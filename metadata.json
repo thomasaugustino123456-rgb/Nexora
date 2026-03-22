@@ -1,0 +1,5 @@
+{
+  "name": "Nexora",
+  "description": "A minimal daily challenge app to level up your body, health, mind, and creativity.",
+  "requestFramePermissions": ["notifications"]
+}

@@ -1,0 +1,121 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and settings information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User ID" },
+        "displayName": { "type": "string", "description": "Display name" },
+        "email": { "type": "string", "description": "Email address" },
+        "role": { "type": "string", "description": "User role", "enum": ["user", "admin"] },
+        "pushupsGoal": { "type": "number" },
+        "waterGoal": { "type": "number" },
+        "reminderTime": { "type": "string" },
+        "themeColor": { "type": "string" },
+        "soundEnabled": { "type": "boolean" },
+        "notificationsEnabled": { "type": "boolean" },
+        "showQuotes": { "type": "boolean" },
+        "unitSystem": { "type": "string" },
+        "profilePic": { "type": "string" },
+        "gender": { "type": "string" },
+        "source": { "type": "string" },
+        "onboardingCompleted": { "type": "boolean" }
+      },
+      "required": ["uid", "displayName", "email", "role"]
+    },
+    "UserStats": {
+      "title": "UserStats",
+      "description": "User streak, XP, and points",
+      "type": "object",
+      "properties": {
+        "streak": { "type": "number" },
+        "bestStreak": { "type": "number" },
+        "totalPoints": { "type": "number" },
+        "totalCompletedDays": { "type": "number" },
+        "lastCompletedDate": { "type": "string" },
+        "currentChallengeIndex": { "type": "number" },
+        "pointsByCategory": {
+          "type": "object",
+          "properties": {
+            "physical": { "type": "number" },
+            "mental": { "type": "number" },
+            "creative": { "type": "number" }
+          }
+        }
+      }
+    },
+    "DailyProgress": {
+      "title": "DailyProgress",
+      "description": "Daily challenges progress",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "pushupsDone": { "type": "boolean" },
+        "waterDrank": { "type": "number" },
+        "breathingDone": { "type": "boolean" },
+        "drawingDone": { "type": "boolean" },
+        "footballDone": { "type": "boolean" },
+        "bubblesDone": { "type": "boolean" }
+      },
+      "required": ["date"]
+    },
+    "ShopPurchases": {
+      "title": "ShopPurchases",
+      "description": "Items purchased from the shop",
+      "type": "object",
+      "properties": {
+        "purchasedItems": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "LibraryTrophies": {
+      "title": "LibraryTrophies",
+      "description": "Trophies earned by the user",
+      "type": "object",
+      "properties": {
+        "trophies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string" },
+              "earnedDate": { "type": "string" },
+              "lastUpdated": { "type": "string" }
+            }
+          }
+        },
+        "savedTrophyIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "UserProfile" },
+      "description": "User profile and settings documents"
+    },
+    "/users/{userId}/stats/main": {
+      "schema": { "$ref": "UserStats" },
+      "description": "User stats, XP, and streaks"
+    },
+    "/users/{userId}/progress/{date}": {
+      "schema": { "$ref": "DailyProgress" },
+      "description": "Daily progress for challenges"
+    },
+    "/users/{userId}/shop/purchases": {
+      "schema": { "$ref": "ShopPurchases" },
+      "description": "User shop purchases"
+    },
+    "/users/{userId}/library/trophies": {
+      "schema": { "$ref": "LibraryTrophies" },
+      "description": "User earned trophies"
+    }
+  }
+}

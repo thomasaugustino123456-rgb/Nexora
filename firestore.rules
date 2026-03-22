@@ -1,0 +1,139 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (matches auth.uid)
+    // Fields:
+    //   - uid: string (required) - User ID
+    //   - displayName: string (required, < 100 chars) - Display name
+    //   - email: string (required, valid email) - Email address
+    //   - role: string (required, 'user' or 'admin') - User role
+    //   - pushupsGoal, waterGoal: number (optional)
+    //   - reminderTime, themeColor, unitSystem, profilePic: string (optional)
+    //   - soundEnabled, notificationsEnabled, showQuotes: bool (optional)
+    //
+    // Subcollections under users/{userId}:
+    //   - stats/main: streak, bestStreak, totalPoints, etc.
+    //   - progress/{date}: daily progress booleans and numbers
+    //   - shop/purchases: purchasedItems array
+    //   - library/trophies: trophies array
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "thomasaugustino12345678@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'role']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['user', 'admin'] &&
+             (!('pushupsGoal' in data) || data.pushupsGoal is number) &&
+             (!('waterGoal' in data) || data.waterGoal is number) &&
+             (!('reminderTime' in data) || (data.reminderTime is string && data.reminderTime.size() <= 10)) &&
+             (!('themeColor' in data) || (data.themeColor is string && data.themeColor.size() <= 20)) &&
+             (!('soundEnabled' in data) || data.soundEnabled is bool) &&
+             (!('notificationsEnabled' in data) || data.notificationsEnabled is bool) &&
+             (!('showQuotes' in data) || data.showQuotes is bool) &&
+             (!('unitSystem' in data) || (data.unitSystem is string && data.unitSystem.size() <= 20)) &&
+             (!('profilePic' in data) || (data.profilePic is string && data.profilePic.size() <= 1048576)) && // 1MB limit
+             (!('gender' in data) || (data.gender is string && data.gender.size() <= 50)) &&
+             (!('source' in data) || (data.source is string && data.source.size() <= 50)) &&
+             (!('onboardingCompleted' in data) || data.onboardingCompleted is bool);
+    }
+
+    function isValidStats(data) {
+      return (!('streak' in data) || data.streak is number) &&
+             (!('bestStreak' in data) || data.bestStreak is number) &&
+             (!('totalPoints' in data) || data.totalPoints is number) &&
+             (!('totalCompletedDays' in data) || data.totalCompletedDays is number) &&
+             (!('lastCompletedDate' in data) || (data.lastCompletedDate is string && data.lastCompletedDate.size() <= 20)) &&
+             (!('currentChallengeIndex' in data) || data.currentChallengeIndex is number) &&
+             (!('pointsByCategory' in data) || data.pointsByCategory is map);
+    }
+
+    function isValidProgress(data) {
+      return data.keys().hasAll(['date']) &&
+             data.date is string && data.date.size() <= 20 &&
+             (!('completed' in data) || data.completed is bool) &&
+             (!('pushupsDone' in data) || data.pushupsDone is bool) &&
+             (!('waterDrank' in data) || data.waterDrank is number) &&
+             (!('breathingDone' in data) || data.breathingDone is bool) &&
+             (!('drawingDone' in data) || data.drawingDone is bool) &&
+             (!('footballDone' in data) || data.footballDone is bool) &&
+             (!('bubblesDone' in data) || data.bubblesDone is bool);
+    }
+
+    function isValidShopPurchases(data) {
+      return (!('purchasedItems' in data) || (data.purchasedItems is list && data.purchasedItems.size() <= 1000));
+    }
+
+    function isValidLibraryTrophies(data) {
+      return (!('trophies' in data) || (data.trophies is list && data.trophies.size() <= 10000)) &&
+             (!('savedTrophyIds' in data) || (data.savedTrophyIds is list && data.savedTrophyIds.size() <= 10000));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+      allow delete: if isAdmin();
+      
+      match /stats/main {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidStats(request.resource.data);
+        allow update: if isOwner(userId) && isValidStats(request.resource.data);
+      }
+      
+      match /progress/{date} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidProgress(request.resource.data);
+        allow update: if isOwner(userId) && isValidProgress(request.resource.data);
+      }
+      
+      match /shop/purchases {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidShopPurchases(request.resource.data);
+        allow update: if isOwner(userId) && isValidShopPurchases(request.resource.data);
+      }
+      
+      match /library/trophies {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidLibraryTrophies(request.resource.data);
+        allow update: if isOwner(userId) && isValidLibraryTrophies(request.resource.data);
+      }
+    }
+  }
+}

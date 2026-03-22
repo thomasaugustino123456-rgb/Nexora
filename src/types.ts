@@ -1,0 +1,62 @@
+export interface UserSettings {
+  pushupsGoal: number;
+  waterGoal: number;
+  reminderTime: string;
+  displayName?: string;
+  profilePic?: string; // base64
+  themeColor?: string;
+  soundEnabled?: boolean;
+  notificationsEnabled?: boolean;
+  showQuotes?: boolean;
+  unitSystem?: 'metric' | 'imperial';
+  purchasedItems?: string[];
+  savedChallengeIds?: string[];
+  savedTrophyIds?: string[];
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  effect: string;
+  icon: string;
+}
+
+export interface DailyProgress {
+  date: string; // YYYY-MM-DD
+  completed: boolean;
+  pushupsDone: boolean;
+  waterDrank: number;
+  breathingDone: boolean;
+  drawingDone: boolean;
+  footballDone: boolean;
+  bubblesDone: boolean;
+}
+
+export type TrophyType = 'golden' | 'ice' | 'broken';
+
+export interface Trophy {
+  id: string;
+  type: TrophyType;
+  earnedDate: string; // ISO string
+  lastUpdated: string; // ISO string
+}
+
+export interface UserStats {
+  streak: number;
+  bestStreak: number;
+  totalPoints: number;
+  totalCompletedDays: number;
+  lastCompletedDate: string | null;
+  currentChallengeIndex: number; // The index of the next challenge to be completed
+  trophies: Trophy[];
+  pointsByCategory: {
+    physical: number;
+    mental: number;
+    creative: number;
+  };
+}
+
+export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library';
+export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'completion';
