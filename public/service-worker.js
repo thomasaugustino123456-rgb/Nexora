@@ -8,6 +8,7 @@ const ASSETS_TO_CACHE = [
 
 // Install event - caching assets
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('Service Worker: Caching assets');
@@ -32,15 +33,30 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - cache-first strategy
+// Fetch event - network-first for navigation, cache-first for others
 self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match('/');
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request).catch(() => {
+      return response || fetch(event.request).then((fetchResponse) => {
+        // Optionally cache new assets on the fly
+        return caches.open(CACHE_NAME).then((cache) => {
+          if (event.request.url.startsWith('http')) {
+            cache.put(event.request, fetchResponse.clone());
+          }
+          return fetchResponse;
+        });
+      }).catch(() => {
         // Fallback if both cache and network fail
-        if (event.request.mode === 'navigate') {
-          return caches.match('/');
-        }
+        return caches.match('/');
       });
     })
   );

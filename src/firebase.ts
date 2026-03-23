@@ -4,7 +4,6 @@ import { getFirestore } from 'firebase/firestore';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import firebaseConfig from './firebase-applet-config.json';
 
-console.log('Firebase: Initializing with config:', firebaseConfig);
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
