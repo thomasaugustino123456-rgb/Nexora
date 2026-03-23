@@ -135,7 +135,7 @@ export default function App() {
         console.log('FCM: Service Worker ready:', registration.scope);
         
         const token = await getToken(m, {
-          vapidKey: 'BF2tHGVbbJHc3wxlE98atQFPU1TRqX3shN0bhSsaNf-UxdDxgoj25zLhpttoeDsrjQ8l24cnysfF-eyzH3P7baw',
+          vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BF2tHGVbbJHc3wxlE98atQFPU1TRqX3shN0bhSsaNf-UxdDxgoj25zLhpttoeDsrjQ8l24cnysfF-eyzH3P7baw',
           serviceWorkerRegistration: registration
         });
         
