@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, LogOut } from 'lucide-react';
+import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, LogOut, PaintBucket } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy } from './types';
@@ -75,6 +75,12 @@ const DEFAULT_STATS: UserStats = {
     mental: 0,
     creative: 0,
   },
+};
+
+const vibrate = (duration: number | number[] = 20) => {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    navigator.vibrate(duration);
+  }
 };
 
 export default function App() {
@@ -708,8 +714,8 @@ export default function App() {
         </main>
 
         {activeScreen !== 'challenge' && (
-          <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-center pointer-events-none">
-            <nav className="glass-card px-8 py-4 flex items-center gap-12 pointer-events-auto">
+          <div className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 flex justify-center pointer-events-none">
+            <nav className="glass-card px-4 py-3 sm:px-8 sm:py-4 flex items-center gap-4 sm:gap-12 pointer-events-auto">
               <NavButton 
                 active={activeScreen === 'home'} 
                 onClick={() => setActiveScreen('home')} 
@@ -774,14 +780,21 @@ export default function App() {
 }
 
 function NavButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
+  const handleClick = () => {
+    vibrate(15);
+    onClick();
+  };
+
   return (
     <button 
-      onClick={onClick}
-      className={`flex flex-col items-center gap-1 transition-all ${active ? 'scale-110' : 'text-blue-900/30 hover:text-blue-900/50'}`}
+      onClick={handleClick}
+      className={`flex flex-col items-center gap-0.5 sm:gap-1 transition-all ${active ? 'scale-105 sm:scale-110' : 'text-blue-900/30 hover:text-blue-900/50'}`}
       style={active ? { color: 'var(--accent-color)' } : {}}
     >
-      {icon}
-      <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+      <div className="scale-90 sm:scale-100">
+        {icon}
+      </div>
+      <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider">{label}</span>
     </button>
   );
 }
@@ -903,7 +916,10 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
             </div>
 
             <button 
-              onClick={onStartChallenge}
+              onClick={() => {
+                vibrate(25);
+                onStartChallenge();
+              }}
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
               {isCompletedToday ? 'Review Today\'s Work' : 'Start Today\'s Challenge ✍️'}
@@ -1796,20 +1812,26 @@ function PushupsStep({ goal, onDone, onSkip }: { goal: number, onDone: () => voi
           {isReady && <HappyMascot size={32} />}
           {!isReady ? (
             <button 
-              onClick={() => setIsReady(true)} 
+              onClick={() => {
+                vibrate(20);
+                setIsReady(true);
+              }} 
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
               I'm Done! 💪
             </button>
           ) : (
             <button 
-              onClick={onDone} 
+              onClick={() => {
+                vibrate(30);
+                onDone();
+              }} 
               className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600"
             >
               Continue <ChevronRight size={20} />
             </button>
           )}
-          <button onClick={onSkip} className="btn-secondary w-full">
+          <button onClick={() => { vibrate(10); onSkip(); }} className="btn-secondary w-full">
             Skip
           </button>
         </div>
@@ -1849,12 +1871,21 @@ function WaterStep({ goal, progress, onUpdate, onContinue }: { goal: number, pro
         <div className="space-y-4">
           {isFinished && <HappyMascot size={40} />}
           {!isFinished ? (
-            <button onClick={() => onUpdate(progress + 1)} className="btn-primary w-full flex items-center justify-center gap-2">
+            <button 
+              onClick={() => {
+                vibrate(15);
+                onUpdate(progress + 1);
+              }} 
+              className="btn-primary w-full flex items-center justify-center gap-2"
+            >
               Drink +1 💧
             </button>
           ) : (
             <button 
-              onClick={onContinue} 
+              onClick={() => {
+                vibrate(30);
+                onContinue();
+              }} 
               className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600"
             >
               Continue <ChevronRight size={20} />
@@ -1884,6 +1915,7 @@ function BreathingStep({ onDone }: { onDone: () => void }) {
 
   useEffect(() => {
     if (timer < 0) {
+      vibrate(10);
       setTimer(5);
       setPhase((p) => {
         const next = p === 'In' ? 'Out' : 'In';
@@ -1969,8 +2001,9 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#3B82F6');
-  const [tool, setTool] = useState<'pencil' | 'pen'>('pen');
+  const [tool, setTool] = useState<'pencil' | 'pen' | 'bucket'>('pen');
   const [hasDrawn, setHasDrawn] = useState(false);
+  const lastPoint = useRef<{ x: number, y: number } | null>(null);
 
   const colors = [
     '#3B82F6', // Blue
@@ -1991,7 +2024,91 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
     canvas.height = rect.height;
   }, []);
 
+  const floodFill = (startX: number, startY: number, fillColor: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    const getPixel = (x: number, y: number) => {
+      const i = (y * canvas.width + x) * 4;
+      return [data[i], data[i + 1], data[i + 2], data[i + 3]];
+    };
+
+    const setPixel = (x: number, y: number, r: number, g: number, b: number) => {
+      const i = (y * canvas.width + x) * 4;
+      data[i] = r;
+      data[i + 1] = g;
+      data[i + 2] = b;
+      data[i + 3] = 255;
+    };
+
+    const targetColor = getPixel(startX, startY);
+    const fillRGB = hexToRgb(fillColor);
+    if (!fillRGB) return;
+
+    if (colorsMatch(targetColor, [fillRGB.r, fillRGB.g, fillRGB.b, 255])) return;
+
+    const stack: [number, number][] = [[startX, startY]];
+    while (stack.length > 0) {
+      const [x, y] = stack.pop()!;
+      let curX = x;
+      while (curX >= 0 && colorsMatch(getPixel(curX, y), targetColor)) {
+        curX--;
+      }
+      curX++;
+      let reachAbove = false;
+      let reachBelow = false;
+      while (curX < canvas.width && colorsMatch(getPixel(curX, y), targetColor)) {
+        setPixel(curX, y, fillRGB.r, fillRGB.g, fillRGB.b);
+        if (y > 0) {
+          if (colorsMatch(getPixel(curX, y - 1), targetColor)) {
+            if (!reachAbove) {
+              stack.push([curX, y - 1]);
+              reachAbove = true;
+            }
+          } else {
+            reachAbove = false;
+          }
+        }
+        if (y < canvas.height - 1) {
+          if (colorsMatch(getPixel(curX, y + 1), targetColor)) {
+            if (!reachBelow) {
+              stack.push([curX, y + 1]);
+              reachBelow = true;
+            }
+          } else {
+            reachBelow = false;
+          }
+        }
+        curX++;
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+  };
+
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  };
+
+  const colorsMatch = (c1: number[], c2: number[]) => {
+    const threshold = 10;
+    return Math.abs(c1[0] - c2[0]) < threshold &&
+           Math.abs(c1[1] - c2[1]) < threshold &&
+           Math.abs(c1[2] - c2[2]) < threshold &&
+           Math.abs(c1[3] - c2[3]) < threshold;
+  };
+
   const startDrawing = (e: any) => {
+    vibrate(5);
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -2001,14 +2118,21 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
     const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
     const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
 
+    if (tool === 'bucket') {
+      floodFill(Math.floor(x), Math.floor(y), color);
+      setHasDrawn(true);
+      return;
+    }
+
     ctx.beginPath();
     ctx.moveTo(x, y);
+    lastPoint.current = { x, y };
     setIsDrawing(true);
     setHasDrawn(true);
   };
 
   const draw = (e: any) => {
-    if (!isDrawing) return;
+    if (!isDrawing || tool === 'bucket') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -2018,15 +2142,30 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
     const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
     const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
 
-    ctx.lineTo(x, y);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = tool === 'pencil' ? 2 : 6;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke();
+    if (lastPoint.current) {
+      const midPoint = {
+        x: (lastPoint.current.x + x) / 2,
+        y: (lastPoint.current.y + y) / 2
+      };
+      
+      ctx.beginPath();
+      ctx.moveTo(lastPoint.current.x, lastPoint.current.y);
+      ctx.quadraticCurveTo(lastPoint.current.x, lastPoint.current.y, midPoint.x, midPoint.y);
+      
+      ctx.strokeStyle = color;
+      ctx.lineWidth = tool === 'pencil' ? 2 : 6;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      
+      lastPoint.current = { x, y };
+    }
   };
 
-  const stopDrawing = () => setIsDrawing(false);
+  const stopDrawing = () => {
+    setIsDrawing(false);
+    lastPoint.current = null;
+  };
 
   const clearCanvas = () => {
     const canvas = canvasRef.current;
@@ -2062,18 +2201,34 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
         <div className="flex flex-wrap gap-4 items-center justify-center bg-blue-50/50 p-4 rounded-xl border border-blue-100">
           <div className="flex gap-2 p-1 bg-white rounded-lg shadow-sm border border-blue-100">
             <button
-              onClick={() => setTool('pencil')}
+              onClick={() => {
+                vibrate(10);
+                setTool('pencil');
+              }}
               className={`p-2 rounded-md transition-all ${tool === 'pencil' ? 'bg-blue-500 text-white shadow-md' : 'text-blue-400 hover:bg-blue-50'}`}
               title="Pencil"
             >
               <Pencil size={20} />
             </button>
             <button
-              onClick={() => setTool('pen')}
+              onClick={() => {
+                vibrate(10);
+                setTool('pen');
+              }}
               className={`p-2 rounded-md transition-all ${tool === 'pen' ? 'bg-blue-500 text-white shadow-md' : 'text-blue-400 hover:bg-blue-50'}`}
               title="Pen"
             >
               <Pen size={20} />
+            </button>
+            <button
+              onClick={() => {
+                vibrate(10);
+                setTool('bucket');
+              }}
+              className={`p-2 rounded-md transition-all ${tool === 'bucket' ? 'bg-blue-500 text-white shadow-md' : 'text-blue-400 hover:bg-blue-50'}`}
+              title="Bucket Fill"
+            >
+              <PaintBucket size={20} />
             </button>
           </div>
 
@@ -2083,7 +2238,10 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
             {colors.map((c) => (
               <button
                 key={c}
-                onClick={() => setColor(c)}
+                onClick={() => {
+                  vibrate(10);
+                  setColor(c);
+                }}
                 className={`w-8 h-8 rounded-full border-2 transition-all ${color === c ? 'border-blue-500 scale-110 shadow-md' : 'border-transparent hover:scale-105'}`}
                 style={{ backgroundColor: c }}
               />
@@ -2200,6 +2358,7 @@ function FootballStep({ onFinish }: { onFinish: () => void }) {
 
   const onStart = (e: any) => {
     if (isFlying || ballsLeft <= 0) return;
+    vibrate(10);
     setIsDragging(true);
   };
 
@@ -2266,8 +2425,11 @@ function FootballStep({ onFinish }: { onFinish: () => void }) {
           (targetX < obsXMin || targetX > obsXMax);
 
         if (isGoal) {
+          vibrate([20, 50, 20]);
           setScore(s => s + 1);
           setScoredBalls(prev => [...prev, { x: targetX, y: targetY }]);
+        } else {
+          vibrate(15);
         }
 
         setBallsLeft(b => b - 1);
@@ -2509,6 +2671,7 @@ function BubbleStep({ onFinish }: { onFinish: () => void }) {
   }, []);
 
   const popBubble = (id: number) => {
+    vibrate(10);
     playPopSound();
     setBubbles(prev => prev.filter(b => b.id !== id));
     setPoppedCount(prev => prev + 1);
