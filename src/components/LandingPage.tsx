@@ -25,14 +25,14 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
       {/* Header */}
       <header className="w-full max-w-6xl mx-auto p-6 flex justify-between items-center z-10">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <img 
-            src="https://i.postimg.cc/sgDPwzD3/Cheerful-blue-slime-mascot-design-(1).png" 
+            src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
             alt="Nexora Logo" 
-            className="w-16 h-16 object-contain mix-blend-multiply"
+            className="w-24 h-24 object-contain"
             referrerPolicy="no-referrer"
           />
-          <span className="text-3xl font-black text-blue-900 tracking-tighter">Nexora</span>
+          <span className="text-4xl font-black text-blue-900 tracking-tighter">Nexora</span>
         </div>
         <button 
           onClick={onGetStarted}
@@ -43,7 +43,17 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       </header>
 
       {/* Hero Section */}
-      <main className="flex-1 w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-center p-6 gap-12 z-10">
+      <main className="flex-1 w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-center p-6 gap-12 z-10 relative overflow-hidden">
+        {/* Background Mascot Watermark for Hero */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full pointer-events-none opacity-[0.05] z-[-1] flex items-center justify-center">
+          <img 
+            src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
+            alt="" 
+            className="w-[150%] max-w-none"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+        
         <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left space-y-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -385,14 +395,14 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       {/* Footer */}
       <footer className="w-full bg-blue-950 text-blue-200 py-12 relative z-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <img 
-              src="https://i.postimg.cc/sgDPwzD3/Cheerful-blue-slime-mascot-design-(1).png" 
+              src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
               alt="Nexora Logo" 
-              className="w-12 h-12 object-contain mix-blend-screen brightness-200 contrast-150"
+              className="w-20 h-20 object-contain"
               referrerPolicy="no-referrer"
             />
-            <span className="text-2xl font-black text-white tracking-tighter">Nexora</span>
+            <span className="text-3xl font-black text-white tracking-tighter">Nexora</span>
           </div>
           
           <div className="flex gap-8 text-sm font-medium">

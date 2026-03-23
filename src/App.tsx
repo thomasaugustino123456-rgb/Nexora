@@ -14,9 +14,10 @@ import { LibraryScreen } from './components/LibraryScreen';
 import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './components/Trophies';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { format, subDays, isSameDay, parseISO } from 'date-fns';
-import { auth, db } from './firebase';
+import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, getDocFromServer } from 'firebase/firestore';
+import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingScreen } from './components/OnboardingScreen';
@@ -88,6 +89,11 @@ export default function App() {
   const [stats, setStats] = useLocalStorage<UserStats>('nexora_stats', DEFAULT_STATS);
   const [history, setHistory] = useState<DailyProgress[]>([]);
   const [earnedTrophyToday, setEarnedTrophyToday] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallButton, setShowInstallButton] = useState(false);
+  const [showWelcomeBack, setShowWelcomeBack] = useState(false);
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
+  const [fcmError, setFcmError] = useState<string | null>(null);
   
   const today = new Date().toISOString().split('T')[0];
   const [dailyProgress, setDailyProgress] = useState<DailyProgress>({
@@ -101,23 +107,180 @@ export default function App() {
     bubblesDone: false,
   });
 
+  const setupFCM = async () => {
+    console.log('FCM: Starting setup...');
+    setFcmError(null);
+    try {
+      // Request permission if not granted
+      if (Notification.permission !== 'granted') {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          console.log('FCM: Notification permission denied.');
+          setFcmError('PERMISSION_DENIED');
+          return;
+        }
+      }
+
+      const m = await messaging();
+      if (!m) {
+        console.log('FCM: Messaging not supported in this browser.');
+        setFcmError('NOT_SUPPORTED');
+        return;
+      }
+      
+      // Ensure service worker is ready
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        console.log('FCM: Service Worker ready:', registration.scope);
+        
+        const token = await getToken(m, {
+          vapidKey: 'BF2tHGVbbJHc3wxlE98atQFPU1TRqX3shN0bhSsaNf-UxdDxgoj25zLhpttoeDsrjQ8l24cnysfF-eyzH3P7baw',
+          serviceWorkerRegistration: registration
+        });
+        
+        if (token) {
+          console.log('FCM Device Token:', token);
+          setFcmToken(token);
+        } else {
+          console.log('FCM: No token received.');
+          setFcmError('NO_TOKEN');
+        }
+      } else {
+        setFcmError('NO_SW');
+      }
+    } catch (error: any) {
+      console.error('Error setting up FCM:', error);
+      setFcmError(error.message || 'UNKNOWN_ERROR');
+    }
+  };
+
   useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+      // Update UI notify the user they can install the PWA
+      setShowInstallButton(true);
+      console.log('PWA: beforeinstallprompt event fired');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Request notification permission on mount if supported
+    if ('Notification' in window && Notification.permission === 'default') {
+      // Show a friendly message first? (Optional, but user asked for it)
+      // For simplicity, we just request it.
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          console.log('PWA: Notification permission granted');
+          setupFCM();
+        }
+      });
+    } else if (Notification.permission === 'granted') {
+      setupFCM();
+    }
+
+    // Smart In-App Reminder: Check last active time
+    const lastActive = localStorage.getItem('nexora_last_active');
+    const now = new Date().getTime();
+    if (lastActive) {
+      const lastActiveTime = parseInt(lastActive);
+      const diffHours = (now - lastActiveTime) / (1000 * 60 * 60);
+      if (diffHours > 24) {
+        setShowWelcomeBack(true);
+      }
+    }
+    localStorage.setItem('nexora_last_active', now.toString());
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setupFCM();
+    }
+  }, [user]);
+
+  // Daily Reminder Timer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!settings.notificationsEnabled || Notification.permission !== 'granted') return;
+
+      const now = new Date();
+      const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      
+      if (currentTimeStr === settings.reminderTime) {
+        const lastReminderDate = localStorage.getItem('nexora_last_reminder_date');
+        const todayStr = now.toISOString().split('T')[0];
+
+        if (lastReminderDate !== todayStr) {
+          new Notification('Nexora 🔥', {
+            body: 'Hey 👋 Ready for today’s challenge?',
+            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+          });
+          localStorage.setItem('nexora_last_reminder_date', todayStr);
+        }
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [settings.notificationsEnabled, settings.reminderTime]);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    
+    // Show the install prompt
+    deferredPrompt.prompt();
+    
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`PWA: User response to the install prompt: ${outcome}`);
+    
+    // We've used the prompt, and can't use it again, throw it away
+    setDeferredPrompt(null);
+    setShowInstallButton(false);
+  };
+
+  useEffect(() => {
+    async function testConnection() {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+        console.log("Firestore: Connection test successful");
+      } catch (error) {
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration. The client is offline.");
+        }
+        // Skip logging for other errors, as this is simply a connection test.
+      }
+    }
+    testConnection();
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setLoading(true); // Prevent flashing home screen while checking profile
         setUser(currentUser);
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        if (!userDoc.exists()) {
-          await setDoc(doc(db, 'users', currentUser.uid), {
-            uid: currentUser.uid,
-            displayName: currentUser.displayName || 'Nexora User',
-            email: currentUser.email || '',
-            role: 'user',
-            onboardingCompleted: false
-          });
-          setNeedsOnboarding(true);
-        } else {
-          setNeedsOnboarding(userDoc.data().onboardingCompleted === false);
+        
+        const path = `users/${currentUser.uid}`;
+        try {
+          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          if (!userDoc.exists()) {
+            const newUser = {
+              uid: currentUser.uid,
+              displayName: currentUser.displayName || 'Nexora User',
+              email: currentUser.email || '',
+              role: 'user',
+              onboardingCompleted: false
+            };
+            await setDoc(doc(db, 'users', currentUser.uid), newUser);
+            setNeedsOnboarding(true);
+          } else {
+            setNeedsOnboarding(userDoc.data().onboardingCompleted === false);
+          }
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, path);
         }
         setLoading(false);
       } else {
@@ -300,18 +463,76 @@ export default function App() {
         ))}
       </div>
 
+      {/* Background Mascot Watermark */}
+      <div className="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0 opacity-[0.03]">
+        <img 
+          src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
+          alt="" 
+          className="w-[150%] max-w-none"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+
+      {/* PWA Install Button */}
+      <AnimatePresence>
+        {showInstallButton && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] w-full max-w-xs px-4"
+          >
+            <button
+              onClick={handleInstallClick}
+              className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-2xl shadow-indigo-600/40 flex items-center justify-center gap-3 border-4 border-white"
+            >
+              <Download size={24} />
+              INSTALL NEXORA APP
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Welcome Back Popup */}
+      <AnimatePresence>
+        {showWelcomeBack && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl text-center"
+            >
+              <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto">
+                <Mascot className="w-12 h-12" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-blue-900">Hey 👋</h3>
+                <p className="text-blue-900/60 font-medium">You missed yesterday. Let’s get back on track 🔥</p>
+              </div>
+              <button 
+                onClick={() => setShowWelcomeBack(false)}
+                className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-blue-700 transition-colors"
+              >
+                Let's Go!
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="w-full max-w-5xl flex flex-col min-h-screen relative z-10 mx-auto">
         
         {activeScreen !== 'challenge' && (
           <header className="px-6 pt-12 pb-4 flex items-center justify-between max-w-4xl mx-auto w-full">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <img 
-                src="https://i.postimg.cc/sgDPwzD3/Cheerful-blue-slime-mascot-design-(1).png" 
+                src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
                 alt="Nexora Logo" 
-                className="w-14 h-14 object-contain mix-blend-multiply"
+                className="w-20 h-20 object-contain"
                 referrerPolicy="no-referrer"
               />
-              <h1 className="text-3xl font-bold text-blue-900/80 tracking-tight">Nexora</h1>
+              <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexora</h1>
             </div>
             <button 
               onClick={() => setActiveScreen('settings')}
@@ -344,7 +565,15 @@ export default function App() {
               <ProfileScreen settings={settings} setSettings={setSettings} stats={stats} user={user} />
             )}
             {activeScreen === 'settings' && (
-              <SettingsScreen settings={settings} setSettings={setSettings} onBack={() => setActiveScreen('home')} onLogout={handleLogout} />
+              <SettingsScreen 
+                settings={settings} 
+                setSettings={setSettings} 
+                onBack={() => setActiveScreen('home')} 
+                onLogout={handleLogout} 
+                fcmToken={fcmToken} 
+                fcmError={fcmError}
+                onRetryFCM={setupFCM}
+              />
             )}
             {activeScreen === 'shop' && (
               <ShopScreen 
@@ -872,7 +1101,12 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
       reader.onloadend = async () => {
         const base64 = reader.result as string;
         setSettings({ ...settings, profilePic: base64 });
+        const path = `users/${user.uid}`;
+      try {
         await updateDoc(doc(db, 'users', user.uid), { profilePic: base64 });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, path);
+      }
       };
       reader.readAsDataURL(file);
     }
@@ -882,7 +1116,12 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
     setSettings({ ...settings, displayName: tempName });
     setIsEditingName(false);
     if (user) {
+    const path = `users/${user.uid}`;
+    try {
       await updateDoc(doc(db, 'users', user.uid), { displayName: tempName });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, path);
+    }
     }
   };
 
@@ -979,7 +1218,15 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
   );
 }
 
-function SettingsScreen({ settings, setSettings, onBack, onLogout }: { settings: UserSettings, setSettings: (s: UserSettings) => void, onBack: () => void, onLogout: () => Promise<void> }) {
+function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcmError, onRetryFCM }: { 
+  settings: UserSettings, 
+  setSettings: (s: UserSettings) => void, 
+  onBack: () => void, 
+  onLogout: () => Promise<void>,
+  fcmToken: string | null,
+  fcmError: string | null,
+  onRetryFCM: () => void
+}) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const exportData = () => {
@@ -1179,6 +1426,54 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout }: { settings:
           >
             Logout
           </button>
+        </div>
+
+        {/* 10. FCM Status */}
+        <div className="glass-card p-6 space-y-4 col-span-1 md:col-span-2 lg:col-span-1">
+          <div className="flex items-center gap-3 text-indigo-500">
+            <Zap size={24} />
+            <h3 className="font-bold text-blue-900">Cloud Sync</h3>
+          </div>
+          <p className="text-xs text-blue-900/40">Status of your cloud notification connection.</p>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-blue-900/60">Status:</span>
+              <span className={`text-xs font-black px-2 py-1 rounded-full ${
+                fcmToken ? 'bg-emerald-100 text-emerald-600' : 
+                fcmError === 'PERMISSION_DENIED' ? 'bg-amber-100 text-amber-600' :
+                fcmError ? 'bg-rose-100 text-rose-600' : 
+                'bg-amber-100 text-amber-600'
+              }`}>
+                {fcmToken ? 'CONNECTED' : 
+                 fcmError === 'PERMISSION_DENIED' ? 'PERMISSION REQUIRED' :
+                 fcmError ? 'ERROR' : 'WAITING FOR KEY'}
+              </span>
+            </div>
+            {fcmToken && (
+              <div className="mt-2">
+                <span className="text-[10px] font-bold text-blue-900/40 block mb-1">Device Token:</span>
+                <div className="bg-white/40 p-2 rounded-lg break-all text-[8px] font-mono text-blue-900/60 border border-blue-900/5">
+                  {fcmToken}
+                </div>
+              </div>
+            )}
+            {fcmError && (
+              <p className="text-[10px] text-rose-600 font-medium italic mt-1">
+                Error: {fcmError}
+              </p>
+            )}
+            {!fcmToken && !fcmError && (
+              <p className="text-[10px] text-amber-600 font-medium italic">
+                {Notification.permission === 'granted' ? 'Connecting to cloud...' : 'Enable notifications to connect.'}
+              </p>
+            )}
+            <button 
+              onClick={onRetryFCM}
+              className="mt-2 text-[10px] font-bold text-blue-600 hover:underline text-left"
+            >
+              Retry Connection
+            </button>
+          </div>
         </div>
 
         {/* 9. Reset App */}

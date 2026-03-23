@@ -198,16 +198,16 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
         </motion.div>
 
         <div className="space-y-2 mt-2 flex flex-col items-center">
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-6">
             <img 
-              src="https://i.postimg.cc/sgDPwzD3/Cheerful-blue-slime-mascot-design-(1).png" 
+              src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
               alt="Nexora Logo" 
-              className="w-24 h-24 object-contain mix-blend-multiply"
+              className="w-64 h-64 object-contain"
               referrerPolicy="no-referrer"
             />
-            <h1 className="text-5xl md:text-6xl font-black text-blue-900 tracking-tighter">Nexora</h1>
+            <h1 className="text-7xl md:text-8xl font-black text-blue-900 tracking-tighter">Nexora</h1>
           </div>
-          <p className="text-blue-900/60 font-medium text-lg">Your personal flow companion</p>
+          <p className="text-blue-900/60 font-medium text-2xl">Your personal flow companion</p>
         </div>
 
         {error && (
