@@ -91,6 +91,7 @@ export default function App() {
   const [earnedTrophyToday, setEarnedTrophyToday] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
+  const [showIOSInstallGuide, setShowIOSInstallGuide] = useState(false);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [fcmError, setFcmError] = useState<string | null>(null);
@@ -166,6 +167,19 @@ export default function App() {
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Check if already installed
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+
+    if (!isStandalone && isIOS) {
+      // For iOS, we can't use beforeinstallprompt, so we show a custom guide
+      // But maybe not immediately on every load to avoid annoyance
+      const hasSeenGuide = localStorage.getItem('nexora_ios_guide_seen');
+      if (!hasSeenGuide) {
+        setShowIOSInstallGuide(true);
+      }
+    }
 
     // Request notification permission on mount if supported
     if ('Notification' in window && Notification.permission === 'default') {
@@ -473,7 +487,7 @@ export default function App() {
         />
       </div>
 
-      {/* PWA Install Button */}
+      {/* PWA Install Button (Android/Chrome) */}
       <AnimatePresence>
         {showInstallButton && (
           <motion.div 
@@ -482,14 +496,82 @@ export default function App() {
             exit={{ opacity: 0, y: 50 }}
             className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] w-full max-w-xs px-4"
           >
-            <button
-              onClick={handleInstallClick}
-              className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-2xl shadow-indigo-600/40 flex items-center justify-center gap-3 border-4 border-white"
-            >
-              <Download size={24} />
-              INSTALL NEXORA APP
-            </button>
+            <div className="bg-white p-4 rounded-3xl shadow-2xl border-2 border-indigo-100 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                  <Download size={24} />
+                </div>
+                <div>
+                  <h4 className="font-black text-blue-900 leading-tight text-sm">Install Nexora App</h4>
+                  <p className="text-[10px] text-blue-900/40 font-bold">Get the full experience on your home screen!</p>
+                </div>
+              </div>
+              <button
+                onClick={handleInstallClick}
+                className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black shadow-lg hover:bg-indigo-700 transition-all active:scale-95"
+              >
+                INSTALL NOW
+              </button>
+              <button 
+                onClick={() => setShowInstallButton(false)}
+                className="w-full text-[10px] font-black text-blue-900/40 hover:text-blue-900/60"
+              >
+                NOT NOW
+              </button>
+            </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* iOS Install Guide */}
+      <AnimatePresence>
+        {showIOSInstallGuide && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[300] flex items-end justify-center">
+            <motion.div 
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              className="bg-white w-full max-w-md rounded-t-[40px] p-8 pb-12 space-y-6"
+            >
+              <div className="flex justify-center">
+                <div className="w-16 h-1.5 bg-blue-900/10 rounded-full" />
+              </div>
+              
+              <div className="text-center space-y-2">
+                <div className="w-20 h-20 bg-indigo-50 rounded-[28px] flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-xl">
+                  <img 
+                    src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
+                    alt="Logo" 
+                    className="w-14 h-14 object-contain"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <h3 className="text-2xl font-black text-blue-900">Add to Home Screen</h3>
+                <p className="text-blue-900/60 font-medium">Install Nexora on your iPhone for the best experience.</p>
+              </div>
+
+              <div className="space-y-4 bg-blue-50/50 p-6 rounded-3xl border border-blue-100">
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm text-blue-900 font-black text-sm">1</div>
+                  <p className="text-sm font-bold text-blue-900/80">Tap the <span className="text-blue-600">Share</span> button in Safari</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm text-blue-900 font-black text-sm">2</div>
+                  <p className="text-sm font-bold text-blue-900/80">Scroll down and tap <span className="text-blue-600">"Add to Home Screen"</span></p>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => {
+                  setShowIOSInstallGuide(false);
+                  localStorage.setItem('nexora_ios_guide_seen', 'true');
+                }}
+                className="w-full bg-blue-900 text-white py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-transform"
+              >
+                GOT IT!
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
