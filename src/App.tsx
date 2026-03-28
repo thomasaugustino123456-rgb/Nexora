@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book } from 'lucide-react';
+import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, MascotMood } from './types';
@@ -381,6 +381,42 @@ export default function App() {
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [fcmError, setFcmError] = useState<string | null>(null);
+  
+  // Version Update Logic
+  const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean } | null>(null);
+  const [showUpdatePopup, setShowUpdatePopup] = useState(false);
+  const currentAppVersion = "1.0.0"; // Current hardcoded version
+
+  useEffect(() => {
+    const checkVersion = async () => {
+      try {
+        // Use cache: 'no-store' to ensure we get the latest file from the server
+        const response = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.version !== currentAppVersion) {
+            console.log('New version detected:', data.version);
+            setUpdateInfo(data);
+            setShowUpdatePopup(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking version:', error);
+      }
+    };
+
+    // Check immediately on mount
+    checkVersion();
+
+    // Check every 5 minutes
+    const interval = setInterval(checkVersion, 300000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleUpdate = () => {
+    vibrate(50);
+    window.location.reload();
+  };
   
   const today = new Date().toISOString().split('T')[0];
   const [dailyProgress, setDailyProgress] = useState<DailyProgress>({
@@ -1113,6 +1149,59 @@ export default function App() {
             </motion.div>
           </div>
         )}
+
+        <AnimatePresence>
+          {showUpdatePopup && updateInfo && (
+            <motion.div 
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.9 }}
+              className="fixed bottom-24 left-6 right-6 z-[60]"
+            >
+              <div className="glass-card p-6 border-2 border-blue-500/30 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-indigo-500 to-blue-400 animate-pulse" />
+                
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
+                    <Sparkles className="text-white w-6 h-6" />
+                  </div>
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-lg font-black text-blue-900">Nexora Update v{updateInfo.version}</h3>
+                      <button 
+                        onClick={() => setShowUpdatePopup(false)}
+                        className="p-1 hover:bg-blue-50 rounded-lg text-blue-400"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-2 mb-4">
+                      <p className="text-xs font-bold text-blue-900/60 uppercase tracking-wider">What's New:</p>
+                      <ul className="space-y-1">
+                        {updateInfo.releaseNotes.map((note, i) => (
+                          <li key={i} className="text-xs text-blue-900/80 flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 shrink-0" />
+                            {note}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    <button 
+                      onClick={handleUpdate}
+                      className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                    >
+                      <RefreshCw size={18} className="animate-spin-slow" />
+                      UPDATE NOW
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

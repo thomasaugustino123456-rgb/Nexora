@@ -1,0 +1,10 @@
+{
+  "version": "1.0.1",
+  "releaseNotes": [
+    "Added Gratitude Notebook to track your daily wins",
+    "Improved account removal security and re-authentication",
+    "Added real-time update notifications to keep you in flow",
+    "Fixed minor UI bugs in the challenge flow"
+  ],
+  "forceUpdate": false
+}
