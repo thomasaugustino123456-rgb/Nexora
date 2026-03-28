@@ -1079,6 +1079,12 @@ export default function App() {
                 icon={<TrophyIcon size={24} />} 
                 label="Library"
               />
+              <NavButton 
+                active={activeScreen === 'notebook'} 
+                onClick={() => setActiveScreen('notebook')} 
+                icon={<Book size={24} />} 
+                label="Notebook"
+              />
             </nav>
           </div>
         )}
