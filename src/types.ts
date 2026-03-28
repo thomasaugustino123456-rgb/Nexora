@@ -28,6 +28,7 @@ export interface ShopItem {
 export interface DailyProgress {
   date: string; // YYYY-MM-DD
   completed: boolean;
+  completionsCount: number; // Number of times the flow was completed today
   pushupsDone: boolean;
   waterDrank: number;
   breathingDone: boolean;

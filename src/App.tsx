@@ -386,6 +386,7 @@ export default function App() {
   const [dailyProgress, setDailyProgress] = useState<DailyProgress>({
     date: today,
     completed: false,
+    completionsCount: 0,
     pushupsDone: false,
     waterDrank: 0,
     breathingDone: false,
@@ -603,6 +604,19 @@ export default function App() {
       } catch (e) {
         console.error("Failed to parse daily progress", e);
       }
+    } else {
+      // Reset for new day
+      setDailyProgress({
+        date: today,
+        completed: false,
+        completionsCount: 0,
+        pushupsDone: false,
+        waterDrank: 0,
+        breathingDone: false,
+        drawingDone: false,
+        footballDone: false,
+        bubblesDone: false,
+      });
     }
   }, [today]);
 
@@ -659,14 +673,15 @@ export default function App() {
   }, []); // Run once on mount
 
   const handleCompleteChallenge = () => {
-    const isNewDay = stats.lastCompletedDate !== today;
+    const nextCompletionsCount = dailyProgress.completionsCount + 1;
+    const canAwardTrophy = nextCompletionsCount <= 3;
     
-    if (isNewDay) {
-      console.log("Awarding new trophy for today!");
+    if (canAwardTrophy) {
+      console.log(`Awarding trophy for completion #${nextCompletionsCount} today!`);
       if (settings.soundEnabled) playTrophySound('golden');
       setEarnedTrophyToday(true);
     } else {
-      console.log("Already completed today, no new trophy.");
+      console.log("Already reached 3 completions today, no more trophies.");
       setEarnedTrophyToday(false);
     }
 
@@ -681,7 +696,8 @@ export default function App() {
         }
       };
 
-      if (isNewDay) {
+      // Streak logic (only on first completion of the day)
+      if (stats.lastCompletedDate !== today) {
         const newStreak = prevStats.lastCompletedDate === getYesterday() ? prevStats.streak + 5 : 5;
         
         // Apply Streak Protection effect if purchased
@@ -696,8 +712,10 @@ export default function App() {
         // Apply Double Points effect if purchased
         const hasDoublePoints = settings.purchasedItems?.includes('double-points');
         newStats.totalPoints = newStats.totalPoints + (hasDoublePoints ? 10 : 5);
+      }
 
-        // Award Golden Trophy for finishing all challenges
+      // Award Golden Trophy if within daily limit
+      if (canAwardTrophy) {
         const newTrophy: Trophy = {
           id: Math.random().toString(36).substr(2, 9),
           type: 'golden',
@@ -712,11 +730,14 @@ export default function App() {
     setDailyProgress({ 
       ...dailyProgress, 
       completed: true,
-      pushupsDone: true,
-      breathingDone: true,
-      drawingDone: true,
-      footballDone: true,
-      bubblesDone: true
+      completionsCount: nextCompletionsCount,
+      // Reset tasks for the next run if under limit
+      pushupsDone: false,
+      waterDrank: 0,
+      breathingDone: false,
+      drawingDone: false,
+      footballDone: false,
+      bubblesDone: false
     });
     setChallengeStep('completion');
   };
@@ -938,7 +959,7 @@ export default function App() {
                   setChallengeStep('pushups');
                   setActiveScreen('challenge');
                 }}
-                isCompletedToday={dailyProgress.completed}
+                isCompletedToday={dailyProgress.completionsCount >= 3}
                 dailyProgress={dailyProgress}
                 settings={settings}
                 history={history}
@@ -1218,17 +1239,27 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
                   <Star size={18} className="text-yellow-500" />
                   <span>{stats.totalPoints} pts</span>
                 </div>
+                <div className="flex items-center gap-2 text-blue-900/50 font-medium">
+                  <TrophyIcon size={18} className="text-emerald-500" />
+                  <span>{dailyProgress.completionsCount}/3 Today</span>
+                </div>
               </div>
             </div>
 
             <button 
               onClick={() => {
+                if (dailyProgress.completionsCount >= 3) return;
                 vibrate(25);
                 onStartChallenge();
               }}
-              className="btn-primary w-full flex items-center justify-center gap-2"
+              disabled={dailyProgress.completionsCount >= 3}
+              className={`btn-primary w-full flex items-center justify-center gap-2 ${dailyProgress.completionsCount >= 3 ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
             >
-              {isCompletedToday ? 'Review Today\'s Work' : 'Start Today\'s Challenge ✍️'}
+              {dailyProgress.completionsCount >= 3 
+                ? 'Daily Limit Reached (3/3) 🏆' 
+                : dailyProgress.completionsCount > 0 
+                  ? `Start Challenge #${dailyProgress.completionsCount + 1} ✍️` 
+                  : 'Start Today\'s Challenge ✍️'}
             </button>
           </div>
 
