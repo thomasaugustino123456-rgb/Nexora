@@ -5,7 +5,6 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { UserSettings } from '../types';
-import { WritingMascot } from './WritingMascot';
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -21,29 +20,15 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
   const [water, setWater] = useState<number>(2);
   const [pushups, setPushups] = useState<number>(5);
   const [isHoveringContinue, setIsHoveringContinue] = useState(false);
-  const [isHappy, setIsHappy] = useState(false);
-  const [isWaiting, setIsWaiting] = useState(false);
-  const [isJumping, setIsJumping] = useState(false);
-  const [showGlow, setShowGlow] = useState(false);
   const [buttonPulse, setButtonPulse] = useState(false);
 
-  useEffect(() => {
-    // Reset waiting state on step change
-    setIsWaiting(false);
-    
-    // Idle timer for mascot attention
-    const idleTimer = setTimeout(() => {
-      setIsWaiting(true);
-    }, 5000);
-
-    return () => clearTimeout(idleTimer);
-  }, [step, isHoveringContinue]);
+  const totalSteps = 8;
 
   useEffect(() => {
-    if (step === 6) {
+    if (step === 7) {
       // Simulate plan creation
       const timer = setTimeout(() => {
-        setStep(7);
+        setStep(8);
       }, 3000);
       return () => clearTimeout(timer);
     }
@@ -78,22 +63,14 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
   };
 
   const handleContinueClick = (action: () => void) => {
-    setIsHappy(true);
-    setShowGlow(true);
-    setTimeout(() => {
-      setIsHappy(false);
-      setShowGlow(false);
-      action();
-    }, 600);
+    action();
   };
 
   const handleButtonHover = (isHovering: boolean) => {
     setIsHoveringContinue(isHovering);
     if (isHovering) {
-      setIsJumping(true);
       setButtonPulse(true);
       setTimeout(() => {
-        setIsJumping(false);
         setButtonPulse(false);
       }, 400);
     }
@@ -102,7 +79,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
   const nextStep = () => handleContinueClick(() => setStep(prev => prev + 1));
 
   const handleBack = async () => {
-    if (step > 1 && step < 6) {
+    if (step > 1 && step < 7) {
       setStep(prev => prev - 1);
     } else if (step === 1) {
       try {
@@ -116,7 +93,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
   return (
     <div className="min-h-screen bg-blue-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Back Button */}
-      {step < 6 && (
+      {step < 7 && (
         <button 
           onClick={handleBack}
           className="absolute top-6 left-6 p-3 rounded-full bg-white/50 text-blue-900/60 hover:bg-white/80 hover:text-blue-900 transition-all z-20 shadow-sm"
@@ -136,23 +113,21 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
         {/* Mascot */}
         <div className="flex justify-center mb-6">
           <motion.div 
-            initial={{ y: -50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
+            initial={{ y: -50, opacity: 0, scale: 0.8 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
             transition={{ 
               type: "spring", 
               stiffness: 300, 
               damping: 15,
-              delay: 0.5 
+              delay: 0.2 
             }}
-            className="w-48 h-48 drop-shadow-xl"
+            className="w-64 h-64 md:w-[512px] md:h-[512px] max-w-full flex items-center justify-center"
           >
-            <WritingMascot 
-              isLookingAtButton={isHoveringContinue} 
-              isHappy={isHappy}
-              isWaving={step === 1}
-              isWaiting={isWaiting}
-              isJumping={isJumping}
-              showGlow={showGlow}
+            <img 
+              src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
+              alt="Nexora Mascot" 
+              className="w-full h-full object-contain drop-shadow-2xl"
+              referrerPolicy="no-referrer"
             />
           </motion.div>
         </div>
@@ -160,24 +135,70 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
         {/* Progress Bar */}
         <div className="mb-8 space-y-2">
           <div className="flex justify-between text-xs font-bold text-blue-900/40 uppercase tracking-widest">
-            <span>Step {step} of 7</span>
-            <span>{Math.round((step / 7) * 100)}%</span>
+            <span>Step {step} of {totalSteps}</span>
+            <span>{Math.round((step / totalSteps) * 100)}%</span>
           </div>
           <div className="h-2 w-full bg-blue-100 rounded-full overflow-hidden">
             <motion.div 
               className="h-full bg-blue-500"
               initial={{ width: 0 }}
-              animate={{ width: `${(step / 7) * 100}%` }}
+              animate={{ width: `${(step / totalSteps) * 100}%` }}
               transition={{ duration: 0.3 }}
             />
           </div>
         </div>
 
         <AnimatePresence mode="wait">
-          {/* STEP 1: Name */}
+          {/* STEP 1: Welcome & Importance */}
           {step === 1 && (
             <motion.div 
               key="step1"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="glass-card p-8 flex flex-col items-center text-center space-y-8"
+            >
+              <div className="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-2">
+                <Sparkles size={32} />
+              </div>
+              <div className="space-y-4">
+                <h2 className="text-3xl font-black text-blue-900 leading-tight">Welcome to Nexora, bro!</h2>
+                <div className="space-y-3 text-left">
+                  <p className="text-blue-900/70 text-sm font-medium">
+                    Creating an account is the first step to a better you. Here's why it's important:
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex gap-2 text-xs text-blue-900/60">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 shrink-0" />
+                      <span><strong>Save Your Progress:</strong> Never lose your streaks or trophies. Your data is safely synced to the cloud.</span>
+                    </li>
+                    <li className="flex gap-2 text-xs text-blue-900/60">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 shrink-0" />
+                      <span><strong>Personalized Flow:</strong> We tailor your daily challenges to your specific goals and lifestyle.</span>
+                    </li>
+                    <li className="flex gap-2 text-xs text-blue-900/60">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 shrink-0" />
+                      <span><strong>Multi-Device Sync:</strong> Access your flow companion from any device, anywhere, anytime.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <button 
+                onClick={nextStep} 
+                onMouseEnter={() => handleButtonHover(true)}
+                onMouseLeave={() => handleButtonHover(false)}
+                className={`btn-primary w-full flex justify-center items-center gap-2 transition-all duration-300 ${buttonPulse ? 'scale-105 shadow-blue-500/50' : ''}`}
+              >
+                Continue <ChevronRight size={20} />
+              </button>
+            </motion.div>
+          )}
+
+          {/* STEP 2: Name */}
+          {step === 2 && (
+            <motion.div 
+              key="step2"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -225,10 +246,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
             </motion.div>
           )}
 
-          {/* STEP 2: Gender */}
-          {step === 2 && (
+          {/* STEP 3: Gender */}
+          {step === 3 && (
             <motion.div 
-              key="step2"
+              key="step3"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -276,10 +297,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
             </motion.div>
           )}
 
-          {/* STEP 3: Source */}
-          {step === 3 && (
+          {/* STEP 4: Source */}
+          {step === 4 && (
             <motion.div 
-              key="step3"
+              key="step4"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -329,10 +350,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
             </motion.div>
           )}
 
-          {/* STEP 4: Water Goal */}
-          {step === 4 && (
+          {/* STEP 5: Water Goal */}
+          {step === 5 && (
             <motion.div 
-              key="step4"
+              key="step5"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -378,10 +399,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
             </motion.div>
           )}
 
-          {/* STEP 5: Pushups Goal */}
-          {step === 5 && (
+          {/* STEP 6: Pushups Goal */}
+          {step === 6 && (
             <motion.div 
-              key="step5"
+              key="step6"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -421,10 +442,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
             </motion.div>
           )}
 
-          {/* STEP 6: Creating Plan */}
-          {step === 6 && (
+          {/* STEP 7: Creating Plan */}
+          {step === 7 && (
             <motion.div 
-              key="step6"
+              key="step7"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.1 }}
@@ -439,10 +460,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
             </motion.div>
           )}
 
-          {/* STEP 7: Thanks */}
-          {step === 7 && (
+          {/* STEP 8: Thanks */}
+          {step === 8 && (
             <motion.div 
-              key="step7"
+              key="step8"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className="glass-card p-12 flex flex-col items-center text-center space-y-8"
