@@ -5,8 +5,8 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, MascotMood } from './types';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
-import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, getDocFromServer } from 'firebase/firestore';
+import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser } from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc } from 'firebase/firestore';
 import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
@@ -1628,6 +1628,39 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
   onRetryFCM: () => void
 }) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+
+  const handleRemoveAccount = async () => {
+    if (!auth.currentUser) return;
+    
+    setIsRemoving(true);
+    setRemoveError(null);
+    
+    try {
+      const uid = auth.currentUser.uid;
+      // 1. Delete Firestore data
+      await deleteDoc(doc(db, 'users', uid));
+      
+      // 2. Delete Auth account
+      await deleteUser(auth.currentUser);
+      
+      // 3. Clear local storage
+      localStorage.clear();
+      
+      // 4. Reload or redirect
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error removing account:', error);
+      if (error.code === 'auth/requires-recent-login') {
+        setRemoveError('For security, please sign out and sign back in before deleting your account.');
+      } else {
+        setRemoveError('Failed to remove account. Please try again later.');
+      }
+      setIsRemoving(false);
+    }
+  };
 
   const exportData = () => {
     const data = {
@@ -1828,6 +1861,23 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
           </button>
         </div>
 
+        {/* 9. Remove Account */}
+        <div className="glass-card p-6 flex items-center justify-between border-2 border-red-100 bg-red-50/10">
+          <div className="flex items-center gap-3 text-red-600">
+            <Trash2 size={24} />
+            <div className="flex flex-col">
+              <h3 className="font-bold text-blue-900">Remove Account</h3>
+              <p className="text-[10px] text-red-500/60 font-medium italic">This action is permanent, bro.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowRemoveConfirm(true)}
+            className="bg-red-600 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-700 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-red-200"
+          >
+            Remove
+          </button>
+        </div>
+
         {/* 10. FCM Status */}
         <div className="glass-card p-6 space-y-4 col-span-1 md:col-span-2 lg:col-span-1">
           <div className="flex items-center gap-3 text-indigo-500">
@@ -1969,6 +2019,53 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
                   className="flex-1 py-3 bg-rose-500 text-white rounded-xl font-bold hover:bg-rose-600 transition-colors shadow-lg shadow-rose-200"
                 >
                   Yes, Reset
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showRemoveConfirm && (
+          <div className="fixed inset-0 bg-red-900/40 backdrop-blur-sm z-[200] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl"
+            >
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
+                <Trash2 size={32} />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-xl font-black text-blue-900">Remove Account?</h3>
+                <p className="text-sm text-blue-900/60">
+                  This will permanently delete your account and all your progress from our servers. This cannot be undone, bro.
+                </p>
+                {removeError && (
+                  <p className="text-red-500 text-xs font-bold mt-2 bg-red-50 p-2 rounded-lg">
+                    {removeError}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={handleRemoveAccount}
+                  disabled={isRemoving}
+                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-black shadow-xl hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isRemoving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Removing...
+                    </>
+                  ) : 'Yes, Delete Everything'}
+                </button>
+                <button 
+                  onClick={() => { setShowRemoveConfirm(false); setRemoveError(null); }}
+                  disabled={isRemoving}
+                  className="w-full py-3 font-bold text-blue-900/40 hover:text-blue-900 transition-colors"
+                >
+                  Wait, I changed my mind
                 </button>
               </div>
             </motion.div>
