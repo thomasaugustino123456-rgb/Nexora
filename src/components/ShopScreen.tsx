@@ -35,9 +35,9 @@ export function ShopScreen({
 
   const getPlanUrl = () => {
     switch (plan) {
-      case 'weekly': return import.meta.env.VITE_LEMON_SQUEEZY_WEEKLY_URL;
-      case 'monthly': return import.meta.env.VITE_LEMON_SQUEEZY_MONTHLY_URL;
-      case 'yearly': return import.meta.env.VITE_LEMON_SQUEEZY_YEARLY_URL;
+      case 'weekly': return 'https://nexora-daily.lemonsqueezy.com/checkout/buy/be209445-5c93-461e-9a2d-5db0e7af2d29';
+      case 'monthly': return 'https://nexora-daily.lemonsqueezy.com/checkout/buy/ca3035cc-8722-4462-bba9-d25bd7d9ea09';
+      case 'yearly': return 'https://nexora-daily.lemonsqueezy.com/checkout/buy/202b9050-b67b-4857-9d58-fe68b7d12b44';
       default: return '';
     }
   };
@@ -103,10 +103,13 @@ export function ShopScreen({
             onClick={() => {
               const url = getPlanUrl();
               if (!url) {
-                alert("Payment link not configured. Please check your App Settings and ensure all Pro plan URLs are saved.");
+                alert("Payment link not configured. Please check your App Settings.");
                 return;
               }
-              window.open(url, '_blank');
+              const newWindow = window.open(url, '_blank');
+              if (!newWindow) {
+                alert("Popup blocked! Please allow popups to proceed to payment.");
+              }
             }}
             className="w-full bg-amber-500 text-white py-4 rounded-2xl font-black text-lg hover:bg-amber-600 transition-all active:scale-95 shadow-xl shadow-amber-500/20"
           >

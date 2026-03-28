@@ -1,6 +1,8 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "releaseNotes": [
+    "Added Pro subscription button to the header",
+    "Improved payment checkout experience",
     "Added Gratitude Notebook to track your daily wins",
     "Improved account removal security and re-authentication",
     "Added real-time update notifications to keep you in flow",
