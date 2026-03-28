@@ -20,6 +20,24 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
   const [source, setSource] = useState('');
   const [water, setWater] = useState<number>(2);
   const [pushups, setPushups] = useState<number>(5);
+  const [isHoveringContinue, setIsHoveringContinue] = useState(false);
+  const [isHappy, setIsHappy] = useState(false);
+  const [isWaiting, setIsWaiting] = useState(false);
+  const [isJumping, setIsJumping] = useState(false);
+  const [showGlow, setShowGlow] = useState(false);
+  const [buttonPulse, setButtonPulse] = useState(false);
+
+  useEffect(() => {
+    // Reset waiting state on step change
+    setIsWaiting(false);
+    
+    // Idle timer for mascot attention
+    const idleTimer = setTimeout(() => {
+      setIsWaiting(true);
+    }, 5000);
+
+    return () => clearTimeout(idleTimer);
+  }, [step, isHoveringContinue]);
 
   useEffect(() => {
     if (step === 6) {
@@ -59,7 +77,29 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
     }
   };
 
-  const nextStep = () => setStep(prev => prev + 1);
+  const handleContinueClick = (action: () => void) => {
+    setIsHappy(true);
+    setShowGlow(true);
+    setTimeout(() => {
+      setIsHappy(false);
+      setShowGlow(false);
+      action();
+    }, 600);
+  };
+
+  const handleButtonHover = (isHovering: boolean) => {
+    setIsHoveringContinue(isHovering);
+    if (isHovering) {
+      setIsJumping(true);
+      setButtonPulse(true);
+      setTimeout(() => {
+        setIsJumping(false);
+        setButtonPulse(false);
+      }, 400);
+    }
+  };
+
+  const nextStep = () => handleContinueClick(() => setStep(prev => prev + 1));
 
   const handleBack = async () => {
     if (step > 1 && step < 6) {
@@ -95,9 +135,26 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
       <div className="w-full max-w-md z-10">
         {/* Mascot */}
         <div className="flex justify-center mb-6">
-          <div className="w-48 h-48 drop-shadow-xl">
-            <WritingMascot />
-          </div>
+          <motion.div 
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 300, 
+              damping: 15,
+              delay: 0.5 
+            }}
+            className="w-48 h-48 drop-shadow-xl"
+          >
+            <WritingMascot 
+              isLookingAtButton={isHoveringContinue} 
+              isHappy={isHappy}
+              isWaving={step === 1}
+              isWaiting={isWaiting}
+              isJumping={isJumping}
+              showGlow={showGlow}
+            />
+          </motion.div>
         </div>
 
         {/* Progress Bar */}
@@ -146,11 +203,21 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
 
               <div className="w-full flex flex-col gap-3">
                 {name.trim() ? (
-                  <button onClick={nextStep} className="btn-primary w-full flex justify-center items-center gap-2">
+                  <button 
+                    onClick={nextStep} 
+                    onMouseEnter={() => handleButtonHover(true)}
+                    onMouseLeave={() => handleButtonHover(false)}
+                    className={`btn-primary w-full flex justify-center items-center gap-2 transition-all duration-300 ${buttonPulse ? 'scale-105 shadow-blue-500/50' : ''}`}
+                  >
                     Continue <ChevronRight size={20} />
                   </button>
                 ) : (
-                  <button onClick={nextStep} className="w-full py-4 text-blue-900/40 font-bold hover:text-blue-900/60 transition-colors">
+                  <button 
+                    onClick={nextStep} 
+                    onMouseEnter={() => handleButtonHover(true)}
+                    onMouseLeave={() => handleButtonHover(false)}
+                    className={`w-full py-4 text-blue-900/40 font-bold hover:text-blue-900/60 transition-colors ${buttonPulse ? 'scale-105' : ''}`}
+                  >
                     Skip for now
                   </button>
                 )}
@@ -187,11 +254,21 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
 
               <div className="w-full flex flex-col gap-3 mt-4">
                 {gender ? (
-                  <button onClick={nextStep} className="btn-primary w-full flex justify-center items-center gap-2">
+                  <button 
+                    onClick={nextStep} 
+                    onMouseEnter={() => handleButtonHover(true)}
+                    onMouseLeave={() => handleButtonHover(false)}
+                    className={`btn-primary w-full flex justify-center items-center gap-2 transition-all duration-300 ${buttonPulse ? 'scale-105 shadow-blue-500/50' : ''}`}
+                  >
                     Continue <ChevronRight size={20} />
                   </button>
                 ) : (
-                  <button onClick={nextStep} className="w-full py-4 text-blue-900/40 font-bold hover:text-blue-900/60 transition-colors">
+                  <button 
+                    onClick={nextStep} 
+                    onMouseEnter={() => handleButtonHover(true)}
+                    onMouseLeave={() => handleButtonHover(false)}
+                    className={`w-full py-4 text-blue-900/40 font-bold hover:text-blue-900/60 transition-colors ${buttonPulse ? 'scale-105' : ''}`}
+                  >
                     Skip
                   </button>
                 )}
@@ -230,11 +307,21 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
 
               <div className="w-full flex flex-col gap-3 mt-4">
                 {source ? (
-                  <button onClick={nextStep} className="bg-indigo-500 text-white py-4 px-6 rounded-xl font-black shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2">
+                  <button 
+                    onClick={nextStep} 
+                    onMouseEnter={() => handleButtonHover(true)}
+                    onMouseLeave={() => handleButtonHover(false)}
+                    className={`bg-indigo-500 text-white py-4 px-6 rounded-xl font-black shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2 ${buttonPulse ? 'scale-105 shadow-indigo-500/50' : ''}`}
+                  >
                     Continue <ChevronRight size={20} />
                   </button>
                 ) : (
-                  <button onClick={nextStep} className="w-full py-4 text-blue-900/40 font-bold hover:text-blue-900/60 transition-colors">
+                  <button 
+                    onClick={nextStep} 
+                    onMouseEnter={() => handleButtonHover(true)}
+                    onMouseLeave={() => handleButtonHover(false)}
+                    className={`w-full py-4 text-blue-900/40 font-bold hover:text-blue-900/60 transition-colors ${buttonPulse ? 'scale-105' : ''}`}
+                  >
                     Skip
                   </button>
                 )}
@@ -279,7 +366,12 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
               </div>
 
               <div className="w-full flex flex-col gap-3 mt-4">
-                <button onClick={nextStep} className="bg-cyan-500 text-white py-4 px-6 rounded-xl font-black shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2">
+                <button 
+                  onClick={nextStep} 
+                  onMouseEnter={() => handleButtonHover(true)}
+                  onMouseLeave={() => handleButtonHover(false)}
+                  className={`bg-cyan-500 text-white py-4 px-6 rounded-xl font-black shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2 ${buttonPulse ? 'scale-105 shadow-cyan-500/50' : ''}`}
+                >
                   Continue <ChevronRight size={20} />
                 </button>
               </div>
@@ -317,7 +409,12 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
               </div>
 
               <div className="w-full flex flex-col gap-3 mt-4">
-                <button onClick={nextStep} className="bg-orange-500 text-white py-4 px-6 rounded-xl font-black shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2">
+                <button 
+                  onClick={nextStep} 
+                  onMouseEnter={() => handleButtonHover(true)}
+                  onMouseLeave={() => handleButtonHover(false)}
+                  className={`bg-orange-500 text-white py-4 px-6 rounded-xl font-black shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2 ${buttonPulse ? 'scale-105 shadow-orange-500/50' : ''}`}
+                >
                   Continue <ChevronRight size={20} />
                 </button>
               </div>
@@ -364,7 +461,12 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
                 <p className="text-blue-900/50 text-xs mt-2">Your mascot is excited to meet you. Remember, building habits takes time, so be kind to yourself and take it one day at a time. Let's go!</p>
               </div>
               
-              <button onClick={handleComplete} className="bg-emerald-500 text-white py-4 px-8 rounded-xl font-black shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2 text-lg">
+              <button 
+                onClick={() => handleContinueClick(handleComplete)} 
+                onMouseEnter={() => handleButtonHover(true)}
+                onMouseLeave={() => handleButtonHover(false)}
+                className={`bg-emerald-500 text-white py-4 px-8 rounded-xl font-black shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2 text-lg ${buttonPulse ? 'scale-105 shadow-emerald-500/50' : ''}`}
+              >
                 Let's Go! <CheckCircle2 size={24} />
               </button>
             </motion.div>

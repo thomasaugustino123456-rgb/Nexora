@@ -5,12 +5,13 @@ export type MascotMood = 'happy' | 'angry' | 'boiling' | 'neutral';
 interface MascotProps {
   className?: string;
   mood?: MascotMood;
+  hat?: string;
   onClick?: () => void;
   onPointerMove?: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerLeave?: () => void;
 }
 
-export const Mascot: React.FC<MascotProps> = ({ className, mood = 'happy', onClick, onPointerMove, onPointerLeave }) => {
+export const Mascot: React.FC<MascotProps> = ({ className, mood = 'happy', hat = 'none', onClick, onPointerMove, onPointerLeave }) => {
   const isAngry = mood === 'angry' || mood === 'boiling';
   const isBoiling = mood === 'boiling';
   const isNeutral = mood === 'neutral';
@@ -228,6 +229,37 @@ export const Mascot: React.FC<MascotProps> = ({ className, mood = 'happy', onCli
           <ellipse cx="250" cy="60" rx="90" ry="15" fill="none" stroke={isBoiling ? "#FF5C5C" : "#52D1FF"} strokeWidth="10" filter="url(#glow)" opacity="0.8" />
           <ellipse cx="250" cy="60" rx="90" ry="15" fill="none" stroke="#ffffff" strokeWidth="4" />
         </g>
+
+        {/* HATS */}
+        {hat === 'crown' && (
+          <g transform="translate(180, 40) scale(0.7)">
+            <path d="M 0,100 L 0,0 L 50,40 L 100,0 L 150,40 L 200,0 L 200,100 Z" fill="#FFD700" stroke="#B8860B" strokeWidth="8" />
+            <circle cx="100" cy="40" r="15" fill="#FF0000" />
+            <circle cx="20" cy="20" r="10" fill="#0000FF" />
+            <circle cx="180" cy="20" r="10" fill="#0000FF" />
+          </g>
+        )}
+        {hat === 'cool' && (
+          <g transform="translate(130, 240) scale(1.2)">
+            <rect x="0" y="0" width="100" height="30" rx="5" fill="#000000" />
+            <rect x="140" y="0" width="100" height="30" rx="5" fill="#000000" />
+            <path d="M 100,15 L 140,15" stroke="#000000" strokeWidth="8" />
+          </g>
+        )}
+        {hat === 'wizard' && (
+          <g transform="translate(150, -50) scale(1.5)">
+            <path d="M 0,100 L 100,100 L 50,0 Z" fill="#4B0082" stroke="#ffffff" strokeWidth="2" />
+            <circle cx="50" cy="40" r="5" fill="#FFD700" />
+            <circle cx="30" cy="70" r="3" fill="#FFD700" />
+            <circle cx="70" cy="70" r="3" fill="#FFD700" />
+          </g>
+        )}
+        {hat === 'artist' && (
+          <g transform="translate(180, 50) scale(0.8)">
+            <path d="M 0,50 Q 0,0 75,0 Q 150,0 150,50 Q 150,80 75,80 Q 0,80 0,50 Z" fill="#8B4513" />
+            <circle cx="130" cy="20" r="10" fill="#8B4513" />
+          </g>
+        )}
 
         {/* SPARKLES / STARS */}
         <defs>

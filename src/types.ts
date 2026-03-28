@@ -12,6 +12,8 @@ export interface UserSettings {
   purchasedItems?: string[];
   savedChallengeIds?: string[];
   savedTrophyIds?: string[];
+  activeHat?: string;
+  zenModeEnabled?: boolean;
 }
 
 export interface ShopItem {
@@ -32,6 +34,9 @@ export interface DailyProgress {
   drawingDone: boolean;
   footballDone: boolean;
   bubblesDone: boolean;
+  memoryDone?: boolean;
+  gratitudeDone?: boolean;
+  reactionDone?: boolean;
 }
 
 export type TrophyType = 'golden' | 'ice' | 'broken';
@@ -56,7 +61,10 @@ export interface UserStats {
     mental: number;
     creative: number;
   };
+  drawings?: string[]; // base64 strings
+  unlockedHats?: string[];
 }
 
-export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library';
-export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'completion';
+export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery';
+export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'completion';
+export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';

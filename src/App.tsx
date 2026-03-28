@@ -1,19 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, LogOut, PaintBucket } from 'lucide-react';
+import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy } from './types';
-import { Mascot, MascotMood } from './components/Mascot';
-import { PushupMascot } from './components/PushupMascot';
-import { WaterMascot } from './components/WaterMascot';
-import { BreathingMascot } from './components/BreathingMascot';
-import { ArtistMascot } from './components/ArtistMascot';
-import { Calendar, StatsCharts } from './components/Dashboard';
-import { ShopScreen } from './components/ShopScreen';
-import { LibraryScreen } from './components/LibraryScreen';
-import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './components/Trophies';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { format, subDays, isSameDay, parseISO } from 'date-fns';
+import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, MascotMood } from './types';
+import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, getDocFromServer } from 'firebase/firestore';
@@ -21,6 +11,140 @@ import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingScreen } from './components/OnboardingScreen';
+import { Mascot } from './components/Mascot';
+import { ArtistMascot } from './components/ArtistMascot';
+import { BreathingMascot } from './components/BreathingMascot';
+import { PushupMascot } from './components/PushupMascot';
+import { WaterMascot } from './components/WaterMascot';
+import { WritingMascot } from './components/WritingMascot';
+import { GoldenTrophy, IceTrophy, BrokenTrophy } from './components/Trophies';
+import { LibraryScreen } from './components/LibraryScreen';
+import { ShopScreen } from './components/ShopScreen';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { GoogleGenAI } from "@google/genai";
+
+function playTrophySound(type: string) {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    osc.type = 'triangle';
+    if (type === 'golden') {
+      osc.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+      osc.frequency.exponentialRampToValueAtTime(1046.50, audioContext.currentTime + 0.3); // C6
+    } else if (type === 'ice') {
+      osc.frequency.setValueAtTime(329.63, audioContext.currentTime); // E4
+      osc.frequency.exponentialRampToValueAtTime(164.81, audioContext.currentTime + 0.3); // E3
+    } else {
+      osc.frequency.setValueAtTime(261.63, audioContext.currentTime); // C4
+      osc.frequency.exponentialRampToValueAtTime(130.81, audioContext.currentTime + 0.3); // C3
+    }
+
+    gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc.start();
+    osc.stop(audioContext.currentTime + 0.3);
+  } catch (e) {
+    console.error('Trophy sound error:', e);
+  }
+}
+
+function Calendar({ history }: { history: DailyProgress[] }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(monthStart);
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  return (
+    <div className="glass-card p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-sm font-black text-blue-900/40 uppercase tracking-widest">Activity Calendar</h3>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setCurrentDate(subDays(monthStart, 1))} className="p-1 hover:bg-blue-50 rounded-md text-blue-400">
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-xs font-bold text-blue-900/60 min-w-[100px] text-center">
+            {format(currentDate, 'MMMM yyyy')}
+          </span>
+          <button onClick={() => setCurrentDate(subDays(monthEnd, -1))} className="p-1 hover:bg-blue-50 rounded-md text-blue-400">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
+          <div key={d} className="text-[10px] font-black text-blue-900/20 text-center py-2">{d}</div>
+        ))}
+        {Array.from({ length: monthStart.getDay() }).map((_, i) => (
+          <div key={`empty-${i}`} />
+        ))}
+        {days.map(day => {
+          const dateStr = format(day, 'yyyy-MM-dd');
+          const dayData = history.find(h => h.date === dateStr);
+          const isToday = isSameDay(day, new Date());
+          return (
+            <div 
+              key={dateStr}
+              className={`aspect-square rounded-lg flex items-center justify-center text-[10px] font-bold transition-all ${
+                dayData?.completed 
+                  ? 'bg-emerald-500 text-white shadow-sm' 
+                  : isToday 
+                    ? 'bg-blue-50 text-blue-600 border border-blue-200' 
+                    : 'text-blue-900/30 hover:bg-blue-50/50'
+              }`}
+            >
+              {day.getDate()}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StatsCharts({ history }: { history: DailyProgress[] }) {
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = subDays(new Date(), 6 - i);
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const dayData = history.find(h => h.date === dateStr);
+    return {
+      name: format(date, 'EEE'),
+      water: dayData?.waterDrank || 0,
+    };
+  });
+
+  return (
+    <div className="glass-card p-6">
+      <h3 className="text-sm font-black text-blue-900/40 uppercase tracking-widest mb-6">Hydration Stats</h3>
+      <div className="h-48 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={last7Days}>
+            <XAxis 
+              dataKey="name" 
+              axisLine={false} 
+              tickLine={false} 
+              tick={{ fontSize: 10, fontWeight: 800, fill: '#1e3a8a', opacity: 0.3 }}
+            />
+            <Tooltip 
+              cursor={{ fill: 'rgba(59, 130, 246, 0.05)' }}
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+            />
+            <Bar dataKey="water" radius={[4, 4, 0, 0]}>
+              {last7Days.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.water >= 2 ? '#10b981' : '#3b82f6'} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
 
 function HappyMascot({ size = 32 }: { size?: number }) {
   return (
@@ -60,6 +184,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   notificationsEnabled: true,
   showQuotes: true,
   unitSystem: 'metric',
+  activeHat: 'none',
+  zenModeEnabled: false,
 };
 
 const DEFAULT_STATS: UserStats = {
@@ -75,6 +201,8 @@ const DEFAULT_STATS: UserStats = {
     mental: 0,
     creative: 0,
   },
+  drawings: [],
+  unlockedHats: ['none'],
 };
 
 const vibrate = (duration: number | number[] = 20) => {
@@ -82,6 +210,141 @@ const vibrate = (duration: number | number[] = 20) => {
     navigator.vibrate(duration);
   }
 };
+
+function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSettings }) {
+  const [message, setMessage] = useState<string>("");
+  const [response, setResponse] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleChat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+    
+    const userMsg = message;
+    setMessage("");
+    setLoading(true);
+    setResponse("");
+    
+    try {
+      const apiKey = typeof process !== 'undefined' ? process?.env?.GEMINI_API_KEY : undefined;
+      if (!apiKey) throw new Error("API Key missing");
+      
+      const ai = new GoogleGenAI({ apiKey });
+      const model = "gemini-3-flash-preview";
+      const prompt = `You are Nexora, a friendly water-bottle mascot for a productivity and wellness app. 
+      The user says: "${userMsg}"
+      Respond as Nexora. Be friendly, helpful, and encouraging. 
+      Keep it short (max 2-3 sentences). 
+      User stats: Streak ${stats.streak}, Points ${stats.totalPoints}.`;
+      
+      const result = await ai.models.generateContent({
+        model,
+        contents: [{ parts: [{ text: prompt }] }],
+      });
+      setResponse(result.text || "I'm here for you, bro! 🌊");
+    } catch (error) {
+      setResponse("I'm a bit parched right now, but I'm still cheering for you! 🚀");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateMotivation = async () => {
+    setLoading(true);
+    try {
+      const apiKey = typeof process !== 'undefined' ? process?.env?.GEMINI_API_KEY : undefined;
+      if (!apiKey) {
+        throw new Error("API Key missing");
+      }
+      const ai = new GoogleGenAI({ apiKey });
+      const model = "gemini-3-flash-preview";
+      const prompt = `You are Nexora, a friendly water-bottle mascot for a productivity and wellness app. 
+      The user's current streak is ${stats.streak} days. 
+      Their total points are ${stats.totalPoints}.
+      They have ${stats.trophies.length} trophies.
+      Give them a short, punchy, and super friendly motivational message (max 2 sentences). 
+      Be encouraging and maybe a bit bubbly!`;
+      
+      const result = await ai.models.generateContent({
+        model,
+        contents: [{ parts: [{ text: prompt }] }],
+      });
+      setResponse(result.text || "You're doing great, bro! Keep that streak alive! 🌊");
+    } catch (error) {
+      setResponse("I'm always here to cheer you on! Let's crush today! 🚀");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && !response) {
+      generateMotivation();
+    }
+  }, [isOpen]);
+
+  return (
+    <div className="fixed bottom-24 right-6 z-[60]">
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            className="absolute bottom-16 right-0 w-64 glass-card p-4 shadow-2xl border-2 border-blue-200"
+          >
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Nexora Says:</span>
+              <button onClick={() => setIsOpen(false)} className="text-blue-900/20 hover:text-blue-900/40">
+                <X size={14} />
+              </button>
+            </div>
+            {loading ? (
+              <div className="flex gap-1 items-center">
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" />
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+              </div>
+            ) : (
+              <p className="text-sm font-medium text-blue-900 leading-relaxed italic">"{response}"</p>
+            )}
+            
+            <form onSubmit={handleChat} className="mt-4 flex gap-2">
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Say something..."
+                className="flex-1 text-[10px] bg-white/50 border border-blue-200 rounded-full px-3 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400 text-blue-900"
+              />
+              <button 
+                type="submit"
+                disabled={loading}
+                className="p-1 text-blue-500 hover:text-blue-700 disabled:opacity-50"
+              >
+                <Send size={12} />
+              </button>
+            </form>
+
+            <button 
+              onClick={() => { setResponse(""); generateMotivation(); }}
+              className="mt-3 text-[10px] font-bold text-blue-500 hover:text-blue-700 flex items-center gap-1"
+            >
+              <Sparkles size={10} /> Get more wisdom
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-all hover:scale-110 active:scale-95"
+      >
+        <MessageSquare size={24} />
+      </button>
+    </div>
+  );
+}
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -95,6 +358,23 @@ export default function App() {
   const [stats, setStats] = useLocalStorage<UserStats>('nexora_stats', DEFAULT_STATS);
   const [history, setHistory] = useState<DailyProgress[]>([]);
   const [earnedTrophyToday, setEarnedTrophyToday] = useState(false);
+
+  // Zen Mode Audio
+  useEffect(() => {
+    let audio: HTMLAudioElement | null = null;
+    if (settings.zenModeEnabled && (activeScreen === 'challenge' || activeScreen === 'home')) {
+      audio = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'); // Placeholder lo-fi
+      audio.loop = true;
+      audio.volume = 0.2;
+      audio.play().catch(() => console.log("Audio play blocked by browser"));
+    }
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio = null;
+      }
+    };
+  }, [settings.zenModeEnabled, activeScreen]);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showIOSInstallGuide, setShowIOSInstallGuide] = useState(false);
@@ -300,7 +580,11 @@ export default function App() {
             setNeedsOnboarding(userDoc.data().onboardingCompleted === false);
           }
         } catch (error) {
-          handleFirestoreError(error, OperationType.GET, path);
+          try {
+            handleFirestoreError(error, OperationType.GET, path);
+          } catch (e) {
+            console.error("Firestore error handled:", e);
+          }
         }
         setLoading(false);
       } else {
@@ -314,7 +598,11 @@ export default function App() {
   useEffect(() => {
     const saved = localStorage.getItem(`nexora_progress_${today}`);
     if (saved) {
-      setDailyProgress(JSON.parse(saved));
+      try {
+        setDailyProgress(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse daily progress", e);
+      }
     }
   }, [today]);
 
@@ -323,7 +611,14 @@ export default function App() {
     
     // Update history whenever daily progress changes
     const allKeys = Object.keys(localStorage).filter(k => k.startsWith('nexora_progress_'));
-    const allHistory = allKeys.map(k => JSON.parse(localStorage.getItem(k) || '{}'))
+    const allHistory = allKeys.map(k => {
+      try {
+        return JSON.parse(localStorage.getItem(k) || '{}');
+      } catch (e) {
+        return {};
+      }
+    })
+      .filter(item => item && item.date)
       .sort((a, b) => a.date.localeCompare(b.date));
     setHistory(allHistory);
   }, [dailyProgress, today]);
@@ -647,6 +942,7 @@ export default function App() {
                 dailyProgress={dailyProgress}
                 settings={settings}
                 history={history}
+                onOpenGallery={() => setActiveScreen('gallery')}
               />
             )}
             {activeScreen === 'progress' && (
@@ -697,6 +993,12 @@ export default function App() {
                 }}
               />
             )}
+            {activeScreen === 'gallery' && (
+              <GalleryScreen 
+                stats={stats} 
+                onBack={() => setActiveScreen('home')} 
+              />
+            )}
             {activeScreen === 'challenge' && (
               <ChallengeFlow 
                 step={challengeStep} 
@@ -705,6 +1007,8 @@ export default function App() {
                 setSettings={setSettings}
                 dailyProgress={dailyProgress}
                 setDailyProgress={setDailyProgress}
+                stats={stats}
+                setStats={setStats}
                 onFinish={handleCompleteChallenge}
                 onExit={() => setActiveScreen('home')}
                 earnedTrophyToday={earnedTrophyToday}
@@ -799,13 +1103,14 @@ function NavButton({ active, onClick, icon, label }: { active: boolean, onClick:
   );
 }
 
-function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history }: { 
+function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
   dailyProgress: DailyProgress,
   settings: UserSettings,
-  history: DailyProgress[]
+  history: DailyProgress[],
+  onOpenGallery: () => void
 }) {
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
@@ -884,6 +1189,7 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
       exit={{ opacity: 0, y: -20 }}
       className="flex flex-col items-center pt-4 gap-12 w-full max-w-4xl mx-auto"
     >
+      <MascotAI stats={stats} settings={settings} />
       <div className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-16 w-full">
         <div className="relative w-64 h-64 lg:w-80 lg:h-80 flex items-center justify-center flex-shrink-0">
           <div className="absolute inset-0 bg-blue-400/20 blur-3xl rounded-full" />
@@ -977,13 +1283,6 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
           </div>
         </div>
       )}
-
-      <div className="w-full space-y-8">
-        <div className="grid grid-cols-1 gap-8">
-          <Calendar history={history} />
-          <StatsCharts history={history} />
-        </div>
-      </div>
     </motion.div>
   );
 }
@@ -1680,18 +1979,20 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
   );
 }
 
-function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, setDailyProgress, onFinish, onExit, earnedTrophyToday }: { 
+function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday }: { 
   step: ChallengeStep, 
   setStep: (s: ChallengeStep) => void, 
   settings: UserSettings,
   setSettings: (s: UserSettings | ((prev: UserSettings) => UserSettings)) => void,
   dailyProgress: DailyProgress,
   setDailyProgress: (p: DailyProgress) => void,
+  stats: UserStats,
+  setStats: (s: UserStats | ((prev: UserStats) => UserStats)) => void,
   onFinish: () => void,
   onExit: () => void,
   earnedTrophyToday: boolean
 }) {
-  const steps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles'];
+  const steps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'gratitude', 'reaction'];
   const currentIdx = steps.indexOf(step as any);
   const progressLabel = step === 'completion' ? 'Done!' : `Challenge ${currentIdx + 1}/${steps.length}`;
 
@@ -1703,13 +2004,24 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
     alert('Challenge saved to library!');
   };
 
-  const nextStep = () => {
+  const nextStep = (data?: any) => {
     const updates: Partial<DailyProgress> = {};
     if (step === 'pushups') updates.pushupsDone = true;
     if (step === 'breathing') updates.breathingDone = true;
-    if (step === 'drawing') updates.drawingDone = true;
+    if (step === 'drawing') {
+      updates.drawingDone = true;
+      if (data && typeof data === 'string') {
+        setStats(prev => ({
+          ...prev,
+          drawings: [data, ...(prev.drawings || [])].slice(0, 20)
+        }));
+      }
+    }
     if (step === 'football') updates.footballDone = true;
     if (step === 'bubbles') updates.bubblesDone = true;
+    if (step === 'memory') updates.memoryDone = true;
+    if (step === 'gratitude') updates.gratitudeDone = true;
+    if (step === 'reaction') updates.reactionDone = true;
 
     if (Object.keys(updates).length > 0) {
       setDailyProgress({ ...dailyProgress, ...updates });
@@ -1770,6 +2082,21 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
             {step === 'bubbles' && (
               <BubbleStep 
                 onFinish={nextStep} 
+              />
+            )}
+            {step === 'memory' && (
+              <MemoryStep 
+                onComplete={nextStep} 
+              />
+            )}
+            {step === 'gratitude' && (
+              <GratitudeStep 
+                onComplete={nextStep} 
+              />
+            )}
+            {step === 'reaction' && (
+              <ReactionStep 
+                onComplete={nextStep} 
               />
             )}
             {step === 'completion' && (
@@ -1997,13 +2324,14 @@ function BreathingStep({ onDone }: { onDone: () => void }) {
   );
 }
 
-function DrawingStep({ onFinish }: { onFinish: () => void }) {
+function DrawingStep({ onFinish }: { onFinish: (data: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#3B82F6');
-  const [tool, setTool] = useState<'pencil' | 'pen' | 'bucket'>('pen');
+  const [tool, setTool] = useState<'pencil' | 'pen' | 'brush' | 'bucket'>('pen');
   const [hasDrawn, setHasDrawn] = useState(false);
   const lastPoint = useRef<{ x: number, y: number } | null>(null);
+  const lastMidPoint = useRef<{ x: number, y: number } | null>(null);
 
   const colors = [
     '#3B82F6', // Blue
@@ -2012,16 +2340,22 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
     '#F59E0B', // Orange
     '#8B5CF6', // Purple
     '#000000', // Black
+    '#FFFFFF', // White
   ];
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    // Set canvas size to match display size
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
+    
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
   }, []);
 
   const floodFill = (startX: number, startY: number, fillColor: string) => {
@@ -2100,7 +2434,7 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
   };
 
   const colorsMatch = (c1: number[], c2: number[]) => {
-    const threshold = 10;
+    const threshold = 15;
     return Math.abs(c1[0] - c2[0]) < threshold &&
            Math.abs(c1[1] - c2[1]) < threshold &&
            Math.abs(c1[2] - c2[2]) < threshold &&
@@ -2127,6 +2461,7 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
     ctx.beginPath();
     ctx.moveTo(x, y);
     lastPoint.current = { x, y };
+    lastMidPoint.current = { x, y };
     setIsDrawing(true);
     setHasDrawn(true);
   };
@@ -2142,29 +2477,31 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
     const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
     const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
 
-    if (lastPoint.current) {
+    if (lastPoint.current && lastMidPoint.current) {
       const midPoint = {
         x: (lastPoint.current.x + x) / 2,
         y: (lastPoint.current.y + y) / 2
       };
       
       ctx.beginPath();
-      ctx.moveTo(lastPoint.current.x, lastPoint.current.y);
+      ctx.moveTo(lastMidPoint.current.x, lastMidPoint.current.y);
       ctx.quadraticCurveTo(lastPoint.current.x, lastPoint.current.y, midPoint.x, midPoint.y);
       
       ctx.strokeStyle = color;
-      ctx.lineWidth = tool === 'pencil' ? 2 : 6;
+      ctx.lineWidth = tool === 'pencil' ? 2 : tool === 'pen' ? 8 : 24;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.stroke();
       
       lastPoint.current = { x, y };
+      lastMidPoint.current = midPoint;
     }
   };
 
   const stopDrawing = () => {
     setIsDrawing(false);
     lastPoint.current = null;
+    lastMidPoint.current = null;
   };
 
   const clearCanvas = () => {
@@ -2172,8 +2509,15 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     setHasDrawn(false);
+  };
+
+  const saveDrawing = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return '';
+    return canvas.toDataURL('image/png');
   };
 
   return (
@@ -2219,6 +2563,16 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
               title="Pen"
             >
               <Pen size={20} />
+            </button>
+            <button
+              onClick={() => {
+                vibrate(10);
+                setTool('brush');
+              }}
+              className={`p-2 rounded-md transition-all ${tool === 'brush' ? 'bg-blue-500 text-white shadow-md' : 'text-blue-400 hover:bg-blue-50'}`}
+              title="Brush"
+            >
+              <Palette size={20} />
             </button>
             <button
               onClick={() => {
@@ -2270,7 +2624,10 @@ function DrawingStep({ onFinish }: { onFinish: () => void }) {
 
         <div className="flex flex-col items-center gap-4">
           <button 
-            onClick={onFinish} 
+            onClick={() => {
+              const drawing = saveDrawing();
+              onFinish(drawing);
+            }} 
             disabled={!hasDrawn}
             className={`btn-primary w-full flex items-center justify-center gap-2 ${!hasDrawn ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
@@ -2679,6 +3036,8 @@ function BubbleStep({ onFinish }: { onFinish: () => void }) {
 
   useEffect(() => {
     if (poppedCount >= 20) {
+      vibrate(20);
+      playPopSound();
       const timer = setTimeout(onFinish, 2000);
       return () => clearTimeout(timer);
     }
@@ -2742,5 +3101,233 @@ function BubbleStep({ onFinish }: { onFinish: () => void }) {
         </motion.div>
       )}
     </motion.div>
+  );
+}
+
+function MemoryStep({ onComplete }: { onComplete: () => void }) {
+  const [cards, setCards] = useState<{ id: number, emoji: string, flipped: boolean, matched: boolean }[]>([]);
+  const [flipped, setFlipped] = useState<number[]>([]);
+  const emojis = ['💧', '🍎', '🏃', '🧘', '⚽', '🎨'];
+
+  useEffect(() => {
+    const initialCards = [...emojis, ...emojis]
+      .sort(() => Math.random() - 0.5)
+      .map((emoji, i) => ({ id: i, emoji, flipped: false, matched: false }));
+    setCards(initialCards);
+  }, []);
+
+  const handleFlip = (id: number) => {
+    if (flipped.length === 2 || cards[id].matched || cards[id].flipped) return;
+    vibrate(10);
+    const newCards = [...cards];
+    newCards[id].flipped = true;
+    setCards(newCards);
+    setFlipped([...flipped, id]);
+
+    if (flipped.length === 1) {
+      const firstId = flipped[0];
+      if (cards[firstId].emoji === cards[id].emoji) {
+        newCards[firstId].matched = true;
+        newCards[id].matched = true;
+        setCards(newCards);
+        setFlipped([]);
+        if (newCards.every(c => c.matched)) {
+          vibrate([50, 30, 50]);
+          setTimeout(onComplete, 1000);
+        }
+      } else {
+        setTimeout(() => {
+          const resetCards = [...newCards];
+          resetCards[firstId].flipped = false;
+          resetCards[id].flipped = false;
+          setCards(resetCards);
+          setFlipped([]);
+        }, 1000);
+      }
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-black text-blue-900 mb-2">Memory Match</h2>
+        <p className="text-blue-600 font-medium">Keep your brain sharp!</p>
+      </div>
+      <div className="grid grid-cols-4 gap-3">
+        {cards.map(card => (
+          <motion.button
+            key={card.id}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => handleFlip(card.id)}
+            className={`w-16 h-16 rounded-xl flex items-center justify-center text-2xl shadow-md transition-all ${
+              card.flipped || card.matched ? 'bg-white' : 'bg-blue-500 text-transparent'
+            }`}
+          >
+            {card.flipped || card.matched ? card.emoji : '?'}
+          </motion.button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GratitudeStep({ onComplete }: { onComplete: () => void }) {
+  const [text, setText] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = () => {
+    if (text.trim().length < 3) return;
+    vibrate(30);
+    setSubmitted(true);
+    setTimeout(onComplete, 2000);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-6 w-full max-w-xs mx-auto">
+      <div className="text-center">
+        <h2 className="text-2xl font-black text-blue-900 mb-2">Gratitude Jar</h2>
+        <p className="text-blue-600 font-medium">What's one good thing today?</p>
+      </div>
+      <div className="relative w-full aspect-square bg-blue-50 rounded-3xl border-4 border-blue-200 flex items-center justify-center p-6 overflow-hidden">
+        <AnimatePresence>
+          {!submitted ? (
+            <motion.div exit={{ y: -100, opacity: 0 }} className="w-full">
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="I am grateful for..."
+                className="w-full h-32 bg-white rounded-xl p-4 text-blue-900 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-medium"
+              />
+              <button
+                onClick={handleSubmit}
+                disabled={text.trim().length < 3}
+                className="w-full mt-4 py-3 bg-blue-500 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
+              >
+                Drop in Jar
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-center"
+            >
+              <div className="text-6xl mb-4">✨</div>
+              <p className="text-blue-900 font-bold">Saved to your jar!</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+function ReactionStep({ onComplete }: { onComplete: () => void }) {
+  const [state, setState] = useState<'waiting' | 'ready' | 'clicked' | 'too-soon'>('waiting');
+  const [startTime, setStartTime] = useState(0);
+  const [reactionTime, setReactionTime] = useState(0);
+  const timerRef = useRef<any>(null);
+
+  const startTest = () => {
+    setState('waiting');
+    const delay = 2000 + Math.random() * 3000;
+    timerRef.current = setTimeout(() => {
+      setState('ready');
+      setStartTime(Date.now());
+      vibrate(50);
+    }, delay);
+  };
+
+  useEffect(() => {
+    startTest();
+    return () => clearTimeout(timerRef.current);
+  }, []);
+
+  const handleClick = () => {
+    if (state === 'waiting') {
+      clearTimeout(timerRef.current);
+      setState('too-soon');
+      vibrate([10, 50]);
+    } else if (state === 'ready') {
+      const time = Date.now() - startTime;
+      setReactionTime(time);
+      setState('clicked');
+      vibrate(20);
+      setTimeout(onComplete, 2000);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-6 w-full">
+      <div className="text-center">
+        <h2 className="text-2xl font-black text-blue-900 mb-2">Reaction Test</h2>
+        <p className="text-blue-600 font-medium">Tap when it turns GREEN!</p>
+      </div>
+      <button
+        onClick={handleClick}
+        className={`w-full aspect-square rounded-3xl flex flex-col items-center justify-center transition-colors duration-75 shadow-xl ${
+          state === 'waiting' ? 'bg-blue-100' :
+          state === 'ready' ? 'bg-green-500' :
+          state === 'too-soon' ? 'bg-red-500' : 'bg-blue-500'
+        }`}
+      >
+        {state === 'waiting' && <p className="text-blue-400 font-bold text-xl">Wait...</p>}
+        {state === 'ready' && <p className="text-white font-black text-4xl animate-pulse">TAP!</p>}
+        {state === 'too-soon' && (
+          <div className="text-center text-white">
+            <p className="font-black text-2xl mb-2">Too soon!</p>
+            <button onClick={startTest} className="px-4 py-2 bg-white/20 rounded-lg font-bold">Try Again</button>
+          </div>
+        )}
+        {state === 'clicked' && (
+          <div className="text-center text-white">
+            <p className="font-black text-4xl mb-2">{reactionTime}ms</p>
+            <p className="font-bold">Great reflexes!</p>
+          </div>
+        )}
+      </button>
+    </div>
+  );
+}
+
+function GalleryScreen({ stats, onBack }: { stats: UserStats, onBack: () => void }) {
+  return (
+    <div className="min-h-screen bg-blue-50 p-6 pb-24">
+      <div className="flex items-center gap-4 mb-8">
+        <button onClick={onBack} className="p-2 bg-white rounded-xl shadow-sm text-blue-900">
+          <ChevronLeft size={24} />
+        </button>
+        <h1 className="text-3xl font-black text-blue-900">Masterpieces</h1>
+      </div>
+
+      {stats.drawings.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
+          <ImageIcon size={64} className="text-blue-300 mb-4" />
+          <p className="text-blue-900 font-bold">No drawings yet, bro!</p>
+          <p className="text-sm text-blue-600">Complete the drawing challenge to see them here.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4">
+          {stats.drawings.map((drawing, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="bg-white p-2 rounded-2xl shadow-md border-2 border-blue-100 overflow-hidden"
+            >
+              <img src={drawing} alt={`Drawing ${i}`} className="w-full aspect-square object-cover rounded-xl" />
+              <div className="mt-2 flex justify-between items-center px-1">
+                <span className="text-[10px] font-bold text-blue-400">#{i + 1}</span>
+                <button className="text-blue-500 hover:text-blue-700">
+                  <Sparkles size={12} />
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
