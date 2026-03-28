@@ -49,6 +49,12 @@ export interface Trophy {
   lastUpdated: string; // ISO string
 }
 
+export interface GratitudeEntry {
+  id: string;
+  text: string;
+  date: string;
+}
+
 export interface UserStats {
   streak: number;
   bestStreak: number;
@@ -64,8 +70,9 @@ export interface UserStats {
   };
   drawings?: string[]; // base64 strings
   unlockedHats?: string[];
+  gratitudeEntries?: GratitudeEntry[];
 }
 
-export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery';
+export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook';
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'completion';
 export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Play, Eye, Star, Trophy as TrophyIcon } from 'lucide-react';
+import { ArrowLeft, Play, Eye, Star, Trophy as TrophyIcon, Book } from 'lucide-react';
 import { UserSettings, UserStats, Trophy, ChallengeStep } from '../types';
 
 export function LibraryScreen({
@@ -8,13 +8,15 @@ export function LibraryScreen({
   stats,
   onBack,
   onPlayChallenge,
-  onViewTrophy
+  onViewTrophy,
+  onOpenNotebook
 }: {
   settings: UserSettings;
   stats: UserStats;
   onBack: () => void;
   onPlayChallenge: (challengeId: ChallengeStep) => void;
   onViewTrophy: (trophy: Trophy) => void;
+  onOpenNotebook: () => void;
 }) {
   const savedChallenges = settings.savedChallengeIds || [];
   const savedTrophies = (stats.trophies || []).filter(t => settings.savedTrophyIds?.includes(t.id));
@@ -31,6 +33,22 @@ export function LibraryScreen({
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-3xl font-black">Library</h1>
+      </div>
+
+      <h2 className="text-xl font-bold mb-4">Gratitude Jar</h2>
+      <div className="glass-card p-6 mb-8 border-l-8 border-l-amber-400">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-lg">Gratitude Notebook</h3>
+            <p className="text-sm text-blue-900/60">View and edit your saved entries.</p>
+          </div>
+          <button 
+            onClick={onOpenNotebook}
+            className="bg-amber-500 text-white p-3 rounded-xl shadow-lg"
+          >
+            <Book size={24} />
+          </button>
+        </div>
       </div>
 
       <h2 className="text-xl font-bold mb-4">Saved Challenges</h2>

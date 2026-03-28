@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send } from 'lucide-react';
+import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, MascotMood } from './types';
@@ -1012,11 +1012,19 @@ export default function App() {
                 onViewTrophy={(trophy) => {
                   setViewingTrophy(trophy);
                 }}
+                onOpenNotebook={() => setActiveScreen('notebook')}
               />
             )}
             {activeScreen === 'gallery' && (
               <GalleryScreen 
                 stats={stats} 
+                onBack={() => setActiveScreen('home')} 
+              />
+            )}
+            {activeScreen === 'notebook' && (
+              <NotebookScreen 
+                stats={stats} 
+                setStats={setStats}
                 onBack={() => setActiveScreen('home')} 
               />
             )}
@@ -2220,6 +2228,15 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
             {step === 'gratitude' && (
               <GratitudeStep 
                 onComplete={nextStep} 
+                onSave={(text) => {
+                  setStats(prev => ({
+                    ...prev,
+                    gratitudeEntries: [
+                      { id: Math.random().toString(36).substr(2, 9), text, date: new Date().toISOString() },
+                      ...(prev.gratitudeEntries || [])
+                    ]
+                  }));
+                }}
               />
             )}
             {step === 'reaction' && (
@@ -3300,7 +3317,7 @@ function MemoryStep({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-function GratitudeStep({ onComplete }: { onComplete: () => void }) {
+function GratitudeStep({ onComplete, onSave }: { onComplete: () => void, onSave: (text: string) => void }) {
   const [text, setText] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -3309,6 +3326,12 @@ function GratitudeStep({ onComplete }: { onComplete: () => void }) {
     vibrate(30);
     setSubmitted(true);
     setTimeout(onComplete, 2000);
+  };
+
+  const handleSave = () => {
+    if (text.trim().length < 3) return;
+    onSave(text);
+    alert('Saved to your Gratitude Library!');
   };
 
   return (
@@ -3327,13 +3350,23 @@ function GratitudeStep({ onComplete }: { onComplete: () => void }) {
                 placeholder="I am grateful for..."
                 className="w-full h-32 bg-white rounded-xl p-4 text-blue-900 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-medium"
               />
-              <button
-                onClick={handleSubmit}
-                disabled={text.trim().length < 3}
-                className="w-full mt-4 py-3 bg-blue-500 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
-              >
-                Drop in Jar
-              </button>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={handleSave}
+                  disabled={text.trim().length < 3}
+                  className="p-3 bg-amber-100 text-amber-600 rounded-xl font-bold shadow-sm disabled:opacity-50"
+                  title="Save to Library"
+                >
+                  <Save size={24} />
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={text.trim().length < 3}
+                  className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
+                >
+                  Drop in Jar
+                </button>
+              </div>
             </motion.div>
           ) : (
             <motion.div
@@ -3457,5 +3490,128 @@ function GalleryScreen({ stats, onBack }: { stats: UserStats, onBack: () => void
         </div>
       )}
     </div>
+  );
+}
+
+function NotebookScreen({ stats, setStats, onBack }: { stats: UserStats, setStats: (s: UserStats | ((prev: UserStats) => UserStats)) => void, onBack: () => void }) {
+  const [text, setText] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const handleSave = () => {
+    if (text.trim().length < 3) return;
+    vibrate(30);
+    
+    setStats(prev => {
+      const entries = prev.gratitudeEntries || [];
+      if (editingId) {
+        return {
+          ...prev,
+          gratitudeEntries: entries.map(e => e.id === editingId ? { ...e, text, date: new Date().toISOString() } : e)
+        };
+      } else {
+        const newEntry = {
+          id: Math.random().toString(36).substr(2, 9),
+          text,
+          date: new Date().toISOString()
+        };
+        return {
+          ...prev,
+          gratitudeEntries: [newEntry, ...entries]
+        };
+      }
+    });
+
+    setText("");
+    setEditingId(null);
+    alert('Saved to your Gratitude Library!');
+  };
+
+  const handleEdit = (entry: any) => {
+    setText(entry.text);
+    setEditingId(entry.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Are you sure you want to delete this entry?')) {
+      setStats(prev => ({
+        ...prev,
+        gratitudeEntries: (prev.gratitudeEntries || []).filter(e => e.id !== id)
+      }));
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="p-6 pb-24 max-w-2xl mx-auto w-full"
+    >
+      <div className="flex items-center gap-4 mb-8">
+        <button onClick={onBack} className="p-2 bg-white rounded-xl shadow-sm text-blue-900">
+          <ChevronLeft size={24} />
+        </button>
+        <h1 className="text-3xl font-black text-blue-900">Gratitude Notebook</h1>
+      </div>
+
+      <div className="glass-card p-6 mb-8 border-l-8 border-l-amber-400 bg-[#fffef5]">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-amber-900">
+            {editingId ? 'Edit Note' : 'New Note'}
+          </h2>
+          {editingId && (
+            <button 
+              onClick={() => { setEditingId(null); setText(""); }}
+              className="text-xs font-bold text-red-500 uppercase"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Write what you are grateful for..."
+          className="w-full h-48 bg-white/80 rounded-xl p-4 text-blue-900 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none font-medium border-l-4 border-l-red-400 shadow-sm"
+        />
+        <button
+          onClick={handleSave}
+          disabled={text.trim().length < 3}
+          className="w-full mt-4 py-4 bg-amber-500 text-white rounded-xl font-bold shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-amber-600 transition-colors"
+        >
+          <Save size={20} />
+          {editingId ? 'Update Note' : 'Save to Library'}
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-sm font-black text-blue-900/40 uppercase tracking-widest">Recent Entries</h3>
+        {(stats.gratitudeEntries || []).length === 0 ? (
+          <div className="text-center py-12 text-blue-900/30 font-medium">
+            No entries yet. Start writing!
+          </div>
+        ) : (
+          stats.gratitudeEntries?.map((entry) => (
+            <div key={entry.id} className="glass-card p-4 flex flex-col gap-3">
+              <div className="flex items-start justify-between gap-4">
+                <p className="text-blue-900 font-medium whitespace-pre-wrap">{entry.text}</p>
+                <div className="flex gap-2">
+                  <button onClick={() => handleEdit(entry)} className="p-2 text-blue-400 hover:text-blue-600">
+                    <Pen size={18} />
+                  </button>
+                  <button onClick={() => handleDelete(entry.id)} className="p-2 text-red-400 hover:text-red-600">
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+              <div className="text-[10px] font-bold text-blue-900/30 uppercase">
+                {new Date(entry.date).toLocaleDateString()}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </motion.div>
   );
 }
