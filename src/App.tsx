@@ -1685,10 +1685,19 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
     
     try {
       const uid = auth.currentUser.uid;
-      // 1. Delete Firestore data
-      await deleteDoc(doc(db, 'users', uid));
+      
+      // 1. Delete Firestore data (main user doc and known subcollections)
+      try {
+        await deleteDoc(doc(db, 'users', uid));
+        await deleteDoc(doc(db, 'users', uid, 'stats', 'main'));
+        await deleteDoc(doc(db, 'users', uid, 'shop', 'purchases'));
+        await deleteDoc(doc(db, 'users', uid, 'library', 'trophies'));
+      } catch (fsError: any) {
+        console.error('Firestore deletion failed:', fsError);
+      }
       
       // 2. Delete Auth account
+      // This is the most likely to fail with 'requires-recent-login'
       await deleteUser(auth.currentUser);
       
       // 3. Clear local storage
@@ -1699,9 +1708,11 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
     } catch (error: any) {
       console.error('Error removing account:', error);
       if (error.code === 'auth/requires-recent-login') {
-        setRemoveError('For security, please sign out and sign back in before deleting your account.');
+        setRemoveError('For security, this action requires a recent login. Please sign out and sign back in, then try again.');
+      } else if (error.code === 'permission-denied') {
+        setRemoveError('Permission denied. Please try logging in again.');
       } else {
-        setRemoveError('Failed to remove account. Please try again later.');
+        setRemoveError('Failed to remove account: ' + (error.message || 'Unknown error'));
       }
       setIsRemoving(false);
     }
