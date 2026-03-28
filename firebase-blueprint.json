@@ -20,7 +20,8 @@
         "profilePic": { "type": "string" },
         "gender": { "type": "string" },
         "source": { "type": "string" },
-        "onboardingCompleted": { "type": "boolean" }
+        "onboardingCompleted": { "type": "boolean" },
+        "activeSkin": { "type": "string", "description": "Currently active mascot skin" }
       },
       "required": ["uid", "displayName", "email", "role"]
     },
@@ -32,6 +33,7 @@
         "streak": { "type": "number" },
         "bestStreak": { "type": "number" },
         "totalPoints": { "type": "number" },
+        "level": { "type": "number", "description": "User level" },
         "totalCompletedDays": { "type": "number" },
         "lastCompletedDate": { "type": "string" },
         "currentChallengeIndex": { "type": "number" },
@@ -57,9 +59,24 @@
         "breathingDone": { "type": "boolean" },
         "drawingDone": { "type": "boolean" },
         "footballDone": { "type": "boolean" },
-        "bubblesDone": { "type": "boolean" }
+        "bubblesDone": { "type": "boolean" },
+        "dailyQuestDone": { "type": "boolean" }
       },
       "required": ["date"]
+    },
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Public leaderboard entry",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "streak": { "type": "number" },
+        "totalPoints": { "type": "number" },
+        "level": { "type": "number" }
+      },
+      "required": ["uid", "displayName", "streak", "totalPoints", "level"]
     },
     "ShopPurchases": {
       "title": "ShopPurchases",
@@ -116,6 +133,10 @@
     "/users/{userId}/library/trophies": {
       "schema": { "$ref": "LibraryTrophies" },
       "description": "User earned trophies"
+    },
+    "/leaderboard/{userId}": {
+      "schema": { "$ref": "LeaderboardEntry" },
+      "description": "Public leaderboard entries"
     }
   }
 }

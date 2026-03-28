@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle } from 'lucide-react';
+import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Trophy, Award, Users, Crown } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, MascotMood } from './types';
+import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood } from './types';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
@@ -19,9 +19,10 @@ import { WaterMascot } from './components/WaterMascot';
 import { WritingMascot } from './components/WritingMascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './components/Trophies';
 import { LibraryScreen } from './components/LibraryScreen';
-import { ShopScreen } from './components/ShopScreen';
+import { ShopScreen, SHOP_ITEMS } from './components/ShopScreen';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { GoogleGenAI } from "@google/genai";
+import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
 
 function playTrophySound(type: string) {
   try {
@@ -146,7 +147,7 @@ function StatsCharts({ history }: { history: DailyProgress[] }) {
   );
 }
 
-function HappyMascot({ size = 32 }: { size?: number }) {
+function HappyMascot({ size = 32, hat = 'none' }: { size?: number, hat?: string }) {
   return (
     <motion.div
       initial={{ scale: 0, y: 20 }}
@@ -161,7 +162,7 @@ function HappyMascot({ size = 32 }: { size?: number }) {
       className="flex flex-col items-center gap-2 mb-4"
     >
       <div className={`w-${size} h-${size} relative`}>
-        <Mascot className="w-full h-full drop-shadow-lg" />
+        <Mascot className="w-full h-full drop-shadow-lg" hat={hat} />
       </div>
       <motion.div 
         animate={{ scale: [1, 1.1, 1] }}
@@ -185,6 +186,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   showQuotes: true,
   unitSystem: 'metric',
   activeHat: 'none',
+  activeSkin: 'none',
   zenModeEnabled: false,
 };
 
@@ -205,11 +207,163 @@ const DEFAULT_STATS: UserStats = {
   unlockedHats: ['none'],
 };
 
-const vibrate = (duration: number | number[] = 20) => {
-  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-    navigator.vibrate(duration);
-  }
-};
+function LevelUpCelebration({ level, onComplete }: { level: number, onComplete: () => void }) {
+  useEffect(() => {
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
+    const timer = setTimeout(onComplete, 4000);
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-blue-500/90 backdrop-blur-md p-6"
+    >
+      <div className="text-center">
+        <motion.div
+          initial={{ scale: 0, rotate: -20 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", damping: 12 }}
+          className="mb-8 relative inline-block"
+        >
+          <div className="absolute inset-0 bg-yellow-400 blur-3xl opacity-50 animate-pulse" />
+          <Award size={120} className="text-yellow-400 relative z-10 drop-shadow-2xl" />
+        </motion.div>
+        
+        <motion.h2 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="text-5xl font-black text-white mb-2 uppercase tracking-tighter"
+        >
+          Level Up!
+        </motion.h2>
+        
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-8xl font-black text-white drop-shadow-lg"
+        >
+          {level}
+        </motion.div>
+        
+        <motion.p 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="text-blue-100 font-bold mt-4"
+        >
+          You're becoming a legend, bro! 🚀
+        </motion.p>
+        
+        <div className="mt-8 flex gap-2 justify-center">
+          {[...Array(20)].map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ y: 0, x: 0, opacity: 1 }}
+              animate={{ 
+                y: [0, -100 - Math.random() * 200],
+                x: [0, (Math.random() - 0.5) * 200],
+                opacity: [1, 0],
+                scale: [1, 0.5]
+              }}
+              transition={{ duration: 1 + Math.random(), repeat: Infinity }}
+              className="w-2 h-2 rounded-full bg-yellow-400"
+            />
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function LeaderboardScreen({ onBack }: { onBack: () => void }) {
+  const [entries, setEntries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'leaderboard'), orderBy('totalPoints', 'desc'), limit(50));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => doc.data());
+      setEntries(data);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-blue-50 pb-24">
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-blue-100 p-4 flex items-center gap-4">
+        <button onClick={onBack} className="p-2 text-blue-900/40 hover:text-blue-900">
+          <ChevronLeft size={24} />
+        </button>
+        <h1 className="text-xl font-black text-blue-900 uppercase tracking-tight flex items-center gap-2">
+          <Crown className="text-yellow-500" size={24} />
+          Global Leaderboard
+        </h1>
+      </div>
+
+      <div className="p-4 max-w-2xl mx-auto">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <RefreshCw className="text-blue-500 animate-spin" size={32} />
+            <p className="text-blue-900/40 font-bold">Loading legends...</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {entries.map((entry, index) => (
+              <motion.div
+                key={entry.uid}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className={`glass-card p-4 flex items-center gap-4 ${index === 0 ? 'border-2 border-yellow-400 bg-yellow-50/50' : ''}`}
+              >
+                <div className={`w-8 h-8 flex items-center justify-center font-black text-sm rounded-full ${
+                  index === 0 ? 'bg-yellow-400 text-white' : 
+                  index === 1 ? 'bg-gray-300 text-white' : 
+                  index === 2 ? 'bg-amber-600 text-white' : 'text-blue-900/30'
+                }`}>
+                  {index + 1}
+                </div>
+                
+                <div className="w-12 h-12 rounded-full bg-blue-100 overflow-hidden border-2 border-white shadow-sm">
+                  {entry.photoURL ? (
+                    <img src={entry.photoURL} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-blue-400">
+                      <User size={24} />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <h3 className="font-black text-blue-900 truncate">{entry.displayName}</h3>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-[10px] font-bold text-orange-500 flex items-center gap-0.5">
+                      <Flame size={10} /> {entry.streak}
+                    </span>
+                    <span className="text-[10px] font-bold text-blue-500 flex items-center gap-0.5">
+                      <Award size={10} /> Lvl {entry.level || 1}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-sm font-black text-blue-900">{entry.totalPoints}</div>
+                  <div className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest">Points</div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSettings }) {
   const [message, setMessage] = useState<string>("");
@@ -236,7 +390,8 @@ function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSetting
       The user says: "${userMsg}"
       Respond as Nexora. Be friendly, helpful, and encouraging. 
       Keep it short (max 2-3 sentences). 
-      User stats: Streak ${stats.streak}, Points ${stats.totalPoints}.`;
+      User stats: Streak ${stats.streak}, Points ${stats.totalPoints}, Level ${stats.level || 1}.
+      Your current outfit is: ${settings.activeSkin || 'none'}.`;
       
       const result = await ai.models.generateContent({
         model,
@@ -353,11 +508,20 @@ export default function App() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [activeScreen, setActiveScreen] = useState<Screen>('home');
   const [challengeStep, setChallengeStep] = useState<ChallengeStep>('pushups');
-  const [viewingTrophy, setViewingTrophy] = useState<Trophy | null>(null);
+  const [viewingTrophy, setViewingTrophy] = useState<TrophyType | null>(null);
   const [settings, setSettings] = useLocalStorage<UserSettings>('nexora_settings', DEFAULT_SETTINGS);
   const [stats, setStats] = useLocalStorage<UserStats>('nexora_stats', DEFAULT_STATS);
   const [history, setHistory] = useState<DailyProgress[]>([]);
   const [earnedTrophyToday, setEarnedTrophyToday] = useState(false);
+  const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
+  const [dailyQuest, setDailyQuest] = useState<ChallengeStep | null>(null);
+
+  useEffect(() => {
+    // Select a daily quest based on the date
+    const steps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'reaction'];
+    const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+    setDailyQuest(steps[dayOfYear % steps.length]);
+  }, []);
 
   // Zen Mode Audio
   useEffect(() => {
@@ -727,15 +891,39 @@ export default function App() {
     }
 
     setStats((prevStats) => {
+      const isDailyQuest = challengeStep === dailyQuest;
+      const pointsToAdd = isDailyQuest ? 20 : 10;
+      const oldLevel = Math.floor((prevStats.totalPoints || 0) / 100) + 1;
+      const newPoints = (prevStats.totalPoints || 0) + pointsToAdd;
+      const newLevel = Math.floor(newPoints / 100) + 1;
+
+      if (newLevel > oldLevel) {
+        setShowLevelUp(newLevel);
+      }
+
       const newStats = {
         ...prevStats,
-        totalPoints: prevStats.totalPoints + 10,
+        totalPoints: newPoints,
+        level: newLevel,
         pointsByCategory: {
-          physical: (prevStats.pointsByCategory?.physical || 0) + 4,
-          mental: (prevStats.pointsByCategory?.mental || 0) + 4,
-          creative: (prevStats.pointsByCategory?.creative || 0) + 2,
+          physical: (prevStats.pointsByCategory?.physical || 0) + (isDailyQuest ? 8 : 4),
+          mental: (prevStats.pointsByCategory?.mental || 0) + (isDailyQuest ? 8 : 4),
+          creative: (prevStats.pointsByCategory?.creative || 0) + (isDailyQuest ? 4 : 2),
         }
       };
+
+      // Update Leaderboard
+      if (user) {
+        const leaderboardRef = doc(db, 'leaderboard', user.uid);
+        setDoc(leaderboardRef, {
+          uid: user.uid,
+          displayName: settings.displayName || 'Anonymous',
+          photoURL: user.photoURL || '',
+          streak: newStats.streak || 0,
+          totalPoints: newStats.totalPoints,
+          level: newLevel
+        }, { merge: true }).catch(e => handleFirestoreError(e, OperationType.WRITE, 'leaderboard'));
+      }
 
       // Streak logic (only on first completion of the day)
       if (stats.lastCompletedDate !== today) {
@@ -757,7 +945,7 @@ export default function App() {
 
       // Award Golden Trophy if within daily limit
       if (canAwardTrophy) {
-        const newTrophy: Trophy = {
+        const newTrophy: TrophyType = {
           id: Math.random().toString(36).substr(2, 9),
           type: 'golden',
           earnedDate: new Date().toISOString(),
@@ -772,6 +960,7 @@ export default function App() {
       ...dailyProgress, 
       completed: true,
       completionsCount: nextCompletionsCount,
+      dailyQuestDone: dailyProgress.dailyQuestDone || (challengeStep === dailyQuest),
       // Reset tasks for the next run if under limit
       pushupsDone: false,
       waterDrank: 0,
@@ -952,7 +1141,7 @@ export default function App() {
               className="bg-white rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl text-center"
             >
               <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto">
-                <Mascot className="w-12 h-12" />
+                <Mascot className="w-12 h-12" hat={settings.activeSkin} />
               </div>
               <div className="space-y-2">
                 <h3 className="text-2xl font-black text-blue-900">Hey 👋</h3>
@@ -994,95 +1183,221 @@ export default function App() {
         <main className="flex-1 flex flex-col px-4 sm:px-6 pb-32">
           <AnimatePresence mode="wait">
             {activeScreen === 'home' && (
-              <HomeScreen 
-                stats={stats} 
-                onStartChallenge={() => {
-                  setChallengeStep('pushups');
-                  setActiveScreen('challenge');
-                }}
-                isCompletedToday={dailyProgress.completionsCount >= 3}
-                dailyProgress={dailyProgress}
-                settings={settings}
-                history={history}
-                onOpenGallery={() => setActiveScreen('gallery')}
-              />
+              <motion.div
+                key="home"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <HomeScreen 
+                  stats={stats} 
+                  onStartChallenge={() => {
+                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                    setChallengeStep('pushups');
+                    setActiveScreen('challenge');
+                  }}
+                  isCompletedToday={dailyProgress.completionsCount >= 3}
+                  dailyProgress={dailyProgress}
+                  settings={settings}
+                  history={history}
+                  onOpenGallery={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setActiveScreen('gallery');
+                  }}
+                  dailyQuest={dailyQuest}
+                />
+              </motion.div>
             )}
             {activeScreen === 'progress' && (
-              <ProgressScreen stats={stats} history={history} settings={settings} setSettings={setSettings} />
+              <motion.div
+                key="progress"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <ProgressScreen stats={stats} history={history} settings={settings} setSettings={setSettings} />
+              </motion.div>
             )}
             {activeScreen === 'profile' && (
-              <ProfileScreen settings={settings} setSettings={setSettings} stats={stats} user={user} />
+              <motion.div
+                key="profile"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <ProfileScreen settings={settings} setSettings={setSettings} stats={stats} user={user} />
+              </motion.div>
             )}
             {activeScreen === 'settings' && (
-              <SettingsScreen 
-                settings={settings} 
-                setSettings={setSettings} 
-                onBack={() => setActiveScreen('home')} 
-                onLogout={handleLogout} 
-                fcmToken={fcmToken} 
-                fcmError={fcmError}
-                onRetryFCM={setupFCM}
-              />
+              <motion.div
+                key="settings"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <SettingsScreen 
+                  settings={settings} 
+                  setSettings={setSettings} 
+                  onBack={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setActiveScreen('home');
+                  }} 
+                  onLogout={handleLogout} 
+                  fcmToken={fcmToken} 
+                  fcmError={fcmError}
+                  onRetryFCM={setupFCM}
+                />
+              </motion.div>
             )}
             {activeScreen === 'shop' && (
-              <ShopScreen 
-                streak={stats.streak}
-                purchasedItems={settings.purchasedItems || []}
-                onBuy={(item) => {
-                  setSettings(prev => ({
-                    ...prev,
-                    purchasedItems: [...(prev.purchasedItems || []), item.id]
-                  }));
-                  setStats(prev => ({
-                    ...prev,
-                    streak: prev.streak - item.price
-                  }));
-                }}
-                onBack={() => setActiveScreen('home')}
-              />
+              <motion.div
+                key="shop"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <ShopScreen 
+                  streak={stats.streak}
+                  purchasedItems={settings.purchasedItems || []}
+                  onBuy={(item) => {
+                    vibrate(VIBRATION_PATTERNS.SUCCESS);
+                    setSettings(prev => ({
+                      ...prev,
+                      purchasedItems: [...(prev.purchasedItems || []), item.id],
+                      activeSkin: item.effect === 'skin' ? item.id.replace('skin-', '') : prev.activeSkin
+                    }));
+                    setStats(prev => ({
+                      ...prev,
+                      streak: prev.streak - item.price
+                    }));
+                  }}
+                  onBack={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setActiveScreen('home');
+                  }}
+                />
+              </motion.div>
             )}
             {activeScreen === 'library' && (
-              <LibraryScreen
-                settings={settings}
-                stats={stats}
-                onBack={() => setActiveScreen('home')}
-                onPlayChallenge={(challengeId) => {
-                  setChallengeStep(challengeId);
-                  setActiveScreen('challenge');
-                }}
-                onViewTrophy={(trophy) => {
-                  setViewingTrophy(trophy);
-                }}
-                onOpenNotebook={() => setActiveScreen('notebook')}
-              />
+              <motion.div
+                key="library"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <LibraryScreen
+                  settings={settings}
+                  stats={stats}
+                  onBack={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setActiveScreen('home');
+                  }}
+                  onPlayChallenge={(challengeId) => {
+                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                    setChallengeStep(challengeId);
+                    setActiveScreen('challenge');
+                  }}
+                  onViewTrophy={(trophy) => {
+                    vibrate(VIBRATION_PATTERNS.TROPHY);
+                    setViewingTrophy(trophy);
+                  }}
+                  onOpenNotebook={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setActiveScreen('notebook');
+                  }}
+                />
+              </motion.div>
             )}
             {activeScreen === 'gallery' && (
-              <GalleryScreen 
-                stats={stats} 
-                onBack={() => setActiveScreen('home')} 
-              />
+              <motion.div
+                key="gallery"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <GalleryScreen 
+                  stats={stats} 
+                  onBack={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setActiveScreen('home');
+                  }} 
+                />
+              </motion.div>
             )}
             {activeScreen === 'notebook' && (
-              <NotebookScreen 
-                stats={stats} 
-                setStats={setStats}
-                onBack={() => setActiveScreen('home')} 
-              />
+              <motion.div
+                key="notebook"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <NotebookScreen 
+                  stats={stats} 
+                  setStats={setStats}
+                  onBack={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setActiveScreen('home');
+                  }} 
+                />
+              </motion.div>
+            )}
+            {activeScreen === 'leaderboard' && (
+              <motion.div
+                key="leaderboard"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <LeaderboardScreen onBack={() => {
+                  vibrate(VIBRATION_PATTERNS.CLICK);
+                  setActiveScreen('home');
+                }} />
+              </motion.div>
             )}
             {activeScreen === 'challenge' && (
-              <ChallengeFlow 
-                step={challengeStep} 
-                setStep={setChallengeStep} 
-                settings={settings}
-                setSettings={setSettings}
-                dailyProgress={dailyProgress}
-                setDailyProgress={setDailyProgress}
-                stats={stats}
-                setStats={setStats}
-                onFinish={handleCompleteChallenge}
-                onExit={() => setActiveScreen('home')}
-                earnedTrophyToday={earnedTrophyToday}
-              />
+              <motion.div
+                key="challenge"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <ChallengeFlow 
+                  step={challengeStep} 
+                  setStep={setChallengeStep} 
+                  settings={settings}
+                  setSettings={setSettings}
+                  dailyProgress={dailyProgress}
+                  setDailyProgress={setDailyProgress}
+                  stats={stats}
+                  setStats={setStats}
+                  onFinish={handleCompleteChallenge}
+                  onExit={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setActiveScreen('home');
+                  }}
+                  earnedTrophyToday={earnedTrophyToday}
+                />
+              </motion.div>
             )}
           </AnimatePresence>
         </main>
@@ -1092,37 +1407,64 @@ export default function App() {
             <nav className="glass-card px-4 py-3 sm:px-8 sm:py-4 flex items-center gap-4 sm:gap-12 pointer-events-auto">
               <NavButton 
                 active={activeScreen === 'home'} 
-                onClick={() => setActiveScreen('home')} 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                  setActiveScreen('home');
+                }} 
                 icon={<Home size={24} />} 
                 label="Home"
               />
               <NavButton 
+                active={activeScreen === 'leaderboard'} 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                  setActiveScreen('leaderboard');
+                }} 
+                icon={<Trophy size={24} />} 
+                label="Ranks"
+              />
+              <NavButton 
                 active={activeScreen === 'progress'} 
-                onClick={() => setActiveScreen('progress')} 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                  setActiveScreen('progress');
+                }} 
                 icon={<BarChart2 size={24} />} 
                 label="Progress"
               />
               <NavButton 
                 active={activeScreen === 'profile'} 
-                onClick={() => setActiveScreen('profile')} 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                  setActiveScreen('profile');
+                }} 
                 icon={<User size={24} />} 
                 label="Profile"
               />
               <NavButton 
                 active={activeScreen === 'shop'} 
-                onClick={() => setActiveScreen('shop')} 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                  setActiveScreen('shop');
+                }} 
                 icon={<Star size={24} />} 
                 label="Shop"
               />
               <NavButton 
                 active={activeScreen === 'library'} 
-                onClick={() => setActiveScreen('library')} 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                  setActiveScreen('library');
+                }} 
                 icon={<TrophyIcon size={24} />} 
                 label="Library"
               />
               <NavButton 
                 active={activeScreen === 'notebook'} 
-                onClick={() => setActiveScreen('notebook')} 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                  setActiveScreen('notebook');
+                }} 
                 icon={<Book size={24} />} 
                 label="Notebook"
               />
@@ -1237,14 +1579,15 @@ function NavButton({ active, onClick, icon, label }: { active: boolean, onClick:
   );
 }
 
-function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery }: { 
+function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
   dailyProgress: DailyProgress,
   settings: UserSettings,
   history: DailyProgress[],
-  onOpenGallery: () => void
+  onOpenGallery: () => void,
+  dailyQuest: ChallengeStep | null
 }) {
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
@@ -1283,6 +1626,7 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
   };
 
   const handleMascotTap = () => {
+    vibrate(VIBRATION_PATTERNS.CLICK);
     setTapCount(prev => prev + 1);
     if (tapCount < 5) {
       triggerJump();
@@ -1324,6 +1668,44 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
       className="flex flex-col items-center pt-4 gap-12 w-full max-w-4xl mx-auto"
     >
       <MascotAI stats={stats} settings={settings} />
+      
+      {/* Daily Quest Card */}
+      {dailyQuest && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-6 border-2 border-yellow-400/30 bg-yellow-400/5 mb-8 w-full max-w-md mx-auto"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-white shadow-lg shadow-yellow-200">
+                <Star size={20} />
+              </div>
+              <div>
+                <h3 className="font-black text-blue-900 leading-tight">Daily Quest</h3>
+                <p className="text-[10px] text-blue-900/40 font-bold uppercase tracking-widest">Double Points! 🔥</p>
+              </div>
+            </div>
+            {dailyProgress.dailyQuestDone && (
+              <div className="bg-emerald-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                Completed
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold text-blue-900/60">Complete the <span className="text-blue-900 uppercase">{dailyQuest}</span> challenge today!</p>
+            {!dailyProgress.dailyQuestDone && (
+              <button 
+                onClick={onStartChallenge}
+                className="bg-yellow-400 text-white px-4 py-2 rounded-xl font-black text-xs shadow-lg shadow-yellow-200 active:scale-95 transition-transform"
+              >
+                GO!
+              </button>
+            )}
+          </div>
+        </motion.div>
+      )}
+
       <div className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-16 w-full">
         <div className="relative w-64 h-64 lg:w-80 lg:h-80 flex items-center justify-center flex-shrink-0">
           <div className="absolute inset-0 bg-blue-400/20 blur-3xl rounded-full" />
@@ -1331,6 +1713,7 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
             <Mascot 
               className="w-full h-full drop-shadow-2xl" 
               mood={mascotMood}
+              hat={settings.activeSkin}
               onClick={handleMascotTap}
               onPointerMove={handleMascotPointerMove}
               onPointerLeave={handleMascotPointerLeave}
@@ -1362,7 +1745,7 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
             <button 
               onClick={() => {
                 if (dailyProgress.completionsCount >= 3) return;
-                vibrate(25);
+                vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                 onStartChallenge();
               }}
               disabled={dailyProgress.completionsCount >= 3}
@@ -1433,6 +1816,7 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
 
 function ProgressScreen({ stats, history, settings, setSettings }: { stats: UserStats, history: DailyProgress[], settings: UserSettings, setSettings: (s: UserSettings) => void }) {
   const handleTrophyClick = (type: any) => {
+    vibrate(VIBRATION_PATTERNS.TROPHY);
     if (settings.soundEnabled) playTrophySound(type);
   };
 
@@ -1689,7 +2073,10 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
             )}
           </div>
           <button 
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              vibrate(VIBRATION_PATTERNS.CLICK);
+              fileInputRef.current?.click();
+            }}
             className="absolute bottom-2 right-2 p-3 text-white rounded-full shadow-lg hover:scale-110 transition-transform"
             style={{ backgroundColor: settings.themeColor }}
           >
@@ -1714,10 +2101,18 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
                 onChange={(e) => setTempName(e.target.value)}
                 className="w-full bg-white/50 border border-white/40 rounded-xl px-4 py-2 font-bold text-blue-900 focus:outline-none"
                 autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    vibrate(VIBRATION_PATTERNS.SUCCESS);
+                    handleSaveName();
+                  }
+                }}
               />
               <button 
-                onClick={handleSaveName} 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.SUCCESS);
+                  handleSaveName();
+                }} 
                 className="p-2 text-white rounded-lg"
                 style={{ backgroundColor: settings.themeColor }}
               >
@@ -1727,12 +2122,55 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
           ) : (
             <div className="flex items-center justify-center gap-3">
               <h2 className="text-3xl font-black text-blue-900">{settings.displayName}</h2>
-              <button onClick={() => setIsEditingName(true)} className="p-1 text-blue-900/30 hover:text-blue-900/60">
+              <button onClick={() => { vibrate(VIBRATION_PATTERNS.CLICK); setIsEditingName(true); }} className="p-1 text-blue-900/30 hover:text-blue-900/60">
                 <Pen size={18} />
               </button>
             </div>
           )}
           <p className="text-blue-900/40 font-medium tracking-wide uppercase text-xs">Nexora Member Since March 2026</p>
+        </div>
+      </div>
+
+      {/* Mascot Wardrobe */}
+      <div className="space-y-6">
+        <h3 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest px-4">Mascot Wardrobe</h3>
+        <div className="glass-card p-6">
+          <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
+            <button
+              onClick={() => {
+                vibrate(VIBRATION_PATTERNS.CLICK);
+                setSettings({ ...settings, activeSkin: 'none' });
+              }}
+              className={`aspect-square rounded-2xl flex items-center justify-center text-2xl border-2 transition-all ${
+                settings.activeSkin === 'none' ? 'border-blue-500 bg-blue-50' : 'border-transparent bg-slate-50'
+              }`}
+            >
+              🚫
+            </button>
+            {(settings.purchasedItems || []).filter(id => id.startsWith('skin-')).map(skinId => {
+              const skinName = skinId.replace('skin-', '');
+              const icon = SHOP_ITEMS.find(i => i.id === skinId)?.icon || '✨';
+              return (
+                <button
+                  key={skinId}
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setSettings({ ...settings, activeSkin: skinName });
+                  }}
+                  className={`aspect-square rounded-2xl flex items-center justify-center text-2xl border-2 transition-all ${
+                    settings.activeSkin === skinName ? 'border-blue-500 bg-blue-50' : 'border-transparent bg-slate-50'
+                  }`}
+                >
+                  {icon}
+                </button>
+              );
+            })}
+          </div>
+          {(!settings.purchasedItems || settings.purchasedItems.filter(id => id.startsWith('skin-')).length === 0) && (
+            <p className="text-center text-blue-900/40 font-medium py-4">
+              Visit the shop to unlock mascot skins! 🛍️
+            </p>
+          )}
         </div>
       </div>
 
@@ -1886,7 +2324,10 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
             <input 
               type="range" min="1" max="10" step="0.5"
               value={settings.waterGoal}
-              onChange={(e) => setSettings({ ...settings, waterGoal: parseFloat(e.target.value) })}
+              onChange={(e) => {
+                vibrate(VIBRATION_PATTERNS.CLICK);
+                setSettings({ ...settings, waterGoal: parseFloat(e.target.value) });
+              }}
               className="flex-1"
               style={{ accentColor: 'var(--accent-color)' }}
             />
@@ -1905,7 +2346,10 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
             <input 
               type="range" min="5" max="100" step="5"
               value={settings.pushupsGoal}
-              onChange={(e) => setSettings({ ...settings, pushupsGoal: parseInt(e.target.value) })}
+              onChange={(e) => {
+                vibrate(VIBRATION_PATTERNS.CLICK);
+                setSettings({ ...settings, pushupsGoal: parseInt(e.target.value) });
+              }}
               className="flex-1"
               style={{ accentColor: 'var(--accent-color)' }}
             />
@@ -1925,7 +2369,10 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
             </div>
           </div>
           <button 
-            onClick={() => setSettings({ ...settings, soundEnabled: !settings.soundEnabled })}
+            onClick={() => {
+              vibrate(VIBRATION_PATTERNS.CLICK);
+              setSettings({ ...settings, soundEnabled: !settings.soundEnabled });
+            }}
             className={`w-12 h-6 rounded-full transition-colors relative ${settings.soundEnabled ? 'bg-emerald-500' : 'bg-gray-300'}`}
           >
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.soundEnabled ? 'left-7' : 'left-1'}`} />
@@ -1945,7 +2392,10 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
               </div>
             </div>
             <button 
-              onClick={() => setSettings({ ...settings, notificationsEnabled: !settings.notificationsEnabled })}
+              onClick={() => {
+                vibrate(VIBRATION_PATTERNS.CLICK);
+                setSettings({ ...settings, notificationsEnabled: !settings.notificationsEnabled });
+              }}
               className={`w-12 h-6 rounded-full transition-colors relative ${settings.notificationsEnabled ? 'bg-purple-500' : 'bg-gray-300'}`}
             >
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.notificationsEnabled ? 'left-7' : 'left-1'}`} />
@@ -1974,7 +2424,10 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
             {['#3b82f6', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6'].map(color => (
               <button 
                 key={color}
-                onClick={() => setSettings({ ...settings, themeColor: color })}
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.CLICK);
+                  setSettings({ ...settings, themeColor: color });
+                }}
                 className={`w-8 h-8 rounded-full border-2 ${settings.themeColor === color ? 'border-blue-900 scale-110' : 'border-transparent'}`}
                 style={{ backgroundColor: color }}
               />
@@ -1994,7 +2447,10 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
             </div>
           </div>
           <button 
-            onClick={() => setSettings({ ...settings, showQuotes: !settings.showQuotes })}
+            onClick={() => {
+              vibrate(VIBRATION_PATTERNS.CLICK);
+              setSettings({ ...settings, showQuotes: !settings.showQuotes });
+            }}
             className={`w-12 h-6 rounded-full transition-colors relative ${settings.showQuotes ? 'bg-blue-500' : 'bg-gray-300'}`}
           >
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.showQuotes ? 'left-7' : 'left-1'}`} />
@@ -2009,13 +2465,19 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
           </div>
           <div className="flex bg-gray-100 p-1 rounded-xl">
             <button 
-              onClick={() => setSettings({ ...settings, unitSystem: 'metric' })}
+              onClick={() => {
+                vibrate(VIBRATION_PATTERNS.CLICK);
+                setSettings({ ...settings, unitSystem: 'metric' });
+              }}
               className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${settings.unitSystem === 'metric' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-900/40'}`}
             >
               Metric (L)
             </button>
             <button 
-              onClick={() => setSettings({ ...settings, unitSystem: 'imperial' })}
+              onClick={() => {
+                vibrate(VIBRATION_PATTERNS.CLICK);
+                setSettings({ ...settings, unitSystem: 'imperial' });
+              }}
               className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${settings.unitSystem === 'imperial' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-900/40'}`}
             >
               Imperial (gal)
@@ -2030,7 +2492,10 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
             <h3 className="font-bold text-blue-900">Sign Out</h3>
           </div>
           <button 
-            onClick={onLogout}
+            onClick={() => {
+              vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+              onLogout();
+            }}
             className="bg-red-50 text-red-600 font-bold py-2 px-4 rounded-xl hover:bg-red-100 transition-colors"
           >
             Logout
@@ -2047,7 +2512,10 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
             </div>
           </div>
           <button 
-            onClick={() => setShowRemoveConfirm(true)}
+            onClick={() => {
+              vibrate(VIBRATION_PATTERNS.ERROR);
+              setShowRemoveConfirm(true);
+            }}
             className="bg-red-600 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-700 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-red-200"
           >
             Remove
@@ -2327,6 +2795,7 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
                 goal={settings.pushupsGoal} 
                 onDone={nextStep} 
                 onSkip={nextStep}
+                activeSkin={settings.activeSkin}
               />
             )}
             {step === 'water' && (
@@ -2335,11 +2804,13 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
                 progress={dailyProgress.waterDrank}
                 onUpdate={(val) => setDailyProgress({ ...dailyProgress, waterDrank: val })}
                 onContinue={nextStep} 
+                activeSkin={settings.activeSkin}
               />
             )}
             {step === 'breathing' && (
               <BreathingStep 
                 onDone={nextStep} 
+                activeSkin={settings.activeSkin}
               />
             )}
             {step === 'drawing' && (
@@ -2350,6 +2821,7 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
             {step === 'football' && (
               <FootballStep 
                 onFinish={nextStep} 
+                activeSkin={settings.activeSkin}
               />
             )}
             {step === 'bubbles' && (
@@ -2397,7 +2869,7 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
   );
 }
 
-function PushupsStep({ goal, onDone, onSkip }: { goal: number, onDone: () => void, onSkip: () => void }) {
+function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none' }: { goal: number, onDone: () => void, onSkip: () => void, activeSkin?: string }) {
   const [isReady, setIsReady] = useState(false);
 
   return (
@@ -2418,11 +2890,11 @@ function PushupsStep({ goal, onDone, onSkip }: { goal: number, onDone: () => voi
         </div>
 
         <div className="space-y-4 flex flex-col items-center">
-          {isReady && <HappyMascot size={32} />}
+          {isReady && <HappyMascot size={32} hat={activeSkin} />}
           {!isReady ? (
             <button 
               onClick={() => {
-                vibrate(20);
+                vibrate(VIBRATION_PATTERNS.CLICK);
                 setIsReady(true);
               }} 
               className="btn-primary w-full flex items-center justify-center gap-2"
@@ -2432,7 +2904,7 @@ function PushupsStep({ goal, onDone, onSkip }: { goal: number, onDone: () => voi
           ) : (
             <button 
               onClick={() => {
-                vibrate(30);
+                vibrate(VIBRATION_PATTERNS.SUCCESS);
                 onDone();
               }} 
               className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600"
@@ -2440,7 +2912,7 @@ function PushupsStep({ goal, onDone, onSkip }: { goal: number, onDone: () => voi
               Continue <ChevronRight size={20} />
             </button>
           )}
-          <button onClick={() => { vibrate(10); onSkip(); }} className="btn-secondary w-full">
+          <button onClick={() => { vibrate(VIBRATION_PATTERNS.CLICK); onSkip(); }} className="btn-secondary w-full">
             Skip
           </button>
         </div>
@@ -2449,7 +2921,7 @@ function PushupsStep({ goal, onDone, onSkip }: { goal: number, onDone: () => voi
   );
 }
 
-function WaterStep({ goal, progress, onUpdate, onContinue }: { goal: number, progress: number, onUpdate: (v: number) => void, onContinue: () => void }) {
+function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = 'none' }: { goal: number, progress: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string }) {
   const isFinished = progress >= goal;
 
   return (
@@ -2478,11 +2950,11 @@ function WaterStep({ goal, progress, onUpdate, onContinue }: { goal: number, pro
         </div>
 
         <div className="space-y-4">
-          {isFinished && <HappyMascot size={40} />}
+          {isFinished && <HappyMascot size={40} hat={activeSkin} />}
           {!isFinished ? (
             <button 
               onClick={() => {
-                vibrate(15);
+                vibrate(VIBRATION_PATTERNS.CLICK);
                 onUpdate(progress + 1);
               }} 
               className="btn-primary w-full flex items-center justify-center gap-2"
@@ -2492,7 +2964,7 @@ function WaterStep({ goal, progress, onUpdate, onContinue }: { goal: number, pro
           ) : (
             <button 
               onClick={() => {
-                vibrate(30);
+                vibrate(VIBRATION_PATTERNS.SUCCESS);
                 onContinue();
               }} 
               className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600"
@@ -2506,7 +2978,7 @@ function WaterStep({ goal, progress, onUpdate, onContinue }: { goal: number, pro
   );
 }
 
-function BreathingStep({ onDone }: { onDone: () => void }) {
+function BreathingStep({ onDone, activeSkin = 'none' }: { onDone: () => void, activeSkin?: string }) {
   const [phase, setPhase] = useState<'In' | 'Out'>('In');
   const [timer, setTimer] = useState(5);
   const [cycles, setCycles] = useState(0);
@@ -2565,7 +3037,7 @@ function BreathingStep({ onDone }: { onDone: () => void }) {
         </div>
 
         <div className="flex flex-col items-center gap-4">
-          {isFinished && <HappyMascot size={40} />}
+          {isFinished && <HappyMascot size={40} hat={activeSkin} />}
           {!isFinished ? (
             <div className="relative w-32 h-32 flex items-center justify-center">
               <svg className="absolute inset-0 w-full h-full -rotate-90">
@@ -2594,7 +3066,10 @@ function BreathingStep({ onDone }: { onDone: () => void }) {
             </div>
           ) : (
             <button 
-              onClick={onDone} 
+              onClick={() => {
+                vibrate(VIBRATION_PATTERNS.SUCCESS);
+                onDone();
+              }} 
               className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600"
             >
               Continue <ChevronRight size={20} />
@@ -2907,6 +3382,7 @@ function DrawingStep({ onFinish }: { onFinish: (data: string) => void }) {
         <div className="flex flex-col items-center gap-4">
           <button 
             onClick={() => {
+              vibrate(VIBRATION_PATTERNS.SUCCESS);
               const drawing = saveDrawing();
               onFinish(drawing);
             }} 
@@ -2923,8 +3399,11 @@ function DrawingStep({ onFinish }: { onFinish: (data: string) => void }) {
 
 function CompletionStep({ onFinish, streak, points, showTrophy, settings }: { onFinish: () => void, streak: number, points: number, showTrophy: boolean, settings: UserSettings }) {
   useEffect(() => {
-    if (showTrophy && settings.soundEnabled) {
-      playTrophySound('golden');
+    if (showTrophy) {
+      vibrate(VIBRATION_PATTERNS.TROPHY);
+      if (settings.soundEnabled) {
+        playTrophySound('golden');
+      }
     }
   }, [showTrophy, settings.soundEnabled]);
 
@@ -2963,7 +3442,10 @@ function CompletionStep({ onFinish, streak, points, showTrophy, settings }: { on
       </div>
 
       <button 
-        onClick={onFinish}
+        onClick={() => {
+          vibrate(VIBRATION_PATTERNS.CLICK);
+          onFinish();
+        }}
         className="btn-primary w-full py-6 text-xl shadow-2xl shadow-blue-500/20"
       >
         Back to Home ✨
@@ -2972,7 +3454,7 @@ function CompletionStep({ onFinish, streak, points, showTrophy, settings }: { on
   );
 }
 
-function FootballStep({ onFinish }: { onFinish: () => void }) {
+function FootballStep({ onFinish, activeSkin = 'none' }: { onFinish: () => void, activeSkin?: string }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [score, setScore] = useState(0);
   const [ballsLeft, setBallsLeft] = useState(5);
@@ -3232,9 +3714,12 @@ function FootballStep({ onFinish }: { onFinish: () => void }) {
 
         {score >= 5 && (
           <div className="flex flex-col items-center w-full">
-            <HappyMascot size={40} />
+            <HappyMascot size={40} hat={activeSkin} />
             <button
-              onClick={onFinish}
+              onClick={() => {
+                vibrate(VIBRATION_PATTERNS.SUCCESS);
+                onFinish();
+              }}
               className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 animate-bounce"
             >
               Continue to Bubbles <CheckCircle2 size={20} />
@@ -3310,7 +3795,7 @@ function BubbleStep({ onFinish }: { onFinish: () => void }) {
   }, []);
 
   const popBubble = (id: number) => {
-    vibrate(10);
+    vibrate(VIBRATION_PATTERNS.CLICK);
     playPopSound();
     setBubbles(prev => prev.filter(b => b.id !== id));
     setPoppedCount(prev => prev + 1);
@@ -3318,7 +3803,7 @@ function BubbleStep({ onFinish }: { onFinish: () => void }) {
 
   useEffect(() => {
     if (poppedCount >= 20) {
-      vibrate(20);
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
       playPopSound();
       const timer = setTimeout(onFinish, 2000);
       return () => clearTimeout(timer);
@@ -3376,7 +3861,7 @@ function BubbleStep({ onFinish }: { onFinish: () => void }) {
           <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-4 flex flex-col items-center">
             <h3 className="text-3xl font-bold text-blue-900">Amazing!</h3>
             <p className="text-blue-900/60">You're so focused! 🫧</p>
-            <button onClick={onFinish} className="btn-primary w-full mt-4">
+            <button onClick={() => { vibrate(VIBRATION_PATTERNS.SUCCESS); onFinish(); }} className="btn-primary w-full mt-4">
               Finish Today's Flow! ✨
             </button>
           </div>
@@ -3414,7 +3899,7 @@ function MemoryStep({ onComplete }: { onComplete: () => void }) {
         setCards(newCards);
         setFlipped([]);
         if (newCards.every(c => c.matched)) {
-          vibrate([50, 30, 50]);
+          vibrate(VIBRATION_PATTERNS.SUCCESS);
           setTimeout(onComplete, 1000);
         }
       } else {
@@ -3460,13 +3945,14 @@ function GratitudeStep({ onComplete, onSave }: { onComplete: () => void, onSave:
 
   const handleSubmit = () => {
     if (text.trim().length < 3) return;
-    vibrate(30);
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
     setSubmitted(true);
     setTimeout(onComplete, 2000);
   };
 
   const handleSave = () => {
     if (text.trim().length < 3) return;
+    vibrate(VIBRATION_PATTERNS.CLICK);
     onSave(text);
     alert('Saved to your Gratitude Library!');
   };
@@ -3546,12 +4032,12 @@ function ReactionStep({ onComplete }: { onComplete: () => void }) {
     if (state === 'waiting') {
       clearTimeout(timerRef.current);
       setState('too-soon');
-      vibrate([10, 50]);
+      vibrate(VIBRATION_PATTERNS.ERROR);
     } else if (state === 'ready') {
       const time = Date.now() - startTime;
       setReactionTime(time);
       setState('clicked');
-      vibrate(20);
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
       setTimeout(onComplete, 2000);
     }
   };

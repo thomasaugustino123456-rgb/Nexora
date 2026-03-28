@@ -5,6 +5,7 @@ import { motion, useAnimationControls } from 'motion/react';
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Mascot, MascotMood } from './Mascot';
 import { ArrowLeft } from 'lucide-react';
+import { vibrate } from '../lib/vibrate';
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -60,6 +61,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
   };
 
   const handleMascotTap = () => {
+    vibrate(20);
     setTapCount(prev => prev + 1);
     if (tapCount < 5) {
       triggerJump();
@@ -111,6 +113,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    vibrate(20);
     if (isSigningIn || !email || !password) return;
     
     setIsSigningIn(true);
@@ -142,6 +145,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
   };
 
   const handleGoogleSignIn = async () => {
+    vibrate(15);
     if (isSigningIn) return;
     setIsSigningIn(true);
     setError('');
@@ -171,7 +175,10 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     >
       {onBack && (
         <button 
-          onClick={onBack}
+          onClick={() => {
+            vibrate(10);
+            onBack();
+          }}
           className="absolute top-6 left-6 p-3 rounded-full bg-white/50 text-blue-900/60 hover:bg-white/80 hover:text-blue-900 transition-all z-20 shadow-sm"
           aria-label="Go back"
         >

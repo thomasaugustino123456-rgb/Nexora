@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
+import { vibrate } from '../lib/vibrate';
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -35,7 +36,10 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           <span className="text-4xl font-black text-blue-900 tracking-tighter">Nexora</span>
         </div>
         <button 
-          onClick={onGetStarted}
+          onClick={() => {
+            vibrate(10);
+            onGetStarted();
+          }}
           className="text-blue-600 font-bold hover:text-blue-800 transition-colors px-4 py-2"
         >
           Log In
@@ -78,7 +82,10 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto"
           >
             <button 
-              onClick={onGetStarted}
+              onClick={() => {
+                vibrate(20);
+                onGetStarted();
+              }}
               className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
             >
               Get Started <ArrowRight size={20} />

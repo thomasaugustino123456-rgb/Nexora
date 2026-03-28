@@ -23,6 +23,10 @@ service cloud.firestore {
     //   - shop/purchases: purchasedItems array
     //   - library/trophies: trophies array
     //
+    // Collection: leaderboard
+    // Document ID: userId
+    // Fields: uid, displayName, photoURL, streak, totalPoints, level
+    //
     // ===============================================================
 
     // ===============================================================
@@ -67,13 +71,15 @@ service cloud.firestore {
              (!('profilePic' in data) || (data.profilePic is string && data.profilePic.size() <= 1048576)) && // 1MB limit
              (!('gender' in data) || (data.gender is string && data.gender.size() <= 50)) &&
              (!('source' in data) || (data.source is string && data.source.size() <= 50)) &&
-             (!('onboardingCompleted' in data) || data.onboardingCompleted is bool);
+             (!('onboardingCompleted' in data) || data.onboardingCompleted is bool) &&
+             (!('activeSkin' in data) || (data.activeSkin is string && data.activeSkin.size() <= 50));
     }
 
     function isValidStats(data) {
       return (!('streak' in data) || data.streak is number) &&
              (!('bestStreak' in data) || data.bestStreak is number) &&
              (!('totalPoints' in data) || data.totalPoints is number) &&
+             (!('level' in data) || data.level is number) &&
              (!('totalCompletedDays' in data) || data.totalCompletedDays is number) &&
              (!('lastCompletedDate' in data) || (data.lastCompletedDate is string && data.lastCompletedDate.size() <= 20)) &&
              (!('currentChallengeIndex' in data) || data.currentChallengeIndex is number) &&
@@ -89,7 +95,18 @@ service cloud.firestore {
              (!('breathingDone' in data) || data.breathingDone is bool) &&
              (!('drawingDone' in data) || data.drawingDone is bool) &&
              (!('footballDone' in data) || data.footballDone is bool) &&
-             (!('bubblesDone' in data) || data.bubblesDone is bool);
+             (!('bubblesDone' in data) || data.bubblesDone is bool) &&
+             (!('dailyQuestDone' in data) || data.dailyQuestDone is bool);
+    }
+
+    function isValidLeaderboardEntry(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'streak', 'totalPoints', 'level']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1048576)) &&
+             data.streak is number &&
+             data.totalPoints is number &&
+             data.level is number;
     }
 
     function isValidShopPurchases(data) {
@@ -142,6 +159,13 @@ service cloud.firestore {
         allow update: if isOwner(userId) && isValidLibraryTrophies(request.resource.data);
         allow delete: if isOwner(userId) || isAdmin();
       }
+    }
+
+    match /leaderboard/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidLeaderboardEntry(request.resource.data);
+      allow update: if isOwner(userId) && isValidLeaderboardEntry(request.resource.data);
+      allow delete: if isOwner(userId) || isAdmin();
     }
   }
 }

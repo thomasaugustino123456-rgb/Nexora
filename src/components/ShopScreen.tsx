@@ -3,14 +3,18 @@ import { motion } from 'motion/react';
 import { ArrowLeft, Star } from 'lucide-react';
 import { ShopItem } from '../types';
 
-const SHOP_ITEMS: ShopItem[] = [
+export const SHOP_ITEMS: ShopItem[] = [
   { id: 'streak-protection', name: 'Streak Protection', description: 'Protects your streak for a day.', price: 50, effect: 'streak-protection', icon: '🛡️' },
   { id: 'double-points', name: 'Double Points', description: 'Get double points for challenges.', price: 100, effect: 'double-points', icon: '⚡' },
-  ...Array.from({ length: 98 }, (_, i) => ({
-    id: `item-${i + 2}`,
-    name: `Power Item ${i + 2}`,
+  { id: 'skin-crown', name: 'Royal Crown', description: 'A majestic crown for your mascot.', price: 200, effect: 'skin', icon: '👑' },
+  { id: 'skin-cool', name: 'Cool Shades', description: 'Some stylish sunglasses.', price: 150, effect: 'skin', icon: '🕶️' },
+  { id: 'skin-wizard', name: 'Wizard Hat', description: 'A magical hat for a magical bottle.', price: 250, effect: 'skin', icon: '🧙' },
+  { id: 'skin-artist', name: 'Artist Beret', description: 'For the creative souls.', price: 180, effect: 'skin', icon: '🎨' },
+  ...Array.from({ length: 94 }, (_, i) => ({
+    id: `item-${i + 6}`,
+    name: `Power Item ${i + 6}`,
     description: `This is a powerful item that gives you special effects.`,
-    price: (i + 1) * 10,
+    price: (i + 1) * 10 + 50,
     effect: 'Special Effect',
     icon: '✨',
   }))

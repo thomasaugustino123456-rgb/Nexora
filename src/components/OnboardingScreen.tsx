@@ -5,6 +5,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { UserSettings } from '../types';
+import { vibrate } from '../lib/vibrate';
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -63,12 +64,14 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
   };
 
   const handleContinueClick = (action: () => void) => {
+    vibrate(15);
     action();
   };
 
   const handleButtonHover = (isHovering: boolean) => {
     setIsHoveringContinue(isHovering);
     if (isHovering) {
+      vibrate(5);
       setButtonPulse(true);
       setTimeout(() => {
         setButtonPulse(false);
@@ -79,6 +82,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
   const nextStep = () => handleContinueClick(() => setStep(prev => prev + 1));
 
   const handleBack = async () => {
+    vibrate(10);
     if (step > 1 && step < 7) {
       setStep(prev => prev - 1);
     } else if (step === 1) {
@@ -265,7 +269,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
                 {["Male", "Female", "Other", "I don't know or I don't want to talk about it"].map((option) => (
                   <button 
                     key={option}
-                    onClick={() => setGender(option)}
+                    onClick={() => {
+                      vibrate(10);
+                      setGender(option);
+                    }}
                     className={`p-4 rounded-xl border-2 text-left font-bold transition-all ${gender === option ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-blue-100 bg-white/50 text-blue-900/70 hover:border-blue-300'}`}
                   >
                     {option}
@@ -318,7 +325,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
                 {["YouTube", "Reddit", "Friends", "Google", "Others"].map((option) => (
                   <button 
                     key={option}
-                    onClick={() => setSource(option)}
+                    onClick={() => {
+                      vibrate(10);
+                      setSource(option);
+                    }}
                     className={`p-4 rounded-xl border-2 text-left font-bold transition-all ${source === option ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-blue-100 bg-white/50 text-blue-900/70 hover:border-indigo-300'}`}
                   >
                     {option}

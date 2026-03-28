@@ -13,6 +13,7 @@ export interface UserSettings {
   savedChallengeIds?: string[];
   savedTrophyIds?: string[];
   activeHat?: string;
+  activeSkin?: string;
   zenModeEnabled?: boolean;
 }
 
@@ -35,6 +36,7 @@ export interface DailyProgress {
   drawingDone: boolean;
   footballDone: boolean;
   bubblesDone: boolean;
+  dailyQuestDone?: boolean;
   memoryDone?: boolean;
   gratitudeDone?: boolean;
   reactionDone?: boolean;
@@ -59,6 +61,7 @@ export interface UserStats {
   streak: number;
   bestStreak: number;
   totalPoints: number;
+  level?: number;
   totalCompletedDays: number;
   lastCompletedDate: string | null;
   currentChallengeIndex: number; // The index of the next challenge to be completed
@@ -73,6 +76,6 @@ export interface UserStats {
   gratitudeEntries?: GratitudeEntry[];
 }
 
-export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook';
+export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard';
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'completion';
 export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';
