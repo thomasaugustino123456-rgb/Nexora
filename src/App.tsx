@@ -383,9 +383,9 @@ export default function App() {
   const [fcmError, setFcmError] = useState<string | null>(null);
   
   // Version Update Logic
-  const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean } | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean, imageUrl?: string } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
-  const currentAppVersion = "1.0.0"; // Current hardcoded version
+  const currentAppVersion = "1.0.1"; // Current hardcoded version
 
   useEffect(() => {
     const checkVersion = async () => {
@@ -394,7 +394,9 @@ export default function App() {
         const response = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
         if (response.ok) {
           const data = await response.json();
-          if (data.version !== currentAppVersion) {
+          const dismissedVersion = localStorage.getItem('nexora_dismissed_version');
+          
+          if (data.version !== currentAppVersion && dismissedVersion !== data.version) {
             console.log('New version detected:', data.version);
             setUpdateInfo(data);
             setShowUpdatePopup(true);
@@ -415,6 +417,9 @@ export default function App() {
 
   const handleUpdate = () => {
     vibrate(50);
+    if (updateInfo) {
+      localStorage.setItem('nexora_dismissed_version', updateInfo.version);
+    }
     window.location.reload();
   };
   
@@ -1162,8 +1167,13 @@ export default function App() {
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-indigo-500 to-blue-400 animate-pulse" />
                 
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
-                    <Sparkles className="text-white w-6 h-6" />
+                  <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/10 border border-blue-100 overflow-hidden">
+                    <img 
+                      src={updateInfo.imageUrl || "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png"} 
+                      alt="Mascot" 
+                      className="w-12 h-12 object-contain"
+                      referrerPolicy="no-referrer"
+                    />
                   </div>
                   
                   <div className="flex-1">

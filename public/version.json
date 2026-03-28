@@ -1,10 +1,12 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "releaseNotes": [
     "Added Gratitude Notebook to track your daily wins",
     "Improved account removal security and re-authentication",
     "Added real-time update notifications to keep you in flow",
-    "Fixed minor UI bugs in the challenge flow"
+    "Fixed update notification loop issue",
+    "Added mascot to update notifications"
   ],
+  "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
   "forceUpdate": false
 }
