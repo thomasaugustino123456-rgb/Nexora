@@ -5,7 +5,7 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, MascotMood } from './types';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
-import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser } from 'firebase/auth';
+import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc } from 'firebase/firestore';
 import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
@@ -1684,9 +1684,34 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
     setRemoveError(null);
     
     try {
-      const uid = auth.currentUser.uid;
+      const user = auth.currentUser;
+      const uid = user.uid;
       
-      // 1. Delete Firestore data (main user doc and known subcollections)
+      // 1. Try to delete Auth account first (this is the most sensitive and likely to fail)
+      try {
+        await deleteUser(user);
+      } catch (error: any) {
+        // If it requires recent login, try to re-authenticate automatically for Google users
+        if (error.code === 'auth/requires-recent-login') {
+          const provider = new GoogleAuthProvider();
+          try {
+            await reauthenticateWithPopup(user, provider);
+            // After re-auth, try deleting again
+            await deleteUser(user);
+          } catch (reauthError: any) {
+            console.error('Re-authentication failed:', reauthError);
+            setRemoveError('For security, please sign out and sign back in, then try deleting again immediately.');
+            setIsRemoving(false);
+            return;
+          }
+        } else {
+          throw error;
+        }
+      }
+      
+      // 2. Delete Firestore data (main user doc and known subcollections)
+      // We do this AFTER auth deletion because if auth deletion fails, we don't want to orphan the data
+      // although usually it's the other way around. But here, auth deletion is the blocker.
       try {
         await deleteDoc(doc(db, 'users', uid));
         await deleteDoc(doc(db, 'users', uid, 'stats', 'main'));
@@ -1695,10 +1720,6 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
       } catch (fsError: any) {
         console.error('Firestore deletion failed:', fsError);
       }
-      
-      // 2. Delete Auth account
-      // This is the most likely to fail with 'requires-recent-login'
-      await deleteUser(auth.currentUser);
       
       // 3. Clear local storage
       localStorage.clear();

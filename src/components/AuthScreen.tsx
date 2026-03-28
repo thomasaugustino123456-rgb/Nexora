@@ -211,9 +211,16 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
         </div>
 
         {error && (
-          <div className="w-full bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium flex items-start gap-2 text-left">
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-            <span>{error}</span>
+          <div className="w-full bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium flex flex-col gap-2 text-left">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+            {error.includes('Invalid email or password') && (
+              <p className="text-[10px] text-red-400 font-bold uppercase pl-7">
+                Tip: If you signed up with Google, please use the Google button below!
+              </p>
+            )}
           </div>
         )}
 
