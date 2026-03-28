@@ -280,91 +280,6 @@ function LevelUpCelebration({ level, onComplete }: { level: number, onComplete: 
   );
 }
 
-function LeaderboardScreen({ onBack }: { onBack: () => void }) {
-  const [entries, setEntries] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const q = query(collection(db, 'leaderboard'), orderBy('totalPoints', 'desc'), limit(50));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => doc.data());
-      setEntries(data);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  return (
-    <div className="min-h-screen bg-blue-50 pb-24">
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-blue-100 p-4 flex items-center gap-4">
-        <button onClick={onBack} className="p-2 text-blue-900/40 hover:text-blue-900">
-          <ChevronLeft size={24} />
-        </button>
-        <h1 className="text-xl font-black text-blue-900 uppercase tracking-tight flex items-center gap-2">
-          <Crown className="text-yellow-500" size={24} />
-          Global Leaderboard
-        </h1>
-      </div>
-
-      <div className="p-4 max-w-2xl mx-auto">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <RefreshCw className="text-blue-500 animate-spin" size={32} />
-            <p className="text-blue-900/40 font-bold">Loading legends...</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {entries.map((entry, index) => (
-              <motion.div
-                key={entry.uid}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className={`glass-card p-4 flex items-center gap-4 ${index === 0 ? 'border-2 border-yellow-400 bg-yellow-50/50' : ''}`}
-              >
-                <div className={`w-8 h-8 flex items-center justify-center font-black text-sm rounded-full ${
-                  index === 0 ? 'bg-yellow-400 text-white' : 
-                  index === 1 ? 'bg-gray-300 text-white' : 
-                  index === 2 ? 'bg-amber-600 text-white' : 'text-blue-900/30'
-                }`}>
-                  {index + 1}
-                </div>
-                
-                <div className="w-12 h-12 rounded-full bg-blue-100 overflow-hidden border-2 border-white shadow-sm">
-                  {entry.photoURL ? (
-                    <img src={entry.photoURL} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-blue-400">
-                      <User size={24} />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1">
-                  <h3 className="font-black text-blue-900 truncate">{entry.displayName}</h3>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-[10px] font-bold text-orange-500 flex items-center gap-0.5">
-                      <Flame size={10} /> {entry.streak}
-                    </span>
-                    <span className="text-[10px] font-bold text-blue-500 flex items-center gap-0.5">
-                      <Award size={10} /> Lvl {entry.level || 1}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-sm font-black text-blue-900">{entry.totalPoints}</div>
-                  <div className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest">Points</div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSettings }) {
   const [message, setMessage] = useState<string>("");
   const [response, setResponse] = useState<string>("");
@@ -1171,12 +1086,31 @@ export default function App() {
               />
               <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexora</h1>
             </div>
-            <button 
-              onClick={() => setActiveScreen('settings')}
-              className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors"
-            >
-              <Settings size={24} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setActiveScreen('shop')}
+                className={`flex items-center gap-1 p-2 transition-colors ${activeScreen === 'shop' ? 'text-red-600' : 'text-red-500 hover:text-red-600'}`}
+              >
+                <Crown size={24} />
+                <span className="font-bold text-xs">Pro</span>
+              </button>
+              <button 
+                onClick={() => setActiveScreen('profile')}
+                className={`p-2 transition-colors ${activeScreen === 'profile' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+              >
+                {settings.profilePic ? (
+                  <img src={settings.profilePic} alt="Profile" className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" referrerPolicy="no-referrer" />
+                ) : (
+                  <User size={24} />
+                )}
+              </button>
+              <button 
+                onClick={() => setActiveScreen('settings')}
+                className={`p-2 transition-colors ${activeScreen === 'settings' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+              >
+                <Settings size={24} />
+              </button>
+            </div>
           </header>
         )}
 
@@ -1357,21 +1291,6 @@ export default function App() {
                 />
               </motion.div>
             )}
-            {activeScreen === 'leaderboard' && (
-              <motion.div
-                key="leaderboard"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="w-full"
-              >
-                <LeaderboardScreen onBack={() => {
-                  vibrate(VIBRATION_PATTERNS.CLICK);
-                  setActiveScreen('home');
-                }} />
-              </motion.div>
-            )}
             {activeScreen === 'challenge' && (
               <motion.div
                 key="challenge"
@@ -1415,15 +1334,6 @@ export default function App() {
                 label="Home"
               />
               <NavButton 
-                active={activeScreen === 'leaderboard'} 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                  setActiveScreen('leaderboard');
-                }} 
-                icon={<Trophy size={24} />} 
-                label="Ranks"
-              />
-              <NavButton 
                 active={activeScreen === 'progress'} 
                 onClick={() => {
                   vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
@@ -1431,15 +1341,6 @@ export default function App() {
                 }} 
                 icon={<BarChart2 size={24} />} 
                 label="Progress"
-              />
-              <NavButton 
-                active={activeScreen === 'profile'} 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                  setActiveScreen('profile');
-                }} 
-                icon={<User size={24} />} 
-                label="Profile"
               />
               <NavButton 
                 active={activeScreen === 'shop'} 

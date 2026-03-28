@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target } from 'lucide-react';
+import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target, Crown } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
 import { vibrate } from '../lib/vibrate';
@@ -35,15 +35,29 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           />
           <span className="text-4xl font-black text-blue-900 tracking-tighter">Nexora</span>
         </div>
-        <button 
-          onClick={() => {
-            vibrate(10);
-            onGetStarted();
-          }}
-          className="text-blue-600 font-bold hover:text-blue-800 transition-colors px-4 py-2"
-        >
-          Log In
-        </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => {
+              vibrate(10);
+              // Assuming 'shop' screen is not accessible before login, maybe just alert or redirect?
+              // For now, let's just make it visible.
+              alert('Pro features coming soon!');
+            }}
+            className="flex items-center gap-1 text-red-500 font-bold hover:text-red-600 transition-colors px-4 py-2"
+          >
+            <Crown size={20} />
+            <span className="text-sm">Pro</span>
+          </button>
+          <button 
+            onClick={() => {
+              vibrate(10);
+              onGetStarted();
+            }}
+            className="text-blue-600 font-bold hover:text-blue-800 transition-colors px-4 py-2"
+          >
+            Log In
+          </button>
+        </div>
       </header>
 
       {/* Hero Section */}

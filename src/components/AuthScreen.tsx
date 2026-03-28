@@ -228,6 +228,17 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
                 Tip: If you signed up with Google, please use the Google button below!
               </p>
             )}
+            {error.includes('already exists') && (
+              <button
+                onClick={() => {
+                  setIsSignUp(false);
+                  setError('');
+                }}
+                className="text-xs font-bold text-red-700 underline pl-7 hover:text-red-900"
+              >
+                Click here to Sign In instead
+              </button>
+            )}
           </div>
         )}
 
