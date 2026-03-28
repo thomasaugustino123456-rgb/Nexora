@@ -31,26 +31,6 @@ export function ShopScreen({
   onBuy: (item: ShopItem) => void; 
   onBack: () => void; 
 }) {
-  const [plan, setPlan] = React.useState<'weekly' | 'monthly' | 'yearly'>('monthly');
-
-  const getPlanUrl = () => {
-    switch (plan) {
-      case 'weekly': return 'https://nexora-daily.lemonsqueezy.com/checkout/buy/be209445-5c93-461e-9a2d-5db0e7af2d29';
-      case 'monthly': return 'https://nexora-daily.lemonsqueezy.com/checkout/buy/ca3035cc-8722-4462-bba9-d25bd7d9ea09';
-      case 'yearly': return 'https://nexora-daily.lemonsqueezy.com/checkout/buy/202b9050-b67b-4857-9d58-fe68b7d12b44';
-      default: return '';
-    }
-  };
-
-  const getPrice = () => {
-    switch (plan) {
-      case 'weekly': return '$3.99';
-      case 'monthly': return '$9.99';
-      case 'yearly': return '$29.90';
-      default: return '';
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -70,60 +50,6 @@ export function ShopScreen({
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="col-span-2 glass-card p-6 border-amber-500/50 bg-gradient-to-br from-amber-500/10 to-transparent flex flex-col gap-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-black text-2xl text-amber-500">Nexora Pro</h3>
-              <p className="text-sm text-slate-400">Unlock the full potential of your journey.</p>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-black text-white">{getPrice()}</div>
-              <div className="text-xs text-slate-500 uppercase tracking-widest">{plan}</div>
-            </div>
-          </div>
-
-          <div className="flex p-1 bg-slate-900/50 rounded-xl gap-1">
-            {(['weekly', 'monthly', 'yearly'] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPlan(p)}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                  plan === p 
-                    ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {p.charAt(0).toUpperCase() + p.slice(1)}
-                {p === 'yearly' && <span className="ml-1 text-[10px] opacity-70">(-75%)</span>}
-              </button>
-            ))}
-          </div>
-
-          <button 
-            onClick={() => {
-              const url = getPlanUrl();
-              if (!url) {
-                alert("Payment link not configured. Please check your App Settings.");
-                return;
-              }
-              const newWindow = window.open(url, '_blank');
-              if (!newWindow) {
-                alert("Popup blocked! Please allow popups to proceed to payment.");
-              }
-            }}
-            className="w-full bg-amber-500 text-white py-4 rounded-2xl font-black text-lg hover:bg-amber-600 transition-all active:scale-95 shadow-xl shadow-amber-500/20"
-          >
-            Upgrade Now
-          </button>
-
-          <div className="flex justify-center gap-4 text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
-            <span>✨ Unlimited AI</span>
-            <span>•</span>
-            <span>👑 Exclusive Skins</span>
-            <span>•</span>
-            <span>📊 Deep Insights</span>
-          </div>
-        </div>
         {SHOP_ITEMS.map((item) => (
           <div key={item.id} className="glass-card p-4 flex flex-col gap-2">
             <div className="text-4xl">{item.icon}</div>

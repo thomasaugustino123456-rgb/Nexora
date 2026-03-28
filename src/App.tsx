@@ -20,6 +20,7 @@ import { WritingMascot } from './components/WritingMascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './components/Trophies';
 import { LibraryScreen } from './components/LibraryScreen';
 import { ShopScreen, SHOP_ITEMS } from './components/ShopScreen';
+import { SubscriptionScreen } from './components/SubscriptionScreen';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { GoogleGenAI } from "@google/genai";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
@@ -1088,8 +1089,8 @@ export default function App() {
             </div>
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => setActiveScreen('shop')}
-                className={`flex items-center gap-1 p-2 transition-colors ${activeScreen === 'shop' ? 'text-red-600' : 'text-red-500 hover:text-red-600'}`}
+                onClick={() => setActiveScreen('subscription')}
+                className={`flex items-center gap-1 p-2 transition-colors ${activeScreen === 'subscription' ? 'text-amber-500' : 'text-amber-500/60 hover:text-amber-500'}`}
               >
                 <Crown size={24} />
                 <span className="font-bold text-xs">Pro</span>
@@ -1220,6 +1221,18 @@ export default function App() {
                     setActiveScreen('home');
                   }}
                 />
+              </motion.div>
+            )}
+            {activeScreen === 'subscription' && (
+              <motion.div
+                key="subscription"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <SubscriptionScreen onBack={() => setActiveScreen('home')} />
               </motion.div>
             )}
             {activeScreen === 'library' && (

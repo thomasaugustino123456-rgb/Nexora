@@ -76,6 +76,6 @@ export interface UserStats {
   gratitudeEntries?: GratitudeEntry[];
 }
 
-export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard';
+export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription';
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'completion';
 export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';
