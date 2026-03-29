@@ -536,7 +536,7 @@ export default function App() {
   // Version Update Logic
   const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean, imageUrl?: string } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
-  const currentAppVersion = "1.1.0"; // Current hardcoded version
+  const currentAppVersion = "1.1.1"; // Current hardcoded version
 
   useEffect(() => {
     const checkVersion = async () => {

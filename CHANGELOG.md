@@ -1,5 +1,11 @@
 # Nexora Daily - Changelog
 
+## [1.1.1] - 2026-03-29
+
+### Added
+- **Shop Overhaul**: Lowered prices for all items (starting from 10 streaks) and added more variety of mascot skins (Viking, Ninja, Space, Detective).
+- **Shop UI Improvements**: Added a "Featured Deal" section and categorized items into "Power-Ups" and "Mascot Styles" for better navigation.
+
 ## [1.1.0] - 2026-03-29
 
 ### Added

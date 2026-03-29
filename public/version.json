@@ -1,12 +1,12 @@
 {
-  "version": "1.1.0",
+  "version": "1.1.1",
   "releaseNotes": [
-    "Pro Feature: Custom Challenge Goals (set your own daily target up to 20!)",
+    "Shop Overhaul: Lowered prices (starting from 10 streaks)!",
+    "New Mascot Skins: Ninja, Space, Viking, and more!",
+    "Categorized Shop UI with Featured Deals",
+    "Pro Feature: Custom Challenge Goals",
     "Enhanced Pro Section with clearer benefit descriptions",
-    "Improved Subscription Plans (Weekly, Monthly, Yearly)",
-    "Redesigned goal sliders in settings for a smoother experience",
-    "Smarter Mascot AI with more relevant advice",
-    "Consistent haptic feedback for better interaction"
+    "Smarter Mascot AI with more relevant advice"
   ],
   "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
   "forceUpdate": false

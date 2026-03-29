@@ -1,7 +1,17 @@
 {
-  "version": "1.1.0",
+  "version": "1.1.1",
   "releaseDate": "2026-03-29",
   "updates": [
+    {
+      "category": "Shop",
+      "title": "Lower Prices & More Items",
+      "description": "All shop items now have much lower prices (starting from 10 streaks). We've also added new skins like Ninja, Space, and Viking!"
+    },
+    {
+      "category": "Shop UI",
+      "title": "Categorized Shop",
+      "description": "The shop is now organized into Power-Ups and Mascot Styles, with a new Featured Deal section."
+    },
     {
       "category": "Pro Features",
       "title": "Customizable Challenge Goals",
