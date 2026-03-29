@@ -1,31 +1,26 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "releaseDate": "2026-03-29",
   "updates": [
     {
-      "category": "Inventory",
-      "title": "New Library System",
-      "description": "All purchased items are now automatically saved to your Library. You can activate, deactivate, or delete them as you wish."
-    },
-    {
-      "category": "Shop",
-      "title": "Buy One Get One Free!",
-      "description": "Every time you buy a gift in the shop, a bonus surprise gift is automatically added to your library for free!"
-    },
-    {
-      "category": "Shop",
-      "title": "Expanded Gift Selection",
-      "description": "Added new items like the Golden Chest, Lucky Clover, Party Popper, and the legendary Diamond Box."
-    },
-    {
-      "category": "Repurchase",
-      "title": "Return to Shop",
-      "description": "Deleting an item from your library now makes it available in the shop again, allowing you to repurchase it later."
+      "category": "Library",
+      "title": "Unified Library",
+      "description": "Your library is now a central hub for everything! View your shop items, saved notes, drawings, and challenges in one place."
     },
     {
       "category": "UI/UX",
-      "title": "Improved Navigation",
-      "description": "The Library icon in the navigation bar now leads directly to your personal inventory of items and skins."
+      "title": "New Toast Notifications",
+      "description": "We've replaced browser alerts with smooth, bubbly toast notifications for a much better user experience."
+    },
+    {
+      "category": "Persistence",
+      "title": "Improved Saving",
+      "description": "Fixed issues with saving challenges and notes. Your progress is now more secure than ever."
+    },
+    {
+      "category": "Feedback",
+      "title": "Haptic Feedback",
+      "description": "Added subtle vibrations for key actions like deleting items, giving the app a more premium feel."
     }
   ]
 }

@@ -1,12 +1,11 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "releaseNotes": [
-    "New Inventory System: Manage all your purchased items in one place!",
-    "Item Management: Activate, deactivate, or delete items from your library.",
-    "Repurchase Logic: Deleting an item returns it to the shop for repurchase.",
-    "Buy One Get One Free: Every gift purchase now includes a bonus gift!",
-    "Expanded Shop: Added Golden Chest, Lucky Clover, Party Popper, and Diamond Box.",
-    "Improved Navigation: Library icon now leads to your personal inventory."
+    "Unified Library: View Shop Items, Notes, Drawings, and Challenges in one place!",
+    "New Toast Notification System: Replaced boring alerts with smooth, bubbly popups.",
+    "Improved Saving: Fixed issues with saving challenges and notes to the library.",
+    "Haptic Feedback: Added vibrations for a more premium feel when deleting items.",
+    "Bug Fixes: Resolved type errors and improved data persistence across the app."
   ],
   "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
   "forceUpdate": false

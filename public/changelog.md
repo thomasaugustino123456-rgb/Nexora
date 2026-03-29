@@ -1,5 +1,21 @@
 # Nexora Daily - What's New!
 
+## Version 1.2.1 (2026-03-29)
+
+### 📚 Unified Library
+- **Central Hub**: Your library now displays shop items, saved notes, drawings, and challenges in one place.
+- **Improved Deletion**: Deleting items now includes haptic feedback and clear toast notifications.
+
+### ✨ UI/UX & Feedback
+- **Toast Notifications**: Replaced browser alerts with smooth, integrated toast notifications.
+- **Haptic Feedback**: Added vibrations for key actions like deleting items and completing challenges.
+
+### 🛠️ Bug Fixes & Persistence
+- **Saving Fixes**: Resolved issues where challenges and notes weren't saving correctly to the library.
+- **Type Safety**: Improved TypeScript definitions across the app for better stability.
+
+---
+
 ## Version 1.2.0 (2026-03-29)
 
 ### 📦 Inventory & Library

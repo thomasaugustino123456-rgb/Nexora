@@ -22,7 +22,28 @@
         "source": { "type": "string" },
         "onboardingCompleted": { "type": "boolean" },
         "activeSkin": { "type": "string", "description": "Currently active mascot skin" },
-        "isPro": { "type": "boolean", "description": "Pro subscription status" }
+        "activeHat": { "type": "string", "description": "Currently active mascot hat" },
+        "isPro": { "type": "boolean", "description": "Pro subscription status" },
+        "zenModeEnabled": { "type": "boolean" },
+        "challengeCountGoal": { "type": "number" },
+        "purchasedItems": { "type": "array", "items": { "type": "string" } },
+        "savedChallengeIds": { "type": "array", "items": { "type": "string" } },
+        "savedTrophyIds": { "type": "array", "items": { "type": "string" } },
+        "inventory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "itemId": { "type": "string" },
+              "name": { "type": "string" },
+              "icon": { "type": "string" },
+              "activated": { "type": "boolean" },
+              "type": { "type": "string" },
+              "purchasedAt": { "type": "string" }
+            }
+          }
+        }
       },
       "required": ["uid", "displayName", "email", "role"]
     },
@@ -44,6 +65,31 @@
             "physical": { "type": "number" },
             "mental": { "type": "number" },
             "creative": { "type": "number" }
+          }
+        },
+        "drawings": { "type": "array", "items": { "type": "string" } },
+        "unlockedHats": { "type": "array", "items": { "type": "string" } },
+        "gratitudeEntries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "text": { "type": "string" },
+              "date": { "type": "string" }
+            }
+          }
+        },
+        "trophies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string" },
+              "earnedDate": { "type": "string" },
+              "lastUpdated": { "type": "string" }
+            }
           }
         }
       }

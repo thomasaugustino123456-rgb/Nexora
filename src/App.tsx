@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Trophy, Award, Users, Crown } from 'lucide-react';
+import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Trophy, Award, Users, Crown, Info } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood } from './types';
@@ -494,6 +494,12 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [activeScreen, setActiveScreen] = useState<Screen>('home');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
   const [challengeStep, setChallengeStep] = useState<ChallengeStep>('pushups');
   const [viewingTrophy, setViewingTrophy] = useState<TrophyType | null>(null);
   const [settings, setSettings] = useLocalStorage<UserSettings>('nexora_settings', DEFAULT_SETTINGS);
@@ -536,7 +542,7 @@ export default function App() {
   // Version Update Logic
   const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean, imageUrl?: string } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
-  const currentAppVersion = "1.1.1"; // Current hardcoded version
+  const currentAppVersion = "1.2.1"; // Current hardcoded version
 
   useEffect(() => {
     const checkVersion = async () => {
@@ -1347,6 +1353,8 @@ export default function App() {
               >
                 <LibraryScreen
                   items={settings.inventory || []}
+                  stats={stats}
+                  settings={settings}
                   onActivate={(id) => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
                     setSettings(prev => {
@@ -1406,6 +1414,23 @@ export default function App() {
 
                       return { ...prev, inventory, purchasedItems, activeSkin };
                     });
+                    showToast('Item deleted from library', 'info');
+                  }}
+                  onDeleteNote={(id) => {
+                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                    setStats(prev => ({
+                      ...prev,
+                      gratitudeEntries: (prev.gratitudeEntries || []).filter(e => e.id !== id)
+                    }));
+                    showToast('Note deleted', 'info');
+                  }}
+                  onDeleteChallenge={(id) => {
+                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                    setSettings(prev => ({
+                      ...prev,
+                      savedChallengeIds: (prev.savedChallengeIds || []).filter(cid => cid !== id)
+                    }));
+                    showToast('Challenge removed', 'info');
                   }}
                   onBack={() => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
@@ -1448,6 +1473,7 @@ export default function App() {
                     vibrate(VIBRATION_PATTERNS.CLICK);
                     setActiveScreen('home');
                   }} 
+                  showToast={showToast}
                 />
               </motion.div>
             )}
@@ -1475,6 +1501,7 @@ export default function App() {
                     setActiveScreen('home');
                   }}
                   earnedTrophyToday={earnedTrophyToday}
+                  showToast={showToast}
                 />
               </motion.div>
             )}
@@ -1612,6 +1639,31 @@ export default function App() {
                   </div>
                 </div>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Toast Notification */}
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[280px] border border-white/20 backdrop-blur-xl"
+              style={{ 
+                backgroundColor: toast.type === 'success' ? 'rgba(16, 185, 129, 0.9)' : 
+                                 toast.type === 'error' ? 'rgba(239, 68, 68, 0.9)' : 
+                                 'rgba(59, 130, 246, 0.9)',
+                color: 'white'
+              }}
+            >
+              <div className="p-1.5 bg-white/20 rounded-lg">
+                {toast.type === 'success' ? <CheckCircle2 size={18} /> : 
+                 toast.type === 'error' ? <AlertCircle size={18} /> : 
+                 <Info size={18} />}
+              </div>
+              <p className="font-bold text-sm">{toast.message}</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -2825,7 +2877,7 @@ function SettingsScreen({ settings, setSettings, isPro, onBack, onLogout, fcmTok
   );
 }
 
-function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday }: { 
+function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast }: { 
   step: ChallengeStep, 
   setStep: (s: ChallengeStep) => void, 
   settings: UserSettings,
@@ -2836,7 +2888,8 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
   setStats: (s: UserStats | ((prev: UserStats) => UserStats)) => void,
   onFinish: () => void,
   onExit: () => void,
-  earnedTrophyToday: boolean
+  earnedTrophyToday: boolean,
+  showToast: (msg: string, type?: 'success' | 'info' | 'error') => void
 }) {
   const steps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'gratitude', 'reaction'];
   const currentIdx = steps.indexOf(step as any);
@@ -2847,7 +2900,7 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
       ...prev,
       savedChallengeIds: [...(prev.savedChallengeIds || []), step]
     }));
-    alert('Challenge saved to library!');
+    showToast('Challenge saved to library!');
   };
 
   const nextStep = (data?: any) => {
@@ -2951,6 +3004,7 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
                     ]
                   }));
                 }}
+                showToast={showToast}
               />
             )}
             {step === 'reaction' && (
@@ -4044,7 +4098,7 @@ function MemoryStep({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-function GratitudeStep({ onComplete, onSave }: { onComplete: () => void, onSave: (text: string) => void }) {
+function GratitudeStep({ onComplete, onSave, showToast }: { onComplete: () => void, onSave: (text: string) => void, showToast: (msg: string, type?: 'success' | 'info' | 'error') => void }) {
   const [text, setText] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -4059,7 +4113,7 @@ function GratitudeStep({ onComplete, onSave }: { onComplete: () => void, onSave:
     if (text.trim().length < 3) return;
     vibrate(VIBRATION_PATTERNS.CLICK);
     onSave(text);
-    alert('Saved to your Gratitude Library!');
+    showToast('Saved to your Gratitude Library!');
   };
 
   return (
@@ -4221,7 +4275,7 @@ function GalleryScreen({ stats, onBack }: { stats: UserStats, onBack: () => void
   );
 }
 
-function NotebookScreen({ stats, setStats, onBack }: { stats: UserStats, setStats: (s: UserStats | ((prev: UserStats) => UserStats)) => void, onBack: () => void }) {
+function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: UserStats, setStats: (s: UserStats | ((prev: UserStats) => UserStats)) => void, onBack: () => void, showToast: (msg: string, type?: 'success' | 'info' | 'error') => void }) {
   const [text, setText] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -4251,7 +4305,7 @@ function NotebookScreen({ stats, setStats, onBack }: { stats: UserStats, setStat
 
     setText("");
     setEditingId(null);
-    alert('Saved to your Gratitude Library!');
+    showToast('Saved to your Gratitude Library!');
   };
 
   const handleEdit = (entry: any) => {
@@ -4261,12 +4315,12 @@ function NotebookScreen({ stats, setStats, onBack }: { stats: UserStats, setStat
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this entry?')) {
-      setStats(prev => ({
-        ...prev,
-        gratitudeEntries: (prev.gratitudeEntries || []).filter(e => e.id !== id)
-      }));
-    }
+    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    setStats(prev => ({
+      ...prev,
+      gratitudeEntries: (prev.gratitudeEntries || []).filter(e => e.id !== id)
+    }));
+    showToast('Note deleted', 'info');
   };
 
   return (
