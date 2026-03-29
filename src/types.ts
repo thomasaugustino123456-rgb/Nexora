@@ -17,6 +17,7 @@ export interface UserSettings {
   zenModeEnabled?: boolean;
   isPro?: boolean;
   challengeCountGoal?: number;
+  inventory?: LibraryItem[];
 }
 
 export interface ShopItem {
@@ -24,8 +25,18 @@ export interface ShopItem {
   name: string;
   description: string;
   price: number;
-  effect: string;
+  effect: 'streak-protection' | 'double-points' | 'skin' | 'gift';
   icon: string;
+}
+
+export interface LibraryItem {
+  id: string; // Unique instance ID
+  itemId: string; // Reference to ShopItem.id
+  name: string;
+  icon: string;
+  activated: boolean;
+  type: 'power-up' | 'skin' | 'gift';
+  purchasedAt: string; // ISO date
 }
 
 export interface DailyProgress {

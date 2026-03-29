@@ -1,86 +1,160 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Play, Eye, Star, Trophy as TrophyIcon, Book } from 'lucide-react';
-import { UserSettings, UserStats, Trophy, ChallengeStep } from '../types';
+import { ArrowLeft, Trash2, Power, PowerOff, Package } from 'lucide-react';
+import { LibraryItem } from '../types';
 
-export function LibraryScreen({
-  settings,
-  stats,
-  onBack,
-  onPlayChallenge,
-  onViewTrophy,
-  onOpenNotebook
-}: {
-  settings: UserSettings;
-  stats: UserStats;
-  onBack: () => void;
-  onPlayChallenge: (challengeId: ChallengeStep) => void;
-  onViewTrophy: (trophy: Trophy) => void;
-  onOpenNotebook: () => void;
+export function LibraryScreen({ 
+  items, 
+  onActivate, 
+  onDeactivate, 
+  onDelete, 
+  onBack 
+}: { 
+  items: LibraryItem[]; 
+  onActivate: (id: string) => void; 
+  onDeactivate: (id: string) => void; 
+  onDelete: (id: string) => void; 
+  onBack: () => void; 
 }) {
-  const savedChallenges = settings.savedChallengeIds || [];
-  const savedTrophies = (stats.trophies || []).filter(t => settings.savedTrophyIds?.includes(t.id));
+  const powerUps = items.filter(item => item.type === 'power-up');
+  const skins = items.filter(item => item.type === 'skin');
+  const gifts = items.filter(item => item.type === 'gift');
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className="p-6 pb-24"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="p-6 pb-24 max-w-2xl mx-auto"
     >
       <div className="flex items-center gap-4 mb-8">
-        <button onClick={onBack} className="p-2 rounded-full hover:bg-white/10">
-          <ArrowLeft size={24} />
+        <button onClick={onBack} className="p-2 rounded-full hover:bg-blue-100 transition-colors">
+          <ArrowLeft size={24} className="text-blue-900" />
         </button>
-        <h1 className="text-3xl font-black">Library</h1>
-      </div>
-
-      <h2 className="text-xl font-bold mb-4">Gratitude Jar</h2>
-      <div className="glass-card p-6 mb-8 border-l-8 border-l-amber-400">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h3 className="font-bold text-lg">Gratitude Notebook</h3>
-            <p className="text-sm text-blue-900/60">View and edit your saved entries.</p>
-          </div>
-          <button 
-            onClick={onOpenNotebook}
-            className="bg-amber-500 text-white p-3 rounded-xl shadow-lg"
-          >
-            <Book size={24} />
-          </button>
+        <h1 className="text-3xl font-black text-blue-900">My Library</h1>
+        <div className="ml-auto p-2 bg-blue-100 rounded-xl">
+          <Package size={24} className="text-blue-600" />
         </div>
       </div>
 
-      <h2 className="text-xl font-bold mb-4">Saved Challenges</h2>
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        {savedChallenges.map((challengeId) => (
-          <div key={challengeId} className="glass-card p-4 flex flex-col gap-2">
-            <h3 className="font-bold capitalize">{challengeId}</h3>
-            <button 
-              onClick={() => onPlayChallenge(challengeId as ChallengeStep)}
-              className="mt-auto bg-blue-500 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2"
-            >
-              <Play size={16} /> Take Again
-            </button>
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+            <Package size={40} className="text-blue-200" />
           </div>
-        ))}
-      </div>
+          <h2 className="text-xl font-bold text-blue-900 mb-2">Your library is empty</h2>
+          <p className="text-blue-900/40 max-w-xs">Visit the shop to buy items and they will appear here!</p>
+          <button 
+            onClick={onBack}
+            className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors"
+          >
+            Go to Shop
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-10">
+          {powerUps.length > 0 && (
+            <section>
+              <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Active Power-Ups</h2>
+              <div className="grid grid-cols-1 gap-4">
+                {powerUps.map((item) => (
+                  <LibraryItemCard 
+                    key={item.id} 
+                    item={item} 
+                    onActivate={onActivate} 
+                    onDeactivate={onDeactivate} 
+                    onDelete={onDelete} 
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
-      <h2 className="text-xl font-bold mb-4">Saved Trophies</h2>
-      <div className="grid grid-cols-2 gap-4">
-        {savedTrophies.map((trophy) => (
-          <div key={trophy.id} className="glass-card p-4 flex flex-col gap-2">
-            <TrophyIcon className={`w-12 h-12 ${trophy.type === 'golden' ? 'text-amber-500' : 'text-slate-400'}`} />
-            <h3 className="font-bold capitalize">{trophy.type} Trophy</h3>
-            <button 
-              onClick={() => onViewTrophy(trophy)}
-              className="mt-auto bg-amber-500 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2"
-            >
-              <Eye size={16} /> View
-            </button>
-          </div>
-        ))}
-      </div>
+          {skins.length > 0 && (
+            <section>
+              <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Mascot Styles</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {skins.map((item) => (
+                  <LibraryItemCard 
+                    key={item.id} 
+                    item={item} 
+                    onActivate={onActivate} 
+                    onDeactivate={onDeactivate} 
+                    onDelete={onDelete} 
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {gifts.length > 0 && (
+            <section>
+              <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Mystery Gifts</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {gifts.map((item) => (
+                  <LibraryItemCard 
+                    key={item.id} 
+                    item={item} 
+                    onActivate={onActivate} 
+                    onDeactivate={onDeactivate} 
+                    onDelete={onDelete} 
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      )}
     </motion.div>
+  );
+}
+
+function LibraryItemCard({ 
+  item, 
+  onActivate, 
+  onDeactivate, 
+  onDelete 
+}: { 
+  item: LibraryItem; 
+  onActivate: (id: string) => void; 
+  onDeactivate: (id: string) => void; 
+  onDelete: (id: string) => void; 
+}) {
+  return (
+    <div className={`glass-card p-4 flex items-center gap-4 transition-all ${item.activated ? 'border-blue-500 bg-blue-50/50' : 'border-transparent'}`}>
+      <div className="text-4xl drop-shadow-sm">{item.icon}</div>
+      <div className="flex-1 min-w-0">
+        <h3 className="font-bold text-blue-900 truncate">{item.name}</h3>
+        <p className="text-[10px] text-blue-900/40 font-medium">
+          {item.activated ? 'Currently Active' : 'Inactive'}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        {item.activated ? (
+          <button 
+            onClick={() => onDeactivate(item.id)}
+            className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+            title="Deactivate"
+          >
+            <PowerOff size={18} />
+          </button>
+        ) : (
+          <button 
+            onClick={() => onActivate(item.id)}
+            className="p-2 rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors"
+            title="Activate"
+          >
+            <Power size={18} />
+          </button>
+        )}
+        <button 
+          onClick={() => onDelete(item.id)}
+          className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+          title="Delete (Return to Shop)"
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
+    </div>
   );
 }

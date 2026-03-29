@@ -1,12 +1,12 @@
 {
-  "version": "1.1.1",
+  "version": "1.2.0",
   "releaseNotes": [
-    "Shop Overhaul: Lowered prices (starting from 10 streaks)!",
-    "New Mascot Skins: Ninja, Space, Viking, and more!",
-    "Categorized Shop UI with Featured Deals",
-    "Pro Feature: Custom Challenge Goals",
-    "Enhanced Pro Section with clearer benefit descriptions",
-    "Smarter Mascot AI with more relevant advice"
+    "New Inventory System: Manage all your purchased items in one place!",
+    "Item Management: Activate, deactivate, or delete items from your library.",
+    "Repurchase Logic: Deleting an item returns it to the shop for repurchase.",
+    "Buy One Get One Free: Every gift purchase now includes a bonus gift!",
+    "Expanded Shop: Added Golden Chest, Lucky Clover, Party Popper, and Diamond Box.",
+    "Improved Navigation: Library icon now leads to your personal inventory."
   ],
   "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
   "forceUpdate": false

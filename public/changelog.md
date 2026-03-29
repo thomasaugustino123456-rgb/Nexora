@@ -1,5 +1,21 @@
 # Nexora Daily - What's New!
 
+## Version 1.2.0 (2026-03-29)
+
+### 📦 Inventory & Library
+- **New Library System**: All purchased items are now automatically saved to your Library.
+- **Item Management**: You can now activate, deactivate, or delete items from your library.
+- **Repurchase Logic**: Deleting an item from your library makes it available in the shop again.
+
+### 🎁 Shop & Gifts
+- **Buy One Get One Free**: Every gift purchase now includes an automatic bonus gift!
+- **Expanded Selection**: Added Golden Chest, Lucky Clover, Party Popper, and Diamond Box.
+
+### 🎨 UI/UX Improvements
+- **Improved Navigation**: The Library icon now leads to your personal inventory.
+
+---
+
 ## Version 1.1.0 (2026-03-29)
 
 ### 🚀 Pro Features

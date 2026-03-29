@@ -1281,11 +1281,37 @@ export default function App() {
                   isPro={isPro}
                   onBuy={(item) => {
                     vibrate(VIBRATION_PATTERNS.SUCCESS);
+                    
+                    const newItem: any = {
+                      id: `${item.id}-${Date.now()}`,
+                      itemId: item.id,
+                      name: item.name,
+                      icon: item.icon,
+                      activated: false,
+                      type: item.effect === 'skin' ? 'skin' : item.effect === 'gift' ? 'gift' : 'power-up',
+                      purchasedAt: new Date().toISOString()
+                    };
+
+                    const bonusItems: any[] = [];
+                    if (item.effect === 'gift') {
+                      // Add an automatic bonus gift
+                      bonusItems.push({
+                        id: `bonus-${item.id}-${Date.now()}`,
+                        itemId: `bonus-${item.id}`,
+                        name: `Bonus ${item.name}`,
+                        icon: `✨${item.icon}`,
+                        activated: false,
+                        type: 'gift',
+                        purchasedAt: new Date().toISOString()
+                      });
+                    }
+
                     setSettings(prev => ({
                       ...prev,
                       purchasedItems: [...(prev.purchasedItems || []), item.id],
-                      activeSkin: item.effect === 'skin' ? item.id.replace('skin-', '') : prev.activeSkin
+                      inventory: [...(prev.inventory || []), newItem, ...bonusItems]
                     }));
+
                     setStats(prev => ({
                       ...prev,
                       streak: prev.streak - item.price
@@ -1320,24 +1346,70 @@ export default function App() {
                 className="w-full"
               >
                 <LibraryScreen
-                  settings={settings}
-                  stats={stats}
+                  items={settings.inventory || []}
+                  onActivate={(id) => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setSettings(prev => {
+                      const inventory = (prev.inventory || []).map(item => {
+                        if (item.id === id) {
+                          return { ...item, activated: true };
+                        }
+                        // If it's a skin, deactivate other skins
+                        if (item.type === 'skin' && (prev.inventory?.find(i => i.id === id)?.type === 'skin')) {
+                          return { ...item, activated: false };
+                        }
+                        return item;
+                      });
+                      
+                      const activeItem = inventory.find(i => i.id === id);
+                      let activeSkin = prev.activeSkin;
+                      if (activeItem?.type === 'skin') {
+                        activeSkin = activeItem.itemId.replace('skin-', '');
+                      }
+
+                      return { ...prev, inventory, activeSkin };
+                    });
+                  }}
+                  onDeactivate={(id) => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setSettings(prev => {
+                      const inventory = (prev.inventory || []).map(item => {
+                        if (item.id === id) {
+                          return { ...item, activated: false };
+                        }
+                        return item;
+                      });
+                      
+                      const activeItem = prev.inventory?.find(i => i.id === id);
+                      let activeSkin = prev.activeSkin;
+                      if (activeItem?.type === 'skin') {
+                        activeSkin = 'none';
+                      }
+
+                      return { ...prev, inventory, activeSkin };
+                    });
+                  }}
+                  onDelete={(id) => {
+                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                    setSettings(prev => {
+                      const itemToDelete = prev.inventory?.find(i => i.id === id);
+                      const inventory = (prev.inventory || []).filter(item => item.id !== id);
+                      
+                      // If deleted, remove from purchasedItems so it can be bought again
+                      // But ONLY if it's not a bonus gift (bonus gifts don't exist in shop)
+                      const purchasedItems = (prev.purchasedItems || []).filter(pid => pid !== itemToDelete?.itemId);
+                      
+                      let activeSkin = prev.activeSkin;
+                      if (itemToDelete?.type === 'skin' && itemToDelete.activated) {
+                        activeSkin = 'none';
+                      }
+
+                      return { ...prev, inventory, purchasedItems, activeSkin };
+                    });
+                  }}
                   onBack={() => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
                     setActiveScreen('home');
-                  }}
-                  onPlayChallenge={(challengeId) => {
-                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                    setChallengeStep(challengeId);
-                    setActiveScreen('challenge');
-                  }}
-                  onViewTrophy={(trophy) => {
-                    vibrate(VIBRATION_PATTERNS.TROPHY);
-                    setViewingTrophy(trophy);
-                  }}
-                  onOpenNotebook={() => {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    setActiveScreen('notebook');
                   }}
                 />
               </motion.div>

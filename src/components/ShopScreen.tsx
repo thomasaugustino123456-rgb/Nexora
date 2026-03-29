@@ -17,6 +17,14 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'skin-space', name: 'Space Helmet', description: 'To the moon with your habits!', price: 80, effect: 'skin', icon: '👨‍🚀' },
   { id: 'skin-ninja', name: 'Ninja Mask', description: 'Silent but consistent.', price: 40, effect: 'skin', icon: '🥷' },
   { id: 'skin-detective', name: 'Detective Hat', description: 'Solving the mystery of productivity.', price: 30, effect: 'skin', icon: '🕵️' },
+
+  // Gifts
+  { id: 'gift-mystery', name: 'Mystery Gift', description: 'A surprise gift box! (Buy one, get one free!)', price: 15, effect: 'gift', icon: '🎁' },
+  { id: 'gift-premium', name: 'Premium Gift', description: 'A high-value surprise for your library.', price: 30, effect: 'gift', icon: '💝' },
+  { id: 'gift-gold', name: 'Golden Chest', description: 'Contains legendary items and rare skins.', price: 50, effect: 'gift', icon: '💰' },
+  { id: 'gift-lucky', name: 'Lucky Clover', description: 'A small gift with a big surprise potential.', price: 10, effect: 'gift', icon: '🍀' },
+  { id: 'gift-party', name: 'Party Popper', description: 'Celebrate your progress with a surprise!', price: 12, effect: 'gift', icon: '🎉' },
+  { id: 'gift-diamond', name: 'Diamond Box', description: 'The ultimate gift for the most dedicated users.', price: 100, effect: 'gift', icon: '💎' },
 ];
 
 export function ShopScreen({ 

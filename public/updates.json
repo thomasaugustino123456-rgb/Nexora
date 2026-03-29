@@ -1,36 +1,31 @@
 {
-  "version": "1.1.1",
+  "version": "1.2.0",
   "releaseDate": "2026-03-29",
   "updates": [
     {
+      "category": "Inventory",
+      "title": "New Library System",
+      "description": "All purchased items are now automatically saved to your Library. You can activate, deactivate, or delete them as you wish."
+    },
+    {
       "category": "Shop",
-      "title": "Lower Prices & More Items",
-      "description": "All shop items now have much lower prices (starting from 10 streaks). We've also added new skins like Ninja, Space, and Viking!"
+      "title": "Buy One Get One Free!",
+      "description": "Every time you buy a gift in the shop, a bonus surprise gift is automatically added to your library for free!"
     },
     {
-      "category": "Shop UI",
-      "title": "Categorized Shop",
-      "description": "The shop is now organized into Power-Ups and Mascot Styles, with a new Featured Deal section."
+      "category": "Shop",
+      "title": "Expanded Gift Selection",
+      "description": "Added new items like the Golden Chest, Lucky Clover, Party Popper, and the legendary Diamond Box."
     },
     {
-      "category": "Pro Features",
-      "title": "Customizable Challenge Goals",
-      "description": "Pro users can now set their own daily challenge count goal (from 3 up to 20) in the settings menu."
-    },
-    {
-      "category": "Subscription",
-      "title": "Enhanced Pro Section",
-      "description": "Clearer descriptions of Pro benefits and subscription plans (Weekly, Monthly, Yearly) to help you choose the best fit."
+      "category": "Repurchase",
+      "title": "Return to Shop",
+      "description": "Deleting an item from your library now makes it available in the shop again, allowing you to repurchase it later."
     },
     {
       "category": "UI/UX",
-      "title": "Improved Goal Adjusters",
-      "description": "Redesigned goal sliders in settings for a smoother experience."
-    },
-    {
-      "category": "Mascot",
-      "title": "Smarter Mascot AI",
-      "description": "Your companion now provides more relevant advice based on your current progress and goals."
+      "title": "Improved Navigation",
+      "description": "The Library icon in the navigation bar now leads directly to your personal inventory of items and skins."
     }
   ]
 }
