@@ -15,6 +15,8 @@ export interface UserSettings {
   activeHat?: string;
   activeSkin?: string;
   zenModeEnabled?: boolean;
+  isPro?: boolean;
+  challengeCountGoal?: number;
 }
 
 export interface ShopItem {

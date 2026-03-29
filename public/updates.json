@@ -1,0 +1,26 @@
+{
+  "version": "1.1.0",
+  "releaseDate": "2026-03-29",
+  "updates": [
+    {
+      "category": "Pro Features",
+      "title": "Customizable Challenge Goals",
+      "description": "Pro users can now set their own daily challenge count goal (from 3 up to 20) in the settings menu."
+    },
+    {
+      "category": "Subscription",
+      "title": "Enhanced Pro Section",
+      "description": "Clearer descriptions of Pro benefits and subscription plans (Weekly, Monthly, Yearly) to help you choose the best fit."
+    },
+    {
+      "category": "UI/UX",
+      "title": "Improved Goal Adjusters",
+      "description": "Redesigned goal sliders in settings for a smoother experience."
+    },
+    {
+      "category": "Mascot",
+      "title": "Smarter Mascot AI",
+      "description": "Your companion now provides more relevant advice based on your current progress and goals."
+    }
+  ]
+}

@@ -1,13 +1,12 @@
 {
-  "version": "1.0.3",
+  "version": "1.1.0",
   "releaseNotes": [
-    "Added Pro subscription button to the header",
-    "Improved payment checkout experience",
-    "Added Gratitude Notebook to track your daily wins",
-    "Improved account removal security and re-authentication",
-    "Added real-time update notifications to keep you in flow",
-    "Fixed update notification loop issue",
-    "Added mascot to update notifications"
+    "Pro Feature: Custom Challenge Goals (set your own daily target up to 20!)",
+    "Enhanced Pro Section with clearer benefit descriptions",
+    "Improved Subscription Plans (Weekly, Monthly, Yearly)",
+    "Redesigned goal sliders in settings for a smoother experience",
+    "Smarter Mascot AI with more relevant advice",
+    "Consistent haptic feedback for better interaction"
   ],
   "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
   "forceUpdate": false

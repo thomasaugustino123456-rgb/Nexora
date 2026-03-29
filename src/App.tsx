@@ -56,6 +56,75 @@ function playTrophySound(type: string) {
   }
 }
 
+function WhatIsNewModal({ onClose }: { onClose: () => void }) {
+  const [updates, setUpdates] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('/updates.json')
+      .then(res => res.json())
+      .then(data => setUpdates(data))
+      .catch(err => console.error('Failed to fetch updates:', err));
+  }, []);
+
+  if (!updates) return null;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-blue-900/40 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <motion.div 
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        className="glass-card w-full max-w-md p-8 space-y-6 relative overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="absolute top-0 right-0 p-4">
+          <button onClick={onClose} className="p-2 hover:bg-blue-50 rounded-full text-blue-400 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-4 mb-2">
+          <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-200">
+            <Sparkles size={24} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-blue-900 leading-tight">What's New!</h2>
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest">Version {updates.version}</p>
+          </div>
+        </div>
+
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+          {updates.updates.map((update: any, i: number) => (
+            <div key={i} className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-[10px] font-black uppercase rounded-md">
+                  {update.category}
+                </span>
+                <h4 className="font-bold text-blue-900 text-sm">{update.title}</h4>
+              </div>
+              <p className="text-xs text-blue-900/60 leading-relaxed pl-2 border-l-2 border-blue-100 ml-1">
+                {update.description}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <button 
+          onClick={onClose}
+          className="btn-primary w-full py-4 text-sm font-black uppercase tracking-widest shadow-xl shadow-blue-200"
+        >
+          Awesome! 🚀
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function Calendar({ history }: { history: DailyProgress[] }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const monthStart = startOfMonth(currentDate);
@@ -189,6 +258,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   activeHat: 'none',
   activeSkin: 'none',
   zenModeEnabled: false,
+  challengeCountGoal: 3,
 };
 
 const DEFAULT_STATS: UserStats = {
@@ -419,6 +489,7 @@ function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSetting
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isPro, setIsPro] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showAuth, setShowAuth] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
@@ -465,7 +536,7 @@ export default function App() {
   // Version Update Logic
   const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean, imageUrl?: string } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
-  const currentAppVersion = "1.0.3"; // Current hardcoded version
+  const currentAppVersion = "1.1.0"; // Current hardcoded version
 
   useEffect(() => {
     const checkVersion = async () => {
@@ -700,6 +771,7 @@ export default function App() {
             setNeedsOnboarding(true);
           } else {
             setNeedsOnboarding(userDoc.data().onboardingCompleted === false);
+            setIsPro(!!userDoc.data().isPro);
           }
         } catch (error) {
           try {
@@ -1133,7 +1205,7 @@ export default function App() {
                     setChallengeStep('pushups');
                     setActiveScreen('challenge');
                   }}
-                  isCompletedToday={dailyProgress.completionsCount >= 3}
+                  isCompletedToday={dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 999) : 3)}
                   dailyProgress={dailyProgress}
                   settings={settings}
                   history={history}
@@ -1142,6 +1214,7 @@ export default function App() {
                     setActiveScreen('gallery');
                   }}
                   dailyQuest={dailyQuest}
+                  isPro={isPro}
                 />
               </motion.div>
             )}
@@ -1181,6 +1254,7 @@ export default function App() {
                 <SettingsScreen 
                   settings={settings} 
                   setSettings={setSettings} 
+                  isPro={isPro}
                   onBack={() => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
                     setActiveScreen('home');
@@ -1204,6 +1278,7 @@ export default function App() {
                 <ShopScreen 
                   streak={stats.streak}
                   purchasedItems={settings.purchasedItems || []}
+                  isPro={isPro}
                   onBuy={(item) => {
                     vibrate(VIBRATION_PATTERNS.SUCCESS);
                     setSettings(prev => ({
@@ -1493,7 +1568,7 @@ function NavButton({ active, onClick, icon, label }: { active: boolean, onClick:
   );
 }
 
-function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest }: { 
+function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
@@ -1501,7 +1576,8 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
   settings: UserSettings,
   history: DailyProgress[],
   onOpenGallery: () => void,
-  dailyQuest: ChallengeStep | null
+  dailyQuest: ChallengeStep | null,
+  isPro: boolean
 }) {
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
@@ -1651,22 +1727,22 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
                 </div>
                 <div className="flex items-center gap-2 text-blue-900/50 font-medium">
                   <TrophyIcon size={18} className="text-emerald-500" />
-                  <span>{dailyProgress.completionsCount}/3 Today</span>
+                  <span>{dailyProgress.completionsCount}/{isPro ? (settings.challengeCountGoal || 999) : 3} Today</span>
                 </div>
               </div>
             </div>
 
             <button 
               onClick={() => {
-                if (dailyProgress.completionsCount >= 3) return;
+                if (dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 999) : 3)) return;
                 vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                 onStartChallenge();
               }}
-              disabled={dailyProgress.completionsCount >= 3}
-              className={`btn-primary w-full flex items-center justify-center gap-2 ${dailyProgress.completionsCount >= 3 ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+              disabled={dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 999) : 3)}
+              className={`btn-primary w-full flex items-center justify-center gap-2 ${dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 999) : 3) ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
             >
-              {dailyProgress.completionsCount >= 3 
-                ? 'Daily Limit Reached (3/3) 🏆' 
+              {dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 999) : 3)
+                ? `Daily Limit Reached (${dailyProgress.completionsCount}/${isPro ? (settings.challengeCountGoal || 999) : 3}) 🏆` 
                 : dailyProgress.completionsCount > 0 
                   ? `Start Challenge #${dailyProgress.completionsCount + 1} ✍️` 
                   : 'Start Today\'s Challenge ✍️'}
@@ -2114,9 +2190,10 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
   );
 }
 
-function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcmError, onRetryFCM }: { 
+function SettingsScreen({ settings, setSettings, isPro, onBack, onLogout, fcmToken, fcmError, onRetryFCM }: { 
   settings: UserSettings, 
   setSettings: (s: UserSettings) => void, 
+  isPro: boolean,
   onBack: () => void, 
   onLogout: () => Promise<void>,
   fcmToken: string | null,
@@ -2270,6 +2347,30 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
             <span className="font-bold text-blue-900 w-12">{settings.pushupsGoal}</span>
           </div>
         </div>
+
+        {/* 2.5 Challenge Count Goal Adjuster (Pro Only) */}
+        {isPro && (
+          <div className="glass-card p-6 space-y-4">
+            <div className="flex items-center gap-3 text-purple-500">
+              <Target size={24} />
+              <h3 className="font-bold text-blue-900">Challenge Count</h3>
+            </div>
+            <p className="text-xs text-blue-900/40">Set your daily challenge count goal.</p>
+            <div className="flex items-center gap-4">
+              <input 
+                type="range" min="3" max="20" step="1"
+                value={settings.challengeCountGoal || 3}
+                onChange={(e) => {
+                  vibrate(VIBRATION_PATTERNS.CLICK);
+                  setSettings({ ...settings, challengeCountGoal: parseInt(e.target.value) });
+                }}
+                className="flex-1"
+                style={{ accentColor: 'var(--accent-color)' }}
+              />
+              <span className="font-bold text-blue-900 w-12">{settings.challengeCountGoal || 3}</span>
+            </div>
+          </div>
+        )}
 
         {/* 3. Sound Effects Toggle */}
         <div className="glass-card p-6 flex items-center justify-between">
@@ -2482,6 +2583,24 @@ function SettingsScreen({ settings, setSettings, onBack, onLogout, fcmToken, fcm
               Retry Connection
             </button>
           </div>
+        </div>
+
+        {/* 11. What's New Link */}
+        <div className="glass-card p-6 space-y-4">
+          <div className="flex items-center gap-3 text-blue-600">
+            <Sparkles size={24} />
+            <h3 className="font-bold text-blue-900">What's New</h3>
+          </div>
+          <p className="text-xs text-blue-900/40">Check out the latest updates and features.</p>
+          <button 
+            onClick={() => {
+              vibrate(VIBRATION_PATTERNS.CLICK);
+              window.open('/changelog.md', '_blank');
+            }}
+            className="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 py-3 rounded-xl font-black text-sm transition-all active:scale-95 border border-blue-200"
+          >
+            VIEW CHANGELOG
+          </button>
         </div>
 
         {/* 9. Reset App */}

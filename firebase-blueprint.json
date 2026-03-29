@@ -21,7 +21,8 @@
         "gender": { "type": "string" },
         "source": { "type": "string" },
         "onboardingCompleted": { "type": "boolean" },
-        "activeSkin": { "type": "string", "description": "Currently active mascot skin" }
+        "activeSkin": { "type": "string", "description": "Currently active mascot skin" },
+        "isPro": { "type": "boolean", "description": "Pro subscription status" }
       },
       "required": ["uid", "displayName", "email", "role"]
     },

@@ -72,7 +72,8 @@ service cloud.firestore {
              (!('gender' in data) || (data.gender is string && data.gender.size() <= 50)) &&
              (!('source' in data) || (data.source is string && data.source.size() <= 50)) &&
              (!('onboardingCompleted' in data) || data.onboardingCompleted is bool) &&
-             (!('activeSkin' in data) || (data.activeSkin is string && data.activeSkin.size() <= 50));
+             (!('activeSkin' in data) || (data.activeSkin is string && data.activeSkin.size() <= 50)) &&
+             (!('isPro' in data) || data.isPro is bool);
     }
 
     function isValidStats(data) {

@@ -23,11 +23,13 @@ export const SHOP_ITEMS: ShopItem[] = [
 export function ShopScreen({ 
   streak, 
   purchasedItems, 
+  isPro,
   onBuy, 
   onBack 
 }: { 
   streak: number; 
   purchasedItems: string[]; 
+  isPro: boolean;
   onBuy: (item: ShopItem) => void; 
   onBack: () => void; 
 }) {
@@ -57,10 +59,10 @@ export function ShopScreen({
             <p className="text-xs text-slate-400">{item.description}</p>
             <button 
               onClick={() => onBuy(item)}
-              disabled={streak < item.price || purchasedItems.includes(item.id)}
+              disabled={(!isPro && streak < item.price) || purchasedItems.includes(item.id)}
               className="mt-auto bg-emerald-500 text-white py-2 rounded-lg font-bold disabled:opacity-50"
             >
-              {purchasedItems.includes(item.id) ? 'Purchased' : `${item.price} Streak`}
+              {purchasedItems.includes(item.id) ? 'Purchased' : isPro ? 'Free' : `${item.price} Streak`}
             </button>
           </div>
         ))}
