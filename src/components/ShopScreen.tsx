@@ -17,6 +17,14 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'skin-space', name: 'Space Helmet', description: 'To the moon with your habits!', price: 80, effect: 'skin', icon: '👨‍🚀' },
   { id: 'skin-ninja', name: 'Ninja Mask', description: 'Silent but consistent.', price: 40, effect: 'skin', icon: '🥷' },
   { id: 'skin-detective', name: 'Detective Hat', description: 'Solving the mystery of productivity.', price: 30, effect: 'skin', icon: '🕵️' },
+  { id: 'sound-dog', name: 'Dog Sound Pack', description: 'Make your mascot bark!', price: 10, effect: 'sound-pack', icon: '🐶' },
+  { id: 'music-fanfare', name: 'Medieval Fanfare', description: 'A royal announcement!', price: 5, effect: 'music', icon: '🎺' },
+  { id: 'music-funkee', name: 'Funkee Monkeee', description: 'Get groovy!', price: 5, effect: 'music', icon: '🐒' },
+  { id: 'music-triplets', name: 'Funky Triplets', description: 'A rhythmic delight.', price: 5, effect: 'music', icon: '🥁' },
+  { id: 'music-forest', name: 'Forest Treasure', description: 'A magical forest journey.', price: 5, effect: 'music', icon: '🌲' },
+  { id: 'music-cbpd', name: 'CBPD Beat', description: 'A cool urban beat.', price: 5, effect: 'music', icon: '🎧' },
+  { id: 'music-nba', name: 'NBA Type Beat', description: 'Ready for the game!', price: 5, effect: 'music', icon: '🏀' },
+  { id: 'music-complicated', name: 'Complicated', description: 'A complex melody.', price: 5, effect: 'music', icon: '🧩' },
 
   // Gifts
   { id: 'gift-mystery', name: 'Mystery Gift', description: 'A surprise gift box! (Buy one, get one free!)', price: 15, effect: 'gift', icon: '🎁' },

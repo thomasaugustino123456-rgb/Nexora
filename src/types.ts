@@ -18,6 +18,7 @@ export interface UserSettings {
   isPro?: boolean;
   challengeCountGoal?: number;
   inventory?: LibraryItem[];
+  isDogSoundPackActive?: boolean;
 }
 
 export interface ShopItem {
@@ -25,7 +26,7 @@ export interface ShopItem {
   name: string;
   description: string;
   price: number;
-  effect: 'streak-protection' | 'double-points' | 'skin' | 'gift';
+  effect: 'streak-protection' | 'double-points' | 'skin' | 'gift' | 'sound-pack' | 'music';
   icon: string;
 }
 
@@ -35,7 +36,7 @@ export interface LibraryItem {
   name: string;
   icon: string;
   activated: boolean;
-  type: 'power-up' | 'skin' | 'gift';
+  type: 'power-up' | 'skin' | 'gift' | 'sound-pack' | 'music';
   purchasedAt: string; // ISO date
 }
 

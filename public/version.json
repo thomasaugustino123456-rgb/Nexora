@@ -1,12 +1,15 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.3",
   "releaseNotes": [
+    "New Pro Subscription Experience: A completely redesigned subscription page with glowing animations and a premium dark theme!",
+    "New Sound & Music Packs: Customize your experience with 7 new music tracks and an updated Dog Sound Pack!",
+    "Library Activation: Manage your purchased sound packs and music directly in your library.",
     "Unified Library: View Shop Items, Notes, Drawings, and Challenges in one place!",
     "New Toast Notification System: Replaced boring alerts with smooth, bubbly popups.",
     "Improved Saving: Fixed issues with saving challenges and notes to the library.",
     "Haptic Feedback: Added vibrations for a more premium feel when deleting items.",
     "Bug Fixes: Resolved type errors and improved data persistence across the app."
   ],
-  "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+  "imageUrl": "https://i.postimg.cc/yxF522mf/Subscription-plan-selection-for-Nexora.png",
   "forceUpdate": false
 }

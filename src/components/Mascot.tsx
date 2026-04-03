@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useSound } from '../hooks/useSound';
 
 export type MascotMood = 'happy' | 'angry' | 'boiling' | 'neutral';
 
@@ -6,20 +7,42 @@ interface MascotProps {
   className?: string;
   mood?: MascotMood;
   hat?: string;
+  soundPack?: 'cat' | 'dog';
   onClick?: () => void;
   onPointerMove?: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerLeave?: () => void;
 }
 
-export const Mascot: React.FC<MascotProps> = ({ className, mood = 'happy', hat = 'none', onClick, onPointerMove, onPointerLeave }) => {
-  const isAngry = mood === 'angry' || mood === 'boiling';
-  const isBoiling = mood === 'boiling';
-  const isNeutral = mood === 'neutral';
+export const Mascot: React.FC<MascotProps> = ({ className, mood = 'happy', hat = 'none', soundPack = 'cat', onClick, onPointerMove, onPointerLeave }) => {
+  const [clickCount, setClickCount] = useState(0);
+  const { play } = useSound();
+
+  const handleMascotClick = () => {
+    const newCount = clickCount + 1;
+    setClickCount(newCount);
+    
+    const isDog = soundPack === 'dog';
+    
+    if (newCount >= 1 && newCount <= 5) {
+        play(isDog ? 'dogHappy' : 'catHappy');
+    } else if (newCount >= 6 && newCount <= 8) {
+        play(isDog ? 'dogHungry' : 'catHungry');
+    } else if (newCount >= 9 && newCount <= 12) {
+        play(isDog ? 'dogAngry' : 'catHungry');
+    }
+    
+    if (onClick) onClick();
+  };
+
+  const actualMood = (clickCount >= 9 && clickCount <= 12) ? 'angry' : mood;
+  const isAngry = actualMood === 'angry' || actualMood === 'boiling';
+  const isBoiling = actualMood === 'boiling';
+  const isNeutral = actualMood === 'neutral';
 
   return (
     <div 
       className={`bottle-container cursor-pointer ${className || ''}`}
-      onClick={onClick}
+      onClick={handleMascotClick}
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
     >

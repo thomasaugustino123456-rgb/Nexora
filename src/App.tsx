@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Home, BarChart2, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Trophy, Award, Users, Crown, Info } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { useSound } from './hooks/useSound';
 import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood } from './types';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
@@ -217,7 +218,7 @@ function StatsCharts({ history }: { history: DailyProgress[] }) {
   );
 }
 
-function HappyMascot({ size = 32, hat = 'none' }: { size?: number, hat?: string }) {
+function HappyMascot({ size = 32, hat = 'none', settings }: { size?: number, hat?: string, settings: UserSettings }) {
   return (
     <motion.div
       initial={{ scale: 0, y: 20 }}
@@ -232,7 +233,7 @@ function HappyMascot({ size = 32, hat = 'none' }: { size?: number, hat?: string 
       className="flex flex-col items-center gap-2 mb-4"
     >
       <div className={`w-${size} h-${size} relative`}>
-        <Mascot className="w-full h-full drop-shadow-lg" hat={hat} />
+        <Mascot className="w-full h-full drop-shadow-lg" hat={hat} soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'} />
       </div>
       <motion.div 
         animate={{ scale: [1, 1.1, 1] }}
@@ -504,10 +505,29 @@ export default function App() {
   const [viewingTrophy, setViewingTrophy] = useState<TrophyType | null>(null);
   const [settings, setSettings] = useLocalStorage<UserSettings>('nexora_settings', DEFAULT_SETTINGS);
   const [stats, setStats] = useLocalStorage<UserStats>('nexora_stats', DEFAULT_STATS);
+  const { play, stop } = useSound();
   const [history, setHistory] = useState<DailyProgress[]>([]);
   const [earnedTrophyToday, setEarnedTrophyToday] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
   const [dailyQuest, setDailyQuest] = useState<ChallengeStep | null>(null);
+
+  useEffect(() => {
+    if (challengeStep === 'football') {
+      play('stadium', true);
+    } else {
+      stop('stadium');
+    }
+  }, [challengeStep]);
+
+  // Emergency sound logic
+  useEffect(() => {
+    const hasIceOrBroken = stats.trophies?.some(t => t.type === 'ice' || t.type === 'broken');
+    if (hasIceOrBroken) {
+      play('emergency', true);
+    } else {
+      stop('emergency');
+    }
+  }, [stats.trophies]);
 
   useEffect(() => {
     // Select a daily quest based on the date
@@ -542,7 +562,7 @@ export default function App() {
   // Version Update Logic
   const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean, imageUrl?: string } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
-  const currentAppVersion = "1.2.1"; // Current hardcoded version
+  const currentAppVersion = "1.2.2"; // Current hardcoded version
 
   useEffect(() => {
     const checkVersion = async () => {
@@ -550,13 +570,19 @@ export default function App() {
         // Use cache: 'no-store' to ensure we get the latest file from the server
         const response = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
         if (response.ok) {
-          const data = await response.json();
-          const dismissedVersion = localStorage.getItem('nexora_dismissed_version');
-          
-          if (data.version !== currentAppVersion && dismissedVersion !== data.version) {
-            console.log('New version detected:', data.version);
-            setUpdateInfo(data);
-            setShowUpdatePopup(true);
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            const dismissedVersion = localStorage.getItem('nexora_dismissed_version');
+            
+            if (data.version !== currentAppVersion && dismissedVersion !== data.version) {
+              console.log('New version detected:', data.version);
+              setUpdateInfo(data);
+              setShowUpdatePopup(true);
+            }
+          } else {
+            const text = await response.text();
+            console.error('Expected JSON for version check, but got:', contentType, text.substring(0, 100));
           }
         }
       } catch (error) {
@@ -744,6 +770,15 @@ export default function App() {
   };
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      showToast('Payment successful! Your Pro features are being unlocked... 🚀', 'success');
+      // Clear the URL param
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
     async function testConnection() {
       try {
         await getDocFromServer(doc(db, 'test', 'connection'));
@@ -877,7 +912,11 @@ export default function App() {
     
     if (canAwardTrophy) {
       console.log(`Awarding trophy for completion #${nextCompletionsCount} today!`);
-      if (settings.soundEnabled) playTrophySound('golden');
+      if (settings.soundEnabled) {
+        if (nextCompletionsCount === 1) play('trophy1');
+        else if (nextCompletionsCount === 2) play('trophy2');
+        else if (nextCompletionsCount === 3) play('trophy3');
+      }
       setEarnedTrophyToday(true);
     } else {
       console.log("Already reached 3 completions today, no more trophies.");
@@ -1135,7 +1174,7 @@ export default function App() {
               className="bg-white rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl text-center"
             >
               <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto">
-                <Mascot className="w-12 h-12" hat={settings.activeSkin} />
+                <Mascot className="w-12 h-12" hat={settings.activeSkin} soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'} />
               </div>
               <div className="space-y-2">
                 <h3 className="text-2xl font-black text-blue-900">Hey 👋</h3>
@@ -1294,7 +1333,7 @@ export default function App() {
                       name: item.name,
                       icon: item.icon,
                       activated: false,
-                      type: item.effect === 'skin' ? 'skin' : item.effect === 'gift' ? 'gift' : 'power-up',
+                      type: item.effect === 'skin' ? 'skin' : item.effect === 'gift' ? 'gift' : item.effect === 'sound-pack' ? 'sound-pack' : 'power-up',
                       purchasedAt: new Date().toISOString()
                     };
 
@@ -1315,7 +1354,7 @@ export default function App() {
                     setSettings(prev => ({
                       ...prev,
                       purchasedItems: [...(prev.purchasedItems || []), item.id],
-                      inventory: [...(prev.inventory || []), newItem, ...bonusItems]
+                      inventory: [...(prev.inventory || []), newItem, ...bonusItems],
                     }));
 
                     setStats(prev => ({
@@ -1339,7 +1378,7 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <SubscriptionScreen onBack={() => setActiveScreen('home')} />
+                <SubscriptionScreen onBack={() => setActiveScreen('home')} userId={user?.uid || ''} />
               </motion.div>
             )}
             {activeScreen === 'library' && (
@@ -1828,6 +1867,7 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
               className="w-full h-full drop-shadow-2xl" 
               mood={mascotMood}
               hat={settings.activeSkin}
+              soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'}
               onClick={handleMascotTap}
               onPointerMove={handleMascotPointerMove}
               onPointerLeave={handleMascotPointerLeave}
@@ -2624,7 +2664,32 @@ function SettingsScreen({ settings, setSettings, isPro, onBack, onLogout, fcmTok
           </div>
         </div>
 
-        {/* 8. Logout */}
+        {/* 8. Library Items */}
+        <div className="space-y-4">
+          <h3 className="font-bold text-blue-900">Your Library</h3>
+          {settings.inventory?.filter(item => item.type === 'sound-pack' || item.type === 'music').map(item => (
+            <div key={item.id} className="glass-card p-6 flex items-center justify-between">
+              <div className="flex items-center gap-3 text-blue-500">
+                <Music size={24} />
+                <h3 className="font-bold text-blue-900">{item.name}</h3>
+              </div>
+              <button 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.CLICK);
+                  setSettings({
+                    ...settings,
+                    inventory: settings.inventory?.map(i => i.id === item.id ? { ...i, activated: !i.activated } : i)
+                  });
+                }}
+                className={`w-12 h-6 rounded-full transition-colors relative ${item.activated ? 'bg-blue-500' : 'bg-gray-300'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${item.activated ? 'left-7' : 'left-1'}`} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* 9. Logout */}
         <div className="glass-card p-6 flex items-center justify-between">
           <div className="flex items-center gap-3 text-red-500">
             <LogOut size={24} />
@@ -2891,6 +2956,7 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
   earnedTrophyToday: boolean,
   showToast: (msg: string, type?: 'success' | 'info' | 'error') => void
 }) {
+  const { play } = useSound();
   const steps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'gratitude', 'reaction'];
   const currentIdx = steps.indexOf(step as any);
   const progressLabel = step === 'completion' ? 'Done!' : `Challenge ${currentIdx + 1}/${steps.length}`;
@@ -2904,6 +2970,7 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
   };
 
   const nextStep = (data?: any) => {
+    play('continue');
     const updates: Partial<DailyProgress> = {};
     if (step === 'pushups') updates.pushupsDone = true;
     if (step === 'breathing') updates.breathingDone = true;
@@ -2954,6 +3021,7 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
                 onDone={nextStep} 
                 onSkip={nextStep}
                 activeSkin={settings.activeSkin}
+                settings={settings}
               />
             )}
             {step === 'water' && (
@@ -2963,12 +3031,14 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
                 onUpdate={(val) => setDailyProgress({ ...dailyProgress, waterDrank: val })}
                 onContinue={nextStep} 
                 activeSkin={settings.activeSkin}
+                settings={settings}
               />
             )}
             {step === 'breathing' && (
               <BreathingStep 
                 onDone={nextStep} 
                 activeSkin={settings.activeSkin}
+                settings={settings}
               />
             )}
             {step === 'drawing' && (
@@ -2980,6 +3050,8 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
               <FootballStep 
                 onFinish={nextStep} 
                 activeSkin={settings.activeSkin}
+                play={play}
+                settings={settings}
               />
             )}
             {step === 'bubbles' && (
@@ -3028,7 +3100,7 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
   );
 }
 
-function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none' }: { goal: number, onDone: () => void, onSkip: () => void, activeSkin?: string }) {
+function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none', settings }: { goal: number, onDone: () => void, onSkip: () => void, activeSkin?: string, settings: UserSettings }) {
   const [isReady, setIsReady] = useState(false);
 
   return (
@@ -3049,7 +3121,7 @@ function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none' }: { goal: numb
         </div>
 
         <div className="space-y-4 flex flex-col items-center">
-          {isReady && <HappyMascot size={32} hat={activeSkin} />}
+          {isReady && <HappyMascot size={32} hat={activeSkin} settings={settings} />}
           {!isReady ? (
             <button 
               onClick={() => {
@@ -3080,7 +3152,7 @@ function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none' }: { goal: numb
   );
 }
 
-function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = 'none' }: { goal: number, progress: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string }) {
+function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = 'none', settings }: { goal: number, progress: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings }) {
   const isFinished = progress >= goal;
 
   return (
@@ -3109,7 +3181,7 @@ function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = 'none' }
         </div>
 
         <div className="space-y-4">
-          {isFinished && <HappyMascot size={40} hat={activeSkin} />}
+          {isFinished && <HappyMascot size={40} hat={activeSkin} settings={settings} />}
           {!isFinished ? (
             <button 
               onClick={() => {
@@ -3137,7 +3209,7 @@ function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = 'none' }
   );
 }
 
-function BreathingStep({ onDone, activeSkin = 'none' }: { onDone: () => void, activeSkin?: string }) {
+function BreathingStep({ onDone, activeSkin = 'none', settings }: { onDone: () => void, activeSkin?: string, settings: UserSettings }) {
   const [phase, setPhase] = useState<'In' | 'Out'>('In');
   const [timer, setTimer] = useState(5);
   const [cycles, setCycles] = useState(0);
@@ -3196,7 +3268,7 @@ function BreathingStep({ onDone, activeSkin = 'none' }: { onDone: () => void, ac
         </div>
 
         <div className="flex flex-col items-center gap-4">
-          {isFinished && <HappyMascot size={40} hat={activeSkin} />}
+          {isFinished && <HappyMascot size={40} hat={activeSkin} settings={settings} />}
           {!isFinished ? (
             <div className="relative w-32 h-32 flex items-center justify-center">
               <svg className="absolute inset-0 w-full h-full -rotate-90">
@@ -3613,7 +3685,7 @@ function CompletionStep({ onFinish, streak, points, showTrophy, settings }: { on
   );
 }
 
-function FootballStep({ onFinish, activeSkin = 'none' }: { onFinish: () => void, activeSkin?: string }) {
+function FootballStep({ onFinish, activeSkin = 'none', play, settings }: { onFinish: () => void, activeSkin?: string, play: (s: string) => void, settings: UserSettings }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [score, setScore] = useState(0);
   const [ballsLeft, setBallsLeft] = useState(5);
@@ -3710,6 +3782,7 @@ function FootballStep({ onFinish, activeSkin = 'none' }: { onFinish: () => void,
           setScoredBalls(prev => [...prev, { x: targetX, y: targetY }]);
         } else {
           vibrate(15);
+          play('losing');
         }
 
         setBallsLeft(b => b - 1);
@@ -3873,7 +3946,7 @@ function FootballStep({ onFinish, activeSkin = 'none' }: { onFinish: () => void,
 
         {score >= 5 && (
           <div className="flex flex-col items-center w-full">
-            <HappyMascot size={40} hat={activeSkin} />
+            <HappyMascot size={40} hat={activeSkin} settings={settings} />
             <button
               onClick={() => {
                 vibrate(VIBRATION_PATTERNS.SUCCESS);

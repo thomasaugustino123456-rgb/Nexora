@@ -1,7 +1,22 @@
 {
-  "version": "1.2.1",
-  "releaseDate": "2026-03-29",
+  "version": "1.2.3",
+  "releaseDate": "2026-04-03",
   "updates": [
+    {
+      "category": "Pro",
+      "title": "New Pro Subscription Experience!",
+      "description": "We've completely redesigned the subscription page with glowing animations and a premium dark theme. Check it out!"
+    },
+    {
+      "category": "Shop",
+      "title": "New Sound & Music Packs!",
+      "description": "Customize your experience with 7 new music tracks and an updated Dog Sound Pack for your mascot. Visit the shop to check them out!"
+    },
+    {
+      "category": "Library",
+      "title": "Library Activation",
+      "description": "You can now manage your purchased sound packs and music directly in your library. Activate and deactivate them whenever you want!"
+    },
     {
       "category": "Library",
       "title": "Unified Library",
