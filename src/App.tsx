@@ -29,29 +29,32 @@ import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
 function playTrophySound(type: string) {
   try {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
     const osc = audioContext.createOscillator();
     const gain = audioContext.createGain();
 
     osc.type = 'triangle';
     if (type === 'golden') {
       osc.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-      osc.frequency.exponentialRampToValueAtTime(1046.50, audioContext.currentTime + 0.3); // C6
+      osc.frequency.exponentialRampToValueAtTime(1046.50, audioContext.currentTime + 0.5); // C6
     } else if (type === 'ice') {
       osc.frequency.setValueAtTime(329.63, audioContext.currentTime); // E4
-      osc.frequency.exponentialRampToValueAtTime(164.81, audioContext.currentTime + 0.3); // E3
+      osc.frequency.exponentialRampToValueAtTime(164.81, audioContext.currentTime + 0.5); // E3
     } else {
       osc.frequency.setValueAtTime(261.63, audioContext.currentTime); // C4
-      osc.frequency.exponentialRampToValueAtTime(130.81, audioContext.currentTime + 0.3); // C3
+      osc.frequency.exponentialRampToValueAtTime(130.81, audioContext.currentTime + 0.5); // C3
     }
 
     gain.gain.setValueAtTime(0.1, audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
 
     osc.connect(gain);
     gain.connect(audioContext.destination);
 
     osc.start();
-    osc.stop(audioContext.currentTime + 0.3);
+    osc.stop(audioContext.currentTime + 0.5);
   } catch (e) {
     console.error('Trophy sound error:', e);
   }
@@ -516,9 +519,9 @@ function CoinAnimation({ onComplete, play, settings }: { onComplete: () => void,
     if (settings.soundEnabled) {
       play('coin');
     }
-    const timer1 = setTimeout(() => setPhase('fly'), 1500);
-    const timer2 = setTimeout(() => setPhase('dust'), 2300);
-    const timer3 = setTimeout(() => onComplete(), 2800);
+    const timer1 = setTimeout(() => setPhase('fly'), 2500);
+    const timer2 = setTimeout(() => setPhase('dust'), 4000);
+    const timer3 = setTimeout(() => onComplete(), 5000);
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
@@ -540,8 +543,8 @@ function CoinAnimation({ onComplete, play, settings }: { onComplete: () => void,
             }}
             exit={{ scale: 0.8, opacity: 0 }}
             transition={{ 
-              duration: 0.8,
-              y: { repeat: Infinity, duration: 0.6, ease: "easeInOut" }
+              duration: 1.5,
+              y: { repeat: Infinity, duration: 1.2, ease: "easeInOut" }
             }}
             className="relative"
           >
@@ -561,7 +564,7 @@ function CoinAnimation({ onComplete, play, settings }: { onComplete: () => void,
               scale: 0.5,
               opacity: [1, 1, 0]
             }}
-            transition={{ duration: 0.8, ease: "anticipate" }}
+            transition={{ duration: 1.5, ease: "anticipate" }}
             className="w-16 h-16 bg-yellow-400 rounded-full border-2 border-yellow-600 flex items-center justify-center shadow-xl"
           >
             <span className="text-xl font-black text-yellow-700">$</span>
@@ -580,7 +583,7 @@ function CoinAnimation({ onComplete, play, settings }: { onComplete: () => void,
                   scale: 0,
                   opacity: 0 
                 }}
-                transition={{ duration: 0.5 }}
+                transition={{ duration: 1.0 }}
                 className="w-2 h-2 bg-yellow-400 rounded-full"
               />
             ))}
@@ -798,7 +801,16 @@ export default function App() {
         }),
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error('Server returned non-JSON response:', text);
+        showToast('Server Error: ' + text.substring(0, 50) + '...', 'error');
+        return;
+      }
+
       if (data.success) {
         showToast('Test notification sent!', 'success');
       } else {
@@ -827,7 +839,16 @@ export default function App() {
         }),
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error('Server returned non-JSON response:', text);
+        showToast('Server Error: ' + text.substring(0, 50) + '...', 'error');
+        return;
+      }
+
       if (data.success) {
         showToast('Motivation sent! 🔥', 'success');
       } else {
