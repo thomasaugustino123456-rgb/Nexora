@@ -181,6 +181,10 @@
       "schema": { "$ref": "LibraryTrophies" },
       "description": "User earned trophies"
     },
+    "/users/{userId}/music/purchased": {
+      "schema": { "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "UserProfile/properties/inventory/items" } } } },
+      "description": "User purchased music and sound packs"
+    },
     "/leaderboard/{userId}": {
       "schema": { "$ref": "LeaderboardEntry" },
       "description": "Public leaderboard entries"

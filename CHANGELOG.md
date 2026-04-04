@@ -1,5 +1,22 @@
 # Nexora Daily - Changelog
 
+## [1.2.0] - 2026-04-04
+
+### Added
+- **Pro Daily Gift**: Premium users now receive a 50 Coin bonus every day.
+- **Global Rankings**: Integrated a global leaderboard to show users their rank and performance tier.
+- **New Challenges**: Added "Deep Meditation" and "Creative Writing" challenges.
+- **Level-Up Rewards**: Users now receive 15 coins and a 5-streak bonus upon reaching a new level.
+- **Pro Badge**: Added a visual "PRO" badge to the level indicator for premium users.
+
+### Changed
+- **Meditation for All**: Moved the "Deep Meditation" challenge to the free version (30s duration) and made it the final step of the daily flow.
+- **Dynamic Level Map**: The level journey map now centers around the user's current level for better visibility.
+
+### Fixed
+- **AI Mascot**: Fixed an issue where the AI mascot couldn't retrieve the API key in the browser.
+- **Gratitude Entries**: Fixed a bug where gratitude notes were not displaying the correct date.
+
 ## [1.1.1] - 2026-03-29
 
 ### Added

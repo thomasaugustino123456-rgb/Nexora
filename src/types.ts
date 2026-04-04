@@ -8,6 +8,7 @@ export interface UserSettings {
   soundEnabled?: boolean;
   notificationsEnabled?: boolean;
   showQuotes?: boolean;
+  pushMotivationEnabled?: boolean;
   unitSystem?: 'metric' | 'imperial';
   purchasedItems?: string[];
   savedChallengeIds?: string[];
@@ -26,6 +27,7 @@ export interface ShopItem {
   name: string;
   description: string;
   price: number;
+  coinPrice?: number;
   effect: 'streak-protection' | 'double-points' | 'skin' | 'gift' | 'sound-pack' | 'music';
   icon: string;
 }
@@ -54,6 +56,8 @@ export interface DailyProgress {
   memoryDone?: boolean;
   gratitudeDone?: boolean;
   reactionDone?: boolean;
+  meditationDone?: boolean;
+  writingDone?: boolean;
 }
 
 export type TrophyType = 'golden' | 'ice' | 'broken';
@@ -78,7 +82,9 @@ export interface UserStats {
   level?: number;
   totalCompletedDays: number;
   lastCompletedDate: string | null;
+  lastGiftDate?: string | null;
   currentChallengeIndex: number; // The index of the next challenge to be completed
+  coins: number;
   trophies: Trophy[];
   pointsByCategory: {
     physical: number;
@@ -91,5 +97,5 @@ export interface UserStats {
 }
 
 export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription';
-export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'completion';
+export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion';
 export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';

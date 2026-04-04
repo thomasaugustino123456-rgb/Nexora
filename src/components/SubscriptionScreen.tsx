@@ -4,9 +4,38 @@ import { ArrowLeft, Check, Crown, Zap, Star } from 'lucide-react';
 
 export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, userId: string }) {
   const plans = [
-    { name: 'Weekly', price: '$3.99', description: 'Perfect for a quick boost to your routine.', url: `https://nexora-daily.lemonsqueezy.com/checkout/buy/be209445-5c93-461e-9a2d-5db0e7af2d29?checkout[custom][user_id]=${userId}` },
-    { name: 'Monthly', price: '$9.99', description: 'The most popular choice for steady progress.', url: `https://nexora-daily.lemonsqueezy.com/checkout/buy/ca3035cc-8722-4462-bba9-d25bd7d9ea09?checkout[custom][user_id]=${userId}` },
-    { name: 'Yearly', price: '$29.90', description: 'Best value for long-term transformation.', url: `https://nexora-daily.lemonsqueezy.com/checkout/buy/202b9050-b67b-4857-9d58-fe68b7d12b44?checkout[custom][user_id]=${userId}` },
+    { 
+      id: 'weekly',
+      name: 'Weekly', 
+      price: '$3.99', 
+      period: 'per week',
+      description: 'Full access for 7 days. Perfect for a quick boost to your routine.', 
+      features: ['All Pro Features', '7-Day Access', 'Cancel Anytime'],
+      icon: <Zap className="text-blue-400" size={24} />,
+      url: `https://nexora-daily.lemonsqueezy.com/checkout/buy/be209445-5c93-461e-9a2d-5db0e7af2d29?checkout[custom][user_id]=${userId}` 
+    },
+    { 
+      id: 'monthly',
+      name: 'Monthly', 
+      price: '$9.99', 
+      period: 'per month',
+      description: 'The most popular choice for steady progress and lasting habits.', 
+      features: ['All Pro Features', 'Monthly Billing', 'Priority Support'],
+      icon: <Star className="text-amber-400" size={24} />,
+      popular: true,
+      url: `https://nexora-daily.lemonsqueezy.com/checkout/buy/ca3035cc-8722-4462-bba9-d25bd7d9ea09?checkout[custom][user_id]=${userId}` 
+    },
+    { 
+      id: 'yearly',
+      name: 'Yearly', 
+      price: '$29.90', 
+      period: 'per year',
+      description: 'Ultimate value for long-term transformation and peak performance.', 
+      features: ['All Pro Features', 'Best Value (Save 75%)', 'Exclusive Content'],
+      icon: <Crown className="text-orange-400" size={24} />,
+      bestValue: true,
+      url: `https://nexora-daily.lemonsqueezy.com/checkout/buy/202b9050-b67b-4857-9d58-fe68b7d12b44?checkout[custom][user_id]=${userId}` 
+    },
   ];
 
   const features = [
@@ -46,88 +75,133 @@ export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, use
         />
       </div>
 
-      <div className="relative z-10 max-w-2xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <button onClick={onBack} className="p-2 rounded-full hover:bg-white/10 transition-colors backdrop-blur-md">
-            <ArrowLeft size={24} className="text-white" />
+      <div className="relative z-10 max-w-5xl mx-auto">
+        <div className="flex items-center gap-4 mb-12">
+          <button onClick={onBack} className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md group">
+            <ArrowLeft size={24} className="text-white group-hover:-translate-x-1 transition-transform" />
           </button>
-          <h1 className="text-3xl font-black text-white drop-shadow-lg">Upgrade to Pro</h1>
-        </div>
-
-        {/* Animated Subscription Image */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="mb-8 flex justify-center"
-        >
-          <motion.img 
-            animate={{ y: [-10, 10, -10] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            src="https://i.postimg.cc/yxF522mf/Subscription-plan-selection-for-Nexora.png" 
-            alt="Subscription Plan" 
-            className="w-full max-w-md rounded-3xl shadow-2xl shadow-amber-500/20 border border-white/10"
-            referrerPolicy="no-referrer"
-          />
-        </motion.div>
-
-        <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20 mb-8">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-4 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl text-white shadow-lg shadow-amber-500/30">
-              <Crown size={32} />
-            </div>
-            <div>
-              <h2 className="text-2xl font-black text-white">Nexora Pro</h2>
-              <p className="text-amber-300 font-medium">Unlock your full potential</p>
-            </div>
+          <div>
+            <h1 className="text-4xl font-black text-white tracking-tight">Nexora Pro</h1>
+            <p className="text-slate-400 font-medium">Choose the plan that fits your journey</p>
           </div>
-          <ul className="space-y-4">
-            {features.map((feature, index) => (
-              <motion.li 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + index * 0.1 }}
-                key={feature.title} 
-                className="flex items-start gap-3 text-white/90"
-              >
-                <div className="bg-emerald-500/20 p-1 rounded-full text-emerald-400 mt-1 flex-shrink-0 border border-emerald-500/30">
-                  <Check size={16} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-white">{feature.title}</h4>
-                  <p className="text-sm text-white/60">{feature.description}</p>
-                </div>
-              </motion.li>
-            ))}
-          </ul>
         </div>
 
-        <div className="space-y-4">
+        {/* Pricing Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           {plans.map((plan, index) => (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
+            <motion.div
+              key={plan.id}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 + index * 0.1 }}
-              key={plan.name} 
-              className="bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/10 shadow-xl flex items-center justify-between hover:border-amber-400/50 hover:bg-white/10 transition-all group"
+              transition={{ delay: 0.2 + index * 0.1, duration: 0.6 }}
+              className={`relative group rounded-3xl p-8 flex flex-col h-full transition-all duration-500 ${
+                plan.popular 
+                  ? 'bg-gradient-to-b from-amber-500/20 to-amber-950/40 border-2 border-amber-500/50 shadow-[0_0_40px_-10px_rgba(245,158,11,0.3)]' 
+                  : 'bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10'
+              }`}
             >
-              <div className="flex-1 mr-4">
-                <h3 className="font-black text-xl text-white group-hover:text-amber-300 transition-colors">{plan.name}</h3>
-                <p className="text-sm text-white/50 font-medium">{plan.description}</p>
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg">
+                  Most Popular
+                </div>
+              )}
+              {plan.bestValue && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-red-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg">
+                  Best Value
+                </div>
+              )}
+
+              <div className="mb-8">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${
+                  plan.popular ? 'bg-amber-500/20 text-amber-400' : 'bg-white/10 text-white'
+                }`}>
+                  {plan.icon}
+                </div>
+                <h3 className="text-2xl font-black text-white mb-2">{plan.name}</h3>
+                <div className="flex items-baseline gap-1 mb-4">
+                  <span className="text-4xl font-black text-white">{plan.price}</span>
+                  <span className="text-slate-400 text-sm font-medium">{plan.period}</span>
+                </div>
+                <p className="text-slate-400 text-sm leading-relaxed min-h-[3rem]">
+                  {plan.description}
+                </p>
               </div>
-              <button 
+
+              <div className="space-y-4 mb-8 flex-grow">
+                {plan.features.map((feature, i) => (
+                  <div key={i} className="flex items-center gap-3 text-sm text-slate-300">
+                    <div className={`p-0.5 rounded-full ${plan.popular ? 'bg-amber-500/20 text-amber-400' : 'bg-white/10 text-slate-400'}`}>
+                      <Check size={14} />
+                    </div>
+                    {feature}
+                  </div>
+                ))}
+              </div>
+
+              <button
                 onClick={() => {
                   const newWindow = window.open(plan.url, '_blank');
                   if (!newWindow) {
                     alert("Popup blocked! Please allow popups to proceed to payment.");
                   }
                 }}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white px-6 py-3 rounded-xl font-black transition-all active:scale-95 shadow-lg shadow-amber-500/25"
+                className={`w-full py-4 rounded-2xl font-black transition-all active:scale-95 shadow-xl ${
+                  plan.popular
+                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:shadow-amber-500/25'
+                    : 'bg-white text-slate-950 hover:bg-slate-100'
+                }`}
               >
-                {plan.price}
+                Get Started
               </button>
             </motion.div>
           ))}
+        </div>
+
+        {/* Feature Highlights */}
+        <div className="bg-white/5 backdrop-blur-xl p-10 rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10">
+            <Crown size={120} className="text-amber-500" />
+          </div>
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-4 mb-10">
+              <div className="p-4 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl text-white shadow-lg shadow-amber-500/30">
+                <Crown size={32} />
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-white tracking-tight">Pro Features</h2>
+                <p className="text-amber-300/80 font-bold uppercase text-[10px] tracking-[0.2em]">Unlock your full potential</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {features.map((feature, index) => (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  key={feature.title} 
+                  className="flex items-start gap-4"
+                >
+                  <div className="bg-amber-500/20 p-2 rounded-xl text-amber-400 mt-1 flex-shrink-0 border border-amber-500/30">
+                    <Check size={18} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white text-lg mb-1">{feature.title}</h4>
+                    <p className="text-sm text-slate-400 leading-relaxed">{feature.description}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Trust/Security Footer */}
+        <div className="mt-12 text-center">
+          <p className="text-slate-500 text-xs font-medium flex items-center justify-center gap-2">
+            <Zap size={12} className="text-amber-500" /> Secure checkout powered by Lemon Squeezy
+          </p>
         </div>
       </div>
     </motion.div>

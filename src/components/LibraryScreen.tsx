@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { LibraryItem, UserStats, UserSettings } from '../types';
-import { ArrowLeft, Trash2, Power, PowerOff, Package, Book, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { ArrowLeft, Trash2, Power, PowerOff, Package, Book, Image as ImageIcon, Sparkles, Music, Play, Pause, Volume2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 export function LibraryScreen({ 
@@ -12,6 +12,7 @@ export function LibraryScreen({
   onDelete, 
   onDeleteNote,
   onDeleteChallenge,
+  onDeleteDrawing,
   onBack 
 }: { 
   items: LibraryItem[]; 
@@ -22,10 +23,12 @@ export function LibraryScreen({
   onDelete: (id: string) => void; 
   onDeleteNote: (id: string) => void; 
   onDeleteChallenge: (id: string) => void;
+  onDeleteDrawing: (index: number) => void;
   onBack: () => void; 
 }) {
   const powerUps = items.filter(item => item.type === 'power-up');
   const skins = items.filter(item => item.type === 'skin');
+  const musicItems = items.filter(item => item.type === 'music' || item.type === 'sound-pack');
   const gifts = items.filter(item => item.type === 'gift');
   const notes = stats.gratitudeEntries || [];
   const drawings = stats.drawings || [];
@@ -65,13 +68,33 @@ export function LibraryScreen({
       ) : (
         <div className="space-y-12">
           {/* Shop Items Section */}
-          {(powerUps.length > 0 || skins.length > 0 || gifts.length > 0) && (
+          {(powerUps.length > 0 || skins.length > 0 || musicItems.length > 0 || gifts.length > 0) && (
             <div className="space-y-8">
               {powerUps.length > 0 && (
                 <section>
                   <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Active Power-Ups</h2>
                   <div className="grid grid-cols-1 gap-4">
                     {powerUps.map((item) => (
+                      <LibraryItemCard 
+                        key={item.id} 
+                        item={item} 
+                        onActivate={onActivate} 
+                        onDeactivate={onDeactivate} 
+                        onDelete={onDelete} 
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {musicItems.length > 0 && (
+                <section>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Music size={16} className="text-blue-400" />
+                    <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest">Music & Sound Packs</h2>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    {musicItems.map((item) => (
                       <LibraryItemCard 
                         key={item.id} 
                         item={item} 
@@ -190,6 +213,13 @@ export function LibraryScreen({
                 {drawings.map((drawing, i) => (
                   <div key={i} className="bg-white p-2 rounded-2xl shadow-md border-2 border-blue-100 overflow-hidden group relative">
                     <img src={drawing} alt={`Drawing ${i}`} className="w-full aspect-square object-cover rounded-xl" />
+                    <button 
+                      onClick={() => onDeleteDrawing(i)}
+                      className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete Drawing"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                     <div className="mt-2 flex justify-between items-center px-1">
                       <span className="text-[10px] font-bold text-blue-400">#{i + 1}</span>
                       <Sparkles size={12} className="text-blue-300" />
@@ -216,31 +246,44 @@ function LibraryItemCard({
   onDeactivate: (id: string) => void; 
   onDelete: (id: string) => void; 
 }) {
+  const isMusic = item.type === 'music' || item.type === 'sound-pack';
+
   return (
-    <div className={`glass-card p-4 flex items-center gap-4 transition-all ${item.activated ? 'border-blue-500 bg-blue-50/50' : 'border-transparent'}`}>
-      <div className="text-4xl drop-shadow-sm">{item.icon}</div>
+    <div className={`glass-card p-4 flex items-center gap-4 transition-all ${item.activated ? 'border-blue-500 bg-blue-50/50 shadow-lg shadow-blue-100' : 'border-transparent'}`}>
+      <div className="relative">
+        <div className="text-4xl drop-shadow-sm">{item.icon}</div>
+        {item.activated && isMusic && (
+          <motion.div 
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 1, repeat: Infinity }}
+            className="absolute -top-1 -right-1 bg-blue-500 text-white p-1 rounded-full shadow-md"
+          >
+            <Volume2 size={10} />
+          </motion.div>
+        )}
+      </div>
       <div className="flex-1 min-w-0">
         <h3 className="font-bold text-blue-900 truncate">{item.name}</h3>
         <p className="text-[10px] text-blue-900/40 font-medium">
-          {item.activated ? 'Currently Active' : 'Inactive'}
+          {item.activated ? (isMusic ? 'Now Playing' : 'Currently Active') : 'Inactive'}
         </p>
       </div>
       <div className="flex items-center gap-2">
         {item.activated ? (
           <button 
             onClick={() => onDeactivate(item.id)}
-            className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
-            title="Deactivate"
+            className={`p-2 rounded-lg transition-colors ${isMusic ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'}`}
+            title={isMusic ? "Stop Music" : "Deactivate"}
           >
-            <PowerOff size={18} />
+            {isMusic ? <Pause size={18} /> : <PowerOff size={18} />}
           </button>
         ) : (
           <button 
             onClick={() => onActivate(item.id)}
-            className="p-2 rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors"
-            title="Activate"
+            className={`p-2 rounded-lg transition-colors ${isMusic ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md' : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'}`}
+            title={isMusic ? "Play Music" : "Activate"}
           >
-            <Power size={18} />
+            {isMusic ? <Play size={18} /> : <Power size={18} />}
           </button>
         )}
         <button 

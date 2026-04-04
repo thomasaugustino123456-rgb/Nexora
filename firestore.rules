@@ -67,12 +67,17 @@ service cloud.firestore {
              (!('soundEnabled' in data) || data.soundEnabled is bool) &&
              (!('notificationsEnabled' in data) || data.notificationsEnabled is bool) &&
              (!('showQuotes' in data) || data.showQuotes is bool) &&
+             (!('pushMotivationEnabled' in data) || data.pushMotivationEnabled is bool) &&
              (!('unitSystem' in data) || (data.unitSystem is string && data.unitSystem.size() <= 20)) &&
              (!('profilePic' in data) || (data.profilePic is string && data.profilePic.size() <= 1048576)) && // 1MB limit
              (!('gender' in data) || (data.gender is string && data.gender.size() <= 50)) &&
              (!('source' in data) || (data.source is string && data.source.size() <= 50)) &&
              (!('onboardingCompleted' in data) || data.onboardingCompleted is bool) &&
              (!('activeSkin' in data) || (data.activeSkin is string && data.activeSkin.size() <= 50)) &&
+             (!('inventory' in data) || (data.inventory is list && data.inventory.size() <= 100)) &&
+             (!('savedChallengeIds' in data) || (data.savedChallengeIds is list && data.savedChallengeIds.size() <= 100)) &&
+             (!('fcmToken' in data) || (data.fcmToken is string && data.fcmToken.size() <= 500)) &&
+             (!('stats' in data) || data.stats is map) &&
              (!('isPro' in data) || data.isPro is bool);
     }
 
@@ -158,6 +163,13 @@ service cloud.firestore {
         allow read: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && isValidLibraryTrophies(request.resource.data);
         allow update: if isOwner(userId) && isValidLibraryTrophies(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /music/purchased {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
         allow delete: if isOwner(userId) || isAdmin();
       }
     }
