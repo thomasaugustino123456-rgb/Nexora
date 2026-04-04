@@ -7,7 +7,7 @@ import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy a
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
@@ -1650,6 +1650,7 @@ export default function App() {
                 className="w-full"
               >
                 <SettingsScreen 
+                  user={user}
                   settings={settings} 
                   setSettings={setSettings} 
                   isPro={isPro}
@@ -1664,6 +1665,7 @@ export default function App() {
                   onSendTestNotification={sendTestNotification}
                   onSendMotivation={sendMotivation}
                   onSendTestEmail={sendTestEmail}
+                  showToast={showToast}
                 />
               </motion.div>
             )}
@@ -2920,7 +2922,8 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
   );
 }
 
-function SettingsScreen({ settings, setSettings, isPro, onBack, onLogout, fcmToken, fcmError, onRetryFCM, onSendTestNotification, onSendMotivation, onSendTestEmail }: { 
+function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, fcmToken, fcmError, onRetryFCM, onSendTestNotification, onSendMotivation, onSendTestEmail, showToast }: { 
+  user: FirebaseUser | null,
   settings: UserSettings, 
   setSettings: (s: UserSettings) => void, 
   isPro: boolean,
@@ -2931,12 +2934,44 @@ function SettingsScreen({ settings, setSettings, isPro, onBack, onLogout, fcmTok
   onRetryFCM: () => void,
   onSendTestNotification: () => void,
   onSendMotivation: () => void,
-  onSendTestEmail: () => void
+  onSendTestEmail: () => void,
+  showToast: (message: string, type: 'success' | 'error') => void
 }) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  
+  // Feedback state
+  const [feedbackName, setFeedbackName] = useState(user?.displayName || '');
+  const [feedbackEmail, setFeedbackEmail] = useState(user?.email || '');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+
+  const sendFeedback = async () => {
+    if (!feedbackName || !feedbackEmail || !feedbackMessage) {
+      showToast('Please fill in all fields', 'error');
+      return;
+    }
+    
+    setIsSendingFeedback(true);
+    try {
+      await setDoc(doc(collection(db, 'feedback')), {
+        name: feedbackName,
+        email: feedbackEmail,
+        message: feedbackMessage,
+        createdAt: serverTimestamp(),
+        userId: auth.currentUser?.uid || 'anonymous'
+      });
+      showToast('Feedback sent! Thanks bro! 🔥', 'success');
+      setFeedbackMessage('');
+    } catch (error) {
+      console.error('Error sending feedback:', error);
+      showToast('Failed to send feedback', 'error');
+    } finally {
+      setIsSendingFeedback(false);
+    }
+  };
 
   const handleRemoveAccount = async () => {
     if (!auth.currentUser) return;
@@ -3037,6 +3072,23 @@ function SettingsScreen({ settings, setSettings, isPro, onBack, onLogout, fcmTok
 
       {/* 7 Helpful Things Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Help Center */}
+        <div className="glass-card p-6 space-y-4 lg:col-span-2">
+          <div className="flex items-center gap-3 text-blue-500">
+            <MessageSquare size={24} />
+            <h3 className="font-bold text-blue-900">Help Center</h3>
+          </div>
+          <p className="text-xs text-blue-900/40">Need help or have feedback? Let us know bro!</p>
+          <div className="grid grid-cols-2 gap-4">
+            <input type="text" placeholder="Name" value={feedbackName} onChange={e => setFeedbackName(e.target.value)} className="w-full p-3 rounded-xl bg-white/50 border border-blue-100 text-sm" />
+            <input type="email" placeholder="Email" value={feedbackEmail} onChange={e => setFeedbackEmail(e.target.value)} className="w-full p-3 rounded-xl bg-white/50 border border-blue-100 text-sm" />
+          </div>
+          <textarea placeholder="Your message..." value={feedbackMessage} onChange={e => setFeedbackMessage(e.target.value)} className="w-full p-3 rounded-xl bg-white/50 border border-blue-100 text-sm h-24" />
+          <button onClick={sendFeedback} disabled={isSendingFeedback} className="btn-primary w-full py-3 text-sm font-black uppercase tracking-widest">
+            {isSendingFeedback ? 'Sending...' : 'Send Feedback'}
+          </button>
+        </div>
+
         {/* 1. Water Goal Adjuster */}
         <div className="glass-card p-6 space-y-4">
           <div className="flex items-center gap-3 text-blue-500">

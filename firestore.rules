@@ -180,5 +180,17 @@ service cloud.firestore {
       allow update: if isOwner(userId) && isValidLeaderboardEntry(request.resource.data);
       allow delete: if isOwner(userId) || isAdmin();
     }
+
+    match /feedback/{feedbackId} {
+      allow create: if isAuthenticated() && 
+                    request.resource.data.keys().hasAll(['name', 'email', 'message', 'createdAt', 'userId']) &&
+                    request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 100 &&
+                    request.resource.data.email is string && isValidEmail(request.resource.data.email) &&
+                    request.resource.data.message is string && request.resource.data.message.size() > 0 && request.resource.data.message.size() < 2000 &&
+                    request.resource.data.createdAt is timestamp &&
+                    request.resource.data.userId is string;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
   }
 }

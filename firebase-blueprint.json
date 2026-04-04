@@ -158,6 +158,19 @@
           "items": { "type": "string" }
         }
       }
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback messages",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "email", "message", "createdAt", "userId"]
     }
   },
   "firestore": {
@@ -188,6 +201,10 @@
     "/leaderboard/{userId}": {
       "schema": { "$ref": "LeaderboardEntry" },
       "description": "Public leaderboard entries"
+    },
+    "/feedback/{feedbackId}": {
+      "schema": { "$ref": "Feedback" },
+      "description": "User feedback messages"
     }
   }
 }
