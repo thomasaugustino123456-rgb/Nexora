@@ -21,7 +21,6 @@ import { WritingMascot } from './components/WritingMascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './components/Trophies';
 import { LibraryScreen } from './components/LibraryScreen';
 import { ShopScreen, SHOP_ITEMS } from './components/ShopScreen';
-import { SubscriptionScreen } from './components/SubscriptionScreen';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { GoogleGenAI } from "@google/genai";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
@@ -801,15 +800,13 @@ export default function App() {
         }),
       });
 
-      const text = await response.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        console.error('Server returned non-JSON response:', text);
-        showToast('Server Error: ' + text.substring(0, 50) + '...', 'error');
+      if (!response.ok) {
+        const text = await response.text();
+        showToast('Server Error: ' + (text.substring(0, 50) || response.statusText), 'error');
         return;
       }
+
+      const data = await response.json();
 
       if (data.success) {
         showToast('Test notification sent!', 'success');
@@ -839,15 +836,13 @@ export default function App() {
         }),
       });
 
-      const text = await response.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        console.error('Server returned non-JSON response:', text);
-        showToast('Server Error: ' + text.substring(0, 50) + '...', 'error');
+      if (!response.ok) {
+        const text = await response.text();
+        showToast('Server Error: ' + (text.substring(0, 50) || response.statusText), 'error');
         return;
       }
+
+      const data = await response.json();
 
       if (data.success) {
         showToast('Motivation sent! 🔥', 'success');
@@ -879,6 +874,12 @@ export default function App() {
           body: 'Hey bro, this is a test email from your Nexora app. It works!',
         }),
       });
+
+      if (!response.ok) {
+        const text = await response.text();
+        showToast('Server Error: ' + (text.substring(0, 50) || response.statusText), 'error');
+        return;
+      }
 
       const data = await response.json();
       if (data.success) {
@@ -1733,9 +1734,11 @@ export default function App() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="w-full"
+                className="w-full p-6 flex flex-col items-center justify-center min-h-screen text-center"
               >
-                <SubscriptionScreen onBack={() => setActiveScreen('home')} userId={user?.uid || ''} />
+                <h2 className="text-3xl font-black text-blue-900 mb-4">Coming Soon</h2>
+                <p className="text-blue-900/60">We're working hard to bring you Nexora Pro. Stay tuned!</p>
+                <button onClick={() => setActiveScreen('home')} className="mt-8 px-6 py-3 bg-blue-900 text-white rounded-full font-bold">Back Home</button>
               </motion.div>
             )}
             {activeScreen === 'library' && (

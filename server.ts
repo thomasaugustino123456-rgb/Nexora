@@ -114,11 +114,13 @@ async function startServer() {
         token: token,
       };
 
+      console.log("Attempting to send motivation message:", message);
       const response = await admin.messaging().send(message);
+      console.log("Successfully sent motivation message:", response);
       res.json({ success: true, messageId: response, quote: randomQuote });
     } catch (error: any) {
       console.error("Error sending motivation:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error.message, stack: error.stack });
     }
   });
 
