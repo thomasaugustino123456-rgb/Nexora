@@ -1266,6 +1266,8 @@ export default function App() {
         setLoading(false);
       } else {
         setUser(null);
+        setStats(DEFAULT_STATS);
+        setSettings(DEFAULT_SETTINGS);
         setLoading(false);
       }
     });
@@ -1585,6 +1587,8 @@ export default function App() {
     console.log("Logout button clicked");
     try {
       await signOut(auth);
+      setStats(DEFAULT_STATS);
+      setSettings(DEFAULT_SETTINGS);
       console.log("Sign out successful");
     } catch (error) {
       console.error("Error signing out:", error);

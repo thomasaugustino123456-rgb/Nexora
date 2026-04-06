@@ -129,7 +129,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
       setIsSuccess(true);
       triggerJump();
     } catch (err: any) {
-      console.error("Email auth error:", err);
+      console.error("Email auth error:", err.code, err.message);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
         setError('Invalid email or password.');
       } else if (err.code === 'auth/email-already-in-use') {
@@ -137,7 +137,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
       } else if (err.code === 'auth/weak-password') {
         setError('Password should be at least 6 characters.');
       } else {
-        setError(err.message || 'An error occurred during authentication.');
+        setError(`Error: ${err.code} - ${err.message}`);
       }
     } finally {
       setIsSigningIn(false);
@@ -156,11 +156,12 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
       setIsSuccess(true);
       triggerJump();
     } catch (err: any) {
+      console.error("Google auth error:", err.code, err.message);
       if (err.code === 'auth/cancelled-popup-request' || err.code === 'auth/popup-closed-by-user') {
         console.log("Sign in popup closed by user");
       } else {
         console.error("Error signing in with Google:", err);
-        setError('Failed to sign in with Google. Please try again.');
+        setError(`Failed to sign in with Google: ${err.code} - ${err.message}`);
       }
     } finally {
       setIsSigningIn(false);
