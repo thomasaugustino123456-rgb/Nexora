@@ -1249,11 +1249,23 @@ export default function App() {
             if (data.stats) {
               setStats(prev => ({ ...prev, ...data.stats }));
             }
-
-            // Load daily progress from Firestore
+            const today = new Date().toISOString().split('T')[0];
             const progressDoc = await getDoc(doc(db, 'users', currentUser.uid, 'progress', today));
             if (progressDoc.exists()) {
-              setDailyProgress(prev => ({ ...prev, ...progressDoc.data() }));
+              setDailyProgress(progressDoc.data() as DailyProgress);
+            } else {
+              setDailyProgress({
+                date: today,
+                completed: false,
+                pushupsDone: false,
+                waterDrank: 0,
+                breathingDone: false,
+                drawingDone: false,
+                footballDone: false,
+                bubblesDone: false,
+                dailyQuestDone: false,
+                completionsCount: 0
+              });
             }
           }
         } catch (error) {
@@ -3199,6 +3211,7 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
     const path = `users/${user.uid}`;
     try {
       await updateDoc(doc(db, 'users', user.uid), { displayName: tempName });
+      await updateDoc(doc(db, 'leaderboard', user.uid), { displayName: tempName });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, path);
     }
@@ -3239,7 +3252,6 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
             ref={fileInputRef} 
             onChange={handleFileChange} 
             accept="image/*" 
-            capture="user"
             className="hidden" 
           />
         </div>
