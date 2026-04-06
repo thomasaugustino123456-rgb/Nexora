@@ -1,5 +1,36 @@
 # Nexora Daily - What's New!
 
+## Version 1.4.0 (2026-04-06)
+
+### 🏆 Real User Leaderboard
+- **No More Bots**: Removed all placeholder users. You now compete against real Nexora users!
+- **League System**: Climb from Bronze to Diamond. Top 3 users in each league advance weekly.
+- **Duolingo Style**: Redesigned UI with ranking colors, promotion zones, and a sticky user bar.
+
+### ⚡ New XP System
+- **Task XP**: Earn +5 XP for every individual task completed (Pushups, Water, etc.).
+- **Level Bonus**: Earn +5 XP for completing an entire daily flow.
+- **Weekly XP**: Leaderboard now tracks weekly XP for fair competition.
+
+### 📊 UI & Stats
+- **XP Everywhere**: New XP stats on Home screen cards, Consistency cards, and Leaderboard.
+- **Home Screen Cards**: Added prominent Streak and Coin cards with XP earning info.
+
+---
+
+## Version 1.3.0 (2026-04-06)
+
+### 📱 App Icon Badges (PWA)
+- **Live Badges**: A red notification badge now appears on your app icon for trophy alerts and updates.
+- **Customization**: Choose exactly which notifications trigger the badge in Settings.
+- **Dynamic Urgency**: Badge count increases after 10:00 PM if your daily challenge isn't done.
+
+### 🛠️ Bug Fixes & Audio
+- **Emergency Sound Fix**: Improved reliability for trophy degradation sounds.
+- **Performance**: Faster data syncing and smoother transitions.
+
+---
+
 ## Version 1.2.1 (2026-03-29)
 
 ### 📚 Unified Library

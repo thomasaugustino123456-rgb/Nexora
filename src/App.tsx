@@ -3,7 +3,7 @@ import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
-import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood, BadgeSettings } from './types';
+import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood, BadgeSettings, LeaderboardEntry } from './types';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider } from 'firebase/auth';
@@ -280,7 +280,9 @@ const DEFAULT_STATS: UserStats = {
   lastCompletedDate: null,
   currentChallengeIndex: 0,
   coins: 0,
+  xp: 0,
   weeklyPoints: 0,
+  weeklyXP: 0,
   trophies: [],
   pointsByCategory: {
     physical: 0,
@@ -691,7 +693,7 @@ export default function App() {
   // Version Update Logic
   const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean, imageUrl?: string } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
-  const currentAppVersion = "1.3.0"; // Current hardcoded version
+  const currentAppVersion = "1.4.0"; // Current hardcoded version
 
   // Background Music Logic
   useEffect(() => {
@@ -795,6 +797,21 @@ export default function App() {
         await setDoc(progressRef, {
           ...dailyProgress,
           date: today
+        }, { merge: true });
+
+        // Sync to leaderboard collection
+        const leaderboardRef = doc(db, 'leaderboard', user.uid);
+        await setDoc(leaderboardRef, {
+          uid: user.uid,
+          displayName: settings.displayName || 'Anonymous',
+          photoURL: user.photoURL || '',
+          streak: stats.streak || 0,
+          totalPoints: stats.totalPoints,
+          xp: stats.xp || 0,
+          weeklyPoints: stats.weeklyPoints,
+          weeklyXP: stats.weeklyXP || 0,
+          level: Math.floor((stats.totalPoints || 0) / 100) + 1,
+          league: settings.league || 'Bronze'
         }, { merge: true });
 
         // Sync music specifically to the new path as requested
@@ -1225,7 +1242,7 @@ export default function App() {
   }, [settings.isPro, user, stats.lastGiftDate, today]);
 
   // 11. Leaderboard Data Fetching
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   useEffect(() => {
     if (user) {
       // Weekly Reset Logic
@@ -1235,6 +1252,7 @@ export default function App() {
         setStats(prev => ({
           ...prev,
           weeklyPoints: 0,
+          weeklyXP: 0,
           lastWeeklyReset: startOfWeek
         }));
       }
@@ -1242,50 +1260,29 @@ export default function App() {
       const q = query(
         collection(db, 'leaderboard'), 
         where('league', '==', settings.league || 'Bronze'),
-        orderBy('weeklyPoints', 'desc'), 
-        limit(20)
+        orderBy('weeklyXP', 'desc'), 
+        limit(50)
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (snapshot.empty) {
-          // Seed some bots for competition if empty
-          const bots = [
-            { uid: 'bot1', displayName: 'Alex', weeklyPoints: 120, totalPoints: 500, level: 5, streak: 12, league: settings.league || 'Bronze', photoURL: '' },
-            { uid: 'bot2', displayName: 'Sam', weeklyPoints: 95, totalPoints: 420, level: 4, streak: 8, league: settings.league || 'Bronze', photoURL: '' },
-            { uid: 'bot3', displayName: 'Jordan', weeklyPoints: 80, totalPoints: 380, level: 3, streak: 5, league: settings.league || 'Bronze', photoURL: '' },
-            { uid: 'bot4', displayName: 'Taylor', weeklyPoints: 45, totalPoints: 210, level: 2, streak: 3, league: settings.league || 'Bronze', photoURL: '' },
-            { uid: 'bot5', displayName: 'Casey', weeklyPoints: 30, totalPoints: 150, level: 1, streak: 1, league: settings.league || 'Bronze', photoURL: '' },
-          ];
-          // Add user to bots list
-          if (user) {
-            bots.push({
-              uid: user.uid,
-              displayName: settings.displayName || 'Anonymous',
-              photoURL: user.photoURL || '',
-              streak: stats.streak || 0,
-              totalPoints: stats.totalPoints,
-              weeklyPoints: stats.weeklyPoints,
-              level: Math.floor((stats.totalPoints || 0) / 100) + 1,
-              league: settings.league || 'Bronze'
-            });
-          }
-          setLeaderboard(bots.sort((a, b) => (b.weeklyPoints || 0) - (a.weeklyPoints || 0)));
-        } else {
-          const data = snapshot.docs.map(doc => doc.data());
-          // If user is not in the data, add them manually to the local state for immediate feedback
-          if (user && !data.find(d => d.uid === user.uid)) {
-            data.push({
-              uid: user.uid,
-              displayName: settings.displayName || 'Anonymous',
-              photoURL: user.photoURL || '',
-              streak: stats.streak || 0,
-              totalPoints: stats.totalPoints,
-              weeklyPoints: stats.weeklyPoints,
-              level: Math.floor((stats.totalPoints || 0) / 100) + 1,
-              league: settings.league || 'Bronze'
-            });
-          }
-          setLeaderboard(data.sort((a, b) => (b.weeklyPoints || 0) - (a.weeklyPoints || 0)));
+        const data = snapshot.docs.map(doc => doc.data() as any);
+        
+        // Ensure user is in the list for local feedback if not yet synced
+        if (user && !data.find(d => d.uid === user.uid)) {
+          data.push({
+            uid: user.uid,
+            displayName: settings.displayName || 'Anonymous',
+            photoURL: user.photoURL || '',
+            streak: stats.streak || 0,
+            totalPoints: stats.totalPoints,
+            xp: stats.xp || 0,
+            weeklyPoints: stats.weeklyPoints,
+            weeklyXP: stats.weeklyXP || 0,
+            level: Math.floor((stats.totalPoints || 0) / 100) + 1,
+            league: settings.league || 'Bronze'
+          });
         }
+        
+        setLeaderboard(data.sort((a, b) => (b.weeklyXP || 0) - (a.weeklyXP || 0)));
       }, (error) => {
         try {
           handleFirestoreError(error, OperationType.LIST, 'leaderboard');
@@ -1295,7 +1292,7 @@ export default function App() {
       });
       return () => unsubscribe();
     }
-  }, [user]);
+  }, [user, settings.league, stats.weeklyPoints]);
 
   const userRank = leaderboard.findIndex(l => l.uid === user?.uid) + 1;
 
@@ -1447,6 +1444,8 @@ export default function App() {
         ...prevStats,
         totalPoints: newPoints,
         weeklyPoints: (prevStats.weeklyPoints || 0) + pointsToAdd + streakBonusPoints,
+        xp: (prevStats.xp || 0) + 5, // 5 XP for level completion
+        weeklyXP: (prevStats.weeklyXP || 0) + 5, // 5 weeklyXP for level completion
         level: newLevel,
         coins: (prevStats.coins || 0) + 15 + levelUpBonusCoins,
         streak: finalStreak + levelUpBonusStreak,
@@ -1482,6 +1481,8 @@ export default function App() {
           streak: newStats.streak || 0,
           totalPoints: newStats.totalPoints,
           weeklyPoints: newStats.weeklyPoints,
+          weeklyXP: newStats.weeklyXP || 0,
+          xp: newStats.xp || 0,
           level: newLevel,
           league: newLeague
         }, { merge: true }).catch(e => {
@@ -2324,102 +2325,130 @@ function getLeagueColor(league: string) {
   }
 }
 
-function LeaderboardScreen({ leaderboard, user, settings, stats, onBack }: { leaderboard: any[], user: FirebaseUser | null, settings: UserSettings, stats: UserStats, onBack: () => void }) {
+function LeaderboardScreen({ leaderboard, user, settings, stats, onBack }: { leaderboard: LeaderboardEntry[], user: FirebaseUser | null, settings: UserSettings, stats: UserStats, onBack: () => void }) {
   const userRank = leaderboard.findIndex(l => l.uid === user?.uid) + 1;
   const currentLeague = settings.league || 'Bronze';
   const leagueIndex = LEAGUES.indexOf(currentLeague);
   
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 sm:p-8 space-y-8 pb-32">
-      <div className="flex items-center justify-between">
-        <button onClick={onBack} className="p-2 hover:bg-blue-50 rounded-full transition-colors text-blue-900/40">
-          <ArrowLeft size={24} />
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="flex flex-col h-screen bg-white"
+    >
+      {/* Header */}
+      <div className="p-6 flex items-center justify-between border-b border-gray-100">
+        <button onClick={onBack} className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors">
+          <ChevronRight className="rotate-180" size={28} />
         </button>
-        <h1 className="text-3xl font-black text-blue-900 tracking-tighter">LEADERBOARD</h1>
-        <div className="w-10" />
+        <div className="flex flex-col items-center">
+          <h2 className="text-xl font-black text-blue-900 uppercase tracking-tight">{currentLeague} League</h2>
+          <div className="flex gap-1 mt-1">
+            {LEAGUES.map((l, i) => (
+              <div 
+                key={l} 
+                className={`w-2 h-2 rounded-full ${i <= leagueIndex ? 'bg-yellow-400' : 'bg-gray-200'}`}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="w-10" /> {/* Spacer */}
       </div>
 
-      {/* League Header */}
-      <div className={`p-6 rounded-3xl border-2 flex flex-col items-center gap-4 text-center ${getLeagueColor(currentLeague)}`}>
-        <div className="p-4 bg-white rounded-2xl shadow-sm">
-          <TrophyIcon size={48} className={currentLeague === 'Gold' ? 'text-yellow-500' : currentLeague === 'Diamond' ? 'text-blue-500' : 'text-blue-900/20'} />
+      {/* League Info */}
+      <div className="bg-blue-50 p-4 flex items-center gap-4">
+        <div className="w-12 h-12 bg-yellow-400 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-yellow-200">
+          <TrophyIcon size={24} />
         </div>
         <div>
-          <h2 className="text-2xl font-black uppercase tracking-widest">{currentLeague} League</h2>
-          <p className="text-sm font-bold opacity-60">Top 3 advance to {LEAGUES[leagueIndex + 1] || 'the next level'}! 🚀</p>
+          <p className="text-xs font-bold text-blue-900/60 uppercase tracking-widest">Promotion Zone</p>
+          <p className="text-sm font-bold text-blue-900">Top 3 advance to the next league!</p>
         </div>
       </div>
 
       {/* Leaderboard List */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-4 py-2">
-          <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Promotion Zone (Top 3)</span>
-          <span className="text-[10px] font-black text-blue-900/20 uppercase tracking-widest">XP</span>
-        </div>
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
         {leaderboard.map((entry, index) => {
           const isCurrentUser = entry.uid === user?.uid;
           const rank = index + 1;
-          const isPromotionZone = rank <= 3;
           
           return (
             <motion.div
               key={entry.uid}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.05 }}
-              className={`p-4 rounded-2xl border-2 flex items-center gap-4 transition-all ${isCurrentUser ? 'bg-blue-500 border-blue-400 text-white shadow-lg scale-[1.02]' : 'bg-white border-blue-50 text-blue-900'} ${isPromotionZone && !isCurrentUser ? 'border-emerald-200' : ''}`}
+              className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
+                isCurrentUser ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-[1.02] z-10' : 'bg-white border-2 border-gray-50'
+              }`}
             >
-              <div className={`w-8 text-center font-black text-lg ${isCurrentUser ? 'text-white' : isPromotionZone ? 'text-emerald-500' : 'text-blue-900/20'}`}>
+              <div className={`w-8 text-center font-black text-lg ${
+                rank === 1 ? 'text-yellow-500' : 
+                rank === 2 ? 'text-gray-400' : 
+                rank === 3 ? 'text-orange-400' : 
+                isCurrentUser ? 'text-white' : 'text-blue-900/20'
+              }`}>
                 {rank}
               </div>
               
               <div className="relative">
-                <img 
-                  src={entry.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.displayName}`} 
-                  alt={entry.displayName}
-                  className="w-12 h-12 rounded-xl border-2 border-white/20 bg-blue-100"
-                  referrerPolicy="no-referrer"
-                />
+                {entry.photoURL ? (
+                  <img src={entry.photoURL} alt={entry.displayName} className="w-12 h-12 rounded-2xl object-cover border-2 border-white/20" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${isCurrentUser ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600'}`}>
+                    {entry.displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 {rank <= 3 && (
-                  <div className="absolute -top-2 -right-2 text-xl">
-                    {rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'}
+                  <div className="absolute -top-1 -right-1 bg-white rounded-full p-1 shadow-md">
+                    <Star size={10} className="text-yellow-400 fill-yellow-400" />
                   </div>
                 )}
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="font-black truncate flex items-center gap-2">
+                <h4 className={`font-bold truncate ${isCurrentUser ? 'text-white' : 'text-blue-900'}`}>
                   {entry.displayName}
-                  {isCurrentUser && <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">YOU</span>}
-                </div>
-                <div className={`text-xs font-bold ${isCurrentUser ? 'text-white/60' : 'text-blue-900/40'}`}>
-                  Level {entry.level} • {entry.streak} Day Streak
+                </h4>
+                <div className="flex items-center gap-2">
+                  <div className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${isCurrentUser ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    Lvl {entry.level}
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] font-bold opacity-60">
+                    <Flame size={12} className={isCurrentUser ? 'text-white' : 'text-orange-500'} />
+                    {entry.streak}
+                  </div>
                 </div>
               </div>
 
               <div className="text-right">
-                <div className="text-lg font-black">{entry.weeklyPoints || 0}</div>
-                <div className={`text-[10px] font-bold uppercase tracking-wider ${isCurrentUser ? 'text-white/60' : 'text-blue-900/20'}`}>XP</div>
+                <div className={`text-lg font-black ${isCurrentUser ? 'text-white' : 'text-blue-900'}`}>
+                  {entry.weeklyPoints}
+                </div>
+                <div className={`text-[10px] font-bold uppercase tracking-widest opacity-60`}>
+                  Points
+                </div>
               </div>
             </motion.div>
           );
         })}
       </div>
 
-      {/* User's Rank Sticky (if not in top 10) */}
+      {/* User's Fixed Position Bar (If not in top view) */}
       {userRank > 10 && (
-        <div className="fixed bottom-28 left-4 right-4 max-w-2xl mx-auto">
-          <div className="p-4 bg-blue-600 text-white rounded-2xl shadow-2xl border-2 border-blue-400 flex items-center gap-4">
-            <div className="w-8 text-center font-black text-lg">{userRank}</div>
-            <div className="flex-1 font-black">You're almost there! Keep going! 🔥</div>
-            <div className="text-right">
-              <div className="text-lg font-black">{stats.weeklyPoints || 0}</div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-white/60">XP</div>
-            </div>
-          </div>
+        <div className="p-4 bg-blue-600 text-white shadow-2xl">
+           <div className="flex items-center gap-4 max-w-2xl mx-auto">
+             <div className="w-8 text-center font-black text-lg">{userRank}</div>
+             <div className="flex-1 font-black">You're almost there! Keep going! 🔥</div>
+             <div className="text-right">
+               <div className="text-lg font-black">{stats.weeklyXP || 0}</div>
+               <div className="text-[10px] font-bold uppercase tracking-wider text-white/60">XP</div>
+             </div>
+           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -2608,7 +2637,7 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
                 </div>
                 <div className="flex items-center gap-2 text-blue-900/50 font-medium">
                   <Star size={18} className="text-yellow-500" />
-                  <span>{stats.totalPoints} pts</span>
+                  <span>{stats.xp || 0} XP</span>
                 </div>
                 <div className="flex items-center gap-2 text-blue-900/50 font-medium">
                   <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-[10px] font-black text-yellow-700 shadow-sm border border-yellow-600">
@@ -2619,6 +2648,29 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
                 <div className="flex items-center gap-2 text-blue-900/50 font-medium">
                   <TrophyIcon size={18} className="text-emerald-500" />
                   <span>{dailyProgress.completionsCount}/{isPro ? (settings.challengeCountGoal || 999) : 3} Today</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="glass-card p-4 flex flex-col items-center gap-2 border-2 border-orange-100 bg-orange-50/30">
+                <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-200">
+                  <Flame size={20} />
+                </div>
+                <div className="text-center">
+                  <div className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Streak</div>
+                  <div className="text-xl font-black text-blue-900">{stats.streak}</div>
+                  <div className="text-[8px] font-bold text-blue-900/40">+5 XP per day</div>
+                </div>
+              </div>
+              <div className="glass-card p-4 flex flex-col items-center gap-2 border-2 border-yellow-100 bg-yellow-50/30">
+                <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-white shadow-lg shadow-yellow-200">
+                  <div className="font-black text-lg">$</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[10px] font-black text-yellow-600 uppercase tracking-widest">Coins</div>
+                  <div className="text-xl font-black text-blue-900">{stats.coins || 0}</div>
+                  <div className="text-[8px] font-bold text-blue-900/40">Earned: {stats.xp || 0} XP</div>
                 </div>
               </div>
             </div>
@@ -2762,6 +2814,11 @@ function ProgressScreen({ stats, history, settings, setSettings, userRank }: { s
             <div className="text-right">
               <p className="text-4xl font-black text-amber-500 leading-none">{stats.coins || 0}</p>
               <p className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest mt-1">Nexora Coins</p>
+            </div>
+            <div className="w-px h-10 bg-blue-100" />
+            <div className="text-right">
+              <p className="text-4xl font-black text-purple-600 leading-none">{stats.xp || 0}</p>
+              <p className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest mt-1">Nexora XP</p>
             </div>
           </div>
         </div>
@@ -2925,6 +2982,10 @@ function ProgressScreen({ stats, history, settings, setSettings, userRank }: { s
             <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
               <p className="text-3xl font-black text-emerald-500">{stats.bestStreak || stats.streak}</p>
               <p className="text-[10px] font-bold text-emerald-900/40 uppercase tracking-widest">Best Streak</p>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-2xl border border-purple-100 col-span-2">
+              <p className="text-3xl font-black text-purple-600">{stats.xp || 0}</p>
+              <p className="text-[10px] font-bold text-purple-900/40 uppercase tracking-widest">Total XP Earned</p>
             </div>
           </div>
           
@@ -4082,6 +4143,13 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
     if (!skipped && settings.soundEnabled) {
       play('continue');
     }
+    if (!skipped) {
+      setStats(prev => ({ 
+        ...prev, 
+        xp: (prev.xp || 0) + 5,
+        weeklyXP: (prev.weeklyXP || 0) + 5 
+      }));
+    }
     const updates: Partial<DailyProgress> = {};
     if (step === 'pushups') updates.pushupsDone = !skipped;
     if (step === 'breathing') updates.breathingDone = true;
@@ -4100,6 +4168,10 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
 
     if (Object.keys(updates).length > 0) {
       setDailyProgress(finalProgress);
+    }
+
+    if (!skipped) {
+      setStats(prev => ({ ...prev, xp: (prev.xp || 0) + 5 }));
     }
 
     if (currentIdx < steps.length - 1) {

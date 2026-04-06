@@ -89,6 +89,7 @@ export interface UserStats {
   streak: number;
   bestStreak: number;
   totalPoints: number;
+  xp: number;
   level?: number;
   totalCompletedDays: number;
   lastCompletedDate: string | null;
@@ -96,6 +97,7 @@ export interface UserStats {
   currentChallengeIndex: number; // The index of the next challenge to be completed
   coins: number;
   weeklyPoints: number;
+  weeklyXP: number;
   lastWeeklyReset?: string; // ISO date
   trophies: Trophy[];
   pointsByCategory: {
@@ -106,6 +108,18 @@ export interface UserStats {
   drawings?: string[]; // base64 strings
   unlockedHats?: string[];
   gratitudeEntries?: GratitudeEntry[];
+}
+
+export interface LeaderboardEntry {
+  uid: string;
+  displayName: string;
+  photoURL: string;
+  streak: number;
+  totalPoints: number;
+  xp: number;
+  weeklyPoints: number;
+  level: number;
+  league: string;
 }
 
 export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription';
