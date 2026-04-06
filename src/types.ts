@@ -20,6 +20,7 @@ export interface UserSettings {
   challengeCountGoal?: number;
   inventory?: LibraryItem[];
   isDogSoundPackActive?: boolean;
+  league?: string;
 }
 
 export interface ShopItem {
@@ -85,6 +86,8 @@ export interface UserStats {
   lastGiftDate?: string | null;
   currentChallengeIndex: number; // The index of the next challenge to be completed
   coins: number;
+  weeklyPoints: number;
+  lastWeeklyReset?: string; // ISO date
   trophies: Trophy[];
   pointsByCategory: {
     physical: number;

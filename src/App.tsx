@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Trophy, Award, Users, Crown, Info, Map as MapIcon, Check } from 'lucide-react';
+import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Trophy, Award, Users, Crown, Info, Map as MapIcon, Check } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
@@ -7,7 +7,7 @@ import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy a
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs } from 'firebase/firestore';
 import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
@@ -262,6 +262,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   activeSkin: 'none',
   zenModeEnabled: false,
   challengeCountGoal: 3,
+  league: 'Bronze',
 };
 
 const DEFAULT_STATS: UserStats = {
@@ -272,6 +273,7 @@ const DEFAULT_STATS: UserStats = {
   lastCompletedDate: null,
   currentChallengeIndex: 0,
   coins: 0,
+  weeklyPoints: 0,
   trophies: [],
   pointsByCategory: {
     physical: 0,
@@ -698,18 +700,48 @@ export default function App() {
     }
   }, [settings.inventory, settings.soundEnabled]);
 
+  const today = new Date().toISOString().split('T')[0];
+  const [dailyProgress, setDailyProgress] = useState<DailyProgress>({
+    date: today,
+    completed: false,
+    completionsCount: 0,
+    pushupsDone: false,
+    waterDrank: 0,
+    breathingDone: false,
+    drawingDone: false,
+    footballDone: false,
+    bubblesDone: false,
+    dailyQuestDone: false
+  });
+
   // Firestore Sync Logic
   useEffect(() => {
     if (!user) return;
 
     const syncToFirestore = async () => {
+      const path = `users/${user.uid}`;
       try {
         const userRef = doc(db, 'users', user.uid);
+        
+        // Sync main user document (settings, fcmToken, etc.)
         await updateDoc(userRef, {
           ...settings,
           fcmToken: fcmToken,
-          stats: stats, // Also sync stats inside user doc for simplicity or use separate subcollections
+          // We also keep a copy of stats in the main doc for quick access, 
+          // but the subcollection is the source of truth for detailed stats.
+          stats: stats, 
         });
+
+        // Sync detailed stats to subcollection
+        const statsRef = doc(db, 'users', user.uid, 'stats', 'main');
+        await setDoc(statsRef, stats, { merge: true });
+
+        // Sync daily progress to subcollection
+        const progressRef = doc(db, 'users', user.uid, 'progress', today);
+        await setDoc(progressRef, {
+          ...dailyProgress,
+          date: today
+        }, { merge: true });
 
         // Sync music specifically to the new path as requested
         const musicItems = (settings.inventory || []).filter(item => item.type === 'music');
@@ -718,13 +750,17 @@ export default function App() {
           await setDoc(musicRef, { items: musicItems });
         }
       } catch (error) {
-        console.error("Failed to sync to Firestore:", error);
+        try {
+          handleFirestoreError(error, OperationType.UPDATE, path);
+        } catch (e) {
+          console.error("Firestore sync error handled:", e);
+        }
       }
     };
 
     const timeoutId = setTimeout(syncToFirestore, 2000); // Debounce sync
     return () => clearTimeout(timeoutId);
-  }, [settings, stats, user, fcmToken]);
+  }, [settings, stats, dailyProgress, user, fcmToken, today]);
 
   useEffect(() => {
     const checkVersion = async () => {
@@ -768,19 +804,6 @@ export default function App() {
     window.location.reload();
   };
   
-  const today = new Date().toISOString().split('T')[0];
-  const [dailyProgress, setDailyProgress] = useState<DailyProgress>({
-    date: today,
-    completed: false,
-    completionsCount: 0,
-    pushupsDone: false,
-    waterDrank: 0,
-    breathingDone: false,
-    drawingDone: false,
-    footballDone: false,
-    bubblesDone: false,
-  });
-
   const sendTestNotification = async () => {
     if (!fcmToken) {
       showToast('No device token found. Please enable notifications.', 'error');
@@ -1098,6 +1121,12 @@ export default function App() {
             if (data.stats) {
               setStats(prev => ({ ...prev, ...data.stats }));
             }
+
+            // Load daily progress from Firestore
+            const progressDoc = await getDoc(doc(db, 'users', currentUser.uid, 'progress', today));
+            if (progressDoc.exists()) {
+              setDailyProgress(prev => ({ ...prev, ...progressDoc.data() }));
+            }
           }
         } catch (error) {
           try {
@@ -1145,10 +1174,64 @@ export default function App() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   useEffect(() => {
     if (user) {
-      const q = query(collection(db, 'leaderboard'), orderBy('totalPoints', 'desc'), limit(10));
+      // Weekly Reset Logic
+      const now = new Date();
+      const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay())).toISOString().split('T')[0];
+      if (stats.lastWeeklyReset !== startOfWeek) {
+        setStats(prev => ({
+          ...prev,
+          weeklyPoints: 0,
+          lastWeeklyReset: startOfWeek
+        }));
+      }
+
+      const q = query(
+        collection(db, 'leaderboard'), 
+        where('league', '==', settings.league || 'Bronze'),
+        orderBy('weeklyPoints', 'desc'), 
+        limit(20)
+      );
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const data = snapshot.docs.map(doc => doc.data());
-        setLeaderboard(data);
+        if (snapshot.empty) {
+          // Seed some bots for competition if empty
+          const bots = [
+            { uid: 'bot1', displayName: 'Alex', weeklyPoints: 120, totalPoints: 500, level: 5, streak: 12, league: settings.league || 'Bronze', photoURL: '' },
+            { uid: 'bot2', displayName: 'Sam', weeklyPoints: 95, totalPoints: 420, level: 4, streak: 8, league: settings.league || 'Bronze', photoURL: '' },
+            { uid: 'bot3', displayName: 'Jordan', weeklyPoints: 80, totalPoints: 380, level: 3, streak: 5, league: settings.league || 'Bronze', photoURL: '' },
+            { uid: 'bot4', displayName: 'Taylor', weeklyPoints: 45, totalPoints: 210, level: 2, streak: 3, league: settings.league || 'Bronze', photoURL: '' },
+            { uid: 'bot5', displayName: 'Casey', weeklyPoints: 30, totalPoints: 150, level: 1, streak: 1, league: settings.league || 'Bronze', photoURL: '' },
+          ];
+          // Add user to bots list
+          if (user) {
+            bots.push({
+              uid: user.uid,
+              displayName: settings.displayName || 'Anonymous',
+              photoURL: user.photoURL || '',
+              streak: stats.streak || 0,
+              totalPoints: stats.totalPoints,
+              weeklyPoints: stats.weeklyPoints,
+              level: Math.floor((stats.totalPoints || 0) / 100) + 1,
+              league: settings.league || 'Bronze'
+            });
+          }
+          setLeaderboard(bots.sort((a, b) => (b.weeklyPoints || 0) - (a.weeklyPoints || 0)));
+        } else {
+          const data = snapshot.docs.map(doc => doc.data());
+          // If user is not in the data, add them manually to the local state for immediate feedback
+          if (user && !data.find(d => d.uid === user.uid)) {
+            data.push({
+              uid: user.uid,
+              displayName: settings.displayName || 'Anonymous',
+              photoURL: user.photoURL || '',
+              streak: stats.streak || 0,
+              totalPoints: stats.totalPoints,
+              weeklyPoints: stats.weeklyPoints,
+              level: Math.floor((stats.totalPoints || 0) / 100) + 1,
+              league: settings.league || 'Bronze'
+            });
+          }
+          setLeaderboard(data.sort((a, b) => (b.weeklyPoints || 0) - (a.weeklyPoints || 0)));
+        }
       }, (error) => {
         try {
           handleFirestoreError(error, OperationType.LIST, 'leaderboard');
@@ -1267,7 +1350,31 @@ export default function App() {
       const isDailyQuest = challengeStep === dailyQuest;
       const pointsToAdd = isDailyQuest ? 20 : 10;
       const oldLevel = Math.floor((prevStats.totalPoints || 0) / 100) + 1;
-      const newPoints = (prevStats.totalPoints || 0) + pointsToAdd;
+      
+      // Streak logic (only on first completion of the day)
+      let finalStreak = prevStats.streak || 0;
+      let newBestStreak = prevStats.bestStreak || 0;
+      let newTotalCompletedDays = prevStats.totalCompletedDays || 0;
+      let newLastCompletedDate = prevStats.lastCompletedDate;
+      let streakBonusPoints = 0;
+
+      if (prevStats.lastCompletedDate !== today) {
+        const baseStreak = prevStats.lastCompletedDate === getYesterday() ? (prevStats.streak || 0) + 5 : 5;
+        
+        // Apply Streak Protection effect if purchased
+        const hasStreakProtection = settings.purchasedItems?.includes('streak-protection');
+        finalStreak = hasStreakProtection ? Math.max(baseStreak, prevStats.streak || 0) : baseStreak;
+        
+        newBestStreak = Math.max(prevStats.bestStreak || 0, finalStreak);
+        newTotalCompletedDays = (prevStats.totalCompletedDays || 0) + 1;
+        newLastCompletedDate = today;
+        
+        // Apply Double Points effect if purchased
+        const hasDoublePoints = settings.purchasedItems?.includes('double-points');
+        streakBonusPoints = hasDoublePoints ? 10 : 5;
+      }
+
+      const newPoints = (prevStats.totalPoints || 0) + pointsToAdd + streakBonusPoints;
       const newLevel = Math.floor(newPoints / 100) + 1;
       let levelUpBonusCoins = 0;
       let levelUpBonusStreak = 0;
@@ -1282,9 +1389,13 @@ export default function App() {
       const newStats = {
         ...prevStats,
         totalPoints: newPoints,
+        weeklyPoints: (prevStats.weeklyPoints || 0) + pointsToAdd + streakBonusPoints,
         level: newLevel,
         coins: (prevStats.coins || 0) + 15 + levelUpBonusCoins,
-        streak: (prevStats.streak || 0) + levelUpBonusStreak,
+        streak: finalStreak + levelUpBonusStreak,
+        bestStreak: newBestStreak,
+        totalCompletedDays: newTotalCompletedDays,
+        lastCompletedDate: newLastCompletedDate,
         pointsByCategory: {
           physical: (prevStats.pointsByCategory?.physical || 0) + (isDailyQuest ? 8 : 4),
           mental: (prevStats.pointsByCategory?.mental || 0) + (isDailyQuest ? 8 : 4),
@@ -1294,6 +1405,18 @@ export default function App() {
 
       // Update Leaderboard
       if (user) {
+        // Promotion logic: if in top 3 of current leaderboard, move up
+        const currentRank = leaderboard.findIndex(l => l.uid === user.uid) + 1;
+        let newLeague = settings.league || 'Bronze';
+        if (currentRank > 0 && currentRank <= 3 && newStats.weeklyPoints > 50) {
+          const leagueIndex = LEAGUES.indexOf(newLeague);
+          if (leagueIndex < LEAGUES.length - 1) {
+            newLeague = LEAGUES[leagueIndex + 1];
+            setSettings(prev => ({ ...prev, league: newLeague }));
+            showToast(`PROMOTED! Welcome to the ${newLeague} League! 🏆`, 'success');
+          }
+        }
+
         const leaderboardRef = doc(db, 'leaderboard', user.uid);
         setDoc(leaderboardRef, {
           uid: user.uid,
@@ -1301,30 +1424,16 @@ export default function App() {
           photoURL: user.photoURL || '',
           streak: newStats.streak || 0,
           totalPoints: newStats.totalPoints,
-          level: newLevel
-        }, { merge: true }).catch(e => handleFirestoreError(e, OperationType.WRITE, 'leaderboard'));
-      }
-
-      // Streak logic (only on first completion of the day)
-      let finalStreak = newStats.streak;
-      if (prevStats.lastCompletedDate !== today) {
-        const baseStreak = prevStats.lastCompletedDate === getYesterday() ? (prevStats.streak || 0) + 5 : 5;
-        
-        // Apply Streak Protection effect if purchased
-        const hasStreakProtection = settings.purchasedItems?.includes('streak-protection');
-        finalStreak = (hasStreakProtection ? baseStreak : baseStreak) + levelUpBonusStreak;
-        
-        newStats.streak = finalStreak;
-        newStats.bestStreak = Math.max(prevStats.bestStreak || 0, finalStreak);
-        newStats.totalCompletedDays = (prevStats.totalCompletedDays || 0) + 1;
-        newStats.lastCompletedDate = today;
-        
-        // Apply Double Points effect if purchased
-        const hasDoublePoints = settings.purchasedItems?.includes('double-points');
-        newStats.totalPoints = newStats.totalPoints + (hasDoublePoints ? 10 : 5);
-      } else {
-        // If not first completion, just add the bonus if it exists
-        newStats.streak = (prevStats.streak || 0) + levelUpBonusStreak;
+          weeklyPoints: newStats.weeklyPoints,
+          level: newLevel,
+          league: newLeague
+        }, { merge: true }).catch(e => {
+          try {
+            handleFirestoreError(e, OperationType.WRITE, 'leaderboard');
+          } catch (err) {
+            console.error("Leaderboard update error handled:", err);
+          }
+        });
       }
 
       // Award Golden Trophy if within daily limit
@@ -1891,6 +2000,27 @@ export default function App() {
                 />
               </motion.div>
             )}
+            {activeScreen === 'leaderboard' && (
+              <motion.div
+                key="leaderboard"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <LeaderboardScreen 
+                  leaderboard={leaderboard} 
+                  user={user} 
+                  settings={settings}
+                  stats={stats}
+                  onBack={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setActiveScreen('home');
+                  }}
+                />
+              </motion.div>
+            )}
             {activeScreen === 'challenge' && (
               <motion.div
                 key="challenge"
@@ -1978,6 +2108,15 @@ export default function App() {
                 }} 
                 icon={<Book size={24} />} 
                 label="Notebook"
+              />
+              <NavButton 
+                active={activeScreen === 'leaderboard'} 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                  setActiveScreen('leaderboard');
+                }} 
+                icon={<TrophyIcon size={24} />} 
+                label="Rank"
               />
             </nav>
           </div>
@@ -2112,6 +2251,118 @@ function NavButton({ active, onClick, icon, label }: { active: boolean, onClick:
       </div>
       <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider">{label}</span>
     </button>
+  );
+}
+
+const LEAGUES = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'];
+
+function getLeagueColor(league: string) {
+  switch (league) {
+    case 'Bronze': return 'text-orange-600 bg-orange-50 border-orange-200';
+    case 'Silver': return 'text-slate-500 bg-slate-50 border-slate-200';
+    case 'Gold': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+    case 'Platinum': return 'text-cyan-600 bg-cyan-50 border-cyan-200';
+    case 'Diamond': return 'text-blue-600 bg-blue-50 border-blue-200';
+    default: return 'text-blue-600 bg-blue-50 border-blue-200';
+  }
+}
+
+function LeaderboardScreen({ leaderboard, user, settings, stats, onBack }: { leaderboard: any[], user: FirebaseUser | null, settings: UserSettings, stats: UserStats, onBack: () => void }) {
+  const userRank = leaderboard.findIndex(l => l.uid === user?.uid) + 1;
+  const currentLeague = settings.league || 'Bronze';
+  const leagueIndex = LEAGUES.indexOf(currentLeague);
+  
+  return (
+    <div className="w-full max-w-2xl mx-auto p-4 sm:p-8 space-y-8 pb-32">
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="p-2 hover:bg-blue-50 rounded-full transition-colors text-blue-900/40">
+          <ArrowLeft size={24} />
+        </button>
+        <h1 className="text-3xl font-black text-blue-900 tracking-tighter">LEADERBOARD</h1>
+        <div className="w-10" />
+      </div>
+
+      {/* League Header */}
+      <div className={`p-6 rounded-3xl border-2 flex flex-col items-center gap-4 text-center ${getLeagueColor(currentLeague)}`}>
+        <div className="p-4 bg-white rounded-2xl shadow-sm">
+          <TrophyIcon size={48} className={currentLeague === 'Gold' ? 'text-yellow-500' : currentLeague === 'Diamond' ? 'text-blue-500' : 'text-blue-900/20'} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-black uppercase tracking-widest">{currentLeague} League</h2>
+          <p className="text-sm font-bold opacity-60">Top 3 advance to {LEAGUES[leagueIndex + 1] || 'the next level'}! 🚀</p>
+        </div>
+      </div>
+
+      {/* Leaderboard List */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-4 py-2">
+          <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Promotion Zone (Top 3)</span>
+          <span className="text-[10px] font-black text-blue-900/20 uppercase tracking-widest">XP</span>
+        </div>
+        {leaderboard.map((entry, index) => {
+          const isCurrentUser = entry.uid === user?.uid;
+          const rank = index + 1;
+          const isPromotionZone = rank <= 3;
+          
+          return (
+            <motion.div
+              key={entry.uid}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className={`p-4 rounded-2xl border-2 flex items-center gap-4 transition-all ${isCurrentUser ? 'bg-blue-500 border-blue-400 text-white shadow-lg scale-[1.02]' : 'bg-white border-blue-50 text-blue-900'} ${isPromotionZone && !isCurrentUser ? 'border-emerald-200' : ''}`}
+            >
+              <div className={`w-8 text-center font-black text-lg ${isCurrentUser ? 'text-white' : isPromotionZone ? 'text-emerald-500' : 'text-blue-900/20'}`}>
+                {rank}
+              </div>
+              
+              <div className="relative">
+                <img 
+                  src={entry.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.displayName}`} 
+                  alt={entry.displayName}
+                  className="w-12 h-12 rounded-xl border-2 border-white/20 bg-blue-100"
+                  referrerPolicy="no-referrer"
+                />
+                {rank <= 3 && (
+                  <div className="absolute -top-2 -right-2 text-xl">
+                    {rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="font-black truncate flex items-center gap-2">
+                  {entry.displayName}
+                  {isCurrentUser && <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">YOU</span>}
+                </div>
+                <div className={`text-xs font-bold ${isCurrentUser ? 'text-white/60' : 'text-blue-900/40'}`}>
+                  Level {entry.level} • {entry.streak} Day Streak
+                </div>
+              </div>
+
+              <div className="text-right">
+                <div className="text-lg font-black">{entry.weeklyPoints || 0}</div>
+                <div className={`text-[10px] font-bold uppercase tracking-wider ${isCurrentUser ? 'text-white/60' : 'text-blue-900/20'}`}>XP</div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* User's Rank Sticky (if not in top 10) */}
+      {userRank > 10 && (
+        <div className="fixed bottom-28 left-4 right-4 max-w-2xl mx-auto">
+          <div className="p-4 bg-blue-600 text-white rounded-2xl shadow-2xl border-2 border-blue-400 flex items-center gap-4">
+            <div className="w-8 text-center font-black text-lg">{userRank}</div>
+            <div className="flex-1 font-black">You're almost there! Keep going! 🔥</div>
+            <div className="text-right">
+              <div className="text-lg font-black">{stats.weeklyPoints || 0}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-white/60">XP</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -2940,6 +3191,7 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   
   // Feedback state
@@ -2983,44 +3235,59 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
       const user = auth.currentUser;
       const uid = user.uid;
       
-      // 1. Try to delete Auth account first (this is the most sensitive and likely to fail)
+      // 1. Re-authenticate for security (Sensitive Action Guard)
+      // This is required for account deletion if the session is old
+      const provider = new GoogleAuthProvider();
       try {
-        await deleteUser(user);
-      } catch (error: any) {
-        // If it requires recent login, try to re-authenticate automatically for Google users
-        if (error.code === 'auth/requires-recent-login') {
-          const provider = new GoogleAuthProvider();
-          try {
-            await reauthenticateWithPopup(user, provider);
-            // After re-auth, try deleting again
-            await deleteUser(user);
-          } catch (reauthError: any) {
-            console.error('Re-authentication failed:', reauthError);
-            setRemoveError('For security, please sign out and sign back in, then try deleting again immediately.');
-            setIsRemoving(false);
-            return;
-          }
-        } else {
-          throw error;
+        await reauthenticateWithPopup(user, provider);
+      } catch (reauthError: any) {
+        if (reauthError.code !== 'auth/cancelled-popup-request') {
+          console.error('Re-authentication failed:', reauthError);
+          setRemoveError('For security, we need to verify it\'s you. Please sign in again when prompted.');
+          setIsRemoving(false);
+          return;
         }
       }
-      
-      // 2. Delete Firestore data (main user doc and known subcollections)
-      // We do this AFTER auth deletion because if auth deletion fails, we don't want to orphan the data
-      // although usually it's the other way around. But here, auth deletion is the blocker.
+
+      // 2. Delete Firestore data (The "Clean Sweep")
+      // We delete everything associated with the user UID
       try {
+        // Delete subcollections first
+        const subcollections = [
+          'stats', 'shop', 'library', 'music', 'private', 'progress'
+        ];
+        
+        for (const sub of subcollections) {
+          const subRef = collection(db, 'users', uid, sub);
+          const snapshot = await getDocs(subRef);
+          for (const d of snapshot.docs) {
+            await deleteDoc(d.ref);
+          }
+        }
+
+        // Delete main docs
         await deleteDoc(doc(db, 'users', uid));
-        await deleteDoc(doc(db, 'users', uid, 'stats', 'main'));
-        await deleteDoc(doc(db, 'users', uid, 'shop', 'purchases'));
-        await deleteDoc(doc(db, 'users', uid, 'library', 'trophies'));
+        await deleteDoc(doc(db, 'leaderboard', uid));
+        
+        // Delete user's feedback (optional, but requested as "Clean Sweep")
+        const feedbackQuery = query(collection(db, 'feedback'), where('userId', '==', uid));
+        const feedbackSnapshot = await getDocs(feedbackQuery);
+        for (const d of feedbackSnapshot.docs) {
+          await deleteDoc(d.ref);
+        }
+        
       } catch (fsError: any) {
         console.error('Firestore deletion failed:', fsError);
+        // We continue anyway to try and delete the Auth account
       }
       
-      // 3. Clear local storage
+      // 3. Delete Auth account
+      await deleteUser(user);
+      
+      // 4. Clear local storage
       localStorage.clear();
       
-      // 4. Reload or redirect
+      // 5. Reload or redirect
       window.location.reload();
     } catch (error: any) {
       console.error('Error removing account:', error);
@@ -3035,20 +3302,60 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
     }
   };
 
-  const exportData = () => {
-    const data = {
-      settings,
-      stats: JSON.parse(localStorage.getItem('nexora_stats') || '{}'),
-      history: Object.keys(localStorage)
-        .filter(k => k.startsWith('nexora_progress_'))
-        .map(k => JSON.parse(localStorage.getItem(k) || '{}'))
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `nexora_data_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
+  const exportData = async () => {
+    if (!user) return;
+    setIsDownloading(true);
+    
+    try {
+      const uid = user.uid;
+      const fullData: any = {
+        exportedAt: new Date().toISOString(),
+        user: {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+        },
+        settings,
+        stats: {},
+        progress: [],
+        purchases: [],
+        trophies: [],
+        music: [],
+        privateData: {}
+      };
+
+      // Fetch all data from Firestore
+      const statsDoc = await getDoc(doc(db, 'users', uid, 'stats', 'main'));
+      if (statsDoc.exists()) fullData.stats = statsDoc.data();
+
+      const progressSnapshot = await getDocs(collection(db, 'users', uid, 'progress'));
+      fullData.progress = progressSnapshot.docs.map(d => d.data());
+
+      const purchasesDoc = await getDoc(doc(db, 'users', uid, 'shop', 'purchases'));
+      if (purchasesDoc.exists()) fullData.purchases = purchasesDoc.data().purchasedItems || [];
+
+      const trophiesDoc = await getDoc(doc(db, 'users', uid, 'library', 'trophies'));
+      if (trophiesDoc.exists()) fullData.trophies = trophiesDoc.data().trophies || [];
+
+      const musicDoc = await getDoc(doc(db, 'users', uid, 'music', 'purchased'));
+      if (musicDoc.exists()) fullData.music = musicDoc.data().items || [];
+
+      const privateDoc = await getDoc(doc(db, 'users', uid, 'private', 'data'));
+      if (privateDoc.exists()) fullData.privateData = privateDoc.data();
+
+      const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nexora_full_data_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      showToast('Data exported successfully! 📂', 'success');
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      showToast('Failed to export data', 'error');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const resetApp = () => {
@@ -3349,6 +3656,37 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
           </button>
         </div>
 
+        {/* 9.5 Download Data */}
+        <div className="glass-card p-6 flex items-center justify-between border-2 border-blue-100 bg-blue-50/10">
+          <div className="flex items-center gap-3 text-blue-600">
+            <Download size={24} />
+            <div className="flex flex-col">
+              <h3 className="font-bold text-blue-900">Download My Data</h3>
+              <p className="text-[10px] text-blue-900/40 font-medium italic">Get a JSON file of your progress, bro.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              vibrate(VIBRATION_PATTERNS.CLICK);
+              exportData();
+            }}
+            disabled={isDownloading}
+            className="bg-blue-600 text-white font-bold py-2 px-4 rounded-xl hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-200 flex items-center gap-2"
+          >
+            {isDownloading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download size={16} />
+                Download
+              </>
+            )}
+          </button>
+        </div>
+
         {/* 9. Remove Account */}
         <div className="glass-card p-6 flex items-center justify-between border-2 border-red-100 bg-red-50/10">
           <div className="flex items-center gap-3 text-red-600">
@@ -3564,9 +3902,12 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
               </div>
               <div className="text-center space-y-2">
                 <h3 className="text-xl font-black text-blue-900">Remove Account?</h3>
-                <p className="text-sm text-blue-900/60">
-                  This will permanently delete your account and all your progress from our servers. This cannot be undone, bro.
-                </p>
+                <div className="text-sm text-blue-900/60 space-y-2">
+                  <p>This will permanently delete your account and perform a <span className="font-black text-red-600">"Clean Sweep"</span> of all your data from our servers.</p>
+                  <p className="text-xs italic bg-red-50 p-2 rounded-lg border border-red-100">
+                    This includes your workout logs, mindset notes, leaderboard rank, and feedback. This cannot be undone, bro.
+                  </p>
+                </div>
                 {removeError && (
                   <p className="text-red-500 text-xs font-bold mt-2 bg-red-50 p-2 rounded-lg">
                     {removeError}

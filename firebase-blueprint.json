@@ -24,6 +24,7 @@
         "activeSkin": { "type": "string", "description": "Currently active mascot skin" },
         "activeHat": { "type": "string", "description": "Currently active mascot hat" },
         "isPro": { "type": "boolean", "description": "Pro subscription status" },
+        "league": { "type": "string", "description": "Current league (e.g., Bronze, Silver)", "enum": ["Bronze", "Silver", "Gold", "Platinum", "Diamond"] },
         "zenModeEnabled": { "type": "boolean" },
         "challengeCountGoal": { "type": "number" },
         "purchasedItems": { "type": "array", "items": { "type": "string" } },
@@ -121,9 +122,11 @@
         "photoURL": { "type": "string" },
         "streak": { "type": "number" },
         "totalPoints": { "type": "number" },
-        "level": { "type": "number" }
+        "weeklyPoints": { "type": "number", "description": "Points earned in the current week" },
+        "level": { "type": "number" },
+        "league": { "type": "string" }
       },
-      "required": ["uid", "displayName", "streak", "totalPoints", "level"]
+      "required": ["uid", "displayName", "streak", "totalPoints", "level", "league"]
     },
     "ShopPurchases": {
       "title": "ShopPurchases",
@@ -197,6 +200,10 @@
     "/users/{userId}/music/purchased": {
       "schema": { "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "UserProfile/properties/inventory/items" } } } },
       "description": "User purchased music and sound packs"
+    },
+    "/users/{userId}/private/data": {
+      "schema": { "type": "object", "properties": { "logs": { "type": "array", "items": { "type": "string" } }, "goals": { "type": "array", "items": { "type": "string" } } } },
+      "description": "Sensitive user data like workout logs and personal goals"
     },
     "/leaderboard/{userId}": {
       "schema": { "$ref": "LeaderboardEntry" },
