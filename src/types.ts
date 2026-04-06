@@ -1,3 +1,11 @@
+export interface BadgeSettings {
+  trophyAlerts: boolean;
+  appUpdates: boolean;
+  dailyChallenge: boolean;
+  dailyQuest: boolean;
+  dynamicUrgency: boolean;
+}
+
 export interface UserSettings {
   pushupsGoal: number;
   waterGoal: number;
@@ -21,6 +29,7 @@ export interface UserSettings {
   inventory?: LibraryItem[];
   isDogSoundPackActive?: boolean;
   league?: string;
+  badgeSettings?: BadgeSettings;
 }
 
 export interface ShopItem {

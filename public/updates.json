@@ -1,41 +1,31 @@
 {
-  "version": "1.2.3",
-  "releaseDate": "2026-04-03",
+  "version": "1.3.0",
+  "releaseDate": "2026-04-06",
   "updates": [
     {
-      "category": "Pro",
-      "title": "New Pro Subscription Experience!",
-      "description": "We've completely redesigned the subscription page with glowing animations and a premium dark theme. Check it out!"
+      "category": "PWA",
+      "title": "App Icon Badges!",
+      "description": "A red notification badge now appears on your app icon for trophy alerts, updates, and reminders. It feels just like a native app!"
     },
     {
-      "category": "Shop",
-      "title": "New Sound & Music Packs!",
-      "description": "Customize your experience with 7 new music tracks and an updated Dog Sound Pack for your mascot. Visit the shop to check them out!"
+      "category": "Settings",
+      "title": "Badge Customization",
+      "description": "You can now fully customize which notifications trigger the app icon badge in your Settings. You're in control!"
     },
     {
-      "category": "Library",
-      "title": "Library Activation",
-      "description": "You can now manage your purchased sound packs and music directly in your library. Activate and deactivate them whenever you want!"
+      "category": "PWA",
+      "title": "Dynamic Urgency",
+      "description": "The app icon badge now increases in count after 10:00 PM if you haven't finished your daily challenge. Don't forget your goals!"
     },
     {
-      "category": "Library",
-      "title": "Unified Library",
-      "description": "Your library is now a central hub for everything! View your shop items, saved notes, drawings, and challenges in one place."
+      "category": "Audio",
+      "title": "Emergency Sound Fix",
+      "description": "Improved reliability for trophy degradation sounds to ensure you never miss a warning when your trophies are in danger."
     },
     {
-      "category": "UI/UX",
-      "title": "New Toast Notifications",
-      "description": "We've replaced browser alerts with smooth, bubbly toast notifications for a much better user experience."
-    },
-    {
-      "category": "Persistence",
-      "title": "Improved Saving",
-      "description": "Fixed issues with saving challenges and notes. Your progress is now more secure than ever."
-    },
-    {
-      "category": "Feedback",
-      "title": "Haptic Feedback",
-      "description": "Added subtle vibrations for key actions like deleting items, giving the app a more premium feel."
+      "category": "Performance",
+      "title": "Smoother Experience",
+      "description": "Faster data syncing and smoother transitions between app screens for a more responsive feel."
     }
   ]
 }

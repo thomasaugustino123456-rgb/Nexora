@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 const SOUNDS = {
   stadium: "https://res.cloudinary.com/dfoty883a/video/upload/v1775215630/mixkit-stadium-crowd-light-applause-362_ockkrm.wav",
@@ -39,7 +39,8 @@ if (typeof window !== 'undefined') {
 export function useSound() {
   const [currentMusic, setCurrentMusic] = useState<string | null>(null);
 
-  const play = (soundKey: keyof typeof SOUNDS, loop: boolean = false) => {
+  const play = useCallback((soundKey: keyof typeof SOUNDS, loop: boolean = false) => {
+    console.log(`Playing sound: ${soundKey} (loop: ${loop})`);
     const audio = audioCache[soundKey];
     if (audio) {
       audio.loop = loop;
@@ -51,17 +52,17 @@ export function useSound() {
         }
       });
     }
-  };
+  }, []);
 
-  const stop = (soundKey: keyof typeof SOUNDS) => {
+  const stop = useCallback((soundKey: keyof typeof SOUNDS) => {
     const audio = audioCache[soundKey];
     if (audio) {
       audio.pause();
       audio.currentTime = 0;
     }
-  };
+  }, []);
 
-  const playMusic = (musicKey: string | null) => {
+  const playMusic = useCallback((musicKey: string | null) => {
     // Stop current music if any
     if (currentMusic && audioCache[currentMusic]) {
       audioCache[currentMusic].pause();
@@ -80,9 +81,9 @@ export function useSound() {
     } else {
       setCurrentMusic(null);
     }
-  };
+  }, [currentMusic]);
 
-  const stopAllMusic = () => {
+  const stopAllMusic = useCallback(() => {
     Object.keys(SOUNDS).forEach(key => {
       if (key.startsWith('music') || key === 'music-fanfare') {
         const audio = audioCache[key];
@@ -93,7 +94,7 @@ export function useSound() {
       }
     });
     setCurrentMusic(null);
-  };
+  }, []);
 
   return { play, stop, playMusic, stopAllMusic, currentMusic };
 }

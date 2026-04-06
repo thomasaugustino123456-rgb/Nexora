@@ -1,15 +1,12 @@
 {
-  "version": "1.2.3",
+  "version": "1.3.0",
   "releaseNotes": [
-    "New Pro Subscription Experience: A completely redesigned subscription page with glowing animations and a premium dark theme!",
-    "New Sound & Music Packs: Customize your experience with 7 new music tracks and an updated Dog Sound Pack!",
-    "Library Activation: Manage your purchased sound packs and music directly in your library.",
-    "Unified Library: View Shop Items, Notes, Drawings, and Challenges in one place!",
-    "New Toast Notification System: Replaced boring alerts with smooth, bubbly popups.",
-    "Improved Saving: Fixed issues with saving challenges and notes to the library.",
-    "Haptic Feedback: Added vibrations for a more premium feel when deleting items.",
-    "Bug Fixes: Resolved type errors and improved data persistence across the app."
+    "App Icon Badges: A red notification badge now appears on your app icon for trophy alerts, updates, and reminders!",
+    "Badge Customization: Fully customize which notifications trigger the app icon badge in your Settings.",
+    "Dynamic Urgency: The app icon badge now increases in count after 10:00 PM if you haven't finished your daily challenge.",
+    "Emergency Sound Fix: Improved reliability for trophy degradation sounds to ensure you never miss a warning.",
+    "Performance Improvements: Faster data syncing and smoother transitions between app screens."
   ],
-  "imageUrl": "https://i.postimg.cc/yxF522mf/Subscription-plan-selection-for-Nexora.png",
+  "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
   "forceUpdate": false
 }

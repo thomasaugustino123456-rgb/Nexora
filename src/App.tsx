@@ -3,7 +3,7 @@ import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
-import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood } from './types';
+import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood, BadgeSettings } from './types';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider } from 'firebase/auth';
@@ -46,7 +46,7 @@ function playTrophySound(type: string) {
       osc.frequency.exponentialRampToValueAtTime(130.81, audioContext.currentTime + 0.5); // C3
     }
 
-    gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gain.gain.setValueAtTime(0.3, audioContext.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
 
     osc.connect(gain);
@@ -263,6 +263,13 @@ const DEFAULT_SETTINGS: UserSettings = {
   zenModeEnabled: false,
   challengeCountGoal: 3,
   league: 'Bronze',
+  badgeSettings: {
+    trophyAlerts: true,
+    appUpdates: true,
+    dailyChallenge: true,
+    dailyQuest: true,
+    dynamicUrgency: true
+  }
 };
 
 const DEFAULT_STATS: UserStats = {
@@ -631,6 +638,7 @@ export default function App() {
   // Emergency sound logic
   useEffect(() => {
     if (emergencyActive && settings.soundEnabled) {
+      console.log("Emergency sound triggered!");
       play('emergency', true);
       const timer = setTimeout(() => {
         setEmergencyActive(false);
@@ -642,7 +650,7 @@ export default function App() {
     } else {
       stop('emergency');
     }
-  }, [emergencyActive, settings.soundEnabled]);
+  }, [emergencyActive, settings.soundEnabled, play, stop]);
 
   useEffect(() => {
     if (activeScreen === 'challenge') {
@@ -683,7 +691,7 @@ export default function App() {
   // Version Update Logic
   const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean, imageUrl?: string } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
-  const currentAppVersion = "1.2.2"; // Current hardcoded version
+  const currentAppVersion = "1.3.0"; // Current hardcoded version
 
   // Background Music Logic
   useEffect(() => {
@@ -713,6 +721,52 @@ export default function App() {
     bubblesDone: false,
     dailyQuestDone: false
   });
+
+  // App Badge Logic
+  useEffect(() => {
+    const updateBadge = async () => {
+      // Check if the App Badging API is supported
+      if (!('setAppBadge' in navigator)) return;
+
+      let count = 0;
+      const badgeSettings = settings.badgeSettings || DEFAULT_SETTINGS.badgeSettings!;
+      const now = new Date();
+      
+      // 1. Trophy degradation alert (High priority)
+      if (badgeSettings.trophyAlerts && emergencyActive) count++;
+      
+      // 2. App update available
+      if (badgeSettings.appUpdates && showUpdatePopup) count++;
+      
+      // 3. Daily challenge not completed (If it's after 6 PM)
+      if (badgeSettings.dailyChallenge && !dailyProgress.completed && now.getHours() >= 18) {
+        count++;
+        // Dynamic Urgency: Add another count if it's after 10 PM
+        if (badgeSettings.dynamicUrgency && now.getHours() >= 22) {
+          count++;
+        }
+      }
+      
+      // 4. Daily quest not done (If it's after 12 PM)
+      if (badgeSettings.dailyQuest && !dailyProgress.dailyQuestDone && now.getHours() >= 12) {
+        count++;
+      }
+
+      try {
+        if (count > 0) {
+          await (navigator as any).setAppBadge(count);
+          console.log(`PWA: Badge set to ${count}`);
+        } else {
+          await (navigator as any).clearAppBadge();
+          console.log('PWA: Badge cleared');
+        }
+      } catch (error) {
+        console.error('Error setting app badge:', error);
+      }
+    };
+
+    updateBadge();
+  }, [emergencyActive, showUpdatePopup, dailyProgress.completed, dailyProgress.dailyQuestDone, settings.badgeSettings]);
 
   // Firestore Sync Logic
   useEffect(() => {
@@ -1299,24 +1353,27 @@ export default function App() {
           
           if (t.type === 'golden' && daysSince >= 2) {
             changed = true;
-            if (settings.soundEnabled) {
-              playTrophySound('ice');
-              setEmergencyActive(true);
-            }
             return { ...t, type: 'ice' as const, lastUpdated: new Date().toISOString() };
           }
           if (t.type === 'ice' && daysSince >= 3) {
             changed = true;
-            if (settings.soundEnabled) {
-              playTrophySound('broken');
-              setEmergencyActive(true);
-            }
             return { ...t, type: 'broken' as const, lastUpdated: new Date().toISOString() };
           }
           return t;
         });
         
         if (changed) {
+          if (settings.soundEnabled) {
+            const hasIce = updatedTrophies.some(t => t.type === 'ice');
+            const hasBroken = updatedTrophies.some(t => t.type === 'broken');
+            
+            // Use a timeout to ensure side effects happen outside of the render/update phase
+            setTimeout(() => {
+              if (hasIce) playTrophySound('ice');
+              else if (hasBroken) playTrophySound('broken');
+              setEmergencyActive(true);
+            }, 100);
+          }
           return { ...prevStats, trophies: updatedTrophies };
         }
         return prevStats;
@@ -3519,6 +3576,55 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
               />
             </div>
           )}
+        </div>
+
+        {/* App Badge Settings */}
+        <div className="glass-card p-6 space-y-4">
+          <div className="flex items-center gap-3 text-red-500">
+            <div className="p-2 bg-red-100 rounded-lg">
+              <Bell size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-blue-900">App Icon Badge</h3>
+              <p className="text-[10px] text-blue-900/40">Red dot on app icon</p>
+            </div>
+          </div>
+          
+          <div className="space-y-3 pt-2">
+            {[
+              { id: 'trophyAlerts', label: 'Trophy Degradation', desc: 'Alert when trophies freeze/break' },
+              { id: 'appUpdates', label: 'App Updates', desc: 'Notify when new version is ready' },
+              { id: 'dailyChallenge', label: 'Daily Challenge', desc: 'Reminder if not done by 6 PM' },
+              { id: 'dailyQuest', label: 'Daily Quest', desc: 'Reminder if not done by 12 PM' },
+              { id: 'dynamicUrgency', label: 'Dynamic Urgency', desc: 'Increase count after 10 PM' },
+            ].map((item) => (
+              <div key={item.id} className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-blue-900">{item.label}</p>
+                  <p className="text-[9px] text-blue-900/40">{item.desc}</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    const current = settings.badgeSettings || DEFAULT_SETTINGS.badgeSettings!;
+                    setSettings({ 
+                      ...settings, 
+                      badgeSettings: { ...current, [item.id]: !current[item.id as keyof BadgeSettings] } 
+                    });
+                  }}
+                  className={`w-10 h-5 rounded-full transition-colors relative ${
+                    (settings.badgeSettings || DEFAULT_SETTINGS.badgeSettings!)[item.id as keyof BadgeSettings] 
+                    ? 'bg-red-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${
+                    (settings.badgeSettings || DEFAULT_SETTINGS.badgeSettings!)[item.id as keyof BadgeSettings] 
+                    ? 'left-5.5' : 'left-0.5'
+                  }`} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* 5. Theme Color Picker */}
