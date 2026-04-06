@@ -20,7 +20,7 @@ const SOUNDS = {
   'music-cbpd': "https://res.cloudinary.com/dfoty883a/video/upload/v1775223304/mixkit-cbpd-400_hxdsvf.mp3",
   'music-nba': "https://res.cloudinary.com/dfoty883a/video/upload/v1775223411/mixkit-g-eazy-nba-type-403_kai44j.mp3",
   'music-complicated': "https://res.cloudinary.com/dfoty883a/video/upload/v1775223497/mixkit-complicated-281_iqtv8a.mp3",
-  coin: "https://res.cloudinary.com/dfoty883a/video/upload/v1775223550/mixkit-arcade-game-jump-coin-216_tq8v2j.wav",
+  coin: "https://actions.google.com/sounds/v1/ui/gameshow_correct_answer.ogg",
   water: "https://res.cloudinary.com/dfoty883a/video/upload/v1775302429/mixkit-liquid-bubble-3000_dvewrr.wav",
 };
 

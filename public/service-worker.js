@@ -49,7 +49,7 @@ self.addEventListener('fetch', (event) => {
       return response || fetch(event.request).then((fetchResponse) => {
         // Optionally cache new assets on the fly
         return caches.open(CACHE_NAME).then((cache) => {
-          if (event.request.url.startsWith('http')) {
+          if (event.request.url.startsWith('http') && event.request.method === 'GET') {
             cache.put(event.request, fetchResponse.clone());
           }
           return fetchResponse;
