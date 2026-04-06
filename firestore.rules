@@ -54,12 +54,11 @@ service cloud.firestore {
     // ===============================================================
     // Domain Validators
     // ===============================================================
-    function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'displayName', 'email', 'role']) &&
-             data.uid is string && data.uid == request.auth.uid &&
-             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
-             data.email is string && isValidEmail(data.email) &&
-             data.role in ['user', 'admin'] &&
+    function isValidUserFields(data) {
+      return (!('uid' in data) || (data.uid is string && data.uid == request.auth.uid)) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100)) &&
+             (!('email' in data) || (data.email is string && isValidEmail(data.email))) &&
+             (!('role' in data) || (data.role in ['user', 'admin'])) &&
              (!('pushupsGoal' in data) || data.pushupsGoal is number) &&
              (!('waterGoal' in data) || data.waterGoal is number) &&
              (!('reminderTime' in data) || (data.reminderTime is string && data.reminderTime.size() <= 10)) &&
@@ -82,7 +81,15 @@ service cloud.firestore {
              (!('isPro' in data) || data.isPro is bool);
     }
 
-    function isValidStats(data) {
+    function isValidUserCreate(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'role']) && isValidUserFields(data);
+    }
+
+    function isValidUserUpdate(data) {
+      return isValidUserFields(data);
+    }
+
+    function isValidStatsFields(data) {
       return (!('streak' in data) || (data.streak is number && data.streak >= 0)) &&
              (!('bestStreak' in data) || (data.bestStreak is number && data.bestStreak >= 0)) &&
              (!('totalPoints' in data) || (data.totalPoints is number && data.totalPoints >= 0)) &&
@@ -96,9 +103,16 @@ service cloud.firestore {
              (!('drawings' in data) || (data.drawings is list && data.drawings.size() <= 100));
     }
 
-    function isValidProgress(data) {
-      return data.keys().hasAll(['date']) &&
-             data.date is string && data.date.size() <= 20 &&
+    function isValidStatsCreate(data) {
+      return isValidStatsFields(data);
+    }
+
+    function isValidStatsUpdate(data) {
+      return isValidStatsFields(data);
+    }
+
+    function isValidProgressFields(data) {
+      return (!('date' in data) || (data.date is string && data.date.size() <= 20)) &&
              (!('completed' in data) || data.completed is bool) &&
              (!('pushupsDone' in data) || data.pushupsDone is bool) &&
              (!('waterDrank' in data) || (data.waterDrank is number && data.waterDrank >= 0)) &&
@@ -110,21 +124,36 @@ service cloud.firestore {
              (!('completionsCount' in data) || (data.completionsCount is number && data.completionsCount >= 0));
     }
 
-    function isValidLeaderboardEntry(data) {
-      return data.keys().hasAll(['uid', 'displayName', 'streak', 'totalPoints', 'level', 'league']) &&
-             data.uid is string && data.uid == request.auth.uid &&
-             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
-             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1048576)) &&
-             data.streak is number && data.streak >= 0 &&
-             data.totalPoints is number && data.totalPoints >= 0 && data.totalPoints < 1000000 &&
-             (!('weeklyPoints' in data) || (data.weeklyPoints is number && data.weeklyPoints >= 0)) &&
-             data.level is number && data.level >= 1 &&
-             data.league is string && data.league in ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'];
+    function isValidProgressCreate(data) {
+      return data.keys().hasAll(['date']) && isValidProgressFields(data);
+    }
+
+    function isValidProgressUpdate(data) {
+      return isValidProgressFields(data);
     }
 
     function isValidPrivateData(data) {
       return (!('logs' in data) || (data.logs is list && data.logs.size() <= 1000)) &&
              (!('goals' in data) || (data.goals is list && data.goals.size() <= 100));
+    }
+
+    function isValidLeaderboardEntryFields(data) {
+      return (!('uid' in data) || (data.uid is string && data.uid == request.auth.uid)) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1048576)) &&
+             (!('streak' in data) || (data.streak is number && data.streak >= 0)) &&
+             (!('totalPoints' in data) || (data.totalPoints is number && data.totalPoints >= 0 && data.totalPoints < 1000000)) &&
+             (!('weeklyPoints' in data) || (data.weeklyPoints is number && data.weeklyPoints >= 0)) &&
+             (!('level' in data) || (data.level is number && data.level >= 1)) &&
+             (!('league' in data) || (data.league is string && data.league in ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond']));
+    }
+
+    function isValidLeaderboardEntryCreate(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'streak', 'totalPoints', 'level', 'league']) && isValidLeaderboardEntryFields(data);
+    }
+
+    function isValidLeaderboardEntryUpdate(data) {
+      return isValidLeaderboardEntryFields(data);
     }
 
     function isValidShopPurchases(data) {
@@ -146,8 +175,8 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
-      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+      allow create: if isOwner(userId) && isValidUserCreate(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isOwner(userId) && isValidUserUpdate(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
       allow delete: if isOwner(userId) || isAdmin();
       
       match /private/data {
@@ -157,15 +186,15 @@ service cloud.firestore {
 
       match /stats/main {
         allow read: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId) && isValidStats(request.resource.data);
-        allow update: if isOwner(userId) && isValidStats(request.resource.data);
+        allow create: if isOwner(userId) && isValidStatsCreate(request.resource.data);
+        allow update: if isOwner(userId) && isValidStatsUpdate(request.resource.data);
         allow delete: if isOwner(userId) || isAdmin();
       }
       
       match /progress/{date} {
         allow read: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId) && isValidProgress(request.resource.data);
-        allow update: if isOwner(userId) && isValidProgress(request.resource.data);
+        allow create: if isOwner(userId) && isValidProgressCreate(request.resource.data);
+        allow update: if isOwner(userId) && isValidProgressUpdate(request.resource.data);
         allow delete: if isOwner(userId) || isAdmin();
       }
       
@@ -193,8 +222,8 @@ service cloud.firestore {
 
     match /leaderboard/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isOwner(userId) && isValidLeaderboardEntry(request.resource.data);
-      allow update: if isOwner(userId) && isValidLeaderboardEntry(request.resource.data);
+      allow create: if isOwner(userId) && isValidLeaderboardEntryCreate(request.resource.data);
+      allow update: if isOwner(userId) && isValidLeaderboardEntryUpdate(request.resource.data);
       allow delete: if isOwner(userId) || isAdmin();
     }
 
