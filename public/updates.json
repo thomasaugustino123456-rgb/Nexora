@@ -1,7 +1,12 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "releaseDate": "2026-04-06",
   "updates": [
+    {
+      "category": "PWA",
+      "title": "App Icon Badge Fix!",
+      "description": "Improved reliability of the notification badge on the home screen. You'll now see a '1' when there's a new update or notification."
+    },
     {
       "category": "Leaderboard",
       "title": "Real User Leaderboard!",
@@ -11,16 +16,6 @@
       "category": "XP System",
       "title": "Earn XP Every Day",
       "description": "Earn 5 XP for every task and 5 XP for completing a level. Level up faster and climb the ranks!"
-    },
-    {
-      "category": "Design",
-      "title": "Duolingo-Style Leaderboard",
-      "description": "Redesigned leaderboard with promotion zones, ranking colors, and a sticky user bar for easy tracking."
-    },
-    {
-      "category": "Stats",
-      "title": "XP Everywhere",
-      "description": "New XP stats on the home screen, consistency cards, and leaderboard for a clear sense of achievement."
     },
     {
       "category": "Performance",

@@ -1,5 +1,22 @@
 # Nexora Daily - Changelog
 
+## [1.4.1] - 2026-04-06
+
+### Fixed
+- **App Icon Badge**: Improved reliability of the notification badge on the home screen for PWAs.
+- **Update Detection**: Fixed logic to ensure the "What's New" popup and badge trigger correctly for new versions.
+
+## [1.4.0] - 2026-04-06
+
+### Added
+- **Real User Leaderboard**: Compete with real users in your league! No more bots, just real progress.
+- **New XP System**: Earn 5 XP for every task and 5 XP for completing a level. Level up faster!
+- **Duolingo-Style Leaderboard**: Redesigned leaderboard with promotion zones, ranking colors, and sticky user bar.
+- **XP Display**: New XP stats on the home screen, consistency cards, and leaderboard.
+
+### Changed
+- **Performance Improvements**: Faster data syncing and smoother transitions between app screens.
+
 ## [1.2.0] - 2026-04-04
 
 ### Added

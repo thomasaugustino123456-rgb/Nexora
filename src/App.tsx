@@ -693,7 +693,8 @@ export default function App() {
   // Version Update Logic
   const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean, imageUrl?: string } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
-  const currentAppVersion = "1.4.0"; // Current hardcoded version
+  const currentAppVersion = "1.4.1"; // Current hardcoded version
+  const [lastUpdateTime, setLastUpdateTime] = useState<string | null>(localStorage.getItem('nexora_last_update_time'));
 
   // Background Music Logic
   useEffect(() => {
@@ -728,47 +729,84 @@ export default function App() {
   useEffect(() => {
     const updateBadge = async () => {
       // Check if the App Badging API is supported
-      if (!('setAppBadge' in navigator)) return;
+      if (!('setAppBadge' in navigator)) {
+        console.warn('PWA: App Badging API not supported in this browser/mode. (Must be in Standalone/PWA mode on supported OS)');
+        return;
+      }
+
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      if (!isStandalone) {
+        console.warn('PWA: App is not running in standalone mode. Badges might not appear on the home screen icon.');
+      }
 
       let count = 0;
-      const badgeSettings = settings.badgeSettings || DEFAULT_SETTINGS.badgeSettings!;
+      const badgeSettings = settings.badgeSettings || {
+        trophyAlerts: true,
+        appUpdates: true,
+        dailyChallenge: true,
+        dailyQuest: true,
+        dynamicUrgency: true
+      };
       const now = new Date();
       
       // 1. Trophy degradation alert (High priority)
-      if (badgeSettings.trophyAlerts && emergencyActive) count++;
+      if (badgeSettings.trophyAlerts && emergencyActive) {
+        count++;
+        console.log('PWA Badge: Trophy emergency active');
+      }
       
       // 2. App update available
-      if (badgeSettings.appUpdates && showUpdatePopup) count++;
+      if (badgeSettings.appUpdates && showUpdatePopup) {
+        count++;
+        console.log('PWA Badge: App update available (showUpdatePopup is true)');
+      }
+      
+      // 2.5 New content badge (For 24 hours after update)
+      if (lastUpdateTime && badgeSettings.appUpdates) {
+        const updateDate = new Date(lastUpdateTime);
+        const diff = now.getTime() - updateDate.getTime();
+        if (diff < 24 * 60 * 60 * 1000) {
+          count++;
+          console.log('PWA Badge: Recent update (24h window)');
+        }
+      }
       
       // 3. Daily challenge not completed (If it's after 6 PM)
       if (badgeSettings.dailyChallenge && !dailyProgress.completed && now.getHours() >= 18) {
         count++;
+        console.log('PWA Badge: Daily challenge not done (Evening)');
         // Dynamic Urgency: Add another count if it's after 10 PM
         if (badgeSettings.dynamicUrgency && now.getHours() >= 22) {
           count++;
+          console.log('PWA Badge: Dynamic urgency active (>10 PM)');
         }
       }
       
       // 4. Daily quest not done (If it's after 12 PM)
       if (badgeSettings.dailyQuest && !dailyProgress.dailyQuestDone && now.getHours() >= 12) {
         count++;
+        console.log('PWA Badge: Daily quest not done');
       }
 
       try {
         if (count > 0) {
           await (navigator as any).setAppBadge(count);
-          console.log(`PWA: Badge set to ${count}`);
+          console.log(`PWA Badge: Successfully set to ${count} (Update: ${showUpdatePopup}, Emergency: ${emergencyActive}, LastUpdate: ${lastUpdateTime})`);
         } else {
           await (navigator as any).clearAppBadge();
-          console.log('PWA: Badge cleared');
+          console.log('PWA Badge: Cleared (Count is 0)');
         }
       } catch (error) {
-        console.error('Error setting app badge:', error);
+        console.error('PWA Badge: Error calling setAppBadge:', error);
       }
     };
 
     updateBadge();
-  }, [emergencyActive, showUpdatePopup, dailyProgress.completed, dailyProgress.dailyQuestDone, settings.badgeSettings]);
+    
+    // Update every minute to handle time-based badges
+    const intervalId = setInterval(updateBadge, 60000);
+    return () => clearInterval(intervalId);
+  }, [emergencyActive, showUpdatePopup, dailyProgress.completed, dailyProgress.dailyQuestDone, settings.badgeSettings, lastUpdateTime]);
 
   // Firestore Sync Logic
   useEffect(() => {
@@ -843,11 +881,20 @@ export default function App() {
           if (contentType && contentType.includes("application/json")) {
             const data = await response.json();
             const dismissedVersion = localStorage.getItem('nexora_dismissed_version');
+            console.log('PWA: Version check - Current:', currentAppVersion, 'Fetched:', data.version, 'Dismissed:', dismissedVersion);
             
-            if (data.version !== currentAppVersion && dismissedVersion !== data.version) {
-              console.log('New version detected:', data.version);
+            if (dismissedVersion !== data.version) {
+              console.log('PWA: New version or unseen update detected:', data.version);
               setUpdateInfo(data);
               setShowUpdatePopup(true);
+              
+              // If it's a new version, we should also ensure the badge is set immediately
+              if ('setAppBadge' in navigator) {
+                console.log('PWA: Setting initial update badge');
+                (navigator as any).setAppBadge(1).catch(console.error);
+              }
+            } else {
+              console.log('PWA: No new update or already dismissed');
             }
           } else {
             const text = await response.text();
@@ -861,6 +908,13 @@ export default function App() {
 
     // Check immediately on mount
     checkVersion();
+    
+    // Set last update time for 1.4.0 if not set to show the badge
+    if (currentAppVersion === "1.4.1" && !localStorage.getItem('nexora_last_update_time')) {
+      const now = new Date().toISOString();
+      localStorage.setItem('nexora_last_update_time', now);
+      setLastUpdateTime(now);
+    }
 
     // Check every 5 minutes
     const interval = setInterval(checkVersion, 300000);
@@ -870,7 +924,10 @@ export default function App() {
   const handleUpdate = () => {
     vibrate(50);
     if (updateInfo) {
+      const now = new Date().toISOString();
       localStorage.setItem('nexora_dismissed_version', updateInfo.version);
+      localStorage.setItem('nexora_last_update_time', now);
+      setLastUpdateTime(now);
     }
     window.location.reload();
   };
@@ -3685,6 +3742,34 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
                 </button>
               </div>
             ))}
+          </div>
+
+          <div className="pt-4 border-t border-blue-50">
+            <button 
+              onClick={async () => {
+                vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                if ('setAppBadge' in navigator) {
+                  try {
+                    await (navigator as any).setAppBadge(1);
+                    showToast('Badge set to 1! Check your icon bro! 🔥', 'success');
+                    setTimeout(() => {
+                      (navigator as any).clearAppBadge();
+                    }, 5000);
+                  } catch (e) {
+                    showToast('Badge API failed. Use PWA mode!', 'error');
+                  }
+                } else {
+                  showToast('Badge API not supported on this device', 'error');
+                }
+              }}
+              className="w-full py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-colors"
+            >
+              Test App Badge (Set to 1)
+            </button>
+            <p className="text-[8px] text-blue-900/30 mt-2 text-center">
+              Note: Badges only work when Nexora is installed as a PWA. 
+              On iOS, allow notifications. On Android, check your launcher settings.
+            </p>
           </div>
         </div>
 

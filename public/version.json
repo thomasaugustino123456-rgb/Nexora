@@ -1,11 +1,10 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "releaseNotes": [
-    "Real User Leaderboard: Compete with real users in your league! No more bots, just real progress.",
-    "New XP System: Earn 5 XP for every task and 5 XP for completing a level. Level up faster!",
-    "Duolingo-Style Leaderboard: Redesigned leaderboard with promotion zones, ranking colors, and sticky user bar.",
-    "XP Display: New XP stats on the home screen, consistency cards, and leaderboard.",
-    "Performance Improvements: Faster data syncing and smoother transitions between app screens."
+    "App Icon Badge Fix: Improved reliability of the notification badge on the home screen.",
+    "Real User Leaderboard: Compete with real users in your league!",
+    "New XP System: Earn 5 XP for every task and level completion.",
+    "Performance Improvements: Faster data syncing and smoother transitions."
   ],
   "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
   "forceUpdate": false
