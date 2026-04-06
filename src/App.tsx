@@ -3187,20 +3187,26 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
   const [tempName, setTempName] = useState(settings.displayName || '');
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("handleFileChange triggered");
     const file = e.target.files?.[0];
     if (file && user) {
+      console.log("File selected:", file.name);
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result as string;
         setSettings({ ...settings, profilePic: base64 });
         const path = `users/${user.uid}`;
-      try {
-        await updateDoc(doc(db, 'users', user.uid), { profilePic: base64 });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, path);
-      }
+        try {
+          await updateDoc(doc(db, 'users', user.uid), { profilePic: base64 });
+          await setDoc(doc(db, 'leaderboard', user.uid), { photoURL: base64 }, { merge: true });
+          console.log("Profile picture updated in Firestore and Leaderboard");
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, path);
+        }
       };
       reader.readAsDataURL(file);
+    } else {
+      console.log("No file selected or user not logged in");
     }
   };
 
@@ -3208,13 +3214,13 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
     setSettings({ ...settings, displayName: tempName });
     setIsEditingName(false);
     if (user) {
-    const path = `users/${user.uid}`;
-    try {
-      await updateDoc(doc(db, 'users', user.uid), { displayName: tempName });
-      await updateDoc(doc(db, 'leaderboard', user.uid), { displayName: tempName });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, path);
-    }
+      const path = `users/${user.uid}`;
+      try {
+        await updateDoc(doc(db, 'users', user.uid), { displayName: tempName });
+        await setDoc(doc(db, 'leaderboard', user.uid), { displayName: tempName }, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, path);
+      }
     }
   };
 
