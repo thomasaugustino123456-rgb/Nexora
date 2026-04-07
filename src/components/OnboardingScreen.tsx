@@ -460,22 +460,41 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center text-center space-y-8 p-4"
+              className="flex flex-col items-center text-center space-y-6 p-4"
             >
-              <motion.img 
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                src="https://i.postimg.cc/Hk3hzChG/Nexora-app-notifications-on-display-removebg-preview.png"
-                alt="Notifications"
-                className="w-64 h-64 object-contain"
-              />
+              {/* Back Button */}
+              <button 
+                onClick={handleBack}
+                className="absolute top-6 left-6 p-3 rounded-full bg-white/50 text-blue-900/60 hover:bg-white/80 hover:text-blue-900 transition-all z-20 shadow-sm"
+                aria-label="Go back"
+              >
+                <ArrowLeft size={24} />
+              </button>
+
+              <div className="relative w-64 h-64 md:w-80 md:h-80">
+                <motion.img 
+                  initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                  transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+                  src="https://i.postimg.cc/Hk3hzChG/Nexora-app-notifications-on-display-removebg-preview.png"
+                  alt="Notifications 1"
+                  className="w-full h-full object-contain"
+                />
+                <motion.img 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8, duration: 1, ease: [0.22, 1, 0.36, 1] }}
+                  src="https://i.postimg.cc/Hk3hzChG/Nexora-app-notifications-on-display-removebg-preview.png"
+                  alt="Notifications 2"
+                  className="absolute top-1/2 left-0 w-full h-full object-contain"
+                />
+              </div>
               
-              <div className="space-y-6 text-blue-900">
+              <div className="space-y-6 text-blue-900 mt-16">
                 <motion.h2 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5, duration: 0.8 }}
+                  transition={{ delay: 1.2, duration: 0.8 }}
                   className="text-3xl font-black leading-tight"
                 >
                   Stay Consistent with Smart Notifications
@@ -483,7 +502,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                 <motion.p 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7, duration: 0.8 }}
+                  transition={{ delay: 1.4, duration: 0.8 }}
                   className="text-lg font-medium text-blue-900/80"
                 >
                   Nexora is designed to keep you moving forward — even on days when motivation is low.
@@ -492,7 +511,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.9, duration: 0.8 }}
+                  transition={{ delay: 1.6, duration: 0.8 }}
                   className="space-y-4 text-left text-blue-900/70"
                 >
                   <p>Our smart notifications gently guide you, remind you, and keep your progress alive:</p>
@@ -511,7 +530,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                 <motion.button 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.1, duration: 0.8 }}
+                  transition={{ delay: 1.8, duration: 0.8 }}
                   onClick={async () => {
                     await setupFCM();
                     nextStep();
@@ -523,7 +542,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                 <motion.button 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.3, duration: 0.8 }}
+                  transition={{ delay: 2.0, duration: 0.8 }}
                   onClick={nextStep}
                   className="w-full py-4 text-blue-900/50 font-bold hover:text-blue-900/70 transition-colors"
                 >
