@@ -11,9 +11,10 @@ interface OnboardingProps {
   onComplete: () => void;
   settings: UserSettings;
   setSettings: (s: UserSettings) => void;
+  setupFCM: () => Promise<void>;
 }
 
-export function OnboardingScreen({ onComplete, settings, setSettings }: OnboardingProps) {
+export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }: OnboardingProps) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [gender, setGender] = useState('');
@@ -23,13 +24,13 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
   const [isHoveringContinue, setIsHoveringContinue] = useState(false);
   const [buttonPulse, setButtonPulse] = useState(false);
 
-  const totalSteps = 8;
+  const totalSteps = 9;
 
   useEffect(() => {
-    if (step === 7) {
+    if (step === 8) {
       // Simulate plan creation
       const timer = setTimeout(() => {
-        setStep(8);
+        setStep(9);
       }, 3000);
       return () => clearTimeout(timer);
     }
@@ -83,7 +84,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
 
   const handleBack = async () => {
     vibrate(10);
-    if (step > 1 && step < 7) {
+    if (step > 1 && step < 8) {
       setStep(prev => prev - 1);
     } else if (step === 1) {
       try {
@@ -452,10 +453,73 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
             </motion.div>
           )}
 
-          {/* STEP 7: Creating Plan */}
+          {/* STEP 7: Notifications */}
           {step === 7 && (
             <motion.div 
               key="step7"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="glass-card p-8 flex flex-col items-center text-center space-y-8"
+            >
+              <motion.img 
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+                src="https://i.postimg.cc/Hk3hzChG/Nexora-app-notifications-on-display-removebg-preview.png"
+                alt="Notifications"
+                className="w-48 h-48 object-contain"
+              />
+              
+              <div className="space-y-4">
+                <motion.h2 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.5 }}
+                  className="text-2xl font-black text-blue-900"
+                >
+                  Stay in the loop, bro!
+                </motion.h2>
+                <motion.p 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7, duration: 0.5 }}
+                  className="text-blue-900/60 text-sm"
+                >
+                  Enable notifications to get daily challenges, motivation, and streak updates. Never miss a beat!
+                </motion.p>
+              </div>
+
+              <div className="w-full flex flex-col gap-3 mt-4">
+                <motion.button 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.9, duration: 0.5 }}
+                  onClick={async () => {
+                    await setupFCM();
+                    nextStep();
+                  }}
+                  className="btn-primary w-full flex justify-center items-center gap-2"
+                >
+                  Enable Notifications
+                </motion.button>
+                <motion.button 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.1, duration: 0.5 }}
+                  onClick={nextStep}
+                  className="w-full py-4 text-blue-900/40 font-bold hover:text-blue-900/60 transition-colors"
+                >
+                  Skip
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* STEP 8: Creating Plan */}
+          {step === 8 && (
+            <motion.div 
+              key="step8"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.1 }}
@@ -470,10 +534,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings }: Onboardi
             </motion.div>
           )}
 
-          {/* STEP 8: Thanks */}
-          {step === 8 && (
+          {/* STEP 9: Thanks */}
+          {step === 9 && (
             <motion.div 
-              key="step8"
+              key="step9"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className="glass-card p-12 flex flex-col items-center text-center space-y-8"

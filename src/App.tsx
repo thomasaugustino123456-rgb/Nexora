@@ -1314,6 +1314,31 @@ export default function App() {
 
   // 11. Leaderboard Data Fetching
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  
+  useEffect(() => {
+    if (user) {
+      const leaderboardRef = doc(db, 'leaderboard', user.uid);
+      setDoc(leaderboardRef, {
+        uid: user.uid,
+        displayName: settings.displayName || 'Anonymous',
+        photoURL: user.photoURL || '',
+        streak: stats.streak || 0,
+        totalPoints: stats.totalPoints,
+        xp: stats.xp || 0,
+        weeklyPoints: stats.weeklyPoints,
+        weeklyXP: stats.weeklyXP || 0,
+        level: Math.floor((stats.totalPoints || 0) / 100) + 1,
+        league: settings.league || 'Bronze'
+      }, { merge: true }).catch(e => {
+        try {
+          handleFirestoreError(e, OperationType.WRITE, 'leaderboard');
+        } catch (err) {
+          console.error("Firestore error handled:", err);
+        }
+      });
+    }
+  }, [user, stats.weeklyXP, stats.totalPoints, stats.streak, settings.displayName, settings.profilePic, settings.league]);
+
   useEffect(() => {
     if (user) {
       // Weekly Reset Logic
@@ -1342,7 +1367,7 @@ export default function App() {
           data.push({
             uid: user.uid,
             displayName: settings.displayName || 'Anonymous',
-            photoURL: user.photoURL || '',
+            photoURL: settings.profilePic || user.photoURL || '',
             streak: stats.streak || 0,
             totalPoints: stats.totalPoints,
             xp: stats.xp || 0,
@@ -1632,7 +1657,7 @@ export default function App() {
   }
 
   if (needsOnboarding) {
-    return <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} settings={settings} setSettings={setSettings} />;
+    return <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} settings={settings} setSettings={setSettings} setupFCM={setupFCM} />;
   }
 
   return (
