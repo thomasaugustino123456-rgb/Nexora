@@ -457,58 +457,75 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
           {step === 7 && (
             <motion.div 
               key="step7"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col items-center text-center space-y-8 p-4"
             >
               <motion.img 
-                initial={{ opacity: 0, scale: 0.5 }}
+                initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
                 src="https://i.postimg.cc/Hk3hzChG/Nexora-app-notifications-on-display-removebg-preview.png"
                 alt="Notifications"
-                className="w-48 h-48 object-contain"
+                className="w-64 h-64 object-contain"
               />
               
-              <div className="space-y-4">
+              <div className="space-y-6 text-blue-900">
                 <motion.h2 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5, duration: 0.5 }}
-                  className="text-2xl font-black text-blue-900"
+                  transition={{ delay: 0.5, duration: 0.8 }}
+                  className="text-3xl font-black leading-tight"
                 >
-                  Stay in the loop, bro!
+                  Stay Consistent with Smart Notifications
                 </motion.h2>
                 <motion.p 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7, duration: 0.5 }}
-                  className="text-blue-900/60 text-sm"
+                  transition={{ delay: 0.7, duration: 0.8 }}
+                  className="text-lg font-medium text-blue-900/80"
                 >
-                  Enable notifications to get daily challenges, motivation, and streak updates. Never miss a beat!
+                  Nexora is designed to keep you moving forward — even on days when motivation is low.
                 </motion.p>
+                
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.9, duration: 0.8 }}
+                  className="space-y-4 text-left text-blue-900/70"
+                >
+                  <p>Our smart notifications gently guide you, remind you, and keep your progress alive:</p>
+                  <ul className="space-y-3 text-sm">
+                    <li><strong>🔔 Daily Challenge Reminders:</strong> Get a simple nudge to complete your 4 daily challenges.</li>
+                    <li><strong>🏆 Streak & Trophy Alerts:</strong> Know when your streak is growing or about to break.</li>
+                    <li><strong>💪 Comeback Motivation:</strong> Get encouraging messages to help you restart without guilt.</li>
+                    <li><strong>⏰ Personalized Timing:</strong> Nexora adapts to your routine.</li>
+                    <li><strong>🚀 New Features & Updates:</strong> Stay updated with improvements.</li>
+                    <li><strong>🌱 Small Wins, Big Progress:</strong> Celebrate your daily progress.</li>
+                  </ul>
+                </motion.div>
               </div>
 
-              <div className="w-full flex flex-col gap-3 mt-4">
+              <div className="w-full flex flex-col gap-3 mt-6">
                 <motion.button 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.9, duration: 0.5 }}
+                  transition={{ delay: 1.1, duration: 0.8 }}
                   onClick={async () => {
                     await setupFCM();
                     nextStep();
                   }}
-                  className="btn-primary w-full flex justify-center items-center gap-2"
+                  className="btn-primary w-full py-4 text-lg font-bold"
                 >
                   Enable Notifications
                 </motion.button>
                 <motion.button 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.1, duration: 0.5 }}
+                  transition={{ delay: 1.3, duration: 0.8 }}
                   onClick={nextStep}
-                  className="w-full py-4 text-blue-900/40 font-bold hover:text-blue-900/60 transition-colors"
+                  className="w-full py-4 text-blue-900/50 font-bold hover:text-blue-900/70 transition-colors"
                 >
                   Skip
                 </motion.button>
