@@ -122,6 +122,17 @@ export interface LeaderboardEntry {
   league: string;
 }
 
-export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription';
+export interface CustomPlan {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  challenges: ChallengeStep[];
+  days: number[]; // 0-6 (Sun-Sat)
+  reminderTime?: string;
+  createdAt: string;
+}
+
+export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder';
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion';
 export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';

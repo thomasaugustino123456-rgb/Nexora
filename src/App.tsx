@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Trophy, Award, Users, Crown, Info, Map as MapIcon, Check } from 'lucide-react';
+import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Trophy, Award, Users, Crown, Info, Map as MapIcon, Check, Plus } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
-import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood, BadgeSettings, LeaderboardEntry } from './types';
+import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan } from './types';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider } from 'firebase/auth';
@@ -12,6 +12,7 @@ import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingScreen } from './components/OnboardingScreen';
+import { PlanBuilder } from './components/PlanBuilder';
 import { Mascot } from './components/Mascot';
 import { ArtistMascot } from './components/ArtistMascot';
 import { BreathingMascot } from './components/BreathingMascot';
@@ -1314,7 +1315,55 @@ export default function App() {
 
   // 11. Leaderboard Data Fetching
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [customPlans, setCustomPlans] = useState<CustomPlan[]>([]);
   
+  useEffect(() => {
+    if (user) {
+      const q = query(collection(db, 'users', user.uid, 'customPlans'), orderBy('createdAt', 'desc'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const plans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomPlan));
+        setCustomPlans(plans);
+      }, (error) => {
+        try {
+          handleFirestoreError(error, OperationType.LIST, 'customPlans');
+        } catch (e) {
+          console.error("Firestore error handled:", e);
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [user]);
+
+  const handleSaveCustomPlan = async (plan: CustomPlan) => {
+    if (!user) return;
+    try {
+      const planRef = doc(db, 'users', user.uid, 'customPlans', plan.id);
+      await setDoc(planRef, plan);
+      showToast('Plan created successfully!', 'success');
+      setActiveScreen('home');
+    } catch (error) {
+      try {
+        handleFirestoreError(error, OperationType.WRITE, 'customPlans');
+      } catch (e) {
+        console.error("Firestore error handled:", e);
+      }
+    }
+  };
+
+  const handleDeleteCustomPlan = async (planId: string) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'customPlans', planId));
+      showToast('Plan deleted', 'info');
+    } catch (error) {
+      try {
+        handleFirestoreError(error, OperationType.DELETE, 'customPlans');
+      } catch (e) {
+        console.error("Firestore error handled:", e);
+      }
+    }
+  };
+
   useEffect(() => {
     if (user) {
       const leaderboardRef = doc(db, 'leaderboard', user.uid);
@@ -1878,6 +1927,15 @@ export default function App() {
                   dailyQuest={dailyQuest}
                   isPro={isPro}
                   emergencyActive={emergencyActive}
+                  customPlans={customPlans}
+                  onStartCustomPlan={(plan) => {
+                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                    // For now, we just start the first challenge in the custom plan
+                    setChallengeStep(plan.challenges[0]);
+                    setActiveScreen('challenge');
+                  }}
+                  onDeleteCustomPlan={handleDeleteCustomPlan}
+                  onOpenPlanBuilder={() => setActiveScreen('plan-builder')}
                 />
               </motion.div>
             )}
@@ -2006,6 +2064,24 @@ export default function App() {
                 <h2 className="text-3xl font-black text-blue-900 mb-4">Coming Soon</h2>
                 <p className="text-blue-900/60">We're working hard to bring you Nexora Pro. Stay tuned!</p>
                 <button onClick={() => setActiveScreen('home')} className="mt-8 px-6 py-3 bg-blue-900 text-white rounded-full font-bold">Back Home</button>
+              </motion.div>
+            )}
+            {activeScreen === 'plan-builder' && (
+              <motion.div
+                key="plan-builder"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <PlanBuilder 
+                  onBack={() => setActiveScreen('home')}
+                  onSave={handleSaveCustomPlan}
+                  isPro={isPro}
+                  existingPlansCount={customPlans.length}
+                  settings={settings}
+                />
               </motion.div>
             )}
             {activeScreen === 'library' && (
@@ -2550,7 +2626,7 @@ function LeaderboardScreen({ leaderboard, user, settings, stats, onBack }: { lea
   );
 }
 
-function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive }: { 
+function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
@@ -2560,7 +2636,11 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
   onOpenGallery: () => void,
   dailyQuest: ChallengeStep | null,
   isPro: boolean,
-  emergencyActive: boolean
+  emergencyActive: boolean,
+  customPlans?: CustomPlan[],
+  onStartCustomPlan: (plan: CustomPlan) => void,
+  onDeleteCustomPlan: (id: string) => void,
+  onOpenPlanBuilder: () => void
 }) {
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
@@ -2788,6 +2868,63 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
                   ? `Start Challenge #${dailyProgress.completionsCount + 1} ✍️` 
                   : 'Start Today\'s Challenge ✍️'}
             </button>
+          </div>
+
+          {/* Custom Plans Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-blue-900/40 uppercase tracking-widest">Your Custom Plans</h3>
+              <button 
+                onClick={onOpenPlanBuilder}
+                className="text-xs font-bold text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1"
+              >
+                <Plus size={14} /> Create New
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {customPlans.length === 0 ? (
+                <div className="p-6 rounded-3xl border-2 border-dashed border-gray-100 flex flex-col items-center gap-3 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-300">
+                    <Target size={24} />
+                  </div>
+                  <p className="text-xs font-bold text-blue-900/30">No custom plans yet, bro. Create one to level up your routine!</p>
+                </div>
+              ) : (
+                customPlans.map((plan) => (
+                  <motion.div
+                    key={plan.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="glass-card p-4 flex items-center gap-4 group hover:border-blue-500/30 transition-all"
+                  >
+                    <div className={`w-12 h-12 rounded-2xl ${plan.color} text-white flex items-center justify-center shadow-lg shadow-blue-100`}>
+                      <Target size={24} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-black text-blue-900">{plan.name}</h4>
+                      <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest">
+                        {plan.challenges.length} Challenges • {plan.days.length} Days
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => onDeleteCustomPlan(plan.id)}
+                        className="p-2 text-red-500/20 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                      <button 
+                        onClick={() => onStartCustomPlan(plan)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-xs shadow-lg shadow-blue-200 active:scale-95 transition-all"
+                      >
+                        START
+                      </button>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
           </div>
 
           {latestTrophy && (
