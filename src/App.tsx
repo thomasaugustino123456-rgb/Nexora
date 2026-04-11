@@ -1330,7 +1330,7 @@ export default function App() {
 
   // Daily & Custom Plan Reminder Timer
   useEffect(() => {
-    const interval = setInterval(() => {
+    const checkReminders = () => {
       if (!settings.notificationsEnabled) return;
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
@@ -1338,11 +1338,22 @@ export default function App() {
       const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       const todayStr = now.toISOString().split('T')[0];
       
+      const sendNotification = (title: string, options: NotificationOptions) => {
+        // Try to use service worker registration for better background support
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(title, options);
+          });
+        } else {
+          new Notification(title, options);
+        }
+      };
+
       // Main Reminder
       if (currentTimeStr === settings.reminderTime) {
         const lastReminderDate = localStorage.getItem('nexora_last_reminder_date');
         if (lastReminderDate !== todayStr) {
-          new Notification('Nexora 🔥', {
+          sendNotification('Nexora 🔥', {
             body: 'Hey 👋 Ready for today’s challenge?',
             icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
           });
@@ -1357,7 +1368,7 @@ export default function App() {
           if (plan.days.includes(currentDay)) {
             const lastPlanReminderDate = localStorage.getItem(`nexora_last_reminder_date_${plan.id}`);
             if (lastPlanReminderDate !== todayStr) {
-              new Notification(`${plan.name} 🚀`, {
+              sendNotification(`${plan.name} 🚀`, {
                 body: `Time for your custom plan: ${plan.name}! Let's go!`,
                 icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
               });
@@ -1366,8 +1377,13 @@ export default function App() {
           }
         }
       });
+    };
 
-    }, 60000); // Check every minute
+    // Check every 30 seconds to be more precise and avoid missing the minute mark
+    const interval = setInterval(checkReminders, 30000);
+    
+    // Also check immediately
+    checkReminders();
 
     return () => clearInterval(interval);
   }, [settings.notificationsEnabled, settings.reminderTime, customPlans]);
@@ -3928,7 +3944,23 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
             <button 
               onClick={() => {
                 vibrate(VIBRATION_PATTERNS.CLICK);
-                setSettings({ ...settings, notificationsEnabled: !settings.notificationsEnabled });
+                if (!settings.notificationsEnabled) {
+                  // Request permission when turning ON
+                  if ('Notification' in window) {
+                    Notification.requestPermission().then(permission => {
+                      if (permission === 'granted') {
+                        showToast('Notifications enabled! 🔔', 'success');
+                        setSettings({ ...settings, notificationsEnabled: true });
+                      } else {
+                        showToast('Permission denied. Check browser settings.', 'error');
+                      }
+                    });
+                  } else {
+                    showToast('Notifications not supported on this device.', 'error');
+                  }
+                } else {
+                  setSettings({ ...settings, notificationsEnabled: false });
+                }
               }}
               className={`w-12 h-6 rounded-full transition-colors relative ${settings.notificationsEnabled ? 'bg-purple-500' : 'bg-gray-300'}`}
             >
@@ -3936,14 +3968,33 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
             </button>
           </div>
           {settings.notificationsEnabled && (
-            <div className="flex items-center gap-3 bg-white/40 p-3 rounded-xl">
-              <span className="text-xs font-bold text-blue-900/60">Time:</span>
-              <input 
-                type="time" 
-                value={settings.reminderTime}
-                onChange={(e) => setSettings({ ...settings, reminderTime: e.target.value })}
-                className="bg-transparent font-bold text-blue-900 text-sm focus:outline-none"
-              />
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 bg-white/40 p-3 rounded-xl">
+                <span className="text-xs font-bold text-blue-900/60">Time:</span>
+                <input 
+                  type="time" 
+                  value={settings.reminderTime}
+                  onChange={(e) => setSettings({ ...settings, reminderTime: e.target.value })}
+                  className="bg-transparent font-bold text-blue-900 text-sm focus:outline-none"
+                />
+              </div>
+              <button 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.CLICK);
+                  if (Notification.permission === 'granted') {
+                    new Notification('Nexora 🔥', {
+                      body: 'Test notification! It works, bro! 🚀',
+                      icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+                    });
+                    showToast('Test notification sent!', 'success');
+                  } else {
+                    showToast('Please allow notifications first.', 'error');
+                  }
+                }}
+                className="w-full py-2 text-[10px] font-black uppercase tracking-widest text-purple-600 bg-purple-50 rounded-lg border border-purple-100 hover:bg-purple-100 transition-colors"
+              >
+                Send Test Notification
+              </button>
             </div>
           )}
         </div>
