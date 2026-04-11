@@ -212,6 +212,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
               alt="Nexora Logo" 
               className="w-64 h-64 object-contain"
               referrerPolicy="no-referrer"
+              loading="lazy"
             />
             <h1 className="text-7xl md:text-8xl font-black text-blue-900 tracking-tighter">Nexora</h1>
           </div>

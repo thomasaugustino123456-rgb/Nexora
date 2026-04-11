@@ -613,6 +613,18 @@ export default function App() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [activeScreen, setActiveScreen] = useState<Screen>('home');
   const [activeCustomPlan, setActiveCustomPlan] = useState<CustomPlan | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
@@ -1834,6 +1846,21 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+      
+      {/* Offline Indicator */}
+      <AnimatePresence>
+        {!isOnline && (
+          <motion.div 
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[400] bg-amber-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-xs font-bold"
+          >
+            <RefreshCw size={14} className="animate-spin" />
+            Working Offline... Syncing soon! 🌐
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Welcome Back Popup */}
       <AnimatePresence>
@@ -1889,7 +1916,7 @@ export default function App() {
                 className={`p-2 transition-colors ${activeScreen === 'profile' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
               >
                 {settings.profilePic ? (
-                  <img src={settings.profilePic} alt="Profile" className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" referrerPolicy="no-referrer" />
+                  <img src={settings.profilePic} alt="Profile" className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" referrerPolicy="no-referrer" loading="lazy" />
                 ) : (
                   <User size={24} />
                 )}
@@ -2577,7 +2604,7 @@ function LeaderboardScreen({ leaderboard, user, settings, stats, onBack }: { lea
               
               <div className="relative">
                 {entry.photoURL ? (
-                  <img src={entry.photoURL} alt={entry.displayName} className="w-12 h-12 rounded-2xl object-cover border-2 border-white/20" referrerPolicy="no-referrer" />
+                  <img src={entry.photoURL} alt={entry.displayName} className="w-12 h-12 rounded-2xl object-cover border-2 border-white/20" referrerPolicy="no-referrer" loading="lazy" />
                 ) : (
                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${isCurrentUser ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600'}`}>
                     {entry.displayName.charAt(0).toUpperCase()}
@@ -3420,7 +3447,7 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
         <div className="relative group">
           <div className="w-40 h-40 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-blue-100 flex items-center justify-center">
             {settings.profilePic ? (
-              <img src={settings.profilePic} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <img src={settings.profilePic} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
             ) : (
               <User size={80} className="text-blue-300" />
             )}
@@ -5908,7 +5935,7 @@ function GalleryScreen({ stats, onBack }: { stats: UserStats, onBack: () => void
               transition={{ delay: i * 0.1 }}
               className="bg-white p-2 rounded-2xl shadow-md border-2 border-blue-100 overflow-hidden"
             >
-              <img src={drawing} alt={`Drawing ${i}`} className="w-full aspect-square object-cover rounded-xl" />
+              <img src={drawing} alt={`Drawing ${i}`} className="w-full aspect-square object-cover rounded-xl" loading="lazy" />
               <div className="mt-2 flex justify-between items-center px-1">
                 <span className="text-[10px] font-bold text-blue-400">#{i + 1}</span>
                 <button className="text-blue-500 hover:text-blue-700">

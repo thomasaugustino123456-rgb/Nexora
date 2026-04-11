@@ -32,6 +32,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             alt="Nexora Logo" 
             className="w-24 h-24 object-contain"
             referrerPolicy="no-referrer"
+            loading="lazy"
           />
           <span className="text-4xl font-black text-blue-900 tracking-tighter">Nexora</span>
         </div>
@@ -69,6 +70,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             alt="" 
             className="w-[150%] max-w-none"
             referrerPolicy="no-referrer"
+            loading="lazy"
           />
         </div>
         
@@ -422,6 +424,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               alt="Nexora Logo" 
               className="w-20 h-20 object-contain"
               referrerPolicy="no-referrer"
+              loading="lazy"
             />
             <span className="text-3xl font-black text-white tracking-tighter">Nexora</span>
           </div>

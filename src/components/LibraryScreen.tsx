@@ -212,7 +212,7 @@ export function LibraryScreen({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {drawings.map((drawing, i) => (
                   <div key={i} className="bg-white p-2 rounded-2xl shadow-md border-2 border-blue-100 overflow-hidden group relative">
-                    <img src={drawing} alt={`Drawing ${i}`} className="w-full aspect-square object-cover rounded-xl" />
+                    <img src={drawing} alt={`Drawing ${i}`} className="w-full aspect-square object-cover rounded-xl" loading="lazy" />
                     <button 
                       onClick={() => onDeleteDrawing(i)}
                       className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"

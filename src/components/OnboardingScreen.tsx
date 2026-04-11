@@ -133,6 +133,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
               alt="Nexora Mascot" 
               className="w-full h-full object-contain drop-shadow-2xl"
               referrerPolicy="no-referrer"
+              loading="lazy"
             />
           </motion.div>
         </div>
@@ -479,6 +480,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                   src="https://i.postimg.cc/Hk3hzChG/Nexora-app-notifications-on-display-removebg-preview.png"
                   alt="Notifications 1"
                   className="w-full h-full object-contain"
+                  loading="lazy"
                 />
                 <motion.img 
                   initial={{ opacity: 0, y: 20 }}
@@ -487,6 +489,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                   src="https://i.postimg.cc/Hk3hzChG/Nexora-app-notifications-on-display-removebg-preview.png"
                   alt="Notifications 2"
                   className="absolute top-1/2 left-0 w-full h-full object-contain"
+                  loading="lazy"
                 />
               </div>
               
