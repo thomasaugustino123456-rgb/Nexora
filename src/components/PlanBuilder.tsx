@@ -49,7 +49,9 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
   const [isCreating, setIsCreating] = useState(false);
   const [step, setStep] = useState(1);
 
-  const canCreate = isPro || existingPlansCount < 5;
+  // Launch Mode: Unlimited plans for everyone until we reach 20+ users
+  const canCreate = true; 
+  const planLimit = isPro ? 999 : 5;
 
   const handleToggleChallenge = (id: ChallengeStep) => {
     vibrate(10);
@@ -227,12 +229,14 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
           </div>
         </section>
 
-        {!canCreate && (
-          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 text-amber-800 text-sm font-medium flex gap-3">
-            <Sparkles className="shrink-0" size={20} />
-            <p>Free users can only have 5 custom plans. Upgrade to Pro for unlimited plans, bro!</p>
+        {/* Launch Special Message */}
+        <div className="p-4 rounded-2xl bg-blue-50 border-2 border-blue-100 text-blue-900 text-sm font-bold flex gap-3 items-center">
+          <Sparkles className="text-blue-500 shrink-0" size={24} />
+          <div>
+            <p className="text-blue-600 uppercase tracking-widest text-[10px] font-black">Launch Special! 🚀</p>
+            <p className="text-xs">Unlimited plan creation is unlocked for everyone during our launch phase, bro! Go crazy!</p>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Footer Action */}

@@ -2883,12 +2883,15 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black text-blue-900/40 uppercase tracking-widest">Your Custom Plans</h3>
-              <button 
-                onClick={onOpenPlanBuilder}
-                className="text-xs font-bold text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1"
-              >
-                <Plus size={14} /> Create New
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 text-[8px] font-black uppercase tracking-tighter">Unlimited</div>
+                <button 
+                  onClick={onOpenPlanBuilder}
+                  className="text-xs font-bold text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1"
+                >
+                  <Plus size={14} /> Create New
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3">
