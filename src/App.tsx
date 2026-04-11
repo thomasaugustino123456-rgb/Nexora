@@ -4445,6 +4445,7 @@ function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dail
   const baseSteps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'gratitude', 'reaction'];
   const defaultSteps: ChallengeStep[] = [...baseSteps, ...(settings.isPro ? ['writing' as ChallengeStep] : []), 'meditation' as ChallengeStep];
   const steps = customSteps || defaultSteps;
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   
   const currentIdx = steps.indexOf(step as any);
   const progressLabel = step === 'completion' ? 'Done!' : `Challenge ${currentIdx + 1}/${steps.length}`;
@@ -4499,11 +4500,20 @@ function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dail
     }
   };
 
+  const handleBackClick = () => {
+    if (step === 'completion') {
+      onExit();
+    } else {
+      vibrate(VIBRATION_PATTERNS.CLICK);
+      setShowExitConfirm(true);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-[#E0F2FF] to-[#F0E6FF] z-[100] flex flex-col items-center overflow-y-auto">
       <div className="w-full max-w-4xl flex flex-col min-h-screen">
         <header className="p-6 flex items-center justify-between">
-          <button onClick={onExit} className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors">
+          <button onClick={handleBackClick} className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors">
             <ChevronRight className="rotate-180" size={28} />
           </button>
           <h2 className="text-lg font-bold text-blue-900/60 tracking-tight">{progressLabel}</h2>
@@ -4620,6 +4630,52 @@ function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dail
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Exit Confirmation Modal */}
+      <AnimatePresence>
+        {showExitConfirm && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-blue-900/40 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="glass-card w-full max-w-sm p-8 flex flex-col items-center text-center space-y-6"
+            >
+              <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center text-red-500 shadow-lg shadow-red-200/50">
+                <LogOut size={40} />
+              </div>
+              
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-blue-900 leading-tight">Wait, don't go! 🥺</h2>
+                <p className="text-blue-900/60 font-medium">
+                  If you quit now, you'll lose your progress for this session. Are you sure you want to stop?
+                </p>
+              </div>
+
+              <div className="w-full flex flex-col gap-3">
+                <button 
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    onExit();
+                  }}
+                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-black shadow-xl hover:bg-red-700 transition-all active:scale-95"
+                >
+                  Quit Session
+                </button>
+                <button 
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setShowExitConfirm(false);
+                  }}
+                  className="w-full py-4 bg-blue-100 text-blue-600 rounded-2xl font-black hover:bg-blue-200 transition-all active:scale-95"
+                >
+                  Keep Going! ✨
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
