@@ -612,6 +612,7 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [activeScreen, setActiveScreen] = useState<Screen>('home');
+  const [activeCustomPlan, setActiveCustomPlan] = useState<CustomPlan | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
@@ -1918,6 +1919,7 @@ export default function App() {
                   stats={stats} 
                   onStartChallenge={() => {
                     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                    setActiveCustomPlan(null);
                     setChallengeStep('pushups');
                     setActiveScreen('challenge');
                   }}
@@ -1935,7 +1937,7 @@ export default function App() {
                   customPlans={customPlans}
                   onStartCustomPlan={(plan) => {
                     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                    // For now, we just start the first challenge in the custom plan
+                    setActiveCustomPlan(plan);
                     setChallengeStep(plan.challenges[0]);
                     setActiveScreen('challenge');
                   }}
@@ -2270,6 +2272,7 @@ export default function App() {
                 <ChallengeFlow 
                   step={challengeStep} 
                   setStep={setChallengeStep} 
+                  customSteps={activeCustomPlan?.challenges}
                   settings={settings}
                   setSettings={setSettings}
                   dailyProgress={dailyProgress}
@@ -2279,6 +2282,7 @@ export default function App() {
                   onFinish={handleCompleteChallenge}
                   onExit={() => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
+                    setActiveCustomPlan(null);
                     setActiveScreen('home');
                   }}
                   earnedTrophyToday={earnedTrophyToday}
@@ -4392,9 +4396,10 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
   );
 }
 
-function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play }: { 
+function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play }: { 
   step: ChallengeStep, 
   setStep: (s: ChallengeStep) => void, 
+  customSteps?: ChallengeStep[],
   settings: UserSettings,
   setSettings: (s: UserSettings | ((prev: UserSettings) => UserSettings)) => void,
   dailyProgress: DailyProgress,
@@ -4408,7 +4413,8 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
   play: (s: any) => void
 }) {
   const baseSteps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'gratitude', 'reaction'];
-  const steps: ChallengeStep[] = [...baseSteps, ...(settings.isPro ? ['writing' as ChallengeStep] : []), 'meditation' as ChallengeStep];
+  const defaultSteps: ChallengeStep[] = [...baseSteps, ...(settings.isPro ? ['writing' as ChallengeStep] : []), 'meditation' as ChallengeStep];
+  const steps = customSteps || defaultSteps;
   
   const currentIdx = steps.indexOf(step as any);
   const progressLabel = step === 'completion' ? 'Done!' : `Challenge ${currentIdx + 1}/${steps.length}`;
@@ -4573,8 +4579,10 @@ function ChallengeFlow({ step, setStep, settings, setSettings, dailyProgress, se
             {step === 'completion' && (
               <CompletionStep 
                 onFinish={onExit} 
-                streak={dailyProgress.completed ? 1 : 0} 
+                streak={stats.streak || 0} 
                 points={10} 
+                xp={5}
+                coins={15}
                 showTrophy={earnedTrophyToday}
                 settings={settings}
               />
@@ -5174,7 +5182,7 @@ function DrawingStep({ onFinish, onSave }: { onFinish: (data: string) => void, o
   );
 }
 
-function CompletionStep({ onFinish, streak, points, showTrophy, settings }: { onFinish: () => void, streak: number, points: number, showTrophy: boolean, settings: UserSettings }) {
+function CompletionStep({ onFinish, streak, points, xp, coins, showTrophy, settings }: { onFinish: () => void, streak: number, points: number, xp: number, coins: number, showTrophy: boolean, settings: UserSettings }) {
   useEffect(() => {
     if (showTrophy) {
       vibrate(VIBRATION_PATTERNS.TROPHY);
@@ -5188,33 +5196,41 @@ function CompletionStep({ onFinish, streak, points, showTrophy, settings }: { on
     <motion.div 
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full"
+      className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-md mx-auto w-full"
     >
-      <div className="text-center space-y-4">
+      <div className="text-center space-y-2">
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          <h2 className="text-5xl font-black text-blue-900 tracking-tighter">DAY COMPLETE!</h2>
-          <p className="text-xl text-blue-900/40 font-bold">You're unstoppable! 🔥</p>
+          <h2 className="text-4xl font-black text-blue-900 tracking-tighter">PLAN COMPLETE!</h2>
+          <p className="text-lg text-blue-900/40 font-bold">You're unstoppable! 🔥</p>
         </motion.div>
       </div>
 
       {showTrophy && (
-        <div className="w-full max-w-[300px]">
+        <div className="w-full max-w-[200px]">
           <GoldenTrophy />
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 w-full">
-        <div className="glass-card p-6 text-center">
-          <div className="text-3xl font-black text-emerald-500">+{points}</div>
-          <div className="text-xs font-bold text-blue-900/40 uppercase">Points</div>
+      <div className="grid grid-cols-2 gap-3 w-full">
+        <div className="glass-card p-4 text-center border-emerald-100 bg-emerald-50/30">
+          <div className="text-2xl font-black text-emerald-500">+{points}</div>
+          <div className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest">Points</div>
         </div>
-        <div className="glass-card p-6 text-center">
-          <div className="text-3xl font-black text-orange-500">{streak}</div>
-          <div className="text-xs font-bold text-blue-900/40 uppercase">Day Streak</div>
+        <div className="glass-card p-4 text-center border-orange-100 bg-orange-50/30">
+          <div className="text-2xl font-black text-orange-500">{streak}</div>
+          <div className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest">Day Streak</div>
+        </div>
+        <div className="glass-card p-4 text-center border-blue-100 bg-blue-50/30">
+          <div className="text-2xl font-black text-blue-500">+5</div>
+          <div className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest">Bonus XP</div>
+        </div>
+        <div className="glass-card p-4 text-center border-yellow-100 bg-yellow-50/30">
+          <div className="text-2xl font-black text-yellow-500">+15</div>
+          <div className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest">Coins</div>
         </div>
       </div>
 
@@ -5223,7 +5239,7 @@ function CompletionStep({ onFinish, streak, points, showTrophy, settings }: { on
           vibrate(VIBRATION_PATTERNS.CLICK);
           onFinish();
         }}
-        className="btn-primary w-full py-6 text-xl shadow-2xl shadow-blue-500/20"
+        className="btn-primary w-full py-5 text-lg shadow-2xl shadow-blue-500/20"
       >
         Back to Home ✨
       </button>
