@@ -165,6 +165,19 @@ service cloud.firestore {
              (!('savedTrophyIds' in data) || (data.savedTrophyIds is list && data.savedTrophyIds.size() <= 10000));
     }
 
+    function isValidCustomPlan(data) {
+      return data.keys().hasAll(['id', 'userId', 'name', 'challenges', 'days', 'createdAt']) &&
+             data.id is string && data.id.size() <= 50 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.challenges is list && data.challenges.size() > 0 && data.challenges.size() <= 20 &&
+             data.days is list && data.days.size() > 0 && data.days.size() <= 7 &&
+             data.createdAt is string && data.createdAt.size() <= 40 &&
+             (!('reminderTime' in data) || (data.reminderTime is string && data.reminderTime.size() <= 10)) &&
+             (!('icon' in data) || (data.icon is string && data.icon.size() <= 50)) &&
+             (!('color' in data) || (data.color is string && data.color.size() <= 50));
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -218,6 +231,13 @@ service cloud.firestore {
         allow update: if isOwner(userId);
         allow delete: if isOwner(userId) || isAdmin();
       }
+    }
+
+    match /customPlans/{planId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidCustomPlan(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidCustomPlan(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /leaderboard/{userId} {

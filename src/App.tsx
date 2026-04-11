@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Trophy, Award, Users, Crown, Info, Map as MapIcon, Check, Plus } from 'lucide-react';
+import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Trophy, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
@@ -694,7 +694,7 @@ export default function App() {
   // Version Update Logic
   const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean, imageUrl?: string } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
-  const currentAppVersion = "1.4.1"; // Current hardcoded version
+  const currentAppVersion = "1.5.0"; // Current hardcoded version
   const [lastUpdateTime, setLastUpdateTime] = useState<string | null>(localStorage.getItem('nexora_last_update_time'));
 
   // Background Music Logic
@@ -910,8 +910,8 @@ export default function App() {
     // Check immediately on mount
     checkVersion();
     
-    // Set last update time for 1.4.0 if not set to show the badge
-    if (currentAppVersion === "1.4.1" && !localStorage.getItem('nexora_last_update_time')) {
+    // Set last update time for 1.5.0 if not set to show the badge
+    if (currentAppVersion === "1.5.0" && !localStorage.getItem('nexora_last_update_time')) {
       const now = new Date().toISOString();
       localStorage.setItem('nexora_last_update_time', now);
       setLastUpdateTime(now);
@@ -1319,7 +1319,11 @@ export default function App() {
   
   useEffect(() => {
     if (user) {
-      const q = query(collection(db, 'users', user.uid, 'customPlans'), orderBy('createdAt', 'desc'));
+      const q = query(
+        collection(db, 'customPlans'), 
+        where('userId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      );
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const plans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomPlan));
         setCustomPlans(plans);
@@ -1337,8 +1341,9 @@ export default function App() {
   const handleSaveCustomPlan = async (plan: CustomPlan) => {
     if (!user) return;
     try {
-      const planRef = doc(db, 'users', user.uid, 'customPlans', plan.id);
-      await setDoc(planRef, plan);
+      const planWithUser = { ...plan, userId: user.uid };
+      const planRef = doc(db, 'customPlans', plan.id);
+      await setDoc(planRef, planWithUser);
       showToast('Plan created successfully!', 'success');
       setActiveScreen('home');
     } catch (error) {
@@ -1353,7 +1358,7 @@ export default function App() {
   const handleDeleteCustomPlan = async (planId: string) => {
     if (!user) return;
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'customPlans', planId));
+      await deleteDoc(doc(db, 'customPlans', planId));
       showToast('Plan deleted', 'info');
     } catch (error) {
       try {
@@ -2903,9 +2908,17 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
                     </div>
                     <div className="flex-1">
                       <h4 className="font-black text-blue-900">{plan.name}</h4>
-                      <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest">
-                        {plan.challenges.length} Challenges • {plan.days.length} Days
-                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest">
+                          {plan.challenges.length} Challenges • {plan.days.length} Days
+                        </p>
+                        {plan.reminderTime && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
+                            <Clock size={8} />
+                            <span className="text-[8px] font-black">{plan.reminderTime}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button 

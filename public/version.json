@@ -1,10 +1,10 @@
 {
-  "version": "1.4.1",
+  "version": "1.5.0",
   "releaseNotes": [
-    "App Icon Badge Fix: Improved reliability of the notification badge on the home screen.",
-    "Real User Leaderboard: Compete with real users in your league!",
-    "New XP System: Earn 5 XP for every task and level completion.",
-    "Performance Improvements: Faster data syncing and smoother transitions."
+    "Custom Plan Builder: Create your own personalized workout plans!",
+    "Mascot Animations: New engaging mascot interactions during plan creation.",
+    "Root Path Storage: Your custom plans are now stored securely at the root level.",
+    "Performance Improvements: Smoother transitions and faster data syncing."
   ],
   "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
   "forceUpdate": false

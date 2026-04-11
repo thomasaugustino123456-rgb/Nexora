@@ -16,9 +16,9 @@ import {
   Clock,
   Calendar
 } from 'lucide-react';
-import { ChallengeStep, CustomPlan, UserSettings } from '../types';
+import { ChallengeStep, CustomPlan, UserSettings, MascotMood } from '../types';
 import { vibrate } from '../lib/vibrate';
-import { PushupMascot } from './PushupMascot';
+import { Mascot } from './Mascot';
 
 interface PlanBuilderProps {
   onBack: () => void;
@@ -65,16 +65,17 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
     );
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!name || selectedChallenges.length === 0) return;
     
     vibrate(20);
     setIsCreating(true);
     
     // Simulate mascot "creating" the plan
-    setTimeout(() => {
+    setTimeout(async () => {
       const newPlan: CustomPlan = {
         id: Math.random().toString(36).substr(2, 9),
+        userId: '', // Will be set by App.tsx
         name,
         icon: 'Target', // Default for now
         color: 'bg-blue-500',
@@ -83,34 +84,54 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
         reminderTime: time,
         createdAt: new Date().toISOString()
       };
-      onSave(newPlan);
+      await onSave(newPlan);
       setIsCreating(false);
     }, 3000);
   };
 
   if (isCreating) {
     return (
-      <div className="fixed inset-0 bg-blue-50 z-[200] flex flex-col items-center justify-center p-8 text-center">
+      <div className="fixed inset-0 bg-white z-[200] flex flex-col items-center justify-center p-8 text-center">
         <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="w-full max-w-sm space-y-8"
+          initial={{ scale: 0, opacity: 0, rotate: -20 }}
+          animate={{ scale: 1, opacity: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 20 }}
+          className="w-full max-w-sm space-y-12"
         >
           <div className="relative">
-            <PushupMascot className="w-64 h-64 mx-auto drop-shadow-2xl" />
+            <div className="absolute inset-0 bg-blue-400/20 blur-3xl rounded-full" />
+            <Mascot className="w-64 h-64 mx-auto drop-shadow-2xl relative z-10" mood="happy" />
+            
             <motion.div 
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="absolute -top-4 -right-4 bg-white p-4 rounded-2xl shadow-xl border-2 border-blue-100 max-w-[200px]"
+              initial={{ opacity: 0, y: 20, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              className="absolute -top-12 -right-4 bg-white p-4 rounded-2xl shadow-xl border-2 border-blue-100 max-w-[200px] z-20"
             >
-              <p className="text-sm font-bold text-blue-900">Wait bro, I'm creating your custom plan right now! 🚀</p>
+              <p className="text-sm font-black text-blue-900 leading-tight">Wait bro, I'm creating your custom plan right now! 🚀</p>
+              <div className="absolute -bottom-2 right-8 w-4 h-4 bg-white border-r-2 border-b-2 border-blue-100 rotate-45" />
             </motion.div>
           </div>
-          <div className="space-y-4">
-            <h2 className="text-2xl font-black text-blue-900">Building "{name}"</h2>
-            <div className="flex justify-center gap-2">
-              <Loader2 className="animate-spin text-blue-500" size={24} />
-              <span className="text-blue-900/60 font-bold">Almost ready...</span>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-3xl font-black text-blue-900">Building "{name}"</h2>
+              <p className="text-blue-900/40 font-bold uppercase tracking-widest text-xs">Setting up your routine...</p>
+            </div>
+            
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden max-w-[200px]">
+                <motion.div 
+                  initial={{ width: "0%" }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 3, ease: "linear" }}
+                  className="h-full bg-blue-500"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Loader2 className="animate-spin text-blue-500" size={20} />
+                <span className="text-blue-900/60 font-bold text-sm">Almost ready, bro...</span>
+              </div>
             </div>
           </div>
         </motion.div>

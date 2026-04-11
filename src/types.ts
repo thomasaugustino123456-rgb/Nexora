@@ -124,6 +124,7 @@ export interface LeaderboardEntry {
 
 export interface CustomPlan {
   id: string;
+  userId: string;
   name: string;
   icon: string;
   color: string;

@@ -1,5 +1,15 @@
 # Nexora Daily - Changelog
 
+## [1.5.0] - 2026-04-11
+
+### Added
+- **Custom Plan Builder**: Create your own personalized workout plans! Pick your challenges, set your schedule, and let the mascot help you build your routine.
+- **New Mascot Animations**: Engaging mascot interactions with speech bubbles and progress bars during plan creation.
+- **Root Path Storage**: Custom plans are now stored securely at the root level for better reliability.
+
+### Changed
+- **App Version**: Updated to 1.5.0 to reflect major feature additions.
+
 ## [1.4.1] - 2026-04-06
 
 ### Fixed
