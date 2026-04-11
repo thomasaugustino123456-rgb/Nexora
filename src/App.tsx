@@ -1168,30 +1168,7 @@ export default function App() {
     }
   }, [user]);
 
-  // Daily Reminder Timer
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!settings.notificationsEnabled || Notification.permission !== 'granted') return;
-
-      const now = new Date();
-      const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      
-      if (currentTimeStr === settings.reminderTime) {
-        const lastReminderDate = localStorage.getItem('nexora_last_reminder_date');
-        const todayStr = now.toISOString().split('T')[0];
-
-        if (lastReminderDate !== todayStr) {
-          new Notification('Nexora 🔥', {
-            body: 'Hey 👋 Ready for today’s challenge?',
-            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
-          });
-          localStorage.setItem('nexora_last_reminder_date', todayStr);
-        }
-      }
-    }, 60000); // Check every minute
-
-    return () => clearInterval(interval);
-  }, [settings.notificationsEnabled, settings.reminderTime]);
+  // Daily Reminder Timer removed from here and moved after customPlans definition
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -1350,6 +1327,50 @@ export default function App() {
       return () => unsubscribe();
     }
   }, [user]);
+
+  // Daily & Custom Plan Reminder Timer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!settings.notificationsEnabled) return;
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+      const now = new Date();
+      const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      const todayStr = now.toISOString().split('T')[0];
+      
+      // Main Reminder
+      if (currentTimeStr === settings.reminderTime) {
+        const lastReminderDate = localStorage.getItem('nexora_last_reminder_date');
+        if (lastReminderDate !== todayStr) {
+          new Notification('Nexora 🔥', {
+            body: 'Hey 👋 Ready for today’s challenge?',
+            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+          });
+          localStorage.setItem('nexora_last_reminder_date', todayStr);
+        }
+      }
+
+      // Custom Plan Reminders
+      customPlans.forEach(plan => {
+        if (plan.reminderTime === currentTimeStr) {
+          const currentDay = now.getDay();
+          if (plan.days.includes(currentDay)) {
+            const lastPlanReminderDate = localStorage.getItem(`nexora_last_reminder_date_${plan.id}`);
+            if (lastPlanReminderDate !== todayStr) {
+              new Notification(`${plan.name} 🚀`, {
+                body: `Time for your custom plan: ${plan.name}! Let's go!`,
+                icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+              });
+              localStorage.setItem(`nexora_last_reminder_date_${plan.id}`, todayStr);
+            }
+          }
+        }
+      });
+
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [settings.notificationsEnabled, settings.reminderTime, customPlans]);
 
   const handleSaveCustomPlan = async (plan: CustomPlan) => {
     if (!user) return;
