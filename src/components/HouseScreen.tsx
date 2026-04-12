@@ -12,11 +12,29 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
   const [lightOn, setLightOn] = useState(true);
   const [plantShaking, setPlantShaking] = useState(false);
 
-  // Room 2 States (Cartoon)
-  const [screenOn, setScreenOn] = useState(false);
-  const [ballBouncing, setBallBouncing] = useState(false);
-  const [curtainsSwaying, setCurtainsSwaying] = useState(false);
-  const [booksWobbling, setBooksWobbling] = useState(false);
+  // Room 2 States (4-Mini-Rooms)
+  const [room2Lamps, setRoom2Lamps] = useState([false, false, false, false]);
+  const [room2ComputerOn, setRoom2ComputerOn] = useState(false);
+  const [room2LaptopOn, setRoom2LaptopOn] = useState(false);
+
+  const toggleRoom2Lamp = (index: number) => {
+    vibrate(10);
+    setRoom2Lamps(prev => {
+      const next = [...prev];
+      next[index] = !next[index];
+      return next;
+    });
+  };
+
+  const toggleRoom2Computer = () => {
+    vibrate(10);
+    setRoom2ComputerOn(!room2ComputerOn);
+  };
+
+  const toggleRoom2Laptop = () => {
+    vibrate(10);
+    setRoom2LaptopOn(!room2LaptopOn);
+  };
 
   // Room 3 States (Cozy)
   const [fireTaps, setFireTaps] = useState(0);
@@ -39,29 +57,6 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
     vibrate(5);
     setPlantShaking(true);
     setTimeout(() => setPlantShaking(false), 900);
-  };
-
-  const bounceBall = () => {
-    vibrate(10);
-    setBallBouncing(true);
-    setTimeout(() => setBallBouncing(false), 1000);
-  };
-
-  const swayCurtains = () => {
-    vibrate(5);
-    setCurtainsSwaying(true);
-    setTimeout(() => setCurtainsSwaying(false), 1500);
-  };
-
-  const wobbleBooks = () => {
-    vibrate(5);
-    setBooksWobbling(true);
-    setTimeout(() => setBooksWobbling(false), 1000);
-  };
-
-  const toggleScreen = () => {
-    vibrate(10);
-    setScreenOn(!screenOn);
   };
 
   // Room 3 Handlers
@@ -94,7 +89,9 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
     setResetKey(prev => prev + 1);
     setZoom(1);
     setLightOn(true);
-    setScreenOn(false);
+    setRoom2Lamps([false, false, false, false]);
+    setRoom2ComputerOn(false);
+    setRoom2LaptopOn(false);
     setFireTaps(0);
     setIsNightMode(false);
   };
@@ -124,7 +121,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
             My Nexora Space <Sparkles size={18} className="text-yellow-400" />
           </h2>
           <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-            {activeRoom === 0 ? 'Interactive 3D Room' : activeRoom === 1 ? 'Cartoon Studio' : 'Cozy Miniature'}
+            {activeRoom === 0 ? 'Interactive 3D Room' : activeRoom === 1 ? 'Miniature 4-Room House' : 'Cozy Miniature'}
           </p>
         </div>
         <button 
@@ -361,110 +358,352 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
             >
               <svg viewBox="0 0 800 600" className="w-full h-full drop-shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
                 <defs>
-                  <filter id="screenGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <filter id="screenGlowRoom2" x="-20%" y="-20%" width="140%" height="140%">
                     <feGaussianBlur stdDeviation="8" result="blur" />
                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                   </filter>
-                  <linearGradient id="cartoonFloor" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#C26A3B" />
-                    <stop offset="100%" stopColor="#9A4E26" />
-                  </linearGradient>
+                  {/* Reusable Book */}
+                  <g id="book1"><rect width="8" height="25" fill="#D32F2F" rx="1"/></g>
+                  <g id="book2"><rect width="10" height="20" fill="#1976D2" rx="1"/></g>
+                  <g id="book3"><rect width="6" height="28" fill="#FBC02D" rx="1"/></g>
+                  <g id="book4"><rect width="12" height="22" fill="#388E3C" rx="1"/></g>
+                  
+                  {/* Reusable Pillow */}
+                  <g id="pillow-pink"><circle cx="0" cy="0" r="10" fill="#E91E63"/></g>
+                  <g id="pillow-yellow"><rect x="-12" y="-8" width="24" height="16" fill="#FBC02D" rx="3"/></g>
+                  <g id="pillow-orange"><rect x="-10" y="-10" width="20" height="20" fill="#F57C00" rx="3"/></g>
                 </defs>
 
-                {/* Room Background (Isometric) */}
-                <g id="cartoon-base">
-                  <polygon points="400,300 100,450 100,80 400,50" fill="#F4A460" />
-                  <polygon points="400,300 700,450 700,80 400,50" fill="#ECA058" />
-                  <polygon points="400,300 100,450 400,600 700,450" fill="url(#cartoonFloor)" />
-                </g>
-
-                {/* Window & Curtains (Original Style) */}
-                <g id="window-area" transform="translate(100, 20)">
-                  <rect x="180" y="80" width="220" height="180" fill="#FFFFFF" rx="5" />
-                  <rect x="190" y="90" width="200" height="160" fill="#81D4FA" />
-                  <rect x="285" y="90" width="10" height="160" fill="#FFFFFF" />
-                  <rect x="190" y="165" width="200" height="10" fill="#FFFFFF" />
+                {/* ==========================================
+                     TOP-LEFT ROOM (Green Stripes, Pink Floor) 
+                     ========================================== */}
+                <g id="room-tl">
+                  {/* Background */}
+                  <rect width="400" height="220" fill="#A5D68B"/>
+                  <path d="M20,0 v220 M60,0 v220 M100,0 v220 M140,0 v220 M180,0 v220 M220,0 v220 M260,0 v220 M300,0 v220 M340,0 v220 M380,0 v220" stroke="#8BC34A" strokeWidth="20" opacity="0.6"/>
+                  <polygon points="0,220 400,220 400,300 0,300" fill="#E06287"/>
                   
-                  <motion.g 
-                    id="curtains" 
-                    onClick={swayCurtains} 
-                    className="cursor-pointer"
-                    animate={curtainsSwaying ? { rotate: [0, 3, -2, 1, 0] } : {}}
-                    transition={{ duration: 1.5 }}
-                    style={{ transformOrigin: "250px 80px" }}
-                  >
-                    <path d="M 400,80 Q 420,180 370,250 L 420,280 L 420,80 Z" fill="#00897B" />
-                    <path d="M 180,80 Q 160,180 210,250 L 160,280 L 160,80 Z" fill="#00897B" />
-                    <rect x="160" y="70" width="260" height="35" fill="#00796B" rx="5" />
-                    <rect x="160" y="100" width="260" height="10" fill="#00695C" rx="2" />
+                  {/* Ambient Sunbeam */}
+                  <polygon points="120,0 280,0 40,300 -120,300" fill="#FFFFFF" opacity="0.15" pointer-events="none"/>
+
+                  {/* Window & Curtains */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="-30" y="20" width="80" height="120" fill="#E1F5FE"/>
+                    <path d="M0,0 Q30,50 10,150 L-30,150 V0 Z" fill="#F48FB1"/>
+                  </motion.g>
+                  
+                  {/* Wooden Wall Shelves */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="330" y="40" width="60" height="8" fill="#8D6E63"/>
+                    <rect x="330" y="80" width="60" height="8" fill="#8D6E63"/>
+                    <rect x="340" y="40" width="5" height="48" fill="#795548"/>
+                    <use href="#book1" x="335" y="15"/> <use href="#book3" x="345" y="12"/>
+                    <use href="#book2" x="355" y="60"/> <use href="#book4" x="368" y="58"/>
+                  </motion.g>
+
+                  {/* Yellow Dresser & Plant */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="10" y="150" width="60" height="80" fill="#FFCA28" rx="3"/>
+                    <rect x="15" y="155" width="50" height="20" fill="#FFB300" rx="2"/>
+                    <rect x="15" y="180" width="50" height="20" fill="#FFB300" rx="2"/>
+                    <rect x="15" y="205" width="50" height="20" fill="#FFB300" rx="2"/>
+                    <rect x="30" y="135" width="20" height="15" fill="#FFFFFF"/>
+                    <path d="M40,135 Q30,110 25,125 Q40,135 45,115 Q50,135 55,120 Q40,135 40,135" fill="#4CAF50"/>
+                  </motion.g>
+
+                  {/* Yellow Vanity */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="85" y="150" width="50" height="40" fill="#FFCA28" rx="2"/>
+                    <ellipse cx="110" cy="110" rx="20" ry="35" fill="#B3E5FC" stroke="#FFA000" strokeWidth="4"/>
+                    <rect x="100" y="195" width="20" height="25" fill="#FFCA28"/>
+                    <ellipse cx="110" cy="195" rx="15" ry="8" fill="#EC407A"/>
+                  </motion.g>
+
+                  {/* White Sofa */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="170" y="140" width="180" height="70" fill="#F5F5F5" rx="10"/>
+                    <rect x="160" y="180" width="200" height="35" fill="#FFFFFF" rx="8"/>
+                    <rect x="180" y="215" width="8" height="10" fill="#FFA000" rx="2"/>
+                    <rect x="330" y="215" width="8" height="10" fill="#FFA000" rx="2"/>
+                    <use href="#pillow-yellow" x="200" y="170" transform="rotate(-10 200 170)"/>
+                    <use href="#pillow-pink" x="230" y="175"/>
+                    <use href="#pillow-orange" x="290" y="172"/>
+                    <use href="#pillow-yellow" x="320" y="175" transform="rotate(15 320 175)"/>
+                  </motion.g>
+
+                  {/* INTERACTIVE LAMP 1 */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    {room2Lamps[0] && <polygon points="365,110 250,300 450,300" fill="#FFF176" opacity="0.5" className="pointer-events-none"/>}
+                    <g onClick={() => toggleRoom2Lamp(0)} className="cursor-pointer">
+                      <rect x="363" y="110" width="4" height="110" fill="#757575"/>
+                      <ellipse cx="365" cy="220" rx="15" ry="5" fill="#424242"/>
+                      <polygon points="350,110 380,110 370,70 360,70" fill="#EC407A"/>
+                      <circle cx="365" cy="105" r="6" fill={room2Lamps[0] ? "#FFF7B0" : "#888"} className="transition-colors duration-300"/>
+                    </g>
                   </motion.g>
                 </g>
 
-                {/* Rug (Original Style) */}
-                <ellipse cx="400" cy="520" rx="250" ry="60" fill="#8FBC8F" />
-                <ellipse cx="400" cy="520" rx="230" ry="50" fill="#A5D6A7" />
-
-                {/* Movable Items (Original Style) */}
-                <motion.g id="picture-cartoon" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} className="cursor-grab active:cursor-grabbing">
-                  <rect x="40" y="120" width="80" height="110" fill="#5D4037" rx="3" />
-                  <rect x="45" y="125" width="70" height="100" fill="#FFF" />
-                  <circle cx="80" cy="160" r="15" fill="#FFB300" />
-                  <polygon points="45,225 70,180 90,200 115,160 115,225" fill="#4CAF50" />
-                </motion.g>
-
-                <motion.g id="bookshelf" drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing" onClick={wobbleBooks}>
-                  <rect x="580" y="100" width="160" height="340" fill="#5D4037" />
-                  <rect x="590" y="110" width="140" height="320" fill="#3E2723" />
-                  <rect x="580" y="180" width="160" height="10" fill="#6D4C41" />
-                  <rect x="580" y="260" width="160" height="10" fill="#6D4C41" />
-                  <rect x="580" y="350" width="160" height="10" fill="#6D4C41" />
-
-                  <motion.g animate={booksWobbling ? { rotate: [0, 4, -3, 2, 0] } : {}} transition={{ duration: 0.6 }} style={{ transformOrigin: "650px 180px" }}>
-                    <rect x="600" y="130" width="20" height="50" fill="#D32F2F" />
-                    <rect x="625" y="120" width="15" height="60" fill="#1976D2" />
-                    <rect x="645" y="140" width="18" height="40" fill="#388E3C" />
-                    <polygon points="675,180 665,180 685,130 695,130" fill="#FBC02D" />
+                {/* ==========================================
+                     TOP-RIGHT ROOM (Teal Walls, Yellow Rug) 
+                     ========================================== */}
+                <g id="room-tr" transform="translate(400, 0)">
+                  <rect width="400" height="220" fill="#4DB6AC"/>
+                  <polygon points="0,220 400,220 400,300 0,300" fill="#00695C"/>
+                  {/* Yellow Striped Rug */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.02 }} className="cursor-grab active:cursor-grabbing">
+                    <polygon points="30,230 360,230 380,290 10,290" fill="#FFCA28"/>
+                    <polygon points="50,230 70,230 60,290 30,290" fill="#FFA000"/>
+                    <polygon points="110,230 130,230 120,290 90,290" fill="#FFA000"/>
+                    <polygon points="170,230 190,230 180,290 150,290" fill="#FFA000"/>
+                    <polygon points="230,230 250,230 240,290 210,290" fill="#FFA000"/>
+                    <polygon points="290,230 310,230 300,290 270,290" fill="#FFA000"/>
                   </motion.g>
-                </motion.g>
 
-                <motion.g id="desk" drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
-                  <rect x="180" y="440" width="300" height="20" fill="#000" opacity="0.2" rx="10" />
-                  <rect x="190" y="360" width="70" height="100" fill="#A1887F" />
-                  <rect x="195" y="365" width="60" height="25" fill="#8D6E63" rx="2" />
-                  <circle cx="225" cy="377" r="3" fill="#3E2723" />
-                  <rect x="195" y="395" width="60" height="25" fill="#8D6E63" rx="2" />
-                  <circle cx="225" cy="407" r="3" fill="#3E2723" />
-                  <rect x="195" y="425" width="60" height="25" fill="#8D6E63" rx="2" />
-                  <circle cx="225" cy="437" r="3" fill="#3E2723" />
-                  <rect x="450" y="360" width="15" height="100" fill="#8D6E63" />
-                  <rect x="170" y="345" width="310" height="15" fill="#6D4C41" rx="3" />
-                </motion.g>
+                  <polygon points="200,0 350,0 150,300 -50,300" fill="#FFFFFF" opacity="0.1" pointer-events="none"/>
 
-                <motion.g id="chair-cartoon" drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
-                  <rect x="330" y="380" width="10" height="80" fill="#424242" />
-                  <rect x="380" y="380" width="10" height="80" fill="#424242" />
-                  <rect x="320" y="370" width="80" height="15" fill="#FF7043" rx="5" />
-                  <rect x="325" y="300" width="70" height="70" fill="#FF8A65" rx="10" />
-                </motion.g>
+                  {/* Window */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="180" y="20" width="100" height="80" fill="#FFFFFF" stroke="#B2DFDB" strokeWidth="4"/>
+                    <path d="M170,10 Q210,50 190,110 L170,110 Z" fill="#00796B"/>
+                    <path d="M290,10 Q250,50 270,110 L290,110 Z" fill="#00796B"/>
+                    <rect x="220" y="90" width="15" height="10" fill="#8D6E63"/>
+                    <circle cx="227" cy="80" r="10" fill="#4CAF50"/>
+                  </motion.g>
 
-                <motion.g id="computer" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={toggleScreen} className="cursor-grab active:cursor-grabbing">
-                  <rect x="295" y="330" width="10" height="15" fill="#616161" />
-                  <rect x="280" y="340" width="40" height="5" fill="#424242" rx="2" />
-                  <rect x="250" y="270" width="100" height="60" fill="#212121" rx="4" />
-                  <rect x="255" y="275" width="90" height="50" fill={screenOn ? "#E0F7FA" : "#111"} className="transition-colors duration-300" />
-                  {screenOn && <rect x="255" y="275" width="90" height="50" fill="#E3F2FD" opacity="0.5" filter="url(#screenGlow)" />}
-                </motion.g>
+                  {/* Bed */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="60" y="160" width="160" height="30" fill="#8D6E63" rx="4"/>
+                    <rect x="70" y="150" width="150" height="35" fill="#4CAF50" rx="5"/>
+                    <rect x="70" y="165" width="150" height="25" fill="#388E3C" rx="5"/>
+                    <rect x="50" y="140" width="40" height="20" fill="#FFB74D" rx="5" transform="rotate(-15 70 150)"/>
+                    <polygon points="140,150 160,155 180,150 180,140 160,145 140,140" fill="#FFFFFF"/>
+                  </motion.g>
 
-                <motion.g id="basketball" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={bounceBall} className="cursor-grab active:cursor-grabbing" animate={ballBouncing ? { y: [0, 10, -120, 0, 5, -40, 0], scaleY: [1, 0.9, 1.1, 1, 0.95, 1.02, 1], scaleX: [1, 1.1, 0.9, 1, 1.05, 0.98, 1] } : {}} transition={{ duration: 1, ease: "easeOut" }} style={{ transformOrigin: "520px 520px" }}>
-                  <circle cx="520" cy="520" r="25" fill="#FF8C00" />
-                  <path d="M 495,520 A 25,25 0 0,0 545,520" fill="none" stroke="#3E2723" strokeWidth="2" />
-                  <path d="M 520,495 A 25,25 0 0,0 520,545" fill="none" stroke="#3E2723" strokeWidth="2" />
-                  <path d="M 505,500 A 30,30 0 0,1 505,540" fill="none" stroke="#3E2723" strokeWidth="2" />
-                  <path d="M 535,500 A 30,30 0 0,0 535,540" fill="none" stroke="#3E2723" strokeWidth="2" />
-                </motion.g>
+                  {/* Nightstand */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="10" y="160" width="35" height="45" fill="#795548"/>
+                    <rect x="15" y="150" width="25" height="10" fill="#212121" rx="2"/>
+                    <text x="18" y="158" fontSize="6" fill="#00FF00" fontFamily="monospace">12:00</text>
+                  </motion.g>
+
+                  {/* Slippers */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} className="cursor-grab active:cursor-grabbing">
+                    <ellipse cx="140" cy="245" rx="10" ry="5" fill="#8D6E63" transform="rotate(-20 140 245)"/>
+                    <ellipse cx="160" cy="250" rx="10" ry="5" fill="#8D6E63" transform="rotate(-10 160 250)"/>
+                  </motion.g>
+
+                  {/* Tall Bookshelf */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="300" y="20" width="60" height="170" fill="#FFB300"/>
+                    <rect x="305" y="25" width="50" height="160" fill="#6D4C41"/>
+                    <rect x="305" y="60" width="50" height="4" fill="#FFB300"/>
+                    <rect x="305" y="100" width="50" height="4" fill="#FFB300"/>
+                    <rect x="305" y="140" width="50" height="4" fill="#FFB300"/>
+                    <use href="#book1" x="310" y="35"/> <use href="#book3" x="325" y="32"/>
+                    <use href="#book2" x="340" y="80"/> <use href="#book4" x="315" y="78"/>
+                    <circle cx="330" cy="125" r="12" fill="#29B6F6"/>
+                    <path d="M330,113 Q345,125 330,137" fill="none" stroke="#4CAF50" strokeWidth="3"/>
+                    <rect x="328" y="137" width="4" height="4" fill="#BDBDBD"/>
+                  </motion.g>
+
+                  {/* Desk & Laptop */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <polygon points="340,170 400,190 400,230 340,200" fill="#8D6E63"/>
+                    <rect x="360" y="200" width="30" height="40" fill="#5D4037"/>
+                    <g onClick={toggleRoom2Laptop} className="cursor-pointer">
+                      <polygon points="360,170 380,180 375,160 355,150" fill="#424242"/>
+                      <polygon points="360,170 380,180 390,175 370,165" fill={room2LaptopOn ? "#E3F2FD" : "#BDBDBD"} className="transition-colors duration-300"/>
+                      {room2LaptopOn && <polygon points="360,170 380,180 390,175 370,165" fill="#E3F2FD" opacity="0.5" filter="url(#screenGlowRoom2)"/>}
+                    </g>
+                  </motion.g>
+
+                  {/* Chair */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="290" y="140" width="30" height="35" fill="#EC407A" rx="8"/>
+                    <ellipse cx="305" cy="185" rx="20" ry="8" fill="#D81B60"/>
+                    <rect x="303" y="188" width="4" height="20" fill="#424242"/>
+                    <path d="M290,210 L320,210 M305,210 L305,215" stroke="#424242" strokeWidth="3"/>
+                  </motion.g>
+
+                  {/* INTERACTIVE LAMP 2 */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    {room2Lamps[1] && <polygon points="345,145 280,250 400,250" fill="#FFF176" opacity="0.5" className="pointer-events-none"/>}
+                    <g onClick={() => toggleRoom2Lamp(1)} className="cursor-pointer">
+                      <ellipse cx="335" cy="165" rx="8" ry="3" fill="#616161"/>
+                      <path d="M335,165 L330,135 L345,140" fill="none" stroke="#757575" strokeWidth="2"/>
+                      <polygon points="340,135 350,145 342,150" fill="#F44336"/>
+                      <circle cx="345" cy="146" r="4" fill={room2Lamps[1] ? "#FFF7B0" : "#888"} className="transition-colors duration-300"/>
+                    </g>
+                  </motion.g>
+                </g>
+
+                {/* ==========================================
+                     BOTTOM-LEFT ROOM (Tan Walls, PC Desk) 
+                     ========================================== */}
+                <g id="room-bl" transform="translate(0, 300)">
+                  <rect width="400" height="220" fill="#E6C89C"/>
+                  <polygon points="0,220 400,220 400,300 0,300" fill="#BA6824"/>
+                  <polygon points="100,0 250,0 50,300 -100,300" fill="#FFFFFF" opacity="0.15" pointer-events="none"/>
+
+                  {/* Window */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="80" y="30" width="120" height="100" fill="#E0F7FA"/>
+                    <rect x="138" y="30" width="4" height="100" fill="#FFFFFF"/>
+                    <rect x="80" y="78" width="120" height="4" fill="#FFFFFF"/>
+                    <path d="M60,20 Q100,80 70,140 L60,140 Z" fill="#009688"/>
+                    <path d="M220,20 Q180,80 210,140 L220,140 Z" fill="#009688"/>
+                  </motion.g>
+
+                  {/* Bed Edge */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="0" y="150" width="40" height="50" fill="#8D6E63"/>
+                    <rect x="0" y="140" width="50" height="30" fill="#F44336" rx="5"/>
+                    <rect x="-10" y="170" width="60" height="30" fill="#00BCD4" rx="5"/>
+                    <rect x="-10" y="185" width="60" height="15" fill="#FFEB3B" rx="5"/>
+                  </motion.g>
+
+                  {/* Wall Frame */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="20" y="40" width="30" height="40" fill="#D7CCC8" stroke="#8D6E63" strokeWidth="3"/>
+                  </motion.g>
+
+                  {/* Desk & PC */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="60" y="150" width="160" height="15" fill="#6D4C41" rx="2"/>
+                    <rect x="70" y="165" width="40" height="40" fill="#8D6E63"/>
+                    <rect x="75" y="170" width="30" height="10" fill="#5D4037"/>
+                    <rect x="75" y="185" width="30" height="10" fill="#5D4037"/>
+                    <rect x="200" y="165" width="10" height="50" fill="#5D4037"/>
+                    
+                    <g onClick={toggleRoom2Computer} className="cursor-pointer">
+                      <rect x="110" y="100" width="50" height="35" fill="#424242" rx="2"/>
+                      <rect x="115" y="105" width="40" height="25" fill={room2ComputerOn ? "#81C784" : "#222"} className="transition-colors duration-300"/>
+                      {room2ComputerOn && <rect x="115" y="105" width="40" height="25" fill="#81C784" opacity="0.5" filter="url(#screenGlowRoom2)"/>}
+                      <rect x="130" y="135" width="10" height="15" fill="#757575"/>
+                      <rect x="120" y="145" width="30" height="5" fill="#424242"/>
+                    </g>
+                    <rect x="90" y="90" width="15" height="60" fill="#2E7D32" rx="2"/>
+                    <rect x="50" y="190" width="15" height="20" fill="#212121" rx="2"/>
+                    <circle cx="57" cy="195" r="3" fill="#757575"/>
+                    <circle cx="57" cy="205" r="4" fill="#757575"/>
+                  </motion.g>
+
+                  {/* Basketball */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.2 }} className="cursor-grab active:cursor-grabbing">
+                    <circle cx="230" cy="230" r="12" fill="#FF9800"/>
+                    <path d="M220,230 A10,10 0 0,0 240,230 M230,218 A10,10 0 0,0 230,242" fill="none" stroke="#E65100" strokeWidth="1"/>
+                  </motion.g>
+
+                  {/* Crumpled Paper */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.2 }} className="cursor-grab active:cursor-grabbing">
+                    <path d="M180,250 Q185,245 190,255 Q180,260 175,255 Z" fill="#FFFFFF"/>
+                  </motion.g>
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.2 }} className="cursor-grab active:cursor-grabbing">
+                    <path d="M90,260 Q95,255 100,262 Q90,268 85,263 Z" fill="#FFFFFF"/>
+                  </motion.g>
+
+                  {/* Tall Brown Bookshelf */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="250" y="30" width="50" height="190" fill="#5D4037"/>
+                    <rect x="255" y="35" width="40" height="180" fill="#3E2723"/>
+                    <rect x="255" y="70" width="40" height="4" fill="#5D4037"/>
+                    <rect x="255" y="110" width="40" height="4" fill="#5D4037"/>
+                    <rect x="255" y="150" width="40" height="4" fill="#5D4037"/>
+                    <use href="#book1" x="260" y="45"/> <use href="#book3" x="270" y="42"/>
+                    <circle cx="275" cy="95" r="10" fill="#29B6F6"/>
+                    <path d="M275,85 Q285,95 275,105" fill="none" stroke="#FFCA28" strokeWidth="2"/>
+                    <use href="#book2" x="260" y="130"/> <use href="#book4" x="280" y="128"/>
+                  </motion.g>
+
+                  {/* INTERACTIVE LAMP 3 */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    {room2Lamps[2] && <polygon points="265,160 180,280 350,280" fill="#FFF176" opacity="0.5" className="pointer-events-none"/>}
+                    <g onClick={() => toggleRoom2Lamp(2)} className="cursor-pointer">
+                      <rect x="260" y="175" width="10" height="5" fill="#757575"/>
+                      <polygon points="255,160 275,160 270,150 260,150" fill="#AB47BC"/>
+                      <circle cx="265" cy="160" r="3" fill={room2Lamps[2] ? "#FFF7B0" : "#888"} className="transition-colors duration-300"/>
+                    </g>
+                  </motion.g>
+                </g>
+
+                {/* ==========================================
+                     BOTTOM-RIGHT ROOM (Beige Walls, White Sofa) 
+                     ========================================== */}
+                <g id="room-br" transform="translate(400, 300)">
+                  <rect width="400" height="220" fill="#F4DEBA"/>
+                  <polygon points="0,220 400,220 400,300 0,300" fill="#50A29C"/>
+                  <ellipse cx="200" cy="260" rx="150" ry="30" fill="#81C784"/>
+                  <ellipse cx="200" cy="260" rx="130" ry="20" fill="#A5D68B"/>
+                  <polygon points="200,0 350,0 150,300 -50,300" fill="#FFFFFF" opacity="0.15" pointer-events="none"/>
+
+                  {/* Wall Panels */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="60" y="30" width="40" height="60" fill="#FFF8E1" opacity="0.8"/>
+                    <rect x="115" y="30" width="40" height="60" fill="#FFF8E1" opacity="0.8"/>
+                    <rect x="170" y="30" width="40" height="60" fill="#FFF8E1" opacity="0.8"/>
+                  </motion.g>
+
+                  {/* Left Bookshelf */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="10" y="30" width="50" height="190" fill="#4DD0E1"/>
+                    <rect x="15" y="35" width="40" height="180" fill="#00838F"/>
+                    <rect x="15" y="70" width="40" height="4" fill="#4DD0E1"/>
+                    <rect x="15" y="110" width="40" height="4" fill="#4DD0E1"/>
+                    <rect x="15" y="150" width="40" height="4" fill="#4DD0E1"/>
+                    <use href="#book2" x="20" y="50"/> <use href="#book3" x="35" y="42"/>
+                    <use href="#book1" x="25" y="85"/> <use href="#book4" x="40" y="88"/>
+                  </motion.g>
+
+                  {/* Right Bookshelf */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="340" y="30" width="50" height="190" fill="#4DD0E1"/>
+                    <rect x="345" y="35" width="40" height="180" fill="#00838F"/>
+                    <rect x="345" y="70" width="40" height="4" fill="#4DD0E1"/>
+                    <rect x="345" y="110" width="40" height="4" fill="#4DD0E1"/>
+                    <rect x="345" y="150" width="40" height="4" fill="#4DD0E1"/>
+                    <use href="#book4" x="350" y="48"/> <use href="#book1" x="370" y="45"/>
+                    <use href="#book3" x="355" y="82"/> <use href="#book2" x="365" y="90"/>
+                    <circle cx="365" cy="135" r="10" fill="#81C784"/>
+                  </motion.g>
+
+                  {/* White Sofa */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    <rect x="70" y="120" width="260" height="80" fill="#FFFFFF" rx="15"/>
+                    <rect x="80" y="170" width="240" height="25" fill="#F5F5F5" rx="5"/>
+                    <use href="#pillow-pink" x="95" y="160"/>
+                    <use href="#pillow-orange" x="120" y="155"/>
+                    <use href="#pillow-yellow" x="150" y="160" transform="rotate(10 150 160)"/>
+                    <use href="#pillow-pink" x="200" y="155"/>
+                    <use href="#pillow-yellow" x="240" y="160"/>
+                    <use href="#pillow-orange" x="280" y="150" transform="rotate(-15 280 150)"/>
+                  </motion.g>
+
+                  {/* Beanbag Chair */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} className="cursor-grab active:cursor-grabbing">
+                    <path d="M120,280 C100,280 90,250 110,220 C130,190 170,190 180,220 C200,250 180,280 150,280 Z" fill="#FF9800"/>
+                    <path d="M140,240 Q150,230 160,240" fill="none" stroke="#E65100" strokeWidth="2"/>
+                  </motion.g>
+
+                  {/* Floor Laptop */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} className="cursor-grab active:cursor-grabbing">
+                    <polygon points="300,260 330,260 320,240 290,240" fill="#424242"/>
+                    <polygon points="300,260 330,260 340,270 310,270" fill="#BDBDBD"/>
+                  </motion.g>
+
+                  {/* INTERACTIVE LAMP 4 */}
+                  <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                    {room2Lamps[3] && <polygon points="315,90 180,280 400,280" fill="#FFF176" opacity="0.5" className="pointer-events-none"/>}
+                    <g onClick={() => toggleRoom2Lamp(3)} className="cursor-pointer">
+                      <rect x="313" y="80" width="4" height="140" fill="#BCAAA4"/>
+                      <ellipse cx="315" cy="220" rx="15" ry="5" fill="#8D6E63"/>
+                      <polygon points="300,80 330,80 320,40 310,40" fill="#FFCA28"/>
+                      <circle cx="315" cy="80" r="6" fill={room2Lamps[3] ? "#FFF7B0" : "#888"} className="transition-colors duration-300"/>
+                    </g>
+                  </motion.g>
+                </g>
               </svg>
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] font-black text-white/40 uppercase tracking-[0.2em] whitespace-nowrap pointer-events-none">
-                Tap the Basketball, Computer, or Bookshelf!
+                Tap Lamps & Screens to Interact!
               </div>
             </motion.div>
           ) : (
@@ -724,29 +963,26 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
         ) : activeRoom === 1 ? (
           <>
             <button 
-              onClick={bounceBall}
-              className="p-4 rounded-3xl bg-orange-500 text-white shadow-xl shadow-orange-200 flex items-center gap-3"
-            >
-              <Sparkles size={24} />
-              <span className="font-black uppercase tracking-widest text-xs">Bounce Ball</span>
-            </button>
-            
-            <button 
-              onClick={toggleScreen}
+              onClick={() => {
+                vibrate(15);
+                setRoom2Lamps([!room2Lamps[0], !room2Lamps[1], !room2Lamps[2], !room2Lamps[3]]);
+              }}
               className={`p-4 rounded-3xl transition-all shadow-xl flex items-center gap-3 ${
-                screenOn ? 'bg-cyan-400 text-cyan-900 shadow-cyan-200' : 'bg-white/10 text-white/40'
+                room2Lamps.some(l => l) ? 'bg-yellow-400 text-yellow-900 shadow-yellow-200' : 'bg-white/10 text-white/40'
               }`}
             >
               <Lightbulb size={24} />
-              <span className="font-black uppercase tracking-widest text-xs">{screenOn ? 'Screen On' : 'Screen Off'}</span>
+              <span className="font-black uppercase tracking-widest text-xs">All Lamps</span>
             </button>
-
+            
             <button 
-              onClick={wobbleBooks}
-              className="p-4 rounded-3xl bg-purple-500 text-white shadow-xl shadow-purple-200 flex items-center gap-3"
+              onClick={toggleRoom2Computer}
+              className={`p-4 rounded-3xl transition-all shadow-xl flex items-center gap-3 ${
+                room2ComputerOn ? 'bg-green-500 text-white shadow-green-200' : 'bg-white/10 text-white/40'
+              }`}
             >
               <Sparkles size={24} />
-              <span className="font-black uppercase tracking-widest text-xs">Wobble Books</span>
+              <span className="font-black uppercase tracking-widest text-xs">PC Screen</span>
             </button>
           </>
         ) : (
