@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Home, Sparkles, Lightbulb, MousePointer2, Move, RefreshCw, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ArrowLeft, Home, Sparkles, Lightbulb, MousePointer2, Move, RefreshCw, ZoomIn, ZoomOut, Maximize, ChevronLeft, ChevronRight } from 'lucide-react';
 import { vibrate } from '../lib/vibrate';
 
 export function HouseScreen({ onBack }: { onBack: () => void }) {
@@ -153,6 +153,49 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
 
       {/* Main Room Container */}
       <div className="flex-1 relative flex items-center justify-center p-4 overflow-hidden" key={resetKey}>
+        {/* Side Navigation Buttons */}
+        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between items-center z-30 pointer-events-none">
+          {/* Left Button */}
+          <div className="pointer-events-auto">
+            <AnimatePresence>
+              {activeRoom > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  onClick={() => {
+                    vibrate(10);
+                    setActiveRoom(prev => prev - 1);
+                  }}
+                  className="p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md border border-white/10 shadow-2xl group"
+                >
+                  <ChevronLeft size={32} className="group-hover:-translate-x-1 transition-transform" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Right Button */}
+          <div className="pointer-events-auto">
+            <AnimatePresence>
+              {activeRoom < 2 && (
+                <motion.button
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  onClick={() => {
+                    vibrate(10);
+                    setActiveRoom(prev => prev + 1);
+                  }}
+                  className="p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md border border-white/10 shadow-2xl group"
+                >
+                  <ChevronRight size={32} className="group-hover:translate-x-1 transition-transform" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
         <AnimatePresence mode="wait">
           {activeRoom === 0 ? (
             <motion.div 
