@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Home, Sparkles, Lightbulb, MousePointer2, Move, RefreshCw, ZoomIn, ZoomOut, Maximize, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Home, Sparkles, Lightbulb, MousePointer2, Move, RefreshCw, ZoomIn, ZoomOut, Maximize, ChevronLeft, ChevronRight, Archive, X } from 'lucide-react';
 import { vibrate } from '../lib/vibrate';
 
 export function HouseScreen({ onBack }: { onBack: () => void }) {
   const [resetKey, setResetKey] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [activeRoom, setActiveRoom] = useState(0); // 0: Isometric, 1: Cartoon, 2: Cozy
+  const [showStorage, setShowStorage] = useState(false);
 
   // Room 1 States (Isometric)
   const [lightOn, setLightOn] = useState(true);
@@ -124,16 +125,28 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
             {activeRoom === 0 ? 'Interactive 3D Room' : activeRoom === 1 ? 'Miniature 4-Room House' : 'Cozy Miniature'}
           </p>
         </div>
-        <button 
-          onClick={() => {
-            vibrate(10);
-            setActiveRoom(prev => (prev + 1) % 3);
-          }}
-          className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md flex items-center gap-2"
-        >
-          <RefreshCw size={20} className={`transition-transform duration-500 ${activeRoom !== 0 ? 'rotate-180' : ''}`} />
-          <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Switch Room</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => {
+              vibrate(10);
+              setShowStorage(true);
+            }}
+            className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md flex items-center gap-2"
+          >
+            <Archive size={20} />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Storage</span>
+          </button>
+          <button 
+            onClick={() => {
+              vibrate(10);
+              setActiveRoom(prev => (prev + 1) % 3);
+            }}
+            className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md flex items-center gap-2"
+          >
+            <RefreshCw size={20} className={`transition-transform duration-500 ${activeRoom !== 0 ? 'rotate-180' : ''}`} />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Switch Room</span>
+          </button>
+        </div>
       </header>
 
       {/* Instructions Overlay */}
@@ -1024,6 +1037,63 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
       <div className={`absolute inset-0 pointer-events-none transition-colors duration-1000 ${
         lightOn ? 'bg-yellow-500/5' : 'bg-transparent'
       }`} />
+
+      {/* Storage Modal Placeholder */}
+      <AnimatePresence>
+        {showStorage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-6"
+            onClick={() => setShowStorage(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-[#1a1a2e] border-2 border-white/10 rounded-[40px] w-full max-w-lg overflow-hidden shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-500 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
+                    <Archive size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter">House Library</h3>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Your collection of house goods</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowStorage(false)}
+                  className="p-3 rounded-2xl bg-white/5 text-white/40 hover:text-white transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="p-8 min-h-[300px] flex flex-col items-center justify-center text-center space-y-4">
+                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center text-white/20">
+                  <Archive size={40} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-white/80">Storage is Empty</h4>
+                  <p className="text-sm text-white/40 max-w-xs mx-auto">
+                    Store items from your three houses here to use them whenever you want!
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowStorage(false)}
+                  className="px-8 py-4 bg-indigo-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-indigo-500/20 hover:scale-105 transition-transform"
+                >
+                  Got it, bro! 🚀
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
