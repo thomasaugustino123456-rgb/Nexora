@@ -19,6 +19,7 @@ import { BreathingMascot } from './components/BreathingMascot';
 import { PushupMascot } from './components/PushupMascot';
 import { WaterMascot } from './components/WaterMascot';
 import { WritingMascot } from './components/WritingMascot';
+import { HouseScreen } from './components/HouseScreen';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './components/Trophies';
 import { LibraryScreen } from './components/LibraryScreen';
 import { ShopScreen, SHOP_ITEMS } from './components/ShopScreen';
@@ -1949,6 +1950,12 @@ export default function App() {
                 <span className="font-bold text-xs">Pro</span>
               </button>
               <button 
+                onClick={() => setActiveScreen('house')}
+                className={`p-2 transition-colors ${activeScreen === 'house' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+              >
+                <Home size={24} />
+              </button>
+              <button 
                 onClick={() => setActiveScreen('profile')}
                 className={`p-2 transition-colors ${activeScreen === 'profile' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
               >
@@ -2324,6 +2331,9 @@ export default function App() {
                 />
               </motion.div>
             )}
+            {activeScreen === 'house' && (
+              <HouseScreen onBack={() => setActiveScreen('home')} />
+            )}
             {activeScreen === 'challenge' && (
               <motion.div
                 key="challenge"
@@ -2422,6 +2432,15 @@ export default function App() {
                 }} 
                 icon={<TrophyIcon size={24} />} 
                 label="Rank"
+              />
+              <NavButton 
+                active={activeScreen === 'house'} 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                  setActiveScreen('house');
+                }} 
+                icon={<Home size={24} />} 
+                label="Space"
               />
             </nav>
           </div>
