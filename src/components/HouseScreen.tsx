@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Home, Sparkles, Lightbulb, MousePointer2, Move, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Home, Sparkles, Lightbulb, MousePointer2, Move, RefreshCw, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { vibrate } from '../lib/vibrate';
 
 export function HouseScreen({ onBack }: { onBack: () => void }) {
   const [lightOn, setLightOn] = useState(true);
   const [plantShaking, setPlantShaking] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  const [zoom, setZoom] = useState(1);
 
   const toggleLight = () => {
     vibrate(10);
@@ -22,6 +23,12 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
   const resetRoom = () => {
     vibrate(20);
     setResetKey(prev => prev + 1);
+    setZoom(1);
+  };
+
+  const handleZoom = (delta: number) => {
+    vibrate(5);
+    setZoom(prev => Math.min(Math.max(prev + delta, 0.5), 2));
   };
 
   return (
@@ -62,11 +69,13 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Main Room Container */}
-      <div className="flex-1 relative flex items-center justify-center p-4" key={resetKey}>
+      <div className="flex-1 relative flex items-center justify-center p-4 overflow-hidden" key={resetKey}>
         <motion.div 
           className="w-full max-w-4xl aspect-[4/3] relative"
+          animate={{ scale: zoom }}
+          transition={{ type: "spring", stiffness: 200, damping: 25 }}
           drag
-          dragConstraints={{ left: -100, right: 100, top: -100, bottom: 100 }}
+          dragConstraints={{ left: -400 * zoom, right: 400 * zoom, top: -300 * zoom, bottom: 300 * zoom }}
           dragElastic={0.1}
         >
           <svg viewBox="0 0 800 600" className="w-full h-full drop-shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
@@ -106,29 +115,36 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
               <polygon points="400,300 700,450 700,435 400,285" fill="#293942" opacity="0.5" />
             </g>
 
-            {/* Window */}
+            {/* Window (Fixed Perspective) */}
             <g id="window" className="pointer-events-none">
-              <polygon points="460,215 620,295 620,165 460,85" fill="#E0E0E0" />
-              <polygon points="470,215 610,285 610,170 470,100" fill="#2A3B45" />
-              <polygon points="475,215 605,280 605,175 475,110" fill="#112233" />
+              {/* Outer Frame */}
+              <polygon points="480,210 600,270 600,150 480,90" fill="#E0E0E0" />
+              {/* Inner Frame */}
+              <polygon points="490,205 590,255 590,160 490,110" fill="#2A3B45" />
+              {/* Glass */}
+              <polygon points="495,202 585,247 585,165 495,120" fill="#112233" />
               {/* Stars */}
-              <circle cx="500" cy="140" r="1.5" fill="#FFFFFF" opacity="0.8"/>
-              <circle cx="550" cy="200" r="2" fill="#FFFFFF" opacity="0.6"/>
-              <circle cx="580" cy="170" r="1" fill="#FFFFFF" opacity="0.9"/>
-              <circle cx="490" cy="190" r="1.5" fill="#FFFFFF" opacity="0.5"/>
+              <circle cx="520" cy="150" r="1.5" fill="#FFFFFF" opacity="0.8"/>
+              <circle cx="560" cy="210" r="2" fill="#FFFFFF" opacity="0.6"/>
+              <circle cx="540" cy="180" r="1" fill="#FFFFFF" opacity="0.9"/>
               {/* Panes */}
-              <polygon points="535,140 545,145 545,245 535,240" fill="#E0E0E0" opacity="0.3" />
-              <polygon points="475,160 605,225 605,230 475,165" fill="#E0E0E0" opacity="0.3" />
+              <line x1="540" y1="142" x2="540" y2="225" stroke="#E0E0E0" strokeWidth="2" opacity="0.3" />
+              <line x1="495" y1="170" x2="585" y2="215" stroke="#E0E0E0" strokeWidth="2" opacity="0.3" />
             </g>
 
-            {/* Picture Frame */}
-            <g id="picture" className="pointer-events-none">
-              <polygon points="320,150 200,210 200,120 320,60" fill="#111111" />
-              <polygon points="310,145 210,195 210,115 310,65" fill="#F5F5F5" />
-              <polygon points="210,195 250,165 270,180 310,130 310,145 210,195" fill="#4CAF50" />
-              <polygon points="210,195 230,175 250,190 280,150 310,160 310,145 210,195" fill="#2E7D32" />
-              <ellipse cx="260" cy="110" rx="12" ry="16" transform="rotate(-25 260 110)" fill="#FF9800" />
-            </g>
+            {/* Picture Frame (Movable & Fixed Perspective) */}
+            <motion.g 
+              id="picture" 
+              drag 
+              dragMomentum={false}
+              whileDrag={{ scale: 1.1, zIndex: 50 }}
+              className="cursor-grab active:cursor-grabbing"
+            >
+              <polygon points="300,160 220,200 220,120 300,80" fill="#111111" />
+              <polygon points="290,155 230,185 230,125 290,95" fill="#F5F5F5" />
+              <polygon points="230,185 250,165 260,175 290,140 290,155 230,185" fill="#4CAF50" />
+              <ellipse cx="265" cy="115" rx="10" ry="12" transform="rotate(-20 265 115)" fill="#FF9800" />
+            </motion.g>
 
             {/* Rug */}
             <g id="rug" className="pointer-events-none">
@@ -158,7 +174,16 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
               <polygon points="400,370 300,420 400,470 500,420" fill="#8D6E63" />
               <polygon points="300,420 400,470 400,480 300,430" fill="#6D4C41" />
               <polygon points="400,470 500,420 500,430 400,480" fill="#5D4037" />
-              {/* Laptop */}
+            </motion.g>
+
+            {/* Laptop (Separate) */}
+            <motion.g 
+              id="laptop" 
+              drag 
+              dragMomentum={false}
+              whileDrag={{ scale: 1.1, filter: "brightness(1.3)" }}
+              className="cursor-grab active:cursor-grabbing"
+            >
               <polygon points="380,410 350,425 380,440 410,425" fill="#BDBDBD" />
               <polygon points="350,425 380,410 380,385 350,400" fill="#9E9E9E" />
               <polygon points="353,421 377,409 377,388 353,403" fill={lightOn ? "#E3F2FD" : "#1a2a3a"} className="transition-colors duration-500" />
@@ -273,7 +298,31 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Footer Controls */}
-      <footer className="p-8 flex justify-center gap-6 z-20">
+      <footer className="p-8 flex flex-wrap justify-center gap-4 z-20">
+        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md p-2 rounded-3xl border border-white/10">
+          <button 
+            onClick={() => handleZoom(-0.1)}
+            className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all"
+          >
+            <ZoomOut size={20} />
+          </button>
+          <div className="px-2 text-[10px] font-black text-white/60 uppercase tracking-widest w-12 text-center">
+            {Math.round(zoom * 100)}%
+          </div>
+          <button 
+            onClick={() => handleZoom(0.1)}
+            className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all"
+          >
+            <ZoomIn size={20} />
+          </button>
+          <button 
+            onClick={() => setZoom(1)}
+            className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all"
+          >
+            <Maximize size={20} />
+          </button>
+        </div>
+
         <button 
           onClick={toggleLight}
           className={`p-4 rounded-3xl transition-all shadow-xl flex items-center gap-3 ${
