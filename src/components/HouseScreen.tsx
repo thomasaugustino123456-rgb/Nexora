@@ -408,7 +408,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                   <rect x="325" y="300" width="70" height="70" fill="#FF8A65" rx="10" />
                 </motion.g>
 
-                <motion.g id="computer" onClick={toggleScreen} className="cursor-pointer">
+                <motion.g id="computer" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={toggleScreen} className="cursor-grab active:cursor-grabbing">
                   <rect x="295" y="330" width="10" height="15" fill="#616161" />
                   <rect x="280" y="340" width="40" height="5" fill="#424242" rx="2" />
                   <rect x="250" y="270" width="100" height="60" fill="#212121" rx="4" />
@@ -491,7 +491,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                   <polygon points="70,275 150,275 150,280 70,285" fill="#E0E0E0" />
                 </motion.g>
 
-                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerJiggle(setShelfItem1Jiggling)} animate={shelfItem1Jiggling ? { rotate: [0, 5, -5, 2, 0], scale: [1, 1.1, 1.1, 1.05, 1] } : {}} className="cursor-pointer" transform="translate(110, 160)">
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerJiggle(setShelfItem1Jiggling)} animate={shelfItem1Jiggling ? { rotate: [0, 5, -5, 2, 0], scale: [1, 1.1, 1.1, 1.05, 1] } : {}} className="cursor-grab active:cursor-grabbing" transform="translate(110, 160)">
                   <circle cx="0" cy="0" r="18" fill="#FF5252" /> 
                   <circle cx="0" cy="0" r="14" fill="#FFFFFF" /> 
                   <rect x="-1" y="-10" width="2" height="10" fill="#333" rx="1" /> 
@@ -500,7 +500,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                   <path d="M 12,-15 L 18,-20" stroke="#FF5252" strokeWidth="4" strokeLinecap="round" />
                 </motion.g>
 
-                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerJiggle(setShelfItem2Jiggling)} animate={shelfItem2Jiggling ? { rotate: [0, 5, -5, 2, 0], scale: [1, 1.1, 1.1, 1.05, 1] } : {}} className="cursor-pointer" transform="translate(90, 245)">
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerJiggle(setShelfItem2Jiggling)} animate={shelfItem2Jiggling ? { rotate: [0, 5, -5, 2, 0], scale: [1, 1.1, 1.1, 1.05, 1] } : {}} className="cursor-grab active:cursor-grabbing" transform="translate(90, 245)">
                   <rect x="0" y="0" width="45" height="25" fill="#4FC3F7" rx="3" />
                   <rect x="0" y="0" width="45" height="8" fill="#03A9F4" rx="2" />
                   <rect x="18" y="12" width="10" height="4" fill="#E1F5FE" rx="1" />
@@ -518,7 +518,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                   <rect x="345" y="260" width="110" height="90" fill="#212121" /> 
                 </motion.g>
 
-                <motion.g id="fire-trigger" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={handleFireClick} className="cursor-pointer">
+                <motion.g id="fire-trigger" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={handleFireClick} className="cursor-grab active:cursor-grabbing">
                   <motion.g 
                     animate={{ 
                       opacity: fireTaps === 4 ? 0.1 : [0.8, 0.95, 0.8],
@@ -534,7 +534,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                 </motion.g>
 
                 {/* Lamp */}
-                <motion.g id="lamp-right" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={toggleNightMode} className="cursor-pointer" animate={lampWobbling ? { rotate: [0, 5, -3, 0] } : {}} style={{ transformOrigin: "bottom center" }}>
+                <motion.g id="lamp-right" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={toggleNightMode} className="cursor-grab active:cursor-grabbing" animate={lampWobbling ? { rotate: [0, 5, -3, 0] } : {}} style={{ transformOrigin: "bottom center" }}>
                   <rect x="630" y="260" width="15" height="30" fill="#FBC02D" rx="5" /> 
                   <polygon points="637,210 660,265 615,265" fill="#FFF59D" filter="url(#blurGlowCozy)" /> 
                   {!isNightMode && <circle cx="637" cy="240" r="50" fill="url(#lampGlow)" opacity="0.8" style={{ pointerEvents: "none" }} />}
@@ -546,7 +546,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                 </motion.g>
 
                 {/* Furniture */}
-                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setChairLeftBouncing)} animate={chairLeftBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-pointer" style={{ transformOrigin: "240px 420px" }}>
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setChairLeftBouncing)} animate={chairLeftBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-grab active:cursor-grabbing" style={{ transformOrigin: "240px 420px" }}>
                   <rect x="210" y="420" width="6" height="40" fill="#8D6E63" /> 
                   <rect x="270" y="420" width="6" height="40" fill="#8D6E63" /> 
                   <rect x="190" y="440" width="8" height="30" fill="#6D4C41" /> 
@@ -556,7 +556,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                   <polygon points="215,420 265,420 260,360 220,360" fill="url(#checker)" />
                 </motion.g>
 
-                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setSmallTableBouncing)} animate={smallTableBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-pointer" style={{ transformOrigin: "400px 430px" }}>
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setSmallTableBouncing)} animate={smallTableBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-grab active:cursor-grabbing" style={{ transformOrigin: "400px 430px" }}>
                   <rect x="375" y="420" width="6" height="35" fill="#5D4037" />
                   <rect x="420" y="420" width="6" height="35" fill="#5D4037" />
                   <rect x="360" y="415" width="80" height="8" fill="#8D6E63" rx="2" />
@@ -568,7 +568,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                   </g>
                 </motion.g>
 
-                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setChairRightBouncing)} animate={chairRightBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-pointer" style={{ transformOrigin: "560px 420px" }}>
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setChairRightBouncing)} animate={chairRightBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-grab active:cursor-grabbing" style={{ transformOrigin: "560px 420px" }}>
                   <rect x="530" y="420" width="6" height="40" fill="#8D6E63" /> 
                   <rect x="590" y="420" width="6" height="40" fill="#8D6E63" /> 
                   <rect x="510" y="440" width="8" height="30" fill="#6D4C41" /> 
@@ -578,7 +578,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                   <polygon points="535,420 585,420 580,360 540,360" fill="url(#checker)" />
                 </motion.g>
 
-                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setCoffeeTableBouncing)} animate={coffeeTableBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-pointer" style={{ transformOrigin: "400px 520px" }}>
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setCoffeeTableBouncing)} animate={coffeeTableBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-grab active:cursor-grabbing" style={{ transformOrigin: "400px 520px" }}>
                   <rect x="345" y="480" width="10" height="65" fill="#8D6E63" rx="2" />
                   <rect x="465" y="480" width="10" height="65" fill="#8D6E63" rx="2" />
                   <rect x="315" y="520" width="12" height="75" fill="#5D4037" rx="2" />
