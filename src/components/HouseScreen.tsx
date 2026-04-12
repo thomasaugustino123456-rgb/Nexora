@@ -6,7 +6,7 @@ import { vibrate } from '../lib/vibrate';
 export function HouseScreen({ onBack }: { onBack: () => void }) {
   const [resetKey, setResetKey] = useState(0);
   const [zoom, setZoom] = useState(1);
-  const [activeRoom, setActiveRoom] = useState(0); // 0: Isometric, 1: Cartoon
+  const [activeRoom, setActiveRoom] = useState(0); // 0: Isometric, 1: Cartoon, 2: Cozy
 
   // Room 1 States (Isometric)
   const [lightOn, setLightOn] = useState(true);
@@ -17,6 +17,17 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
   const [ballBouncing, setBallBouncing] = useState(false);
   const [curtainsSwaying, setCurtainsSwaying] = useState(false);
   const [booksWobbling, setBooksWobbling] = useState(false);
+
+  // Room 3 States (Cozy)
+  const [fireTaps, setFireTaps] = useState(0);
+  const [isNightMode, setIsNightMode] = useState(false);
+  const [chairLeftBouncing, setChairLeftBouncing] = useState(false);
+  const [chairRightBouncing, setChairRightBouncing] = useState(false);
+  const [coffeeTableBouncing, setCoffeeTableBouncing] = useState(false);
+  const [smallTableBouncing, setSmallTableBouncing] = useState(false);
+  const [shelfItem1Jiggling, setShelfItem1Jiggling] = useState(false);
+  const [shelfItem2Jiggling, setShelfItem2Jiggling] = useState(false);
+  const [lampWobbling, setLampWobbling] = useState(false);
 
   const toggleLight = () => {
     vibrate(10);
@@ -52,12 +63,39 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
     setScreenOn(!screenOn);
   };
 
+  // Room 3 Handlers
+  const handleFireClick = () => {
+    vibrate(10);
+    setFireTaps(prev => (prev >= 4 ? 0 : prev + 1));
+  };
+
+  const toggleNightMode = () => {
+    vibrate(15);
+    setIsNightMode(!isNightMode);
+    setLampWobbling(true);
+    setTimeout(() => setLampWobbling(false), 500);
+  };
+
+  const triggerBounce = (setter: React.Dispatch<React.SetStateAction<boolean>>) => {
+    vibrate(5);
+    setter(true);
+    setTimeout(() => setter(false), 500);
+  };
+
+  const triggerJiggle = (setter: React.Dispatch<React.SetStateAction<boolean>>) => {
+    vibrate(5);
+    setter(true);
+    setTimeout(() => setter(false), 400);
+  };
+
   const resetRoom = () => {
     vibrate(20);
     setResetKey(prev => prev + 1);
     setZoom(1);
     setLightOn(true);
     setScreenOn(false);
+    setFireTaps(0);
+    setIsNightMode(false);
   };
 
   const handleZoom = (delta: number) => {
@@ -85,17 +123,17 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
             My Nexora Space <Sparkles size={18} className="text-yellow-400" />
           </h2>
           <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-            {activeRoom === 0 ? 'Interactive 3D Room' : 'Cartoon Studio'}
+            {activeRoom === 0 ? 'Interactive 3D Room' : activeRoom === 1 ? 'Cartoon Studio' : 'Cozy Miniature'}
           </p>
         </div>
         <button 
           onClick={() => {
             vibrate(10);
-            setActiveRoom(prev => (prev === 0 ? 1 : 0));
+            setActiveRoom(prev => (prev + 1) % 3);
           }}
           className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md flex items-center gap-2"
         >
-          <RefreshCw size={20} className={`transition-transform duration-500 ${activeRoom === 1 ? 'rotate-180' : ''}`} />
+          <RefreshCw size={20} className={`transition-transform duration-500 ${activeRoom !== 0 ? 'rotate-180' : ''}`} />
           <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Switch Room</span>
         </button>
       </header>
@@ -265,7 +303,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                 </AnimatePresence>
               </svg>
             </motion.div>
-          ) : (
+          ) : activeRoom === 1 ? (
             <motion.div 
               key="room-1"
               initial={{ opacity: 0, scale: 0.8, rotateY: 20 }}
@@ -390,6 +428,171 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                 Tap the Basketball, Computer, or Bookshelf!
               </div>
             </motion.div>
+          ) : (
+            <motion.div 
+              key="room-2"
+              initial={{ opacity: 0, scale: 0.8, rotateY: 20 }}
+              animate={{ opacity: 1, scale: zoom, rotateY: 0 }}
+              exit={{ opacity: 0, scale: 1.2, rotateY: -20 }}
+              transition={{ type: "spring", stiffness: 200, damping: 25 }}
+              className="w-full max-w-4xl aspect-[4/3] relative"
+              drag
+              dragConstraints={{ left: -400 * zoom, right: 400 * zoom, top: -300 * zoom, bottom: 300 * zoom }}
+              dragElastic={0.1}
+            >
+              <svg viewBox="0 0 800 600" className="w-full h-full drop-shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
+                <defs>
+                  <pattern id="checker" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="scale(0.8)">
+                    <rect width="20" height="20" fill="#81D4FA" />
+                    <rect width="10" height="10" fill="#E1F5FE" />
+                    <rect x="10" y="10" width="10" height="10" fill="#E1F5FE" />
+                  </pattern>
+                  <pattern id="checker-skewed" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="scale(0.8) skewX(-20)">
+                    <rect width="20" height="20" fill="#4FC3F7" />
+                    <rect width="10" height="10" fill="#B3E5FC" />
+                    <rect x="10" y="10" width="10" height="10" fill="#B3E5FC" />
+                  </pattern>
+                  <pattern id="wood-cozy" width="40" height="100" patternUnits="userSpaceOnUse">
+                    <rect width="40" height="100" fill="#5D4037" />
+                    <line x1="0" y1="0" x2="0" y2="100" stroke="#3E2723" strokeWidth="2" />
+                    <line x1="0" y1="30" x2="40" y2="30" stroke="#3E2723" strokeWidth="1" />
+                  </pattern>
+                  <pattern id="brick-back" width="60" height="30" patternUnits="userSpaceOnUse">
+                    <rect width="60" height="30" fill="#D35400" />
+                    <rect width="60" height="14" fill="#E67E22" />
+                    <rect x="30" y="15" width="60" height="14" fill="#E67E22" />
+                    <line x1="0" y1="15" x2="60" y2="15" stroke="#A04000" strokeWidth="2" />
+                  </pattern>
+                  <radialGradient id="fireGlowGrad" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#FFF9C4" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#D84315" stopOpacity="0" />
+                  </radialGradient>
+                  <radialGradient id="lampGlow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.9" />
+                    <stop offset="100%" stopColor="#FFEA00" stopOpacity="0" />
+                  </radialGradient>
+                  <filter id="blurGlowCozy">
+                    <feGaussianBlur stdDeviation="8" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                </defs>
+
+                {/* Architecture */}
+                <polygon points="0,0 800,0 600,100 200,100" fill="#FFF8E1" />
+                <rect x="200" y="100" width="400" height="250" fill="url(#brick-back)" />
+                <polygon points="0,0 200,100 200,350 0,600" fill="#CA6F1E" />
+                <polygon points="800,0 600,100 600,350 800,600" fill="#E67E22" />
+                <polygon points="0,600 200,350 600,350 800,600" fill="url(#wood-cozy)" />
+
+                {/* Shelf & Items */}
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                  <polygon points="70,90 150,140 150,330 70,420" fill="#F5F5F5" />
+                  <polygon points="70,185 150,210 150,215 70,195" fill="#E0E0E0" />
+                  <polygon points="70,275 150,275 150,280 70,285" fill="#E0E0E0" />
+                </motion.g>
+
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerJiggle(setShelfItem1Jiggling)} animate={shelfItem1Jiggling ? { rotate: [0, 5, -5, 2, 0], scale: [1, 1.1, 1.1, 1.05, 1] } : {}} className="cursor-pointer" transform="translate(110, 160)">
+                  <circle cx="0" cy="0" r="18" fill="#FF5252" /> 
+                  <circle cx="0" cy="0" r="14" fill="#FFFFFF" /> 
+                  <rect x="-1" y="-10" width="2" height="10" fill="#333" rx="1" /> 
+                  <rect x="-1" y="-1" width="8" height="2" fill="#333" rx="1" />
+                  <path d="M -12,-15 L -18,-20" stroke="#FF5252" strokeWidth="4" strokeLinecap="round" /> 
+                  <path d="M 12,-15 L 18,-20" stroke="#FF5252" strokeWidth="4" strokeLinecap="round" />
+                </motion.g>
+
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerJiggle(setShelfItem2Jiggling)} animate={shelfItem2Jiggling ? { rotate: [0, 5, -5, 2, 0], scale: [1, 1.1, 1.1, 1.05, 1] } : {}} className="cursor-pointer" transform="translate(90, 245)">
+                  <rect x="0" y="0" width="45" height="25" fill="#4FC3F7" rx="3" />
+                  <rect x="0" y="0" width="45" height="8" fill="#03A9F4" rx="2" />
+                  <rect x="18" y="12" width="10" height="4" fill="#E1F5FE" rx="1" />
+                </motion.g>
+
+                {/* Window */}
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                  <rect x="310" y="120" width="180" height="100" fill="#FDFEFE" rx="2" />
+                  <rect x="315" y="125" width="170" height="90" fill={isNightMode ? "#1A237E" : "#B2EBF2"} className="transition-colors duration-800" />
+                </motion.g>
+
+                {/* Fireplace */}
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
+                  <rect x="330" y="240" width="140" height="110" fill="#E64A19" /> 
+                  <rect x="345" y="260" width="110" height="90" fill="#212121" /> 
+                </motion.g>
+
+                <motion.g id="fire-trigger" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={handleFireClick} className="cursor-pointer">
+                  <motion.g 
+                    animate={{ 
+                      opacity: fireTaps === 4 ? 0.1 : [0.8, 0.95, 0.8],
+                      scale: fireTaps === 2 || fireTaps === 3 ? 1.6 : fireTaps === 4 ? 0.5 : [0.95, 1, 0.95],
+                      filter: fireTaps === 2 || fireTaps === 3 ? "brightness(1.4) saturate(1.5)" : fireTaps === 4 ? "grayscale(1) brightness(0.2)" : "none"
+                    }} 
+                    transition={{ duration: 0.5 }}
+                    style={{ transformOrigin: "400px 330px" }}
+                  >
+                    <circle cx="400" cy="315" r="45" fill="url(#fireGlowGrad)" />
+                    <path d="M 380,330 Q 390,280 400,320 Q 410,270 420,330 Z" fill="#FFC107" filter="url(#blurGlowCozy)" />
+                  </motion.g>
+                </motion.g>
+
+                {/* Lamp */}
+                <motion.g id="lamp-right" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={toggleNightMode} className="cursor-pointer" animate={lampWobbling ? { rotate: [0, 5, -3, 0] } : {}} style={{ transformOrigin: "bottom center" }}>
+                  <rect x="630" y="260" width="15" height="30" fill="#FBC02D" rx="5" /> 
+                  <polygon points="637,210 660,265 615,265" fill="#FFF59D" filter="url(#blurGlowCozy)" /> 
+                  {!isNightMode && <circle cx="637" cy="240" r="50" fill="url(#lampGlow)" opacity="0.8" style={{ pointerEvents: "none" }} />}
+                </motion.g>
+
+                {/* Rug */}
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.02 }} className="cursor-grab active:cursor-grabbing">
+                  <polygon points="150,580 250,380 550,380 650,580" fill="#FDFEFE" opacity="0.9" />
+                </motion.g>
+
+                {/* Furniture */}
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setChairLeftBouncing)} animate={chairLeftBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-pointer" style={{ transformOrigin: "240px 420px" }}>
+                  <rect x="210" y="420" width="6" height="40" fill="#8D6E63" /> 
+                  <rect x="270" y="420" width="6" height="40" fill="#8D6E63" /> 
+                  <rect x="190" y="440" width="8" height="30" fill="#6D4C41" /> 
+                  <rect x="280" y="440" width="8" height="30" fill="#6D4C41" /> 
+                  <polygon points="190,440 288,440 276,425 210,425" fill="#A1887F" /> 
+                  <polygon points="195,435 280,435 265,420 215,420" fill="url(#checker-skewed)" />
+                  <polygon points="215,420 265,420 260,360 220,360" fill="url(#checker)" />
+                </motion.g>
+
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setSmallTableBouncing)} animate={smallTableBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-pointer" style={{ transformOrigin: "400px 430px" }}>
+                  <rect x="375" y="420" width="6" height="35" fill="#5D4037" />
+                  <rect x="420" y="420" width="6" height="35" fill="#5D4037" />
+                  <rect x="360" y="415" width="80" height="8" fill="#8D6E63" rx="2" />
+                  <g transform="translate(400, 415)">
+                    <path d="M -12,0 Q -12,-15 0,-15 Q 12,-15 12,0 Z" fill="#212121" /> 
+                    <path d="M 8,-12 Q 18,-15 18,-4 Q 18,3 10,2" fill="none" stroke="#212121" strokeWidth="4" strokeLinecap="round" />
+                    <path d="M -10,-8 L -18,-14" stroke="#212121" strokeWidth="4" strokeLinecap="round" />
+                    <circle cx="0" cy="-15" r="2.5" fill="#424242" />
+                  </g>
+                </motion.g>
+
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setChairRightBouncing)} animate={chairRightBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-pointer" style={{ transformOrigin: "560px 420px" }}>
+                  <rect x="530" y="420" width="6" height="40" fill="#8D6E63" /> 
+                  <rect x="590" y="420" width="6" height="40" fill="#8D6E63" /> 
+                  <rect x="510" y="440" width="8" height="30" fill="#6D4C41" /> 
+                  <rect x="600" y="440" width="8" height="30" fill="#6D4C41" /> 
+                  <polygon points="510,440 608,440 596,425 530,425" fill="#A1887F" /> 
+                  <polygon points="515,435 600,435 585,420 535,420" fill="url(#checker-skewed)" />
+                  <polygon points="535,420 585,420 580,360 540,360" fill="url(#checker)" />
+                </motion.g>
+
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setCoffeeTableBouncing)} animate={coffeeTableBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-pointer" style={{ transformOrigin: "400px 520px" }}>
+                  <rect x="345" y="480" width="10" height="65" fill="#8D6E63" rx="2" />
+                  <rect x="465" y="480" width="10" height="65" fill="#8D6E63" rx="2" />
+                  <rect x="315" y="520" width="12" height="75" fill="#5D4037" rx="2" />
+                  <rect x="495" y="520" width="12" height="75" fill="#5D4037" rx="2" />
+                  <polygon points="300,530 525,530 490,480 330,480" fill="#FFFFFF" />
+                  <rect x="420" y="495" width="12" height="12" fill="#F5F5F5" rx="1" />
+                </motion.g>
+
+                {isNightMode && <rect x="0" y="0" width="800" height="600" fill="#0A0A1A" opacity="0.65" style={{ mixBlendMode: 'multiply' }} className="pointer-events-none" />}
+              </svg>
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] font-black text-white/40 uppercase tracking-[0.2em] whitespace-nowrap pointer-events-none">
+                {fireTaps === 0 ? "Tap Fire 2x to Increase, 4x to Off" : fireTaps < 4 ? "Fire is ROARING!" : "Fire is OUT. (Tap once to reset)"}
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
@@ -440,7 +643,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
               <span className="font-black uppercase tracking-widest text-xs">Tickle Plant</span>
             </button>
           </>
-        ) : (
+        ) : activeRoom === 1 ? (
           <>
             <button 
               onClick={bounceBall}
@@ -466,6 +669,30 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
             >
               <Sparkles size={24} />
               <span className="font-black uppercase tracking-widest text-xs">Wobble Books</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <button 
+              onClick={handleFireClick}
+              className={`p-4 rounded-3xl transition-all shadow-xl flex items-center gap-3 ${
+                fireTaps === 4 ? 'bg-white/10 text-white/40' : 'bg-red-500 text-white shadow-red-200'
+              }`}
+            >
+              <Sparkles size={24} />
+              <span className="font-black uppercase tracking-widest text-xs">
+                {fireTaps === 4 ? 'Fire Out' : fireTaps >= 2 ? 'Roaring Fire' : 'Stoke Fire'}
+              </span>
+            </button>
+            
+            <button 
+              onClick={toggleNightMode}
+              className={`p-4 rounded-3xl transition-all shadow-xl flex items-center gap-3 ${
+                isNightMode ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-yellow-400 text-yellow-900'
+              }`}
+            >
+              <Lightbulb size={24} />
+              <span className="font-black uppercase tracking-widest text-xs">{isNightMode ? 'Night Mode' : 'Day Mode'}</span>
             </button>
           </>
         )}
