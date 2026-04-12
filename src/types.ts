@@ -6,6 +6,24 @@ export interface BadgeSettings {
   dynamicUrgency: boolean;
 }
 
+export interface HouseItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  coinPrice: number;
+  icon: string; // Emoji or small SVG path
+  room: number; // 0, 1, or 2
+  category: 'furniture' | 'decoration' | 'electronics' | 'lighting' | 'other';
+}
+
+export interface PlacedHouseItem {
+  itemId: string;
+  x: number;
+  y: number;
+  room: number;
+}
+
 export interface UserSettings {
   pushupsGoal: number;
   waterGoal: number;
@@ -30,6 +48,8 @@ export interface UserSettings {
   isDogSoundPackActive?: boolean;
   league?: string;
   badgeSettings?: BadgeSettings;
+  purchasedHouseItemIds?: string[];
+  placedHouseItems?: PlacedHouseItem[];
 }
 
 export interface ShopItem {

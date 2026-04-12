@@ -3,7 +3,8 @@ import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
-import { UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan } from './types';
+import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan } from './types';
+import { HOUSE_ITEMS } from './constants/houseItems';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider } from 'firebase/auth';
@@ -271,7 +272,9 @@ const DEFAULT_SETTINGS: UserSettings = {
     dailyChallenge: true,
     dailyQuest: true,
     dynamicUrgency: true
-  }
+  },
+  purchasedHouseItemIds: [],
+  placedHouseItems: []
 };
 
 const DEFAULT_STATS: UserStats = {
@@ -640,9 +643,100 @@ export default function App() {
   const [history, setHistory] = useState<DailyProgress[]>([]);
   const [earnedTrophyToday, setEarnedTrophyToday] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
+  const [showCoinAnimation, setShowCoinAnimation] = useState(false);
   const [dailyQuest, setDailyQuest] = useState<ChallengeStep | null>(null);
   const [emergencyActive, setEmergencyActive] = useState(false);
-  const [showCoinAnimation, setShowCoinAnimation] = useState(false);
+  const buyHouseItem = async (itemId: string, currency: 'streak' | 'coins') => {
+    const item = HOUSE_ITEMS.find(i => i.id === itemId);
+    if (!item) return;
+
+    const price = currency === 'streak' ? item.price : item.coinPrice;
+    const currentAmount = currency === 'streak' ? stats.streak : stats.coins;
+
+    if (currentAmount < price) {
+      showToast(`Not enough ${currency}!`, 'error');
+      return;
+    }
+
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
+    
+    const newSettings = {
+      ...settings,
+      purchasedHouseItemIds: [...(settings.purchasedHouseItemIds || []), itemId]
+    };
+    setSettings(newSettings);
+
+    const newStats = {
+      ...stats,
+      [currency === 'streak' ? 'streak' : 'coins']: currentAmount - price
+    };
+    setStats(newStats);
+
+    if (user) {
+      try {
+        await updateDoc(doc(db, 'users', user.uid), {
+          settings: newSettings,
+          stats: newStats
+        });
+      } catch (e) {
+        handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`);
+      }
+    }
+
+    showToast(`Bought ${item.name}! 🚀`);
+  };
+
+  const updateHouseItemPosition = async (index: number, x: number, y: number) => {
+    const newPlaced = [...(settings.placedHouseItems || [])];
+    if (newPlaced[index]) {
+      newPlaced[index] = { ...newPlaced[index], x, y };
+      const newSettings = { ...settings, placedHouseItems: newPlaced };
+      setSettings(newSettings);
+
+      if (user) {
+        try {
+          await updateDoc(doc(db, 'users', user.uid), {
+            'settings.placedHouseItems': newPlaced
+          });
+        } catch (e) {
+          handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`);
+        }
+      }
+    }
+  };
+
+  const placeHouseItem = async (itemId: string, x: number, y: number, room: number) => {
+    const newPlaced = [...(settings.placedHouseItems || []), { itemId, x, y, room }];
+    const newSettings = { ...settings, placedHouseItems: newPlaced };
+    setSettings(newSettings);
+
+    if (user) {
+      try {
+        await updateDoc(doc(db, 'users', user.uid), {
+          'settings.placedHouseItems': newPlaced
+        });
+      } catch (e) {
+        handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`);
+      }
+    }
+  };
+
+  const removeHouseItem = async (index: number) => {
+    const newPlaced = [...(settings.placedHouseItems || [])];
+    newPlaced.splice(index, 1);
+    const newSettings = { ...settings, placedHouseItems: newPlaced };
+    setSettings(newSettings);
+
+    if (user) {
+      try {
+        await updateDoc(doc(db, 'users', user.uid), {
+          'settings.placedHouseItems': newPlaced
+        });
+      } catch (e) {
+        handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`);
+      }
+    }
+  };
 
   useEffect(() => {
     if (challengeStep === 'football') {
@@ -2332,7 +2426,15 @@ export default function App() {
               </motion.div>
             )}
             {activeScreen === 'house' && (
-              <HouseScreen onBack={() => setActiveScreen('home')} />
+              <HouseScreen 
+                onBack={() => setActiveScreen('home')} 
+                stats={stats}
+                settings={settings}
+                onBuyItem={buyHouseItem}
+                onPlaceItem={placeHouseItem}
+                onRemoveItem={removeHouseItem}
+                onUpdateItemPosition={updateHouseItemPosition}
+              />
             )}
             {activeScreen === 'challenge' && (
               <motion.div
