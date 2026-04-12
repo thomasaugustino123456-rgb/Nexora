@@ -27,6 +27,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
   const [smallTableBouncing, setSmallTableBouncing] = useState(false);
   const [shelfItem1Jiggling, setShelfItem1Jiggling] = useState(false);
   const [shelfItem2Jiggling, setShelfItem2Jiggling] = useState(false);
+  const [shelfItem3Jiggling, setShelfItem3Jiggling] = useState(false);
   const [lampWobbling, setLampWobbling] = useState(false);
 
   const toggleLight = () => {
@@ -485,51 +486,68 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                     <rect width="10" height="10" fill="#E1F5FE" />
                     <rect x="10" y="10" width="10" height="10" fill="#E1F5FE" />
                   </pattern>
+
                   <pattern id="checker-skewed" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="scale(0.8) skewX(-20)">
                     <rect width="20" height="20" fill="#4FC3F7" />
                     <rect width="10" height="10" fill="#B3E5FC" />
                     <rect x="10" y="10" width="10" height="10" fill="#B3E5FC" />
                   </pattern>
+
                   <pattern id="wood-cozy" width="40" height="100" patternUnits="userSpaceOnUse">
                     <rect width="40" height="100" fill="#5D4037" />
                     <line x1="0" y1="0" x2="0" y2="100" stroke="#3E2723" strokeWidth="2" />
                     <line x1="0" y1="30" x2="40" y2="30" stroke="#3E2723" strokeWidth="1" />
                   </pattern>
+
                   <pattern id="brick-back" width="60" height="30" patternUnits="userSpaceOnUse">
                     <rect width="60" height="30" fill="#D35400" />
                     <rect width="60" height="14" fill="#E67E22" />
                     <rect x="30" y="15" width="60" height="14" fill="#E67E22" />
                     <line x1="0" y1="15" x2="60" y2="15" stroke="#A04000" strokeWidth="2" />
                   </pattern>
+
                   <radialGradient id="fireGlowGrad" cx="50%" cy="50%" r="50%">
                     <stop offset="0%" stopColor="#FFF9C4" stopOpacity="1" />
                     <stop offset="100%" stopColor="#D84315" stopOpacity="0" />
                   </radialGradient>
+                  
                   <radialGradient id="lampGlow" cx="50%" cy="50%" r="50%">
                     <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.9" />
                     <stop offset="100%" stopColor="#FFEA00" stopOpacity="0" />
                   </radialGradient>
+
                   <filter id="blurGlowCozy">
                     <feGaussianBlur stdDeviation="8" result="blur" />
                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                   </filter>
                 </defs>
 
-                {/* Architecture (Isometric Background) */}
-                <g id="cozy-base-iso">
-                  <polygon points="400,300 100,450 100,80 400,50" fill="#FFF8E1" />
-                  <polygon points="400,300 700,450 700,80 400,50" fill="url(#brick-back)" />
-                  <polygon points="400,300 100,450 400,600 700,450" fill="url(#wood-cozy)" />
-                </g>
+                {/* Architecture */}
+                <polygon points="0,0 800,0 600,100 200,100" fill="#FFF8E1" />
+                <rect x="200" y="100" width="400" height="250" fill="url(#brick-back)" />
+                <polygon points="0,0 200,100 200,350 0,600" fill="#CA6F1E" />
+                <polygon points="800,0 600,100 600,350 800,600" fill="#E67E22" />
+                <polygon points="0,600 200,350 600,350 800,600" fill="url(#wood-cozy)" />
 
-                {/* Shelf & Items (Original Style) */}
+                {/* Shelf & Items */}
                 <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
-                  <polygon points="70,90 150,140 150,330 70,420" fill="#F5F5F5" />
-                  <polygon points="70,185 150,210 150,215 70,195" fill="#E0E0E0" />
-                  <polygon points="70,275 150,275 150,280 70,285" fill="#E0E0E0" />
+                  <polygon points="30,90 110,140 110,330 30,420" fill="#9E9E9E" />
+                  <polygon points="70,90 150,140 110,140 30,90" fill="#757575" />
+                  <polygon points="70,420 150,330 110,330 30,420" fill="#E0E0E0" />
+                  <polygon points="150,140 150,330 110,330 110,140" fill="#616161" />
+                  <polygon points="70,185 150,210 110,210 30,185" fill="#E0E0E0" />
+                  <polygon points="70,185 150,210 150,215 70,190" fill="#F5F5F5" />
+                  <polygon points="150,210 110,210 110,215 150,215" fill="#BDBDBD" />
+                  <polygon points="70,190 150,215 110,215 30,190" fill="#757575" />
+                  <polygon points="70,275 150,275 110,275 30,275" fill="#E0E0E0" />
+                  <polygon points="70,275 150,275 150,280 70,280" fill="#F5F5F5" />
+                  <polygon points="150,275 110,275 110,280 150,280" fill="#BDBDBD" />
+                  <polygon points="70,280 150,280 110,280 30,280" fill="#757575" />
                 </motion.g>
 
-                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerJiggle(setShelfItem1Jiggling)} animate={shelfItem1Jiggling ? { rotate: [0, 5, -5, 2, 0], scale: [1, 1.1, 1.1, 1.05, 1] } : {}} className="cursor-grab active:cursor-grabbing" transform="translate(110, 160)">
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerJiggle(setShelfItem1Jiggling)} animate={shelfItem1Jiggling ? { rotate: [0, 5, -5, 2, 0], scale: [1, 1.1, 1.1, 1.05, 1] } : {}} className="cursor-grab active:cursor-grabbing" transform="translate(90, 165)">
+                  <ellipse cx="0" cy="18" rx="15" ry="5" fill="#000" opacity="0.4" />
+                  <circle cx="-3" cy="-2" r="18" fill="#B71C1C" />
                   <circle cx="0" cy="0" r="18" fill="#FF5252" /> 
                   <circle cx="0" cy="0" r="14" fill="#FFFFFF" /> 
                   <rect x="-1" y="-10" width="2" height="10" fill="#333" rx="1" /> 
@@ -538,19 +556,41 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                   <path d="M 12,-15 L 18,-20" stroke="#FF5252" strokeWidth="4" strokeLinecap="round" />
                 </motion.g>
 
-                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerJiggle(setShelfItem2Jiggling)} animate={shelfItem2Jiggling ? { rotate: [0, 5, -5, 2, 0], scale: [1, 1.1, 1.1, 1.05, 1] } : {}} className="cursor-grab active:cursor-grabbing" transform="translate(90, 245)">
-                  <rect x="0" y="0" width="45" height="25" fill="#4FC3F7" rx="3" />
-                  <rect x="0" y="0" width="45" height="8" fill="#03A9F4" rx="2" />
-                  <rect x="18" y="12" width="10" height="4" fill="#E1F5FE" rx="1" />
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerJiggle(setShelfItem2Jiggling)} animate={shelfItem2Jiggling ? { rotate: [0, 5, -5, 2, 0], scale: [1, 1.1, 1.1, 1.05, 1] } : {}} className="cursor-grab active:cursor-grabbing" transform="translate(60, 245)">
+                  <polygon points="-10,30 30,30 40,25 0,25" fill="#000" opacity="0.4" />
+                  <polygon points="0,0 40,0 30,-10 -10,-10" fill="#81D4FA" />
+                  <polygon points="40,0 30,-10 30,15 40,25" fill="#0288D1" />
+                  <rect x="0" y="0" width="40" height="25" fill="#4FC3F7" rx="2" />
+                  <rect x="0" y="0" width="40" height="8" fill="#03A9F4" rx="2" />
+                  <rect x="15" y="12" width="10" height="4" fill="#E1F5FE" rx="1" />
                 </motion.g>
 
-                {/* Window (Original Style) */}
+                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerJiggle(setShelfItem3Jiggling)} animate={shelfItem3Jiggling ? { rotate: [0, 5, -5, 2, 0], scale: [1, 1.1, 1.1, 1.05, 1] } : {}} className="cursor-grab active:cursor-grabbing" transform="translate(70, 330)">
+                  <ellipse cx="25" cy="48" rx="30" ry="7" fill="#000" opacity="0.4" />
+                  <g transform="translate(0, 5) rotate(-10)">
+                    <polygon points="12,0 20,-5 20,40 12,45" fill="#A5D6A7" /> 
+                    <rect x="0" y="0" width="12" height="45" fill="#388E3C" rx="1" /> 
+                    <polygon points="0,0 12,0 20,-5 8,-5" fill="#2E7D32" /> 
+                  </g>
+                  <g transform="translate(20, -5)">
+                    <polygon points="12,0 18,-5 18,45 12,50" fill="#FFCDD2" />
+                    <rect x="0" y="0" width="12" height="50" fill="#D32F2F" rx="1" />
+                    <polygon points="0,0 12,0 18,-5 6,-5" fill="#B71C1C" />
+                  </g>
+                  <g transform="translate(40, 5) rotate(10)">
+                    <polygon points="12,0 18,-5 18,40 12,45" fill="#BBDEFB" />
+                    <rect x="0" y="0" width="12" height="45" fill="#1976D2" rx="1" />
+                    <polygon points="0,0 12,0 18,-5 6,-5" fill="#0D47A1" />
+                  </g>
+                </motion.g>
+
+                {/* Window */}
                 <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
                   <rect x="310" y="120" width="180" height="100" fill="#FDFEFE" rx="2" />
                   <rect x="315" y="125" width="170" height="90" fill={isNightMode ? "#1A237E" : "#B2EBF2"} className="transition-colors duration-800" />
                 </motion.g>
 
-                {/* Fireplace (Original Style) */}
+                {/* Fireplace */}
                 <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.05 }} className="cursor-grab active:cursor-grabbing">
                   <rect x="330" y="240" width="140" height="110" fill="#E64A19" /> 
                   <rect x="345" y="260" width="110" height="90" fill="#212121" /> 
@@ -564,27 +604,27 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                       filter: fireTaps === 2 || fireTaps === 3 ? "brightness(1.4) saturate(1.5)" : fireTaps === 4 ? "grayscale(1) brightness(0.2)" : "none"
                     }} 
                     transition={{ duration: 0.5 }}
-                    style={{ transformOrigin: "400px 330px" }}
+                    style={{ transformOrigin: "400px 315px" }}
                   >
                     <circle cx="400" cy="315" r="45" fill="url(#fireGlowGrad)" />
                     <path d="M 380,330 Q 390,280 400,320 Q 410,270 420,330 Z" fill="#FFC107" filter="url(#blurGlowCozy)" />
                   </motion.g>
                 </motion.g>
 
-                {/* Lamp (Original Style) */}
+                {/* Lamp */}
                 <motion.g id="lamp-right" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={toggleNightMode} className="cursor-grab active:cursor-grabbing" animate={lampWobbling ? { rotate: [0, 5, -3, 0] } : {}} style={{ transformOrigin: "bottom center" }}>
                   <rect x="630" y="260" width="15" height="30" fill="#FBC02D" rx="5" /> 
                   <polygon points="637,210 660,265 615,265" fill="#FFF59D" filter="url(#blurGlowCozy)" /> 
                   {!isNightMode && <circle cx="637" cy="240" r="50" fill="url(#lampGlow)" opacity="0.8" style={{ pointerEvents: "none" }} />}
                 </motion.g>
 
-                {/* Rug (Original Style) */}
+                {/* Rug */}
                 <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.02 }} className="cursor-grab active:cursor-grabbing">
                   <polygon points="150,580 250,380 550,380 650,580" fill="#FDFEFE" opacity="0.9" />
                 </motion.g>
 
-                {/* Furniture (Original Style) */}
-                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setChairLeftBouncing)} animate={chairLeftBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-grab active:cursor-grabbing" style={{ transformOrigin: "240px 420px" }}>
+                {/* Furniture */}
+                <motion.g id="chair-left" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setChairLeftBouncing)} animate={chairLeftBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-grab active:cursor-grabbing" style={{ transformOrigin: "240px 420px" }}>
                   <rect x="210" y="420" width="6" height="40" fill="#8D6E63" /> 
                   <rect x="270" y="420" width="6" height="40" fill="#8D6E63" /> 
                   <rect x="190" y="440" width="8" height="30" fill="#6D4C41" /> 
@@ -594,7 +634,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                   <polygon points="215,420 265,420 260,360 220,360" fill="url(#checker)" />
                 </motion.g>
 
-                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setSmallTableBouncing)} animate={smallTableBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-grab active:cursor-grabbing" style={{ transformOrigin: "400px 430px" }}>
+                <motion.g id="small-table" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setSmallTableBouncing)} animate={smallTableBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-grab active:cursor-grabbing" style={{ transformOrigin: "400px 430px" }}>
                   <rect x="375" y="420" width="6" height="35" fill="#5D4037" />
                   <rect x="420" y="420" width="6" height="35" fill="#5D4037" />
                   <rect x="360" y="415" width="80" height="8" fill="#8D6E63" rx="2" />
@@ -606,7 +646,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                   </g>
                 </motion.g>
 
-                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setChairRightBouncing)} animate={chairRightBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-grab active:cursor-grabbing" style={{ transformOrigin: "560px 420px" }}>
+                <motion.g id="chair-right" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setChairRightBouncing)} animate={chairRightBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-grab active:cursor-grabbing" style={{ transformOrigin: "560px 420px" }}>
                   <rect x="530" y="420" width="6" height="40" fill="#8D6E63" /> 
                   <rect x="590" y="420" width="6" height="40" fill="#8D6E63" /> 
                   <rect x="510" y="440" width="8" height="30" fill="#6D4C41" /> 
@@ -616,7 +656,7 @@ export function HouseScreen({ onBack }: { onBack: () => void }) {
                   <polygon points="535,420 585,420 580,360 540,360" fill="url(#checker)" />
                 </motion.g>
 
-                <motion.g drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setCoffeeTableBouncing)} animate={coffeeTableBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-grab active:cursor-grabbing" style={{ transformOrigin: "400px 520px" }}>
+                <motion.g id="coffee-table" drag dragMomentum={false} whileDrag={{ scale: 1.1 }} onClick={() => triggerBounce(setCoffeeTableBouncing)} animate={coffeeTableBouncing ? { scale: [1, 1.05, 0.95, 1.02, 1], scaleY: [1, 0.95, 1.05, 0.98, 1] } : {}} className="cursor-grab active:cursor-grabbing" style={{ transformOrigin: "400px 520px" }}>
                   <rect x="345" y="480" width="10" height="65" fill="#8D6E63" rx="2" />
                   <rect x="465" y="480" width="10" height="65" fill="#8D6E63" rx="2" />
                   <rect x="315" y="520" width="12" height="75" fill="#5D4037" rx="2" />
