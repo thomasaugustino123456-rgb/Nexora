@@ -255,6 +255,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   pushupsGoal: 5,
   waterGoal: 2,
   reminderTime: '09:00',
+  reminderTime2: '21:00',
   displayName: 'Nexora User',
   themeColor: '#3b82f6',
   soundEnabled: true,
@@ -615,9 +616,16 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [showAuth, setShowAuth] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const [activeScreen, setActiveScreen] = useState<Screen>('home');
+  const [activeScreen, setActiveScreen] = useState<Screen>(() => {
+    const saved = localStorage.getItem('nexora_active_screen');
+    return (saved as Screen) || 'home';
+  });
   const [activeCustomPlan, setActiveCustomPlan] = useState<CustomPlan | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    localStorage.setItem('nexora_active_screen', activeScreen);
+  }, [activeScreen]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -798,7 +806,20 @@ export default function App() {
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [fcmError, setFcmError] = useState<string | null>(null);
-  
+
+  const sendNotification = (title: string, options: NotificationOptions) => {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    
+    // Try to use service worker registration for better background support
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification(title, options);
+      });
+    } else {
+      new Notification(title, options);
+    }
+  };
+
   // Version Update Logic
   const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean, imageUrl?: string } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
@@ -1433,41 +1454,43 @@ export default function App() {
       const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       const todayStr = now.toISOString().split('T')[0];
       
-      const sendNotification = (title: string, options: NotificationOptions) => {
-        // Try to use service worker registration for better background support
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.ready.then(registration => {
-            registration.showNotification(title, options);
-          });
-        } else {
-          new Notification(title, options);
-        }
-      };
-
       // Main Reminder
-      if (currentTimeStr === settings.reminderTime) {
-        const lastReminderDate = localStorage.getItem('nexora_last_reminder_date');
-        if (lastReminderDate !== todayStr) {
+      if (currentTimeStr === settings.reminderTime || currentTimeStr === settings.reminderTime2) {
+        const lastReminderKey = `nexora_last_reminder_${currentTimeStr}_${todayStr}`;
+        const lastReminderDone = localStorage.getItem(lastReminderKey);
+        if (!lastReminderDone) {
           sendNotification('Nexora 🔥', {
             body: 'Hey 👋 Ready for today’s challenge?',
             icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
           });
-          localStorage.setItem('nexora_last_reminder_date', todayStr);
+          localStorage.setItem(lastReminderKey, 'true');
+        }
+      }
+
+      // Midnight Challenge Restart Notification
+      if (currentTimeStr === '00:00') {
+        const lastRestartKey = `nexora_last_restart_${todayStr}`;
+        if (!localStorage.getItem(lastRestartKey)) {
+          sendNotification('New Day, New Goals! 🌅', {
+            body: 'Challenges have been restarted! Let\'s crush it today, bro!',
+            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+          });
+          localStorage.setItem(lastRestartKey, 'true');
         }
       }
 
       // Custom Plan Reminders
       customPlans.forEach(plan => {
-        if (plan.reminderTime === currentTimeStr) {
+        if (plan.reminderTime === currentTimeStr || plan.reminderTime2 === currentTimeStr) {
           const currentDay = now.getDay();
           if (plan.days.includes(currentDay)) {
-            const lastPlanReminderDate = localStorage.getItem(`nexora_last_reminder_date_${plan.id}`);
-            if (lastPlanReminderDate !== todayStr) {
+            const lastPlanReminderKey = `nexora_last_reminder_${plan.id}_${currentTimeStr}_${todayStr}`;
+            if (!localStorage.getItem(lastPlanReminderKey)) {
               sendNotification(`${plan.name} 🚀`, {
                 body: `Time for your custom plan: ${plan.name}! Let's go!`,
                 icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
               });
-              localStorage.setItem(`nexora_last_reminder_date_${plan.id}`, todayStr);
+              localStorage.setItem(lastPlanReminderKey, 'true');
             }
           }
         }
@@ -1481,7 +1504,7 @@ export default function App() {
     checkReminders();
 
     return () => clearInterval(interval);
-  }, [settings.notificationsEnabled, settings.reminderTime, customPlans]);
+  }, [settings.notificationsEnabled, settings.reminderTime, settings.reminderTime2, customPlans]);
 
   const handleSaveCustomPlan = async (plan: CustomPlan) => {
     if (!user) return;
@@ -1655,10 +1678,24 @@ export default function App() {
         });
         
         if (changed) {
+          const hasIce = updatedTrophies.some(t => t.type === 'ice');
+          const hasBroken = updatedTrophies.some(t => t.type === 'broken');
+
+          if (settings.notificationsEnabled) {
+            if (hasIce) {
+              sendNotification('Trophy Alert! 🧊', {
+                body: 'One of your trophies just turned to ICE! Complete a challenge now to save it!',
+                icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+              });
+            } else if (hasBroken) {
+              sendNotification('Trophy Alert! 💔', {
+                body: 'Oh no! A trophy has BROKEN! Don\'t let more break, bro!',
+                icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+              });
+            }
+          }
+
           if (settings.soundEnabled) {
-            const hasIce = updatedTrophies.some(t => t.type === 'ice');
-            const hasBroken = updatedTrophies.some(t => t.type === 'broken');
-            
             // Use a timeout to ensure side effects happen outside of the render/update phase
             setTimeout(() => {
               if (hasIce) playTrophySound('ice');
@@ -1685,18 +1722,24 @@ export default function App() {
     if (canAwardTrophy) {
       console.log(`Awarding trophy for completion #${nextCompletionsCount} today!`);
       if (settings.soundEnabled) {
+        // Play the specific trophy sound for 1, 2, 3
         if (nextCompletionsCount === 1) play('trophy1');
         else if (nextCompletionsCount === 2) play('trophy2');
         else if (nextCompletionsCount === 3) play('trophy3');
+        else play('trophy1'); // Fallback for 4+
       }
       setEarnedTrophyToday(true);
     } else {
-      console.log("Already reached 3 completions today, no more trophies or pushups skipped.");
+      console.log("No trophy awarded (either limit reached or pushups skipped).");
+      // Still play a success sound if they completed it
+      if (settings.soundEnabled) {
+        play('continue');
+      }
       setEarnedTrophyToday(false);
     }
 
     setStats((prevStats) => {
-      const isDailyQuest = challengeStep === dailyQuest;
+      const isDailyQuest = progress.dailyQuestDone || (challengeStep === dailyQuest);
       const pointsToAdd = isDailyQuest ? 20 : 10;
       const oldLevel = Math.floor((prevStats.totalPoints || 0) / 100) + 1;
       
@@ -2161,6 +2204,7 @@ export default function App() {
                   onSendMotivation={sendMotivation}
                   onSendTestEmail={sendTestEmail}
                   showToast={showToast}
+                  sendNotification={sendNotification}
                 />
               </motion.div>
             )}
@@ -2464,6 +2508,7 @@ export default function App() {
                   earnedTrophyToday={earnedTrophyToday}
                   showToast={showToast}
                   play={play}
+                  dailyQuest={dailyQuest}
                 />
               </motion.div>
             )}
@@ -2479,8 +2524,8 @@ export default function App() {
         )}
 
         {activeScreen !== 'challenge' && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 flex justify-center pointer-events-none">
-            <nav className="glass-card px-4 py-3 sm:px-8 sm:py-4 flex items-center gap-4 sm:gap-12 pointer-events-auto">
+          <div className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 flex justify-center pointer-events-none z-[80]">
+            <nav className="glass-card px-4 py-3 sm:px-8 sm:py-4 flex items-center gap-4 sm:gap-12 pointer-events-auto overflow-x-auto max-w-[95vw] no-scrollbar">
               <NavButton 
                 active={activeScreen === 'home'} 
                 onClick={() => {
@@ -2669,7 +2714,7 @@ function NavButton({ active, onClick, icon, label }: { active: boolean, onClick:
   return (
     <button 
       onClick={handleClick}
-      className={`flex flex-col items-center gap-0.5 sm:gap-1 transition-all ${active ? 'scale-105 sm:scale-110' : 'text-blue-900/30 hover:text-blue-900/50'}`}
+      className={`flex flex-col items-center gap-0.5 sm:gap-1 transition-all flex-shrink-0 ${active ? 'scale-105 sm:scale-110' : 'text-blue-900/30 hover:text-blue-900/50'}`}
       style={active ? { color: 'var(--accent-color)' } : {}}
     >
       <div className="scale-90 sm:scale-100">
@@ -3737,7 +3782,7 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
   );
 }
 
-function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, fcmToken, fcmError, onRetryFCM, onSendTestNotification, onSendMotivation, onSendTestEmail, showToast }: { 
+function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, fcmToken, fcmError, onRetryFCM, onSendTestNotification, onSendMotivation, onSendTestEmail, showToast, sendNotification }: { 
   user: FirebaseUser | null,
   settings: UserSettings, 
   setSettings: (s: UserSettings) => void, 
@@ -3750,7 +3795,8 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
   onSendTestNotification: () => void,
   onSendMotivation: () => void,
   onSendTestEmail: () => void,
-  showToast: (message: string, type: 'success' | 'error') => void
+  showToast: (message: string, type: 'success' | 'info' | 'error') => void,
+  sendNotification: (title: string, options: NotificationOptions) => void
 }) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
@@ -4090,8 +4136,11 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
           </div>
           {settings.notificationsEnabled && (
             <div className="space-y-3">
-              <div className="flex items-center gap-3 bg-white/40 p-3 rounded-xl">
-                <span className="text-xs font-bold text-blue-900/60">Time:</span>
+              <div className="flex items-center justify-between gap-3 bg-white/40 p-3 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <Clock size={14} className="text-blue-500" />
+                  <span className="text-xs font-bold text-blue-900/60">Reminder 1:</span>
+                </div>
                 <input 
                   type="time" 
                   value={settings.reminderTime}
@@ -4099,11 +4148,23 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
                   className="bg-transparent font-bold text-blue-900 text-sm focus:outline-none"
                 />
               </div>
+              <div className="flex items-center justify-between gap-3 bg-white/40 p-3 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <Clock size={14} className="text-purple-500" />
+                  <span className="text-xs font-bold text-blue-900/60">Reminder 2:</span>
+                </div>
+                <input 
+                  type="time" 
+                  value={settings.reminderTime2 || '21:00'}
+                  onChange={(e) => setSettings({ ...settings, reminderTime2: e.target.value })}
+                  className="bg-transparent font-bold text-blue-900 text-sm focus:outline-none"
+                />
+              </div>
               <button 
                 onClick={() => {
                   vibrate(VIBRATION_PATTERNS.CLICK);
                   if (Notification.permission === 'granted') {
-                    new Notification('Nexora 🔥', {
+                    sendNotification('Nexora 🔥', {
                       body: 'Test notification! It works, bro! 🚀',
                       icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
                     });
@@ -4619,7 +4680,7 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
   );
 }
 
-function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play }: { 
+function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest }: { 
   step: ChallengeStep, 
   setStep: (s: ChallengeStep) => void, 
   customSteps?: ChallengeStep[],
@@ -4633,7 +4694,8 @@ function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dail
   onExit: () => void,
   earnedTrophyToday: boolean,
   showToast: (msg: string, type?: 'success' | 'info' | 'error') => void,
-  play: (s: any) => void
+  play: (s: any) => void,
+  dailyQuest: ChallengeStep | null
 }) {
   const baseSteps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'gratitude', 'reaction'];
   const defaultSteps: ChallengeStep[] = [...baseSteps, ...(settings.isPro ? ['writing' as ChallengeStep] : []), 'meditation' as ChallengeStep];
@@ -4658,12 +4720,16 @@ function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dail
     if (!skipped) {
       setStats(prev => ({ 
         ...prev, 
-        xp: (prev.xp || 0) + 5,
-        weeklyXP: (prev.weeklyXP || 0) + 5 
+        xp: (prev.xp || 0) + 10, // 10 XP per step
+        weeklyXP: (prev.weeklyXP || 0) + 10,
+        coins: (prev.coins || 0) + 5 // 5 Coins per step
       }));
+      showToast('Step Complete! +10 XP & +5 Coins! 🔥', 'success');
+      if (settings.soundEnabled) play('continue');
     }
     const updates: Partial<DailyProgress> = {};
     if (step === 'pushups') updates.pushupsDone = !skipped;
+    if (step === dailyQuest) updates.dailyQuestDone = !skipped;
     if (step === 'breathing') updates.breathingDone = true;
     if (step === 'drawing') {
       updates.drawingDone = true;
@@ -4680,10 +4746,6 @@ function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dail
 
     if (Object.keys(updates).length > 0) {
       setDailyProgress(finalProgress);
-    }
-
-    if (!skipped) {
-      setStats(prev => ({ ...prev, xp: (prev.xp || 0) + 5 }));
     }
 
     if (currentIdx < steps.length - 1) {

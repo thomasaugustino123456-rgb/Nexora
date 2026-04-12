@@ -28,6 +28,7 @@ export interface UserSettings {
   pushupsGoal: number;
   waterGoal: number;
   reminderTime: string;
+  reminderTime2?: string;
   displayName?: string;
   profilePic?: string; // base64
   themeColor?: string;
@@ -151,6 +152,7 @@ export interface CustomPlan {
   challenges: ChallengeStep[];
   days: number[]; // 0-6 (Sun-Sat)
   reminderTime?: string;
+  reminderTime2?: string;
   createdAt: string;
 }
 

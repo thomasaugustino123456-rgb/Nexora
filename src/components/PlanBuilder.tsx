@@ -46,6 +46,7 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
   const [selectedChallenges, setSelectedChallenges] = useState<ChallengeStep[]>([]);
   const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [time, setTime] = useState('09:00');
+  const [time2, setTime2] = useState('21:00');
   const [isCreating, setIsCreating] = useState(false);
   const [step, setStep] = useState(1);
 
@@ -84,6 +85,7 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
         challenges: selectedChallenges,
         days: selectedDays,
         reminderTime: time,
+        reminderTime2: time2,
         createdAt: new Date().toISOString()
       };
       await onSave(newPlan);
@@ -217,15 +219,32 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
 
         {/* Reminder Time */}
         <section className="space-y-4">
-          <label className="text-xs font-black text-blue-900/40 uppercase tracking-widest">Reminder Time</label>
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 border-2 border-transparent">
-            <Clock className="text-blue-900/30" size={24} />
-            <input 
-              type="time" 
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="flex-1 bg-transparent outline-none font-bold text-blue-900 text-lg"
-            />
+          <label className="text-xs font-black text-blue-900/40 uppercase tracking-widest">Reminder Times</label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50 border-2 border-transparent">
+              <Clock className="text-blue-900/30" size={20} />
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-blue-900/40 uppercase">Time 1</span>
+                <input 
+                  type="time" 
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  className="bg-transparent outline-none font-bold text-blue-900 text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50 border-2 border-transparent">
+              <Clock className="text-purple-900/30" size={20} />
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-blue-900/40 uppercase">Time 2</span>
+                <input 
+                  type="time" 
+                  value={time2}
+                  onChange={(e) => setTime2(e.target.value)}
+                  className="bg-transparent outline-none font-bold text-blue-900 text-sm"
+                />
+              </div>
+            </div>
           </div>
         </section>
 
