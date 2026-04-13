@@ -1412,6 +1412,17 @@ export default function App() {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    console.log("App State:", { 
+      loading, 
+      user: !!user, 
+      activeScreen, 
+      isAuthReady: !!auth.currentUser,
+      settingsLoaded: !!settings.displayName,
+      statsLoaded: !!stats.totalPoints
+    });
+  }, [loading, user, activeScreen, settings, stats]);
+
   // 10. Pro Daily Gift Logic
   useEffect(() => {
     if (settings.isPro && user && stats.lastGiftDate !== today) {
@@ -1760,43 +1771,47 @@ export default function App() {
   const handleCompleteChallenge = (finalProgress?: DailyProgress) => {
     setEmergencyActive(false);
     const progress = finalProgress || dailyProgress;
-    const nextCompletionsCount = progress.completionsCount + 1;
+    const nextCompletionsCount = (progress.completionsCount || 0) + 1;
     const trophyLimit = isPro ? 10 : 3;
     const canAwardTrophy = nextCompletionsCount <= trophyLimit && progress.pushupsDone;
     
+    // Calculate how many tasks were actually completed in this session
+    const completedTasks = Object.entries(progress).filter(([key, value]) => 
+      ['pushupsDone', 'waterDrank', 'breathingDone', 'drawingDone', 'footballDone', 'bubblesDone', 'memoryDone', 'gratitudeDone', 'reactionDone', 'meditationDone', 'writingDone'].includes(key) && 
+      (typeof value === 'boolean' ? value === true : (typeof value === 'number' ? value > 0 : false))
+    ).length;
+
     if (canAwardTrophy) {
       console.log(`Awarding trophy for completion #${nextCompletionsCount} today!`);
       if (settings.soundEnabled) {
-        // Play the specific trophy sound for 1, 2, 3... up to 10 for Pro
         if (nextCompletionsCount === 1) play('trophy1');
         else if (nextCompletionsCount === 2) play('trophy2');
         else if (nextCompletionsCount === 3) play('trophy3');
-        else play('trophy1'); // Fallback for 4+
+        else play('trophy1');
       }
       setEarnedTrophyToday(true);
     } else {
-      console.log("No trophy awarded (either limit reached or pushups skipped).");
-      // Still play a success sound if they completed it
-      if (settings.soundEnabled) {
-        play('continue');
-      }
+      if (settings.soundEnabled) play('continue');
       setEarnedTrophyToday(false);
     }
 
     setStats((prevStats) => {
       const isDailyQuest = progress.dailyQuestDone || (challengeStep === dailyQuest);
-      const pointsToAdd = isDailyQuest ? 20 : 10;
       
-      // Calculate step rewards to be given at the end
-      // Assuming standard flow has 10 steps (9 base + 1 meditation/writing)
-      // We'll make it dynamic based on the actual steps completed if possible, 
-      // but for now we'll use a fixed bonus for finishing the whole thing.
-      const stepsBonusXP = 100; 
-      const stepsBonusCoins = 50;
+      // Base rewards for finishing the flow
+      let pointsToAdd = isDailyQuest ? 25 : 15;
+      let xpToAdd = isDailyQuest ? 50 : 30;
+      let coinsToAdd = isDailyQuest ? 30 : 20;
+
+      // Session Bonus: Only give full bonus if they completed at least 3 tasks
+      const sessionBonusMultiplier = completedTasks >= 3 ? 1.5 : 1.0;
+      pointsToAdd = Math.round(pointsToAdd * sessionBonusMultiplier);
+      xpToAdd = Math.round(xpToAdd * sessionBonusMultiplier);
+      coinsToAdd = Math.round(coinsToAdd * sessionBonusMultiplier);
+
+      const oldLevel = prevStats.level || 1;
       
-      const oldLevel = Math.floor((prevStats.totalPoints || 0) / 100) + 1;
-      
-      // Streak logic (only on first completion of the day)
+      // Streak logic
       let finalStreak = prevStats.streak || 0;
       let newBestStreak = prevStats.bestStreak || 0;
       let newTotalCompletedDays = prevStats.totalCompletedDays || 0;
@@ -1804,9 +1819,7 @@ export default function App() {
       let streakBonusPoints = 0;
 
       if (prevStats.lastCompletedDate !== today) {
-        const baseStreak = prevStats.lastCompletedDate === getYesterday() ? (prevStats.streak || 0) + 5 : 5;
-        
-        // Apply Streak Protection effect if purchased
+        const baseStreak = prevStats.lastCompletedDate === getYesterday() ? (prevStats.streak || 0) + 1 : 1;
         const hasStreakProtection = settings.purchasedItems?.includes('streak-protection');
         finalStreak = hasStreakProtection ? Math.max(baseStreak, prevStats.streak || 0) : baseStreak;
         
@@ -1814,50 +1827,55 @@ export default function App() {
         newTotalCompletedDays = (prevStats.totalCompletedDays || 0) + 1;
         newLastCompletedDate = today;
         
-        // Apply Double Points effect if purchased
         const hasDoublePoints = settings.purchasedItems?.includes('double-points');
         streakBonusPoints = hasDoublePoints ? 10 : 5;
       }
 
       const newPoints = (prevStats.totalPoints || 0) + pointsToAdd + streakBonusPoints;
-      const newLevel = Math.floor(newPoints / 100) + 1;
+      const newXP = (prevStats.xp || 0) + xpToAdd;
+      const newLevel = Math.floor(newXP / 1000) + 1; // 1000 XP per level
+      
       let levelUpBonusCoins = 0;
-      let levelUpBonusStreak = 0;
-
       if (newLevel > oldLevel) {
         setShowLevelUp(newLevel);
-        levelUpBonusCoins = 15;
-        levelUpBonusStreak = 5;
-        showToast(`LEVEL UP! +15 Coins & +5 Streak! 🔥`, 'success');
+        levelUpBonusCoins = 50;
+        showToast(`LEVEL UP! You are now Level ${newLevel}! +50 Coins! 🔥`, 'success');
+        vibrate(VIBRATION_PATTERNS.TROPHY);
       }
 
-      showToast(`Challenge Complete! +${pointsToAdd + streakBonusPoints} Points, +${stepsBonusXP} XP & +${15 + stepsBonusCoins} Coins! 🏆`, 'success');
+      showToast(`Session Complete! +${pointsToAdd + streakBonusPoints} Points, +${xpToAdd} XP & +${coinsToAdd} Coins! 🏆`, 'success');
+
+      const newTrophies = [...(prevStats.trophies || [])];
+      if (newTotalCompletedDays === 1 && !newTrophies.find(t => t.id === 'first-steps')) {
+        newTrophies.push({ id: 'first-steps', type: 'golden', earnedDate: new Date().toISOString(), lastUpdated: new Date().toISOString() });
+      }
 
       const newStats = {
         ...prevStats,
         totalPoints: newPoints,
         weeklyPoints: (prevStats.weeklyPoints || 0) + pointsToAdd + streakBonusPoints,
-        xp: (prevStats.xp || 0) + 5 + stepsBonusXP, // 5 XP + steps bonus
-        weeklyXP: (prevStats.weeklyXP || 0) + 5 + stepsBonusXP,
+        xp: newXP,
+        weeklyXP: (prevStats.weeklyXP || 0) + xpToAdd,
         level: newLevel,
-        coins: (prevStats.coins || 0) + 15 + stepsBonusCoins + levelUpBonusCoins,
-        streak: finalStreak + levelUpBonusStreak,
+        coins: (prevStats.coins || 0) + coinsToAdd + levelUpBonusCoins,
+        streak: finalStreak,
         bestStreak: newBestStreak,
         totalCompletedDays: newTotalCompletedDays,
         lastCompletedDate: newLastCompletedDate,
+        trophies: newTrophies,
         pointsByCategory: {
-          physical: (prevStats.pointsByCategory?.physical || 0) + (isDailyQuest ? 8 : 4),
-          mental: (prevStats.pointsByCategory?.mental || 0) + (isDailyQuest ? 8 : 4),
-          creative: (prevStats.pointsByCategory?.creative || 0) + (isDailyQuest ? 4 : 2),
+          physical: (prevStats.pointsByCategory?.physical || 0) + (isDailyQuest ? 10 : 5),
+          mental: (prevStats.pointsByCategory?.mental || 0) + (isDailyQuest ? 10 : 5),
+          creative: (prevStats.pointsByCategory?.creative || 0) + (isDailyQuest ? 5 : 2),
         }
       };
 
       // Update Leaderboard
       if (user) {
-        // Promotion logic: if in top 3 of current leaderboard, move up
         const currentRank = leaderboard.findIndex(l => l.uid === user.uid) + 1;
         let newLeague = settings.league || 'Bronze';
         if (currentRank > 0 && currentRank <= 3 && newStats.weeklyPoints > 50) {
+          const LEAGUES = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'];
           const leagueIndex = LEAGUES.indexOf(newLeague);
           if (leagueIndex < LEAGUES.length - 1) {
             newLeague = LEAGUES[leagueIndex + 1];
@@ -2525,17 +2543,26 @@ export default function App() {
               </motion.div>
             )}
             {activeScreen === 'house' && (
-              <HouseScreen 
-                onBack={() => setActiveScreen('home')} 
-                stats={stats}
-                settings={settings}
-                onBuyItem={buyHouseItem}
-                onPlaceItem={placeHouseItem}
-                onRemoveItem={removeHouseItem}
-                onUpdateItemPosition={updateHouseItemPosition}
-                onUpdateSettings={(newSettings) => setSettings(prev => ({ ...prev, ...newSettings }))}
-                onUpdateStats={(newStats) => setStats(prev => ({ ...prev, ...newStats }))}
-              />
+              <motion.div
+                key="house"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <HouseScreen 
+                  onBack={() => setActiveScreen('home')} 
+                  stats={stats}
+                  settings={settings}
+                  onBuyItem={buyHouseItem}
+                  onPlaceItem={placeHouseItem}
+                  onRemoveItem={removeHouseItem}
+                  onUpdateItemPosition={updateHouseItemPosition}
+                  onUpdateSettings={(newSettings) => setSettings(prev => ({ ...prev, ...newSettings }))}
+                  onUpdateStats={(newStats) => setStats(prev => ({ ...prev, ...newStats }))}
+                />
+              </motion.div>
             )}
             {activeScreen === 'challenge' && (
               <motion.div
