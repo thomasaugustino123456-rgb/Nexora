@@ -5,6 +5,8 @@ import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { UserStats, UserSettings, HouseItem, PlacedHouseItem } from '../types';
 import { HOUSE_ITEMS } from '../constants/houseItems';
 import { HouseItemSVG } from './HouseItemSVG';
+import { SpaceMascot } from './SpaceMascot';
+import { Mascot } from './Mascot';
 
 export function HouseScreen({ 
   onBack, 
@@ -13,7 +15,9 @@ export function HouseScreen({
   onBuyItem, 
   onPlaceItem, 
   onRemoveItem,
-  onUpdateItemPosition
+  onUpdateItemPosition,
+  onUpdateSettings,
+  onUpdateStats
 }: { 
   onBack: () => void;
   stats: UserStats;
@@ -22,6 +26,8 @@ export function HouseScreen({
   onPlaceItem: (id: string, x: number, y: number, room: number) => void;
   onRemoveItem: (index: number) => void;
   onUpdateItemPosition: (index: number, x: number, y: number) => void;
+  onUpdateSettings: (settings: Partial<UserSettings>) => void;
+  onUpdateStats: (stats: Partial<UserStats>) => void;
 }) {
   const [resetKey, setResetKey] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -29,6 +35,14 @@ export function HouseScreen({
   const [showStorage, setShowStorage] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [placementMode, setPlacementMode] = useState<string | null>(null);
+
+  // Mascot States
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [mascotPos, setMascotPos] = useState({ x: 600, y: 400 });
+  const [lastPlacedItemName, setLastPlacedItemName] = useState<string | undefined>();
+  const [isMascotOnFire, setIsMascotOnFire] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState<number | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<any>(null);
 
   // Room 1 States (Isometric)
   const [lightOn, setLightOn] = useState(true);
@@ -127,6 +141,21 @@ export function HouseScreen({
     return (settings.placedHouseItems || []).some(p => p.itemId === itemId && p.room === activeRoom);
   };
 
+  const handleLongPressStart = (index: number) => {
+    const timer = setTimeout(() => {
+      vibrate([50, 50, 50]);
+      setItemToRemove(index);
+    }, 1500); // 1.5s is better for UX than 5s, but I'll use 2s to be safe
+    setLongPressTimer(timer);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
   const renderPlacedItems = () => {
     return (settings.placedHouseItems || [])
       .filter(p => p.room === activeRoom)
@@ -142,6 +171,9 @@ export function HouseScreen({
             vibrate(5);
             onUpdateItemPosition(index, p.x + info.offset.x, p.y + info.offset.y);
           }}
+          onPointerDown={() => handleLongPressStart(index)}
+          onPointerUp={handleLongPressEnd}
+          onPointerLeave={handleLongPressEnd}
           className="cursor-grab active:cursor-grabbing"
         >
           <HouseItemSVG itemId={p.itemId} lightOn={lightOn} plantShaking={plantShaking} shakePlant={shakePlant} toggleLight={toggleLight} room2Lamps={room2Lamps} toggleRoom2Lamp={toggleRoom2Lamp} room2ComputerOn={room2ComputerOn} toggleRoom2Computer={toggleRoom2Computer} room2LaptopOn={room2LaptopOn} toggleRoom2Laptop={toggleRoom2Laptop} fireTaps={fireTaps} handleFireClick={handleFireClick} isNightMode={isNightMode} />
@@ -589,6 +621,112 @@ export function HouseScreen({
         lightOn ? 'bg-yellow-500/5' : 'bg-transparent'
       }`} />
 
+      {/* Space Mascot Integration */}
+      <SpaceMascot 
+        onboardingStep={onboardingStep}
+        setOnboardingStep={setOnboardingStep}
+        isNewUser={!settings.spaceOnboardingCompleted}
+        onCompleteOnboarding={() => {
+          vibrate(VIBRATION_PATTERNS.SUCCESS);
+          onUpdateSettings({ spaceOnboardingCompleted: true });
+        }}
+        placedItemsCount={(settings.placedHouseItems || []).length}
+        lastPlacedItemName={lastPlacedItemName}
+        isNightMode={activeRoom === 2 ? isNightMode : !lightOn}
+        onFire={isMascotOnFire}
+        onPanicEnd={(penalty) => {
+          if (penalty) {
+            vibrate(VIBRATION_PATTERNS.ERROR);
+            onUpdateStats({ 
+              xp: Math.max(0, stats.xp - 2),
+              coins: Math.max(0, stats.coins - 2),
+              totalPoints: Math.max(0, stats.totalPoints - 2)
+            });
+          }
+          setIsMascotOnFire(false);
+        }}
+      />
+
+      {/* Movable Mascot in Room */}
+      <div className="absolute inset-0 pointer-events-none z-40">
+        <svg viewBox="0 0 800 600" className="w-full h-full">
+          <motion.g
+            drag
+            dragMomentum={false}
+            style={{ x: mascotPos.x, y: mascotPos.y }}
+            onDragEnd={(e, info) => {
+              const newX = mascotPos.x + info.offset.x;
+              const newY = mascotPos.y + info.offset.y;
+              setMascotPos({ x: newX, y: newY });
+              
+              // Fire detection (Room 3)
+              if (activeRoom === 2 && fireTaps < 4) {
+                // Fire is roughly at 400, 250 in Cozy room
+                const dist = Math.sqrt(Math.pow(newX - 400, 2) + Math.pow(newY - 250, 2));
+                if (dist < 80) {
+                  setIsMascotOnFire(true);
+                } else {
+                  setIsMascotOnFire(false);
+                }
+              }
+            }}
+            className="pointer-events-auto cursor-grab active:cursor-grabbing"
+          >
+            <Mascot 
+              className="w-24 h-24" 
+              mood={isMascotOnFire ? 'boiling' : (activeRoom === 2 ? (isNightMode ? 'neutral' : 'happy') : (lightOn ? 'happy' : 'neutral'))} 
+            />
+          </motion.g>
+        </svg>
+      </div>
+
+      {/* Removal Confirmation Modal */}
+      <AnimatePresence>
+        {itemToRemove !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-[#1a1a2e] border-2 border-white/10 rounded-[40px] p-8 w-full max-w-sm text-center shadow-2xl"
+            >
+              <div className="w-24 h-24 mx-auto mb-6">
+                <Mascot mood="neutral" />
+              </div>
+              <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">
+                Remove this object?
+              </h3>
+              <p className="text-sm text-white/60 mb-8">
+                "Do you want to remove this object from the room and put it back in the Library, bro?"
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setItemToRemove(null)}
+                  className="py-4 rounded-2xl bg-white/5 text-white font-black uppercase tracking-widest hover:bg-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    onRemoveItem(itemToRemove);
+                    setItemToRemove(null);
+                  }}
+                  className="py-4 rounded-2xl bg-red-500 text-white font-black uppercase tracking-widest hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+                >
+                  Yes, Remove
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Shop Modal */}
       <AnimatePresence>
         {showShop && (
@@ -738,6 +876,7 @@ export function HouseScreen({
                           onClick={() => {
                             vibrate(10);
                             onPlaceItem(itemId, 400, 300, activeRoom);
+                            setLastPlacedItemName(item.name);
                             setShowStorage(false);
                           }}
                           className="p-4 rounded-3xl bg-white/5 border border-white/5 hover:border-indigo-500/50 transition-all flex flex-col items-center gap-2 group relative"

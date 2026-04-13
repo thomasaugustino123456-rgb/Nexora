@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import firebaseConfigData from './firebase-applet-config.json';
 
@@ -15,12 +15,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with long polling to bypass potential WebSocket issues
+// Initialize Firestore with settings to bypass potential WebSocket/Proxy issues
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  })
+  experimentalAutoDetectLongPolling: true,
 }, firebaseConfigData.firestoreDatabaseId);
 
 export const auth = getAuth(app);

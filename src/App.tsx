@@ -1331,13 +1331,14 @@ export default function App() {
   useEffect(() => {
     async function testConnection() {
       try {
+        // Add a small delay to allow network to stabilize
+        await new Promise(resolve => setTimeout(resolve, 1000));
         await getDocFromServer(doc(db, 'test', 'connection'));
         console.log("Firestore: Connection test successful");
       } catch (error) {
-        if(error instanceof Error && error.message.includes('the client is offline')) {
-          console.error("Please check your Firebase configuration. The client is offline.");
+        if(error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('Could not reach Cloud Firestore backend'))) {
+          console.error("Firestore Connection Error: The client is offline or backend unreachable. Check your internet or Firebase config.");
         }
-        // Skip logging for other errors, as this is simply a connection test.
       }
     }
     testConnection();
@@ -2532,6 +2533,8 @@ export default function App() {
                 onPlaceItem={placeHouseItem}
                 onRemoveItem={removeHouseItem}
                 onUpdateItemPosition={updateHouseItemPosition}
+                onUpdateSettings={(newSettings) => setSettings(prev => ({ ...prev, ...newSettings }))}
+                onUpdateStats={(newStats) => setStats(prev => ({ ...prev, ...newStats }))}
               />
             )}
             {activeScreen === 'challenge' && (

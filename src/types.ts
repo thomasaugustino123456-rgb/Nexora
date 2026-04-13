@@ -52,6 +52,7 @@ export interface UserSettings {
   badgeSettings?: BadgeSettings;
   purchasedHouseItemIds?: string[];
   placedHouseItems?: PlacedHouseItem[];
+  spaceOnboardingCompleted?: boolean;
 }
 
 export interface ShopItem {
