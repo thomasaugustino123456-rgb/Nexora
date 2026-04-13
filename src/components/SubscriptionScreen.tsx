@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { ArrowLeft, Check, Crown, Zap, Star } from 'lucide-react';
 
 export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, userId: string }) {

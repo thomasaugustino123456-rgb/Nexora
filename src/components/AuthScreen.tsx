@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../firebase';
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { motion, useAnimationControls } from 'motion/react';
+import { motion, useAnimationControls } from 'framer-motion';
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Mascot, MascotMood } from './Mascot';
 import { ArrowLeft } from 'lucide-react';

@@ -1,4 +1,4 @@
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { LibraryItem, UserStats, UserSettings } from '../types';
 import { ArrowLeft, Trash2, Power, PowerOff, Package, Book, Image as ImageIcon, Sparkles, Music, Play, Pause, Volume2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';

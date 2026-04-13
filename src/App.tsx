@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Trophy, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock } from 'lucide-react';
-import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
+import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock } from 'lucide-react';
+import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
 import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan } from './types';
@@ -21,46 +21,14 @@ import { PushupMascot } from './components/PushupMascot';
 import { WaterMascot } from './components/WaterMascot';
 import { WritingMascot } from './components/WritingMascot';
 import { HouseScreen } from './components/HouseScreen';
-import { GoldenTrophy, IceTrophy, BrokenTrophy } from './components/Trophies';
+import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './components/Trophies';
 import { LibraryScreen } from './components/LibraryScreen';
 import { ShopScreen, SHOP_ITEMS } from './components/ShopScreen';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { GoogleGenAI } from "@google/genai";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
 
-function playTrophySound(type: string) {
-  try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    if (audioContext.state === 'suspended') {
-      audioContext.resume();
-    }
-    const osc = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-
-    osc.type = 'triangle';
-    if (type === 'golden') {
-      osc.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-      osc.frequency.exponentialRampToValueAtTime(1046.50, audioContext.currentTime + 0.5); // C6
-    } else if (type === 'ice') {
-      osc.frequency.setValueAtTime(329.63, audioContext.currentTime); // E4
-      osc.frequency.exponentialRampToValueAtTime(164.81, audioContext.currentTime + 0.5); // E3
-    } else {
-      osc.frequency.setValueAtTime(261.63, audioContext.currentTime); // C4
-      osc.frequency.exponentialRampToValueAtTime(130.81, audioContext.currentTime + 0.5); // C3
-    }
-
-    gain.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-    osc.connect(gain);
-    gain.connect(audioContext.destination);
-
-    osc.start();
-    osc.stop(audioContext.currentTime + 0.5);
-  } catch (e) {
-    console.error('Trophy sound error:', e);
-  }
-}
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 function WhatIsNewModal({ onClose }: { onClose: () => void }) {
   const [updates, setUpdates] = useState<any>(null);
@@ -409,11 +377,6 @@ function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSetting
     setResponse("");
     
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) throw new Error("API Key missing");
-      
-      const ai = new GoogleGenAI({ apiKey });
-      const model = "gemini-3-flash-preview";
       const prompt = `You are Nexora, a friendly water-bottle mascot for a productivity and wellness app. 
       The user says: "${userMsg}"
       Respond as Nexora. Be friendly, helpful, and encouraging. 
@@ -422,8 +385,8 @@ function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSetting
       Your current outfit is: ${settings.activeSkin || 'none'}.`;
       
       const result = await ai.models.generateContent({
-        model,
-        contents: [{ parts: [{ text: prompt }] }],
+        model: "gemini-3-flash-preview",
+        contents: prompt,
       });
       setResponse(result.text || "I'm here for you, bro! 🌊");
     } catch (error) {
@@ -436,12 +399,6 @@ function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSetting
   const generateMotivation = async () => {
     setLoading(true);
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("API Key missing");
-      }
-      const ai = new GoogleGenAI({ apiKey });
-      const model = "gemini-3-flash-preview";
       const prompt = `You are Nexora, a friendly water-bottle mascot for a productivity and wellness app. 
       The user's current streak is ${stats.streak} days. 
       Their total points are ${stats.totalPoints}.
@@ -450,8 +407,8 @@ function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSetting
       Be encouraging and maybe a bit bubbly!`;
       
       const result = await ai.models.generateContent({
-        model,
-        contents: [{ parts: [{ text: prompt }] }],
+        model: "gemini-3-flash-preview",
+        contents: prompt,
       });
       setResponse(result.text || "You're doing great, bro! Keep that streak alive! 🌊");
     } catch (error) {
@@ -612,6 +569,7 @@ function CoinAnimation({ onComplete, play, settings }: { onComplete: () => void,
 }
 
 export default function App() {
+  console.log("App component rendering...");
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isPro, setIsPro] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -1402,26 +1360,30 @@ export default function App() {
           }
         }
         setLoading(false);
+        console.log("Loading set to false (User found)");
       } else {
         setUser(null);
         setStats(DEFAULT_STATS);
         setSettings(DEFAULT_SETTINGS);
         setLoading(false);
+        console.log("Loading set to false (No user)");
       }
     });
     return unsubscribe;
   }, []);
 
   useEffect(() => {
-    console.log("App State:", { 
+    console.log("App State Change:", { 
       loading, 
       user: !!user, 
       activeScreen, 
       isAuthReady: !!auth.currentUser,
       settingsLoaded: !!settings.displayName,
-      statsLoaded: !!stats.totalPoints
+      statsLoaded: !!stats.totalPoints,
+      showAuth,
+      needsOnboarding
     });
-  }, [loading, user, activeScreen, settings, stats]);
+  }, [loading, user, activeScreen, settings, stats, showAuth, needsOnboarding]);
 
   // 10. Pro Daily Gift Logic
   useEffect(() => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target, Crown } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
