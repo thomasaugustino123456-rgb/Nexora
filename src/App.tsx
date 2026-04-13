@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Trophy, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -256,6 +256,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   waterGoal: 2,
   reminderTime: '09:00',
   reminderTime2: '21:00',
+  motivationTime: '12:00',
   displayName: 'Nexora User',
   themeColor: '#3b82f6',
   soundEnabled: true,
@@ -807,16 +808,33 @@ export default function App() {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [fcmError, setFcmError] = useState<string | null>(null);
 
-  const sendNotification = (title: string, options: NotificationOptions) => {
+  const sendNotification = async (title: string, options: NotificationOptions) => {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     
-    // Try to use service worker registration for better background support
+    // 1. Local Browser Notification (Immediate feedback if app is open)
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       navigator.serviceWorker.ready.then(registration => {
         registration.showNotification(title, options);
       });
     } else {
       new Notification(title, options);
+    }
+
+    // 2. Server-Side FCM Notification (For background/closed app support)
+    if (fcmToken) {
+      try {
+        await fetch('/api/send-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: fcmToken,
+            title: title,
+            body: options.body || '',
+          }),
+        });
+      } catch (error) {
+        console.error('Error sending server-side notification:', error);
+      }
     }
   };
 
@@ -1454,7 +1472,7 @@ export default function App() {
       const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       const todayStr = now.toISOString().split('T')[0];
       
-      // Main Reminder
+      // Main Reminders (AM/PM or any two times)
       if (currentTimeStr === settings.reminderTime || currentTimeStr === settings.reminderTime2) {
         const lastReminderKey = `nexora_last_reminder_${currentTimeStr}_${todayStr}`;
         const lastReminderDone = localStorage.getItem(lastReminderKey);
@@ -1464,6 +1482,28 @@ export default function App() {
             icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
           });
           localStorage.setItem(lastReminderKey, 'true');
+        }
+      }
+
+      // Daily Motivation Reminder
+      if (currentTimeStr === (settings.motivationTime || '12:00')) {
+        const lastMotivationKey = `nexora_last_motivation_${todayStr}`;
+        if (!localStorage.getItem(lastMotivationKey)) {
+          const quotes = [
+            "The only way to do great work is to love what you do. 🔥",
+            "Believe you can and you're halfway there. 🚀",
+            "Your limitation—it's only your imagination. ✨",
+            "Push yourself, because no one else is going to do it for you. 💪",
+            "Great things never come from comfort zones. 🏆",
+            "Dream it. Wish it. Do it. 🌟",
+            "Success doesn’t just find you. You have to go out and get it. ⚡"
+          ];
+          const quote = quotes[Math.floor(Math.random() * quotes.length)];
+          sendNotification('Daily Motivation! 💡', {
+            body: quote,
+            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+          });
+          localStorage.setItem(lastMotivationKey, 'true');
         }
       }
 
@@ -1495,6 +1535,9 @@ export default function App() {
           }
         }
       });
+
+      // Automatic Trophy Check (Periodic)
+      checkTrophies();
     };
 
     // Check every 30 seconds to be more precise and avoid missing the minute mark
@@ -1504,7 +1547,7 @@ export default function App() {
     checkReminders();
 
     return () => clearInterval(interval);
-  }, [settings.notificationsEnabled, settings.reminderTime, settings.reminderTime2, customPlans]);
+  }, [settings.notificationsEnabled, settings.reminderTime, settings.reminderTime2, settings.motivationTime, customPlans]);
 
   const handleSaveCustomPlan = async (plan: CustomPlan) => {
     if (!user) return;
@@ -1655,74 +1698,75 @@ export default function App() {
     setHistory(allHistory);
   }, [dailyProgress, today]);
 
+  const checkTrophies = useCallback(() => {
+    setStats((prevStats) => {
+      const now = Date.now();
+      let changed = false;
+      const trophies = prevStats.trophies || [];
+      const updatedTrophies = trophies.map(t => {
+        const earnedTime = new Date(t.earnedDate).getTime();
+        const daysSince = (now - earnedTime) / (1000 * 60 * 60 * 24);
+        
+        if (t.type === 'golden' && daysSince >= 2) {
+          changed = true;
+          return { ...t, type: 'ice' as const, lastUpdated: new Date().toISOString() };
+        }
+        if (t.type === 'ice' && daysSince >= 3) {
+          changed = true;
+          return { ...t, type: 'broken' as const, lastUpdated: new Date().toISOString() };
+        }
+        return t;
+      });
+      
+      if (changed) {
+        const hasIce = updatedTrophies.some(t => t.type === 'ice');
+        const hasBroken = updatedTrophies.some(t => t.type === 'broken');
+
+        if (settings.notificationsEnabled) {
+          if (hasIce) {
+            sendNotification('Trophy Alert! 🧊', {
+              body: 'One of your trophies just turned to ICE! Complete a challenge now to save it!',
+              icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+            });
+          } else if (hasBroken) {
+            sendNotification('Trophy Alert! 💔', {
+              body: 'Oh no! A trophy has BROKEN! Don\'t let more break, bro!',
+              icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+            });
+          }
+        }
+
+        if (settings.soundEnabled) {
+          // Use a timeout to ensure side effects happen outside of the render/update phase
+          setTimeout(() => {
+            if (hasIce) playTrophySound('ice');
+            else if (hasBroken) playTrophySound('broken');
+            setEmergencyActive(true);
+          }, 100);
+        }
+        return { ...prevStats, trophies: updatedTrophies };
+      }
+      return prevStats;
+    });
+  }, [settings.notificationsEnabled, settings.soundEnabled]);
+
   // Trophy degradation logic
   useEffect(() => {
-    const checkTrophies = () => {
-      setStats((prevStats) => {
-        const now = Date.now();
-        let changed = false;
-        const trophies = prevStats.trophies || [];
-        const updatedTrophies = trophies.map(t => {
-          const earnedTime = new Date(t.earnedDate).getTime();
-          const daysSince = (now - earnedTime) / (1000 * 60 * 60 * 24);
-          
-          if (t.type === 'golden' && daysSince >= 2) {
-            changed = true;
-            return { ...t, type: 'ice' as const, lastUpdated: new Date().toISOString() };
-          }
-          if (t.type === 'ice' && daysSince >= 3) {
-            changed = true;
-            return { ...t, type: 'broken' as const, lastUpdated: new Date().toISOString() };
-          }
-          return t;
-        });
-        
-        if (changed) {
-          const hasIce = updatedTrophies.some(t => t.type === 'ice');
-          const hasBroken = updatedTrophies.some(t => t.type === 'broken');
-
-          if (settings.notificationsEnabled) {
-            if (hasIce) {
-              sendNotification('Trophy Alert! 🧊', {
-                body: 'One of your trophies just turned to ICE! Complete a challenge now to save it!',
-                icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
-              });
-            } else if (hasBroken) {
-              sendNotification('Trophy Alert! 💔', {
-                body: 'Oh no! A trophy has BROKEN! Don\'t let more break, bro!',
-                icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
-              });
-            }
-          }
-
-          if (settings.soundEnabled) {
-            // Use a timeout to ensure side effects happen outside of the render/update phase
-            setTimeout(() => {
-              if (hasIce) playTrophySound('ice');
-              else if (hasBroken) playTrophySound('broken');
-              setEmergencyActive(true);
-            }, 100);
-          }
-          return { ...prevStats, trophies: updatedTrophies };
-        }
-        return prevStats;
-      });
-    };
-
     const timer = setTimeout(checkTrophies, 2000); // Check shortly after load
     return () => clearTimeout(timer);
-  }, []); // Run once on mount
+  }, [checkTrophies]);
 
   const handleCompleteChallenge = (finalProgress?: DailyProgress) => {
     setEmergencyActive(false);
     const progress = finalProgress || dailyProgress;
     const nextCompletionsCount = progress.completionsCount + 1;
-    const canAwardTrophy = nextCompletionsCount <= 3 && progress.pushupsDone;
+    const trophyLimit = isPro ? 10 : 3;
+    const canAwardTrophy = nextCompletionsCount <= trophyLimit && progress.pushupsDone;
     
     if (canAwardTrophy) {
       console.log(`Awarding trophy for completion #${nextCompletionsCount} today!`);
       if (settings.soundEnabled) {
-        // Play the specific trophy sound for 1, 2, 3
+        // Play the specific trophy sound for 1, 2, 3... up to 10 for Pro
         if (nextCompletionsCount === 1) play('trophy1');
         else if (nextCompletionsCount === 2) play('trophy2');
         else if (nextCompletionsCount === 3) play('trophy3');
@@ -1741,6 +1785,14 @@ export default function App() {
     setStats((prevStats) => {
       const isDailyQuest = progress.dailyQuestDone || (challengeStep === dailyQuest);
       const pointsToAdd = isDailyQuest ? 20 : 10;
+      
+      // Calculate step rewards to be given at the end
+      // Assuming standard flow has 10 steps (9 base + 1 meditation/writing)
+      // We'll make it dynamic based on the actual steps completed if possible, 
+      // but for now we'll use a fixed bonus for finishing the whole thing.
+      const stepsBonusXP = 100; 
+      const stepsBonusCoins = 50;
+      
       const oldLevel = Math.floor((prevStats.totalPoints || 0) / 100) + 1;
       
       // Streak logic (only on first completion of the day)
@@ -1778,14 +1830,16 @@ export default function App() {
         showToast(`LEVEL UP! +15 Coins & +5 Streak! 🔥`, 'success');
       }
 
+      showToast(`Challenge Complete! +${pointsToAdd + streakBonusPoints} Points, +${stepsBonusXP} XP & +${15 + stepsBonusCoins} Coins! 🏆`, 'success');
+
       const newStats = {
         ...prevStats,
         totalPoints: newPoints,
         weeklyPoints: (prevStats.weeklyPoints || 0) + pointsToAdd + streakBonusPoints,
-        xp: (prevStats.xp || 0) + 5, // 5 XP for level completion
-        weeklyXP: (prevStats.weeklyXP || 0) + 5, // 5 weeklyXP for level completion
+        xp: (prevStats.xp || 0) + 5 + stepsBonusXP, // 5 XP + steps bonus
+        weeklyXP: (prevStats.weeklyXP || 0) + 5 + stepsBonusXP,
         level: newLevel,
-        coins: (prevStats.coins || 0) + 15 + levelUpBonusCoins,
+        coins: (prevStats.coins || 0) + 15 + stepsBonusCoins + levelUpBonusCoins,
         streak: finalStreak + levelUpBonusStreak,
         bestStreak: newBestStreak,
         totalCompletedDays: newTotalCompletedDays,
@@ -2580,15 +2634,6 @@ export default function App() {
                 icon={<TrophyIcon size={24} />} 
                 label="Rank"
               />
-              <NavButton 
-                active={activeScreen === 'house'} 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                  setActiveScreen('house');
-                }} 
-                icon={<Home size={24} />} 
-                label="Space"
-              />
             </nav>
           </div>
         )}
@@ -2865,6 +2910,31 @@ function LeaderboardScreen({ leaderboard, user, settings, stats, onBack }: { lea
   );
 }
 
+function CountdownToMidnight() {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const midnight = new Date();
+      midnight.setHours(24, 0, 0, 0);
+      const diff = midnight.getTime() - now.getTime();
+      
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setTimeLeft(`${h}h ${m}m ${s}s`);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return <span>{timeLeft}</span>;
+}
+
 function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
@@ -3094,19 +3164,29 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
 
             <button 
               onClick={() => {
-                if (dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 999) : 3)) return;
+                if (dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3)) return;
                 vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                 onStartChallenge();
               }}
-              disabled={dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 999) : 3)}
-              className={`btn-primary w-full flex items-center justify-center gap-2 ${dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 999) : 3) ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+              disabled={dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3)}
+              className={`btn-primary w-full flex items-center justify-center gap-2 ${dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3) ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
             >
-              {dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 999) : 3)
-                ? `Daily Limit Reached (${dailyProgress.completionsCount}/${isPro ? (settings.challengeCountGoal || 999) : 3}) 🏆` 
+              {dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3)
+                ? `Daily Limit Reached (${dailyProgress.completionsCount}/${isPro ? (settings.challengeCountGoal || 10) : 3}) 🏆` 
                 : dailyProgress.completionsCount > 0 
                   ? `Start Challenge #${dailyProgress.completionsCount + 1} ✍️` 
                   : 'Start Today\'s Challenge ✍️'}
             </button>
+
+            {dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3) && (
+              <div className="text-center space-y-1">
+                <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest">Resets in</p>
+                <div className="flex items-center justify-center gap-2 text-blue-900 font-black">
+                  <Clock size={14} className="text-blue-500" />
+                  <CountdownToMidnight />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Custom Plans Section */}
@@ -4160,6 +4240,18 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
                   className="bg-transparent font-bold text-blue-900 text-sm focus:outline-none"
                 />
               </div>
+              <div className="flex items-center justify-between gap-3 bg-white/40 p-3 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={14} className="text-yellow-500" />
+                  <span className="text-xs font-bold text-blue-900/60">Motivation:</span>
+                </div>
+                <input 
+                  type="time" 
+                  value={settings.motivationTime || '12:00'}
+                  onChange={(e) => setSettings({ ...settings, motivationTime: e.target.value })}
+                  className="bg-transparent font-bold text-blue-900 text-sm focus:outline-none"
+                />
+              </div>
               <button 
                 onClick={() => {
                   vibrate(VIBRATION_PATTERNS.CLICK);
@@ -4718,14 +4810,7 @@ function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dail
       play('continue');
     }
     if (!skipped) {
-      setStats(prev => ({ 
-        ...prev, 
-        xp: (prev.xp || 0) + 10, // 10 XP per step
-        weeklyXP: (prev.weeklyXP || 0) + 10,
-        coins: (prev.coins || 0) + 5 // 5 Coins per step
-      }));
-      showToast('Step Complete! +10 XP & +5 Coins! 🔥', 'success');
-      if (settings.soundEnabled) play('continue');
+      showToast('Step Complete! Keep going, bro! 🔥', 'success');
     }
     const updates: Partial<DailyProgress> = {};
     if (step === 'pushups') updates.pushupsDone = !skipped;

@@ -29,6 +29,7 @@ export interface UserSettings {
   waterGoal: number;
   reminderTime: string;
   reminderTime2?: string;
+  motivationTime?: string;
   displayName?: string;
   profilePic?: string; // base64
   themeColor?: string;
