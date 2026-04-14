@@ -27,6 +27,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   public render(): ReactNode {
+    console.log("ErrorBoundary is rendering, hasError:", this.state.hasError);
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-red-50 p-6">

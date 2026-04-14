@@ -21,6 +21,7 @@ interface AuthScreenProps {
 }
 
 export function AuthScreen({ onBack }: AuthScreenProps) {
+  console.log("AuthScreen is rendering...");
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');

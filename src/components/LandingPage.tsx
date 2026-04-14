@@ -10,6 +10,7 @@ interface LandingPageProps {
 }
 
 export function LandingPage({ onGetStarted }: LandingPageProps) {
+  console.log("LandingPage is rendering...");
   const [view, setView] = useState<'home' | 'terms' | 'privacy' | 'support'>('home');
 
   if (view === 'terms') return <TermsPage onBack={() => setView('home')} />;
@@ -17,7 +18,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
   if (view === 'support') return <SupportPage onBack={() => setView('home')} />;
 
   return (
-    <div className="min-h-screen bg-blue-50 flex flex-col items-center overflow-x-hidden relative">
+    <div className="min-h-screen bg-green-500 flex flex-col items-center overflow-x-hidden relative">
       {/* Background elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-400/20 rounded-full blur-3xl" />

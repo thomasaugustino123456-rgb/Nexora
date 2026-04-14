@@ -1,4 +1,5 @@
 import {StrictMode} from 'react';
+console.log("main.tsx: Imports completed");
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
@@ -18,8 +19,16 @@ if ('serviceWorker' in navigator) {
 }
 
 console.log("main.tsx is running...");
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-      <App />
-  </StrictMode>,
-);
+const rootElement = document.getElementById('root');
+console.log("main.tsx: rootElement found:", !!rootElement);
+if (rootElement) {
+  createRoot(rootElement).render(
+    <StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </StrictMode>,
+  );
+} else {
+  console.error("main.tsx: rootElement NOT found!");
+}

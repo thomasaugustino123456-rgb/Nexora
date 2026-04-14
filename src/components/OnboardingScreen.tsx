@@ -15,6 +15,7 @@ interface OnboardingProps {
 }
 
 export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }: OnboardingProps) {
+  console.log("OnboardingScreen is rendering...");
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [gender, setGender] = useState('');
