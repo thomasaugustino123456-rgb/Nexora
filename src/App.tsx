@@ -571,7 +571,6 @@ function CoinAnimation({ onComplete, play, settings }: { onComplete: () => void,
 }
 
 export default function App() {
-  console.log("App component is rendering...");
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<UserStats>(DEFAULT_STATS);
@@ -1221,7 +1220,6 @@ export default function App() {
     testConnection();
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      console.log("onAuthStateChanged fired:", currentUser ? "User logged in" : "No user");
       if (currentUser) {
         setLoading(true); // Prevent flashing home screen while checking profile
         setUser(currentUser);
@@ -1837,10 +1835,10 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-red-500">
+      <div className="min-h-screen flex items-center justify-center bg-blue-50">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-          <p className="text-white font-bold animate-pulse text-2xl">DEBUG LOADING Nexora...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-blue-600 font-bold animate-pulse">Loading Nexora...</p>
         </div>
       </div>
     );

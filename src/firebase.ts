@@ -13,19 +13,13 @@ const firebaseConfig = {
   appId: firebaseConfigData.appId,
 };
 
-console.log("Firebase: Initializing app...");
 const app = initializeApp(firebaseConfig);
-console.log("Firebase: App initialized");
 
-// Initialize Firestore with settings to bypass potential WebSocket/Proxy issues
-console.log("Firebase: Initializing Firestore with DB ID:", firebaseConfigData.firestoreDatabaseId);
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 }, firebaseConfigData.firestoreDatabaseId);
-console.log("Firebase: Firestore initialized");
 
 export const auth = getAuth(app);
-console.log("Firebase: Auth initialized");
 
 // Messaging is only supported in some browsers
 export const messaging = async () => {
