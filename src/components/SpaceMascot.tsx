@@ -130,14 +130,14 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
             initial={{ x: 300, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 300, opacity: 0 }}
-            className="absolute bottom-20 right-4 w-48 h-48 pointer-events-auto"
+            className="absolute bottom-20 right-4 w-56 h-56 pointer-events-auto"
           >
             <div className="relative">
               {message && (
                 <motion.div
                   initial={{ scale: 0, opacity: 0, y: 20 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
-                  className="absolute bottom-full right-0 mb-4 w-72 p-5 bg-white rounded-[2rem] shadow-2xl border-2 border-indigo-500 text-sm font-bold text-indigo-900"
+                  className="absolute bottom-full right-0 mb-6 w-80 p-6 bg-white rounded-[2.5rem] shadow-2xl border-4 border-indigo-500 text-base font-bold text-indigo-900 z-[200]"
                 >
                   <div className="leading-relaxed">
                     {message}
@@ -149,9 +149,9 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
                   )}
                   <button
                     onClick={handleContinue}
-                    className="mt-4 w-full py-3 bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all active:scale-95 shadow-lg shadow-indigo-500/20"
+                    className="mt-6 w-full py-4 bg-indigo-500 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all active:scale-95 shadow-lg shadow-indigo-500/20"
                   >
-                    {isNewUser && onboardingStep === 2 ? 'Finished' : 'Got it, bro!'}
+                    {isNewUser && onboardingStep === 2 ? 'Let\'s Go, Bro! 🚀' : 'Got it, bro! 👍'}
                   </button>
                   <div className="absolute bottom-[-10px] right-8 w-5 h-5 bg-white border-r-2 border-b-2 border-indigo-500 rotate-45" />
                 </motion.div>

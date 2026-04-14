@@ -2441,6 +2441,7 @@ export default function App() {
                   onUpdateItemPosition={updateHouseItemPosition}
                   onUpdateSettings={(newSettings) => setSettings(prev => ({ ...prev, ...newSettings }))}
                   onUpdateStats={(newStats) => setStats(prev => ({ ...prev, ...newStats }))}
+                  showToast={showToast}
                 />
               </motion.div>
             )}
@@ -5024,7 +5025,7 @@ function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none', settings, play
   );
 }
 
-function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = 'none', settings, play }: { goal: number, progress: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+export function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = 'none', settings, play }: { goal: number, progress: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
   const isFinished = progress >= goal;
 
   return (

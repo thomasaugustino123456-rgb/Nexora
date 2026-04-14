@@ -54,6 +54,7 @@ export interface UserSettings {
   placedHouseItems?: PlacedHouseItem[];
   spaceOnboardingCompleted?: boolean;
   mascotSize?: number;
+  mascotPos?: { x: number, y: number };
 }
 
 export interface ShopItem {
@@ -132,6 +133,7 @@ export interface UserStats {
   drawings?: string[]; // base64 strings
   unlockedHats?: string[];
   gratitudeEntries?: GratitudeEntry[];
+  waterDrank?: number;
 }
 
 export interface LeaderboardEntry {

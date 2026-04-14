@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Home, Sparkles, Lightbulb, MousePointer2, Move, RefreshCw, ZoomIn, ZoomOut, Maximize, ChevronLeft, ChevronRight, Archive, X, ShoppingBag, Flame, Coins, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Home, Sparkles, Lightbulb, MousePointer2, Move, RefreshCw, ZoomIn, ZoomOut, Maximize, ChevronLeft, ChevronRight, Archive, X, ShoppingBag, Flame, Coins, Plus, Trash2, CupSoda } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { UserStats, UserSettings, HouseItem, PlacedHouseItem } from '../types';
 import { HOUSE_ITEMS } from '../constants/houseItems';
 import { HouseItemSVG } from './HouseItemSVG';
 import { SpaceMascot } from './SpaceMascot';
 import { Mascot } from './Mascot';
+import { WaterStep } from '../App';
 
 export function HouseScreen({ 
   onBack, 
@@ -17,7 +18,8 @@ export function HouseScreen({
   onRemoveItem,
   onUpdateItemPosition,
   onUpdateSettings,
-  onUpdateStats
+  onUpdateStats,
+  showToast
 }: { 
   onBack: () => void;
   stats: UserStats;
@@ -28,17 +30,19 @@ export function HouseScreen({
   onUpdateItemPosition: (index: number, x: number, y: number) => void;
   onUpdateSettings: (settings: Partial<UserSettings>) => void;
   onUpdateStats: (stats: Partial<UserStats>) => void;
+  showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }) {
   const [resetKey, setResetKey] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [activeRoom, setActiveRoom] = useState(0); // 0: Isometric, 1: Cartoon, 2: Cozy
   const [showStorage, setShowStorage] = useState(false);
   const [showShop, setShowShop] = useState(false);
+  const [showWaterChallenge, setShowWaterChallenge] = useState(false);
   const [placementMode, setPlacementMode] = useState<string | null>(null);
 
   // Mascot States
   const [onboardingStep, setOnboardingStep] = useState(0);
-  const [mascotPos, setMascotPos] = useState({ x: 600, y: 400 });
+  const [mascotPos, setMascotPos] = useState(settings.mascotPos || { x: 600, y: 400 });
   const [mascotSize, setMascotSize] = useState(settings.mascotSize || 1);
   const [showSizeCustomizer, setShowSizeCustomizer] = useState(false);
   const [mascotReaction, setMascotReaction] = useState<{ text: string, type: 'good' | 'bad' | 'neutral' } | null>(null);
@@ -164,7 +168,7 @@ export function HouseScreen({
     const timer = setTimeout(() => {
       vibrate([50, 50, 50]);
       setShowSizeCustomizer(true);
-    }, 1500);
+    }, 1000); // Reduced to 1s for better responsiveness
     setLongPressTimer(timer);
   };
 
@@ -591,6 +595,16 @@ export function HouseScreen({
       <footer className="p-8 flex flex-wrap justify-center gap-4 z-20">
         <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md p-2 rounded-3xl border border-white/10">
           <button 
+            onClick={() => {
+              vibrate(10);
+              setShowWaterChallenge(true);
+            }}
+            className="p-3 rounded-2xl bg-blue-500 text-white hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
+            title="Water Drinking Challenge"
+          >
+            <CupSoda size={20} />
+          </button>
+          <button 
             onClick={() => handleZoom(-0.1)}
             className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all"
           >
@@ -685,17 +699,6 @@ export function HouseScreen({
         )}
 
         <button 
-          onClick={handleFeedMascot}
-          disabled={isFeeding}
-          className={`p-4 rounded-3xl transition-all flex items-center gap-3 ${
-            isFeeding ? 'bg-orange-500/50 text-white cursor-not-allowed' : 'bg-orange-500 text-white shadow-xl shadow-orange-200 hover:bg-orange-600'
-          }`}
-        >
-          <Plus size={24} className={isFeeding ? 'animate-spin' : ''} />
-          <span className="font-black uppercase tracking-widest text-xs">{isFeeding ? 'Feeding...' : 'Feed Mascot'}</span>
-        </button>
-
-        <button 
           onClick={resetRoom}
           className="p-4 rounded-3xl bg-white/10 text-white/60 hover:bg-white/20 transition-all flex items-center gap-3"
         >
@@ -703,6 +706,68 @@ export function HouseScreen({
           <span className="font-black uppercase tracking-widest text-xs">Reset</span>
         </button>
       </footer>
+
+      {/* Water Challenge Modal */}
+      <AnimatePresence>
+        {showWaterChallenge && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[400] bg-blue-900/90 backdrop-blur-xl flex items-center justify-center p-4"
+          >
+            <div className="w-full max-w-md bg-white rounded-[40px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+              <div className="p-6 border-b border-blue-50 flex items-center justify-between bg-blue-50/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500 rounded-xl text-white">
+                    <CupSoda size={20} />
+                  </div>
+                  <h3 className="font-black text-blue-900 uppercase tracking-tight">Water Challenge</h3>
+                </div>
+                <button 
+                  onClick={() => setShowWaterChallenge(false)}
+                  className="p-2 rounded-xl hover:bg-blue-100 text-blue-400 transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-8">
+                <WaterStep 
+                  goal={settings.waterGoal || 8} 
+                  progress={stats.waterDrank || 0}
+                  onUpdate={(val) => {
+                    // Reward for drinking
+                    const pointsToAdd = 5;
+                    const xpToAdd = 10;
+                    const coinsToAdd = 5;
+                    
+                    // Update stats with rewards
+                    onUpdateStats({ 
+                      waterDrank: val,
+                      xp: (stats.xp || 0) + xpToAdd,
+                      coins: (stats.coins || 0) + coinsToAdd,
+                      totalPoints: (stats.totalPoints || 0) + pointsToAdd
+                    });
+
+                    // Check for streak reward (if they hit a milestone, e.g., every 4 glasses)
+                    if (val > 0 && val % 4 === 0) {
+                      onUpdateStats({ streak: (stats.streak || 0) + 1 });
+                      showToast("Streak +1 for staying hydrated! 💧", "success");
+                    }
+                    
+                    vibrate(VIBRATION_PATTERNS.SUCCESS);
+                  }}
+                  onContinue={() => setShowWaterChallenge(false)}
+                  activeSkin={settings.activeSkin}
+                  settings={settings}
+                  play={() => {}} // Pass dummy play or actual play if available
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Ambient Background Glow */}
       <div className={`absolute inset-0 pointer-events-none transition-colors duration-1000 ${
@@ -747,6 +812,7 @@ export function HouseScreen({
               const newX = mascotPos.x + info.offset.x;
               const newY = mascotPos.y + info.offset.y;
               setMascotPos({ x: newX, y: newY });
+              onUpdateSettings({ mascotPos: { x: newX, y: newY } });
               
               // Placement reaction
               const reaction = getMascotPlacementReaction(newX, newY);
