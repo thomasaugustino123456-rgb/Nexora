@@ -21,7 +21,6 @@ console.log("Firebase: App initialized");
 console.log("Firebase: Initializing Firestore with DB ID:", firebaseConfigData.firestoreDatabaseId);
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
-  experimentalAutoDetectLongPolling: true,
 }, firebaseConfigData.firestoreDatabaseId);
 console.log("Firebase: Firestore initialized");
 

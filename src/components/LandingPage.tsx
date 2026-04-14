@@ -43,7 +43,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               vibrate(10);
               // Assuming 'shop' screen is not accessible before login, maybe just alert or redirect?
               // For now, let's just make it visible.
-              alert('Pro features coming soon!');
+              console.log('Pro features coming soon!');
             }}
             className="flex items-center gap-1 text-red-500 font-bold hover:text-red-600 transition-colors px-4 py-2"
           >

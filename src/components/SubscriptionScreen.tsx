@@ -142,7 +142,7 @@ export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, use
                 onClick={() => {
                   const newWindow = window.open(plan.url, '_blank');
                   if (!newWindow) {
-                    alert("Popup blocked! Please allow popups to proceed to payment.");
+                    console.warn("Popup blocked! Please allow popups to proceed to payment.");
                   }
                 }}
                 className={`w-full py-4 rounded-2xl font-black transition-all active:scale-95 shadow-xl ${
