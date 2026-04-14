@@ -168,7 +168,7 @@ export function HouseScreen({
     const timer = setTimeout(() => {
       vibrate([50, 50, 50]);
       setShowSizeCustomizer(true);
-    }, 1000); // Reduced to 1s for better responsiveness
+    }, 3000); // Increased to 3s as requested
     setLongPressTimer(timer);
   };
 
@@ -872,25 +872,25 @@ export function HouseScreen({
                 "How big do you want me to be in your space, bro?"
               </p>
               
-              <div className="space-y-6 mb-8">
-                <input 
-                  type="range" 
-                  min="0.5" 
-                  max="2" 
-                  step="0.1" 
-                  value={mascotSize}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    setMascotSize(val);
+              <div className="flex justify-center gap-4 mb-8">
+                <button
+                  onClick={() => {
+                    setMascotSize(prev => Math.max(0.3, prev - 0.1));
                     vibrate(5);
                   }}
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                />
-                <div className="flex justify-between text-[10px] font-black text-white/40 uppercase tracking-widest">
-                  <span>Small</span>
-                  <span>Normal</span>
-                  <span>Big</span>
-                </div>
+                  className="px-6 py-3 bg-indigo-500 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-600 transition-all"
+                >
+                  Zoom In (Small)
+                </button>
+                <button
+                  onClick={() => {
+                    setMascotSize(prev => Math.min(2.5, prev + 0.1));
+                    vibrate(5);
+                  }}
+                  className="px-6 py-3 bg-purple-500 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-purple-600 transition-all"
+                >
+                  Zoom Out (Big)
+                </button>
               </div>
 
               <button
