@@ -17,10 +17,9 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+console.log("main.tsx is running...");
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ErrorBoundary>
       <App />
-    </ErrorBoundary>
   </StrictMode>,
 );

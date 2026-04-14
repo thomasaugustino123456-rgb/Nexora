@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+console.log("App.tsx is loading...");
 import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
-import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy as TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan } from './types';
+import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan } from './types';
 import { HOUSE_ITEMS } from './constants/houseItems';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
@@ -28,7 +29,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { GoogleGenAI } from "@google/genai";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+// const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const ai = { models: { generateContent: async () => ({ text: "AI disabled" }) } } as any;
 
 function WhatIsNewModal({ onClose }: { onClose: () => void }) {
   const [updates, setUpdates] = useState<any>(null);
@@ -569,166 +571,82 @@ function CoinAnimation({ onComplete, play, settings }: { onComplete: () => void,
 }
 
 export default function App() {
-  console.log("App component rendering...");
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [isPro, setIsPro] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<UserStats>(DEFAULT_STATS);
+  const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
+  const [activeScreen, setActiveScreen] = useLocalStorage<Screen>('nexora_active_screen', 'home');
   const [showAuth, setShowAuth] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const [activeScreen, setActiveScreen] = useState<Screen>(() => {
-    const saved = localStorage.getItem('nexora_active_screen');
-    return (saved as Screen) || 'home';
-  });
-  const [activeCustomPlan, setActiveCustomPlan] = useState<CustomPlan | null>(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [dailyQuest, setDailyQuest] = useState<ChallengeStep>('water');
+  const [emergencyActive, setEmergencyActive] = useState(false);
+  const [challengeStep, setChallengeStep] = useState<ChallengeStep | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem('nexora_active_screen', activeScreen);
-  }, [activeScreen]);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
-
-  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-  const [challengeStep, setChallengeStep] = useState<ChallengeStep>('pushups');
-  const [viewingTrophy, setViewingTrophy] = useState<TrophyType | null>(null);
-  const [settings, setSettings] = useLocalStorage<UserSettings>('nexora_settings', DEFAULT_SETTINGS);
-  const [stats, setStats] = useLocalStorage<UserStats>('nexora_stats', DEFAULT_STATS);
   const { play, stop, playMusic, stopAllMusic } = useSound();
   const [history, setHistory] = useState<DailyProgress[]>([]);
   const [earnedTrophyToday, setEarnedTrophyToday] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
   const [showCoinAnimation, setShowCoinAnimation] = useState(false);
-  const [dailyQuest, setDailyQuest] = useState<ChallengeStep | null>(null);
-  const [emergencyActive, setEmergencyActive] = useState(false);
-  const buyHouseItem = async (itemId: string, currency: 'streak' | 'coins') => {
-    const item = HOUSE_ITEMS.find(i => i.id === itemId);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [activeCustomPlan, setActiveCustomPlan] = useState<CustomPlan | null>(null);
+  const [viewingTrophy, setViewingTrophy] = useState<Trophy | null>(null);
+
+  const isPro = settings.isPro;
+  const setIsPro = (val: boolean) => setSettings(prev => ({ ...prev, isPro: val }));
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const buyHouseItem = (id: string, currency: 'streak' | 'coins') => {
+    const item = HOUSE_ITEMS.find(i => i.id === id);
     if (!item) return;
-
-    const price = currency === 'streak' ? item.price : item.coinPrice;
-    const currentAmount = currency === 'streak' ? stats.streak : stats.coins;
-
-    if (currentAmount < price) {
-      showToast(`Not enough ${currency}!`, 'error');
-      return;
-    }
-
-    vibrate(VIBRATION_PATTERNS.SUCCESS);
     
-    const newSettings = {
-      ...settings,
-      purchasedHouseItemIds: [...(settings.purchasedHouseItemIds || []), itemId]
-    };
-    setSettings(newSettings);
-
-    const newStats = {
-      ...stats,
-      [currency === 'streak' ? 'streak' : 'coins']: currentAmount - price
-    };
-    setStats(newStats);
-
-    if (user) {
-      try {
-        await updateDoc(doc(db, 'users', user.uid), {
-          settings: newSettings,
-          stats: newStats
-        });
-      } catch (e) {
-        handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`);
+    if (currency === 'coins') {
+      if (stats.coins < item.coinPrice) {
+        showToast("Not enough coins, bro! 🪙", "error");
+        return;
       }
-    }
-
-    showToast(`Bought ${item.name}! 🚀`);
-  };
-
-  const updateHouseItemPosition = async (index: number, x: number, y: number) => {
-    const newPlaced = [...(settings.placedHouseItems || [])];
-    if (newPlaced[index]) {
-      newPlaced[index] = { ...newPlaced[index], x, y };
-      const newSettings = { ...settings, placedHouseItems: newPlaced };
-      setSettings(newSettings);
-
-      if (user) {
-        try {
-          await updateDoc(doc(db, 'users', user.uid), {
-            'settings.placedHouseItems': newPlaced
-          });
-        } catch (e) {
-          handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`);
-        }
-      }
-    }
-  };
-
-  const placeHouseItem = async (itemId: string, x: number, y: number, room: number) => {
-    const newPlaced = [...(settings.placedHouseItems || []), { itemId, x, y, room }];
-    const newSettings = { ...settings, placedHouseItems: newPlaced };
-    setSettings(newSettings);
-
-    if (user) {
-      try {
-        await updateDoc(doc(db, 'users', user.uid), {
-          'settings.placedHouseItems': newPlaced
-        });
-      } catch (e) {
-        handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`);
-      }
-    }
-  };
-
-  const removeHouseItem = async (index: number) => {
-    const newPlaced = [...(settings.placedHouseItems || [])];
-    newPlaced.splice(index, 1);
-    const newSettings = { ...settings, placedHouseItems: newPlaced };
-    setSettings(newSettings);
-
-    if (user) {
-      try {
-        await updateDoc(doc(db, 'users', user.uid), {
-          'settings.placedHouseItems': newPlaced
-        });
-      } catch (e) {
-        handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`);
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (challengeStep === 'football') {
-      play('stadium', true);
+      setStats(prev => ({ ...prev, coins: prev.coins - item.coinPrice }));
     } else {
-      stop('stadium');
+      if (stats.streak < item.price) {
+        showToast("Streak not high enough, bro! 🔥", "error");
+        return;
+      }
     }
-  }, [challengeStep]);
+    
+    setSettings(prev => ({
+      ...prev,
+      purchasedHouseItemIds: [...(prev.purchasedHouseItemIds || []), id]
+    }));
+    showToast(`Purchased ${item.name}! 🏠`, "success");
+  };
 
-  // Emergency sound logic
-  useEffect(() => {
-    if (emergencyActive && settings.soundEnabled) {
-      console.log("Emergency sound triggered!");
-      play('emergency', true);
-      const timer = setTimeout(() => {
-        setEmergencyActive(false);
-      }, 120000); // 2 minutes
-      return () => {
-        clearTimeout(timer);
-        stop('emergency');
-      };
-    } else {
-      stop('emergency');
-    }
-  }, [emergencyActive, settings.soundEnabled, play, stop]);
+  const placeHouseItem = (id: string, x: number, y: number, room: number) => {
+    const newItem: PlacedHouseItem = { itemId: id, x, y, room };
+    setSettings(prev => ({
+      ...prev,
+      placedHouseItems: [...(prev.placedHouseItems || []), newItem]
+    }));
+  };
+
+  const removeHouseItem = (index: number) => {
+    setSettings(prev => ({
+      ...prev,
+      placedHouseItems: (prev.placedHouseItems || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateHouseItemPosition = (index: number, x: number, y: number) => {
+    setSettings(prev => ({
+      ...prev,
+      placedHouseItems: (prev.placedHouseItems || []).map((item, i) => 
+        i === index ? { ...item, x, y } : item
+      )
+    }));
+  };
 
   useEffect(() => {
     if (activeScreen === 'challenge') {
@@ -1869,7 +1787,7 @@ export default function App() {
 
       // Award Golden Trophy if within daily limit
       if (canAwardTrophy) {
-        const newTrophy: TrophyType = {
+        const newTrophy: Trophy = {
           id: Math.random().toString(36).substr(2, 9),
           type: 'golden',
           earnedDate: new Date().toISOString(),
