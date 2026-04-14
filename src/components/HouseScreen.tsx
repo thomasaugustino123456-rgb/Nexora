@@ -44,6 +44,7 @@ export function HouseScreen({
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [mascotPos, setMascotPos] = useState(settings.mascotPos || { x: 600, y: 400 });
   const [mascotSize, setMascotSize] = useState(settings.mascotSize || 1);
+  
   const [showSizeCustomizer, setShowSizeCustomizer] = useState(false);
   const [mascotReaction, setMascotReaction] = useState<{ text: string, type: 'good' | 'bad' | 'neutral' } | null>(null);
   const [isFeeding, setIsFeeding] = useState(false);
@@ -781,7 +782,8 @@ export function HouseScreen({
         isNewUser={!settings.spaceOnboardingCompleted}
         onCompleteOnboarding={() => {
           vibrate(VIBRATION_PATTERNS.SUCCESS);
-          onUpdateSettings({ spaceOnboardingCompleted: true });
+          onUpdateSettings({ spaceOnboardingCompleted: true, mascotSize: 0.6 });
+          setMascotSize(0.6);
         }}
         placedItemsCount={(settings.placedHouseItems || []).length}
         lastPlacedItemName={lastPlacedItemName}
@@ -808,6 +810,7 @@ export function HouseScreen({
             drag
             dragMomentum={false}
             style={{ x: mascotPos.x, y: mascotPos.y, scale: mascotSize }}
+            transition={{ type: "spring", stiffness: 200, damping: 20 }}
             onDragEnd={(e, info) => {
               const newX = mascotPos.x + info.offset.x;
               const newY = mascotPos.y + info.offset.y;
