@@ -12,6 +12,7 @@ interface SpaceMascotProps {
   lastPlacedItemName?: string;
   isNightMode: boolean;
   onFire?: boolean;
+  placementReaction?: { text: string, type: 'good' | 'bad' | 'neutral' } | null;
   onPanicEnd?: (penalty: boolean) => void;
 }
 
@@ -24,6 +25,7 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
   lastPlacedItemName,
   isNightMode,
   onFire,
+  placementReaction,
   onPanicEnd
 }) => {
   const [message, setMessage] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
     if (isNewUser && onboardingStep === 0) {
       setTimeout(() => {
         setShowMascot(true);
-        setMessage("Welcome to your Nexora Space! 🚀 I'm your guide. This is where you can build your dream room and relax.");
+        setMessage("Welcome to your Nexora Space, bro! 🚀 I'm your guide and companion in this journey. This is your personal sanctuary where you can build your dream room, relax after a long day, and see your progress come to life in a fun way!");
       }, 1000);
     } else if (!isNewUser) {
       setShowMascot(true);
@@ -46,38 +48,39 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
   // Recognition logic
   useEffect(() => {
     if (lastPlacedItemName && onboardingStep >= 2) {
-      setMessage(`Wow! A ${lastPlacedItemName}? That looks absolutely amazing in this spot! 🔥`);
-      const timer = setTimeout(() => setMessage(null), 3000);
-      return () => clearTimeout(timer);
+      setMessage(`Wow, bro! That ${lastPlacedItemName} looks absolutely legendary in this spot! 🔥 You've got some serious style. Every item you place makes this space feel more like home. Keep it up!`);
     }
   }, [lastPlacedItemName, onboardingStep]);
+
+  // Placement Reaction logic
+  useEffect(() => {
+    if (placementReaction) {
+      setMessage(placementReaction.text);
+    }
+  }, [placementReaction]);
 
   // Light logic
   useEffect(() => {
     if (isNightMode) {
       setIsSleeping(true);
-      setMessage("It's getting dark... I'm feeling a bit sleepy. Goodnight, friend! 😴");
+      setMessage("Yo bro, it's getting pretty dark out there... I'm starting to feel a bit sleepy. It's important to rest well so we can crush our goals tomorrow! Goodnight, friend! 😴🌙");
     } else {
       setIsSleeping(false);
-      setMessage("Good morning! I feel so refreshed and ready to decorate! ☀️");
+      setMessage("Good morning, bro! ☀️ I feel so refreshed and energized! The sunlight is perfect for some decorating. What should we add to the room today? Let's make it epic!");
     }
-    const timer = setTimeout(() => setMessage(null), 4000);
-    return () => clearTimeout(timer);
   }, [isNightMode]);
 
   // Fire logic
   useEffect(() => {
     if (onFire) {
-      setMessage("HELP! IT'S BURNING! GET ME OUT OF HERE FAST! 🔥🔥🔥");
+      setMessage("AAAH! BRO, HELP! IT'S BURNING! 🔥🔥🔥 GET ME OUT OF HERE FAST! I'M NOT A ROASTED MARSHMALLOW! MOVE ME AWAY FROM THE FIRE QUICKLY!");
       setCountdown(5);
       vibrate([100, 50, 100]);
     } else {
       if (countdown !== null) {
-        setMessage("Phew! That was a close one. Thanks for saving me, bro! 🙌");
+        setMessage("Phew! That was a close one, bro. Thanks for saving me! 🙌 My glass was almost starting to melt. You're a real one for looking out for me like that!");
         setCountdown(null);
         if (onPanicEnd) onPanicEnd(false);
-        const timer = setTimeout(() => setMessage(null), 3000);
-        return () => clearTimeout(timer);
       }
     }
   }, [onFire]);
@@ -101,14 +104,20 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
 
   const handleContinue = () => {
     vibrate(10);
-    if (onboardingStep === 0) {
-      setOnboardingStep(1);
-      setMessage("Let's get started! First, you'll need some items to fill this empty space.");
-    } else if (onboardingStep === 1) {
-      setOnboardingStep(2);
-      setMessage("What are you going to buy to fill your room? Check out the Shop to find some cool stuff!");
-    } else if (onboardingStep === 2) {
-      onCompleteOnboarding();
+    if (isNewUser) {
+      if (onboardingStep === 0) {
+        setOnboardingStep(1);
+        setMessage("Let's get started, bro! First, you'll need some cool items to fill this empty space. You can earn coins by completing your daily routines and challenges!");
+      } else if (onboardingStep === 1) {
+        setOnboardingStep(2);
+        setMessage("What are you going to buy to fill your room? Check out the Shop to find some epic furniture and decorations! Once you buy them, they'll be in your Library.");
+      } else if (onboardingStep === 2) {
+        onCompleteOnboarding();
+        setMessage("You're all set, bro! 🚀 Remember, you can drag me around, and if you hold me for a bit, you can even change my size! Have fun building your space!");
+      } else {
+        setMessage(null);
+      }
+    } else {
       setMessage(null);
     }
   };
@@ -128,23 +137,23 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
                 <motion.div
                   initial={{ scale: 0, opacity: 0, y: 20 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
-                  className="absolute bottom-full right-0 mb-4 w-64 p-4 bg-white rounded-2xl shadow-2xl border-2 border-indigo-500 text-sm font-bold text-indigo-900"
+                  className="absolute bottom-full right-0 mb-4 w-72 p-5 bg-white rounded-[2rem] shadow-2xl border-2 border-indigo-500 text-sm font-bold text-indigo-900"
                 >
-                  {message}
+                  <div className="leading-relaxed">
+                    {message}
+                  </div>
                   {countdown !== null && (
-                    <div className={`mt-2 text-2xl font-black text-center ${countdown <= 2 ? 'text-red-500 animate-pulse' : 'text-orange-500'}`}>
+                    <div className={`mt-3 text-3xl font-black text-center ${countdown <= 2 ? 'text-red-500 animate-pulse' : 'text-orange-500'}`}>
                       {countdown}s
                     </div>
                   )}
-                  {isNewUser && onboardingStep < 3 && (
-                    <button
-                      onClick={handleContinue}
-                      className="mt-3 w-full py-2 bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-colors"
-                    >
-                      {onboardingStep === 2 ? 'Finished' : 'Continue'}
-                    </button>
-                  )}
-                  <div className="absolute bottom-[-10px] right-8 w-4 h-4 bg-white border-r-2 border-b-2 border-indigo-500 rotate-45" />
+                  <button
+                    onClick={handleContinue}
+                    className="mt-4 w-full py-3 bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all active:scale-95 shadow-lg shadow-indigo-500/20"
+                  >
+                    {isNewUser && onboardingStep === 2 ? 'Finished' : 'Got it, bro!'}
+                  </button>
+                  <div className="absolute bottom-[-10px] right-8 w-5 h-5 bg-white border-r-2 border-b-2 border-indigo-500 rotate-45" />
                 </motion.div>
               )}
               <Mascot 

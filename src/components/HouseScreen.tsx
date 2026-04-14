@@ -39,6 +39,10 @@ export function HouseScreen({
   // Mascot States
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [mascotPos, setMascotPos] = useState({ x: 600, y: 400 });
+  const [mascotSize, setMascotSize] = useState(settings.mascotSize || 1);
+  const [showSizeCustomizer, setShowSizeCustomizer] = useState(false);
+  const [mascotReaction, setMascotReaction] = useState<{ text: string, type: 'good' | 'bad' | 'neutral' } | null>(null);
+  const [isFeeding, setIsFeeding] = useState(false);
   const [lastPlacedItemName, setLastPlacedItemName] = useState<string | undefined>();
   const [isMascotOnFire, setIsMascotOnFire] = useState(false);
   const [itemToRemove, setItemToRemove] = useState<number | null>(null);
@@ -154,6 +158,79 @@ export function HouseScreen({
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
     }
+  };
+
+  const handleMascotLongPressStart = () => {
+    const timer = setTimeout(() => {
+      vibrate([50, 50, 50]);
+      setShowSizeCustomizer(true);
+    }, 1500);
+    setLongPressTimer(timer);
+  };
+
+  const getMascotPlacementReaction = (x: number, y: number) => {
+    // Find if mascot is on an item
+    const placedItems = (settings.placedHouseItems || []).filter(p => p.room === activeRoom);
+    let itemOn: PlacedHouseItem | null = null;
+    
+    // Simple proximity check
+    for (const item of placedItems) {
+      const dist = Math.sqrt(Math.pow(x - item.x, 2) + Math.pow(y - item.y, 2));
+      if (dist < 60) {
+        itemOn = item;
+        break;
+      }
+    }
+
+    if (itemOn) {
+      const itemData = HOUSE_ITEMS.find(i => i.id === itemOn?.itemId);
+      if (!itemData) return null;
+
+      // Good places: chairs, beds, sofas, tables
+      const goodItems = ['Chair', 'Bed', 'Sofa', 'Table', 'Armchair', 'Desk'];
+      const badItems = ['Fireplace', 'Trash', 'Dirty']; // Fireplace is handled separately for "boiling" but can have a reaction too
+
+      if (goodItems.some(keyword => itemData.name.includes(keyword))) {
+        return {
+          text: `Yo bro, this ${itemData.name} is so comfy! I could stay here all day, it feels amazing! ✨`,
+          type: 'good' as const
+        };
+      } else if (itemData.name.includes('Fireplace')) {
+        return {
+          text: `AAAH! It's way too hot here bro! Don't leave me on the fire, it's dangerous! 🔥`,
+          type: 'bad' as const
+        };
+      } else {
+        return {
+          text: `Placed on the ${itemData.name}, huh? It's okay, but I've seen better spots, bro! 🏠`,
+          type: 'neutral' as const
+        };
+      }
+    }
+
+    // Check if on floor (base logic)
+    if (y > 400) {
+      return {
+        text: "The floor is a bit cold, but I like the space to move around, bro! 👟",
+        type: 'neutral' as const
+      };
+    }
+
+    return null;
+  };
+
+  const handleFeedMascot = () => {
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
+    setIsFeeding(true);
+    setMascotReaction({
+      text: "Mmm, that's some good stuff, bro! 🍕 I'm feeling so much more energized now. Thanks for the snack! You're the best!",
+      type: 'good'
+    });
+    
+    // Give a tiny bit of XP for caring for the mascot
+    onUpdateStats({ xp: stats.xp + 1 });
+    
+    setTimeout(() => setIsFeeding(false), 3000);
   };
 
   const renderPlacedItems = () => {
@@ -608,6 +685,17 @@ export function HouseScreen({
         )}
 
         <button 
+          onClick={handleFeedMascot}
+          disabled={isFeeding}
+          className={`p-4 rounded-3xl transition-all flex items-center gap-3 ${
+            isFeeding ? 'bg-orange-500/50 text-white cursor-not-allowed' : 'bg-orange-500 text-white shadow-xl shadow-orange-200 hover:bg-orange-600'
+          }`}
+        >
+          <Plus size={24} className={isFeeding ? 'animate-spin' : ''} />
+          <span className="font-black uppercase tracking-widest text-xs">{isFeeding ? 'Feeding...' : 'Feed Mascot'}</span>
+        </button>
+
+        <button 
           onClick={resetRoom}
           className="p-4 rounded-3xl bg-white/10 text-white/60 hover:bg-white/20 transition-all flex items-center gap-3"
         >
@@ -634,6 +722,7 @@ export function HouseScreen({
         lastPlacedItemName={lastPlacedItemName}
         isNightMode={activeRoom === 2 ? isNightMode : !lightOn}
         onFire={isMascotOnFire}
+        placementReaction={mascotReaction}
         onPanicEnd={(penalty) => {
           if (penalty) {
             vibrate(VIBRATION_PATTERNS.ERROR);
@@ -653,12 +742,19 @@ export function HouseScreen({
           <motion.g
             drag
             dragMomentum={false}
-            style={{ x: mascotPos.x, y: mascotPos.y }}
+            style={{ x: mascotPos.x, y: mascotPos.y, scale: mascotSize }}
             onDragEnd={(e, info) => {
               const newX = mascotPos.x + info.offset.x;
               const newY = mascotPos.y + info.offset.y;
               setMascotPos({ x: newX, y: newY });
               
+              // Placement reaction
+              const reaction = getMascotPlacementReaction(newX, newY);
+              if (reaction) {
+                setMascotReaction(reaction);
+                // Clear reaction after some time if needed, or let SpaceMascot handle it
+              }
+
               // Fire detection (Room 3)
               if (activeRoom === 2 && fireTaps < 4) {
                 // Fire is roughly at 400, 250 in Cozy room
@@ -670,15 +766,81 @@ export function HouseScreen({
                 }
               }
             }}
+            onPointerDown={handleMascotLongPressStart}
+            onPointerUp={handleLongPressEnd}
+            onPointerLeave={handleLongPressEnd}
             className="pointer-events-auto cursor-grab active:cursor-grabbing"
           >
             <Mascot 
               className="w-24 h-24" 
-              mood={isMascotOnFire ? 'boiling' : (activeRoom === 2 ? (isNightMode ? 'neutral' : 'happy') : (lightOn ? 'happy' : 'neutral'))} 
+              mood={isMascotOnFire ? 'boiling' : isFeeding ? 'happy' : (activeRoom === 2 ? (isNightMode ? 'neutral' : 'happy') : (lightOn ? 'happy' : 'neutral'))} 
             />
           </motion.g>
         </svg>
       </div>
+
+      {/* Mascot Size Customizer Modal */}
+      <AnimatePresence>
+        {showSizeCustomizer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-[#1a1a2e] border-2 border-white/10 rounded-[40px] p-8 w-full max-w-sm text-center shadow-2xl"
+            >
+              <div className="w-32 h-32 mx-auto mb-6 flex items-center justify-center">
+                <motion.div style={{ scale: mascotSize }}>
+                  <Mascot mood="happy" className="w-24 h-24" />
+                </motion.div>
+              </div>
+              <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">
+                Mascot Size
+              </h3>
+              <p className="text-sm text-white/60 mb-8">
+                "How big do you want me to be in your space, bro?"
+              </p>
+              
+              <div className="space-y-6 mb-8">
+                <input 
+                  type="range" 
+                  min="0.5" 
+                  max="2" 
+                  step="0.1" 
+                  value={mascotSize}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    setMascotSize(val);
+                    vibrate(5);
+                  }}
+                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                />
+                <div className="flex justify-between text-[10px] font-black text-white/40 uppercase tracking-widest">
+                  <span>Small</span>
+                  <span>Normal</span>
+                  <span>Big</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.SUCCESS);
+                  onUpdateSettings({ mascotSize });
+                  setShowSizeCustomizer(false);
+                }}
+                className="w-full py-4 rounded-2xl bg-indigo-500 text-white font-black uppercase tracking-widest hover:bg-indigo-600 transition-colors shadow-lg shadow-indigo-500/20"
+              >
+                Save Size
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Removal Confirmation Modal */}
       <AnimatePresence>

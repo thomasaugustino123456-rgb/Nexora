@@ -53,6 +53,7 @@ export interface UserSettings {
   purchasedHouseItemIds?: string[];
   placedHouseItems?: PlacedHouseItem[];
   spaceOnboardingCompleted?: boolean;
+  mascotSize?: number;
 }
 
 export interface ShopItem {
