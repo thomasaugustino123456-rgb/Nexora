@@ -93,6 +93,7 @@ export interface DailyProgress {
   reactionDone?: boolean;
   meditationDone?: boolean;
   writingDone?: boolean;
+  waterChallengeCount?: number;
 }
 
 export type TrophyType = 'golden' | 'ice' | 'broken';

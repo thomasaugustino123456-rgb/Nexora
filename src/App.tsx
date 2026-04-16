@@ -2385,6 +2385,8 @@ export default function App() {
                   onBack={() => setActiveScreen('home')} 
                   stats={stats}
                   settings={settings}
+                  dailyProgress={dailyProgress}
+                  onUpdateDailyProgress={(data) => setDailyProgress(prev => ({ ...prev, ...data }))}
                   onBuyItem={buyHouseItem}
                   onPlaceItem={placeHouseItem}
                   onRemoveItem={removeHouseItem}

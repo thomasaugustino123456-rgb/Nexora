@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Home, Sparkles, Lightbulb, MousePointer2, Move, RefreshCw, ZoomIn, ZoomOut, Maximize, ChevronLeft, ChevronRight, Archive, X, ShoppingBag, Flame, Coins, Plus, Trash2, CupSoda } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
-import { UserStats, UserSettings, HouseItem, PlacedHouseItem } from '../types';
+import { UserStats, UserSettings, HouseItem, PlacedHouseItem, DailyProgress } from '../types';
 import { HOUSE_ITEMS } from '../constants/houseItems';
 import { HouseItemSVG } from './HouseItemSVG';
 import { SpaceMascot } from './SpaceMascot';
@@ -13,6 +13,8 @@ export function HouseScreen({
   onBack, 
   stats, 
   settings, 
+  dailyProgress,
+  onUpdateDailyProgress,
   onBuyItem, 
   onPlaceItem, 
   onRemoveItem,
@@ -24,6 +26,8 @@ export function HouseScreen({
   onBack: () => void;
   stats: UserStats;
   settings: UserSettings;
+  dailyProgress: DailyProgress;
+  onUpdateDailyProgress: (data: Partial<DailyProgress>) => void;
   onBuyItem: (id: string, currency: 'streak' | 'coins') => void;
   onPlaceItem: (id: string, x: number, y: number, room: number) => void;
   onRemoveItem: (index: number) => void;
@@ -41,7 +45,7 @@ export function HouseScreen({
   const [placementMode, setPlacementMode] = useState<string | null>(null);
 
   // Mascot States
-  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [onboardingStep, setOnboardingStep] = useState(settings.spaceOnboardingCompleted ? 3 : 0);
   const [mascotPos, setMascotPos] = useState(settings.mascotPos || { x: 600, y: 400 });
   const [mascotSize, setMascotSize] = useState(settings.mascotSize || 1);
   
@@ -52,6 +56,78 @@ export function HouseScreen({
   const [isMascotOnFire, setIsMascotOnFire] = useState(false);
   const [itemToRemove, setItemToRemove] = useState<number | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<any>(null);
+
+  // Water Challenge Repeat Logic
+  const [waterSessionKey, setWaterSessionKey] = useState(0);
+
+  const handleWaterComplete = () => {
+    const currentCount = dailyProgress.waterChallengeCount || 0;
+    if (currentCount >= 4) {
+      showToast("Daily limit reached for Water Challenge (4 times), bro! 💧", "info");
+      setShowWaterChallenge(false);
+      return;
+    }
+
+    const pointsToAdd = 10;
+    const xpToAdd = 20;
+    const coinsToAdd = 15;
+    const streakToAdd = 1;
+
+    onUpdateStats({
+      totalPoints: (stats.totalPoints || 0) + pointsToAdd,
+      xp: (stats.xp || 0) + xpToAdd,
+      coins: (stats.coins || 0) + coinsToAdd,
+      streak: (stats.streak || 0) + streakToAdd,
+      weeklyPoints: (stats.weeklyPoints || 0) + pointsToAdd,
+      weeklyXP: (stats.weeklyXP || 0) + xpToAdd,
+    });
+
+    onUpdateDailyProgress({
+      waterChallengeCount: currentCount + 1,
+      waterDrank: (dailyProgress.waterDrank || 0) + 1
+    });
+
+    showToast(`Epic! Reward: +${coinsToAdd} Coins, +${xpToAdd} XP, +${streakToAdd} Streak! 🌊 (${currentCount + 1}/4)`, "success");
+    
+    // Auto-restart if not reached limit
+    if (currentCount + 1 < 4) {
+      setWaterSessionKey(prev => prev + 1);
+    } else {
+      setShowWaterChallenge(false);
+    }
+  };
+
+  const updateMascotPos = (x: number, y: number) => {
+    setMascotPos({ x, y });
+    const roundedX = Math.round(x);
+    const roundedY = Math.round(y);
+    onUpdateSettings({ mascotPos: { x: roundedX, y: roundedY } });
+    
+    // Check for reaction based on floor items
+    const reaction = getMascotPlacementReaction(roundedX, roundedY);
+    if (reaction) {
+      setMascotReaction(reaction);
+      setTimeout(() => setMascotReaction(null), 5000);
+    }
+
+    // Fire detection (Room 3)
+    if (activeRoom === 2 && fireTaps < 4) {
+      // Fire is roughly at 400, 250 in Cozy room
+      const dist = Math.sqrt(Math.pow(roundedX - 400, 2) + Math.pow(roundedY - 250, 2));
+      if (dist < 80) {
+        setIsMascotOnFire(true);
+      } else {
+        setIsMascotOnFire(false);
+      }
+    } else {
+      setIsMascotOnFire(false);
+    }
+  };
+
+  const updateMascotSize = (size: number) => {
+    setMascotSize(size);
+    onUpdateSettings({ mascotSize: size });
+  };
 
   // Room 1 States (Isometric)
   const [lightOn, setLightOn] = useState(true);
@@ -723,7 +799,7 @@ export function HouseScreen({
                   <div className="p-2 bg-blue-500 rounded-xl text-white">
                     <CupSoda size={20} />
                   </div>
-                  <h3 className="font-black text-blue-900 uppercase tracking-tight">Water Challenge</h3>
+                  <h3 className="font-black text-blue-900 uppercase tracking-tight">Water Challenge ({dailyProgress.waterChallengeCount || 0}/4)</h3>
                 </div>
                 <button 
                   onClick={() => setShowWaterChallenge(false)}
@@ -733,36 +809,20 @@ export function HouseScreen({
                 </button>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-8">
+              <div className="flex-1 overflow-y-auto p-8" key={waterSessionKey}>
                 <WaterStep 
-                  goal={settings.waterGoal || 8} 
-                  progress={stats.waterDrank || 0}
+                  goal={4} // Short challenge goal for "drinking" session
+                  progress={0}
                   onUpdate={(val) => {
-                    // Reward for drinking
-                    const pointsToAdd = 5;
-                    const xpToAdd = 10;
-                    const coinsToAdd = 5;
-                    
-                    // Update stats with rewards
-                    onUpdateStats({ 
-                      waterDrank: val,
-                      xp: (stats.xp || 0) + xpToAdd,
-                      coins: (stats.coins || 0) + coinsToAdd,
-                      totalPoints: (stats.totalPoints || 0) + pointsToAdd
-                    });
-
-                    // Check for streak reward (if they hit a milestone, e.g., every 4 glasses)
-                    if (val > 0 && val % 4 === 0) {
-                      onUpdateStats({ streak: (stats.streak || 0) + 1 });
-                      showToast("Streak +1 for staying hydrated! 💧", "success");
+                    if (val >= 4) {
+                      handleWaterComplete();
                     }
-                    
-                    vibrate(VIBRATION_PATTERNS.SUCCESS);
+                    vibrate(VIBRATION_PATTERNS.CLICK);
                   }}
                   onContinue={() => setShowWaterChallenge(false)}
                   activeSkin={settings.activeSkin}
                   settings={settings}
-                  play={() => {}} // Pass dummy play or actual play if available
+                  play={() => {}} 
                 />
               </div>
             </div>
@@ -801,115 +861,16 @@ export function HouseScreen({
           }
           setIsMascotOnFire(false);
         }}
+        x={mascotPos.x}
+        y={mascotPos.y}
+        size={mascotSize}
+        onUpdatePos={updateMascotPos}
+        onUpdateSize={updateMascotSize}
+        showSizeCustomizer={showSizeCustomizer}
+        setShowSizeCustomizer={setShowSizeCustomizer}
       />
 
-      {/* Movable Mascot in Room */}
-      <div className="absolute inset-0 pointer-events-none z-40">
-        <svg viewBox="0 0 800 600" className="w-full h-full">
-          <motion.g
-            drag
-            dragMomentum={false}
-            style={{ x: mascotPos.x, y: mascotPos.y, scale: mascotSize }}
-            transition={{ type: "spring", stiffness: 200, damping: 20 }}
-            onDragEnd={(e, info) => {
-              const newX = mascotPos.x + info.offset.x;
-              const newY = mascotPos.y + info.offset.y;
-              setMascotPos({ x: newX, y: newY });
-              onUpdateSettings({ mascotPos: { x: newX, y: newY } });
-              
-              // Placement reaction
-              const reaction = getMascotPlacementReaction(newX, newY);
-              if (reaction) {
-                setMascotReaction(reaction);
-                // Clear reaction after some time if needed, or let SpaceMascot handle it
-              }
-
-              // Fire detection (Room 3)
-              if (activeRoom === 2 && fireTaps < 4) {
-                // Fire is roughly at 400, 250 in Cozy room
-                const dist = Math.sqrt(Math.pow(newX - 400, 2) + Math.pow(newY - 250, 2));
-                if (dist < 80) {
-                  setIsMascotOnFire(true);
-                } else {
-                  setIsMascotOnFire(false);
-                }
-              }
-            }}
-            onPointerDown={handleMascotLongPressStart}
-            onPointerUp={handleLongPressEnd}
-            onPointerLeave={handleLongPressEnd}
-            className="pointer-events-auto cursor-grab active:cursor-grabbing"
-          >
-            <Mascot 
-              className="w-24 h-24" 
-              mood={isMascotOnFire ? 'boiling' : isFeeding ? 'happy' : (activeRoom === 2 ? (isNightMode ? 'neutral' : 'happy') : (lightOn ? 'happy' : 'neutral'))} 
-            />
-          </motion.g>
-        </svg>
-      </div>
-
-      {/* Mascot Size Customizer Modal */}
-      <AnimatePresence>
-        {showSizeCustomizer && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6"
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-[#1a1a2e] border-2 border-white/10 rounded-[40px] p-8 w-full max-w-sm text-center shadow-2xl"
-            >
-              <div className="w-32 h-32 mx-auto mb-6 flex items-center justify-center">
-                <motion.div style={{ scale: mascotSize }}>
-                  <Mascot mood="happy" className="w-24 h-24" />
-                </motion.div>
-              </div>
-              <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">
-                Mascot Size
-              </h3>
-              <p className="text-sm text-white/60 mb-8">
-                "How big do you want me to be in your space, bro?"
-              </p>
-              
-              <div className="flex justify-center gap-4 mb-8">
-                <button
-                  onClick={() => {
-                    setMascotSize(prev => Math.max(0.3, prev - 0.1));
-                    vibrate(5);
-                  }}
-                  className="px-6 py-3 bg-indigo-500 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-600 transition-all"
-                >
-                  Zoom In (Small)
-                </button>
-                <button
-                  onClick={() => {
-                    setMascotSize(prev => Math.min(2.5, prev + 0.1));
-                    vibrate(5);
-                  }}
-                  className="px-6 py-3 bg-purple-500 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-purple-600 transition-all"
-                >
-                  Zoom Out (Big)
-                </button>
-              </div>
-
-              <button
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.SUCCESS);
-                  onUpdateSettings({ mascotSize });
-                  setShowSizeCustomizer(false);
-                }}
-                className="w-full py-4 rounded-2xl bg-indigo-500 text-white font-black uppercase tracking-widest hover:bg-indigo-600 transition-colors shadow-lg shadow-indigo-500/20"
-              >
-                Save Size
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Ambient Background Glow */}
 
       {/* Removal Confirmation Modal */}
       <AnimatePresence>
