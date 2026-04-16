@@ -174,7 +174,7 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
       <AnimatePresence>
         {showMascot && (
           <motion.div
-            initial={{ scale: 0, opacity: 0 }}
+            initial={{ scale: 0, opacity: 0, x: x - 100, y: y - 100 }}
             animate={{ 
               x: x - 100, 
               y: y - 100, 

@@ -43,10 +43,15 @@ export function HouseScreen({
   const [showShop, setShowShop] = useState(false);
   const [showWaterChallenge, setShowWaterChallenge] = useState(false);
   const [placementMode, setPlacementMode] = useState<string | null>(null);
+  const [currentWaterProgress, setCurrentWaterProgress] = useState(0);
 
   // Mascot States
   const [onboardingStep, setOnboardingStep] = useState(settings.spaceOnboardingCompleted ? 3 : 0);
-  const [mascotPos, setMascotPos] = useState(settings.mascotPos || { x: 600, y: 400 });
+  const [mascotPos, setMascotPos] = useState(() => {
+    if (settings.mascotPos) return settings.mascotPos;
+    // Default to center of viewport
+    return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  });
   const [mascotSize, setMascotSize] = useState(settings.mascotSize || 1);
   
   const [showSizeCustomizer, setShowSizeCustomizer] = useState(false);
@@ -92,6 +97,7 @@ export function HouseScreen({
     // Auto-restart if not reached limit
     if (currentCount + 1 < 4) {
       setWaterSessionKey(prev => prev + 1);
+      setCurrentWaterProgress(0);
     } else {
       setShowWaterChallenge(false);
     }
@@ -812,8 +818,9 @@ export function HouseScreen({
               <div className="flex-1 overflow-y-auto p-8" key={waterSessionKey}>
                 <WaterStep 
                   goal={4} // Short challenge goal for "drinking" session
-                  progress={0}
+                  progress={currentWaterProgress}
                   onUpdate={(val) => {
+                    setCurrentWaterProgress(val);
                     if (val >= 4) {
                       handleWaterComplete();
                     }
