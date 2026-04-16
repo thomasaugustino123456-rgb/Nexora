@@ -573,6 +573,7 @@ function CoinAnimation({ onComplete, play, settings }: { onComplete: () => void,
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDataReady, setIsDataReady] = useState(false); // New flag to prevent overwriting
   const [stats, setStats] = useState<UserStats>(DEFAULT_STATS);
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>('nexora_active_screen', 'home');
@@ -834,7 +835,7 @@ export default function App() {
 
   // Firestore Sync Logic
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isDataReady) return; // Only sync if user is logged in AND data is ready
 
     const syncToFirestore = async () => {
       const path = `users/${user.uid}`;
@@ -1221,7 +1222,8 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        setLoading(true); // Prevent flashing home screen while checking profile
+        setLoading(true);
+        setIsDataReady(false); // Reset while loading
         setUser(currentUser);
         
         const path = `users/${currentUser.uid}`;
@@ -1239,36 +1241,27 @@ export default function App() {
             };
             await setDoc(doc(db, 'users', currentUser.uid), newUser);
             setNeedsOnboarding(true);
+            setIsDataReady(true); // New user is ready to sync
           } else {
             const data = userDoc.data();
             setNeedsOnboarding(data.onboardingCompleted === false);
             setIsPro(!!data.isPro);
             
             // Load settings and stats from Firestore if they exist
-            if (data.inventory) {
+            if (data.inventory || data.displayName) {
               setSettings(prev => ({ ...prev, ...data }));
             }
             if (data.stats) {
               setStats(prev => ({ ...prev, ...data.stats }));
             }
+            
             const today = new Date().toISOString().split('T')[0];
             const progressDoc = await getDoc(doc(db, 'users', currentUser.uid, 'progress', today));
             if (progressDoc.exists()) {
               setDailyProgress(progressDoc.data() as DailyProgress);
-            } else {
-              setDailyProgress({
-                date: today,
-                completed: false,
-                pushupsDone: false,
-                waterDrank: 0,
-                breathingDone: false,
-                drawingDone: false,
-                footballDone: false,
-                bubblesDone: false,
-                dailyQuestDone: false,
-                completionsCount: 0
-              });
             }
+            
+            setIsDataReady(true); // Data is now fully loaded from Firestore
           }
         } catch (error) {
           try {
@@ -1276,11 +1269,15 @@ export default function App() {
           } catch (e) {
             console.error("Firestore error handled:", e);
           }
+          // Even on error, we might want to allow some usage, 
+          // but safely say we're "ready" with local defaults if fetch fails completely
+          setIsDataReady(true); 
         }
         setLoading(false);
         console.log("Loading set to false (User found)");
       } else {
         setUser(null);
+        setIsDataReady(false); // Not ready if no user
         setStats(DEFAULT_STATS);
         setSettings(DEFAULT_SETTINGS);
         setLoading(false);
@@ -1302,32 +1299,6 @@ export default function App() {
       needsOnboarding
     });
   }, [loading, user, activeScreen, settings, stats, showAuth, needsOnboarding]);
-
-  // 10. Pro Daily Gift Logic
-  useEffect(() => {
-    if (settings.isPro && user && stats.lastGiftDate !== today) {
-      const giftAmount = 50;
-      setStats(prev => ({
-        ...prev,
-        coins: (prev.coins || 0) + giftAmount,
-        lastGiftDate: today
-      }));
-      showToast(`Pro Daily Gift: +${giftAmount} Coins! 🎁`, 'success');
-      
-      // Update Firestore
-      const statsRef = doc(db, 'users', user.uid, 'stats', 'main');
-      updateDoc(statsRef, { 
-        coins: (stats.coins || 0) + giftAmount,
-        lastGiftDate: today 
-      }).catch(e => {
-        try {
-          handleFirestoreError(e, OperationType.UPDATE, 'stats');
-        } catch (err) {
-          console.error("Firestore error handled:", err);
-        }
-      });
-    }
-  }, [settings.isPro, user, stats.lastGiftDate, today]);
 
   // 11. Leaderboard Data Fetching
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -1473,31 +1444,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (user) {
-      const leaderboardRef = doc(db, 'leaderboard', user.uid);
-      setDoc(leaderboardRef, {
-        uid: user.uid,
-        displayName: settings.displayName || 'Anonymous',
-        photoURL: user.photoURL || '',
-        streak: stats.streak || 0,
-        totalPoints: stats.totalPoints,
-        xp: stats.xp || 0,
-        weeklyPoints: stats.weeklyPoints,
-        weeklyXP: stats.weeklyXP || 0,
-        level: Math.floor((stats.totalPoints || 0) / 100) + 1,
-        league: settings.league || 'Bronze'
-      }, { merge: true }).catch(e => {
-        try {
-          handleFirestoreError(e, OperationType.WRITE, 'leaderboard');
-        } catch (err) {
-          console.error("Firestore error handled:", err);
-        }
-      });
-    }
-  }, [user, stats.weeklyXP, stats.totalPoints, stats.streak, settings.displayName, settings.profilePic, settings.league]);
-
-  useEffect(() => {
-    if (user) {
+    if (user && isDataReady) {
       // Weekly Reset Logic
       const now = new Date();
       const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay())).toISOString().split('T')[0];
@@ -1510,6 +1457,17 @@ export default function App() {
         }));
       }
 
+      // Pro Daily Gift Logic
+      if (settings.isPro && stats.lastGiftDate !== today) {
+        setStats(prev => ({
+          ...prev,
+          coins: (prev.coins || 0) + 50,
+          lastGiftDate: today
+        }));
+        showToast(`Pro Daily Gift: +50 Coins! 🎁`, 'success');
+      }
+
+      // Leaderboard Listener
       const q = query(
         collection(db, 'leaderboard'), 
         where('league', '==', settings.league || 'Bronze'),
@@ -1518,23 +1476,15 @@ export default function App() {
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const data = snapshot.docs.map(doc => doc.data() as any);
-        
-        // Ensure user is in the list for local feedback if not yet synced
         if (user && !data.find(d => d.uid === user.uid)) {
           data.push({
             uid: user.uid,
             displayName: settings.displayName || 'Anonymous',
             photoURL: settings.profilePic || user.photoURL || '',
-            streak: stats.streak || 0,
-            totalPoints: stats.totalPoints,
-            xp: stats.xp || 0,
-            weeklyPoints: stats.weeklyPoints,
             weeklyXP: stats.weeklyXP || 0,
-            level: Math.floor((stats.totalPoints || 0) / 100) + 1,
             league: settings.league || 'Bronze'
           });
         }
-        
         setLeaderboard(data.sort((a, b) => (b.weeklyXP || 0) - (a.weeklyXP || 0)));
       }, (error) => {
         try {
@@ -1545,7 +1495,7 @@ export default function App() {
       });
       return () => unsubscribe();
     }
-  }, [user, settings.league, stats.weeklyPoints]);
+  }, [user, isDataReady, settings.league, stats.lastWeeklyReset, stats.lastGiftDate, today, settings.isPro, stats.weeklyXP, settings.displayName, settings.profilePic]);
 
   const userRank = leaderboard.findIndex(l => l.uid === user?.uid) + 1;
 
