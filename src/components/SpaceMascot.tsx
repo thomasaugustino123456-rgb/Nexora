@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Pin, PinOff } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { vibrate } from '../lib/vibrate';
 
@@ -21,6 +22,9 @@ interface SpaceMascotProps {
   onUpdateSize: (size: number) => void;
   showSizeCustomizer: boolean;
   setShowSizeCustomizer: (show: boolean) => void;
+  isPinned: boolean;
+  onTogglePin: () => void;
+  isNearItem?: boolean;
 }
 
 const VIBRATION_PATTERNS = {
@@ -46,7 +50,10 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
   onUpdatePos,
   onUpdateSize,
   showSizeCustomizer,
-  setShowSizeCustomizer
+  setShowSizeCustomizer,
+  isPinned,
+  onTogglePin,
+  isNearItem
 }) => {
   const [message, setMessage] = useState<string | null>(null);
   const [showMascot, setShowMascot] = useState(false);
@@ -54,6 +61,7 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
   const [isSleeping, setIsSleeping] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isSettling, setIsSettling] = useState(false);
+  const [justPinned, setJustPinned] = useState(false);
   const longPressRef = React.useRef<any>(null);
 
   // Stage 1: Onboarding
@@ -177,6 +185,14 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (isPinned) {
+      setJustPinned(true);
+      const timer = setTimeout(() => setJustPinned(false), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [isPinned]);
+
   return (
     <div className="fixed inset-0 pointer-events-none z-[160]">
       <AnimatePresence>
@@ -186,14 +202,15 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
             animate={{ 
               x: x - 100, 
               y: y - 100, 
-              scale: isDragging ? size * 1.1 : isSettling ? size * 0.95 : size, 
+              scale: isDragging ? size * 1.1 : justPinned ? size * 1.05 : isSettling ? size * 0.95 : size, 
               opacity: 1,
-              rotate: isDragging ? [0, -5, 5, 0] : 0
+              rotate: isDragging ? [0, -5, 5, 0] : justPinned ? [0, 10, -10, 0] : 0,
+              filter: justPinned ? 'brightness(1.2)' : 'brightness(1)'
             }}
             transition={{
               type: "spring",
-              stiffness: isDragging ? 400 : 250,
-              damping: isDragging ? 30 : 25,
+              stiffness: isDragging ? 400 : justPinned ? 500 : 250,
+              damping: isDragging ? 30 : justPinned ? 20 : 25,
               rotate: { repeat: isDragging ? Infinity : 0, duration: 0.5 }
             }}
             exit={{ scale: 0, opacity: 0 }}
@@ -225,6 +242,15 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
             <div className="relative w-full h-full flex items-center justify-center">
               {isDragging && (
                 <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full -z-10 animate-pulse" />
+              )}
+              {isPinned && !isDragging && (
+                <motion.div 
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  className="absolute -top-4 -right-4 w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white z-20"
+                >
+                  <Pin size={18} className="text-white fill-current" />
+                </motion.div>
               )}
               <AnimatePresence>
                 {message && (
@@ -288,6 +314,27 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
             >
               <span className="text-2xl font-black">+</span>
             </button>
+            
+            <div className="w-[1px] h-8 bg-indigo-100 mx-1" />
+
+            <button
+              onClick={() => {
+                vibrate(isPinned ? 15 : VIBRATION_PATTERNS.SUCCESS);
+                onTogglePin();
+              }}
+              disabled={!isPinned && !isNearItem}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                isPinned 
+                  ? 'bg-red-50 text-red-500 hover:bg-red-100' 
+                  : isNearItem 
+                    ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-md shadow-indigo-500/20' 
+                    : 'bg-indigo-50 text-indigo-200 cursor-not-allowed'
+              }`}
+              title={isPinned ? "Unpin Mascot" : "Pin Mascot to Item"}
+            >
+              {isPinned ? <PinOff size={20} /> : <Pin size={20} />}
+            </button>
+
             <button
               onClick={() => { vibrate(10); setShowSizeCustomizer(false); }}
               className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center hover:bg-indigo-600 transition-colors ml-2"

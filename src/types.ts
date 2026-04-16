@@ -18,6 +18,7 @@ export interface HouseItem {
 }
 
 export interface PlacedHouseItem {
+  id: string; // Unique instance ID
   itemId: string;
   x: number;
   y: number;
@@ -55,6 +56,7 @@ export interface UserSettings {
   spaceOnboardingCompleted?: boolean;
   mascotSize?: number;
   mascotPos?: { x: number, y: number };
+  mascotPinnedItemId?: string | null;
 }
 
 export interface ShopItem {

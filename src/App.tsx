@@ -246,7 +246,10 @@ const DEFAULT_SETTINGS: UserSettings = {
     dynamicUrgency: true
   },
   purchasedHouseItemIds: [],
-  placedHouseItems: []
+  placedHouseItems: [],
+  mascotSize: 1.0,
+  mascotPos: { x: 400, y: 300 },
+  mascotPinnedItemId: null
 };
 
 const DEFAULT_STATS: UserStats = {
@@ -626,7 +629,13 @@ export default function App() {
   };
 
   const placeHouseItem = (id: string, x: number, y: number, room: number) => {
-    const newItem: PlacedHouseItem = { itemId: id, x, y, room };
+    const newItem: PlacedHouseItem = { 
+      id: `${id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      itemId: id, 
+      x, 
+      y, 
+      room 
+    };
     setSettings(prev => ({
       ...prev,
       placedHouseItems: [...(prev.placedHouseItems || []), newItem]
@@ -634,19 +643,35 @@ export default function App() {
   };
 
   const removeHouseItem = (index: number) => {
-    setSettings(prev => ({
-      ...prev,
-      placedHouseItems: (prev.placedHouseItems || []).filter((_, i) => i !== index)
-    }));
+    setSettings(prev => {
+      const itemToRemove = prev.placedHouseItems?.[index];
+      return {
+        ...prev,
+        placedHouseItems: (prev.placedHouseItems || []).filter((_, i) => i !== index),
+        mascotPinnedItemId: (itemToRemove && prev.mascotPinnedItemId === itemToRemove.id) ? null : prev.mascotPinnedItemId
+      };
+    });
   };
 
   const updateHouseItemPosition = (index: number, x: number, y: number) => {
-    setSettings(prev => ({
-      ...prev,
-      placedHouseItems: (prev.placedHouseItems || []).map((item, i) => 
+    setSettings(prev => {
+      const currentItems = prev.placedHouseItems || [];
+      const movingItem = currentItems[index];
+      
+      const updatedItems = currentItems.map((item, i) => 
         i === index ? { ...item, x, y } : item
-      )
-    }));
+      );
+
+      // If mascot is pinned to this specific item instance, update mascot position relatively
+      let mascotPos = prev.mascotPos;
+      if (movingItem && prev.mascotPinnedItemId === movingItem.id && mascotPos) {
+        const dx = x - movingItem.x;
+        const dy = y - movingItem.y;
+        mascotPos = { x: mascotPos.x + dx, y: mascotPos.y + dy };
+      }
+
+      return { ...prev, placedHouseItems: updatedItems, mascotPos };
+    });
   };
 
   useEffect(() => {

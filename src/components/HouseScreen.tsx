@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Home, Sparkles, Lightbulb, MousePointer2, Move, RefreshCw, ZoomIn, ZoomOut, Maximize, ChevronLeft, ChevronRight, Archive, X, ShoppingBag, Flame, Coins, Plus, Trash2, CupSoda } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
@@ -136,6 +136,57 @@ export function HouseScreen({
     setMascotSize(size);
     onUpdateSettings({ mascotSize: size });
   };
+
+  const getNearestItem = () => {
+    const placedItems = (settings.placedHouseItems || []).filter(p => p.room === activeRoom);
+    let nearest: PlacedHouseItem | null = null;
+    let minDist = 120; // threshold for being "near"
+    
+    for (const item of placedItems) {
+      const dist = Math.sqrt(Math.pow(mascotPos.x - item.x, 2) + Math.pow(mascotPos.y - item.y, 2));
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = item;
+      }
+    }
+    return nearest;
+  };
+
+  const toggleMascotPin = () => {
+    if (settings.mascotPinnedItemId) {
+      onUpdateSettings({ mascotPinnedItemId: null });
+      vibrate(10);
+      showToast("Mascot unpinned, bro! 🔓", "info");
+    } else {
+      const nearest = getNearestItem();
+      if (nearest) {
+        onUpdateSettings({ mascotPinnedItemId: nearest.id });
+        vibrate(20);
+        showToast("Mascot pinned to object! 📌", "success");
+      } else {
+        showToast("Move closer to an item to pin, bro! 🏠", "error");
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (settings.mascotPos) {
+      setMascotPos(settings.mascotPos);
+    }
+  }, [settings.mascotPos]);
+
+  useEffect(() => {
+    // Migrate existing items to have IDs if they don't
+    const items = settings.placedHouseItems || [];
+    const missingIds = items.some(i => !i.id);
+    if (missingIds) {
+      const fixedItems = items.map(i => i.id ? i : { 
+        ...i, 
+        id: `${i.itemId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` 
+      });
+      onUpdateSettings({ placedHouseItems: fixedItems });
+    }
+  }, [settings.placedHouseItems, onUpdateSettings]);
 
   // Room 1 States (Isometric)
   const [lightOn, setLightOn] = useState(true);
@@ -888,6 +939,9 @@ export function HouseScreen({
         onUpdateSize={updateMascotSize}
         showSizeCustomizer={showSizeCustomizer}
         setShowSizeCustomizer={setShowSizeCustomizer}
+        isPinned={!!settings.mascotPinnedItemId}
+        onTogglePin={toggleMascotPin}
+        isNearItem={!!getNearestItem()}
       />
 
       {/* Ambient Background Glow */}
