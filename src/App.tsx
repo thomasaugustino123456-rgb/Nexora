@@ -883,6 +883,13 @@ export default function App() {
           const musicRef = doc(db, 'users', user.uid, 'music', 'purchased');
           await setDoc(musicRef, { items: musicItems });
         }
+
+        // Sync space onboarding specifically to the new path as requested
+        const spaceSettingsRef = doc(db, 'users', user.uid, 'settings', 'space');
+        await setDoc(spaceSettingsRef, { 
+          completed: !!settings.spaceOnboardingCompleted,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
       } catch (error) {
         try {
           handleFirestoreError(error, OperationType.UPDATE, path);
@@ -1248,11 +1255,25 @@ export default function App() {
             setIsPro(!!data.isPro);
             
             // Load settings and stats from Firestore if they exist
-            if (data.inventory || data.displayName) {
-              setSettings(prev => ({ ...prev, ...data }));
+            if (data) {
+              setSettings(prev => ({ 
+                ...prev, 
+                ...data,
+                // Ensure default objects exist if data is partial
+                badgeSettings: { ...prev.badgeSettings, ...(data.badgeSettings || {}) },
+                inventory: data.inventory || prev.inventory || [],
+                placedHouseItems: data.placedHouseItems || prev.placedHouseItems || []
+              }));
             }
             if (data.stats) {
               setStats(prev => ({ ...prev, ...data.stats }));
+            }
+            
+            // Explicit check for space onboarding in the new path requested by user
+            const spaceSettingsDoc = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'space'));
+            if (spaceSettingsDoc.exists()) {
+              const spaceData = spaceSettingsDoc.data();
+              setSettings(prev => ({ ...prev, spaceOnboardingCompleted: !!spaceData.completed }));
             }
             
             const today = new Date().toISOString().split('T')[0];
@@ -2394,6 +2415,7 @@ export default function App() {
                   onUpdateSettings={(newSettings) => setSettings(prev => ({ ...prev, ...newSettings }))}
                   onUpdateStats={(newStats) => setStats(prev => ({ ...prev, ...newStats }))}
                   showToast={showToast}
+                  play={play}
                 />
               </motion.div>
             )}

@@ -21,7 +21,8 @@ export function HouseScreen({
   onUpdateItemPosition,
   onUpdateSettings,
   onUpdateStats,
-  showToast
+  showToast,
+  play
 }: { 
   onBack: () => void;
   stats: UserStats;
@@ -35,6 +36,7 @@ export function HouseScreen({
   onUpdateSettings: (settings: Partial<UserSettings>) => void;
   onUpdateStats: (stats: Partial<UserStats>) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
+  play: (s: string) => void;
 }) {
   const [resetKey, setResetKey] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -274,12 +276,18 @@ export function HouseScreen({
       if (!itemData) return null;
 
       // Good places: chairs, beds, sofas, tables
-      const goodItems = ['Chair', 'Bed', 'Sofa', 'Table', 'Armchair', 'Desk'];
-      const badItems = ['Fireplace', 'Trash', 'Dirty']; // Fireplace is handled separately for "boiling" but can have a reaction too
+      const goodItems = ['Chair', 'Bed', 'Sofa', 'Table', 'Armchair', 'Desk', 'Pillow', 'Bean Bag', 'Rug'];
+      const badItems = ['Fireplace', 'Trash', 'Dirty', 'Sharp']; 
 
       if (goodItems.some(keyword => itemData.name.includes(keyword))) {
+        const reactions = [
+          `Yo bro, this ${itemData.name} is so comfy! I could stay here all day, it feels amazing! ✨`,
+          `Ahhh... the ${itemData.name} is the perfect spot, bro. I feel so relaxed! 🧘‍♂️`,
+          `This is legendary, bro! Sitting on the ${itemData.name} makes me feel like a king! 👑`,
+          `Nice move, bro! This ${itemData.name} is super cozy. Good choice! 🏠`
+        ];
         return {
-          text: `Yo bro, this ${itemData.name} is so comfy! I could stay here all day, it feels amazing! ✨`,
+          text: reactions[Math.floor(Math.random() * reactions.length)],
           type: 'good' as const
         };
       } else if (itemData.name.includes('Fireplace')) {
@@ -287,9 +295,14 @@ export function HouseScreen({
           text: `AAAH! It's way too hot here bro! Don't leave me on the fire, it's dangerous! 🔥`,
           type: 'bad' as const
         };
+      } else if (itemData.name.includes('Plant') || itemData.name.includes('Cactus')) {
+        return {
+          text: `Whoa! Careful with the ${itemData.name}, bro! I don't want to get poked or spill water! 🌵`,
+          type: 'neutral' as const
+        };
       } else {
         return {
-          text: `Placed on the ${itemData.name}, huh? It's okay, but I've seen better spots, bro! 🏠`,
+          text: `Placed on the ${itemData.name}, huh? It's a nice change of view, bro! 🏠`,
           type: 'neutral' as const
         };
       }
@@ -829,7 +842,7 @@ export function HouseScreen({
                   onContinue={() => setShowWaterChallenge(false)}
                   activeSkin={settings.activeSkin}
                   settings={settings}
-                  play={() => {}} 
+                  play={play} 
                 />
               </div>
             </div>

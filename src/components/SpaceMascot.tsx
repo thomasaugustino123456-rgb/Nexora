@@ -23,6 +23,12 @@ interface SpaceMascotProps {
   setShowSizeCustomizer: (show: boolean) => void;
 }
 
+const VIBRATION_PATTERNS = {
+  CLICK: 10,
+  SUCCESS: [10, 30, 10],
+  ERROR: [50, 100, 50],
+};
+
 export const SpaceMascot: React.FC<SpaceMascotProps> = ({
   onboardingStep,
   setOnboardingStep,
@@ -46,6 +52,8 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
   const [showMascot, setShowMascot] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isSleeping, setIsSleeping] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSettling, setIsSettling] = useState(false);
   const longPressRef = React.useRef<any>(null);
 
   // Stage 1: Onboarding
@@ -178,21 +186,46 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
             animate={{ 
               x: x - 100, 
               y: y - 100, 
-              scale: size, 
-              opacity: 1 
+              scale: isDragging ? size * 1.1 : isSettling ? size * 0.95 : size, 
+              opacity: 1,
+              rotate: isDragging ? [0, -5, 5, 0] : 0
+            }}
+            transition={{
+              type: "spring",
+              stiffness: isDragging ? 400 : 250,
+              damping: isDragging ? 30 : 25,
+              rotate: { repeat: isDragging ? Infinity : 0, duration: 0.5 }
             }}
             exit={{ scale: 0, opacity: 0 }}
-            className="absolute w-56 h-56 pointer-events-auto cursor-grab active:cursor-grabbing"
+            className={`absolute w-56 h-56 pointer-events-auto transition-shadow ${
+              isDragging ? 'cursor-grabbing z-[180]' : 'cursor-grab z-[160]'
+            }`}
             drag
             dragMomentum={false}
-            onDragEnd={(e, info) => {
-              onUpdatePos(x + info.offset.x, y + info.offset.y);
+            dragElastic={0.1}
+            onDragStart={() => {
+              setIsDragging(true);
+              setIsSettling(false);
+              vibrate(5);
+              startLongPress();
             }}
-            onPointerDown={startLongPress}
+            onDragEnd={(e, info) => {
+              setIsDragging(false);
+              setIsSettling(true);
+              endLongPress();
+              onUpdatePos(x + info.offset.x, y + info.offset.y);
+              vibrate(10);
+              // Small delay for the "squish" effect to finish
+              setTimeout(() => setIsSettling(false), 300);
+            }}
+            onPointerDown={isDragging ? undefined : startLongPress}
             onPointerUp={endLongPress}
             onPointerLeave={endLongPress}
           >
-            <div className="relative w-full h-full">
+            <div className="relative w-full h-full flex items-center justify-center">
+              {isDragging && (
+                <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full -z-10 animate-pulse" />
+              )}
               <AnimatePresence>
                 {message && (
                   <motion.div
@@ -224,6 +257,7 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
               <Mascot 
                 mood={onFire ? 'boiling' : isSleeping ? 'neutral' : 'happy'} 
                 className={`w-full h-full ${isSleeping ? 'opacity-80 grayscale-[0.5]' : ''}`}
+                isSitting={!isDragging}
               />
             </div>
           </motion.div>

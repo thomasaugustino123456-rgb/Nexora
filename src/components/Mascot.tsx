@@ -11,9 +11,19 @@ interface MascotProps {
   onClick?: () => void;
   onPointerMove?: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerLeave?: () => void;
+  isSitting?: boolean;
 }
 
-export const Mascot: React.FC<MascotProps> = ({ className, mood = 'happy', hat = 'none', soundPack = 'cat', onClick, onPointerMove, onPointerLeave }) => {
+export const Mascot: React.FC<MascotProps> = ({ 
+  className, 
+  mood = 'happy', 
+  hat = 'none', 
+  soundPack = 'cat', 
+  onClick, 
+  onPointerMove, 
+  onPointerLeave,
+  isSitting = false
+}) => {
   const [clickCount, setClickCount] = useState(0);
   const { play } = useSound();
 
@@ -46,7 +56,12 @@ export const Mascot: React.FC<MascotProps> = ({ className, mood = 'happy', hat =
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
     >
-      <svg viewBox="0 0 500 600" xmlns="http://www.w3.org/2000/svg" className={`w-full h-full transition-transform duration-300 ease-in-out hover:scale-105 ${isBoiling ? 'animate-pulse' : ''}`}>
+      <svg 
+        viewBox="0 0 500 600" 
+        xmlns="http://www.w3.org/2000/svg" 
+        className={`w-full h-full transition-all duration-500 ease-out hover:scale-105 ${isBoiling ? 'animate-pulse' : ''}`}
+        style={{ transform: isSitting ? 'scaleY(0.85) translateY(10%)' : 'none' }}
+      >
         <defs>
           {/* Filters */}
           <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -214,6 +229,14 @@ export const Mascot: React.FC<MascotProps> = ({ className, mood = 'happy', hat =
               <path d="M 295,270 L 345,240" fill="none" stroke="#001845" strokeWidth="12" strokeLinecap="round" />
               {/* Angry Mouth */}
               <path d="M 220 320 Q 250 290 280 320" fill="none" stroke="#001845" strokeWidth="12" strokeLinecap="round" />
+            </>
+          ) : isSitting ? (
+            <>
+              {/* Relaxed / Sitting Eyes */}
+              <path d="M 160,260 Q 180,275 200,260" fill="none" stroke="#001845" strokeWidth="8" strokeLinecap="round" />
+              <path d="M 300,260 Q 320,275 340,260" fill="none" stroke="#001845" strokeWidth="8" strokeLinecap="round" />
+              {/* Small Smile */}
+              <path d="M 230 310 Q 250 325 270 310" fill="none" stroke="#001845" strokeWidth="6" strokeLinecap="round" />
             </>
           ) : isNeutral ? (
             <>
