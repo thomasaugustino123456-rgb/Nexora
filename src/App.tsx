@@ -249,7 +249,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   placedHouseItems: [],
   mascotSize: 1.0,
   mascotPos: { x: 400, y: 300 },
-  mascotPinnedItemId: null
+  mascotPinnedItemId: null,
+  spaceOnboardingCompleted: false
 };
 
 const DEFAULT_STATS: UserStats = {
@@ -860,13 +861,20 @@ export default function App() {
 
   // Firestore Sync Logic
   useEffect(() => {
-    if (!user || !isDataReady) return; // Only sync if user is logged in AND data is ready
+    if (!user || !isDataReady) return; 
 
     const syncToFirestore = async () => {
       const path = `users/${user.uid}`;
       try {
         const userRef = doc(db, 'users', user.uid);
         
+        // Safety Check: Never sync if settings/stats appear empty/default but user is identified as existing
+        // This is a last-line-of-defense against state race conditions
+        if (settings.displayName === 'Nexora User' && stats.totalPoints === 0 && !needsOnboarding) {
+          console.warn("Firestore Sync Blocked: State appears to be default while user is already existing. Preventing overwrite.");
+          return;
+        }
+
         // Sync main user document (settings, fcmToken, etc.)
         await updateDoc(userRef, {
           ...settings,
@@ -924,9 +932,9 @@ export default function App() {
       }
     };
 
-    const timeoutId = setTimeout(syncToFirestore, 2000); // Debounce sync
+    const timeoutId = setTimeout(syncToFirestore, 3000); // Increased debounce for safety
     return () => clearTimeout(timeoutId);
-  }, [settings, stats, dailyProgress, user, fcmToken, today]);
+  }, [settings, stats, dailyProgress, user, fcmToken, today, isDataReady]);
 
   useEffect(() => {
     const checkVersion = async () => {
@@ -1269,45 +1277,55 @@ export default function App() {
               role: 'user',
               onboardingCompleted: false,
               ...DEFAULT_SETTINGS,
-              stats: DEFAULT_STATS
+              stats: DEFAULT_STATS,
+              createdAt: serverTimestamp()
             };
             await setDoc(doc(db, 'users', currentUser.uid), newUser);
+            setSettings(DEFAULT_SETTINGS);
+            setStats(DEFAULT_STATS);
             setNeedsOnboarding(true);
-            setIsDataReady(true); // New user is ready to sync
+            setIsDataReady(true);
           } else {
             const data = userDoc.data();
             setNeedsOnboarding(data.onboardingCompleted === false);
             setIsPro(!!data.isPro);
             
-            // Load settings and stats from Firestore if they exist
-            if (data) {
-              setSettings(prev => ({ 
-                ...prev, 
-                ...data,
-                // Ensure default objects exist if data is partial
-                badgeSettings: { ...prev.badgeSettings, ...(data.badgeSettings || {}) },
-                inventory: data.inventory || prev.inventory || [],
-                placedHouseItems: data.placedHouseItems || prev.placedHouseItems || []
-              }));
-            }
-            if (data.stats) {
-              setStats(prev => ({ ...prev, ...data.stats }));
-            }
+            // 1. Initial merge from main doc
+            const mergedSettings = { 
+              ...DEFAULT_SETTINGS, 
+              ...data,
+              badgeSettings: { ...DEFAULT_SETTINGS.badgeSettings, ...(data.badgeSettings || {}) },
+              inventory: data.inventory || [],
+              placedHouseItems: data.placedHouseItems || []
+            };
             
-            // Explicit check for space onboarding in the new path requested by user
+            const mergedStats = { ...DEFAULT_STATS, ...(data.stats || {}) };
+
+            // 2. Fetch specific space settings
             const spaceSettingsDoc = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'space'));
             if (spaceSettingsDoc.exists()) {
               const spaceData = spaceSettingsDoc.data();
-              setSettings(prev => ({ ...prev, spaceOnboardingCompleted: !!spaceData.completed }));
+              mergedSettings.spaceOnboardingCompleted = !!spaceData.completed;
             }
+
+            // 3. Fetch detailed stats from main stats doc
+            const detailedStatsDoc = await getDoc(doc(db, 'users', currentUser.uid, 'stats', 'main'));
+            if (detailedStatsDoc.exists()) {
+              const dStats = detailedStatsDoc.data();
+              Object.assign(mergedStats, dStats);
+            }
+
+            // Apply all loaded data before setting ready
+            setSettings(mergedSettings);
+            setStats(mergedStats);
             
             const today = new Date().toISOString().split('T')[0];
             const progressDoc = await getDoc(doc(db, 'users', currentUser.uid, 'progress', today));
             if (progressDoc.exists()) {
-              setDailyProgress(progressDoc.data() as DailyProgress);
+              setDailyProgress(prev => ({ ...prev, ...(progressDoc.data() as DailyProgress) }));
             }
             
-            setIsDataReady(true); // Data is now fully loaded from Firestore
+            setIsDataReady(true);
           }
         } catch (error) {
           try {

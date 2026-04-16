@@ -215,12 +215,13 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
             }}
             exit={{ scale: 0, opacity: 0 }}
             className={`absolute w-56 h-56 pointer-events-auto transition-shadow ${
-              isDragging ? 'cursor-grabbing z-[180]' : 'cursor-grab z-[160]'
+              isDragging ? 'cursor-grabbing z-[180]' : isPinned ? 'cursor-default z-[160]' : 'cursor-grab z-[160]'
             }`}
-            drag
+            drag={!isPinned}
             dragMomentum={false}
             dragElastic={0.1}
             onDragStart={() => {
+              if (isPinned) return;
               setIsDragging(true);
               setIsSettling(false);
               vibrate(5);
