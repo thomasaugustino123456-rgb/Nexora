@@ -10,7 +10,7 @@ import { vibrate } from '../lib/vibrate';
 interface OnboardingProps {
   onComplete: () => void;
   settings: UserSettings;
-  setSettings: (s: UserSettings) => void;
+  setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void;
   setupFCM: () => Promise<void>;
 }
 

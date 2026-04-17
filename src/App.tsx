@@ -8,7 +8,7 @@ import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Scr
 import { HOUSE_ITEMS } from './constants/houseItems';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
-import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs } from 'firebase/firestore';
 import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
@@ -577,16 +577,68 @@ function CoinAnimation({ onComplete, play, settings }: { onComplete: () => void,
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isDataReady, setIsDataReady] = useState(false); // New flag to prevent overwriting
-  const [stats, setStats] = useState<UserStats>(DEFAULT_STATS);
-  const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
+  const [isDataReady, setIsDataReady] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+
+  // Initialize from localStorage for immediate UI (no flash of zero)
+  const [settings, setSettings] = useState<UserSettings>(() => {
+    const saved = localStorage.getItem('nexora_settings');
+    const base = saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
+    return base;
+  });
+
+  const [stats, setStats] = useState<UserStats>(() => {
+    const saved = localStorage.getItem('nexora_stats');
+    const base = saved ? { ...DEFAULT_STATS, ...JSON.parse(saved) } : DEFAULT_STATS;
+    return base;
+  });
+
+  // Track if data has been loaded from Firestore at least once this session
+  const dataLoadedFromFirestore = useRef(false);
+
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>('nexora_active_screen', 'home');
   const [showAuth, setShowAuth] = useState(false);
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [dailyQuest, setDailyQuest] = useState<ChallengeStep>('water');
   const [emergencyActive, setEmergencyActive] = useState(false);
   const [challengeStep, setChallengeStep] = useState<ChallengeStep | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const onUpdateSettings = (newSettings: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => {
+    setSettings(prev => {
+      const updated = typeof newSettings === 'function' ? newSettings(prev) : { ...prev, ...newSettings };
+      localStorage.setItem('nexora_settings', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const onUpdateStats = (newStats: Partial<UserStats> | ((prev: UserStats) => UserStats)) => {
+    setStats(prev => {
+      const updated = typeof newStats === 'function' ? newStats(prev) : { ...prev, ...newStats };
+      localStorage.setItem('nexora_stats', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const onUpdateDailyProgress = (update: Partial<DailyProgress> | ((prev: DailyProgress) => DailyProgress)) => {
+    setDailyProgress(prev => {
+       const updated = typeof update === 'function' ? update(prev) : { ...prev, ...update };
+       localStorage.setItem(`nexora_progress_${today}`, JSON.stringify(updated));
+       return updated;
+    });
+  };
+
+  // Effect to keep localStorage always mirroring state for immediate reload recovery
+  useEffect(() => {
+    if (dataLoadedFromFirestore.current) {
+      localStorage.setItem('nexora_settings', JSON.stringify(settings));
+    }
+  }, [settings]);
+
+  useEffect(() => {
+    if (dataLoadedFromFirestore.current) {
+      localStorage.setItem('nexora_stats', JSON.stringify(stats));
+    }
+  }, [stats]);
 
   const { play, stop, playMusic, stopAllMusic } = useSound();
   const [history, setHistory] = useState<DailyProgress[]>([]);
@@ -763,17 +815,20 @@ export default function App() {
   }, [settings.inventory, settings.soundEnabled]);
 
   const today = new Date().toISOString().split('T')[0];
-  const [dailyProgress, setDailyProgress] = useState<DailyProgress>({
-    date: today,
-    completed: false,
-    completionsCount: 0,
-    pushupsDone: false,
-    waterDrank: 0,
-    breathingDone: false,
-    drawingDone: false,
-    footballDone: false,
-    bubblesDone: false,
-    dailyQuestDone: false
+  const [dailyProgress, setDailyProgress] = useState<DailyProgress>(() => {
+    const saved = localStorage.getItem(`nexora_progress_${today}`);
+    return saved ? JSON.parse(saved) : {
+      date: today,
+      completed: false,
+      completionsCount: 0,
+      pushupsDone: false,
+      waterDrank: 0,
+      breathingDone: false,
+      drawingDone: false,
+      footballDone: false,
+      bubblesDone: false,
+      waterChallengeCount: 0
+    };
   });
 
   // App Badge Logic
@@ -861,28 +916,34 @@ export default function App() {
 
   // Firestore Sync Logic
   useEffect(() => {
-    if (!user || !isDataReady) return; 
+    if (!user || !isDataReady || !dataLoadedFromFirestore.current) return; 
+
+    // Update localStorage immediately
+    localStorage.setItem('nexora_settings', JSON.stringify(settings));
+    localStorage.setItem('nexora_stats', JSON.stringify(stats));
 
     const syncToFirestore = async () => {
       const path = `users/${user.uid}`;
       try {
         const userRef = doc(db, 'users', user.uid);
         
-        // Safety Check: Never sync if settings/stats appear empty/default but user is identified as existing
-        // This is a last-line-of-defense against state race conditions
-        if (settings.displayName === 'Nexora User' && stats.totalPoints === 0 && !needsOnboarding) {
+        // ULTIMATE Safety Check: Never sync if settings/stats appear empty but user is NOT new
+        const isDefaultState = settings.displayName === 'Nexora User' && (stats.totalPoints === 0 || !stats.totalPoints);
+        if (isDefaultState && !needsOnboarding && dataLoadedFromFirestore.current) {
           console.warn("Firestore Sync Blocked: State appears to be default while user is already existing. Preventing overwrite.");
           return;
         }
 
-        // Sync main user document (settings, fcmToken, etc.)
-        await updateDoc(userRef, {
+        // Sync main user document
+        await setDoc(userRef, {
           ...settings,
+          uid: user.uid,
+          email: user.email || '',
+          onboardingCompleted: !needsOnboarding,
+          stats: stats, // Summary for queries
           fcmToken: fcmToken,
-          // We also keep a copy of stats in the main doc for quick access, 
-          // but the subcollection is the source of truth for detailed stats.
-          stats: stats, 
-        });
+          updatedAt: serverTimestamp()
+        }, { merge: true });
 
         // Sync detailed stats to subcollection
         const statsRef = doc(db, 'users', user.uid, 'stats', 'main');
@@ -1246,16 +1307,22 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // 0. Initialize Auth Persistence
+    async function initAuth() {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (e) {
+        console.error("Auth persistence failed:", e);
+      }
+    }
+    initAuth();
+
     async function testConnection() {
       try {
-        // Add a small delay to allow network to stabilize
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 800));
         await getDocFromServer(doc(db, 'test', 'connection'));
-        console.log("Firestore: Connection test successful");
       } catch (error) {
-        if(error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('Could not reach Cloud Firestore backend'))) {
-          console.error("Firestore Connection Error: The client is offline or backend unreachable. Check your internet or Firebase config.");
-        }
+        console.warn("Firestore status check:", error);
       }
     }
     testConnection();
@@ -1263,13 +1330,15 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setLoading(true);
-        setIsDataReady(false); // Reset while loading
+        setIsDataReady(false);
         setUser(currentUser);
         
-        const path = `users/${currentUser.uid}`;
         try {
+          // Force fetch from server for critical initial load
           const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          
           if (!userDoc.exists()) {
+            console.log("Firestore: New user setup");
             const newUser = {
               uid: currentUser.uid,
               displayName: currentUser.displayName || 'Nexora User',
@@ -1284,68 +1353,53 @@ export default function App() {
             setSettings(DEFAULT_SETTINGS);
             setStats(DEFAULT_STATS);
             setNeedsOnboarding(true);
+            dataLoadedFromFirestore.current = true;
             setIsDataReady(true);
           } else {
+            console.log("Firestore: Loading existing data");
             const data = userDoc.data();
             setNeedsOnboarding(data.onboardingCompleted === false);
             setIsPro(!!data.isPro);
             
-            // 1. Initial merge from main doc
-            const mergedSettings = { 
-              ...DEFAULT_SETTINGS, 
-              ...data,
-              badgeSettings: { ...DEFAULT_SETTINGS.badgeSettings, ...(data.badgeSettings || {}) },
-              inventory: data.inventory || [],
-              placedHouseItems: data.placedHouseItems || []
-            };
-            
-            const mergedStats = { ...DEFAULT_STATS, ...(data.stats || {}) };
+            // Merge sequence
+            const mergedSettings = { ...DEFAULT_SETTINGS, ...(JSON.parse(localStorage.getItem('nexora_settings') || '{}')), ...data };
+            const mergedStats = { ...DEFAULT_STATS, ...(JSON.parse(localStorage.getItem('nexora_stats') || '{}')), ...(data.stats || {}) };
 
-            // 2. Fetch specific space settings
+            // Fetch specific settings
             const spaceSettingsDoc = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'space'));
             if (spaceSettingsDoc.exists()) {
-              const spaceData = spaceSettingsDoc.data();
-              mergedSettings.spaceOnboardingCompleted = !!spaceData.completed;
+              mergedSettings.spaceOnboardingCompleted = !!spaceSettingsDoc.data().completed;
             }
 
-            // 3. Fetch detailed stats from main stats doc
+            // Fetch detailed stats
             const detailedStatsDoc = await getDoc(doc(db, 'users', currentUser.uid, 'stats', 'main'));
             if (detailedStatsDoc.exists()) {
-              const dStats = detailedStatsDoc.data();
-              Object.assign(mergedStats, dStats);
+              Object.assign(mergedStats, detailedStatsDoc.data());
             }
 
-            // Apply all loaded data before setting ready
             setSettings(mergedSettings);
             setStats(mergedStats);
             
-            const today = new Date().toISOString().split('T')[0];
             const progressDoc = await getDoc(doc(db, 'users', currentUser.uid, 'progress', today));
             if (progressDoc.exists()) {
-              setDailyProgress(prev => ({ ...prev, ...(progressDoc.data() as DailyProgress) }));
+              setDailyProgress(prev => ({ ...prev, ...progressDoc.data() }));
             }
             
+            dataLoadedFromFirestore.current = true;
             setIsDataReady(true);
           }
         } catch (error) {
-          try {
-            handleFirestoreError(error, OperationType.GET, path);
-          } catch (e) {
-            console.error("Firestore error handled:", e);
-          }
-          // Even on error, we might want to allow some usage, 
-          // but safely say we're "ready" with local defaults if fetch fails completely
-          setIsDataReady(true); 
+          console.error("Load critical failure:", error);
+          // Fallback to local if fetch fails (prevents complete wipe)
+          dataLoadedFromFirestore.current = true;
+          setIsDataReady(true);
         }
         setLoading(false);
-        console.log("Loading set to false (User found)");
       } else {
         setUser(null);
-        setIsDataReady(false); // Not ready if no user
-        setStats(DEFAULT_STATS);
-        setSettings(DEFAULT_SETTINGS);
+        setIsDataReady(false);
+        dataLoadedFromFirestore.current = false;
         setLoading(false);
-        console.log("Loading set to false (No user)");
       }
     });
     return unsubscribe;
@@ -1866,7 +1920,7 @@ export default function App() {
   }
 
   if (needsOnboarding) {
-    return <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} settings={settings} setSettings={setSettings} setupFCM={setupFCM} />;
+    return <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} settings={settings} setSettings={onUpdateSettings} setupFCM={setupFCM} />;
   }
 
   return (
@@ -2130,7 +2184,7 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <ProgressScreen stats={stats} history={history} settings={settings} setSettings={setSettings} userRank={userRank} />
+                <ProgressScreen stats={stats} history={history} settings={settings} setSettings={onUpdateSettings} userRank={userRank} />
               </motion.div>
             )}
             {activeScreen === 'profile' && (
@@ -2142,7 +2196,7 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <ProfileScreen settings={settings} setSettings={setSettings} stats={stats} user={user} />
+                <ProfileScreen settings={settings} setSettings={onUpdateSettings} stats={stats} user={user} />
               </motion.div>
             )}
             {activeScreen === 'settings' && (
@@ -2157,7 +2211,7 @@ export default function App() {
                 <SettingsScreen 
                   user={user}
                   settings={settings} 
-                  setSettings={setSettings} 
+                  setSettings={onUpdateSettings} 
                   isPro={isPro}
                   onBack={() => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
@@ -2450,13 +2504,13 @@ export default function App() {
                   stats={stats}
                   settings={settings}
                   dailyProgress={dailyProgress}
-                  onUpdateDailyProgress={(data) => setDailyProgress(prev => ({ ...prev, ...data }))}
+                  onUpdateDailyProgress={onUpdateDailyProgress}
                   onBuyItem={buyHouseItem}
                   onPlaceItem={placeHouseItem}
                   onRemoveItem={removeHouseItem}
                   onUpdateItemPosition={updateHouseItemPosition}
-                  onUpdateSettings={(newSettings) => setSettings(prev => ({ ...prev, ...newSettings }))}
-                  onUpdateStats={(newStats) => setStats(prev => ({ ...prev, ...newStats }))}
+                  onUpdateSettings={onUpdateSettings}
+                  onUpdateStats={onUpdateStats}
                   showToast={showToast}
                   play={play}
                 />
@@ -2476,11 +2530,11 @@ export default function App() {
                   setStep={setChallengeStep} 
                   customSteps={activeCustomPlan?.challenges}
                   settings={settings}
-                  setSettings={setSettings}
+                  setSettings={onUpdateSettings}
                   dailyProgress={dailyProgress}
-                  setDailyProgress={setDailyProgress}
+                  setDailyProgress={onUpdateDailyProgress}
                   stats={stats}
-                  setStats={setStats}
+                  setStats={onUpdateStats}
                   onFinish={handleCompleteChallenge}
                   onExit={() => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
@@ -3240,7 +3294,7 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
   );
 }
 
-function ProgressScreen({ stats, history, settings, setSettings, userRank }: { stats: UserStats, history: DailyProgress[], settings: UserSettings, setSettings: (s: UserSettings) => void, userRank: number }) {
+function ProgressScreen({ stats, history, settings, setSettings, userRank }: { stats: UserStats, history: DailyProgress[], settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, userRank: number }) {
   const handleTrophyClick = (type: any) => {
     vibrate(VIBRATION_PATTERNS.TROPHY);
     if (settings.soundEnabled) playTrophySound(type);
@@ -3601,7 +3655,7 @@ function ProgressScreen({ stats, history, settings, setSettings, userRank }: { s
   );
 }
 
-function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserSettings, setSettings: (s: UserSettings) => void, stats: UserStats, user: FirebaseUser | null }) {
+function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, stats: UserStats, user: FirebaseUser | null }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(settings.displayName || '');
@@ -3793,10 +3847,10 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
 function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, fcmToken, fcmError, onRetryFCM, onSendTestNotification, onSendMotivation, onSendTestEmail, showToast, sendNotification }: { 
   user: FirebaseUser | null,
   settings: UserSettings, 
-  setSettings: (s: UserSettings) => void, 
+  setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, 
   isPro: boolean,
   onBack: () => void, 
-  onLogout: () => Promise<void>,
+  onLogout: () => void,
   fcmToken: string | null,
   fcmError: string | null,
   onRetryFCM: () => void,
@@ -4705,11 +4759,11 @@ function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dail
   setStep: (s: ChallengeStep) => void, 
   customSteps?: ChallengeStep[],
   settings: UserSettings,
-  setSettings: (s: UserSettings | ((prev: UserSettings) => UserSettings)) => void,
+  setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void,
   dailyProgress: DailyProgress,
-  setDailyProgress: (p: DailyProgress) => void,
+  setDailyProgress: (p: Partial<DailyProgress> | ((prev: DailyProgress) => DailyProgress)) => void,
   stats: UserStats,
-  setStats: (s: UserStats | ((prev: UserStats) => UserStats)) => void,
+  setStats: (s: Partial<UserStats> | ((prev: UserStats) => UserStats)) => void,
   onFinish: (p?: DailyProgress) => void,
   onExit: () => void,
   earnedTrophyToday: boolean,
