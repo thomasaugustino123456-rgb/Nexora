@@ -1,26 +1,16 @@
 {
-  "version": "1.5.0",
-  "releaseDate": "2026-04-11",
+  "version": "1.5.1",
+  "releaseDate": "2026-04-17",
   "updates": [
     {
-      "category": "New Feature",
-      "title": "Custom Plan Builder!",
-      "description": "Create your own personalized workout plans! Pick your challenges, set your schedule, and let the mascot help you build your routine."
+      "category": "System",
+      "title": "Smart Update Engine",
+      "description": "Implemented a robust 'Nuclear Refresh' system that clears old data automatically when you update, ensuring you always have the latest features."
     },
     {
-      "category": "Mascot",
-      "title": "New Mascot Animations",
-      "description": "The mascot is now more interactive! Watch it help you create your plans with fun new animations and speech bubbles."
-    },
-    {
-      "category": "Database",
-      "title": "Root Path Storage",
-      "description": "Your custom plans are now stored securely at the root level, making them more robust and easier to manage."
-    },
-    {
-      "category": "Performance",
-      "title": "Smoother Experience",
-      "description": "Faster data syncing and smoother transitions between app screens for a more responsive feel."
+      "category": "Bug Fix",
+      "title": "Persistence & Sound",
+      "description": "Fixed data loss bugs and missing water sound effects. Your progress is now safer than ever!"
     }
   ]
 }

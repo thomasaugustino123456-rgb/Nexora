@@ -796,7 +796,7 @@ export default function App() {
   // Version Update Logic
   const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean, imageUrl?: string } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
-  const currentAppVersion = "1.5.0"; // Current hardcoded version
+  const currentAppVersion = "1.5.1"; // Auto-bumping version to trigger update sync
   const [lastUpdateTime, setLastUpdateTime] = useState<string | null>(localStorage.getItem('nexora_last_update_time'));
 
   // Background Music Logic
@@ -1035,27 +1035,54 @@ export default function App() {
     // Check immediately on mount
     checkVersion();
     
-    // Set last update time for 1.5.0 if not set to show the badge
-    if (currentAppVersion === "1.5.0" && !localStorage.getItem('nexora_last_update_time')) {
+    // Monitor Service Worker updates
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('PWA: Controller changed, new Service Worker is active');
+        // We don't force reload here to avoid interrupting the user, 
+        // but we know we're ready for the next reload.
+      });
+    }
+
+    // Set last update time for 1.5.1 if not set
+    if (currentAppVersion === "1.5.1" && !localStorage.getItem('nexora_last_update_time')) {
       const now = new Date().toISOString();
       localStorage.setItem('nexora_last_update_time', now);
       setLastUpdateTime(now);
     }
 
-    // Check every 5 minutes
-    const interval = setInterval(checkVersion, 300000);
+    // Check every 2 minutes
+    const interval = setInterval(checkVersion, 120000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleUpdate = () => {
-    vibrate(50);
+  const handleUpdate = async () => {
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
     if (updateInfo) {
       const now = new Date().toISOString();
       localStorage.setItem('nexora_dismissed_version', updateInfo.version);
       localStorage.setItem('nexora_last_update_time', now);
       setLastUpdateTime(now);
     }
-    window.location.reload();
+    
+    // Nuclear Update: Unregister SW and clear all caches to ensure a fresh fetch
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+      
+      console.log('PWA: Caches cleared and Service Worker unregistered. Reloading...');
+    } catch (err) {
+      console.error('PWA: Error during nuclear update:', err);
+    }
+
+    window.location.href = '/?update=' + Date.now(); // Force full reload with cache-busting query
   };
   
   const sendTestNotification = async () => {

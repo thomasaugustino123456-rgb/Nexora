@@ -1,10 +1,9 @@
 {
-  "version": "1.5.0",
+  "version": "1.5.1",
   "releaseNotes": [
-    "Custom Plan Builder: Create your own personalized workout plans!",
-    "Mascot Animations: New engaging mascot interactions during plan creation.",
-    "Root Path Storage: Your custom plans are now stored securely at the root level.",
-    "Performance Improvements: Smoother transitions and faster data syncing."
+    "Smart Update System: Never see an old version of Nexora again! Just click update.",
+    "Data Safety: Improved persistence bridge ensures your coins and xp are always synced.",
+    "Bug Fixes: Fixed the space mascot pinning and water challenge sound effects."
   ],
   "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
   "forceUpdate": false
