@@ -16,13 +16,14 @@ const __dirname = path.dirname(__filename);
 const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
 const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    projectId: firebaseConfig.projectId
-  });
-}
+const app = !admin.apps.length 
+  ? admin.initializeApp({
+      projectId: firebaseConfig.projectId,
+      credential: admin.credential.applicationDefault()
+    })
+  : admin.app();
 
-const db = getFirestore(firebaseConfig.firestoreDatabaseId || undefined);
+const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || undefined);
 
 // Background Scheduler for Reminders
 const startScheduler = () => {

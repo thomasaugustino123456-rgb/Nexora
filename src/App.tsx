@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 console.log("App.tsx is loading...");
-import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen } from 'lucide-react';
+import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
@@ -25,6 +25,7 @@ import { HouseScreen } from './components/HouseScreen';
 import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './components/Trophies';
 import { LibraryScreen } from './components/LibraryScreen';
 import { ShopScreen, SHOP_ITEMS } from './components/ShopScreen';
+import { PlantScreen } from './components/PlantScreen';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { GoogleGenAI } from "@google/genai";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
@@ -760,6 +761,104 @@ export default function App() {
       }
     };
   }, [settings.zenModeEnabled, activeScreen]);
+
+  // PLANT LOGIC: GROWTH & HEALTH CHECKER
+  const growPlant = useCallback(() => {
+    setSettings(prev => {
+      const current = prev.plantState || {
+        stage: 0,
+        growthPoints: 0,
+        lastGrowthDate: null,
+        lastCheckDate: new Date().toISOString(),
+        health: 100,
+        isDead: false,
+        isThirsty: false
+      };
+      
+      if (current.isDead) return prev;
+
+      let newPoints = current.growthPoints + 15;
+      let newStage = current.stage;
+      
+      if (newPoints >= 100) {
+        if (newStage < 5) {
+          newStage += 1;
+          newPoints = 0;
+          showToast(`Your plant grew to Level ${newStage}! 🌿✨`, 'success');
+        } else {
+          newPoints = 100;
+        }
+      } else {
+        showToast(`Plant watered! +15% Growth Energy 💧`, 'success');
+      }
+
+      return {
+        ...prev,
+        plantState: {
+          ...current,
+          stage: newStage,
+          growthPoints: newPoints,
+          lastCheckDate: new Date().toISOString(),
+          isThirsty: false
+        }
+      };
+    });
+  }, [settings.plantState]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Initialize plant if not exists
+    if (isDataReady && !settings.plantState) {
+        onUpdateSettings({
+            plantState: {
+                stage: 0,
+                growthPoints: 0,
+                lastGrowthDate: null,
+                lastCheckDate: new Date().toISOString(),
+                health: 100,
+                isDead: false,
+                isThirsty: false
+            }
+        });
+        return;
+    }
+
+    if (!settings.plantState) return;
+    
+    const checkPlant = () => {
+      const now = new Date();
+      const lastCheck = new Date(settings.plantState!.lastCheckDate);
+      const diffMs = now.getTime() - lastCheck.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+      
+      if (diffHours >= 48 && !settings.plantState!.isDead) { // 2 days
+        onUpdateSettings({
+          plantState: {
+            ...settings.plantState!,
+            isDead: true,
+            health: 0,
+            isThirsty: true,
+            lastCheckDate: now.toISOString()
+          }
+        });
+        sendNotification("Your Nexora Plant has died... 🥀", { body: "Bro, your plant needs discipline! Restore the seed and try again." });
+      } else if (diffHours >= 36 && !settings.plantState!.isThirsty && !settings.plantState!.isDead) { // 1.5 days
+        onUpdateSettings({
+          plantState: {
+            ...settings.plantState!,
+            isThirsty: true
+          }
+        });
+        sendNotification("Your plant is thirsty! 💧", { body: "Water your plant by completing your daily tasks, bro!" });
+      }
+    };
+
+    checkPlant();
+    const timer = setInterval(checkPlant, 30 * 60 * 1000); 
+    return () => clearInterval(timer);
+  }, [user, settings.plantState?.lastCheckDate, isDataReady]);
+
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showIOSInstallGuide, setShowIOSInstallGuide] = useState(false);
@@ -1825,6 +1924,9 @@ export default function App() {
 
       showToast(`Session Complete! +${pointsToAdd + streakBonusPoints} Points, +${xpToAdd} XP & +${coinsToAdd} Coins! 🏆`, 'success');
 
+      // Grow the plant, bro!
+      growPlant();
+
       const newTrophies = [...(prevStats.trophies || [])];
       if (newTotalCompletedDays === 1 && !newTrophies.find(t => t.id === 'first-steps')) {
         newTrophies.push({ id: 'first-steps', type: 'golden', earnedDate: new Date().toISOString(), lastUpdated: new Date().toISOString() });
@@ -2131,7 +2233,7 @@ export default function App() {
               />
               <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexora</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-2">
               <button 
                 onClick={() => setActiveScreen('subscription')}
                 className={`flex items-center gap-1 p-2 transition-colors ${activeScreen === 'subscription' ? 'text-amber-500' : 'text-amber-500/60 hover:text-amber-500'}`}
@@ -2145,16 +2247,44 @@ export default function App() {
               >
                 <Home size={24} />
               </button>
-              <button 
-                onClick={() => setActiveScreen('profile')}
-                className={`p-2 transition-colors ${activeScreen === 'profile' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
-              >
-                {settings.profilePic ? (
-                  <img src={settings.profilePic} alt="Profile" className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" referrerPolicy="no-referrer" loading="lazy" />
-                ) : (
-                  <User size={24} />
+              <div className="flex flex-col items-center gap-2">
+                <button 
+                  onClick={() => setActiveScreen('profile')}
+                  className={`p-2 transition-colors ${activeScreen === 'profile' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+                >
+                  {settings.profilePic ? (
+                    <img src={settings.profilePic} alt="Profile" className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" referrerPolicy="no-referrer" loading="lazy" />
+                  ) : (
+                    <User size={24} />
+                  )}
+                </button>
+                {activeScreen === 'home' && (
+                  <motion.button
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    onClick={() => {
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                      setActiveScreen('plant');
+                    }}
+                    className={`p-2 rounded-xl shadow-lg transition-all active:scale-95 group relative ${
+                      settings.plantState?.isDead 
+                        ? 'bg-red-100 text-red-600' 
+                        : settings.plantState?.isThirsty 
+                          ? 'bg-amber-100 text-amber-600' 
+                          : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
+                    }`}
+                    title="Your Plant 🌿"
+                  >
+                    <Sprout size={18} className="group-hover:rotate-12 transition-transform" />
+                    {(settings.plantState?.isDead || settings.plantState?.isThirsty) && (
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                      </span>
+                    )}
+                  </motion.button>
                 )}
-              </button>
+              </div>
               <button 
                 onClick={() => setActiveScreen('settings')}
                 className={`p-2 transition-colors ${activeScreen === 'settings' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
@@ -2204,6 +2334,10 @@ export default function App() {
                   }}
                   onDeleteCustomPlan={handleDeleteCustomPlan}
                   onOpenPlanBuilder={() => setActiveScreen('plan-builder')}
+                  onOpenPlant={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setActiveScreen('plant');
+                  }}
                 />
               </motion.div>
             )}
@@ -2545,6 +2679,37 @@ export default function App() {
                   onUpdateStats={onUpdateStats}
                   showToast={showToast}
                   play={play}
+                />
+              </motion.div>
+            )}
+            {activeScreen === 'plant' && settings.plantState && (
+              <motion.div
+                key="plant"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full"
+              >
+                <PlantScreen 
+                  plantState={settings.plantState}
+                  onboardingCompleted={!!settings.plantOnboardingCompleted}
+                  onCompleteOnboarding={() => onUpdateSettings({ plantOnboardingCompleted: true })}
+                  onExit={() => setActiveScreen('home')}
+                  onRecover={() => {
+                    onUpdateSettings({
+                      plantState: {
+                        stage: 0,
+                        growthPoints: 0,
+                        lastGrowthDate: null,
+                        lastCheckDate: new Date().toISOString(),
+                        health: 100,
+                        isDead: false,
+                        isThirsty: false
+                      }
+                    });
+                  }}
+                  settings={settings}
+                  stats={stats}
                 />
               </motion.div>
             )}
@@ -2949,7 +3114,7 @@ function CountdownToMidnight() {
   return <span>{timeLeft}</span>;
 }
 
-function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder }: { 
+function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
@@ -2963,7 +3128,8 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
   customPlans?: CustomPlan[],
   onStartCustomPlan: (plan: CustomPlan) => void,
   onDeleteCustomPlan: (id: string) => void,
-  onOpenPlanBuilder: () => void
+  onOpenPlanBuilder: () => void,
+  onOpenPlant: () => void
 }) {
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];

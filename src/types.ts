@@ -25,6 +25,16 @@ export interface PlacedHouseItem {
   room: number;
 }
 
+export interface PlantState {
+  stage: number; // 0: seed, 1-5: growth
+  growthPoints: number;
+  lastGrowthDate: string | null;
+  lastCheckDate: string; // ISO date
+  health: number; // 0-100
+  isDead: boolean;
+  isThirsty: boolean;
+}
+
 export interface UserSettings {
   pushupsGoal: number;
   waterGoal: number;
@@ -56,6 +66,8 @@ export interface UserSettings {
   purchasedHouseItemIds?: string[];
   placedHouseItems?: PlacedHouseItem[];
   spaceOnboardingCompleted?: boolean;
+  plantOnboardingCompleted?: boolean;
+  plantState?: PlantState;
   mascotSize?: number;
   mascotPos?: { x: number, y: number };
   mascotPinnedItemId?: string | null;
@@ -166,6 +178,6 @@ export interface CustomPlan {
   createdAt: string;
 }
 
-export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house';
+export type Screen = 'home' | 'progress' | 'profile' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant';
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion';
 export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';
