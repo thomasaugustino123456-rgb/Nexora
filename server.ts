@@ -144,8 +144,11 @@ const startVersionWatcher = () => {
 
         if (lastKnownVersion && lastKnownVersion !== newVersion) {
           console.log(`Version Watcher: New version detected! ${newVersion}. Broadcasting...`);
-          const usersSnapshot = await db.collection("users").where("fcmToken", "!=", null).get();
-          const tokens = usersSnapshot.docs.map(d => d.data().fcmToken).filter(Boolean);
+          const usersSnapshot = await db.collection("users").get();
+          const tokens = usersSnapshot.docs
+            .map(d => d.data())
+            .filter(data => data.fcmToken && data.notificationsEnabled)
+            .map(data => data.fcmToken);
           
           if (tokens.length > 0) {
             await admin.messaging().sendEachForMulticast({
