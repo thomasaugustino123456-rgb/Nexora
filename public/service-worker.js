@@ -1,10 +1,44 @@
-const CACHE_NAME = 'nexora-v1';
+const CACHE_NAME = 'nexora-v1.1'; // Bumping version for fresh install
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+  'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png',
+  'https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js'
 ];
+
+// Import Firebase compat scripts (required for FCM in SW)
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
+
+// Initialize Firebase in SW
+// Note: We use the same config as the app
+firebase.initializeApp({
+  apiKey: "AIzaSyDzMyKhCPNckxUKzlTzKsSrfzUF7blGJkk",
+  authDomain: "gen-lang-client-0115801809.firebaseapp.com",
+  projectId: "gen-lang-client-0115801809",
+  storageBucket: "gen-lang-client-0115801809.firebasestorage.app",
+  messagingSenderId: "546238758641",
+  appId: "1:546238758641:web:366fb9e770c9a240787350"
+});
+
+const messaging = firebase.messaging();
+
+// Background FCM Messages
+messaging.onBackgroundMessage((payload) => {
+  console.log('[service-worker.js] Received background message ', payload);
+  const notificationTitle = payload.notification.title || 'Nexora 🔥';
+  const notificationOptions = {
+    body: payload.notification.body || 'Ready for your next win, bro?',
+    icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png',
+    badge: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png',
+    data: payload.data,
+    vibrate: [200, 100, 200],
+    tag: 'nexora-alert' // Groups notifications
+  };
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
 
 // Install event - caching assets
 self.addEventListener('install', (event) => {

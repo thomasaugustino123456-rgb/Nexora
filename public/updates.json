@@ -1,16 +1,21 @@
 {
-  "version": "1.5.1",
+  "version": "1.5.2",
   "releaseDate": "2026-04-17",
   "updates": [
     {
-      "category": "System",
-      "title": "Smart Update Engine",
-      "description": "Implemented a robust 'Nuclear Refresh' system that clears old data automatically when you update, ensuring you always have the latest features."
+      "category": "House System",
+      "title": "Furniture Stability v2",
+      "description": "Fixed the 'messy room' bug! Your furniture arrangements are now perfectly preserved across all room styles using stable ID tracking."
     },
     {
-      "category": "Bug Fix",
-      "title": "Persistence & Sound",
-      "description": "Fixed data loss bugs and missing water sound effects. Your progress is now safer than ever!"
+      "category": "UX Improvement",
+      "title": "Bring to Front Logic",
+      "description": "Moved items now automatically jump to the top layer, making it much easier to layer your furniture."
+    },
+    {
+      "category": "System",
+      "title": "Sync+ Optimization",
+      "description": "Optimized firestore sync logic for even more reliable data persistence across sessions."
     }
   ]
 }

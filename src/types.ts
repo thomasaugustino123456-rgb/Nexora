@@ -50,6 +50,8 @@ export interface UserSettings {
   inventory?: LibraryItem[];
   isDogSoundPackActive?: boolean;
   league?: string;
+  timezone?: string;
+  fcmToken?: string;
   badgeSettings?: BadgeSettings;
   purchasedHouseItemIds?: string[];
   placedHouseItems?: PlacedHouseItem[];

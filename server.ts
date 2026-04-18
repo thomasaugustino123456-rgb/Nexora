@@ -18,11 +18,166 @@ const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
 
 if (!admin.apps.length) {
   admin.initializeApp({
-    projectId: firebaseConfig.projectId,
+    projectId: firebaseConfig.projectId
   });
 }
 
-const db = getFirestore(admin.app(), firebaseConfig.firestoreDatabaseId);
+const db = getFirestore(firebaseConfig.firestoreDatabaseId || undefined);
+
+// Background Scheduler for Reminders
+const startScheduler = () => {
+  console.log("Notification Scheduler: Starting... (Checking every minute)");
+  setInterval(async () => {
+    const now = new Date();
+    console.log(`Notification Scheduler: Universal Tick at ${now.toISOString()}`);
+
+    try {
+      // 1. Get all users with notifications enabled
+      let usersSnapshot;
+      try {
+        usersSnapshot = await db.collection("users").get();
+      } catch (e: any) {
+        console.error("Scheduler Error (Fetching Users):", e.message);
+        throw e;
+      }
+      
+      const usersToNotify = usersSnapshot.docs.filter((doc: any) => {
+        const data = doc.data();
+        return data.notificationsEnabled && data.fcmToken;
+      });
+
+      if (usersToNotify.length > 0) {
+        console.log(`Notification Scheduler: Found ${usersToNotify.length} users with tokens.`);
+      }
+      
+      for (const userDoc of usersToNotify) {
+        const userData = userDoc.data();
+        const fcmToken = userData.fcmToken;
+        const tz = userData.timezone || 'UTC';
+
+        // Get user's local time string "HH:mm"
+        let userTimeStr = "";
+        try {
+          const formatter = new Intl.DateTimeFormat('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: tz
+          });
+          userTimeStr = formatter.format(now);
+        } catch (e) {
+          // Fallback to UTC if timezone is invalid
+          const formatter = new Intl.DateTimeFormat('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: 'UTC'
+          });
+          userTimeStr = formatter.format(now);
+        }
+
+        // 1. Main Reminders
+        if (userTimeStr === userData.reminderTime || userTimeStr === userData.reminderTime2) {
+          await sendPush(fcmToken, 'Nexora 🔥', 'Hey 👋 Ready for today’s challenge? Don\'t let that streak die!');
+        }
+
+        // 2. Daily Motivation
+        if (userTimeStr === (userData.motivationTime || '12:00')) {
+          const quotes = [
+            "The only way to do great work is to love what you do. 🔥",
+            "Believe you can and you're halfway there. 🚀",
+            "Push yourself, because no one else is going to do it for you. 💪",
+            "Great things never come from comfort zones. 🏆"
+          ];
+          const quote = quotes[Math.floor(Math.random() * quotes.length)];
+          await sendPush(fcmToken, 'Daily Motivation! 💡', quote);
+        }
+      }
+
+      // 3. Custom Plan Reminders (Global check)
+      try {
+        const plansSnapshot = await db.collection("customPlans").get();
+        for (const planDoc of plansSnapshot.docs) {
+          const plan = planDoc.data();
+          // Find user for this plan
+          const userToNotify = usersToNotify.find((u: any) => u.id === plan.userId);
+          if (!userToNotify) continue;
+
+          const userData = userToNotify.data();
+          const tz = userData.timezone || 'UTC';
+          const formatter = new Intl.DateTimeFormat('en-GB', {
+            hour: '2-digit', minute: '2-digit',
+            hour12: false, timeZone: tz
+          });
+          
+          // Use a simpler day check
+          const localDate = new Date(now.toLocaleString("en-US", {timeZone: tz}));
+          const localDay = localDate.getDay();
+          const userTimeStr = formatter.format(now);
+
+          if (plan.days.includes(localDay)) {
+            if (userTimeStr === plan.reminderTime || userTimeStr === plan.reminderTime2) {
+              await sendPush(userData.fcmToken, `${plan.name} 🚀`, `Time for your custom plan: ${plan.name}! Let's go!`);
+            }
+          }
+        }
+      } catch (e: any) {
+        console.error("Scheduler Error (Custom Plans):", e.message);
+      }
+
+    } catch (error) {
+      console.error("Scheduler Error:", error);
+    }
+  }, 60000);
+};
+
+// Version Watcher (Automatic Update Notifications)
+let lastKnownVersion: string | null = null;
+const startVersionWatcher = () => {
+  console.log("Version Watcher: Starting...");
+  setInterval(async () => {
+    try {
+      const versionFilePath = path.join(process.cwd(), "public", "version.json");
+      if (fs.existsSync(versionFilePath)) {
+        const versionData = JSON.parse(fs.readFileSync(versionFilePath, "utf8"));
+        const newVersion = versionData.version;
+
+        if (lastKnownVersion && lastKnownVersion !== newVersion) {
+          console.log(`Version Watcher: New version detected! ${newVersion}. Broadcasting...`);
+          const usersSnapshot = await db.collection("users").where("fcmToken", "!=", null).get();
+          const tokens = usersSnapshot.docs.map(d => d.data().fcmToken).filter(Boolean);
+          
+          if (tokens.length > 0) {
+            await admin.messaging().sendEachForMulticast({
+              tokens,
+              notification: {
+                title: `New Nexora Update! 🚀 v${newVersion}`,
+                body: versionData.releaseNotes?.[0] || 'New features and bug fixes are ready for you, bro!',
+              }
+            });
+          }
+        }
+        lastKnownVersion = newVersion;
+      }
+    } catch (error) {
+      console.error("Version Watcher Error:", error);
+    }
+  }, 60000); // Check every minute
+};
+
+const sendPush = async (token: string, title: string, body: string) => {
+  try {
+    await admin.messaging().send({
+      token,
+      notification: { title, body },
+      android: { priority: 'high' },
+      apns: { payload: { aps: { sound: 'default' } } }
+    });
+  } catch (err) {
+    // If token is invalid, we could remove it from DB
+    console.error("Push Error for token:", token, err);
+  }
+};
 
 // Lazy Resend initialization
 let resend: Resend | null = null;
@@ -199,6 +354,8 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    startScheduler();
+    startVersionWatcher();
   });
 }
 

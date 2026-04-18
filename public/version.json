@@ -1,9 +1,10 @@
 {
-  "version": "1.5.1",
+  "version": "1.5.2",
   "releaseNotes": [
-    "Smart Update System: Never see an old version of Nexora again! Just click update.",
-    "Data Safety: Improved persistence bridge ensures your coins and xp are always synced.",
-    "Bug Fixes: Fixed the space mascot pinning and water challenge sound effects."
+    "Furniture Stability Fix: Your house layouts are now perfectly preserved across all three room styles! 🏠",
+    "Bring to Front Logic: Moved items now automatically jump to the top layer for easier design 🔝",
+    "Performance Patch: Faster loading and smoother transitions between your Nexora spaces.",
+    "Data Sync+: Extra layer of safety for your coins and xp storage."
   ],
   "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
   "forceUpdate": false

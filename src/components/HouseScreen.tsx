@@ -31,8 +31,8 @@ export function HouseScreen({
   onUpdateDailyProgress: (data: Partial<DailyProgress>) => void;
   onBuyItem: (id: string, currency: 'streak' | 'coins') => void;
   onPlaceItem: (id: string, x: number, y: number, room: number) => void;
-  onRemoveItem: (index: number) => void;
-  onUpdateItemPosition: (index: number, x: number, y: number) => void;
+  onRemoveItem: (instanceId: string) => void;
+  onUpdateItemPosition: (instanceId: string, x: number, y: number) => void;
   onUpdateSettings: (settings: Partial<UserSettings>) => void;
   onUpdateStats: (stats: Partial<UserStats>) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
@@ -61,7 +61,7 @@ export function HouseScreen({
   const [isFeeding, setIsFeeding] = useState(false);
   const [lastPlacedItemName, setLastPlacedItemName] = useState<string | undefined>();
   const [isMascotOnFire, setIsMascotOnFire] = useState(false);
-  const [itemToRemove, setItemToRemove] = useState<number | null>(null);
+  const [itemToRemove, setItemToRemove] = useState<string | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<any>(null);
 
   // Water Challenge Repeat Logic
@@ -285,10 +285,10 @@ export function HouseScreen({
     return (settings.placedHouseItems || []).some(p => p.itemId === itemId && p.room === activeRoom);
   };
 
-  const handleLongPressStart = (index: number) => {
+  const handleLongPressStart = (instanceId: string) => {
     const timer = setTimeout(() => {
       vibrate([50, 50, 50]);
-      setItemToRemove(index);
+      setItemToRemove(instanceId);
     }, 1500); // 1.5s is better for UX than 5s, but I'll use 2s to be safe
     setLongPressTimer(timer);
   };
@@ -387,9 +387,9 @@ export function HouseScreen({
   const renderPlacedItems = () => {
     return (settings.placedHouseItems || [])
       .filter(p => p.room === activeRoom)
-      .map((p, index) => (
+      .map((p) => (
         <motion.g 
-          key={`${p.itemId}-${index}`}
+          key={p.id}
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           style={{ x: p.x, y: p.y }}
@@ -397,9 +397,9 @@ export function HouseScreen({
           dragMomentum={false}
           onDragEnd={(e, info) => {
             vibrate(5);
-            onUpdateItemPosition(index, p.x + info.offset.x, p.y + info.offset.y);
+            onUpdateItemPosition(p.id, p.x + info.offset.x, p.y + info.offset.y);
           }}
-          onPointerDown={() => handleLongPressStart(index)}
+          onPointerDown={() => handleLongPressStart(p.id)}
           onPointerUp={handleLongPressEnd}
           onPointerLeave={handleLongPressEnd}
           className="cursor-grab active:cursor-grabbing"
@@ -411,7 +411,7 @@ export function HouseScreen({
             onClick={(e) => {
               e.stopPropagation();
               vibrate(10);
-              onRemoveItem(index);
+              onRemoveItem(p.id);
             }}
             className="p-1 bg-red-500 text-white rounded-full shadow-lg"
             style={{ transform: 'translate(10px, -10px)' }}

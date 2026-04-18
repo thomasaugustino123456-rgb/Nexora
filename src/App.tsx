@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 console.log("App.tsx is loading...");
-import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock } from 'lucide-react';
+import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
@@ -695,29 +695,33 @@ export default function App() {
     }));
   };
 
-  const removeHouseItem = (index: number) => {
+  const removeHouseItem = (instanceId: string) => {
     setSettings(prev => {
-      const itemToRemove = prev.placedHouseItems?.[index];
+      const itemToRemove = prev.placedHouseItems?.find(i => i.id === instanceId);
       return {
         ...prev,
-        placedHouseItems: (prev.placedHouseItems || []).filter((_, i) => i !== index),
+        placedHouseItems: (prev.placedHouseItems || []).filter(item => item.id !== instanceId),
         mascotPinnedItemId: (itemToRemove && prev.mascotPinnedItemId === itemToRemove.id) ? null : prev.mascotPinnedItemId
       };
     });
   };
 
-  const updateHouseItemPosition = (index: number, x: number, y: number) => {
+  const updateHouseItemPosition = (instanceId: string, x: number, y: number) => {
     setSettings(prev => {
       const currentItems = prev.placedHouseItems || [];
-      const movingItem = currentItems[index];
+      const index = currentItems.findIndex(i => i.id === instanceId);
+      if (index === -1) return prev;
       
-      const updatedItems = currentItems.map((item, i) => 
-        i === index ? { ...item, x, y } : item
-      );
+      const movingItem = currentItems[index];
+
+      // Update position and bring to front by moving it to the end of the array
+      const otherItems = currentItems.filter(item => item.id !== instanceId);
+      const updatedItem = { ...movingItem, x, y };
+      const updatedItems = [...otherItems, updatedItem];
 
       // If mascot is pinned to this specific item instance, update mascot position relatively
       let mascotPos = prev.mascotPos;
-      if (movingItem && prev.mascotPinnedItemId === movingItem.id && mascotPos) {
+      if (prev.mascotPinnedItemId === movingItem.id && mascotPos) {
         const dx = x - movingItem.x;
         const dy = y - movingItem.y;
         mascotPos = { x: mascotPos.x + dx, y: mascotPos.y + dy };
@@ -942,6 +946,7 @@ export default function App() {
           onboardingCompleted: !needsOnboarding,
           stats: stats, // Summary for queries
           fcmToken: fcmToken,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           updatedAt: serverTimestamp()
         }, { merge: true });
 
@@ -4491,6 +4496,27 @@ function SettingsScreen({ user, settings, setSettings, isPro, onBack, onLogout, 
             className="bg-red-50 text-red-600 font-bold py-2 px-4 rounded-xl hover:bg-red-100 transition-colors"
           >
             Logout
+          </button>
+        </div>
+
+        {/* 9.6 What's New / Release History */}
+        <div className="glass-card p-6 flex items-center justify-between border-2 border-indigo-100 bg-indigo-50/10">
+          <div className="flex items-center gap-3 text-indigo-600">
+            <History size={24} />
+            <div className="flex flex-col">
+              <h3 className="font-bold text-blue-900">What's New?</h3>
+              <p className="text-[10px] text-blue-900/40 font-medium italic">Check out the latest house fixes, bro.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              vibrate(VIBRATION_PATTERNS.CLICK);
+              window.open('/CHANGELOG.md', '_blank');
+            }}
+            className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-xl hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-indigo-200 flex items-center gap-2"
+          >
+            <BookOpen size={16} />
+            View Log
           </button>
         </div>
 
