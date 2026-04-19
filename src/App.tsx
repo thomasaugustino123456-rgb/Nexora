@@ -595,8 +595,19 @@ export default function App() {
   // Initialize from localStorage for immediate UI (no flash of zero)
   const [settings, setSettings] = useState<UserSettings>(() => {
     const saved = localStorage.getItem('nexora_settings');
-    const base = saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
-    return base;
+    if (!saved) return DEFAULT_SETTINGS;
+    
+    try {
+      const parsed = JSON.parse(saved);
+      // Deep merge plantState to ensure it's never empty if it exists
+      return {
+        ...DEFAULT_SETTINGS,
+        ...parsed,
+        plantState: parsed.plantState ? { ...DEFAULT_SETTINGS.plantState, ...parsed.plantState } : DEFAULT_SETTINGS.plantState
+      };
+    } catch (e) {
+      return DEFAULT_SETTINGS;
+    }
   });
 
   const [stats, setStats] = useState<UserStats>(() => {
@@ -618,6 +629,10 @@ export default function App() {
   const onUpdateSettings = (newSettings: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => {
     setSettings(prev => {
       const updated = typeof newSettings === 'function' ? newSettings(prev) : { ...prev, ...newSettings };
+      // Safety check: Ensure plantState has a valid type if it exists
+      if (updated.plantState && !updated.plantState.type) {
+        updated.plantState.type = 'zen';
+      }
       localStorage.setItem('nexora_settings', JSON.stringify(updated));
       return updated;
     });
@@ -3465,7 +3480,7 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
                       <Target size={24} />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-black text-blue-900">{plan.name}</h4>
+                      <h4 className="font-black text-blue-900">{plan?.name || "Unnamed Plan"}</h4>
                       <div className="flex items-center gap-2 mt-0.5">
                         <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest">
                           {plan.challenges.length} Challenges • {plan.days.length} Days

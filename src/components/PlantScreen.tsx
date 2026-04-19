@@ -86,7 +86,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
         </button>
         <div className="flex flex-col items-center">
           <span className="font-black text-blue-900/60 uppercase tracking-widest text-[10px]">Ecosystem</span>
-          <span className="font-black text-blue-900 text-sm uppercase">{ecosystemInfo[plantState.type].name}</span>
+          <span className="font-black text-blue-900 text-sm uppercase">{ecosystemInfo[plantState.type]?.name || "Plant"}</span>
         </div>
         <button 
           onClick={() => { vibrate(5); setShowGarden(!showGarden); }}
@@ -151,7 +151,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
                       <div className="mb-2 scale-50 -mt-12 -mb-12">
                         <PlantRenderer type={type} stage={isUnlocked ? 5 : 1} isThirsty={false} isDead={false} />
                       </div>
-                      <span className="text-[10px] font-black uppercase tracking-widest">{ecosystemInfo[type].name}</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">{ecosystemInfo[type]?.name || "Ecosystem"}</span>
                       {!isUnlocked && <div className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-[2rem] backdrop-blur-[2px]">🔒</div>}
                       {isActive && <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-400 rounded-full border-2 border-white flex items-center justify-center text-[10px] shadow-md">✓</div>}
                     </button>
@@ -187,7 +187,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
             )}
           </motion.div>
           <p className="mt-4 text-[10px] font-bold text-blue-900/40 uppercase tracking-widest text-center px-12 italic">
-            {ecosystemInfo[plantState.type].description}
+            {ecosystemInfo[plantState.type]?.description || "Cultivate your garden."}
           </p>
         </div>
 
