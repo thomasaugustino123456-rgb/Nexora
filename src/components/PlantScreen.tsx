@@ -5,6 +5,7 @@ import { Mascot } from './Mascot';
 import { PlantState, UserSettings, UserStats, PlantType } from '../types';
 import { vibrate } from '../lib/vibrate';
 import { PlantRenderer } from './PlantRenderer';
+import { PlantCompletionCard } from './PlantCompletionCard';
 
 interface PlantScreenProps {
   plantState: PlantState;
@@ -13,6 +14,7 @@ interface PlantScreenProps {
   onExit: () => void;
   onRecover: () => void;
   onSwitchType: (type: PlantType) => void;
+  onSaveToLibrary: (imageData: string) => void;
   settings: UserSettings;
   stats: UserStats;
 }
@@ -24,12 +26,14 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   onExit,
   onRecover,
   onSwitchType,
+  onSaveToLibrary,
   settings,
   stats
 }) => {
   const [step, setStep] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [showGarden, setShowGarden] = useState(false);
+  const [showCompletion, setShowCompletion] = useState(false);
 
   const ecosystemInfo: Record<PlantType, { name: string, description: string }> = {
     zen: { name: "Zen Retreat", description: "Bonsai, Bamboo, and Moss. A starting point for focused minds." },
@@ -164,6 +168,15 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
               </p>
             </motion.div>
           )}
+
+          {showCompletion && (
+            <PlantCompletionCard 
+              type={plantState.type}
+              ecosystemName={ecosystemInfo[plantState.type]?.name || "Ecosystem"}
+              onSaveToLibrary={onSaveToLibrary}
+              onClose={() => setShowCompletion(false)}
+            />
+          )}
         </AnimatePresence>
 
         <div className="mb-12 flex flex-col items-center">
@@ -233,6 +246,17 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
                       <span className="text-[8px] font-black text-blue-900/40 uppercase">Lv. {stats.level} User</span>
                    </div>
                 </div>
+
+                {plantState.stage === 5 && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => { vibrate(20); setShowCompletion(true); }}
+                    className="w-full py-4 mt-4 bg-gradient-to-r from-yellow-400 to-amber-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-yellow-500/20 flex items-center justify-center gap-2"
+                  >
+                    <Trophy size={16} /> Capture Achievement
+                  </motion.button>
+                )}
               </div>
             )}
             

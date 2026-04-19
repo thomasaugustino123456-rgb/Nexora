@@ -2725,6 +2725,12 @@ export default function App() {
                   onboardingCompleted={!!settings.plantOnboardingCompleted}
                   onCompleteOnboarding={() => onUpdateSettings({ plantOnboardingCompleted: true })}
                   onExit={() => { vibrate(5); setActiveScreen('home'); }}
+                  onSaveToLibrary={(imageData) => {
+                    onUpdateStats(prev => ({
+                      ...prev,
+                      drawings: [imageData, ...(prev.drawings || [])]
+                    }));
+                  }}
                   onSwitchType={(type) => {
                     vibrate(10);
                     onUpdateSettings(prev => ({
