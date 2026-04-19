@@ -37,13 +37,14 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     tropical: { name: "Tropical Paradise", description: "Monstera and Bird of Paradise. Vibrant growth and energy." },
     forest: { name: "Ancient Forest", description: "Oak, Fern, and Mushrooms. Deep roots and ancient wisdom." },
     meadow: { name: "Meadow Harmony", description: "Wildflowers and Lavender. Swaying with the rhythm of life." },
-    crystal: { name: "Crystal Sanctuary", description: "Floating Air Plants and Crystals. Pure energy and clarity." }
+    crystal: { name: "Crystal Sanctuary", description: "Floating Air Plants and Crystals. Pure energy and clarity." },
+    volcano: { name: "Volcano Forge", description: "Obsidian stems and Lava blooms. Forged in the fires of discipline." }
   };
 
   const onboardingSteps = [
     "Welcome to your Living Plant, bro! 🌿 This space is a reflection of your discipline. As you grow, your ecosystem grows too!",
     "To grow your ecosystem, you need to complete all your daily tasks. Each completion gives the plants growth energy! ✨",
-    "Once you reach Level 5 (Legendary) on an ecosystem, you unlock the next one! Can you cultivate all 6, bro?",
+    "Once you reach Level 5 (Legendary) on an ecosystem, you unlock the next one! Can you cultivate all 7, bro?",
     "Be careful: If you don't 'water' it (by doing tasks) for 1.5 days, it starts to wilt. 💧 If you wait 2 days, it will die. 🥀",
     "Ready to build your ultimate garden? Let's grow together! 🔥🚀"
   ];

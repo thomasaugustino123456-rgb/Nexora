@@ -261,7 +261,7 @@ const DEFAULT_SETTINGS: UserSettings = {
     health: 100,
     isDead: false,
     isThirsty: false,
-    unlockedTypes: ['zen']
+    unlockedTypes: ['zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano']
   }
 };
 
@@ -774,7 +774,7 @@ export default function App() {
   }, [settings.zenModeEnabled, activeScreen]);
 
   // PLANT LOGIC: GROWTH & HEALTH CHECKER
-  const ECOSYSTEM_PATH: PlantType[] = ['zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal'];
+  const ECOSYSTEM_PATH: PlantType[] = ['zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano'];
 
   const growPlant = useCallback(() => {
     setSettings(prev => {
@@ -858,6 +858,16 @@ export default function App() {
     }
 
     if (!settings.plantState) return;
+
+    // FORCE UNLOCK ALL TYPES FOR TESTING (Per User Request)
+    if (settings.plantState.unlockedTypes?.length !== ECOSYSTEM_PATH.length) {
+        onUpdateSettings({
+            plantState: {
+                ...settings.plantState,
+                unlockedTypes: [...ECOSYSTEM_PATH]
+            }
+        });
+    }
     
     const checkPlant = () => {
       const now = new Date();
@@ -3315,7 +3325,18 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
           <div className="glass-card w-full p-8 space-y-6">
             <div className="space-y-2">
               <h2 className="text-3xl font-bold text-blue-900/80">Hey 👋</h2>
-              <h3 className="text-2xl font-bold text-blue-900/70">Ready for today?</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold text-blue-900/70">Ready for today?</h3>
+                <button 
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    onOpenPlant();
+                  }}
+                  className="p-3 bg-emerald-500 text-white rounded-2xl shadow-lg shadow-emerald-200 active:scale-90 transition-all flex items-center justify-center group"
+                >
+                  <Sprout size={24} className="group-hover:rotate-12 transition-transform" />
+                </button>
+              </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 text-blue-900/50 font-medium">
                   <Flame size={18} className="text-orange-500" />

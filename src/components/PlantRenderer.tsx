@@ -22,6 +22,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
       case 'forest': return { primary: '#2E7D32', secondary: '#1B5E20', accent: '#8D6E63' };
       case 'meadow': return { primary: '#AED581', secondary: '#7CB342', accent: '#E91E63' };
       case 'crystal': return { primary: '#B2EBF2', secondary: '#4DD0E1', accent: '#D1C4E9' };
+      case 'volcano': return { primary: '#FF5722', secondary: '#BF360C', accent: '#FFEB3B' };
       default: return { primary: '#4CAF50', secondary: '#388E3C', accent: '#2E7D32' };
     }
   };
@@ -328,6 +329,96 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
     </g>
   );
 
+  const renderVolcano = () => (
+    <g>
+      {/* Basalt Rock Pot */}
+      <path d="M 50,150 L 150,150 L 140,195 L 60,195 Z" fill="#263238" />
+      <motion.path 
+        d="M 50,150 Q 100,165 150,150" 
+        stroke="#FF5722" 
+        strokeWidth="2" 
+        fill="none"
+        animate={{ opacity: [0.3, 0.8, 0.3] }}
+        transition={{ repeat: Infinity, duration: 2 }}
+      />
+      
+      {!isDead && (
+        <g>
+          {/* Obsidian Stems with Lava Veins */}
+          {stage >= 1 && (
+            <motion.path 
+              d="M 100,152 L 100,80" 
+              stroke="#212121" 
+              strokeWidth="10" 
+              strokeLinecap="round" 
+              initial={{ scaleY: 0 }} 
+              animate={{ scaleY: 1 }}
+              style={{ transformOrigin: 'bottom' }}
+            />
+          )}
+
+          {stage >= 2 && (
+            <motion.path 
+              d="M 100,120 Q 70,100 60,110" 
+              stroke="#212121" 
+              strokeWidth="6" 
+              strokeLinecap="round"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+            />
+          )}
+
+          {/* Glowing Leaves/Embers */}
+          {stage >= 3 && (
+            <motion.circle 
+              cx="100" 
+              cy="70" 
+              r="25" 
+              fill={colors.primary} 
+              opacity="0.9"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+            />
+          )}
+
+          {stage >= 4 && (
+            <g>
+              <motion.circle cx="60" cy="110" r="12" fill={colors.secondary} initial={{ scale: 0 }} animate={{ scale: 1 }} />
+              <motion.path 
+                 d="M 100,70 L 110,40" 
+                 stroke={colors.accent} 
+                 strokeWidth="2" 
+                 initial={{ opacity: 0 }} 
+                 animate={{ opacity: [0.4, 1, 0.4] }} 
+                 transition={{ repeat: Infinity, duration: 1.5 }}
+              />
+            </g>
+          )}
+
+          {/* Fire Blooms / Lava Flows */}
+          {stage >= 5 && (
+            <g>
+               <motion.circle 
+                 cx="100" cy="50" r="10" fill={colors.accent} 
+                 initial={{ scale: 0 }} 
+                 animate={{ scale: [1, 1.2, 1] }} 
+                 transition={{ repeat: Infinity, duration: 1 }}
+               />
+               <motion.path 
+                 d="M 100,150 Q 160,180 180,160" 
+                 stroke={colors.primary} 
+                 strokeWidth="3" 
+                 fill="none"
+                 initial={{ pathLength: 0 }}
+                 animate={{ pathLength: 1 }}
+               />
+            </g>
+          )}
+        </g>
+      )}
+    </g>
+  );
+
   const getEcosystemRenderer = () => {
     switch (type) {
       case 'zen': return renderZen();
@@ -336,6 +427,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
       case 'forest': return renderForest();
       case 'meadow': return renderMeadow();
       case 'crystal': return renderCrystal();
+      case 'volcano': return renderVolcano();
       default: return renderZen();
     }
   };
