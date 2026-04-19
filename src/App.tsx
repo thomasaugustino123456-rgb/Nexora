@@ -4,7 +4,7 @@ import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
-import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan } from './types';
+import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType } from './types';
 import { HOUSE_ITEMS } from './constants/houseItems';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
@@ -251,7 +251,18 @@ const DEFAULT_SETTINGS: UserSettings = {
   mascotSize: 1.0,
   mascotPos: { x: 400, y: 300 },
   mascotPinnedItemId: null,
-  spaceOnboardingCompleted: false
+  spaceOnboardingCompleted: false,
+  plantState: {
+    type: 'zen',
+    stage: 0,
+    growthPoints: 0,
+    lastGrowthDate: null,
+    lastCheckDate: new Date().toISOString(),
+    health: 100,
+    isDead: false,
+    isThirsty: false,
+    unlockedTypes: ['zen']
+  }
 };
 
 const DEFAULT_STATS: UserStats = {
@@ -763,33 +774,50 @@ export default function App() {
   }, [settings.zenModeEnabled, activeScreen]);
 
   // PLANT LOGIC: GROWTH & HEALTH CHECKER
+  const ECOSYSTEM_PATH: PlantType[] = ['zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal'];
+
   const growPlant = useCallback(() => {
     setSettings(prev => {
       const current = prev.plantState || {
+        type: 'zen',
         stage: 0,
         growthPoints: 0,
         lastGrowthDate: null,
         lastCheckDate: new Date().toISOString(),
         health: 100,
         isDead: false,
-        isThirsty: false
+        isThirsty: false,
+        unlockedTypes: ['zen']
       };
       
       if (current.isDead) return prev;
 
       let newPoints = current.growthPoints + 15;
       let newStage = current.stage;
+      let newUnlocked = [...(current.unlockedTypes || ['zen'])];
       
       if (newPoints >= 100) {
         if (newStage < 5) {
           newStage += 1;
           newPoints = 0;
-          showToast(`Your plant grew to Level ${newStage}! 🌿✨`, 'success');
+          vibrate(VIBRATION_PATTERNS.SUCCESS);
+          showToast(`Your ecosystem grew to Stage ${newStage}! 🌿✨`, 'success');
+          
+          if (newStage === 5) {
+            const currentIdx = ECOSYSTEM_PATH.indexOf(current.type);
+            if (currentIdx !== -1 && currentIdx < ECOSYSTEM_PATH.length - 1) {
+              const nextType = ECOSYSTEM_PATH[currentIdx + 1];
+              if (!newUnlocked.includes(nextType)) {
+                newUnlocked.push(nextType);
+                showToast(`New Ecosystem Unlocked: ${nextType.toUpperCase()}! 🏆`, 'success');
+              }
+            }
+          }
         } else {
           newPoints = 100;
         }
       } else {
-        showToast(`Plant watered! +15% Growth Energy 💧`, 'success');
+        showToast(`Ecosystem nurtured! +15% Energy 💧`, 'success');
       }
 
       return {
@@ -798,7 +826,10 @@ export default function App() {
           ...current,
           stage: newStage,
           growthPoints: newPoints,
+          unlockedTypes: newUnlocked,
           lastCheckDate: new Date().toISOString(),
+          lastGrowthDate: new Date().toISOString(),
+          health: 100,
           isThirsty: false
         }
       };
@@ -812,13 +843,15 @@ export default function App() {
     if (isDataReady && !settings.plantState) {
         onUpdateSettings({
             plantState: {
+                type: 'zen',
                 stage: 0,
                 growthPoints: 0,
                 lastGrowthDate: null,
                 lastCheckDate: new Date().toISOString(),
                 health: 100,
                 isDead: false,
-                isThirsty: false
+                isThirsty: false,
+                unlockedTypes: ['zen']
             }
         });
         return;
@@ -842,7 +875,7 @@ export default function App() {
             lastCheckDate: now.toISOString()
           }
         });
-        sendNotification("Your Nexora Plant has died... 🥀", { body: "Bro, your plant needs discipline! Restore the seed and try again." });
+        sendNotification("Your Nexora Ecosystem has died... 🥀", { body: "Bro, your plants need discipline! Restore the room and try again." });
       } else if (diffHours >= 36 && !settings.plantState!.isThirsty && !settings.plantState!.isDead) { // 1.5 days
         onUpdateSettings({
           plantState: {
@@ -850,7 +883,7 @@ export default function App() {
             isThirsty: true
           }
         });
-        sendNotification("Your plant is thirsty! 💧", { body: "Water your plant by completing your daily tasks, bro!" });
+        sendNotification("Your ecosystem is thirsty! 💧", { body: "Nurture your plants by completing your daily tasks, bro!" });
       }
     };
 
@@ -2233,7 +2266,7 @@ export default function App() {
               />
               <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexora</h1>
             </div>
-            <div className="flex items-start gap-2">
+            <div className="flex items-center gap-2">
               <button 
                 onClick={() => setActiveScreen('subscription')}
                 className={`flex items-center gap-1 p-2 transition-colors ${activeScreen === 'subscription' ? 'text-amber-500' : 'text-amber-500/60 hover:text-amber-500'}`}
@@ -2247,44 +2280,16 @@ export default function App() {
               >
                 <Home size={24} />
               </button>
-              <div className="flex flex-col items-center gap-2">
-                <button 
-                  onClick={() => setActiveScreen('profile')}
-                  className={`p-2 transition-colors ${activeScreen === 'profile' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
-                >
-                  {settings.profilePic ? (
-                    <img src={settings.profilePic} alt="Profile" className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" referrerPolicy="no-referrer" loading="lazy" />
-                  ) : (
-                    <User size={24} />
-                  )}
-                </button>
-                {activeScreen === 'home' && (
-                  <motion.button
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    onClick={() => {
-                      vibrate(VIBRATION_PATTERNS.CLICK);
-                      setActiveScreen('plant');
-                    }}
-                    className={`p-2 rounded-xl shadow-lg transition-all active:scale-95 group relative ${
-                      settings.plantState?.isDead 
-                        ? 'bg-red-100 text-red-600' 
-                        : settings.plantState?.isThirsty 
-                          ? 'bg-amber-100 text-amber-600' 
-                          : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
-                    }`}
-                    title="Your Plant 🌿"
-                  >
-                    <Sprout size={18} className="group-hover:rotate-12 transition-transform" />
-                    {(settings.plantState?.isDead || settings.plantState?.isThirsty) && (
-                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                      </span>
-                    )}
-                  </motion.button>
+              <button 
+                onClick={() => setActiveScreen('profile')}
+                className={`p-2 transition-colors ${activeScreen === 'profile' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+              >
+                {settings.profilePic ? (
+                  <img src={settings.profilePic} alt="Profile" className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" referrerPolicy="no-referrer" loading="lazy" />
+                ) : (
+                  <User size={24} />
                 )}
-              </div>
+              </button>
               <button 
                 onClick={() => setActiveScreen('settings')}
                 className={`p-2 transition-colors ${activeScreen === 'settings' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
@@ -2694,19 +2699,33 @@ export default function App() {
                   plantState={settings.plantState}
                   onboardingCompleted={!!settings.plantOnboardingCompleted}
                   onCompleteOnboarding={() => onUpdateSettings({ plantOnboardingCompleted: true })}
-                  onExit={() => setActiveScreen('home')}
+                  onExit={() => { vibrate(5); setActiveScreen('home'); }}
+                  onSwitchType={(type) => {
+                    vibrate(10);
+                    onUpdateSettings(prev => ({
+                      ...prev,
+                      plantState: {
+                        ...prev.plantState!,
+                        type,
+                        // If they haven't finished this one yet, keep stage.
+                        // If they want independent tracking per plant, we'd need a map.
+                        // For now, let's keep it as one active progression.
+                      }
+                    }));
+                  }}
                   onRecover={() => {
                     onUpdateSettings({
                       plantState: {
+                        ...settings.plantState!,
                         stage: 0,
                         growthPoints: 0,
-                        lastGrowthDate: null,
-                        lastCheckDate: new Date().toISOString(),
-                        health: 100,
                         isDead: false,
-                        isThirsty: false
+                        isThirsty: false,
+                        health: 100,
+                        lastCheckDate: new Date().toISOString()
                       }
                     });
+                    showToast("Ecosystem restored! 🌿", "info");
                   }}
                   settings={settings}
                   stats={stats}
@@ -3356,6 +3375,27 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
                 : dailyProgress.completionsCount > 0 
                   ? `Start Challenge #${dailyProgress.completionsCount + 1} ✍️` 
                   : 'Start Today\'s Challenge ✍️'}
+            </button>
+
+            <button 
+              onClick={() => {
+                vibrate(VIBRATION_PATTERNS.CLICK);
+                onOpenPlant();
+              }}
+              className="w-full flex items-center justify-between p-4 glass-card bg-emerald-50/30 border-2 border-emerald-100/50 hover:bg-emerald-50 transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-500 text-white flex items-center justify-center shadow-lg shadow-emerald-200 group-hover:scale-110 transition-transform">
+                  <Sprout size={24} />
+                </div>
+                <div className="text-left">
+                  <h4 className="font-black text-blue-900 leading-none">Your Plant</h4>
+                  <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest mt-1">
+                    {settings.plantState?.isDead ? "🥀 Restoration Required" : settings.plantState?.isThirsty ? "💧 Needs Water" : `🌿 Stage ${settings.plantState?.stage || 0} Growth`}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-emerald-500 group-hover:translate-x-1 transition-transform" />
             </button>
 
             {dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3) && (

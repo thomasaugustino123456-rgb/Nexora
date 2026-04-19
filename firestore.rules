@@ -86,6 +86,8 @@ service cloud.firestore {
                data.plantState is map &&
                data.plantState.stage is number &&
                data.plantState.growthPoints is number &&
+               data.plantState.type is string &&
+               (!('unlockedTypes' in data.plantState) || data.plantState.unlockedTypes is list) &&
                (!('health' in data.plantState) || data.plantState.health is number) &&
                (!('isDead' in data.plantState) || data.plantState.isDead is bool) &&
                (!('isThirsty' in data.plantState) || data.plantState.isThirsty is bool) &&

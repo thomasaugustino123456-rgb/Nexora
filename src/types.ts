@@ -25,7 +25,10 @@ export interface PlacedHouseItem {
   room: number;
 }
 
+export type PlantType = 'zen' | 'desert' | 'tropical' | 'forest' | 'meadow' | 'crystal';
+
 export interface PlantState {
+  type: PlantType;
   stage: number; // 0: seed, 1-5: growth
   growthPoints: number;
   lastGrowthDate: string | null;
@@ -33,6 +36,7 @@ export interface PlantState {
   health: number; // 0-100
   isDead: boolean;
   isThirsty: boolean;
+  unlockedTypes?: PlantType[];
 }
 
 export interface UserSettings {
