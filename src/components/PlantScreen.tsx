@@ -83,8 +83,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   const unlocked = plantState.unlockedTypes || ['zen'];
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-[#F0F9FF] to-[#E0F2FE] z-[120] flex flex-col items-center overflow-hidden">
-      <header className="w-full p-6 flex items-center justify-between z-[140]">
+    <div className="fixed inset-0 bg-gradient-to-b from-[#F0F9FF] to-[#E0F2FE] z-[120] flex flex-col items-center overflow-y-auto">
+      <header className="w-full p-6 flex items-center justify-between z-[140] bg-[#F0F9FF]">
         <button onClick={onExit} className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors">
           <ChevronLeft size={28} />
         </button>

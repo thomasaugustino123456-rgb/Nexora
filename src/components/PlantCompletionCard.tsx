@@ -19,72 +19,46 @@ export const PlantCompletionCard: React.FC<PlantCompletionCardProps> = ({
   onSaveToLibrary,
   onClose
 }) => {
-  const cardRef = useRef<HTMLDivElement>(null);
+  const captureRef = useRef<HTMLDivElement>(null); // Ref to capture card with text but no buttons
   const plantRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
 
-  const handleSaveToLibrary = async () => {
-    if (!plantRef.current || isSaving) return;
+  const handleCapture = async (type: 'library' | 'phone') => {
+    if (!captureRef.current || isSaving) return;
     vibrate(20);
     setIsSaving(true);
     
     try {
-      // Capture the plant renderer as a PNG
-      const dataUrl = await toPng(plantRef.current, { 
-        backgroundColor: 'transparent',
-        width: 300,
-        height: 300,
-        style: {
-          transform: 'scale(1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }
-      });
-      
-      onSaveToLibrary(dataUrl);
-      setSaveSuccess(true);
-      
-      // Reset success state after a while
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      console.error('Failed to save to library:', err);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSaveToPhone = async () => {
-    if (!plantRef.current || isSaving) return;
-    vibrate(30);
-    setIsSaving(true);
-    
-    try {
-      const dataUrl = await toPng(plantRef.current, { 
-        backgroundColor: '#F0F9FF', // Nice light blue background for the saved file
-        width: 500,
-        height: 500,
+      const dataUrl = await toPng(captureRef.current, { 
+        backgroundColor: type === 'library' ? 'transparent' : '#F0F9FF',
+        width: 400, // Reasonable size
+        height: 500, // Covers text and plant
         pixelRatio: 2,
         style: {
           transform: 'scale(1)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '40px'
+          padding: type === 'library' ? '0' : '40px'
         }
       });
       
-      const link = document.createElement('a');
-      link.download = `Nexora_${ecosystemName}_Legendary.png`;
-      link.href = dataUrl;
-      link.click();
-      
-      setDownloadSuccess(true);
-      setTimeout(() => setDownloadSuccess(false), 3000);
+      if (type === 'library') {
+        onSaveToLibrary(dataUrl);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        const link = document.createElement('a');
+        link.download = `Nexora_${ecosystemName}_Legendary.png`;
+        link.href = dataUrl;
+        link.click();
+        setDownloadSuccess(true);
+        setTimeout(() => setDownloadSuccess(false), 3000);
+      }
     } catch (err) {
-      console.error('Failed to save to phone:', err);
+      console.error(`Failed to save to ${type}:`, err);
     } finally {
       setIsSaving(false);
     }
@@ -98,7 +72,7 @@ export const PlantCompletionCard: React.FC<PlantCompletionCardProps> = ({
       className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md"
     >
       <motion.div
-        ref={cardRef}
+        ref={captureRef}
         initial={{ scale: 0.5, opacity: 0, rotate: -5, y: 100 }}
         animate={{ scale: 1, opacity: 1, rotate: 0, y: 0 }}
         exit={{ scale: 0.5, opacity: 0, scaleY: 0.2, filter: 'blur(20px)' }}
@@ -110,92 +84,89 @@ export const PlantCompletionCard: React.FC<PlantCompletionCardProps> = ({
         }}
         className="relative glass-card w-full max-w-sm bg-white p-8 overflow-hidden flex flex-col items-center gap-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] border-4 border-yellow-400"
       >
-        {/* Background Confetti Aura */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <motion.div 
-            animate={{ 
-              rotate: 360,
-              scale: [1, 1.2, 1],
-            }}
-            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-[radial-gradient(circle,_rgba(255,223,0,0.15)_0%,_transparent_70%)]"
-          />
-        </div>
-
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 text-gray-400 hover:text-gray-600 rounded-full transition-colors z-20"
-        >
-          <X size={20} />
-        </button>
-
-        <div className="text-center space-y-1 z-10">
-          <motion.div
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="flex items-center justify-center gap-2"
-          >
-            <Sparkles className="text-yellow-500 fill-yellow-500" size={20} />
-            <h2 className="text-sm font-black text-yellow-600 uppercase tracking-[0.3em]">Legendary Growth</h2>
-            <Sparkles className="text-yellow-500 fill-yellow-500" size={20} />
-          </motion.div>
-          <motion.h3 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.4, type: "spring" }}
-            className="text-3xl font-black text-blue-900 leading-tight italic"
-          >
-            {ecosystemName}
-          </motion.h3>
-        </div>
-
-        {/* The Capture Area */}
-        <div className="relative group">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-            className="bg-gradient-to-br from-blue-50 to-emerald-50 p-8 rounded-[3rem] shadow-inner border-2 border-dashed border-blue-100 flex items-center justify-center"
-          >
-            <div ref={plantRef} className="w-56 h-56 flex items-center justify-center">
-              <PlantRenderer type={type} stage={5} isThirsty={false} isDead={false} />
-            </div>
-          </motion.div>
-          
-          {/* Animated sparkles around the plant */}
-          {[...Array(6)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute text-yellow-400"
-              initial={{ opacity: 0, scale: 0 }}
+        {/* Everything inside here (except buttons) is captured */}
+        <div className="flex flex-col items-center gap-6">
+          {/* Background Confetti Aura - exclude from capture? Maybe not, keep for aesthetics. */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <motion.div 
               animate={{ 
-                opacity: [0, 1, 0], 
-                scale: [0, 1, 0],
-                x: Math.sin(i) * 120,
-                y: Math.cos(i) * 120
+                rotate: 360,
+                scale: [1, 1.2, 1],
               }}
-              transition={{ 
-                duration: 2, 
-                repeat: Infinity, 
-                delay: i * 0.4,
-                ease: "easeInOut"
-              }}
+              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+              className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-[radial-gradient(circle,_rgba(255,223,0,0.15)_0%,_transparent_70%)]"
+            />
+          </div>
+
+          <div className="text-center space-y-1 z-10">
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="flex items-center justify-center gap-2"
             >
-              <Sparkles size={16} fill="currentColor" />
+              <Sparkles className="text-yellow-500 fill-yellow-500" size={20} />
+              <h2 className="text-sm font-black text-yellow-600 uppercase tracking-[0.3em]">Legendary Growth</h2>
+              <Sparkles className="text-yellow-500 fill-yellow-500" size={20} />
             </motion.div>
-          ))}
+            <motion.h3 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.4, type: "spring" }}
+              className="text-3xl font-black text-blue-900 leading-tight italic"
+            >
+              {ecosystemName}
+            </motion.h3>
+          </div>
+
+          {/* The Capture Area */}
+          <div className="relative group">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              className="bg-gradient-to-br from-blue-50 to-emerald-50 p-8 rounded-[3rem] shadow-inner border-2 border-dashed border-blue-100 flex items-center justify-center"
+            >
+              <div className="w-56 h-56 flex items-center justify-center">
+                <PlantRenderer type={type} stage={5} isThirsty={false} isDead={false} />
+              </div>
+            </motion.div>
+            
+            {/* Animated sparkles around the plant */}
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute text-yellow-400"
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ 
+                  opacity: [0, 1, 0], 
+                  scale: [0, 1, 0],
+                  x: Math.sin(i) * 120,
+                  y: Math.cos(i) * 120
+                }}
+                transition={{ 
+                  duration: 2, 
+                  repeat: Infinity, 
+                  delay: i * 0.4,
+                  ease: "easeInOut"
+                }}
+              >
+                <Sparkles size={16} fill="currentColor" />
+              </motion.div>
+            ))}
+          </div>
+
+          <p className="text-xs font-bold text-blue-900/40 text-center px-4 leading-relaxed z-10">
+            Bro, your discipline is insane! You've successfully cultivated the legendary {ecosystemName}. Capture this moment!
+          </p>
         </div>
-
-        <p className="text-xs font-bold text-blue-900/40 text-center px-4 leading-relaxed z-10">
-          Bro, your discipline is insane! You've successfully cultivated the legendary {ecosystemName}. Capture this moment!
-        </p>
-
+        
+        {/* Buttons - Separated from captureRef capture area */}
         <div className="w-full grid grid-cols-1 gap-3 z-10">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={handleSaveToLibrary}
+            onClick={() => handleCapture('library')}
             disabled={isSaving || saveSuccess}
             className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs transition-all shadow-lg ${
               saveSuccess 
@@ -217,7 +188,7 @@ export const PlantCompletionCard: React.FC<PlantCompletionCardProps> = ({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={handleSaveToPhone}
+            onClick={() => handleCapture('phone')}
             disabled={isSaving}
             className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs transition-all shadow-lg border-2 ${
               downloadSuccess

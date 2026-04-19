@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { LibraryItem, UserStats, UserSettings } from '../types';
 import { ArrowLeft, Trash2, Power, PowerOff, Package, Book, Image as ImageIcon, Sparkles, Music, Play, Pause, Volume2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -33,6 +34,8 @@ export function LibraryScreen({
   const notes = stats.gratitudeEntries || [];
   const drawings = stats.drawings || [];
   const savedChallenges = settings.savedChallengeIds || [];
+
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
 
   return (
     <motion.div
@@ -211,10 +214,10 @@ export function LibraryScreen({
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {drawings.map((drawing, i) => (
-                  <div key={i} className="bg-white p-2 rounded-2xl shadow-md border-2 border-blue-100 overflow-hidden group relative">
+                  <div key={i} className="bg-white p-2 rounded-2xl shadow-md border-2 border-blue-100 overflow-hidden group relative cursor-pointer" onClick={() => setViewingImage(drawing)}>
                     <img src={drawing} alt={`Drawing ${i}`} className="w-full aspect-square object-cover rounded-xl" loading="lazy" />
                     <button 
-                      onClick={() => onDeleteDrawing(i)}
+                      onClick={(e) => { e.stopPropagation(); onDeleteDrawing(i); }}
                       className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Delete Drawing"
                     >
@@ -227,6 +230,34 @@ export function LibraryScreen({
                   </div>
                 ))}
               </div>
+
+              <AnimatePresence>
+                {viewingImage && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm"
+                    onClick={() => setViewingImage(null)}
+                  >
+                    <motion.div
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.5, opacity: 0 }}
+                      className="bg-white p-4 rounded-3xl shadow-2xl max-w-sm w-full"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <img src={viewingImage} alt="Viewed Masterpiece" className="w-full rounded-2xl" />
+                      <button 
+                        onClick={() => setViewingImage(null)}
+                        className="mt-4 w-full py-3 bg-blue-100 text-blue-900 font-black uppercase tracking-widest text-xs rounded-xl hover:bg-blue-200"
+                      >
+                        Close
+                      </button>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </section>
           )}
         </div>
