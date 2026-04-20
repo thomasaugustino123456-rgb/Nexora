@@ -2551,6 +2551,10 @@ export default function App() {
                         if (item.type === 'music' && itemToActivate?.type === 'music') {
                           return { ...item, activated: false };
                         }
+                        // If it's sound-pack, deactivate other sound-packs
+                        if (item.type === 'sound-pack' && itemToActivate?.type === 'sound-pack') {
+                          return { ...item, activated: false };
+                        }
                         return item;
                       });
                       
@@ -2560,12 +2564,40 @@ export default function App() {
                         activeSkin = activeItem.itemId.replace('skin-', '');
                       }
 
-                      return { ...prev, inventory, activeSkin };
+                      let isDogSoundPackActive = prev.isDogSoundPackActive;
+                      if (activeItem?.type === 'sound-pack') {
+                        isDogSoundPackActive = activeItem.itemId === 'sound-dog';
+                      }
+
+                      // If it's a gift, give a reward and keep it activated (as opened)
+                      if (activeItem?.type === 'gift' && !activeItem.activated) {
+                        const rewards = [
+                          { type: 'coins', amount: 50, msg: 'You found 50 coins! 💰' },
+                          { type: 'coins', amount: 100, msg: 'Jackpot! 100 coins! 💎' },
+                          { type: 'xp', amount: 200, msg: 'Epic discovery! +200 XP! ✨' },
+                          { type: 'xp', amount: 50, msg: 'Nice! +50 XP! 🌟' },
+                          { type: 'streak', amount: 1, msg: 'Bonus Streak Day! 🔥' }
+                        ];
+                        const reward = rewards[Math.floor(Math.random() * rewards.length)];
+                        
+                        showToast(reward.msg, 'success');
+                        vibrate(VIBRATION_PATTERNS.SUCCESS);
+
+                        setStats(s => ({
+                          ...s,
+                          coins: reward.type === 'coins' ? (s.coins || 0) + reward.amount : s.coins,
+                          xp: reward.type === 'xp' ? (s.xp || 0) + reward.amount : s.xp,
+                          streak: reward.type === 'streak' ? s.streak + reward.amount : s.streak
+                        }));
+                      }
+
+                      return { ...prev, inventory, activeSkin, isDogSoundPackActive };
                     });
                   }}
                   onDeactivate={(id) => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
                     setSettings(prev => {
+                      const itemToDeactivate = prev.inventory?.find(i => i.id === id);
                       const inventory = (prev.inventory || []).map(item => {
                         if (item.id === id) {
                           return { ...item, activated: false };
@@ -2573,13 +2605,17 @@ export default function App() {
                         return item;
                       });
                       
-                      const activeItem = prev.inventory?.find(i => i.id === id);
                       let activeSkin = prev.activeSkin;
-                      if (activeItem?.type === 'skin') {
+                      if (itemToDeactivate?.type === 'skin') {
                         activeSkin = 'none';
                       }
 
-                      return { ...prev, inventory, activeSkin };
+                      let isDogSoundPackActive = prev.isDogSoundPackActive;
+                      if (itemToDeactivate?.type === 'sound-pack') {
+                        isDogSoundPackActive = false;
+                      }
+
+                      return { ...prev, inventory, activeSkin, isDogSoundPackActive };
                     });
                   }}
                   onDelete={(id) => {

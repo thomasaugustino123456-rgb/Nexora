@@ -277,13 +277,15 @@ function LibraryItemCard({
   onDeactivate: (id: string) => void; 
   onDelete: (id: string) => void; 
 }) {
-  const isMusic = item.type === 'music' || item.type === 'sound-pack';
+  const isMusic = item.type === 'music';
+  const isSoundPack = item.type === 'sound-pack';
+  const isGift = item.type === 'gift';
 
   return (
     <div className={`glass-card p-4 flex items-center gap-4 transition-all ${item.activated ? 'border-blue-500 bg-blue-50/50 shadow-lg shadow-blue-100' : 'border-transparent'}`}>
       <div className="relative">
-        <div className="text-4xl drop-shadow-sm">{item.icon}</div>
-        {item.activated && isMusic && (
+        <div className={`text-4xl drop-shadow-sm ${isGift && !item.activated ? 'animate-bounce' : ''}`}>{item.icon}</div>
+        {item.activated && (isMusic || isSoundPack) && (
           <motion.div 
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ duration: 1, repeat: Infinity }}
@@ -296,14 +298,17 @@ function LibraryItemCard({
       <div className="flex-1 min-w-0">
         <h3 className="font-bold text-blue-900 truncate">{item.name}</h3>
         <p className="text-[10px] text-blue-900/40 font-medium">
-          {item.activated ? (isMusic ? 'Now Playing' : 'Currently Active') : 'Inactive'}
+          {item.activated 
+            ? (isMusic ? 'Now Playing' : isGift ? 'Gimme more! ✨' : 'Now Active') 
+            : (isGift ? 'Tap to Reveal Surprise' : 'Inactive')}
         </p>
       </div>
       <div className="flex items-center gap-2">
         {item.activated ? (
           <button 
             onClick={() => onDeactivate(item.id)}
-            className={`p-2 rounded-lg transition-colors ${isMusic ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'}`}
+            disabled={isGift} // Gifts can't be "un-opened"
+            className={`p-2 rounded-lg transition-colors ${isMusic ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'} ${isGift ? 'opacity-20' : ''}`}
             title={isMusic ? "Stop Music" : "Deactivate"}
           >
             {isMusic ? <Pause size={18} /> : <PowerOff size={18} />}
@@ -311,10 +316,10 @@ function LibraryItemCard({
         ) : (
           <button 
             onClick={() => onActivate(item.id)}
-            className={`p-2 rounded-lg transition-colors ${isMusic ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md' : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'}`}
-            title={isMusic ? "Play Music" : "Activate"}
+            className={`p-2 rounded-lg transition-colors ${isMusic || isGift ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md' : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'}`}
+            title={isMusic ? "Play Music" : isGift ? "Open Gift" : "Activate"}
           >
-            {isMusic ? <Play size={18} /> : <Power size={18} />}
+            {isMusic ? <Play size={18} /> : isGift ? <Sparkles size={18} /> : <Power size={18} />}
           </button>
         )}
         <button 

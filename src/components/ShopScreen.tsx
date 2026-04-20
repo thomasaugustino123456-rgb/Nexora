@@ -51,8 +51,10 @@ export function ShopScreen({
   onBack: () => void; 
 }) {
   const featuredItem = SHOP_ITEMS[0];
-  const powerUps = SHOP_ITEMS.filter(item => item.effect !== 'skin');
+  const powerUps = SHOP_ITEMS.filter(item => item.effect === 'streak-protection' || item.effect === 'double-points');
+  const musicSounds = SHOP_ITEMS.filter(item => item.effect === 'music' || item.effect === 'sound-pack');
   const skins = SHOP_ITEMS.filter(item => item.effect === 'skin');
+  const gifts = SHOP_ITEMS.filter(item => item.effect === 'gift');
 
   return (
     <motion.div
@@ -116,36 +118,21 @@ export function ShopScreen({
       </div>
 
       {/* Categories */}
-      <div className="space-y-10">
+      <div className="space-y-12">
         <section>
           <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Power-Ups</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {powerUps.map((item) => (
-              <div key={item.id} className="glass-card p-5 flex items-center gap-4 hover:border-blue-300 transition-colors">
-                <div className="text-4xl">{item.icon}</div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-blue-900">{item.name}</h3>
-                  <p className="text-[10px] text-blue-900/40 font-medium leading-tight mb-2">{item.description}</p>
-                  <div className="flex flex-col gap-2">
-                    <button 
-                      onClick={() => onBuy(item, 'streak')}
-                      disabled={(!isPro && streak < item.price) || purchasedItems.includes(item.id)}
-                      className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      {purchasedItems.includes(item.id) ? 'Purchased' : isPro ? 'Free' : `${item.price} Streak`}
-                    </button>
-                    {item.coinPrice && (
-                      <button 
-                        onClick={() => onBuy(item, 'coins')}
-                        disabled={(!isPro && coins < item.coinPrice) || purchasedItems.includes(item.id)}
-                        className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        {purchasedItems.includes(item.id) ? 'Purchased' : isPro ? 'Free' : `${item.coinPrice} Coins`}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <ShopItemCard key={item.id} item={item} streak={streak} coins={coins} isPro={isPro} purchasedItems={purchasedItems} onBuy={onBuy} />
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Music & Sound Packs</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {musicSounds.map((item) => (
+              <ShopItemCard key={item.id} item={item} streak={streak} coins={coins} isPro={isPro} purchasedItems={purchasedItems} onBuy={onBuy} />
             ))}
           </div>
         </section>
@@ -154,35 +141,53 @@ export function ShopScreen({
           <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Mascot Styles</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {skins.map((item) => (
-              <div key={item.id} className="glass-card p-4 flex flex-col items-center text-center gap-3 hover:border-blue-300 transition-colors">
-                <div className="text-5xl drop-shadow-md">{item.icon}</div>
-                <div>
-                  <h3 className="font-bold text-blue-900 text-sm">{item.name}</h3>
-                  <p className="text-[10px] text-blue-900/40 font-medium leading-tight mb-3">{item.description}</p>
-                </div>
-                <div className="mt-auto w-full flex flex-col gap-2">
-                  <button 
-                    onClick={() => onBuy(item, 'streak')}
-                    disabled={(!isPro && streak < item.price) || purchasedItems.includes(item.id)}
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {purchasedItems.includes(item.id) ? 'Purchased' : isPro ? 'Free' : `${item.price} Streak`}
-                  </button>
-                  {item.coinPrice && (
-                    <button 
-                      onClick={() => onBuy(item, 'coins')}
-                      disabled={(!isPro && coins < item.coinPrice) || purchasedItems.includes(item.id)}
-                      className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      {purchasedItems.includes(item.id) ? 'Purchased' : isPro ? 'Free' : `${item.coinPrice} Coins`}
-                    </button>
-                  )}
-                </div>
-              </div>
+              <ShopItemCard key={item.id} item={item} streak={streak} coins={coins} isPro={isPro} purchasedItems={purchasedItems} onBuy={onBuy} />
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Mystery Gifts</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {gifts.map((item) => (
+              <ShopItemCard key={item.id} item={item} streak={streak} coins={coins} isPro={isPro} purchasedItems={purchasedItems} onBuy={onBuy} />
             ))}
           </div>
         </section>
       </div>
     </motion.div>
+  );
+}
+
+function ShopItemCard({ item, streak, coins, isPro, purchasedItems, onBuy }: { item: ShopItem, streak: number, coins: number, isPro: boolean, purchasedItems: string[], onBuy: (item: ShopItem, currency: 'streak' | 'coins') => void }) {
+  return (
+    <div key={item.id} className="glass-card p-5 flex items-center gap-4 hover:border-blue-300 transition-colors">
+      <div className="text-4xl">{item.icon}</div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-bold text-blue-900 truncate">{item.name}</h3>
+          {item.effect === 'gift' && <span className="px-2 py-0.5 bg-purple-100 text-purple-600 text-[8px] font-black uppercase rounded-full">Surprise</span>}
+        </div>
+        <p className="text-[10px] text-blue-900/40 font-medium leading-tight mb-2 line-clamp-2">{item.description}</p>
+        <div className="flex flex-col gap-2">
+          <button 
+            onClick={() => onBuy(item, 'streak')}
+            disabled={(!isPro && streak < item.price) || purchasedItems.includes(item.id)}
+            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
+          >
+            {purchasedItems.includes(item.id) ? 'Purchased' : isPro ? 'Free' : `${item.price} Streak`}
+          </button>
+          {item.coinPrice && (
+            <button 
+              onClick={() => onBuy(item, 'coins')}
+              disabled={(!isPro && coins < item.coinPrice) || purchasedItems.includes(item.id)}
+              className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
+            >
+              {purchasedItems.includes(item.id) ? 'Purchased' : isPro ? 'Free' : `${item.coinPrice} Coins`}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
