@@ -29,6 +29,7 @@ import { PlantScreen } from './components/PlantScreen';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { GoogleGenAI } from "@google/genai";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
+import { requestNotificationPermission, setupOnMessageListener } from './lib/notifications';
 
 // const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 const ai = { models: { generateContent: async () => ({ text: "AI disabled" }) } } as any;
@@ -1101,6 +1102,7 @@ export default function App() {
           uid: user.uid,
           email: user.email || '',
           onboardingCompleted: !needsOnboarding,
+          isTodayCompleted: dailyProgress.completed,
           stats: stats, // Summary for queries
           fcmToken: fcmToken,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -2368,6 +2370,9 @@ export default function App() {
                     vibrate(VIBRATION_PATTERNS.CLICK);
                     setActiveScreen('plant');
                   }}
+                  fcmToken={fcmToken}
+                  setupFCM={setupFCM}
+                  fcmError={fcmError}
                 />
               </motion.div>
             )}
@@ -3164,7 +3169,7 @@ function CountdownToMidnight() {
   return <span>{timeLeft}</span>;
 }
 
-function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant }: { 
+function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, fcmToken, setupFCM, fcmError }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
@@ -3179,7 +3184,10 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
   onStartCustomPlan: (plan: CustomPlan) => void,
   onDeleteCustomPlan: (id: string) => void,
   onOpenPlanBuilder: () => void,
-  onOpenPlant: () => void
+  onOpenPlant: () => void,
+  fcmToken: string | null,
+  setupFCM: () => void,
+  fcmError: string | null
 }) {
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
@@ -3322,6 +3330,31 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
                 GO!
               </button>
             )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Push Notification Onboarding Card */}
+      {!fcmToken && !fcmError && Notification.permission !== 'denied' && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md mx-auto mb-8"
+        >
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-3xl flex items-center gap-4 shadow-xl shadow-blue-200 relative overflow-hidden">
+            <div className="p-3 bg-white/20 rounded-2xl">
+              <Bell size={24} className="animate-pulse" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-black text-sm uppercase tracking-tight">Never miss a streak! 🔔</h4>
+              <p className="text-[10px] font-bold opacity-80 leading-tight">Enable notifications to get reminders and plant alerts even when the app is closed, bro!</p>
+            </div>
+            <button 
+              onClick={setupFCM}
+              className="px-4 py-2 bg-white text-blue-600 rounded-xl text-[10px] font-black uppercase hover:bg-blue-50 active:scale-95 transition-all"
+            >
+              Enable
+            </button>
           </div>
         </motion.div>
       )}

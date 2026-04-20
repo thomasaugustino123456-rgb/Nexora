@@ -79,10 +79,31 @@ const startScheduler = () => {
 
         // 1. Main Reminders
         if (userTimeStr === userData.reminderTime || userTimeStr === userData.reminderTime2) {
-          await sendPush(fcmToken, 'Nexora 🔥', 'Hey 👋 Ready for today’s challenge? Don\'t let that streak die!');
+          if (!userData.isTodayCompleted) {
+            await sendPush(fcmToken, 'Nexora 🔥', 'Hey 👋 Ready for today’s challenge? Don\'t let that streak die!');
+          }
         }
 
-        // 2. Daily Motivation
+        // 2. Plant Status Alerts
+        const plantState = userData.plantState;
+        if (plantState && !plantState.isDead) {
+          if (plantState.isThirsty && (userTimeStr === '09:00' || userTimeStr === '18:00')) {
+            await sendPush(fcmToken, 'Your Plant is Thirsty! 💧', `Bro, your ${plantState.type} ecosystem needs water! Keep it alive!`);
+          }
+          if (plantState.stage === 5 && (userTimeStr === '10:00')) {
+            await sendPush(fcmToken, 'Legendary Growth! 🏆', `Your legendary ${plantState.type} ecosystem is thriving. Go check on it!`);
+          }
+        }
+
+        // 3. Trophy Alert (Universal daily check at 7 PM if trophy is broken)
+        if (userTimeStr === '19:00') {
+          const stats = userData.stats;
+          if (stats && stats.trophies && stats.trophies.some((t: any) => t.type === 'broken')) {
+            await sendPush(fcmToken, 'Trophy in Danger! 🧊', 'One of your trophies is broken, bro! Complete a challenge to fix it!');
+          }
+        }
+
+        // 4. Daily Motivation
         if (userTimeStr === (userData.motivationTime || '12:00')) {
           const quotes = [
             "The only way to do great work is to love what you do. 🔥",
