@@ -43,7 +43,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     forest: { name: "Ancient Forest", description: "Oak, Fern, and Mushrooms. Deep roots and ancient wisdom." },
     meadow: { name: "Meadow Harmony", description: "Wildflowers and Lavender. Swaying with the rhythm of life." },
     crystal: { name: "Crystal Sanctuary", description: "Floating Air Plants and Crystals. Pure energy and clarity." },
-    volcano: { name: "Volcano Forge", description: "Obsidian stems and Lava blooms. Forged in the fires of discipline." }
+    volcano: { name: "Volcano Forge", description: "Obsidian stems and Lava blooms. Forged in the fires of discipline." },
+    carnivore: { name: "Carnivorous Chomper", description: "Snap snap! An angry little plant that bites. Keep it fed with tasks, or else... it gets grumpy!" }
   };
 
   const onboardingSteps = [

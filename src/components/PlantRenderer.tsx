@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { PlantType } from '../types';
+import { useSound } from '../hooks/useSound';
 
 interface PlantRendererProps {
   type: PlantType;
@@ -11,6 +12,28 @@ interface PlantRendererProps {
 }
 
 export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThirsty, isDead }) => {
+  const { play } = useSound();
+  const [clickCount, setClickCount] = useState(0);
+  const [isLunging, setIsLunging] = useState(false);
+
+  const handlePlantClick = () => {
+    if (type !== 'carnivore' || isDead) return;
+    
+    setClickCount(prev => prev + 1);
+    
+    if (clickCount >= 1) {
+      setIsLunging(true);
+      play('dogAngry');
+      setTimeout(() => {
+        setIsLunging(false);
+        setClickCount(0);
+      }, 1000);
+    } else {
+      play('dogAngry'); 
+      setTimeout(() => setClickCount(0), 1000);
+    }
+  };
+
   const getPlantColors = () => {
     if (isDead) return { primary: '#8B4513', secondary: '#5D4037', accent: '#3E2723' };
     if (isThirsty) return { primary: '#C5E1A5', secondary: '#9CCC65', accent: '#7CB342' };
@@ -529,6 +552,124 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
     </g>
   );
 
+  const renderCarnivore = () => {
+    const colors = {
+      pot: "#B36340",
+      potDark: "#85452B",
+      potLight: "#D9805F",
+      stem: "#3A7A40",
+      leaf: "#7CB342",
+      leafDark: "#558B2F",
+      head: "#2E7D32",
+      insideMouth: "#85261F",
+      tongue: "#FF5252",
+      teeth: "#FFFFFF",
+    };
+
+    return (
+      <g onClick={handlePlantClick} style={{ cursor: 'pointer' }}>
+        {/* Pot */}
+        <path d="M 60,165 L 140,165 L 135,195 L 65,195 Z" fill={colors.pot} stroke="#000" strokeWidth="2" />
+        <path d="M 55,155 L 145,155 L 145,165 L 55,165 Z" fill={colors.potDark} stroke="#000" strokeWidth="2" />
+        <ellipse cx="100" cy="155" rx="45" ry="5" fill="#5D4037" />
+
+        {stage >= 1 && (
+          <g>
+            {/* Stem */}
+            <motion.path 
+              d="M 100,155 Q 90,130 100,100" 
+              stroke={colors.stem} 
+              strokeWidth="10" 
+              fill="none"
+              strokeLinecap="round"
+              initial={{ pathLength: 0 }}
+              animate={{ 
+                pathLength: 1,
+                d: isLunging ? "M 100,155 Q 85,120 120,90" : "M 100,155 Q 90,130 100,100"
+              }}
+              transition={{ duration: isLunging ? 0.2 : 0.5 }}
+            />
+
+            {/* Leaves */}
+            <motion.g initial={{ scale: 0 }} animate={{ scale: 1 }}>
+              {/* Left Leaf */}
+              <motion.path 
+                d="M 95,150 Q 50,110 55,160 Z" 
+                stroke="#000" strokeWidth="1.5" fill={colors.leaf}
+                animate={{ rotate: [0, -5, 0] }}
+                transition={{ repeat: Infinity, duration: 3 }}
+              />
+              {/* Right Leaf */}
+              <motion.path 
+                d="M 105,150 Q 150,110 145,160 Z" 
+                stroke="#000" strokeWidth="1.5" fill={colors.leaf}
+                animate={{ rotate: [0, 5, 0] }}
+                transition={{ repeat: Infinity, duration: 3.5, delay: 0.5 }}
+              />
+            </motion.g>
+
+            {/* The Head (Mouth) */}
+            {stage >= 2 && (
+              <motion.g
+                animate={isLunging ? { 
+                  x: 30, y: -20, rotate: 20, scale: 1.1 
+                } : clickCount === 1 ? {
+                  y: -10, rotate: -5
+                } : { 
+                  x: 0, y: 0, rotate: 0, scale: 1 
+                }}
+                transition={{ type: 'spring', stiffness: 400, damping: 10 }}
+                style={{ originX: "100px", originY: "100px" }}
+              >
+                {/* Back of Head */}
+                <ellipse cx="100" cy="80" rx="45" ry="35" fill={colors.head} stroke="#000" strokeWidth="2" />
+                
+                {/* Inside Mouth */}
+                <path d="M 60,85 Q 100,120 140,85 Q 100,50 60,85" fill={colors.insideMouth} stroke="#000" strokeWidth="1" />
+                
+                {/* Tongue */}
+                <motion.path 
+                  d="M 85,90 Q 105,110 120,85" 
+                  stroke={colors.tongue} strokeWidth="8" fill="none" strokeLinecap="round"
+                  animate={{ y: [0, 2, 0] }}
+                  transition={{ repeat: Infinity, duration: 1 }}
+                />
+
+                {/* Teeth (Upper) */}
+                <path d="M 65,77 L 70,87 L 75,77 L 85,87 L 95,77 L 105,87 L 115,77 L 125,87 L 135,77" fill={colors.teeth} stroke="#000" strokeWidth="0.5" />
+                {/* Teeth (Lower) */}
+                <path d="M 65,93 L 70,83 L 75,93 L 85,83 L 95,93 L 105,83 L 115,93 L 125,83 L 135,93" fill={colors.teeth} stroke="#000" strokeWidth="0.5" />
+
+                {/* Upper Jaw/Lip */}
+                <path d="M 55,85 Q 100,45 145,85 L 140,85 Q 100,55 60,85 Z" fill={colors.head} stroke="#000" strokeWidth="2" />
+                {/* Lower Jaw/Lip */}
+                <path d="M 55,85 Q 100,125 145,85 L 140,85 Q 100,115 60,85 Z" fill={colors.head} stroke="#000" strokeWidth="2" />
+
+                {/* Angry Eyes/Brows */}
+                <g>
+                  {/* Left Eye */}
+                  <path d="M 75,65 Q 85,55 95,65" stroke="#000" strokeWidth="4" fill="none" />
+                  <circle cx="85" cy="70" r="4" fill="#000" />
+                  {/* Right Eye */}
+                  <path d="M 105,65 Q 115,55 125,65" stroke="#000" strokeWidth="4" fill="none" />
+                  <circle cx="115" cy="70" r="4" fill="#000" />
+                </g>
+
+                {/* Extra Foliage for higher stages */}
+                {stage >= 4 && (
+                  <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <circle cx="90" cy="50" r="5" fill={colors.leaf} stroke="#000" strokeWidth="1" />
+                    <circle cx="110" cy="50" r="5" fill={colors.leaf} stroke="#000" strokeWidth="1" />
+                  </motion.g>
+                )}
+              </motion.g>
+            )}
+          </g>
+        )}
+      </g>
+    );
+  };
+
   const getEcosystemRenderer = () => {
     switch (type) {
       case 'zen': return renderZen();
@@ -539,6 +680,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
       case 'crystal': return renderCrystal();
       case 'volcano': return renderVolcano();
       case 'sprout': return renderSprout();
+      case 'carnivore': return renderCarnivore();
       default: return renderZen();
     }
   };
