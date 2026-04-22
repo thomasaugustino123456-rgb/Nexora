@@ -46,7 +46,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     volcano: { name: "Volcano Forge", description: "Obsidian stems and Lava blooms. Forged in the fires of discipline." },
     boredFlower: { name: "Bored Blossom", description: "Blinks slowly and shifts its eyes. It's seen enough tasks for one lifetime, bro." },
     mourningSprout: { name: "Mourning Sprout", description: "A gentle soul that feels the weight of missed tasks. Its tears nourish the sand below." },
-    breezeTulip: { name: "Breeze Tulip", description: "A happy blue tulip that loves the fresh morning wind. It sways happily and inhales the sweet scents of nature." }
+    breezeTulip: { name: "Breeze Tulip", description: "A happy blue tulip that loves the fresh morning wind. It sways happily and inhales the sweet scents of nature." },
+    happyTulip: { name: "Radiant Red", description: "A cheerful red tulip that waves its leaves and sparkles with joy. Its happiness is as vibrant as its petals!" }
   };
 
   const onboardingSteps = [

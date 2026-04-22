@@ -804,7 +804,7 @@ export default function App() {
   }, [settings.zenModeEnabled, activeScreen]);
 
   // PLANT LOGIC: GROWTH & HEALTH CHECKER
-  const ECOSYSTEM_PATH: PlantType[] = ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano', 'boredFlower', 'mourningSprout', 'breezeTulip'];
+  const ECOSYSTEM_PATH: PlantType[] = ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano', 'boredFlower', 'mourningSprout', 'breezeTulip', 'happyTulip'];
 
   const growPlant = useCallback(() => {
     setSettings(prev => {
@@ -889,12 +889,12 @@ export default function App() {
 
     if (!settings.plantState) return;
 
-    // FORCE UNLOCK & SET TO BREEZE TULIP FOR TESTING (Per User Request)
-    if (settings.plantState.type !== 'breezeTulip' || settings.plantState.stage < 5) {
+    // FORCE UNLOCK & SET TO HAPPY TULIP FOR TESTING (Per User Request)
+    if (settings.plantState.type !== 'happyTulip' || settings.plantState.stage < 5) {
         onUpdateSettings({
             plantState: {
                 ...settings.plantState,
-                type: 'breezeTulip',
+                type: 'happyTulip',
                 stage: 5,
                 growthPoints: 100,
                 unlockedTypes: [...ECOSYSTEM_PATH]

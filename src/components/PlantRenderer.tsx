@@ -975,6 +975,146 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
     );
   };
 
+  const renderHappyTulip = () => {
+    const happyColors = {
+      petal: "#FF5252",
+      petalDark: "#D32F2F",
+      leaf: "#4CAF50",
+      leafDark: "#388E3C",
+      stem: "#8BC34A",
+      pot: "#FFA726",
+      potDark: "#FB8C00",
+    };
+
+    return (
+      <g onClick={handlePlantClick} style={{ cursor: 'pointer' }}>
+        <defs>
+          <pattern id="happyDotPattern" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.5" fill="black" opacity="0.1" />
+          </pattern>
+        </defs>
+
+        {/* Shadow */}
+        <ellipse cx="110" cy="195" rx="50" ry="10" fill="black" opacity="0.1" />
+
+        {/* Pot - Stationary */}
+        <g id="happy-pot">
+          <path d="M 70,140 L 130,140 L 125,185 L 75,185 Z" fill={happyColors.pot} stroke="#3E2723" strokeWidth="2" />
+          <path d="M 65,125 L 135,125 L 135,145 L 65,145 Z" fill={happyColors.potDark} stroke="#3E2723" strokeWidth="2" />
+          <rect x="70" y="145" width="60" height="40" fill="url(#happyDotPattern)" pointerEvents="none" />
+          {/* Highlight on pot */}
+          <path d="M 75,130 L 75,180" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.3" />
+        </g>
+
+        {stage >= 1 && (
+          <g>
+            {/* Stem */}
+            <path d="M 100,125 L 100,80" stroke={happyColors.stem} strokeWidth="6" fill="none" strokeLinecap="round" />
+
+            {/* Waving Leaves */}
+            <motion.path 
+              d="M 100,115 Q 70,100 80,140" 
+              fill={happyColors.leaf} stroke="#1B5E20" strokeWidth="2"
+              animate={{ d: ["M 100,115 Q 70,100 80,140", "M 100,115 Q 60,95 85,145", "M 100,115 Q 70,100 80,140"] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <motion.path 
+              d="M 100,105 Q 130,90 120,130" 
+              fill={happyColors.leaf} stroke="#1B5E20" strokeWidth="2"
+              animate={{ d: ["M 100,105 Q 130,90 120,130", "M 100,105 Q 140,85 115,135", "M 100,105 Q 130,90 120,130"] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+            />
+
+            {/* Happy Tulip Head */}
+            {stage >= 2 && (
+              <motion.g
+                animate={{ rotate: [-3, 3, -3] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                style={{ originX: "100px", originY: "110px" }}
+              >
+                {/* Tulip Shape */}
+                <path d="M 60,60 C 60,10 80,0 100,30 C 120,0 140,10 140,60 C 140,100 100,115 60,60" fill={happyColors.petal} stroke="#B71C1C" strokeWidth="3" />
+                <path d="M 100,30 C 100,60 100,90 100,115" stroke="#B71C1C" strokeWidth="1" opacity="0.3" />
+                
+                {/* Dotted shading on head */}
+                <path d="M 60,60 C 60,10 80,0 100,30 C 120,0 140,10 140,60 C 140,100 100,115 60,60" fill="url(#happyDotPattern)" pointerEvents="none" />
+
+                {/* Face */}
+                {stage >= 3 && (
+                  <g>
+                    {/* Blushing */}
+                    <circle cx="80" cy="85" r="8" fill="#FF8A80" opacity="0.4" />
+                    <circle cx="120" cy="85" r="8" fill="#FF8A80" opacity="0.4" />
+
+                    {/* Happy Eyes */}
+                    <g transform="translate(85, 75)">
+                      <ellipse rx="8" ry="12" fill="white" stroke="#000" strokeWidth="1.5" />
+                      <circle cx="0" cy="2" r="5" fill="#000" />
+                      <circle cx="2" cy="-2" r="2" fill="white" />
+                      {/* Blink */}
+                      <motion.rect 
+                        x="-10" y="-15" width="20" height="30" fill={happyColors.petal}
+                        animate={{ scaleY: [0, 0, 1, 0, 0] }}
+                        transition={{ duration: 4, repeat: Infinity, times: [0, 0.8, 0.85, 0.9, 1] }}
+                        style={{ originY: 0 }}
+                      />
+                    </g>
+                    <g transform="translate(115, 75)">
+                      <ellipse rx="8" ry="12" fill="white" stroke="#000" strokeWidth="1.5" />
+                      <circle cx="0" cy="2" r="5" fill="#000" />
+                      <circle cx="2" cy="-2" r="2" fill="white" />
+                      {/* Blink */}
+                      <motion.rect 
+                        x="-10" y="-15" width="20" height="30" fill={happyColors.petal}
+                        animate={{ scaleY: [0, 0, 1, 0, 0] }}
+                        transition={{ duration: 4, repeat: Infinity, times: [0, 0.8, 0.85, 0.9, 1] }}
+                        style={{ originY: 0 }}
+                      />
+                    </g>
+
+                    {/* Happy Open Smile */}
+                    <motion.path 
+                      d="M 90,95 Q 100,105 110,95 L 110,100 Q 100,110 90,100 Z"
+                      fill="black"
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 3, repeat: Infinity }}
+                      style={{ originX: "100px", originY: "100px" }}
+                    />
+                    <path d="M 90,95 Q 100,105 110,95" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" />
+                  </g>
+                )}
+
+                {/* Sparkles */}
+                {stage >= 4 && (
+                  <g>
+                    {[0, 1, 2, 3].map(i => (
+                      <motion.path
+                        key={`sparkle-${i}`}
+                        d="M 0,-4 L 1,0 L 4,1 L 1,2 L 0,6 L -1,2 L -4,1 L -1,0 Z"
+                        fill="#FFD54F"
+                        initial={{ x: 100 + (i % 2 === 0 ? -40 : 40), y: 40 + i * 15, scale: 0 }}
+                        animate={{ 
+                          scale: [0, 1, 0],
+                          y: [40 + i * 15, 20 + i * 15]
+                        }}
+                        transition={{ 
+                          duration: 2, 
+                          repeat: Infinity, 
+                          delay: i * 0.5,
+                          ease: "easeOut" 
+                        }}
+                      />
+                    ))}
+                  </g>
+                )}
+              </motion.g>
+            )}
+          </g>
+        )}
+      </g>
+    );
+  };
+
   const getEcosystemRenderer = () => {
     switch (type) {
       case 'zen': return renderZen();
@@ -988,6 +1128,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
       case 'boredFlower': return renderBoredFlower();
       case 'mourningSprout': return renderMourningSprout();
       case 'breezeTulip': return renderBreezeTulip();
+      case 'happyTulip': return renderHappyTulip();
       default: return renderZen();
     }
   };
