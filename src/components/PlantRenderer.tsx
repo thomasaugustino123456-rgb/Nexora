@@ -1115,6 +1115,179 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
     );
   };
 
+  const renderDistressedRose = () => {
+    const roseColors = {
+      petal: "#C62828",
+      petalDark: "#8E0000",
+      leaf: "#81C784",
+      leafDark: "#2E7D32",
+      stem: "#689F38",
+      pot: "#4FC3F7",
+      potDark: "#0288D1",
+      caterpillar: "#FFD54F",
+      soil: "#5D4037",
+    };
+
+    return (
+      <g onClick={handlePlantClick} style={{ cursor: 'pointer' }}>
+        {/* Background Blob */}
+        <path d="M 40,50 Q 0,100 40,150 Q 100,180 160,150 Q 200,100 160,50 Q 100,20 40,50" fill="#FFF3E0" opacity="0.5" />
+
+        {/* Shadow */}
+        <ellipse cx="110" cy="195" rx="55" ry="10" fill="black" opacity="0.1" />
+
+        {/* Pot - Stationary */}
+        <g>
+          {/* Main Pot Body */}
+          <path d="M 75,145 L 125,145 L 120,185 L 80,185 Z" fill={roseColors.pot} stroke="#01579B" strokeWidth="2" />
+          {/* Pot Rim */}
+          <rect x="70" y="135" width="60" height="15" rx="2" fill={roseColors.potDark} stroke="#01579B" strokeWidth="2" />
+          {/* Soil */}
+          <path d="M 75,145 Q 100,140 125,145" fill="none" stroke={roseColors.soil} strokeWidth="4" />
+          <circle cx="85" cy="142" r="1.5" fill={roseColors.soil} />
+          <circle cx="100" cy="143" r="2" fill={roseColors.soil} />
+          <circle cx="115" cy="142" r="1.5" fill={roseColors.soil} />
+        </g>
+
+        {stage >= 1 && (
+          <g>
+            {/* Stem - Stationary */}
+            <path d="M 100,135 Q 90,100 100,70" stroke={roseColors.stem} strokeWidth="6" fill="none" strokeLinecap="round" />
+
+            {/* Leaves with Dynamic Bite Marks */}
+            <motion.g>
+              {/* Left Leaf */}
+              <g transform="translate(100, 115)">
+                <path d="M 0,0 Q -40,-10 -60,20 Q -40,30 0,0" fill={roseColors.leaf} stroke="#1B5E20" strokeWidth="2" />
+                {/* Bite Mark 1 - Left */}
+                <motion.path 
+                  animate={{ scale: [1, 1.2, 1] }} 
+                  transition={{ duration: 4, repeat: Infinity }}
+                  d="M -45,5 Q -48,0 -52,5 Q -55,10 -52,15" fill="#FFF3E0" stroke="#1B5E20" strokeWidth="1" 
+                />
+              </g>
+
+              {/* Right Leaf */}
+              <g transform="translate(100, 100)">
+                <path d="M 0,0 Q 40,-10 60,20 Q 40,30 0,0" fill={roseColors.leaf} stroke="#1B5E20" strokeWidth="2" />
+                {/* Bite Mark 2 - Right */}
+                <motion.path 
+                  animate={{ scale: [1, 1.3, 1] }} 
+                  transition={{ duration: 5, repeat: Infinity }}
+                  d="M 40,0 Q 45,-5 50,0 Q 55,5 50,10" fill="#FFF3E0" stroke="#1B5E20" strokeWidth="1" 
+                />
+              </g>
+            </motion.g>
+
+            {/* Rose Head */}
+            {stage >= 2 && (
+              <g transform="translate(100, 60)">
+                {/* Petals */}
+                <path d="M -30,-10 C -40,-50 0,-60 0,-20 C 0,-60 40,-50 30,-10 C 30,20 0,40 -30,-10" fill={roseColors.petal} stroke="#B71C1C" strokeWidth="3" />
+                <path d="M -15,-20 C -20,-40 0,-40 0,-20" fill={roseColors.petalDark} opacity="0.3" />
+                <path d="M 15,-20 C 20,-40 0,-40 0,-20" fill={roseColors.petalDark} opacity="0.3" />
+                
+                {/* Yellow Spears/Antennae on top */}
+                <line x1="-15" y1="-45" x2="-25" y2="-65" stroke="black" strokeWidth="1.5" />
+                <circle cx="-25" cy="-65" r="4" fill="#FFB300" stroke="black" strokeWidth="1" />
+                <line x1="0" y1="-50" x2="0" y2="-75" stroke="black" strokeWidth="1.5" />
+                <circle cx="0" cy="-75" r="4" fill="#FFB300" stroke="black" strokeWidth="1" />
+                <line x1="15" y1="-45" x2="25" y2="-65" stroke="black" strokeWidth="1.5" />
+                <circle cx="25" cy="-65" r="4" fill="#FFB300" stroke="black" strokeWidth="1" />
+
+                {/* Face */}
+                {stage >= 3 && (
+                  <g>
+                    {/* Blushing */}
+                    <circle cx="-15" cy="15" r="6" fill="#EF9A9A" opacity="0.4" />
+                    <circle cx="15" cy="15" r="6" fill="#EF9A9A" opacity="0.4" />
+
+                    {/* Dizzy Swirl Eyes */}
+                    <g transform="translate(-15, 5)">
+                      <motion.path 
+                        d="M -5,0 A 5,5 0 1,1 5,0 A 5,5 0 1,1 -5,0 M -3,0 A 3,3 0 1,0 3,0" 
+                        stroke="black" fill="none" strokeWidth="1"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      />
+                    </g>
+                    <g transform="translate(15, 5)">
+                      <motion.path 
+                        d="M -5,0 A 5,5 0 1,1 5,0 A 5,5 0 1,1 -5,0 M -3,0 A 3,3 0 1,0 3,0" 
+                        stroke="black" fill="none" strokeWidth="1"
+                        animate={{ rotate: -360 }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      />
+                    </g>
+
+                    {/* Nervous Mouth */}
+                    <path d="M -5,22 Q 0,18 5,22" stroke="black" strokeWidth="2" fill="none" strokeLinecap="round" />
+                  </g>
+                )}
+
+                {/* Caterpillar on Head */}
+                <g transform="translate(20, -35) rotate(30)">
+                  <motion.path 
+                    animate={{ x: [0, 1, 0], scaleY: [1, 1.1, 1] }}
+                    transition={{ duration: 0.3, repeat: Infinity }}
+                    d="M 0,0 Q 5,-10 10,0 Q 15,-10 20,0" stroke={roseColors.caterpillar} strokeWidth="6" fill="none" strokeLinecap="round" 
+                  />
+                  <circle cx="20" cy="0" r="1" fill="black" />
+                </g>
+
+                {/* Dust Cloud */}
+                {stage >= 4 && (
+                  <g>
+                    {[0, 1, 2].map(i => (
+                      <motion.circle
+                        key={`dust-${i}`}
+                        r="2"
+                        fill="#EEEEEE"
+                        initial={{ opacity: 0, scale: 0 }}
+                        animate={{ 
+                          opacity: [0, 0.6, 0],
+                          scale: [0, 1.5, 0],
+                          x: [0, (i - 1) * 20],
+                          y: [0, -30]
+                        }}
+                        transition={{ duration: 2, repeat: Infinity, delay: i * 0.6 }}
+                      />
+                    ))}
+                  </g>
+                )}
+              </g>
+            )}
+
+            {/* Caterpillars on Leaves */}
+            {stage >= 3 && (
+              <g>
+                {/* Left Leaf Caterpillar */}
+                <g transform="translate(50, 115) rotate(-20)">
+                  <motion.path 
+                    animate={{ x: [0, 0.5, 0], scaleY: [1, 1.2, 1] }}
+                    transition={{ duration: 0.25, repeat: Infinity }}
+                    d="M 0,0 Q 5,-8 10,0 Q 15,-8 20,0" stroke={roseColors.caterpillar} strokeWidth="5" fill="none" strokeLinecap="round" 
+                  />
+                  <circle cx="20" cy="0" r="1" fill="black" />
+                </g>
+
+                {/* Right Leaf Caterpillar */}
+                <g transform="translate(130, 105) rotate(10)">
+                  <motion.path 
+                    animate={{ x: [0, -0.5, 0], scaleY: [1, 1.15, 1] }}
+                    transition={{ duration: 0.35, repeat: Infinity, delay: 0.1 }}
+                    d="M 0,0 Q 5,-8 10,0 Q 15,-8 20,0" stroke={roseColors.caterpillar} strokeWidth="5" fill="none" strokeLinecap="round" 
+                  />
+                  <circle cx="20" cy="0" r="1" fill="black" />
+                </g>
+              </g>
+            )}
+          </g>
+        )}
+      </g>
+    );
+  };
+
   const getEcosystemRenderer = () => {
     switch (type) {
       case 'zen': return renderZen();
@@ -1129,6 +1302,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
       case 'mourningSprout': return renderMourningSprout();
       case 'breezeTulip': return renderBreezeTulip();
       case 'happyTulip': return renderHappyTulip();
+      case 'distressedRose': return renderDistressedRose();
       default: return renderZen();
     }
   };
