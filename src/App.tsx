@@ -804,7 +804,7 @@ export default function App() {
   }, [settings.zenModeEnabled, activeScreen]);
 
   // PLANT LOGIC: GROWTH & HEALTH CHECKER
-  const ECOSYSTEM_PATH: PlantType[] = ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano', 'carnivore'];
+  const ECOSYSTEM_PATH: PlantType[] = ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano', 'boredFlower'];
 
   const growPlant = useCallback(() => {
     setSettings(prev => {

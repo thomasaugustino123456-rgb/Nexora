@@ -17,21 +17,11 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
   const [isLunging, setIsLunging] = useState(false);
 
   const handlePlantClick = () => {
-    if (type !== 'carnivore' || isDead) return;
+    if (type !== 'boredFlower' || isDead) return;
     
     setClickCount(prev => prev + 1);
-    
-    if (clickCount >= 1) {
-      setIsLunging(true);
-      play('dogAngry');
-      setTimeout(() => {
-        setIsLunging(false);
-        setClickCount(0);
-      }, 1000);
-    } else {
-      play('dogAngry'); 
-      setTimeout(() => setClickCount(0), 1000);
-    }
+    play('water'); // Lighter sound for the flower
+    setTimeout(() => setClickCount(0), 1000);
   };
 
   const getPlantColors = () => {
@@ -552,117 +542,128 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
     </g>
   );
 
-  const renderCarnivore = () => {
-    const colors = {
-      pot: "#B36340",
-      potDark: "#85452B",
-      potLight: "#D9805F",
-      stem: "#3A7A40",
-      leaf: "#7CB342",
-      leafDark: "#558B2F",
-      head: "#2E7D32",
-      insideMouth: "#85261F",
-      tongue: "#FF5252",
-      teeth: "#FFFFFF",
+  const renderBoredFlower = () => {
+    const flowerColors = {
+      petal: "#F37385",
+      petalDark: "#E15A6C",
+      face: "#FFCF3E",
+      faceShade: "#E6B828",
+      pot: "#FF9F1C",
+      potDark: "#E68A10",
+      stem: "#4D7C0F",
+      leaf: "#65A30D"
     };
 
     return (
       <g onClick={handlePlantClick} style={{ cursor: 'pointer' }}>
+        <defs>
+          <pattern id="halftone" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="1" fill="black" opacity="0.2" />
+          </pattern>
+        </defs>
+
         {/* Pot */}
-        <path d="M 60,165 L 140,165 L 135,195 L 65,195 Z" fill={colors.pot} stroke="#000" strokeWidth="2" />
-        <path d="M 55,155 L 145,155 L 145,165 L 55,165 Z" fill={colors.potDark} stroke="#000" strokeWidth="2" />
-        <ellipse cx="100" cy="155" rx="45" ry="5" fill="#5D4037" />
+        <g id="flower-pot">
+          <path d="M 60,165 L 140,165 L 135,195 L 65,195 Z" fill={flowerColors.pot} stroke="#000" strokeWidth="2" />
+          <path d="M 55,155 L 145,155 L 145,165 L 55,165 Z" fill={flowerColors.pot} stroke="#000" strokeWidth="2" />
+          {/* Halftone Shading on Pot */}
+          <path d="M 115,165 L 140,165 L 135,195 L 110,195 Z" fill="url(#halftone)" opacity="0.5" />
+          <ellipse cx="100" cy="155" rx="45" ry="5" fill="#5D4037" />
+        </g>
 
         {stage >= 1 && (
           <g>
             {/* Stem */}
-            <motion.path 
-              d="M 100,155 Q 90,130 100,100" 
-              stroke={colors.stem} 
-              strokeWidth="10" 
+            <path 
+              d="M 100,155 Q 95,130 100,100" 
+              stroke={flowerColors.stem} 
+              strokeWidth="5" 
               fill="none"
               strokeLinecap="round"
-              initial={{ pathLength: 0 }}
-              animate={{ 
-                pathLength: 1,
-                d: isLunging ? "M 100,155 Q 85,120 120,90" : "M 100,155 Q 90,130 100,100"
-              }}
-              transition={{ duration: isLunging ? 0.2 : 0.5 }}
             />
 
             {/* Leaves */}
-            <motion.g initial={{ scale: 0 }} animate={{ scale: 1 }}>
+            <g id="flower-leaves">
               {/* Left Leaf */}
-              <motion.path 
-                d="M 95,150 Q 50,110 55,160 Z" 
-                stroke="#000" strokeWidth="1.5" fill={colors.leaf}
-                animate={{ rotate: [0, -5, 0] }}
-                transition={{ repeat: Infinity, duration: 3 }}
+              <path 
+                d="M 98,140 Q 60,120 70,160 Z" 
+                stroke="#000" strokeWidth="2" fill={flowerColors.leaf}
               />
+              <path d="M 70,160 L 98,140" stroke="#000" strokeWidth="1" opacity="0.3" />
               {/* Right Leaf */}
-              <motion.path 
-                d="M 105,150 Q 150,110 145,160 Z" 
-                stroke="#000" strokeWidth="1.5" fill={colors.leaf}
-                animate={{ rotate: [0, 5, 0] }}
-                transition={{ repeat: Infinity, duration: 3.5, delay: 0.5 }}
+              <path 
+                d="M 102,130 Q 140,110 130,150 Z" 
+                stroke="#000" strokeWidth="2" fill={flowerColors.leaf}
               />
-            </motion.g>
+              <path d="M 102,130 L 130,150" stroke="#000" strokeWidth="1" opacity="0.3" />
+            </g>
 
-            {/* The Head (Mouth) */}
+            {/* Petals - Static as requested */}
             {stage >= 2 && (
-              <motion.g
-                animate={isLunging ? { 
-                  x: 30, y: -20, rotate: 20, scale: 1.1 
-                } : clickCount === 1 ? {
-                  y: -10, rotate: -5
-                } : { 
-                  x: 0, y: 0, rotate: 0, scale: 1 
-                }}
-                transition={{ type: 'spring', stiffness: 400, damping: 10 }}
-                style={{ originX: "100px", originY: "100px" }}
-              >
-                {/* Back of Head */}
-                <ellipse cx="100" cy="80" rx="45" ry="35" fill={colors.head} stroke="#000" strokeWidth="2" />
+              <g id="petals">
+                {/* 6 Petals */}
+                <ellipse cx="100" cy="55" rx="20" ry="25" fill={flowerColors.petal} stroke="#000" strokeWidth="2" />
+                <ellipse cx="135" cy="70" rx="25" ry="20" fill={flowerColors.petal} stroke="#000" strokeWidth="2" />
+                <ellipse cx="135" cy="110" rx="25" ry="20" fill={flowerColors.petal} stroke="#000" strokeWidth="2" />
+                <ellipse cx="100" cy="125" rx="20" ry="25" fill={flowerColors.petal} stroke="#000" strokeWidth="2" />
+                <ellipse cx="65" cy="110" rx="25" ry="20" fill={flowerColors.petal} stroke="#000" strokeWidth="2" />
+                <ellipse cx="65" cy="70" rx="25" ry="20" fill={flowerColors.petal} stroke="#000" strokeWidth="2" />
+              </g>
+            )}
+
+            {/* Face - Animated eyes */}
+            {stage >= 3 && (
+              <g id="flower-face">
+                <circle cx="100" cy="90" r="35" fill={flowerColors.face} stroke="#000" strokeWidth="2" />
+                {/* Halftone Shading on Cheeks */}
+                <path d="M 70,100 Q 75,115 100,115 Q 125,115 130,100" fill="url(#halftone)" opacity="0.6" stroke="none" />
                 
-                {/* Inside Mouth */}
-                <path d="M 60,85 Q 100,120 140,85 Q 100,50 60,85" fill={colors.insideMouth} stroke="#000" strokeWidth="1" />
+                {/* Nose/Snout area */}
+                <path d="M 95,95 Q 100,105 105,95" stroke="#000" strokeWidth="1.5" fill="none" />
                 
-                {/* Tongue */}
-                <motion.path 
-                  d="M 85,90 Q 105,110 120,85" 
-                  stroke={colors.tongue} strokeWidth="8" fill="none" strokeLinecap="round"
-                  animate={{ y: [0, 2, 0] }}
-                  transition={{ repeat: Infinity, duration: 1 }}
-                />
-
-                {/* Teeth (Upper) */}
-                <path d="M 65,77 L 70,87 L 75,77 L 85,87 L 95,77 L 105,87 L 115,77 L 125,87 L 135,77" fill={colors.teeth} stroke="#000" strokeWidth="0.5" />
-                {/* Teeth (Lower) */}
-                <path d="M 65,93 L 70,83 L 75,93 L 85,83 L 95,93 L 105,83 L 115,93 L 125,83 L 135,93" fill={colors.teeth} stroke="#000" strokeWidth="0.5" />
-
-                {/* Upper Jaw/Lip */}
-                <path d="M 55,85 Q 100,45 145,85 L 140,85 Q 100,55 60,85 Z" fill={colors.head} stroke="#000" strokeWidth="2" />
-                {/* Lower Jaw/Lip */}
-                <path d="M 55,85 Q 100,125 145,85 L 140,85 Q 100,115 60,85 Z" fill={colors.head} stroke="#000" strokeWidth="2" />
-
-                {/* Angry Eyes/Brows */}
-                <g>
+                {/* Bored Eyes */}
+                <g id="eyes">
                   {/* Left Eye */}
-                  <path d="M 75,65 Q 85,55 95,65" stroke="#000" strokeWidth="4" fill="none" />
-                  <circle cx="85" cy="70" r="4" fill="#000" />
+                  <g transform="translate(82, 80)">
+                    <rect x="-12" y="-10" width="24" height="20" rx="10" fill="white" stroke="#000" strokeWidth="1.5" />
+                    {/* Shifting Pupil */}
+                    <motion.circle 
+                      r="4" fill="black"
+                      animate={{ cx: [-4, 4, -4] }}
+                      transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                    {/* Eyelid (Blinking) */}
+                    <motion.rect 
+                      x="-13" y="-11" width="26" height="22" fill={flowerColors.face}
+                      initial={{ scaleY: 0.5 }}
+                      animate={{ scaleY: [0.5, 0.5, 1, 0.5, 0.5] }}
+                      transition={{ duration: 4, repeat: Infinity, times: [0, 0.8, 0.85, 0.9, 1] }}
+                      style={{ originY: 0 }}
+                    />
+                  </g>
                   {/* Right Eye */}
-                  <path d="M 105,65 Q 115,55 125,65" stroke="#000" strokeWidth="4" fill="none" />
-                  <circle cx="115" cy="70" r="4" fill="#000" />
+                  <g transform="translate(118, 80)">
+                    <rect x="-12" y="-10" width="24" height="20" rx="10" fill="white" stroke="#000" strokeWidth="1.5" />
+                    {/* Shifting Pupil */}
+                    <motion.circle 
+                      r="4" fill="black"
+                      animate={{ cx: [-4, 4, -4] }}
+                      transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                    {/* Eyelid (Blinking) */}
+                    <motion.rect 
+                      x="-13" y="-11" width="26" height="22" fill={flowerColors.face}
+                      initial={{ scaleY: 0.5 }}
+                      animate={{ scaleY: [0.5, 0.5, 1, 0.5, 0.5] }}
+                      transition={{ duration: 4, repeat: Infinity, times: [0, 0.8, 0.85, 0.9, 1] }}
+                      style={{ originY: 0 }}
+                    />
+                  </g>
                 </g>
 
-                {/* Extra Foliage for higher stages */}
-                {stage >= 4 && (
-                  <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <circle cx="90" cy="50" r="5" fill={colors.leaf} stroke="#000" strokeWidth="1" />
-                    <circle cx="110" cy="50" r="5" fill={colors.leaf} stroke="#000" strokeWidth="1" />
-                  </motion.g>
-                )}
-              </motion.g>
+                {/* Bored Mouth */}
+                <circle cx="100" cy="115" r="4" fill="none" stroke="#000" strokeWidth="1.5" />
+              </g>
             )}
           </g>
         )}
@@ -680,7 +681,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
       case 'crystal': return renderCrystal();
       case 'volcano': return renderVolcano();
       case 'sprout': return renderSprout();
-      case 'carnivore': return renderCarnivore();
+      case 'boredFlower': return renderBoredFlower();
       default: return renderZen();
     }
   };
