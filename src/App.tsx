@@ -889,11 +889,14 @@ export default function App() {
 
     if (!settings.plantState) return;
 
-    // FORCE UNLOCK ALL TYPES FOR TESTING (Per User Request)
-    if (settings.plantState.unlockedTypes?.length !== ECOSYSTEM_PATH.length) {
+    // FORCE UNLOCK & SET TO FLOWER FOR TESTING (Per User Request)
+    if (settings.plantState.type !== 'boredFlower' || settings.plantState.stage < 5) {
         onUpdateSettings({
             plantState: {
                 ...settings.plantState,
+                type: 'boredFlower',
+                stage: 5,
+                growthPoints: 100,
                 unlockedTypes: [...ECOSYSTEM_PATH]
             }
         });
