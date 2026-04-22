@@ -44,7 +44,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     meadow: { name: "Meadow Harmony", description: "Wildflowers and Lavender. Swaying with the rhythm of life." },
     crystal: { name: "Crystal Sanctuary", description: "Floating Air Plants and Crystals. Pure energy and clarity." },
     volcano: { name: "Volcano Forge", description: "Obsidian stems and Lava blooms. Forged in the fires of discipline." },
-    boredFlower: { name: "Bored Blossom", description: "Blinks slowly and shifts its eyes. It's seen enough tasks for one lifetime, bro." }
+    boredFlower: { name: "Bored Blossom", description: "Blinks slowly and shifts its eyes. It's seen enough tasks for one lifetime, bro." },
+    mourningSprout: { name: "Mourning Sprout", description: "A gentle soul that feels the weight of missed tasks. Its tears nourish the sand below." }
   };
 
   const onboardingSteps = [

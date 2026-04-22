@@ -14,10 +14,21 @@ interface PlantRendererProps {
 export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThirsty, isDead }) => {
   const { play } = useSound();
   const [clickCount, setClickCount] = useState(0);
+  const [isShaking, setIsShaking] = useState(false);
   const [isLunging, setIsLunging] = useState(false);
 
   const handlePlantClick = () => {
-    if (type !== 'boredFlower' || isDead) return;
+    if (isDead) return;
+
+    if (type === 'mourningSprout') {
+      if (isShaking) return;
+      setIsShaking(true);
+      play('dogHungry'); // A whimper-like sound for the sad plant
+      setTimeout(() => setIsShaking(false), 1000);
+      return;
+    }
+
+    if (type !== 'boredFlower') return;
     
     setClickCount(prev => prev + 1);
     play('water'); // Lighter sound for the flower
@@ -671,6 +682,139 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
     );
   };
 
+  const renderMourningSprout = () => {
+    const mourningColors = {
+      pot: "#F16EA9",
+      potDark: "#ED458C",
+      sand: "#FEE7B6",
+      sandDark: "#FCD385",
+      stem: "#8DB600",
+      head: "#6D3F1B",
+      headDetail: "#4A2B12",
+      caterpillar: "#B2D300",
+      tear: "#A0D6FF",
+      petal: "#FFC107"
+    };
+
+    return (
+      <g onClick={handlePlantClick} style={{ cursor: 'pointer' }}>
+        {/* Sand/Ground pooling */}
+        <ellipse cx="100" cy="185" rx="55" ry="12" fill={mourningColors.sand} stroke="#000" strokeWidth="2" />
+        <path d="M 60,185 Q 100,195 140,185" fill="none" stroke="#D4A373" strokeWidth="1" opacity="0.3" />
+        
+        {/* Fallen Petals on sand */}
+        <path d="M 60,188 Q 50,180 55,192 Z" fill={mourningColors.petal} stroke="#000" strokeWidth="1.5" transform="rotate(-20, 60, 188)" />
+        <path d="M 140,190 Q 150,182 145,194 Z" fill={mourningColors.petal} stroke="#000" strokeWidth="1.5" transform="rotate(15, 140, 190)" />
+
+        {/* Pot */}
+        <path d="M 70,140 L 130,140 L 125,185 L 75,185 Z" fill={mourningColors.pot} stroke="#000" strokeWidth="3" />
+        <path d="M 65,125 L 135,125 L 135,140 L 65,140 Z" fill={mourningColors.pot} stroke="#000" strokeWidth="3" />
+        <path d="M 110,140 L 130,140 L 125,185 L 105,185 Z" fill={mourningColors.potDark} opacity="0.3" />
+
+        {stage >= 1 && (
+          <g>
+            {/* Stem */}
+            <path d="M 100,125 L 100,80" stroke={mourningColors.stem} strokeWidth="8" strokeLinecap="round" />
+            
+            {/* Leaves */}
+            <path d="M 100,120 Q 75,100 85,130 Z" fill={mourningColors.stem} stroke="#000" strokeWidth="2" />
+            <path d="M 100,110 Q 125,90 115,120 Z" fill={mourningColors.stem} stroke="#000" strokeWidth="2" />
+
+            {/* Head - The Sphere */}
+            {stage >= 2 && (
+              <motion.g
+                animate={isShaking ? { rotate: [-10, 10, -5, 5, 0] } : {}}
+                transition={{ duration: 0.5 }}
+                style={{ originX: "100px", originY: "80px" }}
+              >
+                {/* Petals behind head */}
+                <g opacity={stage >= 3 ? 1 : 0}>
+                   <path d="M 75,60 Q 60,40 85,55 Z" fill={mourningColors.petal} stroke="#000" strokeWidth="2" />
+                   <path d="M 125,60 Q 140,40 115,55 Z" fill={mourningColors.petal} stroke="#000" strokeWidth="2" />
+                   <path d="M 70,100 Q 50,110 80,95 Z" fill={mourningColors.petal} stroke="#000" strokeWidth="2" />
+                </g>
+
+                <circle cx="100" cy="70" r="40" fill={mourningColors.head} stroke="#000" strokeWidth="3" />
+                
+                {/* Head Striations (Dark lines) */}
+                <path d="M 100,30 L 100,110" stroke={mourningColors.headDetail} strokeWidth="1" opacity="0.3" />
+                <path d="M 75,40 Q 100,70 75,100" stroke={mourningColors.headDetail} strokeWidth="1" opacity="0.3" fill="none" />
+                <path d="M 125,40 Q 100,70 125,100" stroke={mourningColors.headDetail} strokeWidth="1" opacity="0.3" fill="none" />
+
+                {/* Caterpillar on top */}
+                <g transform="translate(105, 30) rotate(-10)">
+                   <path d="M 0,0 Q 5,-10 10,0 Q 15,-10 20,0" stroke={mourningColors.caterpillar} strokeWidth="6" fill="none" strokeLinecap="round" />
+                   <circle cx="2" cy="-2" r="1.5" fill="#000" />
+                </g>
+
+                {/* Face */}
+                {stage >= 4 && (
+                  <g>
+                    {/* Blushing */}
+                    <circle cx="75" cy="85" r="8" fill="#FF80AB" opacity="0.4" />
+                    <circle cx="125" cy="85" r="8" fill="#FF80AB" opacity="0.4" />
+
+                    {/* Sad Eyes */}
+                    <motion.g animate={isShaking ? { scale: 1.2 } : { scale: 1 }}>
+                       <path d="M 80,75 Q 85,70 90,75" stroke="#000" strokeWidth="3" fill="none" strokeLinecap="round" />
+                       <path d="M 110,75 Q 115,70 120,75" stroke="#000" strokeWidth="3" fill="none" strokeLinecap="round" />
+                       {/* Tears tracks */}
+                       <motion.path 
+                         d="M 85,78 L 85,95" stroke={mourningColors.tear} strokeWidth="2" strokeLinecap="round"
+                         animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ repeat: Infinity, duration: 2 }}
+                       />
+                       <motion.path 
+                         d="M 115,78 L 115,95" stroke={mourningColors.tear} strokeWidth="2" strokeLinecap="round"
+                         animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ repeat: Infinity, duration: 2, delay: 1 }}
+                       />
+                    </motion.g>
+
+                    {/* Mouth */}
+                    <path d="M 95,95 Q 100,85 105,95" stroke="#000" strokeWidth="2" fill="none" strokeLinecap="round" />
+                  </g>
+                )}
+              </motion.g>
+            )}
+
+            {/* Falling Tears - Droplets */}
+            {stage >= 4 && (
+               <g>
+                  {[0, 1, 2].map(i => (
+                    <motion.circle
+                      key={i}
+                      r="2"
+                      fill={mourningColors.tear}
+                      initial={{ cx: i === 0 ? 85 : 115, cy: 95, opacity: 0 }}
+                      animate={{ 
+                        cy: [95, 180], 
+                        opacity: [0, 1, 1, 0],
+                        scale: [1, 1, 0.5] 
+                      }}
+                      transition={{ 
+                        duration: 2, 
+                        repeat: Infinity, 
+                        delay: i * 0.7,
+                        ease: "easeIn" 
+                      }}
+                    />
+                  ))}
+                  {/* Puddles in sand */}
+                  <motion.circle 
+                    cx="85" cy="180" r="4" fill={mourningColors.tear} opacity="0.4"
+                    animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 2 }}
+                  />
+                  <motion.circle 
+                    cx="115" cy="182" r="4" fill={mourningColors.tear} opacity="0.4"
+                    animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 2, delay: 1 }}
+                  />
+               </g>
+            )}
+          </g>
+        )}
+      </g>
+    );
+  };
+
   const getEcosystemRenderer = () => {
     switch (type) {
       case 'zen': return renderZen();
@@ -682,6 +826,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
       case 'volcano': return renderVolcano();
       case 'sprout': return renderSprout();
       case 'boredFlower': return renderBoredFlower();
+      case 'mourningSprout': return renderMourningSprout();
       default: return renderZen();
     }
   };
