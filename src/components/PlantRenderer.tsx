@@ -23,11 +23,121 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
       case 'meadow': return { primary: '#AED581', secondary: '#7CB342', accent: '#E91E63' };
       case 'crystal': return { primary: '#B2EBF2', secondary: '#4DD0E1', accent: '#D1C4E9' };
       case 'volcano': return { primary: '#FF5722', secondary: '#BF360C', accent: '#FFEB3B' };
+      case 'sprout': return { primary: '#66BB6A', secondary: '#43A047', accent: '#F39E7D' };
       default: return { primary: '#4CAF50', secondary: '#388E3C', accent: '#2E7D32' };
     }
   };
 
   const colors = getPlantColors();
+
+  const renderSprout = () => (
+    <motion.g
+      whileTap={{ scale: 0.9, rotate: [0, -5, 5, 0] }}
+      transition={{ type: "spring", stiffness: 400, damping: 10 }}
+    >
+      {/* Terracotta Pot */}
+      <g id="pot">
+        {/* Main Body */}
+        <path 
+          d="M 60,140 Q 60,185 75,195 L 125,195 Q 140,185 140,140 Z" 
+          fill="#F39E7D" 
+          stroke="black" 
+          strokeWidth="6" 
+          strokeLinejoin="round" 
+        />
+        {/* Pot Rim */}
+        <path 
+          d="M 50,130 Q 50,115 100,115 Q 150,115 150,130 L 150,145 Q 150,155 100,155 Q 50,155 50,145 Z" 
+          fill="#F39E7D" 
+          stroke="black" 
+          strokeWidth="6" 
+          strokeLinejoin="round" 
+        />
+        {/* Soil */}
+        <path 
+          d="M 60,135 Q 60,125 100,125 Q 140,125 140,135 Q 140,145 100,145 Q 60,145 60,135" 
+          fill="#7C5547" 
+          stroke="black" 
+          strokeWidth="3" 
+        />
+        {/* Highlights and Texture */}
+        <path d="M 65,130 Q 75,125 90,125" stroke="white" strokeWidth="4" strokeLinecap="round" opacity="0.4" />
+        <circle cx="80" cy="170" r="2" fill="black" opacity="0.6" />
+        <circle cx="110" cy="180" r="2" fill="black" opacity="0.6" />
+        <circle cx="95" cy="165" r="1.5" fill="black" opacity="0.6" />
+      </g>
+
+      {!isDead && (
+        <g id="plant-growth">
+          {/* Seed State */}
+          {stage === 0 && (
+            <motion.circle 
+              cx="100" cy="130" r="6" 
+              fill="#D7CCC8" stroke="black" strokeWidth="2"
+              initial={{ scale: 0 }} animate={{ scale: 1 }}
+            />
+          )}
+
+          {/* Stem */}
+          {stage >= 1 && (
+            <motion.path 
+              d={`M 100,135 L 100,${135 - (stage * 15)}`} 
+              stroke="#A5D6A7" 
+              strokeWidth="6" 
+              strokeLinecap="round"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              className="plant-stem"
+            />
+          )}
+
+          {/* Leaves - The Classic Heart Style */}
+          {stage >= 2 && (
+            <g transform={`translate(100, ${135 - (stage * 15)})`}>
+              <motion.g 
+                initial={{ scale: 0, rotate: -20 }} 
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                {/* Left Leaf */}
+                <path 
+                  d="M 0,0 C -15,-10 -25,-20 -20,-30 C -15,-35 -5,-30 0,-15 C 5,-30 15,-35 20,-30 C 25,-20 15,-10 0,0" 
+                  fill={colors.primary} 
+                  stroke="black" 
+                  strokeWidth="3" 
+                  transform="scale(0.8) translate(-15, -5) rotate(-30)"
+                />
+              </motion.g>
+              {stage >= 3 && (
+                <motion.g 
+                  initial={{ scale: 0, rotate: 20 }} 
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  {/* Right Leaf */}
+                  <path 
+                    d="M 0,0 C -15,-10 -25,-20 -20,-30 C -15,-35 -5,-30 0,-15 C 5,-30 15,-35 20,-30 C 25,-20 15,-10 0,0" 
+                    fill={colors.primary} 
+                    stroke="black" 
+                    strokeWidth="3" 
+                    transform="scale(0.8) translate(15, -5) rotate(30)"
+                  />
+                </motion.g>
+              )}
+            </g>
+          )}
+
+          {/* Growth Energy Sparks */}
+          {stage >= 5 && (
+            <motion.g animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }}>
+              <Sparkles className="text-yellow-400 absolute top-0 left-0" style={{ transform: 'translate(40px, 40px)' }} />
+              <Sparkles className="text-yellow-400 absolute top-0 right-0" style={{ transform: 'translate(140px, 60px)' }} />
+            </motion.g>
+          )}
+        </g>
+      )}
+    </motion.g>
+  );
 
   const renderZen = () => (
     <g>
@@ -428,6 +538,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
       case 'meadow': return renderMeadow();
       case 'crystal': return renderCrystal();
       case 'volcano': return renderVolcano();
+      case 'sprout': return renderSprout();
       default: return renderZen();
     }
   };

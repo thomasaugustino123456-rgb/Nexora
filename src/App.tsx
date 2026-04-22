@@ -254,7 +254,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   mascotPinnedItemId: null,
   spaceOnboardingCompleted: false,
   plantState: {
-    type: 'zen',
+    type: 'sprout',
     stage: 0,
     growthPoints: 0,
     lastGrowthDate: null,
@@ -262,7 +262,7 @@ const DEFAULT_SETTINGS: UserSettings = {
     health: 100,
     isDead: false,
     isThirsty: false,
-    unlockedTypes: ['zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano']
+    unlockedTypes: ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano']
   }
 };
 
@@ -588,6 +588,7 @@ function CoinAnimation({ onComplete, play, settings }: { onComplete: () => void,
 }
 
 export default function App() {
+  const today = new Date().toISOString().split('T')[0];
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDataReady, setIsDataReady] = useState(false);
@@ -646,6 +647,19 @@ export default function App() {
       return updated;
     });
   };
+
+  useEffect(() => {
+    // Reset daily states if date changes
+    const checkDateChange = () => {
+      const now = new Date().toISOString().split('T')[0];
+      if (now !== today) {
+        console.log("Daily reset detected. Refreshing...");
+        window.location.reload(); // Hard reset is safest for PWA/ServiceWorker consistency
+      }
+    };
+    const interval = setInterval(checkDateChange, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [today]);
 
   const onUpdateDailyProgress = (update: Partial<DailyProgress> | ((prev: DailyProgress) => DailyProgress)) => {
     setDailyProgress(prev => {
@@ -790,7 +804,7 @@ export default function App() {
   }, [settings.zenModeEnabled, activeScreen]);
 
   // PLANT LOGIC: GROWTH & HEALTH CHECKER
-  const ECOSYSTEM_PATH: PlantType[] = ['zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano'];
+  const ECOSYSTEM_PATH: PlantType[] = ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano'];
 
   const growPlant = useCallback(() => {
     setSettings(prev => {
@@ -859,7 +873,7 @@ export default function App() {
     if (isDataReady && !settings.plantState) {
         onUpdateSettings({
             plantState: {
-                type: 'zen',
+                type: 'sprout',
                 stage: 0,
                 growthPoints: 0,
                 lastGrowthDate: null,
@@ -867,7 +881,7 @@ export default function App() {
                 health: 100,
                 isDead: false,
                 isThirsty: false,
-                unlockedTypes: ['zen']
+                unlockedTypes: ['sprout']
             }
         });
         return;
@@ -976,7 +990,6 @@ export default function App() {
     }
   }, [settings.inventory, settings.soundEnabled]);
 
-  const today = new Date().toISOString().split('T')[0];
   const [dailyProgress, setDailyProgress] = useState<DailyProgress>(() => {
     const saved = localStorage.getItem(`nexora_progress_${today}`);
     return saved ? JSON.parse(saved) : {

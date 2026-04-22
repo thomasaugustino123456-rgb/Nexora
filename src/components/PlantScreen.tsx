@@ -36,6 +36,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   const [showCompletion, setShowCompletion] = useState(false);
 
   const ecosystemInfo: Record<PlantType, { name: string, description: string }> = {
+    sprout: { name: "Classic Sprout", description: "The heart of Nexora. A symbol of your new beginning and pure consistency." },
     zen: { name: "Zen Retreat", description: "Bonsai, Bamboo, and Moss. A starting point for focused minds." },
     desert: { name: "Desert Resilience", description: "Cactus and Aloe. Thriving in the toughest conditions." },
     tropical: { name: "Tropical Paradise", description: "Monstera and Bird of Paradise. Vibrant growth and energy." },
@@ -83,8 +84,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   const unlocked = plantState.unlockedTypes || ['zen'];
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-[#F0F9FF] to-[#E0F2FE] z-[120] flex flex-col items-center overflow-y-auto">
-      <header className="w-full p-6 flex items-center justify-between z-[140] bg-[#F0F9FF]">
+    <div className="fixed inset-0 bg-gradient-to-b from-[#F0F9FF] to-[#E0F2FE] z-[120] flex flex-col items-center">
+      <header className="w-full p-6 flex items-center justify-between z-[140] bg-[#F0F9FF]/80 backdrop-blur-md sticky top-0">
         <button onClick={onExit} className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors">
           <ChevronLeft size={28} />
         </button>
@@ -100,7 +101,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
         </button>
       </header>
 
-      <div className="flex-1 flex flex-col items-center justify-center relative w-full px-6">
+      <div className="flex-1 w-full overflow-y-auto custom-scrollbar">
+        <div className="flex flex-col items-center justify-start relative w-full px-6 pt-8 pb-32 min-h-full">
         <AnimatePresence>
           {!onboardingCompleted && message && (
             <motion.div
@@ -279,5 +281,6 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
         </div>
       </div>
     </div>
+  </div>
   );
 };

@@ -72,7 +72,6 @@ export const PlantCompletionCard: React.FC<PlantCompletionCardProps> = ({
       className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md"
     >
       <motion.div
-        ref={captureRef}
         initial={{ scale: 0.5, opacity: 0, rotate: -5, y: 100 }}
         animate={{ scale: 1, opacity: 1, rotate: 0, y: 0 }}
         exit={{ scale: 0.5, opacity: 0, scaleY: 0.2, filter: 'blur(20px)' }}
@@ -85,7 +84,7 @@ export const PlantCompletionCard: React.FC<PlantCompletionCardProps> = ({
         className="relative glass-card w-full max-w-sm bg-white p-8 overflow-hidden flex flex-col items-center gap-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] border-4 border-yellow-400"
       >
         {/* Everything inside here (except buttons) is captured */}
-        <div className="flex flex-col items-center gap-6">
+        <div ref={captureRef} className="flex flex-col items-center gap-6 bg-white w-full py-4 rounded-[2.5rem]">
           {/* Background Confetti Aura - exclude from capture? Maybe not, keep for aesthetics. */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <motion.div 
