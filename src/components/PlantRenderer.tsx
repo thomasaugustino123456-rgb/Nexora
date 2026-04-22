@@ -815,6 +815,166 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
     );
   };
 
+  const renderBreezeTulip = () => {
+    const tulipColors = {
+      petal: "#29B6F6",
+      petalDark: "#039BE5",
+      leaf: "#7CB342",
+      leafDark: "#558B2F",
+      potTop: "#FB8C00",
+      potBody: "#FBC02D",
+      puddle: "#0288D1",
+      tongue: "#FF5252",
+      scent: "#F06292",
+      eye: "#8BC34A"
+    };
+
+    return (
+      <g onClick={handlePlantClick} style={{ cursor: 'pointer' }}>
+         <defs>
+          <filter id="eyeSparkle">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="1" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Blue Puddle Base */}
+        <ellipse cx="100" cy="192" rx="60" ry="10" fill={tulipColors.puddle} opacity="0.8" />
+        <circle cx="120" cy="190" r="3" fill={tulipColors.puddle} />
+        <circle cx="80" cy="195" r="2" fill={tulipColors.puddle} />
+
+        {/* Pot - Stationary */}
+        <g id="tulip-pot">
+          <rect x="70" y="165" width="60" height="25" rx="8" fill={tulipColors.potBody} stroke="#4E342E" strokeWidth="2" />
+          <rect x="68" y="155" width="64" height="12" rx="4" fill={tulipColors.potTop} stroke="#4E342E" strokeWidth="2" />
+          {/* Decorative Waves on pot */}
+          <path d="M 70,175 Q 75,185 80,175 Q 85,165 90,175 Q 95,185 100,175 Q 105,165 110,175 Q 115,185 120,175 Q 125,165 130,175" fill="none" stroke="#4E342E" strokeWidth="1.5" />
+        </g>
+
+        {stage >= 1 && (
+          <motion.g
+            animate={{ rotate: [-2, 2, -2] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            style={{ originX: "100px", originY: "160px" }}
+          >
+            {/* Stem */}
+            <path d="M 100,155 Q 95,120 100,90" stroke={tulipColors.leafDark} strokeWidth="6" fill="none" strokeLinecap="round" />
+
+            {/* Leaves */}
+            {/* Left Leaf - Pointing down */}
+            <path d="M 98,150 Q 50,130 60,180 Z" fill={tulipColors.leaf} stroke="#33691E" strokeWidth="2" />
+            {/* Right Leaf - Waving up */}
+            <path d="M 102,145 Q 140,110 150,50 Q 120,100 102,145 Z" fill={tulipColors.leaf} stroke="#33691E" strokeWidth="2" />
+
+            {/* Blue Tulip Head */}
+            {stage >= 2 && (
+              <g transform="translate(100, 70)">
+                {/* Petals */}
+                <path d="M -40,-40 Q -50,-80 0,-100 Q 50,-80 40,-40 Q 0,-20 -40,-40 Z" fill={tulipColors.petal} stroke="#01579B" strokeWidth="3" />
+                <path d="M -20,-45 Q 0,-90 20,-45 Z" fill={tulipColors.petalDark} stroke="#01579B" strokeWidth="2" opacity="0.6" />
+                
+                {/* Face */}
+                {stage >= 3 && (
+                  <g>
+                    {/* Eyebrows/Markings */}
+                    <ellipse cx="-15" cy="-75" rx="5" ry="3" fill="#01579B" opacity="0.4" />
+                    <ellipse cx="15" cy="-75" rx="5" ry="3" fill="#01579B" opacity="0.4" />
+
+                    {/* Happy Green Eyes */}
+                    <g transform="translate(-18, -50)">
+                      <circle r="12" fill={tulipColors.eye} stroke="#000" strokeWidth="1" />
+                      <circle r="4" cx="3" cy="-3" fill="white" />
+                      {/* Blink Eyelid */}
+                      <motion.rect 
+                        x="-14" y="-15" width="28" height="28" fill={tulipColors.petal}
+                        initial={{ scaleY: 0 }}
+                        animate={{ scaleY: [0, 0, 1, 0, 0] }}
+                        transition={{ duration: 5, repeat: Infinity, times: [0, 0.8, 0.85, 0.9, 1] }}
+                        style={{ originY: 0 }}
+                      />
+                    </g>
+                    <g transform="translate(18, -50)">
+                      <circle r="12" fill={tulipColors.eye} stroke="#000" strokeWidth="1" />
+                      <circle r="4" cx="3" cy="-3" fill="white" />
+                      {/* Blink Eyelid */}
+                      <motion.rect 
+                        x="-14" y="-15" width="28" height="28" fill={tulipColors.petal}
+                        initial={{ scaleY: 0 }}
+                        animate={{ scaleY: [0, 0, 1, 0, 0] }}
+                        transition={{ duration: 5, repeat: Infinity, times: [0, 0.8, 0.85, 0.9, 1] }}
+                        style={{ originY: 0 }}
+                      />
+                    </g>
+
+                    {/* Happy Smile */}
+                    <motion.path 
+                      d="M -10,-35 Q 0,-25 10,-35" 
+                      fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round"
+                      animate={{ d: ["M -10,-35 Q 0,-25 10,-35", "M -15,-35 Q 0,-15 15,-35", "M -10,-35 Q 0,-25 10,-35"] }}
+                      transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                  </g>
+                )}
+              </g>
+            )}
+          </motion.g>
+        )}
+
+        {/* Wind Effects & Scent */}
+        {stage >= 4 && (
+          <g>
+            {/* Wind Lines */}
+            {[0, 1, 2].map(i => (
+              <motion.path
+                key={`wind-${i}`}
+                d={`M -50,${40 + i * 40} Q 0,${30 + i * 40} 50,${50 + i * 40}`}
+                stroke="white"
+                strokeWidth="1"
+                fill="none"
+                opacity="0.3"
+                initial={{ x: -100, opacity: 0 }}
+                animate={{ x: 300, opacity: [0, 0.3, 0] }}
+                transition={{ duration: 3, repeat: Infinity, delay: i * 1, ease: "linear" }}
+              />
+            ))}
+
+            {/* Sparkles in Wind */}
+            {[0, 1, 2].map(i => (
+              <motion.g
+                key={`sparkle-${i}`}
+                initial={{ x: -20, y: 50 + i * 30, opacity: 0 }}
+                animate={{ x: 220, opacity: [0, 1, 0] }}
+                transition={{ duration: 4, repeat: Infinity, delay: i * 1.5 }}
+              >
+                <circle r="2" fill="#E1F5FE" />
+              </motion.g>
+            ))}
+
+            {/* Scent Particles - Pink Mist */}
+            {[0, 1, 2].map(i => (
+               <motion.circle
+                  key={`scent-${i}`}
+                  r="3"
+                  fill={tulipColors.scent}
+                  initial={{ cx: 0, cy: 60, opacity: 0 }}
+                  animate={{ 
+                    cx: [0, 90], 
+                    cy: [60, 50],
+                    opacity: [0, 0.4, 0],
+                    scale: [1, 1.2, 0]
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, delay: i * 1 }}
+               />
+            ))}
+          </g>
+        )}
+      </g>
+    );
+  };
+
   const getEcosystemRenderer = () => {
     switch (type) {
       case 'zen': return renderZen();
@@ -827,6 +987,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
       case 'sprout': return renderSprout();
       case 'boredFlower': return renderBoredFlower();
       case 'mourningSprout': return renderMourningSprout();
+      case 'breezeTulip': return renderBreezeTulip();
       default: return renderZen();
     }
   };

@@ -25,7 +25,7 @@ export interface PlacedHouseItem {
   room: number;
 }
 
-export type PlantType = 'zen' | 'desert' | 'tropical' | 'forest' | 'meadow' | 'crystal' | 'volcano' | 'sprout' | 'boredFlower' | 'mourningSprout';
+export type PlantType = 'zen' | 'desert' | 'tropical' | 'forest' | 'meadow' | 'crystal' | 'volcano' | 'sprout' | 'boredFlower' | 'mourningSprout' | 'breezeTulip';
 
 export interface PlantState {
   type: PlantType;
