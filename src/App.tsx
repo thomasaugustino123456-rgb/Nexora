@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 console.log("App.tsx is loading...");
-import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout } from 'lucide-react';
+import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout, MoreHorizontal, Flag, Bookmark, EyeOff, Share2 } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
@@ -630,6 +630,24 @@ export default function App() {
   const [emergencyActive, setEmergencyActive] = useState(false);
   const [challengeStep, setChallengeStep] = useState<ChallengeStep | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setScrollDirection('down');
+      } else if (currentScrollY < lastScrollY) {
+        setScrollDirection('up');
+      }
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   const onUpdateSettings = (newSettings: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => {
     setSettings(prev => {
@@ -2321,7 +2339,7 @@ export default function App() {
 
       <div className="w-full max-w-5xl flex flex-col min-h-screen relative z-10 mx-auto">
         
-        {activeScreen !== 'challenge' && (
+        {activeScreen !== 'challenge' && activeScreen !== 'social' && (
           <header className="px-6 pt-12 pb-4 flex items-center justify-between max-w-4xl mx-auto w-full">
             <div className="flex items-center gap-4">
               <img 
@@ -2905,7 +2923,15 @@ export default function App() {
         )}
 
         {activeScreen !== 'challenge' && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 flex justify-center pointer-events-none z-[80]">
+          <motion.div 
+            initial={false}
+            animate={{ 
+              y: scrollDirection === 'down' ? 100 : 0,
+              opacity: scrollDirection === 'down' ? 0 : 1
+            }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 flex justify-center pointer-events-none z-[80]"
+          >
             <nav className="glass-card px-4 py-3 sm:px-8 sm:py-4 flex items-center gap-4 sm:gap-12 pointer-events-auto overflow-x-auto max-w-[95vw] no-scrollbar">
               <NavButton 
                 active={activeScreen === 'home'} 
@@ -2962,7 +2988,7 @@ export default function App() {
                 label="Rank"
               />
             </nav>
-          </div>
+          </motion.div>
         )}
 
         {viewingTrophy && (
@@ -4289,37 +4315,96 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
   const [posts, setPosts] = useState<Post[]>([]);
   const [circles, setCircles] = useState<SocialCircle[]>([]);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
+  const [isCreatingCircle, setIsCreatingCircle] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedCircleId, setSelectedCircleId] = useState('nexora-general');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Circle Creation State
+  const [newCircleName, setNewCircleName] = useState('');
+  const [newCircleDesc, setNewCircleDesc] = useState('');
+  const [newCircleIcon, setNewCircleIcon] = useState('🌟');
+  const [newCircleColor, setNewCircleColor] = useState('#3b82f6');
+  const [newCircleRules, setNewCircleRules] = useState('');
 
-  // Sample Circles
-  const SAMPLE_CIRCLES: SocialCircle[] = [
-    { id: 'nexora-general', name: 'Nexora General', description: 'The main hub for all Nexora members.', icon: '🏛️', color: '#3b82f6', memberCount: 1250, category: 'general' },
-    { id: 'pushup-kings', name: 'Pushup Kings', description: 'Daily pushup updates and physical goals.', icon: '💪', color: '#ef4444', memberCount: 850, category: 'physical' },
-    { id: 'zen-zone', name: 'Zen Zone', description: 'Meditation, breathing, and mental health.', icon: '🧘', color: '#10b981', memberCount: 620, category: 'mental' },
-    { id: 'creative-minds', name: 'Creative Minds', description: 'Sharing drawings and creative progress.', icon: '🎨', color: '#f59e0b', memberCount: 450, category: 'creative' },
-  ];
+  // Comment State
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [isPostingComment, setIsPostingComment] = useState(false);
 
   useEffect(() => {
-    // Initial circles setup
-    setCircles(SAMPLE_CIRCLES);
+    // Fetch Circles
+    const qCircles = query(collection(db, 'circles'), orderBy('memberCount', 'desc'));
+    const unsubCircles = onSnapshot(qCircles, (snapshot) => {
+      const circlesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SocialCircle));
+      // Add default general circle if empty (for first time)
+      if (circlesData.length === 0) {
+        setCircles([
+          { id: 'nexora-general', name: 'Nexora General', description: 'The main hub for all Nexora members.', icon: '🏛️', color: '#3b82f6', memberCount: 1250, category: 'general' }
+        ]);
+      } else {
+        setCircles(circlesData);
+      }
+    });
 
-    // Fetch posts
-    const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(20));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    // Fetch Posts
+    const qPosts = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50));
+    const unsubPosts = onSnapshot(qPosts, (snapshot) => {
       const postsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
       setPosts(postsData);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubCircles();
+      unsubPosts();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!selectedPost) {
+      setComments([]);
+      return;
+    }
+    const qComments = query(collection(db, 'posts', selectedPost.id, 'comments'), orderBy('createdAt', 'asc'));
+    const unsubComments = onSnapshot(qComments, (snapshot) => {
+      setComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment)));
+    });
+    return () => unsubComments();
+  }, [selectedPost]);
+
+  const handleCreateCircle = async () => {
+    if (!newCircleName.trim() || !user) return;
+    setIsSubmitting(true);
+    try {
+      const id = newCircleName.toLowerCase().replace(/ /g, '-').replace(/[^\w-]/g, '');
+      const circleData: Omit<SocialCircle, 'id'> = {
+        name: newCircleName,
+        description: newCircleDesc,
+        icon: newCircleIcon,
+        color: newCircleColor,
+        memberCount: 1,
+        category: 'general',
+        ownerId: user.uid,
+        rules: newCircleRules.split('\n').filter(r => r.trim()),
+        createdAt: new Date().toISOString()
+      };
+      await setDoc(doc(db, 'circles', id), circleData);
+      setIsCreatingCircle(false);
+      showToast('Circle created successfully! 🏺', 'success');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (err) {
+      showToast('Failed to create circle', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleCreatePost = async () => {
     if (!newPostContent.trim() || !user) return;
     setIsSubmitting(true);
     try {
-      const circle = SAMPLE_CIRCLES.find(c => c.id === selectedCircleId);
+      const circle = circles.find(c => c.id === selectedCircleId);
       const postData: Omit<Post, 'id'> = {
         userId: user.uid,
         userName: settings.displayName || 'Nexora User',
@@ -4329,6 +4414,8 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
         content: newPostContent,
         flames: 0,
         shields: 0,
+        likedBy: [],
+        shieldedBy: [],
         commentCount: 0,
         createdAt: new Date().toISOString(),
         type: 'text'
@@ -4336,30 +4423,182 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
       await setDoc(doc(collection(db, 'posts')), postData);
       setNewPostContent('');
       setIsCreatingPost(false);
-      showToast('Post shared with the community! 🔥', 'success');
+      showToast('Shared with the Nexus! 🔥', 'success');
       vibrate(VIBRATION_PATTERNS.SUCCESS);
     } catch (error) {
-      console.error('Error creating post:', error);
       showToast('Failed to post', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handlePostComment = async () => {
+    if (!newComment.trim() || !user || !selectedPost) return;
+    setIsPostingComment(true);
+    try {
+      const commentData: Omit<Comment, 'id'> = {
+        postId: selectedPost.id,
+        userId: user.uid,
+        userName: settings.displayName || 'Nexora User',
+        userPhoto: settings.profilePic,
+        content: newComment,
+        createdAt: new Date().toISOString()
+      };
+      await setDoc(doc(collection(db, 'posts', selectedPost.id, 'comments')), commentData);
+      await updateDoc(doc(db, 'posts', selectedPost.id), {
+        commentCount: (selectedPost.commentCount || 0) + 1
+      });
+      setNewComment('');
+      showToast('Commented! 💬', 'success');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (err) {
+      showToast('Failed to comment', 'error');
+    } finally {
+      setIsPostingComment(false);
+    }
+  };
+
   const handleAction = async (postId: string, type: 'flame' | 'shield') => {
     if (!user) return;
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    const likedBy = post.likedBy || [];
+    const shieldedBy = post.shieldedBy || [];
+    const userId = user.uid;
+
+    const isLiked = likedBy.includes(userId);
+    const isShielded = shieldedBy.includes(userId);
+
     vibrate(VIBRATION_PATTERNS.CLICK);
     const postRef = doc(db, 'posts', postId);
+
     try {
-      const post = posts.find(p => p.id === postId);
-      if (post) {
+      if (type === 'flame') {
+        const newLikedBy = isLiked ? likedBy.filter(id => id !== userId) : [...likedBy, userId];
         await updateDoc(postRef, {
-          [type === 'flame' ? 'flames' : 'shields']: (post[type === 'flame' ? 'flames' : 'shields'] || 0) + 1
+          likedBy: newLikedBy,
+          flames: newLikedBy.length
+        });
+      } else {
+        const newShieldedBy = isShielded ? shieldedBy.filter(id => id !== userId) : [...shieldedBy, userId];
+        await updateDoc(postRef, {
+          shieldedBy: newShieldedBy,
+          shields: newShieldedBy.length
         });
       }
     } catch (err) {
       console.error('Action failed:', err);
     }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm('Are you sure you want to delete this post, bro? 🛡️')) return;
+    try {
+      await deleteDoc(doc(db, 'posts', postId));
+      showToast('Post deleted', 'success');
+      if (selectedPost?.id === postId) setSelectedPost(null);
+    } catch (err) {
+      showToast('Failed to delete', 'error');
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!selectedPost || !confirm('Delete this comment?')) return;
+    try {
+      await deleteDoc(doc(db, 'posts', selectedPost.id, 'comments', commentId));
+      await updateDoc(doc(db, 'posts', selectedPost.id), {
+        commentCount: Math.max(0, (selectedPost.commentCount || 1) - 1)
+      });
+      showToast('Comment removed', 'success');
+    } catch (err) {
+      showToast('Failed to delete', 'error');
+    }
+  };
+
+  const ActionButton = ({ type, count, active, onClick }: { type: 'flame' | 'shield', count: number, active: boolean, onClick: () => void }) => {
+    const controls = useAnimationControls();
+    
+    const handleClick = () => {
+      controls.start({
+        scale: [1, 1.5, 0.8, 1.2, 1],
+        rotate: [0, 15, -15, 5, 0],
+        borderRadius: ["20%", "50%", "20%"]
+      });
+      onClick();
+    };
+
+    return (
+      <button 
+        onClick={handleClick}
+        className={`flex items-center gap-1.5 px-4 py-2 rounded-2xl transition-all active:scale-90 ${
+          active 
+            ? (type === 'flame' ? 'bg-orange-50 text-orange-500 shadow-sm' : 'bg-blue-50 text-blue-500 shadow-sm') 
+            : 'text-blue-900/30 hover:bg-blue-50'
+        }`}
+      >
+        <motion.div animate={controls}>
+          {type === 'flame' ? (
+            <Flame size={20} className={active ? "fill-orange-500" : ""} />
+          ) : (
+            <Award size={20} className={active ? "fill-blue-500" : ""} />
+          )}
+        </motion.div>
+        <span className="text-sm font-black">{count || 0}</span>
+      </button>
+    );
+  };
+
+  const PostMenu = ({ post }: { post: Post }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const isOwner = user?.uid === post.userId;
+    
+    return (
+      <div className="relative">
+        <button onClick={() => setIsOpen(!isOpen)} className="p-2 text-blue-900/20 hover:text-blue-900/60 transition-colors">
+          <MoreHorizontal size={20} />
+        </button>
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              <div className="fixed inset-0 z-[120]" onClick={() => setIsOpen(false)} />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                className="absolute right-0 top-10 bg-white rounded-2xl shadow-2xl border border-blue-50 py-2 w-48 z-[130] overflow-hidden"
+              >
+                {isOwner ? (
+                  <>
+                    <button onClick={() => { setIsOpen(false); handleDeletePost(post.id); }} className="w-full px-4 py-3 text-left text-sm font-bold text-red-500 hover:bg-red-50 flex items-center gap-3">
+                      <Trash2 size={16} /> Delete Post
+                    </button>
+                    <button onClick={() => setIsOpen(false)} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/60 hover:bg-blue-50 flex items-center gap-3">
+                      <Bookmark size={16} /> Save to Library
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => { setIsOpen(false); showToast('Post saved!', 'info'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/60 hover:bg-blue-50 flex items-center gap-3">
+                      <Bookmark size={16} /> Save Post
+                    </button>
+                    <button onClick={() => { setIsOpen(false); showToast('User Reported', 'error'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3">
+                      <Flag size={16} /> Report Post
+                    </button>
+                    <button onClick={() => { setIsOpen(false); showToast('Not interested', 'info'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/30 hover:bg-blue-50 flex items-center gap-3">
+                      <EyeOff size={16} /> Not Interested
+                    </button>
+                  </>
+                )}
+                <button onClick={() => { setIsOpen(false); showToast('Link copied!', 'info'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/60 hover:bg-blue-50 flex items-center gap-3 border-t border-blue-50 mt-1">
+                  <Share2 size={16} /> Share Link
+                </button>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    );
   };
 
   return (
@@ -4370,66 +4609,368 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
       className="max-w-4xl mx-auto w-full space-y-6 pb-24"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm text-blue-900 hover:scale-105 active:scale-95 transition-transform">
-            <ArrowLeft size={24} />
-          </button>
-          <div>
-            <h2 className="text-3xl font-black text-blue-900 tracking-tight">The Nexus</h2>
-            <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">Mixed Reality Social Hub</p>
+      {!selectedPost && (
+        <div className="flex items-center justify-between sticky top-0 bg-blue-50/80 backdrop-blur-md z-[100] py-4 transition-all">
+          <div className="flex items-center gap-4">
+            <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm text-blue-900 hover:scale-105 active:scale-95 transition-transform">
+              <ArrowLeft size={24} />
+            </button>
+            <div>
+              <h2 className="text-3xl font-black text-blue-900 tracking-tight">The Nexus</h2>
+              <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">Hybrid Social Hub</p>
+            </div>
           </div>
+          <button 
+            onClick={() => setIsCreatingPost(true)}
+            className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 hover:scale-105 active:scale-95 transition-transform flex items-center gap-2"
+          >
+            <Plus size={20} />
+            <span className="font-bold hidden sm:inline text-sm">Create Post</span>
+          </button>
         </div>
-        <button 
-          onClick={() => setIsCreatingPost(true)}
-          className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 hover:scale-105 active:scale-95 transition-transform flex items-center gap-2"
-        >
-          <Plus size={20} />
-          <span className="font-bold">Post</span>
-        </button>
-      </div>
+      )}
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 p-1.5 bg-blue-50/50 rounded-2xl w-fit">
-        <button
-          onClick={() => setActiveTab('feed')}
-          className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'feed' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-900/60'}`}
-        >
-          Pulse Feed
-        </button>
-        <button
-          onClick={() => setActiveTab('circles')}
-          className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'circles' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-900/60'}`}
-        >
-          Circles
-        </button>
-      </div>
+      {/* Post Detail View */}
+      <AnimatePresence mode="wait">
+        {selectedPost ? (
+          <motion.div
+            key="post-detail"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="space-y-6 pb-32"
+          >
+            <button onClick={() => setSelectedPost(null)} className="flex items-center gap-2 text-blue-500 font-bold hover:gap-3 transition-all">
+              <ArrowLeft size={20} /> Back to Pulse
+            </button>
+            
+            <div className="glass-card p-6 space-y-6">
+              {/* Detail Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 overflow-hidden border-2 border-white shadow-sm">
+                    {selectedPost.userPhoto ? <img src={selectedPost.userPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User className="w-full h-full p-2 text-blue-400" />}
+                  </div>
+                  <div>
+                    <h4 className="font-black text-blue-900 text-lg leading-tight">{selectedPost.userName}</h4>
+                    <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">{selectedPost.circleName}</p>
+                  </div>
+                </div>
+                <PostMenu post={selectedPost} />
+              </div>
+
+              <div className="text-blue-900/80 font-medium text-lg leading-relaxed whitespace-pre-wrap">
+                {selectedPost.content}
+              </div>
+
+              {selectedPost.image && (
+                <div className="rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
+                  <img src={selectedPost.image} className="w-full object-cover" referrerPolicy="no-referrer" />
+                </div>
+              )}
+
+              <div className="flex items-center gap-6 pt-6 border-t border-blue-50">
+                <ActionButton 
+                  type="flame" 
+                  count={selectedPost.flames} 
+                  active={(selectedPost.likedBy || []).includes(user?.uid || '')} 
+                  onClick={() => handleAction(selectedPost.id, 'flame')}
+                />
+                <ActionButton 
+                  type="shield" 
+                  count={selectedPost.shields} 
+                  active={(selectedPost.shieldedBy || []).includes(user?.uid || '')} 
+                  onClick={() => handleAction(selectedPost.id, 'shield')}
+                />
+                <div className="flex items-center gap-1.5 px-4 py-2 text-blue-900/30 ml-auto">
+                  <MessageSquare size={20} />
+                  <span className="text-sm font-black">{selectedPost.commentCount || 0}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Comments List */}
+            <div className="space-y-4 px-2">
+              <h3 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest px-2">Nexus Reactions</h3>
+              {comments.map(comment => (
+                <div key={comment.id} className="bg-white/40 backdrop-blur-sm rounded-3xl p-4 space-y-3 relative group">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 overflow-hidden border border-white shadow-sm">
+                        {comment.userPhoto ? <img src={comment.userPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User className="w-full h-full p-1.5 text-blue-400" />}
+                      </div>
+                      <div>
+                        <h5 className="font-black text-blue-900 text-xs">{comment.userName}</h5>
+                        <p className="text-[8px] font-medium text-blue-900/20">{format(parseISO(comment.createdAt), 'MMM d, h:mm a')}</p>
+                      </div>
+                    </div>
+                    {/* Comment Menu */}
+                    <div className="flex items-center gap-1">
+                      {(user?.uid === comment.userId || user?.uid === selectedPost.userId) && (
+                        <button 
+                          onClick={() => handleDeleteComment(comment.id)}
+                          className="opacity-0 group-hover:opacity-100 p-2 text-red-400 hover:text-red-500 transition-all active:scale-90"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                      <button onClick={() => showToast('Reported', 'error')} className="opacity-0 group-hover:opacity-100 p-2 text-blue-900/20">
+                        <Flag size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-blue-900/70 text-sm font-medium pl-11">{comment.content}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Comment Input */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-lg border-t border-blue-50 z-[110]">
+              <div className="max-w-4xl mx-auto flex items-center gap-3">
+                <input 
+                  type="text"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Drop a vibe, bro... 🛡️"
+                  className="flex-1 bg-blue-50 border-2 border-transparent focus:border-blue-400 focus:outline-none px-6 py-4 rounded-full font-medium"
+                  onKeyDown={(e) => { if (e.key === 'Enter') handlePostComment(); }}
+                />
+                <button 
+                  onClick={handlePostComment}
+                  disabled={isPostingComment || !newComment.trim()}
+                  className="p-4 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200 active:scale-90 transition-transform disabled:opacity-50"
+                >
+                  <Send size={24} className={isPostingComment ? "animate-send-pulse" : ""} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <>
+            {/* Tabs */}
+            <div className="flex items-center gap-2 p-1.5 bg-blue-50/50 rounded-2xl w-fit">
+              <button
+                onClick={() => setActiveTab('feed')}
+                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'feed' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+              >
+                Pulse Feed
+              </button>
+              <button
+                onClick={() => setActiveTab('circles')}
+                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'circles' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+              >
+                Nexus Circles
+              </button>
+            </div>
+
+            <AnimatePresence mode="wait">
+              {activeTab === 'feed' ? (
+                <motion.div
+                  key="feed"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="grid grid-cols-1 gap-6"
+                >
+                  {posts.length === 0 ? (
+                    <div className="glass-card p-20 text-center space-y-4">
+                      <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-300">
+                        <MessageSquare size={40} />
+                      </div>
+                      <h3 className="text-2xl font-bold text-blue-900">Silence in the Nexus...</h3>
+                      <p className="text-blue-900/40 font-medium uppercase tracking-widest text-xs">Be the pioneer of progress.</p>
+                    </div>
+                  ) : (
+                    posts.map(post => (
+                      <motion.div 
+                        key={post.id} 
+                        layoutId={post.id}
+                        className="glass-card p-6 space-y-4 hover:shadow-xl transition-all cursor-pointer group hover:translate-y-[-2px] active:scale-[0.99]"
+                        onClick={() => setSelectedPost(post)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 overflow-hidden border border-white shadow-sm">
+                              {post.userPhoto ? <img src={post.userPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User className="w-full h-full p-2 text-blue-400" />}
+                            </div>
+                            <div>
+                              <h4 className="font-black text-blue-900 text-sm leading-none">{post.userName}</h4>
+                              <p className="text-[10px] font-bold text-blue-400 uppercase">{post.circleName}</p>
+                            </div>
+                          </div>
+                          <div className="text-xl opacity-40 group-hover:opacity-100 transition-opacity">
+                            {circles.find(c => c.id === post.circleId)?.icon}
+                          </div>
+                        </div>
+
+                        <p className="text-blue-900/80 font-medium line-clamp-3 leading-relaxed">
+                          {post.content}
+                        </p>
+
+                        <div className="flex items-center gap-4 pt-4 border-t border-blue-50" onClick={(e) => e.stopPropagation()}>
+                          <ActionButton 
+                            type="flame" 
+                            count={post.flames} 
+                            active={(post.likedBy || []).includes(user?.uid || '')} 
+                            onClick={() => handleAction(post.id, 'flame')}
+                          />
+                          <ActionButton 
+                            type="shield" 
+                            count={post.shields} 
+                            active={(post.shieldedBy || []).includes(user?.uid || '')} 
+                            onClick={() => handleAction(post.id, 'shield')}
+                          />
+                          <button onClick={() => setSelectedPost(post)} className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-slate-400 hover:bg-slate-50 ml-auto transition-all">
+                            <MessageSquare size={20} />
+                            <span className="text-sm font-black">{post.commentCount || 0}</span>
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="circles"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.05 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-20"
+                >
+                  <button 
+                    onClick={() => setIsCreatingCircle(true)}
+                    className="glass-card p-6 flex flex-col items-center justify-center border-dashed border-2 border-blue-200 text-blue-400 hover:border-blue-500 hover:text-blue-600 transition-all hover:scale-[1.02] group active:scale-95"
+                  >
+                    <div className="p-5 bg-blue-50 rounded-full mb-3 group-hover:rotate-90 transition-transform">
+                      <Plus size={32} />
+                    </div>
+                    <span className="font-black text-xs uppercase tracking-widest">Create Your Circle</span>
+                  </button>
+
+                  {circles.map(circle => (
+                    <div 
+                      key={circle.id} 
+                      className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:border-blue-400 transition-all cursor-pointer group active:scale-[0.98]"
+                      onClick={() => { setSelectedCircleId(circle.id); setActiveTab('feed'); }}
+                    >
+                      <div 
+                        className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl shadow-xl transition-all group-hover:scale-110 group-hover:rotate-3"
+                        style={{ backgroundColor: `${circle.color}20`, color: circle.color }}
+                      >
+                        {circle.icon}
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-blue-900 group-hover:text-blue-600 transition-colors">{circle.name}</h3>
+                        <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest">{circle.memberCount} Mates</p>
+                      </div>
+                      <p className="text-xs text-blue-900/60 font-bold line-clamp-2 uppercase leading-tight italic">
+                        "{circle.description}"
+                      </p>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Circle Creation Modal */}
+      <AnimatePresence>
+        {isCreatingCircle && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-blue-900/60 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 50 }}
+              className="glass-card w-full max-w-xl p-10 space-y-8 relative overflow-y-auto max-h-[90vh]"
+            >
+              <button onClick={() => setIsCreatingCircle(false)} className="absolute top-6 right-6 p-2 hover:bg-blue-50 rounded-full text-blue-400">
+                <X size={24} />
+              </button>
+              
+              <div className="space-y-2">
+                <h3 className="text-3xl font-black text-blue-900 tracking-tighter">Found a Circle 🏺</h3>
+                <p className="text-blue-900/40 font-bold uppercase text-[10px] tracking-widest">Build your own sub-community of champions.</p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">Circle Name</label>
+                    <input 
+                      type="text" value={newCircleName} onChange={e => setNewCircleName(e.target.value)}
+                      placeholder="e.g. Muscle Memory"
+                      className="w-full bg-blue-50/50 border-2 border-blue-100 rounded-2xl p-4 font-bold text-blue-900 focus:border-blue-400 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">Icon & Color</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" value={newCircleIcon} onChange={e => setNewCircleIcon(e.target.value)}
+                        className="w-16 bg-blue-50/50 border-2 border-blue-100 rounded-2xl p-4 text-center text-xl"
+                      />
+                      <input 
+                        type="color" value={newCircleColor} onChange={e => setNewCircleColor(e.target.value)}
+                        className="w-16 h-16 rounded-2xl cursor-pointer p-0 border-0 bg-transparent overflow-hidden"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">Motto / Description</label>
+                  <input 
+                    type="text" value={newCircleDesc} onChange={e => setNewCircleDesc(e.target.value)}
+                    placeholder="Briefly describe the focus of this circle..."
+                    className="w-full bg-blue-50/50 border-2 border-blue-100 rounded-2xl p-4 font-bold text-blue-900 focus:border-blue-400 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">Circle Rules (One per line)</label>
+                  <textarea 
+                    value={newCircleRules} onChange={e => setNewCircleRules(e.target.value)}
+                    placeholder="1. Proof required&#10;2. Be as beastly as possible"
+                    className="w-full h-32 bg-blue-50/50 border-2 border-blue-100 rounded-2xl p-4 font-bold text-blue-900 focus:border-blue-400 focus:outline-none resize-none"
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={handleCreateCircle}
+                disabled={isSubmitting || !newCircleName.trim()}
+                className="btn-primary w-full py-5 flex items-center justify-center gap-3 font-black uppercase tracking-widest text-sm shadow-2xl shadow-blue-200"
+              >
+                {isSubmitting ? <RefreshCw className="animate-spin" /> : "Found Circle🏺"}
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Create Post Modal */}
       <AnimatePresence>
-        {isCreatingPost && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-blue-900/40 backdrop-blur-md">
+        {isCreatingPost && (activeTab === 'feed' || activeTab === 'circles') && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-blue-900/40 backdrop-blur-md">
             <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
+              initial={{ scale: 0.9, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 50 }}
               className="glass-card w-full max-w-lg p-8 space-y-6 relative"
             >
-              <button onClick={() => setIsCreatingPost(false)} className="absolute top-4 right-4 p-2 hover:bg-blue-50 rounded-full text-blue-400">
+              <button onClick={() => setIsCreatingPost(false)} className="absolute top-6 right-6 p-2 hover:bg-blue-50 rounded-full text-blue-400">
                 <X size={20} />
               </button>
               
               <div className="space-y-4">
-                <h3 className="text-2xl font-black text-blue-900">Share with the Nexus</h3>
+                <h3 className="text-2xl font-black text-blue-900 tracking-tight">Channel Progress 🛰️</h3>
                 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">Select Circle</label>
-                  <div className="flex flex-wrap gap-2">
-                    {SAMPLE_CIRCLES.map(c => (
+                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">Target Circle</label>
+                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto no-scrollbar pb-2">
+                    {circles.map(c => (
                       <button
                         key={c.id}
                         onClick={() => setSelectedCircleId(c.id)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${selectedCircleId === c.id ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-50 text-blue-900/60 hover:bg-blue-100'}`}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${selectedCircleId === c.id ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-white text-blue-900/40 border-blue-50 hover:border-blue-200'}`}
                       >
                         {c.icon} {c.name}
                       </button>
@@ -4440,7 +4981,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
                 <textarea
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
-                  placeholder="What's your progress, bro? 💪"
+                  placeholder="Drop some fuel into the Nexus, bro... 🔥"
                   className="w-full h-40 bg-blue-50/50 border-2 border-blue-100 rounded-2xl p-4 text-blue-900 font-medium focus:outline-none focus:border-blue-400 placeholder:text-blue-900/20 resize-none"
                 />
               </div>
@@ -4448,126 +4989,12 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
               <button 
                 onClick={handleCreatePost}
                 disabled={isSubmitting || !newPostContent.trim()}
-                className="btn-primary w-full py-4 text-sm font-black uppercase tracking-widest shadow-xl shadow-blue-200 flex items-center justify-center gap-2"
+                className="btn-primary w-full py-4 flex items-center justify-center gap-2 font-black uppercase tracking-widest text-xs"
               >
-                {isSubmitting ? <RefreshCw size={20} className="animate-spin" /> : <>Blast It! <Send size={20} /></>}
+                {isSubmitting ? <RefreshCw className="animate-spin" /> : <>Post Blast! <Send size={18} /></>}
               </button>
             </motion.div>
           </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence mode="wait">
-        {activeTab === 'feed' ? (
-          <motion.div
-            key="feed"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-6"
-          >
-            {posts.length === 0 ? (
-              <div className="glass-card p-20 text-center space-y-4">
-                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-300">
-                  <MessageSquare size={40} />
-                </div>
-                <h3 className="text-2xl font-bold text-blue-900">Silence in the Nexus...</h3>
-                <p className="text-blue-900/40 font-medium">Be the first to ignite the flame, bro! 🔥</p>
-                <button onClick={() => setIsCreatingPost(true)} className="btn-primary px-8">Start the Pulse</button>
-              </div>
-            ) : (
-              posts.map(post => (
-                <div key={post.id} className="glass-card p-6 space-y-4 hover:shadow-xl transition-shadow border-transparent hover:border-blue-100">
-                  {/* Post Header */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 overflow-hidden border-2 border-white shadow-sm">
-                        {post.userPhoto ? <img src={post.userPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User className="w-full h-full p-2 text-blue-400" />}
-                      </div>
-                      <div>
-                        <h4 className="font-black text-blue-900 text-sm">{post.userName}</h4>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-blue-400 uppercase">{post.circleName}</span>
-                          <span className="text-[10px] font-medium text-blue-900/20">• {format(parseISO(post.createdAt), 'h:mm a')}</span>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Circle Badge (Optional icon style) */}
-                    <div className="text-xl">{SAMPLE_CIRCLES.find(c => c.id === post.circleId)?.icon}</div>
-                  </div>
-
-                  {/* Post Content */}
-                  <p className="text-blue-900/80 font-medium leading-relaxed">
-                    {post.content}
-                  </p>
-
-                  {post.image && (
-                    <div className="rounded-2xl overflow-hidden border-4 border-white shadow-lg">
-                      <img src={post.image} className="w-full object-cover max-h-96" referrerPolicy="no-referrer" />
-                    </div>
-                  )}
-
-                  {/* Post Foot */}
-                  <div className="flex items-center gap-4 pt-4 border-t border-blue-50">
-                    <button 
-                      onClick={() => handleAction(post.id, 'flame')}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-orange-50 text-orange-500 transition-colors"
-                    >
-                      <Flame size={18} className={post.flames > 0 ? "fill-orange-500" : ""} />
-                      <span className="text-xs font-black">{post.flames || 0}</span>
-                    </button>
-                    <button 
-                      onClick={() => handleAction(post.id, 'shield')}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-blue-50 text-blue-500 transition-colors"
-                    >
-                      <Award size={18} className={post.shields > 0 ? "fill-blue-500" : ""} />
-                      <span className="text-xs font-black">{post.shields || 0}</span>
-                    </button>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-50 text-slate-400 transition-colors ml-auto">
-                      <MessageSquare size={18} />
-                      <span className="text-xs font-black">{post.commentCount || 0}</span>
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </motion.div>
-        ) : (
-          <motion.div
-            key="circles"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-6"
-          >
-            {circles.map(circle => (
-              <div key={circle.id} className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:border-blue-400 transition-colors cursor-pointer group">
-                <div 
-                  className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl shadow-xl transition-transform group-hover:scale-110 group-hover:rotate-3"
-                  style={{ backgroundColor: `${circle.color}20`, color: circle.color }}
-                >
-                  {circle.icon}
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-blue-900 group-hover:text-blue-600 transition-colors">{circle.name}</h3>
-                  <p className="text-xs font-bold text-blue-900/40 uppercase tracking-widest">{circle.category} • {circle.memberCount} Mates</p>
-                </div>
-                <p className="text-sm text-blue-900/60 font-medium">
-                  {circle.description}
-                </p>
-                <button 
-                  onClick={() => {
-                    setSelectedCircleId(circle.id);
-                    setActiveTab('feed');
-                    // In real app, we'd filter the feed by circleId
-                  }}
-                  className="btn-primary w-full py-3 text-xs bg-slate-900 hover:bg-slate-800"
-                >
-                  Enter Circle
-                </button>
-              </div>
-            ))}
-          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

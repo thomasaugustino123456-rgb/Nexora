@@ -194,6 +194,10 @@ export interface SocialCircle {
   color: string;
   memberCount: number;
   category: 'physical' | 'mental' | 'creative' | 'general';
+  ownerId?: string;
+  rules?: string[];
+  isPrivate?: boolean;
+  createdAt?: string;
 }
 
 export interface Post {
@@ -207,6 +211,8 @@ export interface Post {
   image?: string;
   flames: number; // likes
   shields: number; // verify/respect
+  likedBy?: string[]; // Array of user IDs who flamed
+  shieldedBy?: string[]; // Array of user IDs who shielded
   commentCount: number;
   createdAt: string;
   type: 'text' | 'image' | 'milestone';
