@@ -191,6 +191,42 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "userId", "name", "challenges", "days", "createdAt"]
+    },
+    "SocialCircle": {
+      "title": "SocialCircle",
+      "description": "A group dedicated to a specific habit or interest",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "memberCount": { "type": "number" },
+        "category": { "type": "string", "enum": ["physical", "mental", "creative", "general"] }
+      },
+      "required": ["id", "name", "icon", "memberCount", "category"]
+    },
+    "CommunityPost": {
+      "title": "CommunityPost",
+      "description": "A post shared in the feed or a circle",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "circleId": { "type": "string" },
+        "circleName": { "type": "string" },
+        "content": { "type": "string" },
+        "image": { "type": "string" },
+        "flames": { "type": "number" },
+        "shields": { "type": "number" },
+        "commentCount": { "type": "number" },
+        "type": { "type": "string", "enum": ["text", "image", "milestone"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "userName", "circleId", "circleName", "content", "type", "createdAt"]
     }
   },
   "firestore": {
@@ -233,6 +269,29 @@
     "/feedback/{feedbackId}": {
       "schema": { "$ref": "Feedback" },
       "description": "User feedback messages"
+    },
+    "/circles/{circleId}": {
+      "schema": { "$ref": "SocialCircle" },
+      "description": "Information about social circles"
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "CommunityPost" },
+      "description": "User shared posts in the community"
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "postId": { "type": "string" },
+          "userId": { "type": "string" },
+          "userName": { "type": "string" },
+          "userPhoto": { "type": "string" },
+          "content": { "type": "string" },
+          "createdAt": { "type": "string" }
+        }
+      },
+      "description": "Comments on community posts"
     }
   }
 }

@@ -185,3 +185,43 @@ export interface CustomPlan {
 export type Screen = 'home' | 'progress' | 'profile' | 'social' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant';
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion';
 export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';
+
+export interface SocialCircle {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  memberCount: number;
+  category: 'physical' | 'mental' | 'creative' | 'general';
+}
+
+export interface Post {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  circleId: string;
+  circleName: string;
+  content: string;
+  image?: string;
+  flames: number; // likes
+  shields: number; // verify/respect
+  commentCount: number;
+  createdAt: string;
+  type: 'text' | 'image' | 'milestone';
+  milestoneData?: {
+    type: 'streak' | 'trophy' | 'level';
+    value: string | number;
+  };
+}
+
+export interface Comment {
+  id: string;
+  postId: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  content: string;
+  createdAt: string;
+}

@@ -2448,7 +2448,13 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <SocialScreen onBack={() => setActiveScreen('profile')} />
+                <SocialScreen 
+                  onBack={() => setActiveScreen('profile')} 
+                  user={user}
+                  settings={settings}
+                  stats={stats}
+                  showToast={showToast}
+                />
               </motion.div>
             )}
             {activeScreen === 'settings' && (
@@ -4278,47 +4284,292 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
   );
 }
 
-function SocialScreen({ onBack }: { onBack: () => void }) {
+function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: () => void, user: FirebaseUser | null, settings: UserSettings, stats: UserStats, showToast: (m: string, t?: 'success' | 'info' | 'error') => void }) {
+  const [activeTab, setActiveTab] = useState<'feed' | 'circles'>('feed');
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [circles, setCircles] = useState<SocialCircle[]>([]);
+  const [isCreatingPost, setIsCreatingPost] = useState(false);
+  const [newPostContent, setNewPostContent] = useState('');
+  const [selectedCircleId, setSelectedCircleId] = useState('nexora-general');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sample Circles
+  const SAMPLE_CIRCLES: SocialCircle[] = [
+    { id: 'nexora-general', name: 'Nexora General', description: 'The main hub for all Nexora members.', icon: '🏛️', color: '#3b82f6', memberCount: 1250, category: 'general' },
+    { id: 'pushup-kings', name: 'Pushup Kings', description: 'Daily pushup updates and physical goals.', icon: '💪', color: '#ef4444', memberCount: 850, category: 'physical' },
+    { id: 'zen-zone', name: 'Zen Zone', description: 'Meditation, breathing, and mental health.', icon: '🧘', color: '#10b981', memberCount: 620, category: 'mental' },
+    { id: 'creative-minds', name: 'Creative Minds', description: 'Sharing drawings and creative progress.', icon: '🎨', color: '#f59e0b', memberCount: 450, category: 'creative' },
+  ];
+
+  useEffect(() => {
+    // Initial circles setup
+    setCircles(SAMPLE_CIRCLES);
+
+    // Fetch posts
+    const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(20));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const postsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
+      setPosts(postsData);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleCreatePost = async () => {
+    if (!newPostContent.trim() || !user) return;
+    setIsSubmitting(true);
+    try {
+      const circle = SAMPLE_CIRCLES.find(c => c.id === selectedCircleId);
+      const postData: Omit<Post, 'id'> = {
+        userId: user.uid,
+        userName: settings.displayName || 'Nexora User',
+        userPhoto: settings.profilePic,
+        circleId: selectedCircleId,
+        circleName: circle?.name || 'General',
+        content: newPostContent,
+        flames: 0,
+        shields: 0,
+        commentCount: 0,
+        createdAt: new Date().toISOString(),
+        type: 'text'
+      };
+      await setDoc(doc(collection(db, 'posts')), postData);
+      setNewPostContent('');
+      setIsCreatingPost(false);
+      showToast('Post shared with the community! 🔥', 'success');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (error) {
+      console.error('Error creating post:', error);
+      showToast('Failed to post', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAction = async (postId: string, type: 'flame' | 'shield') => {
+    if (!user) return;
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    const postRef = doc(db, 'posts', postId);
+    try {
+      const post = posts.find(p => p.id === postId);
+      if (post) {
+        await updateDoc(postRef, {
+          [type === 'flame' ? 'flames' : 'shields']: (post[type === 'flame' ? 'flames' : 'shields'] || 0) + 1
+        });
+      }
+    } catch (err) {
+      console.error('Action failed:', err);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="max-w-4xl mx-auto w-full space-y-8 pb-24"
+      className="max-w-4xl mx-auto w-full space-y-6 pb-24"
     >
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm text-blue-900 hover:scale-105 active:scale-95 transition-transform">
-          <ArrowLeft size={24} />
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm text-blue-900 hover:scale-105 active:scale-95 transition-transform">
+            <ArrowLeft size={24} />
+          </button>
+          <div>
+            <h2 className="text-3xl font-black text-blue-900 tracking-tight">The Nexus</h2>
+            <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">Mixed Reality Social Hub</p>
+          </div>
+        </div>
+        <button 
+          onClick={() => setIsCreatingPost(true)}
+          className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 hover:scale-105 active:scale-95 transition-transform flex items-center gap-2"
+        >
+          <Plus size={20} />
+          <span className="font-bold">Post</span>
         </button>
-        <h2 className="text-3xl font-black text-blue-900">Community</h2>
       </div>
 
-      <div className="glass-card p-20 flex flex-col items-center justify-center text-center space-y-6">
-        <div className="w-32 h-32 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 animate-pulse">
-          <Lock size={64} />
-        </div>
-        <div className="space-y-2">
-          <h3 className="text-4xl font-black text-blue-900 tracking-tighter">PHASE 2 LOCKED</h3>
-          <p className="text-blue-900/40 font-bold text-lg max-w-sm mx-auto uppercase tracking-widest">
-            We are building a beastly community. 🦁
-          </p>
-        </div>
-        <div className="w-full max-w-md bg-blue-50 h-4 rounded-full overflow-hidden border border-blue-100">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: "35%" }}
-            className="h-full bg-blue-500" 
-          />
-        </div>
-        <p className="text-sm font-bold text-blue-500">350 / 1,000 users joined Nexora!</p>
-        
-        <button 
-          onClick={onBack}
-          className="btn-primary px-8"
+      {/* Tabs */}
+      <div className="flex items-center gap-2 p-1.5 bg-blue-50/50 rounded-2xl w-fit">
+        <button
+          onClick={() => setActiveTab('feed')}
+          className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'feed' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-900/60'}`}
         >
-          Contribute more habits! 🔥
+          Pulse Feed
+        </button>
+        <button
+          onClick={() => setActiveTab('circles')}
+          className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'circles' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+        >
+          Circles
         </button>
       </div>
+
+      {/* Create Post Modal */}
+      <AnimatePresence>
+        {isCreatingPost && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-blue-900/40 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="glass-card w-full max-w-lg p-8 space-y-6 relative"
+            >
+              <button onClick={() => setIsCreatingPost(false)} className="absolute top-4 right-4 p-2 hover:bg-blue-50 rounded-full text-blue-400">
+                <X size={20} />
+              </button>
+              
+              <div className="space-y-4">
+                <h3 className="text-2xl font-black text-blue-900">Share with the Nexus</h3>
+                
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">Select Circle</label>
+                  <div className="flex flex-wrap gap-2">
+                    {SAMPLE_CIRCLES.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => setSelectedCircleId(c.id)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${selectedCircleId === c.id ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-50 text-blue-900/60 hover:bg-blue-100'}`}
+                      >
+                        {c.icon} {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <textarea
+                  value={newPostContent}
+                  onChange={(e) => setNewPostContent(e.target.value)}
+                  placeholder="What's your progress, bro? 💪"
+                  className="w-full h-40 bg-blue-50/50 border-2 border-blue-100 rounded-2xl p-4 text-blue-900 font-medium focus:outline-none focus:border-blue-400 placeholder:text-blue-900/20 resize-none"
+                />
+              </div>
+
+              <button 
+                onClick={handleCreatePost}
+                disabled={isSubmitting || !newPostContent.trim()}
+                className="btn-primary w-full py-4 text-sm font-black uppercase tracking-widest shadow-xl shadow-blue-200 flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? <RefreshCw size={20} className="animate-spin" /> : <>Blast It! <Send size={20} /></>}
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence mode="wait">
+        {activeTab === 'feed' ? (
+          <motion.div
+            key="feed"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
+          >
+            {posts.length === 0 ? (
+              <div className="glass-card p-20 text-center space-y-4">
+                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-300">
+                  <MessageSquare size={40} />
+                </div>
+                <h3 className="text-2xl font-bold text-blue-900">Silence in the Nexus...</h3>
+                <p className="text-blue-900/40 font-medium">Be the first to ignite the flame, bro! 🔥</p>
+                <button onClick={() => setIsCreatingPost(true)} className="btn-primary px-8">Start the Pulse</button>
+              </div>
+            ) : (
+              posts.map(post => (
+                <div key={post.id} className="glass-card p-6 space-y-4 hover:shadow-xl transition-shadow border-transparent hover:border-blue-100">
+                  {/* Post Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 overflow-hidden border-2 border-white shadow-sm">
+                        {post.userPhoto ? <img src={post.userPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User className="w-full h-full p-2 text-blue-400" />}
+                      </div>
+                      <div>
+                        <h4 className="font-black text-blue-900 text-sm">{post.userName}</h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-blue-400 uppercase">{post.circleName}</span>
+                          <span className="text-[10px] font-medium text-blue-900/20">• {format(parseISO(post.createdAt), 'h:mm a')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Circle Badge (Optional icon style) */}
+                    <div className="text-xl">{SAMPLE_CIRCLES.find(c => c.id === post.circleId)?.icon}</div>
+                  </div>
+
+                  {/* Post Content */}
+                  <p className="text-blue-900/80 font-medium leading-relaxed">
+                    {post.content}
+                  </p>
+
+                  {post.image && (
+                    <div className="rounded-2xl overflow-hidden border-4 border-white shadow-lg">
+                      <img src={post.image} className="w-full object-cover max-h-96" referrerPolicy="no-referrer" />
+                    </div>
+                  )}
+
+                  {/* Post Foot */}
+                  <div className="flex items-center gap-4 pt-4 border-t border-blue-50">
+                    <button 
+                      onClick={() => handleAction(post.id, 'flame')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-orange-50 text-orange-500 transition-colors"
+                    >
+                      <Flame size={18} className={post.flames > 0 ? "fill-orange-500" : ""} />
+                      <span className="text-xs font-black">{post.flames || 0}</span>
+                    </button>
+                    <button 
+                      onClick={() => handleAction(post.id, 'shield')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-blue-50 text-blue-500 transition-colors"
+                    >
+                      <Award size={18} className={post.shields > 0 ? "fill-blue-500" : ""} />
+                      <span className="text-xs font-black">{post.shields || 0}</span>
+                    </button>
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-50 text-slate-400 transition-colors ml-auto">
+                      <MessageSquare size={18} />
+                      <span className="text-xs font-black">{post.commentCount || 0}</span>
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="circles"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05 }}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-6"
+          >
+            {circles.map(circle => (
+              <div key={circle.id} className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:border-blue-400 transition-colors cursor-pointer group">
+                <div 
+                  className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl shadow-xl transition-transform group-hover:scale-110 group-hover:rotate-3"
+                  style={{ backgroundColor: `${circle.color}20`, color: circle.color }}
+                >
+                  {circle.icon}
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-blue-900 group-hover:text-blue-600 transition-colors">{circle.name}</h3>
+                  <p className="text-xs font-bold text-blue-900/40 uppercase tracking-widest">{circle.category} • {circle.memberCount} Mates</p>
+                </div>
+                <p className="text-sm text-blue-900/60 font-medium">
+                  {circle.description}
+                </p>
+                <button 
+                  onClick={() => {
+                    setSelectedCircleId(circle.id);
+                    setActiveTab('feed');
+                    // In real app, we'd filter the feed by circleId
+                  }}
+                  className="btn-primary w-full py-3 text-xs bg-slate-900 hover:bg-slate-800"
+                >
+                  Enter Circle
+                </button>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
