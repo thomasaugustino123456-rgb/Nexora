@@ -4317,6 +4317,10 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
   const [circles, setCircles] = useState<SocialCircle[]>([]);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
+  const [isEditingCircle, setIsEditingCircle] = useState(false);
+  const [circleToEdit, setCircleToEdit] = useState<SocialCircle | null>(null);
+  const [lastDeletedCircle, setLastDeletedCircle] = useState<SocialCircle | null>(null);
+  const [showRestoreToast, setShowRestoreToast] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [viewingCircle, setViewingCircle] = useState<SocialCircle | null>(null);
   const [showCircleAbout, setShowCircleAbout] = useState(false);
@@ -4464,14 +4468,6 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
   const handlePostComment = async () => {
     if (!newComment.trim() || !user || !selectedPost) return;
 
-    // Check if joined selected circle if it's not general
-    const circleId = selectedPost.circleId;
-    const isJoined = circleId === 'nexora-general' || (settings.joinedCircleIds || []).includes(circleId);
-    if (!isJoined) {
-      showToast('Join the circle to comment, bro! 🛡️', 'info');
-      return;
-    }
-
     setIsPostingComment(true);
     try {
       const commentData: any = {
@@ -4506,14 +4502,6 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
     if (!user || !selectedPost) return;
     const comment = comments.find(c => c.id === commentId);
     if (!comment) return;
-
-    // Check if joined selected circle if it's not general
-    const circleId = selectedPost.circleId;
-    const isJoined = circleId === 'nexora-general' || (settings.joinedCircleIds || []).includes(circleId);
-    if (!isJoined) {
-      showToast('Join the circle to interact, bro! 🛡️', 'info');
-      return;
-    }
 
     const likedBy = comment.likedBy || [];
     const isLiked = likedBy.includes(user.uid);
@@ -4570,14 +4558,6 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
     const post = posts.find(p => p.id === postId);
     if (!post) return;
 
-    // Check if joined selected circle if it's not general
-    const circleId = post.circleId;
-    const isJoined = circleId === 'nexora-general' || (settings.joinedCircleIds || []).includes(circleId);
-    if (!isJoined) {
-      showToast('Join the circle to give respect, bro! 🛡️', 'info');
-      return;
-    }
-
     const likedBy = post.likedBy || [];
     const shieldedBy = post.shieldedBy || [];
     const userId = user.uid;
@@ -4604,6 +4584,61 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
       }
     } catch (err) {
       console.error('Action failed:', err);
+    }
+  };
+
+  const handleUpdateSettings = (s: any) => onUpdateSettings(s);
+
+  const handleDeleteCircle = async (circle: SocialCircle) => {
+    if (!user || circle.ownerId !== user.uid) return;
+    
+    try {
+      setLastDeletedCircle(circle);
+      setShowRestoreToast(true);
+      await updateDoc(doc(db, 'circles', circle.id), { deleted: true });
+      showToast('Circle deleted. Tap to restore! 🛡️', 'info');
+      
+      // Auto-hide restore after 10s
+      setTimeout(() => {
+        setShowRestoreToast(false);
+      }, 10000);
+    } catch (err) {
+      showToast('Failed to delete circle', 'error');
+    }
+  };
+
+  const handleRestoreCircle = async () => {
+    if (!lastDeletedCircle) return;
+    try {
+      await updateDoc(doc(db, 'circles', lastDeletedCircle.id), { deleted: false });
+      setLastDeletedCircle(null);
+      setShowRestoreToast(false);
+      showToast('Circle restored! 🏮', 'success');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (err) {
+      showToast('Failed to restore', 'error');
+    }
+  };
+
+  const handleUpdateCircle = async () => {
+    if (!circleToEdit || !newCircleName.trim() || !user) return;
+    setIsSubmitting(true);
+    try {
+      await updateDoc(doc(db, 'circles', circleToEdit.id), {
+        name: newCircleName,
+        description: newCircleDesc,
+        icon: newCircleIcon,
+        color: newCircleColor,
+        rules: newCircleRules.split('\n').filter(r => r.trim())
+      });
+      setIsEditingCircle(false);
+      setCircleToEdit(null);
+      showToast('Circle updated! 🛡️', 'success');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (err) {
+      showToast('Update failed', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -4849,7 +4884,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                   </div>
                   <div>
                     <h4 className="font-black text-blue-900 text-lg leading-tight">{selectedPost.userName}</h4>
-                    <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">{selectedPost.circleName}</p>
+                    <p className="text-xs font-black text-blue-500 uppercase tracking-tighter">n/{selectedPost.circleName.replace(/\s+/g, '').toLowerCase()}</p>
                   </div>
                 </div>
                 <PostMenu post={selectedPost} />
@@ -5043,7 +5078,21 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                             </div>
                             <div>
                               <h4 className="font-black text-blue-900 text-sm leading-none">{post.userName}</h4>
-                              <p className="text-[10px] font-bold text-blue-400 uppercase">{post.circleName}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-tighter">n/{post.circleName.replace(/\s+/g, '').toLowerCase()}</p>
+                                {!(settings.joinedCircleIds || []).includes(post.circleId) && post.circleId !== 'nexora-general' && (
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const circle = circles.find(c => c.id === post.circleId);
+                                      if (circle) handleToggleJoin(circle);
+                                    }}
+                                    className="text-[8px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full hover:scale-105 active:scale-95 transition-all shadow-sm"
+                                  >
+                                    JOIN
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="text-xl opacity-40 group-hover:opacity-100 transition-opacity">
@@ -5095,12 +5144,36 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                     <span className="font-black text-xs uppercase tracking-widest">Create Your Circle</span>
                   </button>
 
-                  {circles.map(circle => (
+                  {circles.filter(c => !c.deleted || c.id === 'nexora-general').map(circle => (
                     <div 
                       key={circle.id} 
-                      className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:border-blue-400 transition-all cursor-pointer group active:scale-[0.98]"
+                      className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:border-blue-400 transition-all cursor-pointer group active:scale-[0.98] relative"
                       onClick={() => setViewingCircle(circle)}
                     >
+                      {circle.ownerId === user?.uid && circle.id !== 'nexora-general' && (
+                        <div className="absolute top-4 right-4 flex gap-2" onClick={e => e.stopPropagation()}>
+                          <button 
+                            onClick={() => {
+                              setCircleToEdit(circle);
+                              setNewCircleName(circle.name);
+                              setNewCircleDesc(circle.description);
+                              setNewCircleIcon(circle.icon);
+                              setNewCircleColor(circle.color);
+                              setNewCircleRules(circle.rules?.join('\n') || '');
+                              setIsEditingCircle(true);
+                            }}
+                            className="p-2 bg-blue-50 text-blue-400 rounded-full hover:bg-blue-100 transition-all shadow-sm"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteCircle(circle)}
+                            className="p-2 bg-red-50 text-red-400 rounded-full hover:bg-red-100 transition-all shadow-sm"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
                       <div 
                         className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl shadow-xl transition-all group-hover:scale-110 group-hover:rotate-3"
                         style={{ backgroundColor: `${circle.color}20`, color: circle.color }}
@@ -5108,7 +5181,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                         {circle.icon}
                       </div>
                       <div>
-                        <h3 className="text-xl font-black text-blue-900 group-hover:text-blue-600 transition-colors">{circle.name}</h3>
+                        <h3 className="text-xl font-black text-blue-900 group-hover:text-blue-600 transition-colors">n/{circle.name.replace(/\s+/g, '').toLowerCase()}</h3>
                         <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest">{circle.memberCount} Mates</p>
                       </div>
                       <p className="text-xs text-blue-900/60 font-bold line-clamp-2 uppercase leading-tight italic">
@@ -5147,6 +5220,34 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                     {viewingCircle.icon}
                   </div>
                   <div className="flex gap-2">
+                    {viewingCircle.ownerId === user?.uid && viewingCircle.id !== 'nexora-general' && (
+                      <>
+                        <button 
+                          onClick={() => {
+                            setCircleToEdit(viewingCircle);
+                            setNewCircleName(viewingCircle.name);
+                            setNewCircleDesc(viewingCircle.description);
+                            setNewCircleIcon(viewingCircle.icon);
+                            setNewCircleColor(viewingCircle.color);
+                            setNewCircleRules(viewingCircle.rules?.join('\n') || '');
+                            setIsEditingCircle(true);
+                          }}
+                          className="p-3 rounded-2xl bg-blue-50 text-blue-400 hover:bg-blue-100 transition-all shadow-sm flex items-center justify-center"
+                        >
+                          <Pencil size={20} />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const c = viewingCircle;
+                            setViewingCircle(null);
+                            handleDeleteCircle(c);
+                          }}
+                          className="p-3 rounded-2xl bg-red-50 text-red-400 hover:bg-red-100 transition-all shadow-sm flex items-center justify-center"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      </>
+                    )}
                     <button 
                       onClick={() => handleToggleNotifs(viewingCircle.id)}
                       className={`p-3 rounded-2xl border-2 transition-all ${
@@ -5178,7 +5279,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
 
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
-                    <h2 className="text-3xl font-black text-blue-900 tracking-tight">{viewingCircle.name}</h2>
+                    <h2 className="text-3xl font-black text-blue-900 tracking-tight">n/{viewingCircle.name.replace(/\s+/g, '').toLowerCase()}</h2>
                     <p className="text-xs font-bold text-blue-500 uppercase tracking-widest flex items-center gap-2">
                        <Users size={14} /> {viewingCircle.memberCount} Mates
                     </p>
@@ -5302,6 +5403,34 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
         )}
       </AnimatePresence>
 
+      {/* Restore Circle Toast/Bar */}
+      <AnimatePresence>
+        {showRestoreToast && (
+          <motion.div 
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-24 left-6 right-6 z-[200] max-w-lg mx-auto"
+          >
+            <div className="glass-card p-4 bg-blue-900/90 text-white flex items-center justify-between shadow-2xl border-blue-400/30">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-600 rounded-lg text-xl">{lastDeletedCircle?.icon}</div>
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider">Circle Removed</h4>
+                  <p className="text-[10px] text-blue-200">You can still bring it back, bro.</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleRestoreCircle}
+                className="px-4 py-2 bg-white text-blue-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg"
+              >
+                RESTORE
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Circle Creation Modal */}
       <AnimatePresence>
         {isCreatingCircle && (
@@ -5369,6 +5498,88 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                 className="btn-primary w-full py-5 flex items-center justify-center gap-3 font-black uppercase tracking-widest text-sm shadow-2xl shadow-blue-200"
               >
                 {isSubmitting ? <RefreshCw className="animate-spin" /> : "Found Circle🏺"}
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Circle Modal */}
+      <AnimatePresence>
+        {isEditingCircle && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-blue-900/40 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 50 }}
+              className="glass-card w-full max-w-lg p-8 space-y-6 relative overflow-y-auto max-h-[90vh] no-scrollbar"
+            >
+              <button 
+                onClick={() => {
+                  setIsEditingCircle(false);
+                  setCircleToEdit(null);
+                }} 
+                className="absolute top-6 right-6 p-2 hover:bg-blue-50 rounded-full text-blue-400"
+              >
+                <X size={20} />
+              </button>
+              
+              <div className="space-y-4">
+                <h3 className="text-2xl font-black text-blue-900 tracking-tight">Evolve Circle 🏹</h3>
+                
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">Name</label>
+                  <input
+                    value={newCircleName} onChange={e => setNewCircleName(e.target.value)}
+                    className="w-full bg-blue-50 border-2 border-blue-100 rounded-xl p-3 text-sm font-bold text-blue-900 focus:border-blue-400"
+                    placeholder="Circle Name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">Mission</label>
+                  <textarea
+                    value={newCircleDesc} onChange={e => setNewCircleDesc(e.target.value)}
+                    className="w-full bg-blue-50 border-2 border-blue-100 rounded-xl p-3 text-sm font-bold text-blue-900 focus:border-blue-400 h-24"
+                    placeholder="What's this circle about, bro?"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">Vibe Icon</label>
+                    <div className="flex gap-2 flex-wrap bg-blue-50 p-2 rounded-xl border border-blue-100">
+                      {['🏮', '🛡️', '⚡', '🔥', '🌊', '🏹', '🎨', '🧠', '💪', '🌿', '🌟'].map(icon => (
+                        <button key={icon} onClick={() => setNewCircleIcon(icon)} className={`text-xl p-1 rounded-lg ${newCircleIcon === icon ? 'bg-blue-600' : 'hover:bg-white'}`}>
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">Theme</label>
+                    <div className="flex gap-2 flex-wrap bg-blue-50 p-2 rounded-xl border border-blue-100">
+                      {['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'].map(color => (
+                        <button key={color} onClick={() => setNewCircleColor(color)} className={`w-8 h-8 rounded-full border-2 ${newCircleColor === color ? 'border-blue-600 scale-110 shadow-md' : 'border-white'}`} style={{ backgroundColor: color }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">Guardian Rules (One per line)</label>
+                  <textarea
+                    value={newCircleRules} onChange={e => setNewCircleRules(e.target.value)}
+                    className="w-full bg-blue-50 border-2 border-blue-100 rounded-xl p-3 text-xs font-bold text-blue-900 focus:border-blue-400 h-24"
+                    placeholder="1. Keep it real\n2. Stay legendary"
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={handleUpdateCircle}
+                disabled={isSubmitting || !newCircleName.trim()}
+                className="btn-primary w-full py-4 flex items-center justify-center gap-2 font-black uppercase tracking-widest text-xs"
+              >
+                {isSubmitting ? <RefreshCw className="animate-spin" /> : "Preserve Epoch🏺"}
               </button>
             </motion.div>
           </div>

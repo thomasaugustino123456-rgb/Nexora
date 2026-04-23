@@ -200,6 +200,7 @@ export interface SocialCircle {
   rules?: string[];
   isPrivate?: boolean;
   createdAt?: string;
+  deleted?: boolean;
 }
 
 export interface Post {
