@@ -193,6 +193,17 @@ service cloud.firestore {
              (!('color' in data) || (data.color is string && data.color.size() <= 50));
     }
 
+    function isValidCircle(data) {
+      return data.keys().hasAll(['name', 'description', 'icon', 'color', 'memberCount', 'category', 'ownerId', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.description is string && data.description.size() < 1000 &&
+             data.icon is string && data.icon.size() < 50 &&
+             data.color is string && data.color.size() < 50 &&
+             data.memberCount is number &&
+             data.category in ['physical', 'mental', 'creative', 'general'] &&
+             data.ownerId == request.auth.uid;
+    }
+
     // Community Helpers
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
@@ -215,7 +226,10 @@ service cloud.firestore {
       return data.keys().hasAll(['postId', 'userId', 'userName', 'content', 'createdAt']) &&
              data.userId == request.auth.uid &&
              data.postId is string &&
-             data.content is string && data.content.size() > 0 && data.content.size() < 1000;
+             data.content is string && data.content.size() > 0 && data.content.size() < 1000 &&
+             (!('parentId' in data) || (data.parentId is string && data.parentId.size() < 100)) &&
+             (!('likes' in data) || data.likes is number) &&
+             (!('likedBy' in data) || data.likedBy is list);
     }
 
     // ===============================================================
@@ -303,7 +317,12 @@ service cloud.firestore {
 
     match /circles/{circleId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow create: if isAuthenticated() && isValidCircle(request.resource.data);
+      allow update: if isAuthenticated() && (
+        (resource.data.ownerId == request.auth.uid && isValidCircle(request.resource.data)) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount']))
+      );
+      allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
     }
 
     match /posts/{postId} {
@@ -320,8 +339,15 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if isAuthenticated();
         allow create: if isAuthenticated() && isValidComment(request.resource.data);
-        allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid && isValidComment(request.resource.data));
-        allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+        allow update: if isAuthenticated() && (
+          (resource.data.userId == request.auth.uid && isValidComment(request.resource.data)) ||
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy']))
+        );
+        allow delete: if isAuthenticated() && (
+          resource.data.userId == request.auth.uid || 
+          get(/databases/$(database)/documents/posts/$(postId)).data.userId == request.auth.uid || 
+          isAdmin()
+        );
       }
     }
   }

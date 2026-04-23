@@ -230,4 +230,7 @@ export interface Comment {
   userPhoto?: string;
   content: string;
   createdAt: string;
+  parentId?: string; // For replies
+  likes?: number;
+  likedBy?: string[];
 }

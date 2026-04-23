@@ -4332,6 +4332,17 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+  const [savedPosts, setSavedPosts] = useLocalStorage<string[]>('nexora_saved_posts', []);
+  const [savedComments, setSavedComments] = useLocalStorage<string[]>('nexora_saved_comments', []);
+  const [hiddenPosts, setHiddenPosts] = useState<string[]>([]);
+  const [hiddenComments, setHiddenComments] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (selectedPost && hiddenPosts.includes(selectedPost.id)) {
+      setSelectedPost(null);
+    }
+  }, [hiddenPosts, selectedPost]);
 
   useEffect(() => {
     // Fetch Circles
@@ -4377,12 +4388,13 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
     if (!newCircleName.trim() || !user) return;
     setIsSubmitting(true);
     try {
-      const id = newCircleName.toLowerCase().replace(/ /g, '-').replace(/[^\w-]/g, '');
+      const baseId = newCircleName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+      const id = `${baseId}-${Math.random().toString(36).substring(2, 7)}`;
       const circleData: Omit<SocialCircle, 'id'> = {
         name: newCircleName,
         description: newCircleDesc,
-        icon: newCircleIcon,
-        color: newCircleColor,
+        icon: newCircleIcon || '🏺',
+        color: newCircleColor || '#3b82f6',
         memberCount: 1,
         category: 'general',
         ownerId: user.uid,
@@ -4391,9 +4403,13 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
       };
       await setDoc(doc(db, 'circles', id), circleData);
       setIsCreatingCircle(false);
+      setNewCircleName('');
+      setNewCircleDesc('');
+      setNewCircleRules('');
       showToast('Circle created successfully! 🏺', 'success');
       vibrate(VIBRATION_PATTERNS.SUCCESS);
     } catch (err) {
+      console.error(err);
       showToast('Failed to create circle', 'error');
     } finally {
       setIsSubmitting(false);
@@ -4442,19 +4458,43 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
         userName: settings.displayName || 'Nexora User',
         userPhoto: settings.profilePic,
         content: newComment,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        parentId: replyingTo?.id || undefined,
+        likes: 0,
+        likedBy: []
       };
       await setDoc(doc(collection(db, 'posts', selectedPost.id, 'comments')), commentData);
       await updateDoc(doc(db, 'posts', selectedPost.id), {
         commentCount: (selectedPost.commentCount || 0) + 1
       });
       setNewComment('');
+      setReplyingTo(null);
       showToast('Commented! 💬', 'success');
       vibrate(VIBRATION_PATTERNS.SUCCESS);
     } catch (err) {
       showToast('Failed to comment', 'error');
     } finally {
       setIsPostingComment(false);
+    }
+  };
+
+  const handleLikeComment = async (commentId: string) => {
+    if (!user || !selectedPost) return;
+    const comment = comments.find(c => c.id === commentId);
+    if (!comment) return;
+
+    const likedBy = comment.likedBy || [];
+    const isLiked = likedBy.includes(user.uid);
+    vibrate(VIBRATION_PATTERNS.CLICK);
+
+    try {
+      const newLikedBy = isLiked ? likedBy.filter(id => id !== user.uid) : [...likedBy, user.uid];
+      await updateDoc(doc(db, 'posts', selectedPost.id, 'comments', commentId), {
+        likedBy: newLikedBy,
+        likes: newLikedBy.length
+      });
+    } catch (err) {
+      console.error('Comment like failed:', err);
     }
   };
 
@@ -4552,16 +4592,17 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
   const PostMenu = ({ post }: { post: Post }) => {
     const [isOpen, setIsOpen] = useState(false);
     const isOwner = user?.uid === post.userId;
+    const isSaved = savedPosts.includes(post.id);
     
     return (
       <div className="relative">
-        <button onClick={() => setIsOpen(!isOpen)} className="p-2 text-blue-900/20 hover:text-blue-900/60 transition-colors">
+        <button onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} className="p-2 text-blue-900/20 hover:text-blue-900/60 transition-colors">
           <MoreHorizontal size={20} />
         </button>
         <AnimatePresence>
           {isOpen && (
             <>
-              <div className="fixed inset-0 z-[120]" onClick={() => setIsOpen(false)} />
+              <div className="fixed inset-0 z-[120]" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9, y: -10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -4570,29 +4611,83 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
               >
                 {isOwner ? (
                   <>
-                    <button onClick={() => { setIsOpen(false); handleDeletePost(post.id); }} className="w-full px-4 py-3 text-left text-sm font-bold text-red-500 hover:bg-red-50 flex items-center gap-3">
+                    <button onClick={(e) => { e.stopPropagation(); setIsOpen(false); handleDeletePost(post.id); }} className="w-full px-4 py-3 text-left text-sm font-bold text-red-500 hover:bg-red-50 flex items-center gap-3">
                       <Trash2 size={16} /> Delete Post
                     </button>
-                    <button onClick={() => setIsOpen(false)} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/60 hover:bg-blue-50 flex items-center gap-3">
-                      <Bookmark size={16} /> Save to Library
+                    <button onClick={(e) => { e.stopPropagation(); setIsOpen(false); toggleSavePost(post.id); }} className={`w-full px-4 py-3 text-left text-sm font-bold flex items-center gap-3 ${isSaved ? 'text-blue-600 bg-blue-50' : 'text-blue-900/60 hover:bg-blue-50'}`}>
+                      <Bookmark size={16} className={isSaved ? "fill-blue-600" : ""} /> {isSaved ? 'Saved in Library' : 'Save to Library'}
                     </button>
                   </>
                 ) : (
                   <>
-                    <button onClick={() => { setIsOpen(false); showToast('Post saved!', 'info'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/60 hover:bg-blue-50 flex items-center gap-3">
-                      <Bookmark size={16} /> Save Post
+                    <button onClick={(e) => { e.stopPropagation(); setIsOpen(false); toggleSavePost(post.id); }} className={`w-full px-4 py-3 text-left text-sm font-bold flex items-center gap-3 ${isSaved ? 'text-blue-600 bg-blue-50' : 'text-blue-900/60 hover:bg-blue-50'}`}>
+                      <Bookmark size={16} className={isSaved ? "fill-blue-600" : ""} /> {isSaved ? 'Saved' : 'Save Post'}
                     </button>
-                    <button onClick={() => { setIsOpen(false); showToast('User Reported', 'error'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3">
+                    <button onClick={(e) => { e.stopPropagation(); setIsOpen(false); showToast('Post Reported', 'error'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3">
                       <Flag size={16} /> Report Post
                     </button>
-                    <button onClick={() => { setIsOpen(false); showToast('Not interested', 'info'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/30 hover:bg-blue-50 flex items-center gap-3">
+                    <button onClick={(e) => { e.stopPropagation(); setIsOpen(false); hidePost(post.id); }} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/30 hover:bg-blue-50 flex items-center gap-3">
                       <EyeOff size={16} /> Not Interested
                     </button>
                   </>
                 )}
-                <button onClick={() => { setIsOpen(false); showToast('Link copied!', 'info'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/60 hover:bg-blue-50 flex items-center gap-3 border-t border-blue-50 mt-1">
+                <button onClick={(e) => { e.stopPropagation(); setIsOpen(false); showToast('Link copied!', 'info'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/60 hover:bg-blue-50 flex items-center gap-3 border-t border-blue-50 mt-1">
                   <Share2 size={16} /> Share Link
                 </button>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
+  const CommentMenu = ({ comment, postOwnerId }: { comment: Comment, postOwnerId: string }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const isCommentOwner = user?.uid === comment.userId;
+    const isPostOwner = user?.uid === postOwnerId;
+    const isSaved = savedComments.includes(comment.id);
+
+    return (
+      <div className="relative">
+        <button onClick={() => setIsOpen(!isOpen)} className="p-1.5 text-blue-900/20 hover:text-blue-900/60 transition-colors">
+          <MoreHorizontal size={16} />
+        </button>
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              <div className="fixed inset-0 z-[120]" onClick={() => setIsOpen(false)} />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                className="absolute right-0 top-8 bg-white rounded-2xl shadow-2xl border border-blue-50 py-2 w-52 z-[130] overflow-hidden"
+              >
+                {/* Moderation Rules based on owner type */}
+                {(isCommentOwner || isPostOwner) && (
+                  <button onClick={() => { setIsOpen(false); handleDeleteComment(comment.id); }} className="w-full px-4 py-3 text-left text-sm font-bold text-red-500 hover:bg-red-50 flex items-center gap-3">
+                    <Trash2 size={16} /> Delete Comment
+                  </button>
+                )}
+                
+                {isPostOwner && !isCommentOwner && (
+                  <button onClick={() => { setIsOpen(false); showToast('User Reported', 'error'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3">
+                    <Flag size={16} /> Report User
+                  </button>
+                )}
+
+                <button onClick={() => { setIsOpen(false); toggleSaveComment(comment.id); }} className={`w-full px-4 py-3 text-left text-sm font-bold flex items-center gap-3 ${isSaved ? 'text-blue-600 bg-blue-50' : 'text-blue-900/60 hover:bg-blue-50'}`}>
+                  <Bookmark size={16} className={isSaved ? "fill-blue-600" : ""} /> {isSaved ? 'Saved' : 'Save Comment'}
+                </button>
+
+                {!isCommentOwner && (
+                  <>
+                    <button onClick={() => { setIsOpen(false); showToast('Comment Reported', 'error'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3">
+                      <Flag size={16} /> Report
+                    </button>
+                    <button onClick={() => { setIsOpen(false); hideComment(comment.id); }} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/30 hover:bg-blue-50 flex items-center gap-3">
+                      <EyeOff size={16} /> Not Interested
+                    </button>
+                  </>
+                )}
               </motion.div>
             </>
           )}
@@ -4691,57 +4786,109 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
 
             {/* Comments List */}
             <div className="space-y-4 px-2">
-              <h3 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest px-2">Nexus Reactions</h3>
-              {comments.map(comment => (
-                <div key={comment.id} className="bg-white/40 backdrop-blur-sm rounded-3xl p-4 space-y-3 relative group">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 overflow-hidden border border-white shadow-sm">
-                        {comment.userPhoto ? <img src={comment.userPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User className="w-full h-full p-1.5 text-blue-400" />}
+              <div className="flex items-center justify-between px-2">
+                <h3 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest">Nexus Reactions</h3>
+                <span className="text-[10px] font-black text-blue-400 bg-blue-50 px-2 py-0.5 rounded-full">{comments.length}</span>
+              </div>
+              
+              {comments.filter(c => !hiddenComments.includes(c.id)).map(comment => {
+                const isLiked = (comment.likedBy || []).includes(user?.uid || '');
+                return (
+                  <div key={comment.id} className="bg-white/40 backdrop-blur-sm rounded-3xl p-5 space-y-3 relative group border border-transparent hover:border-blue-100 transition-all">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 overflow-hidden border border-white shadow-sm">
+                          {comment.userPhoto ? <img src={comment.userPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User className="w-full h-full p-1.5 text-blue-400" />}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-black text-blue-900 text-xs">{comment.userName}</h5>
+                            {comment.userId === selectedPost.userId && <span className="bg-blue-600 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter">Owner</span>}
+                          </div>
+                          <p className="text-[8px] font-medium text-blue-900/20">{format(parseISO(comment.createdAt), 'MMM d, h:mm a')}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h5 className="font-black text-blue-900 text-xs">{comment.userName}</h5>
-                        <p className="text-[8px] font-medium text-blue-900/20">{format(parseISO(comment.createdAt), 'MMM d, h:mm a')}</p>
-                      </div>
+                      <CommentMenu comment={comment} postOwnerId={selectedPost.userId} />
                     </div>
-                    {/* Comment Menu */}
-                    <div className="flex items-center gap-1">
-                      {(user?.uid === comment.userId || user?.uid === selectedPost.userId) && (
-                        <button 
-                          onClick={() => handleDeleteComment(comment.id)}
-                          className="opacity-0 group-hover:opacity-100 p-2 text-red-400 hover:text-red-500 transition-all active:scale-90"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                    
+                    <p className="text-blue-900/70 text-sm font-medium pl-11 leading-relaxed">
+                      {comment.parentId && (
+                        <span className="text-blue-400 font-bold mr-2 text-xs">@reply</span>
                       )}
-                      <button onClick={() => showToast('Reported', 'error')} className="opacity-0 group-hover:opacity-100 p-2 text-blue-900/20">
-                        <Flag size={14} />
+                      {comment.content}
+                    </p>
+
+                    <div className="flex items-center gap-4 pl-11 pt-2">
+                      <button 
+                        onClick={() => handleLikeComment(comment.id)}
+                        className={`flex items-center gap-1 text-[10px] font-black transition-all active:scale-90 ${isLiked ? 'text-blue-600' : 'text-blue-900/20 hover:text-blue-900/40'}`}
+                      >
+                        <Heart size={12} className={isLiked ? "fill-blue-600" : ""} />
+                        <span>{comment.likes || 0}</span>
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setReplyingTo(comment);
+                          setNewComment(`@${comment.userName} `);
+                        }}
+                        className="text-[10px] font-black text-blue-900/20 hover:text-blue-400 transition-all"
+                      >
+                        REPLY
                       </button>
                     </div>
                   </div>
-                  <p className="text-blue-900/70 text-sm font-medium pl-11">{comment.content}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Comment Input */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-lg border-t border-blue-50 z-[110]">
-              <div className="max-w-4xl mx-auto flex items-center gap-3">
-                <input 
-                  type="text"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Drop a vibe, bro... 🛡️"
-                  className="flex-1 bg-blue-50 border-2 border-transparent focus:border-blue-400 focus:outline-none px-6 py-4 rounded-full font-medium"
-                  onKeyDown={(e) => { if (e.key === 'Enter') handlePostComment(); }}
-                />
-                <button 
-                  onClick={handlePostComment}
-                  disabled={isPostingComment || !newComment.trim()}
-                  className="p-4 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200 active:scale-90 transition-transform disabled:opacity-50"
-                >
-                  <Send size={24} className={isPostingComment ? "animate-send-pulse" : ""} />
-                </button>
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-blue-50 z-[110] shadow-2xl">
+              <div className="max-w-4xl mx-auto space-y-3">
+                {replyingTo && (
+                  <div className="flex items-center justify-between px-4 py-2 bg-blue-50 rounded-2xl animate-in slide-in-from-bottom-2 duration-300">
+                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Replying to {replyingTo.userName}</span>
+                    <button onClick={() => { setReplyingTo(null); setNewComment(''); }} className="text-blue-400 hover:text-blue-600">
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder={replyingTo ? "Write a reply..." : "Drop a vibe, bro... 🛡️"}
+                    className="flex-1 bg-blue-50/50 border-2 border-transparent focus:border-blue-400 focus:outline-none px-6 py-4 rounded-full font-medium text-blue-900 placeholder:text-blue-200"
+                    onKeyDown={(e) => { if (e.key === 'Enter') handlePostComment(); }}
+                  />
+                  <button 
+                    onClick={handlePostComment}
+                    disabled={isPostingComment || !newComment.trim()}
+                    className="p-4 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200 active:scale-90 transition-transform disabled:opacity-50 overflow-hidden relative"
+                  >
+                    <AnimatePresence mode="wait">
+                      {isPostingComment ? (
+                        <motion.div
+                          key="posting"
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          exit={{ y: -20, opacity: 0 }}
+                        >
+                          <RefreshCw size={24} className="animate-spin" />
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="send"
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          exit={{ y: -20, opacity: 0 }}
+                        >
+                          <Send size={24} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -4781,7 +4928,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
                       <p className="text-blue-900/40 font-medium uppercase tracking-widest text-xs">Be the pioneer of progress.</p>
                     </div>
                   ) : (
-                    posts.map(post => (
+                    posts.filter(p => !hiddenPosts.includes(p.id)).map(post => (
                       <motion.div 
                         key={post.id} 
                         layoutId={post.id}
