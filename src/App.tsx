@@ -27,7 +27,7 @@ import { LibraryScreen } from './components/LibraryScreen';
 import { ShopScreen, SHOP_ITEMS } from './components/ShopScreen';
 import { PlantScreen } from './components/PlantScreen';
 
-const SOCIAL_LOCKED = true;
+const SOCIAL_LOCKED = false;
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { GoogleGenAI } from "@google/genai";
