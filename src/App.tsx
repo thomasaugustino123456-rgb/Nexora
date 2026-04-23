@@ -1425,6 +1425,26 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (user && fcmToken) {
+      const saveToken = async () => {
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          await updateDoc(userRef, {
+            fcmToken: fcmToken,
+            notificationsEnabled: true,
+            'settings.fcmToken': fcmToken,
+            'settings.notificationsEnabled': true
+          });
+          console.log('FCM: Token saved to Firestore dashboard and settings.');
+        } catch (e) {
+          console.error('FCM: Failed to save token:', e);
+        }
+      };
+      saveToken();
+    }
+  }, [user, fcmToken]);
+
+  useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();

@@ -44,7 +44,9 @@ const startScheduler = () => {
       
       const usersToNotify = usersSnapshot.docs.filter((doc: any) => {
         const data = doc.data();
-        return data.notificationsEnabled && data.fcmToken;
+        const hasToken = data.fcmToken || (data.settings && data.settings.fcmToken);
+        const hasEnabled = data.notificationsEnabled || (data.settings && data.settings.notificationsEnabled);
+        return hasToken && hasEnabled;
       });
 
       if (usersToNotify.length > 0) {
@@ -53,7 +55,7 @@ const startScheduler = () => {
       
       for (const userDoc of usersToNotify) {
         const userData = userDoc.data();
-        const fcmToken = userData.fcmToken;
+        const fcmToken = userData.fcmToken || (userData.settings && userData.settings.fcmToken);
         const tz = userData.timezone || 'UTC';
 
         // Get user's local time string "HH:mm"
@@ -77,42 +79,72 @@ const startScheduler = () => {
           userTimeStr = formatter.format(now);
         }
 
-        // 1. Main Reminders
+        // 1. Task Reminders (Main & Streak Protection)
+        const currentHour = parseInt(userTimeStr.split(':')[0]);
+        const currentMin = parseInt(userTimeStr.split(':')[1]);
+
         if (userTimeStr === userData.reminderTime || userTimeStr === userData.reminderTime2) {
           if (!userData.isTodayCompleted) {
             await sendPush(fcmToken, 'Nexora 🔥', 'Hey 👋 Ready for today’s challenge? Don\'t let that streak die!');
           }
         }
 
-        // 2. Plant Status Alerts
+        // Streak Protection Check at 10:00 PM (22:00)
+        if (userTimeStr === '22:00' && !userData.isTodayCompleted) {
+          await sendPush(fcmToken, 'Streak at Risk! ⚠️', 'Bro, your streak is about to die! 💀 Spend 2 minutes now to save it!');
+        }
+
+        // 2. Plant Status Alerts (Dynamic)
         const plantState = userData.plantState;
         if (plantState && !plantState.isDead) {
-          if (plantState.isThirsty && (userTimeStr === '09:00' || userTimeStr === '18:00')) {
-            await sendPush(fcmToken, 'Your Plant is Thirsty! 💧', `Bro, your ${plantState.type} ecosystem needs water! Keep it alive!`);
+          // Thirsty Alert
+          if (plantState.isThirsty && (userTimeStr === '09:00' || userTimeStr === '18:00' || userTimeStr === '21:00')) {
+            await sendPush(fcmToken, 'Water Needed! 💧', `Your ${plantState.type} is drying out, bro! Save your ecosystem!`);
           }
-          if (plantState.stage === 5 && (userTimeStr === '10:00')) {
-            await sendPush(fcmToken, 'Legendary Growth! 🏆', `Your legendary ${plantState.type} ecosystem is thriving. Go check on it!`);
+          // Growth Alert
+          if (userTimeStr === '10:00') {
+            if (plantState.stage === 5) {
+              await sendPush(fcmToken, 'Legendary Status! 🏆', `Your ${plantState.type} ecosystem is fully evolved! Go admire your work!`);
+            } else if (plantState.growthPoints > 50) {
+              await sendPush(fcmToken, 'Plant Progress! 🌱', `Your plant is growing strong! Keep crushing habits to see it level up!`);
+            }
           }
         }
 
-        // 3. Trophy Alert (Universal daily check at 7 PM if trophy is broken)
+        // 3. Trophy & Achievement Alert
         if (userTimeStr === '19:00') {
           const stats = userData.stats;
-          if (stats && stats.trophies && stats.trophies.some((t: any) => t.type === 'broken')) {
-            await sendPush(fcmToken, 'Trophy in Danger! 🧊', 'One of your trophies is broken, bro! Complete a challenge to fix it!');
+          if (stats) {
+            if (stats.trophies && stats.trophies.some((t: any) => t.type === 'broken')) {
+              await sendPush(fcmToken, 'Broken Trophy! 🧊', 'A trophy is frozen/broken! Fix it before it shatters completely!');
+            }
+            if (stats.totalPoints > 0 && stats.totalPoints % 1000 < 50) {
+              await sendPush(fcmToken, 'Points Milestone! ✨', `You're crushing it! Over ${Math.floor(stats.totalPoints / 1000) * 1000} points reached!`);
+            }
           }
         }
 
         // 4. Daily Motivation
         if (userTimeStr === (userData.motivationTime || '12:00')) {
           const quotes = [
-            "The only way to do great work is to love what you do. 🔥",
-            "Believe you can and you're halfway there. 🚀",
-            "Push yourself, because no one else is going to do it for you. 💪",
-            "Great things never come from comfort zones. 🏆"
+            "Winning isn't everything, but wanting to win is. 🔥",
+            "Your only limit is you. 🚀",
+            "Be better than you were yesterday. 💪",
+            "Don't stop until you're proud. 🏆",
+            "Hard work beats talent when talent doesn't work hard. ⚡"
           ];
           const quote = quotes[Math.floor(Math.random() * quotes.length)];
-          await sendPush(fcmToken, 'Daily Motivation! 💡', quote);
+          await sendPush(fcmToken, 'Daily Fire! 💡', quote);
+        }
+
+        // 5. Inactivity "We Miss You" (Check every Sunday at 3 PM)
+        const localDate = new Date(now.toLocaleString("en-US", {timeZone: tz}));
+        if (localDate.getDay() === 0 && userTimeStr === '15:00') {
+          const lastActive = userData.updatedAt?.toDate() || new Date(0);
+          const daysInactive = (now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24);
+          if (daysInactive > 3) {
+            await sendPush(fcmToken, 'Nexora Misses You! 👋', "It's been a few days, bro. Your plants and trophies are waiting for you!");
+          }
         }
       }
 
@@ -139,7 +171,10 @@ const startScheduler = () => {
 
           if (plan.days.includes(localDay)) {
             if (userTimeStr === plan.reminderTime || userTimeStr === plan.reminderTime2) {
-              await sendPush(userData.fcmToken, `${plan.name} 🚀`, `Time for your custom plan: ${plan.name}! Let's go!`);
+              const currentToken = userData.fcmToken || (userData.settings && userData.settings.fcmToken);
+              if (currentToken) {
+                await sendPush(currentToken, `${plan.name} 🚀`, `Time for your custom plan: ${plan.name}! Let's go!`);
+              }
             }
           }
         }
