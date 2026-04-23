@@ -4432,10 +4432,9 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
     setIsSubmitting(true);
     try {
       const circle = circles.find(c => c.id === selectedCircleId);
-      const postData: Omit<Post, 'id'> = {
+      const postData: any = {
         userId: user.uid,
         userName: settings.displayName || 'Nexora User',
-        userPhoto: settings.profilePic,
         circleId: selectedCircleId,
         circleName: circle?.name || 'General',
         content: newPostContent,
@@ -4447,6 +4446,9 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
         createdAt: new Date().toISOString(),
         type: 'text'
       };
+
+      if (settings.profilePic) postData.userPhoto = settings.profilePic;
+
       await setDoc(doc(collection(db, 'posts')), postData);
       setNewPostContent('');
       setIsCreatingPost(false);
@@ -4472,17 +4474,19 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
 
     setIsPostingComment(true);
     try {
-      const commentData: Omit<SocialComment, 'id'> = {
+      const commentData: any = {
         postId: selectedPost.id,
         userId: user.uid,
         userName: settings.displayName || 'Nexora User',
-        userPhoto: settings.profilePic,
         content: newComment,
         createdAt: new Date().toISOString(),
-        parentId: replyingTo?.id || undefined,
         likes: 0,
         likedBy: []
       };
+
+      if (settings.profilePic) commentData.userPhoto = settings.profilePic;
+      if (replyingTo) commentData.parentId = replyingTo.id;
+
       await setDoc(doc(collection(db, 'posts', selectedPost.id, 'comments')), commentData);
       await updateDoc(doc(db, 'posts', selectedPost.id), {
         commentCount: (selectedPost.commentCount || 0) + 1
