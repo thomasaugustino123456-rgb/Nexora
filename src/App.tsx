@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 console.log("App.tsx is loading...");
-import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, BellOff, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout, MoreHorizontal, Flag, Bookmark, EyeOff, Share2 } from 'lucide-react';
+import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, BellOff, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout, MoreHorizontal, Flag, Bookmark, EyeOff, Share2, Search } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
-import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType, SocialCircle, Post, SocialComment } from './types';
+import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType, SocialCircle, Post, SocialComment, NexusNotification } from './types';
 import { HOUSE_ITEMS } from './constants/houseItems';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs, addDoc } from 'firebase/firestore';
 import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
@@ -625,6 +625,10 @@ export default function App() {
   const dataLoadedFromFirestore = useRef(false);
 
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>('nexora_active_screen', 'home');
+  const [circles, setCircles] = useState<SocialCircle[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [notifications, setNotifications] = useState<NexusNotification[]>([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [showAuth, setShowAuth] = useState(false);
   const [dailyQuest, setDailyQuest] = useState<ChallengeStep>('water');
   const [emergencyActive, setEmergencyActive] = useState(false);
@@ -955,6 +959,45 @@ export default function App() {
     const timer = setInterval(checkPlant, 30 * 60 * 1000); 
     return () => clearInterval(timer);
   }, [user, settings.plantState?.lastCheckDate, isDataReady]);
+
+  // Global Social Listeners
+  useEffect(() => {
+    if (!user) return;
+    
+    // Fetch Notifications
+    const qNotifs = query(collection(db, 'users', user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(20));
+    const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
+      const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NexusNotification));
+      setNotifications(notifs);
+      setUnreadNotifCount(notifs.filter(n => !n.isRead).length);
+    });
+
+    // Fetch Circles
+    const qCircles = query(collection(db, 'circles'), orderBy('memberCount', 'desc'));
+    const unsubCircles = onSnapshot(qCircles, (snapshot) => {
+      const circlesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SocialCircle));
+      if (circlesData.length === 0) {
+        setCircles([
+          { id: 'nexora-general', name: 'Nexora General', description: 'The main hub for all Nexora members.', icon: '🏛️', color: '#3b82f6', memberCount: 1250, category: 'general' }
+        ]);
+      } else {
+        setCircles(circlesData);
+      }
+    });
+
+    // Fetch Posts
+    const qPosts = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50));
+    const unsubPosts = onSnapshot(qPosts, (snapshot) => {
+      const postsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
+      setPosts(postsData);
+    });
+
+    return () => {
+      unsubNotifs();
+      unsubCircles();
+      unsubPosts();
+    };
+  }, [user]);
 
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
@@ -2380,6 +2423,23 @@ export default function App() {
               >
                 <Settings size={24} />
               </button>
+              <button 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.CLICK);
+                  setActiveScreen('social');
+                  // We can't easily set activeTab here without complex ref/callback, 
+                  // but we can use sessionStorage or just let them click Inbox in social.
+                  // For now, let's just go to social.
+                }}
+                className={`p-2 transition-colors relative ${activeScreen === 'social' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+              >
+                <Bell size={24} className={unreadNotifCount > 0 ? "text-blue-600" : ""} />
+                {unreadNotifCount > 0 && (
+                  <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-black flex items-center justify-center rounded-full shadow-sm border border-white">
+                    {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                  </span>
+                )}
+              </button>
             </div>
           </header>
         )}
@@ -2454,7 +2514,7 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <ProfileScreen settings={settings} setSettings={onUpdateSettings} stats={stats} user={user} setActiveScreen={setActiveScreen} />
+                <ProfileScreen settings={settings} setSettings={onUpdateSettings} stats={stats} user={user} setActiveScreen={setActiveScreen} circles={circles} />
               </motion.div>
             )}
             {activeScreen === 'social' && (
@@ -2473,6 +2533,9 @@ export default function App() {
                   stats={stats}
                   showToast={showToast}
                   onUpdateSettings={onUpdateSettings}
+                  posts={posts}
+                  circles={circles}
+                  notifications={notifications}
                 />
               </motion.div>
             )}
@@ -4088,10 +4151,12 @@ function ProgressScreen({ stats, history, settings, setSettings, userRank }: { s
   );
 }
 
-function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen }: { settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, stats: UserStats, user: FirebaseUser | null, setActiveScreen: (screen: Screen) => void }) {
+function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen, circles }: { settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, stats: UserStats, user: FirebaseUser | null, setActiveScreen: (screen: Screen) => void, circles: SocialCircle[] }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(settings.displayName || '');
+
+  const myCircles = circles.filter(c => c.ownerId === user?.uid && !c.deleted);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log("handleFileChange triggered");
@@ -4242,6 +4307,45 @@ function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen }: 
         </button>
       </div>
 
+      {/* My Created Circles (NEW) */}
+      {myCircles.length > 0 && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between px-4">
+            <h3 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest">My Created Nodes</h3>
+            <span className="text-[10px] font-black text-blue-400 bg-blue-50 px-2 py-0.5 rounded-full uppercase">{myCircles.length} Active</span>
+          </div>
+          <div className="flex flex-col gap-3">
+            {myCircles.map(circle => (
+              <button
+                key={circle.id}
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.CLICK);
+                  setActiveScreen('social');
+                  sessionStorage.setItem('nexora_auto_open_circle', circle.id);
+                }}
+                className="glass-card p-4 flex items-center justify-between group hover:scale-[1.01] transition-all cursor-pointer border-blue-50/50 hover:bg-blue-50/20"
+              >
+                <div className="flex items-center gap-4">
+                  <div 
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center text-3xl shadow-sm transition-transform group-hover:rotate-12"
+                    style={{ backgroundColor: `${circle.color}15`, color: circle.color }}
+                  >
+                    {circle.icon}
+                  </div>
+                  <div className="text-left">
+                    <h4 className="font-black text-blue-900 truncate">n/{circle.name.replace(/\s+/g, '').toLowerCase()}</h4>
+                    <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-tighter">{circle.memberCount} Mates • {circle.category}</p>
+                  </div>
+                </div>
+                <div className="p-2 rounded-xl bg-blue-50 text-blue-300 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                  <ChevronRight size={18} />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Mascot Wardrobe */}
       <div className="space-y-6">
         <h3 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest px-4">Mascot Wardrobe</h3>
@@ -4311,10 +4415,8 @@ function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen }: 
   );
 }
 
-function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings }: { onBack: () => void, user: FirebaseUser | null, settings: UserSettings, stats: UserStats, showToast: (m: string, t?: 'success' | 'info' | 'error') => void, onUpdateSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void }) {
-  const [activeTab, setActiveTab] = useState<'feed' | 'circles'>('feed');
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [circles, setCircles] = useState<SocialCircle[]>([]);
+function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings, posts, circles, notifications }: { onBack: () => void, user: FirebaseUser | null, settings: UserSettings, stats: UserStats, showToast: (m: string, t?: 'success' | 'info' | 'error') => void, onUpdateSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, posts: Post[], circles: SocialCircle[], notifications: NexusNotification[] }) {
+  const [activeTab, setActiveTab] = useState<'feed' | 'circles' | 'inbox'>('feed');
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
   const [isEditingCircle, setIsEditingCircle] = useState(false);
@@ -4323,6 +4425,23 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
   const [showRestoreToast, setShowRestoreToast] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [viewingCircle, setViewingCircle] = useState<SocialCircle | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+
+  const filteredCircles = circles.filter(circle => {
+    if (!searchQuery) return !circle.deleted || circle.id === 'nexora-general';
+    const q = searchQuery.toLowerCase().trim();
+    const normalizedName = circle.name.toLowerCase().replace(/\s+/g, '');
+    const displayId = `n/${normalizedName}`;
+    
+    if (q.startsWith('n/')) {
+      const qCore = q.substring(2);
+      if (!qCore) return true;
+      return normalizedName.includes(qCore) || circle.name.toLowerCase().includes(qCore);
+    }
+
+    return circle.name.toLowerCase().includes(q) || normalizedName.includes(q) || circle.description.toLowerCase().includes(q);
+  });
   const [showCircleAbout, setShowCircleAbout] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedCircleId, setSelectedCircleId] = useState('nexora-general');
@@ -4352,32 +4471,26 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
   }, [hiddenPosts, selectedPost]);
 
   useEffect(() => {
-    // Fetch Circles
-    const qCircles = query(collection(db, 'circles'), orderBy('memberCount', 'desc'));
-    const unsubCircles = onSnapshot(qCircles, (snapshot) => {
-      const circlesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SocialCircle));
-      // Add default general circle if empty (for first time)
-      if (circlesData.length === 0) {
-        setCircles([
-          { id: 'nexora-general', name: 'Nexora General', description: 'The main hub for all Nexora members.', icon: '🏛️', color: '#3b82f6', memberCount: 1250, category: 'general' }
-        ]);
-      } else {
-        setCircles(circlesData);
+    const autoOpenCircleId = sessionStorage.getItem('nexora_auto_open_circle');
+    if (autoOpenCircleId) {
+      const circle = circles.find(c => c.id === autoOpenCircleId);
+      if (circle) {
+        setViewingCircle(circle);
+        setActiveTab('circles');
       }
-    });
+      sessionStorage.removeItem('nexora_auto_open_circle');
+    }
 
-    // Fetch Posts
-    const qPosts = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50));
-    const unsubPosts = onSnapshot(qPosts, (snapshot) => {
-      const postsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
-      setPosts(postsData);
-    });
-
-    return () => {
-      unsubCircles();
-      unsubPosts();
-    };
-  }, []);
+    const autoOpenPostId = sessionStorage.getItem('nexora_auto_open_post');
+    if (autoOpenPostId) {
+      const post = posts.find(p => p.id === autoOpenPostId);
+      if (post) {
+        setSelectedPost(post);
+        setActiveTab('feed');
+      }
+      sessionStorage.removeItem('nexora_auto_open_post');
+    }
+  }, [circles, posts]);
 
   useEffect(() => {
     if (!selectedPost) {
@@ -4390,6 +4503,15 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
     });
     return () => unsubComments();
   }, [selectedPost]);
+
+  const handleMarkAsRead = async (notifId: string) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'notifications', notifId), { isRead: true });
+    } catch (err) {
+      console.error('Failed to mark as read:', err);
+    }
+  };
 
   const handleCreateCircle = async () => {
     if (!newCircleName.trim() || !user) return;
@@ -4487,6 +4609,28 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
       await updateDoc(doc(db, 'posts', selectedPost.id), {
         commentCount: (selectedPost.commentCount || 0) + 1
       });
+
+      // NO-OVERLAP NOTIFICATION LOGIC
+      const recipients = new Set<string>();
+      if (selectedPost.userId !== user.uid) recipients.add(selectedPost.userId);
+      if (replyingTo && replyingTo.userId !== user.uid) recipients.add(replyingTo.userId);
+
+      recipients.forEach(async (recipientId) => {
+        const notifData: Omit<NexusNotification, 'id'> = {
+          userId: recipientId,
+          senderId: user.uid,
+          senderName: settings.displayName || 'Nexora User',
+          senderPhoto: settings.profilePic || '',
+          type: 'reply',
+          postId: selectedPost.id,
+          commentId: commentData.id,
+          message: replyingTo ? 'replied to your comment' : 'commented on your post',
+          isRead: false,
+          createdAt: new Date().toISOString()
+        };
+        await addDoc(collection(db, 'users', recipientId, 'notifications'), notifData);
+      });
+
       setNewComment('');
       setReplyingTo(null);
       showToast('Commented! 💬', 'success');
@@ -5041,24 +5185,135 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
           </motion.div>
         ) : !viewingCircle ? (
           <>
-            {/* Tabs */}
-            <div className="flex items-center gap-2 p-1.5 bg-blue-50/50 rounded-2xl w-fit">
-              <button
-                onClick={() => setActiveTab('feed')}
-                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'feed' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-900/60'}`}
-              >
-                Pulse Feed
-              </button>
-              <button
-                onClick={() => setActiveTab('circles')}
-                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'circles' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-900/60'}`}
-              >
-                Nexus Circles
-              </button>
+            {/* Search & Tabs Row */}
+            <div className="flex items-center gap-3 mb-6">
+              {!showSearch && (
+                <div className="flex items-center gap-2 p-1.5 bg-blue-50/50 rounded-2xl w-fit shrink-0">
+                  <button
+                    onClick={() => setActiveTab('feed')}
+                    className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'feed' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+                  >
+                    Pulse Feed
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('circles')}
+                    className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'circles' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+                  >
+                    Nexus Circles
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('inbox')}
+                    className={`px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 relative ${activeTab === 'inbox' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+                  >
+                    Inbox
+                    {notifications.some(n => !n.isRead) && (
+                      <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-sm shadow-red-200" />
+                    )}
+                  </button>
+                </div>
+              )}
+
+              <div className="flex-1 flex justify-end">
+                <AnimatePresence mode="wait">
+                  {showSearch ? (
+                    <motion.div 
+                      key="search-input"
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: '100%', opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      className="relative flex items-center w-full"
+                    >
+                      <Search size={18} className="absolute left-4 text-blue-400" />
+                      <input 
+                        autoFocus
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search Circles... (eg: n/fitness)"
+                        className="w-full bg-blue-50/50 border-2 border-transparent focus:border-blue-300 rounded-2xl py-3 pl-12 pr-12 text-sm font-black text-blue-900 placeholder:text-blue-200 focus:outline-none transition-all shadow-inner"
+                      />
+                      <button 
+                         onClick={() => { setShowSearch(false); setSearchQuery(''); }}
+                         className="absolute right-4 p-1.5 hover:bg-red-50 rounded-full text-red-300 hover:text-red-500 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <button 
+                      onClick={() => { vibrate(VIBRATION_PATTERNS.CLICK); setShowSearch(true); }}
+                      className="p-3.5 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-100 transition-all active:scale-90 shadow-sm border border-blue-100/50"
+                    >
+                      <Search size={22} />
+                    </button>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
 
             <AnimatePresence mode="wait">
-              {activeTab === 'feed' ? (
+              {searchQuery.trim() ? (
+                <motion.div
+                  key="search-results"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="space-y-6 pb-24"
+                >
+                  <div className="flex items-center justify-between px-4">
+                    <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-widest">
+                       Found {filteredCircles.length} Community {filteredCircles.length === 1 ? 'Node' : 'Nodes'}
+                    </h3>
+                    <button onClick={() => setSearchQuery('')} className="text-[10px] font-black text-blue-500 hover:underline">Clear Search</button>
+                  </div>
+                  
+                  {filteredCircles.length === 0 ? (
+                    <div className="glass-card p-20 text-center space-y-4 border-dashed border-2 border-blue-100">
+                      <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-200">
+                        <Search size={40} />
+                      </div>
+                      <h3 className="text-xl font-black text-blue-900">Node Not Found</h3>
+                      <p className="text-xs text-blue-900/40 font-bold uppercase">No communities match "{searchQuery}"</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                       {filteredCircles.map(circle => (
+                         <div 
+                           key={circle.id} 
+                           className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:border-blue-400 transition-all cursor-pointer group active:scale-[0.98] relative"
+                           onClick={() => { vibrate(VIBRATION_PATTERNS.CLICK); setViewingCircle(circle); }}
+                         >
+                           <div 
+                             className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl shadow-xl transition-all group-hover:scale-110 group-hover:rotate-3"
+                             style={{ backgroundColor: `${circle.color}20`, color: circle.color }}
+                           >
+                             {circle.icon}
+                           </div>
+                           <div>
+                             <h3 className="text-xl font-black text-blue-900 group-hover:text-blue-600 transition-colors">n/{circle.name.replace(/\s+/g, '').toLowerCase()}</h3>
+                             <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest">{circle.memberCount} Mates</p>
+                           </div>
+                           <p className="text-xs text-blue-900/60 font-bold line-clamp-2 uppercase leading-tight italic">
+                             "{circle.description}"
+                           </p>
+                           <div className="pt-2">
+                             {!(settings.joinedCircleIds || []).includes(circle.id) && circle.id !== 'nexora-general' ? (
+                               <button 
+                                 onClick={(e) => { e.stopPropagation(); handleToggleJoin(circle); }}
+                                 className="px-4 py-2 bg-blue-600 text-white text-[10px] font-black uppercase rounded-xl shadow-lg shadow-blue-200 hover:scale-105 active:scale-95 transition-all"
+                               >
+                                 Join Node
+                               </button>
+                             ) : (
+                               <span className="text-[10px] font-black text-blue-400 bg-blue-50 px-3 py-1.5 rounded-xl uppercase tracking-widest">Joined</span>
+                             )}
+                           </div>
+                         </div>
+                       ))}
+                    </div>
+                  )}
+                </motion.div>
+              ) : activeTab === 'feed' ? (
                 <motion.div
                   key="feed"
                   initial={{ opacity: 0, y: 10 }}
@@ -5146,7 +5401,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                     ))
                   )}
                 </motion.div>
-              ) : (
+              ) : activeTab === 'circles' ? (
                 <motion.div
                   key="circles"
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -5164,7 +5419,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                     <span className="font-black text-xs uppercase tracking-widest">Create Your Circle</span>
                   </button>
 
-                  {circles.filter(c => !c.deleted || c.id === 'nexora-general').map(circle => (
+                  {filteredCircles.map(circle => (
                     <div 
                       key={circle.id} 
                       className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:border-blue-400 transition-all cursor-pointer group active:scale-[0.98] relative"
@@ -5207,8 +5462,79 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                       <p className="text-xs text-blue-900/60 font-bold line-clamp-2 uppercase leading-tight italic">
                         "{circle.description}"
                       </p>
+                      <div className="pt-2">
+                        {!(settings.joinedCircleIds || []).includes(circle.id) && circle.id !== 'nexora-general' ? (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleToggleJoin(circle); }}
+                            className="px-4 py-2 bg-blue-600 text-white text-[10px] font-black uppercase rounded-xl shadow-lg shadow-blue-200 hover:scale-105 active:scale-95 transition-all"
+                          >
+                            Join Node
+                          </button>
+                        ) : (
+                          <span className="text-[10px] font-black text-blue-400 bg-blue-50 px-3 py-1.5 rounded-xl uppercase tracking-widest">Joined</span>
+                        )}
+                      </div>
                     </div>
                   ))}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="inbox"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-4 pb-24"
+                >
+                  <div className="flex items-center justify-between px-4">
+                    <h3 className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest">Nexus Mailbox</h3>
+                    <button 
+                      onClick={() => {
+                        vibrate(VIBRATION_PATTERNS.CLICK);
+                        notifications.filter(n => !n.isRead).forEach(n => handleMarkAsRead(n.id));
+                      }}
+                      className="text-[10px] font-black text-blue-600 hover:underline"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+
+                  {notifications.length === 0 ? (
+                    <div className="glass-card p-20 text-center space-y-4">
+                      <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-300">
+                        <BellOff size={40} />
+                      </div>
+                      <h3 className="text-2xl font-bold text-blue-900">Quiet for now...</h3>
+                      <p className="text-blue-900/40 font-medium uppercase tracking-widest text-[10px]">Your pulse is steady.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {notifications.map(notif => (
+                        <div 
+                          key={notif.id}
+                          onClick={() => {
+                            vibrate(VIBRATION_PATTERNS.CLICK);
+                            handleMarkAsRead(notif.id);
+                            const targetPost = posts.find(p => p.id === notif.postId);
+                            if (targetPost) setSelectedPost(targetPost);
+                          }}
+                          className={`glass-card p-4 flex items-center gap-4 cursor-pointer transition-all hover:translate-x-1 ${notif.isRead ? 'opacity-60 grayscale-[0.5]' : 'border-blue-400 bg-blue-50/10'}`}
+                        >
+                          <div className="w-12 h-12 rounded-full overflow-hidden bg-blue-100 border-2 border-white shadow-sm flex-shrink-0">
+                            {notif.senderPhoto ? <img src={notif.senderPhoto} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2 text-blue-400" />}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-bold text-blue-900">
+                              <span className="font-black">{notif.senderName}</span> {notif.message}
+                            </p>
+                            <p className="text-[10px] font-bold text-blue-900/20 uppercase mt-1">{format(parseISO(notif.createdAt), 'MMM d, h:mm a')}</p>
+                          </div>
+                          {!notif.isRead && (
+                             <div className="w-2.5 h-2.5 bg-blue-600 rounded-full shadow-lg shadow-blue-200" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

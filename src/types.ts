@@ -225,6 +225,20 @@ export interface Post {
   };
 }
 
+export interface NexusNotification {
+  id: string;
+  userId: string; // recipient
+  senderId: string;
+  senderName: string;
+  senderPhoto?: string;
+  type: 'reply' | 'like' | 'mention';
+  postId: string;
+  commentId?: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface SocialComment {
   id: string;
   postId: string;
