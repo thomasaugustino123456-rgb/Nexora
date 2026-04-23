@@ -4884,7 +4884,18 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                   </div>
                   <div>
                     <h4 className="font-black text-blue-900 text-lg leading-tight">{selectedPost.userName}</h4>
-                    <p className="text-xs font-black text-blue-500 uppercase tracking-tighter">n/{selectedPost.circleName.replace(/\s+/g, '').toLowerCase()}</p>
+                    <button 
+                      onClick={() => {
+                        const circle = circles.find(c => c.id === selectedPost.circleId);
+                        if (circle) {
+                          setViewingCircle(circle);
+                          setSelectedPost(null);
+                        }
+                      }}
+                      className="text-xs font-black text-blue-500 uppercase tracking-tighter hover:text-blue-700 active:scale-95 transition-all"
+                    >
+                      n/{selectedPost.circleName.replace(/\s+/g, '').toLowerCase()}
+                    </button>
                   </div>
                 </div>
                 <PostMenu post={selectedPost} />
@@ -5079,7 +5090,16 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                             <div>
                               <h4 className="font-black text-blue-900 text-sm leading-none">{post.userName}</h4>
                               <div className="flex items-center gap-2 mt-1">
-                                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-tighter">n/{post.circleName.replace(/\s+/g, '').toLowerCase()}</p>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const circle = circles.find(c => c.id === post.circleId);
+                                    if (circle) setViewingCircle(circle);
+                                  }}
+                                  className="text-[10px] font-black text-blue-400 uppercase tracking-tighter hover:text-blue-600 active:scale-95 transition-all"
+                                >
+                                  n/{post.circleName.replace(/\s+/g, '').toLowerCase()}
+                                </button>
                                 {!(settings.joinedCircleIds || []).includes(post.circleId) && post.circleId !== 'nexora-general' && (
                                   <button 
                                     onClick={(e) => {
