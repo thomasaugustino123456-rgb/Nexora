@@ -26,6 +26,9 @@ import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './compon
 import { LibraryScreen } from './components/LibraryScreen';
 import { ShopScreen, SHOP_ITEMS } from './components/ShopScreen';
 import { PlantScreen } from './components/PlantScreen';
+
+const SOCIAL_LOCKED = true;
+
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { GoogleGenAI } from "@google/genai";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
@@ -2436,6 +2439,18 @@ export default function App() {
                 <ProfileScreen settings={settings} setSettings={onUpdateSettings} stats={stats} user={user} />
               </motion.div>
             )}
+            {activeScreen === 'social' && (
+              <motion.div
+                key="social"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <SocialScreen onBack={() => setActiveScreen('profile')} />
+              </motion.div>
+            )}
             {activeScreen === 'settings' && (
               <motion.div
                 key="settings"
@@ -4160,6 +4175,40 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
         </div>
       </div>
 
+      {/* Social / Community (NEW POSITION) */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between px-4">
+          <h3 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest">Global Community</h3>
+          <span className="bg-blue-100 text-blue-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+            {SOCIAL_LOCKED ? 'Locked 🔒' : 'Beta Access 🚀'}
+          </span>
+        </div>
+        <button
+          onClick={() => {
+            if (!SOCIAL_LOCKED) {
+              vibrate(VIBRATION_PATTERNS.CLICK);
+              setActiveScreen('social');
+            }
+          }}
+          disabled={SOCIAL_LOCKED}
+          className={`glass-card w-full p-8 flex flex-col items-center justify-center gap-4 border-dashed border-2 border-blue-200 transition-all group ${
+            SOCIAL_LOCKED ? 'opacity-60 cursor-not-allowed' : 'hover:scale-[1.02] cursor-pointer hover:border-blue-400'
+          }`}
+        >
+          <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+            <Users size={32} />
+          </div>
+          <div className="text-center">
+            <h4 className="text-xl font-black text-blue-900">Nexora Social</h4>
+            <p className="text-sm text-blue-900/40 font-bold">
+              {SOCIAL_LOCKED 
+                ? 'Community section unlocks at 1,000 members! 🚀' 
+                : 'Connect with fellow high-performers! 🔥'}
+            </p>
+          </div>
+        </button>
+      </div>
+
       {/* Mascot Wardrobe */}
       <div className="space-y-6">
         <h3 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest px-4">Mascot Wardrobe</h3>
@@ -4224,6 +4273,51 @@ function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserS
             <div className="text-[10px] font-bold text-blue-900/40 uppercase">Trophies</div>
           </div>
         </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function SocialScreen({ onBack }: { onBack: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="max-w-4xl mx-auto w-full space-y-8 pb-24"
+    >
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm text-blue-900 hover:scale-105 active:scale-95 transition-transform">
+          <ArrowLeft size={24} />
+        </button>
+        <h2 className="text-3xl font-black text-blue-900">Community</h2>
+      </div>
+
+      <div className="glass-card p-20 flex flex-col items-center justify-center text-center space-y-6">
+        <div className="w-32 h-32 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 animate-pulse">
+          <Lock size={64} />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-4xl font-black text-blue-900 tracking-tighter">PHASE 2 LOCKED</h3>
+          <p className="text-blue-900/40 font-bold text-lg max-w-sm mx-auto uppercase tracking-widest">
+            We are building a beastly community. 🦁
+          </p>
+        </div>
+        <div className="w-full max-w-md bg-blue-50 h-4 rounded-full overflow-hidden border border-blue-100">
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: "35%" }}
+            className="h-full bg-blue-500" 
+          />
+        </div>
+        <p className="text-sm font-bold text-blue-500">350 / 1,000 users joined Nexora!</p>
+        
+        <button 
+          onClick={onBack}
+          className="btn-primary px-8"
+        >
+          Contribute more habits! 🔥
+        </button>
       </div>
     </motion.div>
   );
