@@ -2436,7 +2436,7 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <ProfileScreen settings={settings} setSettings={onUpdateSettings} stats={stats} user={user} />
+                <ProfileScreen settings={settings} setSettings={onUpdateSettings} stats={stats} user={user} setActiveScreen={setActiveScreen} />
               </motion.div>
             )}
             {activeScreen === 'social' && (
@@ -4061,7 +4061,7 @@ function ProgressScreen({ stats, history, settings, setSettings, userRank }: { s
   );
 }
 
-function ProfileScreen({ settings, setSettings, stats, user }: { settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, stats: UserStats, user: FirebaseUser | null }) {
+function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen }: { settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, stats: UserStats, user: FirebaseUser | null, setActiveScreen: (screen: Screen) => void }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(settings.displayName || '');
