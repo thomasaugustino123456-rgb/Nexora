@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 console.log("App.tsx is loading...");
-import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout, MoreHorizontal, Flag, Bookmark, EyeOff, Share2 } from 'lucide-react';
+import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, BellOff, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout, MoreHorizontal, Flag, Bookmark, EyeOff, Share2 } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
-import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType } from './types';
+import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType, SocialCircle, Post, SocialComment } from './types';
 import { HOUSE_ITEMS } from './constants/houseItems';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
@@ -2472,6 +2472,7 @@ export default function App() {
                   settings={settings}
                   stats={stats}
                   showToast={showToast}
+                  onUpdateSettings={onUpdateSettings}
                 />
               </motion.div>
             )}
@@ -4310,13 +4311,15 @@ function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen }: 
   );
 }
 
-function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: () => void, user: FirebaseUser | null, settings: UserSettings, stats: UserStats, showToast: (m: string, t?: 'success' | 'info' | 'error') => void }) {
+function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings }: { onBack: () => void, user: FirebaseUser | null, settings: UserSettings, stats: UserStats, showToast: (m: string, t?: 'success' | 'info' | 'error') => void, onUpdateSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void }) {
   const [activeTab, setActiveTab] = useState<'feed' | 'circles'>('feed');
   const [posts, setPosts] = useState<Post[]>([]);
   const [circles, setCircles] = useState<SocialCircle[]>([]);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [viewingCircle, setViewingCircle] = useState<SocialCircle | null>(null);
+  const [showCircleAbout, setShowCircleAbout] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedCircleId, setSelectedCircleId] = useState('nexora-general');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -4329,10 +4332,10 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
   const [newCircleRules, setNewCircleRules] = useState('');
 
   // Comment State
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<SocialComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+  const [replyingTo, setReplyingTo] = useState<SocialComment | null>(null);
   const [savedPosts, setSavedPosts] = useLocalStorage<string[]>('nexora_saved_posts', []);
   const [savedComments, setSavedComments] = useLocalStorage<string[]>('nexora_saved_comments', []);
   const [hiddenPosts, setHiddenPosts] = useState<string[]>([]);
@@ -4379,7 +4382,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
     }
     const qComments = query(collection(db, 'posts', selectedPost.id, 'comments'), orderBy('createdAt', 'asc'));
     const unsubComments = onSnapshot(qComments, (snapshot) => {
-      setComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment)));
+      setComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SocialComment)));
     });
     return () => unsubComments();
   }, [selectedPost]);
@@ -4418,6 +4421,14 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
 
   const handleCreatePost = async () => {
     if (!newPostContent.trim() || !user) return;
+
+    // Check if joined selected circle if it's not general
+    const isJoined = selectedCircleId === 'nexora-general' || (settings.joinedCircleIds || []).includes(selectedCircleId);
+    if (!isJoined) {
+      showToast('Join the circle to post, bro! 🛡️', 'info');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const circle = circles.find(c => c.id === selectedCircleId);
@@ -4450,9 +4461,18 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
 
   const handlePostComment = async () => {
     if (!newComment.trim() || !user || !selectedPost) return;
+
+    // Check if joined selected circle if it's not general
+    const circleId = selectedPost.circleId;
+    const isJoined = circleId === 'nexora-general' || (settings.joinedCircleIds || []).includes(circleId);
+    if (!isJoined) {
+      showToast('Join the circle to comment, bro! 🛡️', 'info');
+      return;
+    }
+
     setIsPostingComment(true);
     try {
-      const commentData: Omit<Comment, 'id'> = {
+      const commentData: Omit<SocialComment, 'id'> = {
         postId: selectedPost.id,
         userId: user.uid,
         userName: settings.displayName || 'Nexora User',
@@ -4483,6 +4503,14 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
     const comment = comments.find(c => c.id === commentId);
     if (!comment) return;
 
+    // Check if joined selected circle if it's not general
+    const circleId = selectedPost.circleId;
+    const isJoined = circleId === 'nexora-general' || (settings.joinedCircleIds || []).includes(circleId);
+    if (!isJoined) {
+      showToast('Join the circle to interact, bro! 🛡️', 'info');
+      return;
+    }
+
     const likedBy = comment.likedBy || [];
     const isLiked = likedBy.includes(user.uid);
     vibrate(VIBRATION_PATTERNS.CLICK);
@@ -4498,10 +4526,53 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
     }
   };
 
+  const handleToggleJoin = async (circle: SocialCircle) => {
+    if (!user) return;
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    const joinedIds = settings.joinedCircleIds || [];
+    const isJoining = !joinedIds.includes(circle.id);
+    
+    const newJoinedIds = isJoining 
+      ? [...joinedIds, circle.id]
+      : joinedIds.filter(id => id !== circle.id);
+
+    try {
+      onUpdateSettings({ joinedCircleIds: newJoinedIds });
+      // Update circle count in DB (optimistic)
+      await updateDoc(doc(db, 'circles', circle.id), {
+        memberCount: circle.memberCount + (isJoining ? 1 : -1)
+      });
+      showToast(isJoining ? `Joined ${circle.name}! 🏮` : `Left ${circle.name}`, 'success');
+    } catch (err) {
+      showToast('Sync failed', 'error');
+    }
+  };
+
+  const handleToggleNotifs = (circleId: string) => {
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    const notifIds = settings.notifEnabledCircleIds || [];
+    const isEnabled = notifIds.includes(circleId);
+    
+    const newNotifIds = isEnabled
+      ? notifIds.filter(id => id !== circleId)
+      : [...notifIds, circleId];
+
+    onUpdateSettings({ notifEnabledCircleIds: newNotifIds });
+    showToast(isEnabled ? 'Notifications silenced' : 'Circle alerts enabled! 🔔', 'info');
+  };
+
   const handleAction = async (postId: string, type: 'flame' | 'shield') => {
     if (!user) return;
     const post = posts.find(p => p.id === postId);
     if (!post) return;
+
+    // Check if joined selected circle if it's not general
+    const circleId = post.circleId;
+    const isJoined = circleId === 'nexora-general' || (settings.joinedCircleIds || []).includes(circleId);
+    if (!isJoined) {
+      showToast('Join the circle to give respect, bro! 🛡️', 'info');
+      return;
+    }
 
     const likedBy = post.likedBy || [];
     const shieldedBy = post.shieldedBy || [];
@@ -4554,6 +4625,32 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
     } catch (err) {
       showToast('Failed to delete', 'error');
     }
+  };
+
+  const toggleSavePost = (id: string) => {
+    const isSaved = savedPosts.includes(id);
+    const newSaved = isSaved ? savedPosts.filter(i => i !== id) : [...savedPosts, id];
+    setSavedPosts(newSaved);
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    showToast(isSaved ? 'Removed from Library' : 'Saved to Library! 📚', 'success');
+  };
+
+  const toggleSaveComment = (id: string) => {
+    const isSaved = savedComments.includes(id);
+    const newSaved = isSaved ? savedComments.filter(i => i !== id) : [...savedComments, id];
+    setSavedComments(newSaved);
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    showToast(isSaved ? 'Comment unsaved' : 'Comment saved! 🔖', 'success');
+  };
+
+  const hidePost = (id: string) => {
+    setHiddenPosts(prev => [...prev, id]);
+    showToast('Post hidden', 'info');
+  };
+
+  const hideComment = (id: string) => {
+    setHiddenComments(prev => [...prev, id]);
+    showToast('Comment hidden', 'info');
   };
 
   const ActionButton = ({ type, count, active, onClick }: { type: 'flame' | 'shield', count: number, active: boolean, onClick: () => void }) => {
@@ -4642,7 +4739,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
     );
   };
 
-  const CommentMenu = ({ comment, postOwnerId }: { comment: Comment, postOwnerId: string }) => {
+  const CommentMenu = ({ comment, postOwnerId }: { comment: SocialComment, postOwnerId: string }) => {
     const [isOpen, setIsOpen] = useState(false);
     const isCommentOwner = user?.uid === comment.userId;
     const isPostOwner = user?.uid === postOwnerId;
@@ -4892,7 +4989,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
               </div>
             </div>
           </motion.div>
-        ) : (
+        ) : !viewingCircle ? (
           <>
             {/* Tabs */}
             <div className="flex items-center gap-2 p-1.5 bg-blue-50/50 rounded-2xl w-fit">
@@ -4998,7 +5095,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
                     <div 
                       key={circle.id} 
                       className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:border-blue-400 transition-all cursor-pointer group active:scale-[0.98]"
-                      onClick={() => { setSelectedCircleId(circle.id); setActiveTab('feed'); }}
+                      onClick={() => setViewingCircle(circle)}
                     >
                       <div 
                         className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl shadow-xl transition-all group-hover:scale-110 group-hover:rotate-3"
@@ -5019,6 +5116,185 @@ function SocialScreen({ onBack, user, settings, stats, showToast }: { onBack: ()
               )}
             </AnimatePresence>
           </>
+        ) : null}
+        
+        {viewingCircle && !selectedPost && (
+          <motion.div
+            key="circle-detail"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="space-y-6 pb-24"
+          >
+            {/* Reddit-style Header */}
+            <div className="glass-card overflow-hidden">
+              <div className="h-32 bg-blue-600 relative overflow-hidden" style={{ backgroundColor: viewingCircle.color }}>
+                <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
+                <button 
+                  onClick={() => setViewingCircle(null)}
+                  className="absolute top-4 left-4 p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/40 transition-all z-10"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+              </div>
+              <div className="px-6 pb-6 relative">
+                <div className="flex justify-between items-end -mt-10 mb-4">
+                  <div className="w-24 h-24 rounded-3xl bg-white shadow-2xl flex items-center justify-center text-5xl border-4 border-blue-50">
+                    {viewingCircle.icon}
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleToggleNotifs(viewingCircle.id)}
+                      className={`p-3 rounded-2xl border-2 transition-all ${
+                        (settings.notifEnabledCircleIds || []).includes(viewingCircle.id)
+                          ? 'bg-amber-50 border-amber-200 text-amber-500'
+                          : 'border-blue-100 text-blue-300 hover:bg-blue-50'
+                      }`}
+                    >
+                      {(settings.notifEnabledCircleIds || []).includes(viewingCircle.id) ? <Bell size={20} className="fill-amber-500" /> : <BellOff size={20} />}
+                    </button>
+                    {(settings.joinedCircleIds || []).includes(viewingCircle.id) ? (
+                      <button 
+                         onClick={() => handleToggleJoin(viewingCircle)}
+                         className="px-6 py-3 bg-blue-100 text-blue-600 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-red-50 hover:text-red-500 transition-all group"
+                      >
+                         <span className="group-hover:hidden">Joined</span>
+                         <span className="hidden group-hover:inline">Leave</span>
+                      </button>
+                    ) : (
+                      <button 
+                         onClick={() => handleToggleJoin(viewingCircle)}
+                         className="px-8 py-3 bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-blue-200 hover:scale-105 active:scale-95 transition-all"
+                      >
+                         Join
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <h2 className="text-3xl font-black text-blue-900 tracking-tight">{viewingCircle.name}</h2>
+                    <p className="text-xs font-bold text-blue-500 uppercase tracking-widest flex items-center gap-2">
+                       <Users size={14} /> {viewingCircle.memberCount} Mates
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setShowCircleAbout(!showCircleAbout)}
+                    className="p-2 text-blue-300 hover:text-blue-500 transition-colors"
+                  >
+                    <Info size={24} />
+                  </button>
+                </div>
+
+                <AnimatePresence>
+                  {showCircleAbout && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden bg-blue-50/50 rounded-2xl mt-4 border border-blue-100"
+                    >
+                      <div className="p-4 space-y-4">
+                        <div className="space-y-1">
+                          <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">About</h4>
+                          <p className="text-sm font-bold text-blue-900/60 leading-relaxed italic">"{viewingCircle.description}"</p>
+                        </div>
+                        {viewingCircle.rules && viewingCircle.rules.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Circle Rules</h4>
+                            <div className="space-y-1">
+                              {viewingCircle.rules.map((rule, i) => (
+                                <p key={i} className="text-xs font-bold text-blue-900/40 flex gap-2">
+                                  <span className="text-blue-400">🛡️</span> {rule}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="pt-2 border-t border-blue-100 flex items-center justify-between">
+                           <p className="text-[10px] font-black text-blue-300 uppercase">Created: {viewingCircle.createdAt ? format(parseISO(viewingCircle.createdAt), 'MMMM yyyy') : 'Pre-Arrival'}</p>
+                           {viewingCircle.ownerId === user?.uid && <span className="bg-amber-100 text-amber-600 text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Your Creation</span>}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="flex gap-3 mt-6 pt-6 border-t border-blue-50">
+                  <button 
+                    onClick={() => {
+                      if (!(settings.joinedCircleIds || []).includes(viewingCircle!.id)) {
+                        showToast('Join to post, bro! 🛡️', 'info');
+                        return;
+                      }
+                      setSelectedCircleId(viewingCircle!.id);
+                      setIsCreatingPost(true);
+                    }}
+                    className="flex-1 py-4 bg-blue-50 text-blue-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-100 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Plus size={16} /> Create a Post
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Circle Specific Feed */}
+            <div className="space-y-6">
+              <h3 className="text-xs font-black text-blue-900/20 uppercase tracking-widest px-4">Circle Pulse ({posts.filter(p => p.circleId === viewingCircle.id).length})</h3>
+              <div className="grid grid-cols-1 gap-6">
+                 {posts.filter(p => p.circleId === viewingCircle.id && !hiddenPosts.includes(p.id)).map(post => (
+                    <motion.div 
+                        key={post.id} 
+                        layoutId={post.id}
+                        className="glass-card p-6 space-y-4 hover:shadow-xl transition-all cursor-pointer group hover:translate-y-[-2px] active:scale-[0.99]"
+                        onClick={() => setSelectedPost(post)}
+                      >
+                         <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 overflow-hidden border border-white shadow-sm">
+                              {post.userPhoto ? <img src={post.userPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User className="w-full h-full p-2 text-blue-400" />}
+                            </div>
+                            <div>
+                               <h4 className="font-black text-blue-900 text-sm leading-none">{post.userName}</h4>
+                               <p className="text-[10px] font-bold text-blue-900/20 uppercase mt-1">{format(parseISO(post.createdAt), 'MMM d, h:mm a')}</p>
+                            </div>
+                          </div>
+                          <PostMenu post={post} />
+                        </div>
+
+                        <p className="text-blue-900/80 font-medium line-clamp-3 leading-relaxed">
+                          {post.content}
+                        </p>
+
+                        <div className="flex items-center gap-4 pt-4 border-t border-blue-50" onClick={(e) => e.stopPropagation()}>
+                          <ActionButton 
+                            type="flame" 
+                            count={post.flames} 
+                            active={(post.likedBy || []).includes(user?.uid || '')} 
+                            onClick={() => handleAction(post.id, 'flame')}
+                          />
+                          <ActionButton 
+                            type="shield" 
+                            count={post.shields} 
+                            active={(post.shieldedBy || []).includes(user?.uid || '')} 
+                            onClick={() => handleAction(post.id, 'shield')}
+                          />
+                          <button onClick={() => setSelectedPost(post)} className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-slate-400 hover:bg-slate-50 ml-auto transition-all">
+                            <MessageSquare size={20} />
+                            <span className="text-sm font-black">{post.commentCount || 0}</span>
+                          </button>
+                        </div>
+                    </motion.div>
+                 ))}
+                 {posts.filter(p => p.circleId === viewingCircle.id).length === 0 && (
+                   <div className="glass-card p-12 text-center text-blue-900/20 italic font-bold">
+                      No posts in this circle yet. Be the first, bro! 🏮
+                   </div>
+                 )}
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

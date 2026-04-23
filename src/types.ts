@@ -75,6 +75,8 @@ export interface UserSettings {
   mascotSize?: number;
   mascotPos?: { x: number, y: number };
   mascotPinnedItemId?: string | null;
+  joinedCircleIds?: string[];
+  notifEnabledCircleIds?: string[];
 }
 
 export interface ShopItem {
@@ -222,7 +224,7 @@ export interface Post {
   };
 }
 
-export interface Comment {
+export interface SocialComment {
   id: string;
   postId: string;
   userId: string;
