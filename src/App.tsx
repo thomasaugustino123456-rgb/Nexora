@@ -9,7 +9,7 @@ import { HOUSE_ITEMS } from './constants/houseItems';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs, addDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs, addDoc, increment } from 'firebase/firestore';
 import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
@@ -711,6 +711,8 @@ export default function App() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [notifications, setNotifications] = useState<NexusNotification[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [globalSavedVideos, setGlobalSavedVideos] = useState<NexusVideo[]>([]);
+  const [focusedVideoId, setFocusedVideoId] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [dailyQuest, setDailyQuest] = useState<ChallengeStep>('water');
   const [emergencyActive, setEmergencyActive] = useState(false);
@@ -797,6 +799,41 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeCustomPlan, setActiveCustomPlan] = useState<CustomPlan | null>(null);
   const [viewingTrophy, setViewingTrophy] = useState<Trophy | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setGlobalSavedVideos([]);
+      return;
+    }
+    const q = query(collection(db, 'social_videos'), where('savedBy', 'array-contains', user.uid));
+    const unsub = onSnapshot(q, (snapshot) => {
+      setGlobalSavedVideos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NexusVideo)));
+    }, (err) => {
+      console.error("Global saved videos fetch error:", err);
+    });
+    return unsub;
+  }, [user]);
+
+  const handleDeleteSavedVideo = async (vId: string) => {
+    if (!user) return;
+    try {
+      const docRef = doc(db, 'social_videos', vId);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data() as NexusVideo;
+        const newSavedBy = (data.savedBy || []).filter(id => id !== user.uid);
+        await updateDoc(docRef, {
+          savedBy: newSavedBy,
+          saves: newSavedBy.length
+        });
+        showToast('Video removed from library, bro! 🛡️', 'success');
+        vibrate(VIBRATION_PATTERNS.CLICK);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Action failed', 'error');
+    }
+  };
 
   const isPro = settings.isPro;
   const setIsPro = (val: boolean) => setSettings(prev => ({ ...prev, isPro: val }));
@@ -2631,9 +2668,13 @@ export default function App() {
                   className="w-full"
                >
                   <NexusVideoScreen 
-                     onBack={() => setActiveScreen('social')}
+                     onBack={() => {
+                        setActiveScreen('social');
+                        setFocusedVideoId(null);
+                     }}
                      user={user}
                      showToast={showToast}
+                     initialVideoId={focusedVideoId}
                   />
                </motion.div>
             )}
@@ -2772,6 +2813,12 @@ export default function App() {
                   items={settings.inventory || []}
                   stats={stats}
                   settings={settings}
+                  savedVideos={globalSavedVideos}
+                  onPlayVideo={(v) => {
+                    setFocusedVideoId(v.id);
+                    setActiveScreen('nexus-video');
+                  }}
+                  onDeleteVideo={handleDeleteSavedVideo}
                   onActivate={(id) => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
                     setSettings(prev => {
@@ -4513,8 +4560,13 @@ function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen, ci
   );
 }
 
-function NexusVideoScreen({ onBack, user, showToast }: { onBack: () => void, user: FirebaseUser | null, showToast: (m: string, t?: 'success' | 'info' | 'error') => void }) {
+function NexusVideoScreen({ onBack, user, showToast, initialVideoId }: { onBack: () => void, user: FirebaseUser | null, showToast: (m: string, t?: 'success' | 'info' | 'error') => void, initialVideoId?: string | null }) {
   const [videos, setVideos] = useState<NexusVideo[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<NexusVideo | null>(null);
+  const [isShowingVideoComments, setIsShowingVideoComments] = useState(false);
+  const [isShowingVideoOptions, setIsShowingVideoOptions] = useState(false);
+  const [isReporting, setIsReporting] = useState<{ id: string, type: 'post' | 'video', user: string } | null>(null);
+  const [reportReason, setReportReason] = useState('Offensive Content');
   const [isCreating, setIsCreating] = useState(false);
   const [videoUrl, setVideoUrl] = useState('');
   const [caption, setCaption] = useState('');
@@ -4522,15 +4574,30 @@ function NexusVideoScreen({ onBack, user, showToast }: { onBack: () => void, use
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'), limit(24));
+    let q = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'), limit(24));
+    
+    // If we have an initialVideoId, we might want to ensure it's in the list
     const unsub = onSnapshot(q, (snapshot) => {
-      setVideos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NexusVideo)));
+      const fetchedVideos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NexusVideo));
+      setVideos(fetchedVideos);
     }, (err) => {
       console.error("Videos query error:", err);
       handleFirestoreError(err, OperationType.LIST, 'social_videos');
     });
     return unsub;
   }, []);
+
+  // Fetch specific video if it's not in the recents
+  useEffect(() => {
+    if (initialVideoId && !videos.find(v => v.id === initialVideoId)) {
+       getDoc(doc(db, 'social_videos', initialVideoId)).then(snap => {
+         if (snap.exists()) {
+           const v = { id: snap.id, ...snap.data() } as NexusVideo;
+           setVideos(prev => [v, ...prev.filter(x => x.id !== initialVideoId)]);
+         }
+       });
+    }
+  }, [initialVideoId, videos.length]);
 
   const handleCreateVideo = async () => {
     if (!videoUrl.trim() || !user) return;
@@ -4580,6 +4647,91 @@ function NexusVideoScreen({ onBack, user, showToast }: { onBack: () => void, use
     }
   };
 
+  const handleSaveVideo = async (vid: NexusVideo) => {
+    if (!user) return;
+    const isSaved = (vid.savedBy || []).includes(user.uid);
+    const newSavedBy = isSaved ? vid.savedBy!.filter(id => id !== user.uid) : [...(vid.savedBy || []), user.uid];
+    try {
+      await updateDoc(doc(db, 'social_videos', vid.id), {
+        savedBy: newSavedBy,
+        saves: newSavedBy.length
+      });
+      showToast(isSaved ? 'Video unsaved, bro' : 'Video saved to your Library! 🎬', 'success');
+      vibrate(VIBRATION_PATTERNS.CLICK);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRepostVideo = async (vid: NexusVideo) => {
+    if (!user) return;
+    try {
+      const repostData: Omit<NexusVideo, 'id'> = {
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        userPhoto: user.photoURL || '',
+        videoUrl: vid.videoUrl,
+        caption: `Reposting from @${vid.userName}: ${vid.caption}`,
+        likes: 0,
+        likedBy: [],
+        commentCount: 0,
+        createdAt: new Date().toISOString(),
+        isAuthorized: false,
+        platform: vid.platform
+      };
+      await addDoc(collection(db, 'social_videos'), repostData);
+      await updateDoc(doc(db, 'social_videos', vid.id), {
+        repostCount: (vid.repostCount || 0) + 1
+      });
+      showToast('Video reposted to your profile, bro! 🏮', 'success');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+      setIsShowingVideoOptions(false);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to repost', 'error');
+    }
+  };
+
+  const handleVideoDelete = async (vId: string) => {
+     if (!confirm('Permanently delete this video from the Nexus, bro? 🛡️')) return;
+     try {
+       await deleteDoc(doc(db, 'social_videos', vId));
+       showToast('Video removed from the Reel', 'success');
+       setIsShowingVideoOptions(false);
+     } catch (err) {
+       showToast('Failed to delete', 'error');
+     }
+  };
+
+  const handleNotInterested = (vId: string) => {
+     setVideos(prev => prev.filter(v => v.id !== vId));
+     showToast('Content hidden, bro. We got you.', 'info');
+     setIsShowingVideoOptions(false);
+  };
+
+  const handleReportContent = async () => {
+    if (!isReporting || !user) return;
+    try {
+      const reportData: Omit<UserReport, 'id'> = {
+        reporterId: user.uid,
+        reporterName: user.displayName || 'Anonymous',
+        reportedUserId: isReporting.user,
+        reportedUserName: 'Nexus User',
+        contentId: isReporting.id,
+        contentType: isReporting.type,
+        reason: reportReason,
+        createdAt: new Date().toISOString()
+      };
+      await addDoc(collection(db, 'reports'), reportData);
+      showToast('Report submitted. Nexus Mods are on it, bro! 🛡️', 'success');
+      setIsReporting(null);
+      setIsShowingVideoOptions(false);
+    } catch (err) {
+      setVideos(prev => prev); // dummy to fix lint if needed
+      showToast('Reporting failed', 'error');
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black z-[150] flex flex-col">
        {/* TikTok Header */}
@@ -4623,14 +4775,36 @@ function NexusVideoScreen({ onBack, user, showToast }: { onBack: () => void, use
                     </div>
 
                     <div className="flex flex-col items-center gap-1">
-                       <button className="p-4 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all active:scale-75">
+                       <button 
+                         onClick={() => {
+                           setSelectedVideo(vid);
+                           setIsShowingVideoComments(true);
+                         }}
+                         className="p-4 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all active:scale-75"
+                       >
                          <MessageSquare size={28} />
                        </button>
                        <span className="text-white font-black text-xs drop-shadow-md">{vid.commentCount || 0}</span>
                     </div>
 
                     <div className="flex flex-col items-center gap-1">
-                       <button onClick={() => showToast('Link copied!', 'info')} className="p-4 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all active:scale-75">
+                       <button 
+                         onClick={() => handleSaveVideo(vid)}
+                         className={`p-4 rounded-full backdrop-blur-md transition-all active:scale-75 ${vid.savedBy?.includes(user?.uid || '') ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/50' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                       >
+                         <Bookmark size={28} className={vid.savedBy?.includes(user?.uid || '') ? "fill-white" : ""} />
+                       </button>
+                       <span className="text-white font-black text-xs drop-shadow-md">{vid.saves || 0}</span>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-1">
+                       <button 
+                         onClick={() => {
+                           setSelectedVideo(vid);
+                           setIsShowingVideoOptions(true);
+                         }}
+                         className="p-4 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all active:scale-75"
+                       >
                          <Share2 size={28} />
                        </button>
                     </div>
@@ -4735,10 +4909,307 @@ function NexusVideoScreen({ onBack, user, showToast }: { onBack: () => void, use
             </motion.div>
          )}
        </AnimatePresence>
+
+        <AnimatePresence>
+          {isShowingVideoComments && selectedVideo && (
+            <VideoCommentsModal 
+              videoId={selectedVideo.id} 
+              user={user} 
+              onClose={() => setIsShowingVideoComments(false)}
+              showToast={showToast}
+              onCommentAdded={() => {
+                setSelectedVideo(prev => prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : null);
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isShowingVideoOptions && selectedVideo && (
+            <VideoOptionsModal 
+              video={selectedVideo}
+              user={user}
+              onClose={() => setIsShowingVideoOptions(false)}
+              onRepost={() => handleRepostVideo(selectedVideo)}
+              onDelete={() => handleVideoDelete(selectedVideo.id)}
+              onNotInterested={() => handleNotInterested(selectedVideo.id)}
+              onReport={() => setIsReporting({ id: selectedVideo.id, type: 'video', user: selectedVideo.userId })}
+              showToast={showToast}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isReporting && (
+            <div className="fixed inset-0 z-[400] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="glass-card w-full max-w-md p-8 space-y-6 bg-blue-900 border-white/20 text-white"
+              >
+                 <div className="text-center space-y-2">
+                    <AlertCircle size={48} className="mx-auto text-amber-500" />
+                    <h2 className="text-2xl font-black tracking-tight uppercase text-white">Nexus Report</h2>
+                    <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">Identifying the issue, bro. 🛡️</p>
+                 </div>
+
+                 <div className="space-y-4">
+                    <p className="text-xs font-bold text-white/60">Reporting {isReporting.type === 'video' ? 'video' : 'post'}: <span className="text-white">ID {isReporting.id.slice(0, 8)}...</span></p>
+                    
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-blue-300 uppercase tracking-widest pl-1">Reason for Report</label>
+                       <select 
+                         value={reportReason}
+                         onChange={e => setReportReason(e.target.value)}
+                         className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none"
+                         style={{ backgroundColor: '#1e3a8a', color: 'white' }}
+                       >
+                          <option value="Offensive Content">Offensive Content</option>
+                          <option value="Spam / Bot">Spam / Bot</option>
+                          <option value="Harassment">Harassment</option>
+                          <option value="Misinformation">Misinformation</option>
+                          <option value="Graphic Violence">Graphic Violence</option>
+                          <option value="Other">Other</option>
+                       </select>
+                    </div>
+                 </div>
+
+                 <div className="flex gap-3 pt-4">
+                    <button 
+                      onClick={() => setIsReporting(null)}
+                      className="flex-1 py-4 bg-white/5 border border-white/10 rounded-2xl font-black text-xs uppercase tracking-widest"
+                    >
+                       Cancel
+                    </button>
+                    <button 
+                      onClick={handleReportContent}
+                      className="flex-1 py-4 bg-amber-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-amber-900/40"
+                    >
+                       Submit
+                    </button>
+                 </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
     </div>
   );
 }
 
+function VideoCommentsModal({ videoId, user, onClose, showToast, onCommentAdded }: { videoId: string, user: FirebaseUser | null, onClose: () => void, showToast: any, onCommentAdded?: () => void }) {
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [isPosting, setIsPosting] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<any | null>(null);
+
+  useEffect(() => {
+    const q = query(collection(db, 'social_videos', videoId, 'comments'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      setComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (err) => {
+      console.error(err);
+    });
+    return unsub;
+  }, [videoId]);
+
+  const handlePost = async () => {
+    if (!newComment.trim() || !user) return;
+    setIsPosting(true);
+    try {
+      const commentData = {
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        userPhoto: user.photoURL || '',
+        content: newComment.trim(),
+        likes: 0,
+        likedBy: [],
+        createdAt: new Date().toISOString(),
+        parentId: replyingTo?.id || null
+      };
+      await addDoc(collection(db, 'social_videos', videoId, 'comments'), commentData);
+      await updateDoc(doc(db, 'social_videos', videoId), {
+        commentCount: increment(1)
+      });
+      onCommentAdded?.();
+      setNewComment('');
+      setReplyingTo(null);
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (err) {
+      console.error(err);
+      showToast('Comment failed, bro', 'error');
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  return (
+    <motion.div 
+      initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+      className="fixed inset-x-0 bottom-0 top-20 bg-white rounded-t-3xl z-[300] flex flex-col shadow-2xl overflow-hidden"
+      onClick={e => e.stopPropagation()}
+    >
+      <div className="p-4 border-b flex items-center justify-between bg-slate-50">
+        <h3 className="font-black text-blue-900 uppercase tracking-widest text-xs flex items-center gap-2">
+           <MessageSquare size={16} /> Comments ({comments.length})
+        </h3>
+        <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
+           <X size={20} />
+        </button>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
+        {comments.map(c => (
+           <div key={c.id} className="flex gap-3 animate-in fade-in slide-in-from-bottom-2">
+              <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden shrink-0 border-2 border-white shadow-sm">
+                 {c.userPhoto ? <img src={c.userPhoto} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2 text-slate-400" />}
+              </div>
+              <div className="flex-1 space-y-1">
+                 <div className="flex items-center gap-2">
+                    <span className="font-black text-[12px] text-blue-900">{c.userName}</span>
+                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter">{format(parseISO(c.createdAt), 'MMM d, h:mm a')}</span>
+                 </div>
+                 <p className="text-sm text-slate-700 leading-relaxed font-medium">
+                   {c.parentId && <span className="text-blue-500 font-black mr-1 text-[11px]">@reply</span>}
+                   {c.content}
+                 </p>
+                 <div className="flex items-center gap-6 pt-1">
+                    <button 
+                      onClick={() => {
+                        setReplyingTo(c);
+                        setNewComment(`@${c.userName} `);
+                      }}
+                      className="text-[10px] font-black text-blue-400 hover:text-blue-600 uppercase tracking-widest"
+                    >
+                      REPLY
+                    </button>
+                    <button className="flex items-center gap-1 text-[10px] font-black text-slate-300 hover:text-orange-500 transition-colors">
+                       <Flame size={12} /> {c.likes || 0}
+                    </button>
+                 </div>
+              </div>
+           </div>
+        ))}
+        {comments.length === 0 && (
+           <div className="h-full flex flex-col items-center justify-center text-slate-200 py-32 space-y-4">
+              <div className="p-6 bg-slate-50 rounded-full">
+                 <MessageSquare size={64} className="opacity-20" />
+              </div>
+              <div className="text-center">
+                 <p className="font-black text-xs uppercase tracking-widest leading-none">Silent Waters</p>
+                 <p className="text-[10px] font-bold opacity-40 uppercase mt-1">Be the first to drop a reaction, bro. 🏮</p>
+              </div>
+           </div>
+        )}
+      </div>
+
+      <div className="absolute bottom-0 inset-x-0 p-6 bg-white border-t border-slate-100 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-[310]">
+        <div className="max-w-2xl mx-auto space-y-4">
+           {replyingTo && (
+              <div className="flex items-center justify-between bg-blue-50/80 backdrop-blur-sm px-4 py-2 rounded-2xl border border-blue-100 animate-in slide-in-from-bottom-4">
+                 <div className="flex items-center gap-2">
+                    <div className="p-1 bg-blue-500 rounded-full text-white"><ArrowLeft size={10} className="rotate-90" /></div>
+                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Replying to {replyingTo.userName}</span>
+                 </div>
+                 <button onClick={() => { setReplyingTo(null); setNewComment(''); }} className="text-blue-400 hover:text-blue-600 transition-colors"><X size={14} /></button>
+              </div>
+           )}
+           <div className="flex gap-3">
+             <input 
+               type="text" 
+               value={newComment} 
+               onChange={e => setNewComment(e.target.value)}
+               placeholder={replyingTo ? "Write a reply..." : "Add to the Nexus vibe... 🏮"}
+               className="flex-1 bg-slate-100/80 border-2 border-transparent focus:border-blue-400 transition-all rounded-full px-6 py-4 text-sm font-medium focus:outline-none placeholder:text-slate-300"
+               onKeyDown={e => e.key === 'Enter' && handlePost()}
+             />
+             <button 
+               onClick={handlePost}
+               disabled={isPosting || !newComment.trim()}
+               className="p-4 bg-blue-600 text-white rounded-full active:scale-95 transition-all disabled:opacity-50 shadow-lg shadow-blue-200"
+             >
+               {isPosting ? <RefreshCw size={24} className="animate-spin" /> : <Send size={24} />}
+             </button>
+           </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function VideoOptionsModal({ video, user, onClose, onRepost, onDelete, onNotInterested, onReport, showToast }: { video: NexusVideo, user: FirebaseUser | null, onClose: () => void, onRepost: () => void, onDelete: () => void, onNotInterested: () => void, onReport: () => void, showToast: any }) {
+  const isOwner = user?.uid === video.userId;
+  
+  const handleCopyLink = () => {
+     navigator.clipboard.writeText(video.videoUrl);
+     showToast('Nexus Link Copied! 📋', 'success');
+     vibrate(VIBRATION_PATTERNS.SUCCESS);
+     onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[350] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+       <motion.div 
+         initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
+         className="glass-card w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl"
+         onClick={e => e.stopPropagation()}
+       >
+          <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+             <h3 className="font-black text-[10px] text-blue-900/40 uppercase tracking-widest pl-2">Vibe Control</h3>
+             <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"><X size={18} /></button>
+          </div>
+
+          <div className="p-4 space-y-2">
+             <button onClick={handleCopyLink} className="w-full p-4 flex items-center gap-4 bg-slate-50 hover:bg-blue-50 text-blue-900 rounded-2xl transition-all group">
+                <div className="p-3 bg-white rounded-xl shadow-sm text-blue-400 group-hover:scale-110 transition-transform"><Share2 size={24} /></div>
+                <div className="text-left">
+                   <p className="font-black text-sm uppercase tracking-tight">Copy Nexus Link</p>
+                   <p className="text-[10px] font-bold text-blue-900/30">Share the energy with the world, bro.</p>
+                </div>
+             </button>
+
+             <button onClick={onRepost} className="w-full p-4 flex items-center gap-4 bg-slate-50 hover:bg-emerald-50 text-emerald-600 rounded-2xl transition-all group">
+                <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><RefreshCw size={24} /></div>
+                <div className="text-left">
+                   <p className="font-black text-sm uppercase tracking-tight">Repost to Pulse</p>
+                   <p className="text-[10px] font-bold text-emerald-900/20">Boost this clip to your circle, bro.</p>
+                </div>
+             </button>
+
+             {!isOwner && (
+               <button onClick={onNotInterested} className="w-full p-4 flex items-center gap-4 bg-slate-50 hover:bg-slate-100 text-slate-400 rounded-2xl transition-all group">
+                  <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><EyeOff size={24} /></div>
+                  <div className="text-left">
+                     <p className="font-black text-sm uppercase tracking-tight">Not Interested</p>
+                     <p className="text-[10px] font-bold text-slate-300 uppercase">Hide clips like this from your Reel.</p>
+                  </div>
+               </button>
+             )}
+
+             <div className="pt-2 border-t mt-2">
+                {isOwner ? (
+                   <button onClick={onDelete} className="w-full p-4 flex items-center gap-4 bg-red-50 hover:bg-red-100 text-red-600 rounded-2xl transition-all group">
+                      <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><Trash2 size={24} /></div>
+                      <div className="text-left">
+                         <p className="font-black text-sm uppercase tracking-tight">Delete Permanently</p>
+                         <p className="text-[10px] font-bold opacity-60">This action's final, bro. No turning back.</p>
+                      </div>
+                   </button>
+                ) : (
+                  <button onClick={onReport} className="w-full p-4 flex items-center gap-4 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-2xl transition-all group">
+                     <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><Flag size={24} /></div>
+                     <div className="text-left">
+                        <p className="font-black text-sm uppercase tracking-tight">Report Violation</p>
+                        <p className="text-[10px] font-bold opacity-60">Protect the Nexus community, bro. 🛡️</p>
+                     </div>
+                  </button>
+                )}
+             </div>
+          </div>
+       </motion.div>
+    </div>
+  );
+}
 function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings, posts, circles, notifications, setActiveScreen }: { onBack: () => void, user: FirebaseUser | null, settings: UserSettings, stats: UserStats, showToast: (m: string, t?: 'success' | 'info' | 'error') => void, onUpdateSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, posts: Post[], circles: SocialCircle[], notifications: NexusNotification[], setActiveScreen: (s: Screen) => void }) {
   const [activeTab, setActiveTab] = useState<'feed' | 'circles' | 'inbox'>('feed');
   const [isCreatingPost, setIsCreatingPost] = useState(false);
@@ -4937,8 +5408,11 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
 
       await setDoc(doc(collection(db, 'posts', selectedPost.id, 'comments')), commentData);
       await updateDoc(doc(db, 'posts', selectedPost.id), {
-        commentCount: (selectedPost.commentCount || 0) + 1
+        commentCount: increment(1)
       });
+
+      // Update local state for immediate feedback
+      setSelectedPost(prev => prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : null);
 
       // NO-OVERLAP NOTIFICATION LOGIC
       const recipients = new Set<string>();

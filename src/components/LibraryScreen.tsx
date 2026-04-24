@@ -1,30 +1,36 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LibraryItem, UserStats, UserSettings } from '../types';
-import { ArrowLeft, Trash2, Power, PowerOff, Package, Book, Image as ImageIcon, Sparkles, Music, Play, Pause, Volume2 } from 'lucide-react';
+import { LibraryItem, UserStats, UserSettings, NexusVideo } from '../types';
+import { ArrowLeft, Trash2, Power, PowerOff, Package, Book, Image as ImageIcon, Sparkles, Music, Play, Pause, Volume2, Video } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 export function LibraryScreen({ 
   items, 
   stats,
   settings,
+  savedVideos,
   onActivate, 
   onDeactivate, 
   onDelete, 
   onDeleteNote,
   onDeleteChallenge,
   onDeleteDrawing,
+  onDeleteVideo,
+  onPlayVideo,
   onBack 
 }: { 
   items: LibraryItem[]; 
   stats: UserStats;
   settings: UserSettings;
+  savedVideos?: NexusVideo[];
   onActivate: (id: string) => void; 
   onDeactivate: (id: string) => void; 
   onDelete: (id: string) => void; 
   onDeleteNote: (id: string) => void; 
   onDeleteChallenge: (id: string) => void;
   onDeleteDrawing: (index: number) => void;
+  onDeleteVideo?: (id: string) => void;
+  onPlayVideo?: (v: NexusVideo) => void;
   onBack: () => void; 
 }) {
   const powerUps = items.filter(item => item.type === 'power-up');
@@ -34,6 +40,7 @@ export function LibraryScreen({
   const notes = stats.gratitudeEntries || [];
   const drawings = stats.drawings || [];
   const savedChallenges = settings.savedChallengeIds || [];
+  const savedVideosList = savedVideos || [];
 
   const [viewingImage, setViewingImage] = useState<string | null>(null);
 
@@ -54,13 +61,13 @@ export function LibraryScreen({
         </div>
       </div>
 
-      {(items.length === 0 && notes.length === 0 && drawings.length === 0 && savedChallenges.length === 0) ? (
+      {(items.length === 0 && notes.length === 0 && drawings.length === 0 && savedChallenges.length === 0 && savedVideosList.length === 0) ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4">
             <Package size={40} className="text-blue-200" />
           </div>
           <h2 className="text-xl font-bold text-blue-900 mb-2">Your library is empty</h2>
-          <p className="text-blue-900/40 max-w-xs">Buy items in the shop or save notes to see them here!</p>
+          <p className="text-blue-900/40 max-w-xs">Buy items in the shop or save Reels to see them here, bro! 🎬</p>
           <button 
             onClick={onBack}
             className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors"
@@ -168,6 +175,45 @@ export function LibraryScreen({
                     <button 
                       onClick={() => onDeleteChallenge(challengeId)}
                       className="p-2 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Saved Videos Section */}
+          {savedVideosList.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <Video size={16} className="text-blue-400" />
+                <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest">Saved Reels</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {savedVideosList.map((vid) => (
+                  <div key={vid.id} className="glass-card p-4 flex items-center justify-between border-l-4 border-l-indigo-400">
+                    <div 
+                      className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+                      onClick={() => onPlayVideo?.(vid)}
+                    >
+                      <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 relative overflow-hidden group border border-indigo-100 shrink-0">
+                        {vid.userPhoto ? (
+                          <img src={vid.userPhoto} className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity" />
+                        ) : (
+                          <Video size={20} />
+                        )}
+                        <Play size={16} className="absolute inset-0 m-auto text-indigo-600 drop-shadow-sm opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-blue-900 font-bold truncate text-sm">{vid.caption || 'Nexus Reel'}</p>
+                        <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis">by @{vid.userName}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => onDeleteVideo?.(vid.id)}
+                      className="p-2 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-colors ml-2"
                     >
                       <Trash2 size={16} />
                     </button>

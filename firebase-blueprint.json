@@ -242,11 +242,30 @@
         "likes": { "type": "number" },
         "likedBy": { "type": "array", "items": { "type": "string" } },
         "commentCount": { "type": "number" },
+        "saves": { "type": "number" },
+        "savedBy": { "type": "array", "items": { "type": "string" } },
+        "repostCount": { "type": "number" },
         "createdAt": { "type": "string" },
         "isAuthorized": { "type": "boolean" },
         "platform": { "type": "string", "enum": ["youtube", "tiktok"] }
       },
       "required": ["userId", "userName", "videoUrl", "createdAt"]
+    },
+    "UserReport": {
+      "title": "UserReport",
+      "description": "User feedback or content reports",
+      "type": "object",
+      "properties": {
+        "reporterId": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "reportedUserId": { "type": "string" },
+        "reportedUserName": { "type": "string" },
+        "contentId": { "type": "string" },
+        "contentType": { "type": "string", "enum": ["video", "post"] },
+        "reason": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["reporterId", "reportedUserId", "contentId", "reason", "createdAt"]
     }
   },
   "firestore": {
@@ -313,9 +332,25 @@
       },
       "description": "Comments on community posts"
     },
-    "/social_videos/{videoId}": {
-      "schema": { "$ref": "NexusVideo" },
-      "description": "User shared videos in the Nexus Reel"
+    "/social_videos/{videoId}/comments/{commentId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "videoId": { "type": "string" },
+          "userId": { "type": "string" },
+          "userName": { "type": "string" },
+          "userPhoto": { "type": "string" },
+          "content": { "type": "string" },
+          "createdAt": { "type": "string" },
+          "parentId": { "type": "string" }
+        }
+      },
+      "description": "Comments on shared videos"
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "UserReport" },
+      "description": "User feedback and reports"
     }
   }
 }

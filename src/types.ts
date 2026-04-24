@@ -56,6 +56,8 @@ export interface UserSettings {
   purchasedItems?: string[];
   savedChallengeIds?: string[];
   savedTrophyIds?: string[];
+  savedVideoIds?: string[];
+  savedPostIds?: string[];
   activeHat?: string;
   activeSkin?: string;
   zenModeEnabled?: boolean;
@@ -199,9 +201,24 @@ export interface NexusVideo {
   createdAt: string;
   isAuthorized?: boolean;
   platform?: 'youtube' | 'tiktok';
+  saves?: number;
+  savedBy?: string[];
+  repostCount?: number;
 }
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion';
 export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';
+
+export interface UserReport {
+  id: string;
+  reporterId: string;
+  reporterName: string;
+  reportedUserId: string;
+  reportedUserName: string;
+  contentId: string;
+  contentType: 'video' | 'post';
+  reason: string;
+  createdAt: string;
+}
 
 export interface SocialCircle {
   id: string;
