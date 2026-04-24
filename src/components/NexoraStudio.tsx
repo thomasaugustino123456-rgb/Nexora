@@ -47,6 +47,33 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
 
   const startCamera = async () => {
     setCameraError(null);
+    
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError("Secure context (HTTPS) or browser support missing! 🛡️ Try opening this app in a new tab if you're in a restricted environment.");
+      return;
+    }
+
+    const handleStream = (stream: MediaStream) => {
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(e => {
+            console.error("Video play error:", e);
+          });
+        };
+        setCameraError(null);
+      } else {
+        // Fallback for ref availability
+        setTimeout(() => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.play().catch(console.error);
+          }
+        }, 100);
+      }
+    };
+
     try {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -54,38 +81,47 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
       
       const constraints = {
         video: { 
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          facingMode: { ideal: facingMode }
         },
         audio: true
       };
 
-      console.log("Requesting camera with constraints:", constraints);
+      console.log("Requesting camera with primary constraints:", constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log("Camera stream obtained:", stream.id);
-      
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(e => console.error("Video play error:", e));
-      }
+      handleStream(stream);
     } catch (err: any) {
-      console.error("Camera access error details:", err);
-      setCameraError(err.message || 'Camera blocked or unavailable');
+      console.error("Primary camera access error:", err);
       
-      // Try fallback to simpler constraints
+      // Fallback 1: Absolute basics
       try {
-        console.log("Attempting fallback camera constraints...");
+        console.log("Attempting fallback 1: simple video/audio...");
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-          setCameraError(null);
+        handleStream(stream);
+      } catch (fallbackErr: any) {
+        console.error("Fallback 1 error:", fallbackErr);
+        
+        // Fallback 2: Video only
+        try {
+          console.log("Attempting fallback 2: video only...");
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          handleStream(stream);
+        } catch (finalErr: any) {
+          console.error("Final camera error:", finalErr);
+          
+          let friendlyMsg = 'Connection Blocked. 🛡️';
+          
+          if (finalErr.name === 'NotAllowedError') {
+            friendlyMsg = 'Permission denied by browser! Click the LOCK icon in your address bar to reset camera permissions, then REFRESH the page.';
+          } else if (finalErr.name === 'NotFoundError') {
+            friendlyMsg = 'No camera found on this device, bro.';
+          } else if (finalErr.name === 'NotReadableError' || finalErr.name === 'TrackStartError') {
+            friendlyMsg = 'Camera in use! Close other apps using your camera and try again.';
+          } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            friendlyMsg = 'HTTPS REQUIRED! Camera access requires a secure connection.';
+          }
+          
+          setCameraError(`${friendlyMsg} (Code: ${finalErr.name})`);
         }
-      } catch (fallbackErr) {
-        setCameraError('Fully blocked. Check browser permissions, bro! 🛡️');
       }
     }
   };
@@ -220,12 +256,20 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                        <Camera size={40} className="text-red-500" />
                     </div>
                     <p className="text-white font-black uppercase text-sm tracking-widest leading-loose">{cameraError}</p>
-                    <button 
-                      onClick={() => startCamera()}
-                      className="px-8 py-3 bg-white text-black rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
-                    >
-                      Retry Connection
-                    </button>
+                    <div className="flex flex-col gap-3 pt-2">
+                      <button 
+                        onClick={() => startCamera()}
+                        className="px-8 py-3 bg-white text-black rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                      >
+                        Retry Connection
+                      </button>
+                      <button 
+                        onClick={() => window.open(window.location.href, '_blank')}
+                        className="px-8 py-3 bg-blue-600 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                      >
+                        Open in New Tab ↗️
+                      </button>
+                    </div>
                     <button 
                       onClick={onClose}
                       className="block mx-auto text-white/40 font-bold text-[10px] uppercase tracking-widest pt-4"
