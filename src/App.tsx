@@ -4,7 +4,7 @@ import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
-import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType, SocialCircle, Post, SocialComment, NexusNotification } from './types';
+import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType, SocialCircle, Post, SocialComment, NexusNotification, NexusVideo } from './types';
 import { HOUSE_ITEMS } from './constants/houseItems';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
@@ -105,6 +105,54 @@ function WhatIsNewModal({ onClose }: { onClose: () => void }) {
     </motion.div>
   );
 }
+
+const getEmbedData = (url: string) => {
+  if (!url) return null;
+  // YouTube
+  const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+  const ytMatch = url.match(ytRegex);
+  if (ytMatch) return { type: 'youtube', id: ytMatch[1] };
+  // TikTok
+  const ttRegex = /tiktok\.com\/.*video\/(\d+)/i;
+  const ttMatch = url.match(ttRegex);
+  if (ttMatch) return { type: 'tiktok', id: ttMatch[1] };
+  return null;
+};
+
+const VideoPlayer = ({ url }: { url: string }) => {
+  const embedData = getEmbedData(url);
+  if (!embedData) return (
+    <div className="p-6 bg-amber-50 border-2 border-amber-100 rounded-3xl text-center space-y-2">
+      <div className="text-2xl">⚠️</div>
+      <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Video Link Unverified</p>
+      <p className="text-[8px] font-bold text-amber-900/40">{url}</p>
+    </div>
+  );
+  if (embedData.type === 'youtube') {
+    return (
+      <div className="aspect-video w-full rounded-2xl overflow-hidden shadow-lg bg-black border-2 border-white/20">
+        <iframe 
+           src={`https://www.youtube.com/embed/${embedData.id}`} 
+           className="w-full h-full border-0" 
+           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+           allowFullScreen 
+        />
+      </div>
+    );
+  }
+  if (embedData.type === 'tiktok') {
+    return (
+      <div className="aspect-[9/16] w-full max-w-[320px] mx-auto rounded-3xl overflow-hidden shadow-2xl bg-black border-4 border-white/10">
+        <iframe 
+          src={`https://www.tiktok.com/embed/v2/${embedData.id}`} 
+          className="w-full h-full border-0" 
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+  return null;
+};
 
 function Calendar({ history }: { history: DailyProgress[] }) {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -2536,8 +2584,24 @@ export default function App() {
                   posts={posts}
                   circles={circles}
                   notifications={notifications}
+                  setActiveScreen={setActiveScreen}
                 />
               </motion.div>
+            )}
+            {activeScreen === 'nexus-video' && (
+               <motion.div
+                  key="nexus-video"
+                  initial={{ opacity: 0, y: 100 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 100 }}
+                  className="w-full"
+               >
+                  <NexusVideoScreen 
+                     onBack={() => setActiveScreen('social')}
+                     user={user}
+                     showToast={showToast}
+                  />
+               </motion.div>
             )}
             {activeScreen === 'settings' && (
               <motion.div
@@ -4415,7 +4479,228 @@ function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen, ci
   );
 }
 
-function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings, posts, circles, notifications }: { onBack: () => void, user: FirebaseUser | null, settings: UserSettings, stats: UserStats, showToast: (m: string, t?: 'success' | 'info' | 'error') => void, onUpdateSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, posts: Post[], circles: SocialCircle[], notifications: NexusNotification[] }) {
+function NexusVideoScreen({ onBack, user, showToast }: { onBack: () => void, user: FirebaseUser | null, showToast: (m: string, t?: 'success' | 'info' | 'error') => void }) {
+  const [videos, setVideos] = useState<NexusVideo[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [caption, setCaption] = useState('');
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const q = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'), limit(24));
+    const unsub = onSnapshot(q, (snapshot) => {
+      setVideos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NexusVideo)));
+    });
+    return unsub;
+  }, []);
+
+  const handleCreateVideo = async () => {
+    if (!videoUrl.trim() || !user) return;
+    setIsSubmitting(true);
+    try {
+      const platform = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? 'youtube' : 'tiktok';
+      const videoData: Omit<NexusVideo, 'id'> = {
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        userPhoto: user.photoURL || '',
+        videoUrl: videoUrl.trim(),
+        caption: caption.trim(),
+        likes: 0,
+        likedBy: [],
+        commentCount: 0,
+        createdAt: new Date().toISOString(),
+        isAuthorized,
+        platform
+      };
+      await addDoc(collection(db, 'social_videos'), videoData);
+      setIsCreating(false);
+      setVideoUrl('');
+      setCaption('');
+      showToast('Video posted to the Nexus Reel, bro! 🎬', 'success');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to post video', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleLike = async (vId: string, likedBy: string[]) => {
+    if (!user) return;
+    const isLiked = (likedBy || []).includes(user.uid);
+    const newLikedBy = isLiked ? likedBy.filter(id => id !== user.uid) : [...(likedBy || []), user.uid];
+    try {
+      await updateDoc(doc(db, 'social_videos', vId), {
+        likedBy: newLikedBy,
+        likes: newLikedBy.length
+      });
+      vibrate(VIBRATION_PATTERNS.CLICK);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black z-[150] flex flex-col">
+       {/* TikTok Header */}
+       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-[160] bg-gradient-to-b from-black/60 to-transparent pt-12 sm:pt-4">
+          <button onClick={onBack} className="p-2 text-white hover:scale-110 transition-transform">
+            <ArrowLeft size={28} />
+          </button>
+          <div className="flex gap-4">
+             <span className="text-white/60 font-black text-sm uppercase tracking-widest border-b-2 border-transparent pb-1">Following</span>
+             <span className="text-white font-black text-sm uppercase tracking-widest border-b-2 border-blue-500 pb-1">Nexus Reel</span>
+          </div>
+          <button onClick={() => setIsCreating(true)} className="p-2 text-white hover:scale-110 transition-transform bg-blue-600 rounded-full">
+            <Plus size={24} />
+          </button>
+       </div>
+
+       {/* Video Feed */}
+       <div className="flex-1 overflow-y-scroll snap-y snap-mandatory h-screen no-scrollbar">
+          {videos.length === 0 ? (
+             <div className="h-full flex flex-col items-center justify-center text-white/40 space-y-4">
+                <Video size={64} className="animate-pulse" />
+                <p className="font-black uppercase tracking-widest text-xs">No videos in the Nexus Reel yet...</p>
+             </div>
+          ) : (
+            videos.map((vid) => (
+              <div key={vid.id} className="h-full w-full snap-start relative flex items-center justify-center bg-black overflow-hidden">
+                 <div className="w-full h-full max-w-lg aspect-[9/16] relative flex items-center justify-center pt-20 pb-20">
+                    <VideoPlayer url={vid.videoUrl} />
+                 </div>
+                 
+                 {/* Overlay UI */}
+                 <div className="absolute bottom-24 right-4 flex flex-col items-center gap-6 z-[160]">
+                    <div className="flex flex-col items-center gap-1">
+                       <button 
+                         onClick={() => handleLike(vid.id, vid.likedBy || [])}
+                         className={`p-4 rounded-full backdrop-blur-md transition-all active:scale-75 ${vid.likedBy?.includes(user?.uid || '') ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/50' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                       >
+                         <Flame size={28} className={vid.likedBy?.includes(user?.uid || '') ? "fill-white" : ""} />
+                       </button>
+                       <span className="text-white font-black text-xs drop-shadow-md">{vid.likes || 0}</span>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-1">
+                       <button className="p-4 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all active:scale-75">
+                         <MessageSquare size={28} />
+                       </button>
+                       <span className="text-white font-black text-xs drop-shadow-md">{vid.commentCount || 0}</span>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-1">
+                       <button onClick={() => showToast('Link copied!', 'info')} className="p-4 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all active:scale-75">
+                         <Share2 size={28} />
+                       </button>
+                    </div>
+                 </div>
+
+                 <div className="absolute bottom-12 left-4 right-16 z-[160] text-white space-y-2 bg-gradient-to-t from-black/80 to-transparent p-4 rounded-3xl">
+                    <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full border-2 border-white overflow-hidden shadow-lg">
+                          {vid.userPhoto ? <img src={vid.userPhoto} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2 text-white/40" />}
+                       </div>
+                       <div>
+                          <h4 className="font-black text-sm drop-shadow-md">{vid.userName}</h4>
+                          {vid.isAuthorized && (
+                             <span className="text-[8px] bg-blue-500 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter shadow-sm">Verified {vid.platform === 'youtube' ? 'YT' : 'TikTok'}</span>
+                          )}
+                       </div>
+                    </div>
+                    <p className="text-xs font-semibold line-clamp-2 opacity-90 drop-shadow-sm">{vid.caption}</p>
+                    <div className="flex items-center gap-2 opacity-70">
+                       <Music size={12} className="animate-spin" />
+                       <span className="text-[10px] font-black uppercase tracking-widest">Nexus Original Audio</span>
+                    </div>
+                 </div>
+              </div>
+            ))
+          )}
+       </div>
+
+       {/* Create Video Modal */}
+       <AnimatePresence>
+         {isCreating && (
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.9 }}
+               animate={{ opacity: 1, scale: 1 }}
+               exit={{ opacity: 0, scale: 0.9 }}
+               className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-lg"
+               onClick={() => setIsCreating(false)}
+            >
+               <div className="glass-card w-full max-w-md p-8 space-y-6 relative border-white/20 bg-white/10 text-white" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => setIsCreating(false)} className="absolute top-4 right-4 p-2 text-white/40 hover:text-white">
+                    <X size={24} />
+                  </button>
+
+                  <div className="text-center space-y-2">
+                     <h2 className="text-2xl font-black tracking-tight">Post your Reel</h2>
+                     <p className="text-xs font-black text-blue-400 uppercase tracking-widest">Share with the Nexus, bro! 🎬</p>
+                  </div>
+
+                  <div className="space-y-4">
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-blue-300 uppercase tracking-widest ml-1">Video Link</label>
+                        <input 
+                           type="text" 
+                           value={videoUrl}
+                           onChange={e => setVideoUrl(e.target.value)}
+                           placeholder="TikTok or YouTube link..."
+                           className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder:text-white/20"
+                        />
+                     </div>
+
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-blue-300 uppercase tracking-widest ml-1">Caption</label>
+                        <textarea 
+                           value={caption}
+                           onChange={e => setCaption(e.target.value)}
+                           placeholder="Describe the energy..."
+                           className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder:text-white/20 h-24 resize-none"
+                        />
+                     </div>
+
+                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                        <div className="flex items-center gap-3">
+                           <div className={`p-2 rounded-xl ${isAuthorized ? 'bg-blue-600' : 'bg-white/10'}`}>
+                              {videoUrl.includes('youtube') ? <Youtube size={16} /> : <Video size={16} />}
+                           </div>
+                           <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest">Authorize Account</p>
+                              <p className="text-[8px] text-white/40 font-bold uppercase tracking-tighter">Verified post status</p>
+                           </div>
+                        </div>
+                        <button 
+                          onClick={() => { vibrate(VIBRATION_PATTERNS.CLICK); setIsAuthorized(!isAuthorized); }}
+                          className={`w-12 h-6 rounded-full transition-all relative ${isAuthorized ? 'bg-blue-600' : 'bg-white/20'}`}
+                        >
+                          <motion.div 
+                            animate={{ x: isAuthorized ? 24 : 4 }}
+                            className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-md" 
+                          />
+                        </button>
+                     </div>
+                  </div>
+
+                  <button 
+                    onClick={handleCreateVideo}
+                    disabled={isSubmitting || !videoUrl.trim()}
+                    className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'Posting...' : 'Drop it in ! 🎥'}
+                  </button>
+               </div>
+            </motion.div>
+         )}
+       </AnimatePresence>
+    </div>
+  );
+}
+
+function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings, posts, circles, notifications, setActiveScreen }: { onBack: () => void, user: FirebaseUser | null, settings: UserSettings, stats: UserStats, showToast: (m: string, t?: 'success' | 'info' | 'error') => void, onUpdateSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, posts: Post[], circles: SocialCircle[], notifications: NexusNotification[], setActiveScreen: (s: Screen) => void }) {
   const [activeTab, setActiveTab] = useState<'feed' | 'circles' | 'inbox'>('feed');
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
@@ -4591,60 +4876,6 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const getEmbedData = (url: string) => {
-    if (!url) return null;
-    
-    // YouTube
-    const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-    const ytMatch = url.match(ytRegex);
-    if (ytMatch) return { type: 'youtube', id: ytMatch[1] };
-
-    // TikTok
-    const ttRegex = /tiktok\.com\/.*video\/(\d+)/i;
-    const ttMatch = url.match(ttRegex);
-    if (ttMatch) return { type: 'tiktok', id: ttMatch[1] };
-
-    return null;
-  };
-
-  const VideoPlayer = ({ url }: { url: string }) => {
-    const embedData = getEmbedData(url);
-    if (!embedData) return (
-      <div className="p-6 bg-amber-50 border-2 border-amber-100 rounded-3xl text-center space-y-2">
-        <div className="text-2xl">⚠️</div>
-        <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Video Link Unverified</p>
-        <p className="text-[8px] font-bold text-amber-900/40">{url}</p>
-      </div>
-    );
-
-    if (embedData.type === 'youtube') {
-      return (
-        <div className="aspect-video w-full rounded-2xl overflow-hidden shadow-lg bg-black border-2 border-white/20">
-          <iframe 
-             src={`https://www.youtube.com/embed/${embedData.id}`} 
-             className="w-full h-full border-0" 
-             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-             allowFullScreen 
-          />
-        </div>
-      );
-    }
-
-    if (embedData.type === 'tiktok') {
-      return (
-        <div className="aspect-[9/16] w-full max-w-[320px] mx-auto rounded-3xl overflow-hidden shadow-2xl bg-black border-4 border-white/10">
-          <iframe 
-            src={`https://www.tiktok.com/embed/v2/${embedData.id}`} 
-            className="w-full h-full border-0" 
-            allowFullScreen
-          />
-        </div>
-      );
-    }
-
-    return null;
   };
 
   const handlePostComment = async () => {
@@ -5055,13 +5286,22 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
               <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">Hybrid Social Hub</p>
             </div>
           </div>
-          <button 
-            onClick={() => setIsCreatingPost(true)}
-            className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 hover:scale-105 active:scale-95 transition-transform flex items-center gap-2"
-          >
-            <Plus size={20} />
-            <span className="font-bold hidden sm:inline text-sm">Create Post</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setActiveScreen('nexus-video')}
+              className="p-4 bg-white text-blue-600 rounded-2xl shadow-lg border-2 border-blue-50 hover:scale-105 active:scale-95 transition-transform flex items-center gap-2"
+            >
+              <Video size={20} />
+              <span className="font-bold hidden sm:inline text-sm">Nexus Reel</span>
+            </button>
+            <button 
+              onClick={() => setIsCreatingPost(true)}
+              className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 hover:scale-105 active:scale-95 transition-transform flex items-center gap-2"
+            >
+              <Plus size={20} />
+              <span className="font-bold hidden sm:inline text-sm">Create Post</span>
+            </button>
+          </div>
         </div>
       )}
 

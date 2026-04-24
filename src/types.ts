@@ -184,7 +184,22 @@ export interface CustomPlan {
   createdAt: string;
 }
 
-export type Screen = 'home' | 'progress' | 'profile' | 'social' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant';
+export type Screen = 'home' | 'progress' | 'profile' | 'social' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant' | 'nexus-video';
+
+export interface NexusVideo {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  videoUrl: string;
+  caption: string;
+  likes: number;
+  likedBy?: string[];
+  commentCount: number;
+  createdAt: string;
+  isAuthorized?: boolean;
+  platform?: 'youtube' | 'tiktok';
+}
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion';
 export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';
 
