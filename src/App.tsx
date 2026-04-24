@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 console.log("App.tsx is loading...");
 import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, BellOff, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout, MoreHorizontal, Flag, Bookmark, EyeOff, Share2, Search, Youtube, Video } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
@@ -27,6 +27,19 @@ import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './compon
 import { LibraryScreen } from './components/LibraryScreen';
 import { ShopScreen, SHOP_ITEMS } from './components/ShopScreen';
 import { PlantScreen } from './components/PlantScreen';
+import { Calendar } from './components/Calendar';
+import { StatsCharts } from './components/StatsCharts';
+import { VideoPlayer } from './components/VideoPlayer';
+import { SocialScreen as SocialScreenType, NexusVideoScreen as NexusVideoScreenType } from './types'; // We'll use types if needed
+
+const SocialScreen = lazy(() => import('./components/SocialScreen').then(m => ({ default: m.SocialScreen })));
+const NexusVideoScreen = lazy(() => import('./components/NexusVideoScreen').then(m => ({ default: m.NexusVideoScreen })));
+const LeaderboardScreen = lazy(() => import('./components/LeaderboardScreen').then(m => ({ default: m.LeaderboardScreen })));
+const ProgressScreen = lazy(() => import('./components/ProgressScreen').then(m => ({ default: m.ProgressScreen })));
+const ProfileScreen = lazy(() => import('./components/ProfileScreen').then(m => ({ default: m.ProfileScreen })));
+const SettingsScreen = lazy(() => import('./components/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
+const GalleryScreen = lazy(() => import('./components/GalleryScreen').then(m => ({ default: m.GalleryScreen })));
+const NotebookScreen = lazy(() => import('./components/NotebookScreen').then(m => ({ default: m.NotebookScreen })));
 
 const SOCIAL_LOCKED = false;
 
@@ -107,179 +120,7 @@ function WhatIsNewModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-const getEmbedData = (url: string) => {
-  if (!url) return null;
-  const lowerUrl = url.toLowerCase();
-  
-  // YouTube 
-  // Improved regex for all types: shorts, watch, embed, youtu.be
-  const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-  const ytMatch = url.match(ytRegex);
-  if (ytMatch) return { type: 'youtube', id: ytMatch[1], isShort: url.includes('/shorts/') };
-  
-  // TikTok 
-  // Massive upgrade to handle m., v., vt., vm., t., and @user/video formats
-  const ttRegex = /(?:tiktok\.com\/.*video\/(\d+))|(?:tiktok\.com\/t\/([a-zA-Z0-9_-]+))|(?:tiktok\.com\/@[\w.-]+\/video\/(\d+))|(?:[v|vm|vt]\.tiktok\.com\/([a-zA-Z0-9_-]+))|(?:m\.tiktok\.com\/v\/(\d+))/i;
-  const ttMatch = url.match(ttRegex);
-  if (ttMatch) {
-    const id = ttMatch[1] || ttMatch[3] || ttMatch[5] || ttMatch[4] || ttMatch[2];
-    if (id) return { type: 'tiktok', id };
-  }
-
-  // Fallback check
-  if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) return { type: 'youtube', id: 'manual', rawUrl: url };
-  if (lowerUrl.includes('tiktok.com')) return { type: 'tiktok', id: 'manual', rawUrl: url };
-  
-  return null;
-};
-
-const VideoPlayer = ({ url, fullScreen = false }: { url: string, fullScreen?: boolean }) => {
-  const embedData = getEmbedData(url);
-  
-  const ExternalFallback = () => (
-    <div className="p-8 bg-blue-50/50 border-2 border-blue-100 rounded-3xl text-center space-y-4 shadow-inner">
-      <div className="text-4xl">🎥</div>
-      <div>
-        <p className="text-xs font-black text-blue-600 uppercase tracking-widest leading-none">Video Direct Link</p>
-        <p className="text-[10px] text-blue-900/60 font-bold mb-4 leading-relaxed px-4">
-          This clip is playing hard to catch, bro! Jump straight to the source to vibe.
-        </p>
-      </div>
-      <a 
-        href={url} 
-        target="_blank" 
-        rel="noreferrer" 
-        className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all hover:bg-blue-700"
-      >
-        Watch on {url.includes('youtube') ? 'YouTube' : 'TikTok'} 🚀
-      </a>
-    </div>
-  );
-
-  if (!embedData || embedData.id === 'manual') return <ExternalFallback />;
-
-  // Removing 'sandbox' attribute fixes Error 153 and other player initialization bugs
-  if (embedData.type === 'youtube') {
-    return (
-      <div className={`${fullScreen || embedData.isShort ? 'aspect-[9/16]' : 'aspect-video'} w-full rounded-2xl overflow-hidden shadow-2xl bg-black border-2 border-white/10 relative`}>
-        <iframe 
-           src={`https://www.youtube.com/embed/${embedData.id}?autoplay=0&rel=0&modestbranding=1`}
-           className="absolute inset-0 w-full h-full border-0" 
-           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-           allowFullScreen 
-           referrerPolicy="no-referrer-when-downgrade"
-        />
-      </div>
-    );
-  }
-
-  if (embedData.type === 'tiktok') {
-    return (
-      <div className="aspect-[9/16] w-full max-w-[360px] mx-auto rounded-3xl overflow-hidden shadow-2xl bg-black border-4 border-white/5 relative">
-        <iframe 
-          src={`https://www.tiktok.com/embed/v2/${embedData.id}`} 
-          className="absolute inset-0 w-full h-full border-0" 
-          allowFullScreen
-          referrerPolicy="no-referrer-when-downgrade"
-        />
-      </div>
-    );
-  }
-
-  return null;
-};
-
-function Calendar({ history }: { history: DailyProgress[] }) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(monthStart);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
-  return (
-    <div className="glass-card p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-black text-blue-900/40 uppercase tracking-widest">Activity Calendar</h3>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setCurrentDate(subDays(monthStart, 1))} className="p-1 hover:bg-blue-50 rounded-md text-blue-400">
-            <ChevronLeft size={16} />
-          </button>
-          <span className="text-xs font-bold text-blue-900/60 min-w-[100px] text-center">
-            {format(currentDate, 'MMMM yyyy')}
-          </span>
-          <button onClick={() => setCurrentDate(subDays(monthEnd, -1))} className="p-1 hover:bg-blue-50 rounded-md text-blue-400">
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-          <div key={d} className="text-[10px] font-black text-blue-900/20 text-center py-2">{d}</div>
-        ))}
-        {Array.from({ length: monthStart.getDay() }).map((_, i) => (
-          <div key={`empty-${i}`} />
-        ))}
-        {days.map(day => {
-          const dateStr = format(day, 'yyyy-MM-dd');
-          const dayData = history.find(h => h.date === dateStr);
-          const isToday = isSameDay(day, new Date());
-          return (
-            <div 
-              key={dateStr}
-              className={`aspect-square rounded-lg flex items-center justify-center text-[10px] font-bold transition-all ${
-                dayData?.completed 
-                  ? 'bg-emerald-500 text-white shadow-sm' 
-                  : isToday 
-                    ? 'bg-blue-50 text-blue-600 border border-blue-200' 
-                    : 'text-blue-900/30 hover:bg-blue-50/50'
-              }`}
-            >
-              {day.getDate()}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function StatsCharts({ history }: { history: DailyProgress[] }) {
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = subDays(new Date(), 6 - i);
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const dayData = history.find(h => h.date === dateStr);
-    return {
-      name: format(date, 'EEE'),
-      water: dayData?.waterDrank || 0,
-    };
-  });
-
-  return (
-    <div className="glass-card p-6">
-      <h3 className="text-sm font-black text-blue-900/40 uppercase tracking-widest mb-6">Hydration Stats</h3>
-      <div className="h-48 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={last7Days}>
-            <XAxis 
-              dataKey="name" 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{ fontSize: 10, fontWeight: 800, fill: '#1e3a8a', opacity: 0.3 }}
-            />
-            <Tooltip 
-              cursor={{ fill: 'rgba(59, 130, 246, 0.05)' }}
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-            />
-            <Bar dataKey="water" radius={[4, 4, 0, 0]}>
-              {last7Days.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.water >= 2 ? '#10b981' : '#3b82f6'} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-}
+// Moved to separate files: Calendar, StatsCharts, VideoPlayer
 
 function HappyMascot({ size = 32, hat = 'none', settings }: { size?: number, hat?: string, settings: UserSettings }) {
   return (
@@ -677,6 +518,22 @@ export default function App() {
   const today = new Date().toISOString().split('T')[0];
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Preload lazy components when the browser is idle
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(() => {
+        import('./components/SocialScreen');
+        import('./components/NexusVideoScreen');
+        import('./components/LeaderboardScreen');
+        import('./components/ProgressScreen');
+        import('./components/ProfileScreen');
+        import('./components/SettingsScreen');
+        import('./components/GalleryScreen');
+        import('./components/NotebookScreen');
+      });
+    }
+  }, []);
   const [isDataReady, setIsDataReady] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
@@ -2622,7 +2479,9 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <ProgressScreen stats={stats} history={history} settings={settings} setSettings={onUpdateSettings} userRank={userRank} />
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">SYNCHRONIZING GROWTH...</div>}>
+                  <ProgressScreen stats={stats} history={history} settings={settings} setSettings={onUpdateSettings} userRank={userRank} />
+                </Suspense>
               </motion.div>
             )}
             {activeScreen === 'profile' && (
@@ -2634,7 +2493,9 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <ProfileScreen settings={settings} setSettings={onUpdateSettings} stats={stats} user={user} setActiveScreen={setActiveScreen} circles={circles} />
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">FETCHING IDENTITY...</div>}>
+                  <ProfileScreen settings={settings} setSettings={onUpdateSettings} stats={stats} user={user} setActiveScreen={setActiveScreen} circles={circles} />
+                </Suspense>
               </motion.div>
             )}
             {activeScreen === 'social' && (
@@ -2646,18 +2507,20 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <SocialScreen 
-                  onBack={() => setActiveScreen('profile')} 
-                  user={user}
-                  settings={settings}
-                  stats={stats}
-                  showToast={showToast}
-                  onUpdateSettings={onUpdateSettings}
-                  posts={posts}
-                  circles={circles}
-                  notifications={notifications}
-                  setActiveScreen={setActiveScreen}
-                />
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">ENTERING THE NEXUS...</div>}>
+                  <SocialScreen 
+                    onBack={() => setActiveScreen('profile')} 
+                    user={user}
+                    settings={settings}
+                    stats={stats}
+                    showToast={showToast}
+                    onUpdateSettings={onUpdateSettings}
+                    posts={posts}
+                    circles={circles}
+                    notifications={notifications}
+                    setActiveScreen={setActiveScreen}
+                  />
+                </Suspense>
               </motion.div>
             )}
             {activeScreen === 'nexus-video' && (
@@ -2668,16 +2531,18 @@ export default function App() {
                   exit={{ opacity: 0, y: 100 }}
                   className="w-full"
                >
-                  <NexusVideoScreen 
-                     onBack={() => {
-                        setActiveScreen('social');
-                        setFocusedVideoId(null);
-                     }}
-                     user={user}
-                     settings={settings}
-                     showToast={showToast}
-                     initialVideoId={focusedVideoId}
-                  />
+                  <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">TUNING FREQUENCIES...</div>}>
+                    <NexusVideoScreen 
+                       onBack={() => {
+                          setActiveScreen('social');
+                          setFocusedVideoId(null);
+                       }}
+                       user={user}
+                       settings={settings}
+                       showToast={showToast}
+                       initialVideoId={focusedVideoId}
+                    />
+                  </Suspense>
                </motion.div>
             )}
             {activeScreen === 'settings' && (
@@ -2689,25 +2554,27 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <SettingsScreen 
-                  user={user}
-                  settings={settings} 
-                  setSettings={onUpdateSettings} 
-                  isPro={isPro}
-                  onBack={() => {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    setActiveScreen('home');
-                  }} 
-                  onLogout={handleLogout} 
-                  fcmToken={fcmToken} 
-                  fcmError={fcmError}
-                  onRetryFCM={setupFCM}
-                  onSendTestNotification={sendTestNotification}
-                  onSendMotivation={sendMotivation}
-                  onSendTestEmail={sendTestEmail}
-                  showToast={showToast}
-                  sendNotification={sendNotification}
-                />
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">ACCESSING CONTROL...</div>}>
+                  <SettingsScreen 
+                    user={user}
+                    settings={settings} 
+                    setSettings={onUpdateSettings} 
+                    isPro={isPro}
+                    onBack={() => {
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                      setActiveScreen('home');
+                    }} 
+                    onLogout={handleLogout} 
+                    fcmToken={fcmToken} 
+                    fcmError={fcmError}
+                    onRetryFCM={setupFCM}
+                    onSendTestNotification={sendTestNotification}
+                    onSendMotivation={sendMotivation}
+                    onSendTestEmail={sendTestEmail}
+                    showToast={showToast}
+                    sendNotification={sendNotification}
+                  />
+                </Suspense>
               </motion.div>
             )}
             {activeScreen === 'shop' && (
@@ -2963,13 +2830,15 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <GalleryScreen 
-                  stats={stats} 
-                  onBack={() => {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    setActiveScreen('home');
-                  }} 
-                />
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">OPENING VAULT...</div>}>
+                  <GalleryScreen 
+                    stats={stats} 
+                    onBack={() => {
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                      setActiveScreen('home');
+                    }} 
+                  />
+                </Suspense>
               </motion.div>
             )}
             {activeScreen === 'notebook' && (
@@ -2981,15 +2850,17 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <NotebookScreen 
-                  stats={stats} 
-                  setStats={setStats}
-                  onBack={() => {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    setActiveScreen('home');
-                  }} 
-                  showToast={showToast}
-                />
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">OPENING ARCHIVES...</div>}>
+                  <NotebookScreen 
+                    stats={stats} 
+                    setStats={setStats}
+                    onBack={() => {
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                      setActiveScreen('home');
+                    }} 
+                    showToast={showToast}
+                  />
+                </Suspense>
               </motion.div>
             )}
             {activeScreen === 'leaderboard' && (
@@ -3001,16 +2872,18 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <LeaderboardScreen 
-                  leaderboard={leaderboard} 
-                  user={user} 
-                  settings={settings}
-                  stats={stats}
-                  onBack={() => {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    setActiveScreen('home');
-                  }}
-                />
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">COMPUTING HIERARCHY...</div>}>
+                  <LeaderboardScreen 
+                    leaderboard={leaderboard} 
+                    user={user} 
+                    settings={settings}
+                    stats={stats}
+                    onBack={() => {
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                      setActiveScreen('home');
+                    }}
+                  />
+                </Suspense>
               </motion.div>
             )}
             {activeScreen === 'house' && (
@@ -3347,132 +3220,6 @@ function getLeagueColor(league: string) {
   }
 }
 
-function LeaderboardScreen({ leaderboard, user, settings, stats, onBack }: { leaderboard: LeaderboardEntry[], user: FirebaseUser | null, settings: UserSettings, stats: UserStats, onBack: () => void }) {
-  const userRank = leaderboard.findIndex(l => l.uid === user?.uid) + 1;
-  const currentLeague = settings.league || 'Bronze';
-  const leagueIndex = LEAGUES.indexOf(currentLeague);
-  
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="flex flex-col h-screen bg-white"
-    >
-      {/* Header */}
-      <div className="p-6 flex items-center justify-between border-b border-gray-100">
-        <button onClick={onBack} className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors">
-          <ChevronRight className="rotate-180" size={28} />
-        </button>
-        <div className="flex flex-col items-center">
-          <h2 className="text-xl font-black text-blue-900 uppercase tracking-tight">{currentLeague} League</h2>
-          <div className="flex gap-1 mt-1">
-            {LEAGUES.map((l, i) => (
-              <div 
-                key={l} 
-                className={`w-2 h-2 rounded-full ${i <= leagueIndex ? 'bg-yellow-400' : 'bg-gray-200'}`}
-              />
-            ))}
-          </div>
-        </div>
-        <div className="w-10" /> {/* Spacer */}
-      </div>
-
-      {/* League Info */}
-      <div className="bg-blue-50 p-4 flex items-center gap-4">
-        <div className="w-12 h-12 bg-yellow-400 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-yellow-200">
-          <TrophyIcon size={24} />
-        </div>
-        <div>
-          <p className="text-xs font-bold text-blue-900/60 uppercase tracking-widest">Promotion Zone</p>
-          <p className="text-sm font-bold text-blue-900">Top 3 advance to the next league!</p>
-        </div>
-      </div>
-
-      {/* Leaderboard List */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
-        {leaderboard.map((entry, index) => {
-          const isCurrentUser = entry.uid === user?.uid;
-          const rank = index + 1;
-          
-          return (
-            <motion.div
-              key={entry.uid}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
-                isCurrentUser ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-[1.02] z-10' : 'bg-white border-2 border-gray-50'
-              }`}
-            >
-              <div className={`w-8 text-center font-black text-lg ${
-                rank === 1 ? 'text-yellow-500' : 
-                rank === 2 ? 'text-gray-400' : 
-                rank === 3 ? 'text-orange-400' : 
-                isCurrentUser ? 'text-white' : 'text-blue-900/20'
-              }`}>
-                {rank}
-              </div>
-              
-              <div className="relative">
-                {entry.photoURL ? (
-                  <img src={entry.photoURL} alt={entry.displayName} className="w-12 h-12 rounded-2xl object-cover border-2 border-white/20" referrerPolicy="no-referrer" loading="lazy" />
-                ) : (
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${isCurrentUser ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600'}`}>
-                    {entry.displayName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                {rank <= 3 && (
-                  <div className="absolute -top-1 -right-1 bg-white rounded-full p-1 shadow-md">
-                    <Star size={10} className="text-yellow-400 fill-yellow-400" />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <h4 className={`font-bold truncate ${isCurrentUser ? 'text-white' : 'text-blue-900'}`}>
-                  {entry.displayName}
-                </h4>
-                <div className="flex items-center gap-2">
-                  <div className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${isCurrentUser ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                    Lvl {entry.level}
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] font-bold opacity-60">
-                    <Flame size={12} className={isCurrentUser ? 'text-white' : 'text-orange-500'} />
-                    {entry.streak}
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-right">
-                <div className={`text-lg font-black ${isCurrentUser ? 'text-white' : 'text-blue-900'}`}>
-                  {entry.weeklyPoints}
-                </div>
-                <div className={`text-[10px] font-bold uppercase tracking-widest opacity-60`}>
-                  Points
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* User's Fixed Position Bar (If not in top view) */}
-      {userRank > 10 && (
-        <div className="p-4 bg-blue-600 text-white shadow-2xl">
-           <div className="flex items-center gap-4 max-w-2xl mx-auto">
-             <div className="w-8 text-center font-black text-lg">{userRank}</div>
-             <div className="flex-1 font-black">You're almost there! Keep going! 🔥</div>
-             <div className="text-right">
-               <div className="text-lg font-black">{stats.weeklyXP || 0}</div>
-               <div className="text-[10px] font-bold uppercase tracking-wider text-white/60">XP</div>
-             </div>
-           </div>
-        </div>
-      )}
-    </motion.div>
-  );
-}
 
 function CountdownToMidnight() {
   const [timeLeft, setTimeLeft] = useState('');
@@ -3937,1401 +3684,11 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
   );
 }
 
-function ProgressScreen({ stats, history, settings, setSettings, userRank }: { stats: UserStats, history: DailyProgress[], settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, userRank: number }) {
-  const handleTrophyClick = (type: any) => {
-    vibrate(VIBRATION_PATTERNS.TROPHY);
-    if (settings.soundEnabled) playTrophySound(type);
-  };
 
-  const level = Math.floor(stats.totalPoints / 100) + 1;
-  const pointsInLevel = stats.totalPoints % 100;
-  
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = subDays(new Date(), 6 - i);
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const dayData = history.find(h => h.date === dateStr);
-    return {
-      date: dateStr,
-      label: format(date, 'EEE'),
-      completed: dayData?.completed || false
-    };
-  });
 
-  const focusData = [
-    { name: 'Physical', value: stats.pointsByCategory?.physical || 0, color: '#3b82f6', icon: Zap },
-    { name: 'Mental', value: stats.pointsByCategory?.mental || 0, color: '#8b5cf6', icon: Brain },
-    { name: 'Creative', value: stats.pointsByCategory?.creative || 0, color: '#ec4899', icon: Palette },
-  ];
 
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="space-y-6 pt-4 max-w-4xl mx-auto w-full pb-20"
-    >
-      {/* 1. Level & Points Header */}
-      <div className="glass-card p-8 overflow-hidden relative border-2 border-blue-500/20">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -mr-32 -mt-32 blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/5 rounded-full -ml-24 -mb-24 blur-3xl" />
-        
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 relative z-10">
-          <div className="flex items-center gap-5">
-            <div className="relative">
-              <div className="absolute inset-0 bg-blue-500 blur-xl opacity-20 animate-pulse" />
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/40 border-2 border-white/20 transform rotate-3 hover:rotate-0 transition-transform duration-500">
-                <span className="text-3xl font-black text-white drop-shadow-md">{level}</span>
-              </div>
-              <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-1 rounded-lg shadow-lg border border-yellow-500">
-                PRO
-              </div>
-            </div>
-            <div>
-              <h2 className="text-2xl font-black text-blue-900 tracking-tight">Level {level} Explorer</h2>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                <p className="text-xs font-bold text-blue-900/40 uppercase tracking-widest">Next level at {level * 100} pts</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white/50 backdrop-blur-sm p-4 rounded-3xl border border-white/50 shadow-sm flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 leading-none">{stats.totalPoints}</p>
-              <p className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest mt-1">Total Points</p>
-            </div>
-            <div className="w-px h-10 bg-blue-100" />
-            <div className="text-right">
-              <p className="text-4xl font-black text-amber-500 leading-none">{stats.coins || 0}</p>
-              <p className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest mt-1">Nexora Coins</p>
-            </div>
-            <div className="w-px h-10 bg-blue-100" />
-            <div className="text-right">
-              <p className="text-4xl font-black text-purple-600 leading-none">{stats.xp || 0}</p>
-              <p className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest mt-1">Nexora XP</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="space-y-3 relative z-10">
-          <div className="flex justify-between items-end">
-            <span className="text-[11px] font-black text-blue-900/60 uppercase tracking-widest">Level Progress</span>
-            <span className="text-lg font-black text-blue-600">{pointsInLevel}%</span>
-          </div>
-          <div className="h-6 w-full bg-blue-100/50 rounded-2xl p-1 shadow-inner border border-blue-200/50 relative overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${pointsInLevel}%` }}
-              className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 rounded-xl shadow-lg relative overflow-hidden"
-            >
-              {/* Shimmer Effect */}
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.3)_50%,transparent_100%)] bg-[length:200%_100%] animate-[shimmer_2s_linear_infinite]" />
-              
-              {/* Particle Overlay */}
-              <div className="absolute inset-0 opacity-30">
-                {[...Array(5)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-                    style={{ 
-                      left: `${Math.random() * 100}%`, 
-                      top: `${Math.random() * 100}%`,
-                      animationDelay: `${Math.random() * 2}s`
-                    }}
-                  />
-                ))}
-              </div>
-            </motion.div>
-          </div>
-          <div className="flex justify-between text-[10px] font-bold text-blue-900/30 uppercase tracking-widest">
-            <span>Level {level}</span>
-            <span>Level {level + 1}</span>
-          </div>
-        </div>
-      </div>
 
-      {/* Global Rank Section */}
-      <div className="glass-card p-6 bg-gradient-to-br from-blue-500/5 to-purple-500/5 border-blue-100">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <BarChart3 className="text-white" size={20} />
-            </div>
-            <div>
-              <h3 className="font-bold text-blue-900">Global Performance</h3>
-              <p className="text-xs font-medium text-blue-900/40 tracking-tight">How you compare to others</p>
-            </div>
-          </div>
-          {settings.isPro && (
-            <div className="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-black uppercase rounded-full border border-amber-200">
-              PRO RANKING
-            </div>
-          )}
-        </div>
-        
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-1">
-            <div className="text-[10px] font-black text-blue-900/30 uppercase tracking-widest">Global Rank</div>
-            <div className="text-3xl font-black text-blue-900 flex items-baseline gap-1">
-              #{userRank > 0 ? userRank : '---'}
-              <span className="text-xs font-bold text-blue-900/40">/ Top 10</span>
-            </div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-[10px] font-black text-blue-900/30 uppercase tracking-widest">Performance</div>
-            <div className="text-3xl font-black text-emerald-500">
-              {userRank === 1 ? 'ELITE' : userRank <= 3 ? 'TOP TIER' : userRank <= 10 ? 'RISING' : 'ACTIVE'}
-            </div>
-          </div>
-        </div>
-        
-        {!settings.isPro && (
-          <div className="mt-6 p-4 bg-white/50 rounded-xl border border-blue-100/50 flex items-center justify-between">
-            <p className="text-xs font-medium text-blue-900/60 max-w-[180px]">Unlock detailed performance insights with Nexora Pro.</p>
-            <button className="text-xs font-black text-blue-600 uppercase tracking-wider">Upgrade</button>
-          </div>
-        )}
-      </div>
 
-      {/* 1.5 Level Journey Map */}
-      <div className="glass-card p-6 space-y-6 border-2 border-indigo-500/10">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-black text-blue-900/40 uppercase tracking-widest flex items-center gap-2">
-            <MapIcon size={16} className="text-indigo-500" /> Level Journey
-          </h3>
-          <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100">
-            Current: Level {level}
-          </span>
-        </div>
-        <div className="flex items-center justify-between relative px-2 py-4">
-          {/* Connecting Line */}
-          <div className="absolute top-1/2 left-0 w-full h-1.5 bg-blue-50 -translate-y-1/2 z-0 rounded-full" />
-          
-          {/* Dynamic Levels Range */}
-          {(() => {
-            const startLevel = Math.max(1, level - 2);
-            const levelsToShow = Array.from({ length: 5 }, (_, i) => startLevel + i);
-            const progressInWindow = ((level - startLevel) / 4) * 100;
-            
-            return (
-              <>
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, progressInWindow)}%` }}
-                  className="absolute top-1/2 left-0 h-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 -translate-y-1/2 z-0 rounded-full shadow-[0_0_10px_rgba(79,70,229,0.4)]"
-                />
-                
-                {levelsToShow.map((l) => (
-                  <div key={l} className="relative z-10 flex flex-col items-center gap-3">
-                    <motion.div 
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center border-4 transition-all duration-700 relative ${
-                        l < level ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-200 text-white shadow-lg shadow-emerald-500/20' :
-                        l === level ? 'bg-white border-indigo-600 text-indigo-600 scale-125 shadow-2xl ring-4 ring-indigo-500/20' :
-                        'bg-white border-blue-50 text-blue-100'
-                      }`}
-                    >
-                      {l < level ? <Check size={20} strokeWidth={3} /> : <span className="text-sm font-black">{l}</span>}
-                      
-                      {/* Level Up Badge for current level */}
-                      {l === level && (
-                        <motion.div 
-                          initial={{ scale: 0, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ delay: 0.5, type: 'spring' }}
-                          className="absolute -top-3 -right-3 bg-amber-400 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white shadow-sm"
-                        >
-                          PRO
-                        </motion.div>
-                      )}
-                    </motion.div>
-                    <span className={`text-[10px] font-black uppercase tracking-tighter ${l === level ? 'text-indigo-600' : 'text-blue-900/20'}`}>
-                      Level {l}
-                    </span>
-                  </div>
-                ))}
-              </>
-            );
-          })()}
-        </div>
-        <p className="text-[10px] text-center font-bold text-blue-900/30 italic">Keep crushing challenges to unlock higher levels, bro! 🔥</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* 2. Streak Stats */}
-        <div className="glass-card p-6 space-y-6">
-          <h3 className="text-sm font-black text-blue-900/40 uppercase tracking-widest flex items-center gap-2">
-            <Flame size={16} className="text-orange-500" /> Consistency
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100">
-              <p className="text-3xl font-black text-orange-500">{stats.streak}</p>
-              <p className="text-[10px] font-bold text-orange-900/40 uppercase tracking-widest">Current Streak</p>
-            </div>
-            <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
-              <p className="text-3xl font-black text-emerald-500">{stats.bestStreak || stats.streak}</p>
-              <p className="text-[10px] font-bold text-emerald-900/40 uppercase tracking-widest">Best Streak</p>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-2xl border border-purple-100 col-span-2">
-              <p className="text-3xl font-black text-purple-600">{stats.xp || 0}</p>
-              <p className="text-[10px] font-bold text-purple-900/40 uppercase tracking-widest">Total XP Earned</p>
-            </div>
-          </div>
-          
-          {/* Weekly Grid */}
-          <div className="space-y-3">
-            <p className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest">Last 7 Days</p>
-            <div className="flex justify-between items-center px-1">
-              {last7Days.map((day, i) => (
-                <div key={i} className="flex flex-col items-center gap-2">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all duration-500 ${
-                    day.completed 
-                      ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20' 
-                      : 'bg-white/50 border-blue-100 text-blue-200'
-                  }`}>
-                    {day.completed ? <CheckCircle2 size={16} /> : <div className="w-1.5 h-1.5 rounded-full bg-blue-100" />}
-                  </div>
-                  <span className="text-[9px] font-black text-blue-900/30 uppercase">{day.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Focus Balance Chart */}
-        <div className="glass-card p-6 space-y-6">
-          <h3 className="text-sm font-black text-blue-900/40 uppercase tracking-widest flex items-center gap-2">
-            <Target size={16} className="text-blue-500" /> Focus Balance
-          </h3>
-          <div className="h-48 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={focusData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#1e3a8a', fontSize: 10, fontWeight: 900 }} 
-                />
-                <YAxis hide />
-                <Tooltip 
-                  cursor={{ fill: 'transparent' }}
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-white p-2 rounded-xl shadow-xl border border-blue-50 text-[10px] font-black text-blue-900 uppercase">
-                          {payload[0].value} pts
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="value" radius={[8, 8, 8, 8]} barSize={40}>
-                  {focusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex justify-between gap-2">
-            {focusData.map((item, i) => (
-              <div key={i} className="flex-1 flex items-center gap-2 bg-blue-50/50 p-2 rounded-xl">
-                <item.icon size={12} style={{ color: item.color }} />
-                <span className="text-[9px] font-black text-blue-900/60 uppercase">{item.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Trophy Library */}
-      <div className="glass-card p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-black text-blue-900/40 uppercase tracking-widest flex items-center gap-2">
-            <TrophyIcon size={16} className="text-emerald-500" /> Trophy Library
-          </h3>
-          <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase">
-            {stats.trophies?.length || 0} Earned
-          </span>
-        </div>
-        
-        {(!stats.trophies || stats.trophies.length === 0) ? (
-          <div className="text-center py-12 space-y-4">
-            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto">
-              <Star className="text-blue-200" size={40} />
-            </div>
-            <p className="text-blue-900/40 font-medium text-sm">Complete your first daily flow to earn a Golden Trophy!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-            {(stats.trophies || []).map((trophy) => (
-              <motion.div 
-                key={trophy.id}
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex flex-col items-center space-y-2 p-3 bg-white/50 rounded-2xl border border-white/80 shadow-sm relative"
-              >
-                <div className="cursor-pointer" onClick={() => handleTrophyClick(trophy.type)}>
-                  <div className="w-12 h-12">
-                    {trophy.type === 'golden' && <GoldenTrophy />}
-                    {trophy.type === 'ice' && <IceTrophy />}
-                    {trophy.type === 'broken' && <BrokenTrophy />}
-                  </div>
-                  <div className="text-[8px] font-black text-blue-900/30 uppercase tracking-tighter text-center">
-                    {format(parseISO(trophy.earnedDate), 'MMM d')}
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setSettings({ ...settings, savedTrophyIds: [...(settings.savedTrophyIds || []), trophy.id] })}
-                  className="absolute top-1 right-1 p-1 bg-white/80 rounded-full hover:bg-white"
-                >
-                  <Save size={12} />
-                </button>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen, circles }: { settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, stats: UserStats, user: FirebaseUser | null, setActiveScreen: (screen: Screen) => void, circles: SocialCircle[] }) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [tempName, setTempName] = useState(settings.displayName || '');
-
-  const myCircles = circles.filter(c => c.ownerId === user?.uid && !c.deleted);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("handleFileChange triggered");
-    const file = e.target.files?.[0];
-    if (file && user) {
-      console.log("File selected:", file.name);
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = reader.result as string;
-        setSettings({ ...settings, profilePic: base64 });
-        const path = `users/${user.uid}`;
-        try {
-          await updateDoc(doc(db, 'users', user.uid), { profilePic: base64 });
-          await setDoc(doc(db, 'leaderboard', user.uid), { photoURL: base64 }, { merge: true });
-          console.log("Profile picture updated in Firestore and Leaderboard");
-        } catch (error) {
-          handleFirestoreError(error, OperationType.UPDATE, path);
-        }
-      };
-      reader.readAsDataURL(file);
-    } else {
-      console.log("No file selected or user not logged in");
-    }
-  };
-
-  const handleSaveName = async () => {
-    setSettings({ ...settings, displayName: tempName });
-    setIsEditingName(false);
-    if (user) {
-      const path = `users/${user.uid}`;
-      try {
-        await updateDoc(doc(db, 'users', user.uid), { displayName: tempName });
-        await setDoc(doc(db, 'leaderboard', user.uid), { displayName: tempName }, { merge: true });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, path);
-      }
-    }
-  };
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="space-y-12 pt-4 max-w-4xl mx-auto w-full pb-24"
-    >
-      {/* Profile Header */}
-      <div className="glass-card p-10 flex flex-col items-center gap-8 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-2" style={{ backgroundColor: settings.themeColor }} />
-        
-        <div className="relative group">
-          <div className="w-40 h-40 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-blue-100 flex items-center justify-center">
-            {settings.profilePic ? (
-              <img src={settings.profilePic} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
-            ) : (
-              <User size={80} className="text-blue-300" />
-            )}
-          </div>
-          <button 
-            onClick={() => {
-              vibrate(VIBRATION_PATTERNS.CLICK);
-              fileInputRef.current?.click();
-            }}
-            className="absolute bottom-2 right-2 p-3 text-white rounded-full shadow-lg hover:scale-110 transition-transform"
-            style={{ backgroundColor: settings.themeColor }}
-          >
-            <Camera size={20} />
-          </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            accept="image/*" 
-            className="hidden" 
-          />
-        </div>
-
-        <div className="text-center space-y-4 w-full max-w-sm">
-          {isEditingName ? (
-            <div className="flex items-center gap-2">
-              <input 
-                type="text" 
-                value={tempName}
-                onChange={(e) => setTempName(e.target.value)}
-                className="w-full bg-white/50 border border-white/40 rounded-xl px-4 py-2 font-bold text-blue-900 focus:outline-none"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    vibrate(VIBRATION_PATTERNS.SUCCESS);
-                    handleSaveName();
-                  }
-                }}
-              />
-              <button 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.SUCCESS);
-                  handleSaveName();
-                }} 
-                className="p-2 text-white rounded-lg"
-                style={{ backgroundColor: settings.themeColor }}
-              >
-                <Save size={20} />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center gap-3">
-              <h2 className="text-3xl font-black text-blue-900">{settings.displayName}</h2>
-              <button onClick={() => { vibrate(VIBRATION_PATTERNS.CLICK); setIsEditingName(true); }} className="p-1 text-blue-900/30 hover:text-blue-900/60">
-                <Pen size={18} />
-              </button>
-            </div>
-          )}
-          <p className="text-blue-900/40 font-medium tracking-wide uppercase text-xs">Nexora Member Since March 2026</p>
-        </div>
-      </div>
-
-      {/* Social / Community (NEW POSITION) */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between px-4">
-          <h3 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest">Global Community</h3>
-          <span className="bg-blue-100 text-blue-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-            {SOCIAL_LOCKED ? 'Locked 🔒' : 'Beta Access 🚀'}
-          </span>
-        </div>
-        <button
-          onClick={() => {
-            if (!SOCIAL_LOCKED) {
-              vibrate(VIBRATION_PATTERNS.CLICK);
-              setActiveScreen('social');
-            }
-          }}
-          disabled={SOCIAL_LOCKED}
-          className={`glass-card w-full p-8 flex flex-col items-center justify-center gap-4 border-dashed border-2 border-blue-200 transition-all group ${
-            SOCIAL_LOCKED ? 'opacity-60 cursor-not-allowed' : 'hover:scale-[1.02] cursor-pointer hover:border-blue-400'
-          }`}
-        >
-          <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
-            <Users size={32} />
-          </div>
-          <div className="text-center">
-            <h4 className="text-xl font-black text-blue-900">Nexora Social</h4>
-            <p className="text-sm text-blue-900/40 font-bold">
-              {SOCIAL_LOCKED 
-                ? 'Community section unlocks at 1,000 members! 🚀' 
-                : 'Connect with fellow high-performers! 🔥'}
-            </p>
-          </div>
-        </button>
-      </div>
-
-      {/* My Created Circles (NEW) */}
-      {myCircles.length > 0 && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between px-4">
-            <h3 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest">My Created Nodes</h3>
-            <span className="text-[10px] font-black text-blue-400 bg-blue-50 px-2 py-0.5 rounded-full uppercase">{myCircles.length} Active</span>
-          </div>
-          <div className="flex flex-col gap-3">
-            {myCircles.map(circle => (
-              <button
-                key={circle.id}
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.CLICK);
-                  setActiveScreen('social');
-                  sessionStorage.setItem('nexora_auto_open_circle', circle.id);
-                }}
-                className="glass-card p-4 flex items-center justify-between group hover:scale-[1.01] transition-all cursor-pointer border-blue-50/50 hover:bg-blue-50/20"
-              >
-                <div className="flex items-center gap-4">
-                  <div 
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center text-3xl shadow-sm transition-transform group-hover:rotate-12"
-                    style={{ backgroundColor: `${circle.color}15`, color: circle.color }}
-                  >
-                    {circle.icon}
-                  </div>
-                  <div className="text-left">
-                    <h4 className="font-black text-blue-900 truncate">n/{circle.name.replace(/\s+/g, '').toLowerCase()}</h4>
-                    <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-tighter">{circle.memberCount} Mates • {circle.category}</p>
-                  </div>
-                </div>
-                <div className="p-2 rounded-xl bg-blue-50 text-blue-300 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                  <ChevronRight size={18} />
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Mascot Wardrobe */}
-      <div className="space-y-6">
-        <h3 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest px-4">Mascot Wardrobe</h3>
-        <div className="glass-card p-6">
-          <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
-            <button
-              onClick={() => {
-                vibrate(VIBRATION_PATTERNS.CLICK);
-                setSettings({ ...settings, activeSkin: 'none' });
-              }}
-              className={`aspect-square rounded-2xl flex items-center justify-center text-2xl border-2 transition-all ${
-                settings.activeSkin === 'none' ? 'border-blue-500 bg-blue-50' : 'border-transparent bg-slate-50'
-              }`}
-            >
-              🚫
-            </button>
-            {(settings.purchasedItems || []).filter(id => id.startsWith('skin-')).map(skinId => {
-              const skinName = skinId.replace('skin-', '');
-              const icon = SHOP_ITEMS.find(i => i.id === skinId)?.icon || '✨';
-              return (
-                <button
-                  key={skinId}
-                  onClick={() => {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    setSettings({ ...settings, activeSkin: skinName });
-                  }}
-                  className={`aspect-square rounded-2xl flex items-center justify-center text-2xl border-2 transition-all ${
-                    settings.activeSkin === skinName ? 'border-blue-500 bg-blue-50' : 'border-transparent bg-slate-50'
-                  }`}
-                >
-                  {icon}
-                </button>
-              );
-            })}
-          </div>
-          {(!settings.purchasedItems || settings.purchasedItems.filter(id => id.startsWith('skin-')).length === 0) && (
-            <p className="text-center text-blue-900/40 font-medium py-4">
-              Visit the shop to unlock mascot skins! 🛍️
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Your Nexora Journey Stats */}
-      <div className="space-y-6">
-        <h3 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest px-4">Your Nexora Journey</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="glass-card p-6 text-center space-y-2">
-            <div className="text-2xl font-black text-blue-900">{stats.streak}</div>
-            <div className="text-[10px] font-bold text-blue-900/40 uppercase">Current Streak</div>
-          </div>
-          <div className="glass-card p-6 text-center space-y-2">
-            <div className="text-2xl font-black text-blue-900">{stats.bestStreak || stats.streak}</div>
-            <div className="text-[10px] font-bold text-blue-900/40 uppercase">Best Streak</div>
-          </div>
-          <div className="glass-card p-6 text-center space-y-2">
-            <div className="text-2xl font-black text-blue-900">{stats.totalPoints}</div>
-            <div className="text-[10px] font-bold text-blue-900/40 uppercase">Total XP</div>
-          </div>
-          <div className="glass-card p-6 text-center space-y-2">
-            <div className="text-2xl font-black text-blue-900">{stats.trophies?.length || 0}</div>
-            <div className="text-[10px] font-bold text-blue-900/40 uppercase">Trophies</div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function NexusVideoScreen({ onBack, user, settings, showToast, initialVideoId }: { onBack: () => void, user: FirebaseUser | null, settings: UserSettings, showToast: (m: string, t?: 'success' | 'info' | 'error') => void, initialVideoId?: string | null }) {
-  const [videos, setVideos] = useState<NexusVideo[]>([]);
-  const [selectedVideo, setSelectedVideo] = useState<NexusVideo | null>(null);
-  const [isShowingVideoComments, setIsShowingVideoComments] = useState(false);
-  const [isShowingVideoOptions, setIsShowingVideoOptions] = useState(false);
-  const [isReporting, setIsReporting] = useState<{ id: string, type: 'post' | 'video', user: string } | null>(null);
-  const [reportReason, setReportReason] = useState('Offensive Content');
-  const [isCreating, setIsCreating] = useState(false);
-  const [videoUrl, setVideoUrl] = useState('');
-  const [caption, setCaption] = useState('');
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isStudioOpen, setIsStudioOpen] = useState(false);
-
-  useEffect(() => {
-    let q = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'), limit(24));
-    
-    // If we have an initialVideoId, we might want to ensure it's in the list
-    const unsub = onSnapshot(q, (snapshot) => {
-      const fetchedVideos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NexusVideo));
-      setVideos(fetchedVideos);
-    }, (err) => {
-      console.error("Videos query error:", err);
-      handleFirestoreError(err, OperationType.LIST, 'social_videos');
-    });
-    return unsub;
-  }, []);
-
-  // Fetch specific video if it's not in the recents
-  useEffect(() => {
-    if (initialVideoId && !videos.find(v => v.id === initialVideoId)) {
-       getDoc(doc(db, 'social_videos', initialVideoId)).then(snap => {
-         if (snap.exists()) {
-           const v = { id: snap.id, ...snap.data() } as NexusVideo;
-           setVideos(prev => [v, ...prev.filter(x => x.id !== initialVideoId)]);
-         }
-       });
-    }
-  }, [initialVideoId, videos.length]);
-
-  const handleCreateVideo = async () => {
-    if (!videoUrl.trim() || !user) return;
-    setIsSubmitting(true);
-    try {
-      const platform = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? 'youtube' : 'tiktok';
-      const videoData: Omit<NexusVideo, 'id'> = {
-        userId: user.uid,
-        userName: user.displayName || 'Anonymous',
-        userPhoto: user.photoURL || '',
-        videoUrl: videoUrl.trim(),
-        caption: caption.trim(),
-        likes: 0,
-        likedBy: [],
-        commentCount: 0,
-        createdAt: new Date().toISOString(),
-        isAuthorized,
-        platform
-      };
-      await addDoc(collection(db, 'social_videos'), videoData);
-      setIsCreating(false);
-      setVideoUrl('');
-      setCaption('');
-      showToast('Video posted to the Nexus Reel, bro! 🎬', 'success');
-      vibrate(VIBRATION_PATTERNS.SUCCESS);
-    } catch (err) {
-      console.error(err);
-      handleFirestoreError(err, OperationType.CREATE, 'social_videos');
-      showToast('Failed to post video - Check your connection or permissions, bro! ⚠️', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleLike = async (vId: string, likedBy: string[]) => {
-    if (!user) return;
-    const isLiked = (likedBy || []).includes(user.uid);
-    const newLikedBy = isLiked ? likedBy.filter(id => id !== user.uid) : [...(likedBy || []), user.uid];
-    try {
-      await updateDoc(doc(db, 'social_videos', vId), {
-        likedBy: newLikedBy,
-        likes: newLikedBy.length
-      });
-      vibrate(VIBRATION_PATTERNS.CLICK);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleSaveVideo = async (vid: NexusVideo) => {
-    if (!user) return;
-    const isSaved = (vid.savedBy || []).includes(user.uid);
-    const newSavedBy = isSaved ? vid.savedBy!.filter(id => id !== user.uid) : [...(vid.savedBy || []), user.uid];
-    try {
-      await updateDoc(doc(db, 'social_videos', vid.id), {
-        savedBy: newSavedBy,
-        saves: newSavedBy.length
-      });
-      showToast(isSaved ? 'Video unsaved, bro' : 'Video saved to your Library! 🎬', 'success');
-      vibrate(VIBRATION_PATTERNS.CLICK);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleRepostVideo = async (vid: NexusVideo) => {
-    if (!user) return;
-    try {
-      const repostData: Omit<NexusVideo, 'id'> = {
-        userId: user.uid,
-        userName: user.displayName || 'Anonymous',
-        userPhoto: user.photoURL || '',
-        videoUrl: vid.videoUrl,
-        caption: `Reposting from @${vid.userName}: ${vid.caption}`,
-        likes: 0,
-        likedBy: [],
-        commentCount: 0,
-        createdAt: new Date().toISOString(),
-        isAuthorized: false,
-        platform: vid.platform
-      };
-      await addDoc(collection(db, 'social_videos'), repostData);
-      await updateDoc(doc(db, 'social_videos', vid.id), {
-        repostCount: (vid.repostCount || 0) + 1
-      });
-      showToast('Video reposted to your profile, bro! 🏮', 'success');
-      vibrate(VIBRATION_PATTERNS.SUCCESS);
-      setIsShowingVideoOptions(false);
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to repost', 'error');
-    }
-  };
-
-  const handleStudioPost = async (videoData: any) => {
-    if (!user) return;
-    setIsSubmitting(true);
-    try {
-      // For this implementation, we'll use the mock URL from the studio
-      // but in a real app, you'd upload the actual captured blob to Firebase Storage first
-      const postData: Omit<NexusVideo, 'id'> = {
-        userId: user.uid,
-        userName: videoData.userName,
-        userPhoto: videoData.userPhoto,
-        videoUrl: videoData.videoUrl, // In real app: storage download URL
-        caption: videoData.caption,
-        quality: videoData.quality,
-        likes: 0,
-        likedBy: [],
-        commentCount: 0,
-        createdAt: new Date().toISOString(),
-        isAuthorized: true,
-        platform: 'nexora'
-      };
-      
-      await addDoc(collection(db, 'social_videos'), postData);
-      setIsStudioOpen(false);
-      showToast('Nexus Studio: Vibe posted successfully! 🏮', 'success');
-      vibrate(VIBRATION_PATTERNS.SUCCESS);
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to post from studio', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleShareVideo = (vidId: string) => {
-    const url = `${window.location.origin}?video=${vidId}`;
-    navigator.clipboard.writeText(url);
-    showToast('Video link copied to clipboard, bro! 🏮', 'success');
-    vibrate(VIBRATION_PATTERNS.CLICK);
-  };
-
-  const handleVideoDelete = async (vId: string) => {
-     if (!confirm('Permanently delete this video from the Nexus, bro? 🛡️')) return;
-     try {
-       await deleteDoc(doc(db, 'social_videos', vId));
-       showToast('Video removed from the Reel', 'success');
-       setIsShowingVideoOptions(false);
-     } catch (err) {
-       showToast('Failed to delete', 'error');
-     }
-  };
-
-  const handleNotInterested = (vId: string) => {
-     setVideos(prev => prev.filter(v => v.id !== vId));
-     showToast('Content hidden, bro. We got you.', 'info');
-     setIsShowingVideoOptions(false);
-  };
-
-  const handleReportContent = async () => {
-    if (!isReporting || !user) return;
-    try {
-      const reportData: Omit<UserReport, 'id'> = {
-        reporterId: user.uid,
-        reporterName: user.displayName || 'Anonymous',
-        reportedUserId: isReporting.user,
-        reportedUserName: 'Nexus User',
-        contentId: isReporting.id,
-        contentType: isReporting.type,
-        reason: reportReason,
-        createdAt: new Date().toISOString()
-      };
-      await addDoc(collection(db, 'reports'), reportData);
-      showToast('Report submitted. Nexus Mods are on it, bro! 🛡️', 'success');
-      setIsReporting(null);
-      setIsShowingVideoOptions(false);
-    } catch (err) {
-      setVideos(prev => prev); // dummy to fix lint if needed
-      showToast('Reporting failed', 'error');
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black z-[150] flex flex-col">
-       <AnimatePresence>
-         {isStudioOpen && (
-           <NexoraStudio 
-             onClose={() => setIsStudioOpen(false)}
-             onPost={handleStudioPost}
-             user={user}
-           />
-         )}
-       </AnimatePresence>
-
-       {!isStudioOpen && (
-         <>
-           {/* TikTok Header */}
-           <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-[160] bg-gradient-to-b from-black/60 to-transparent pt-12 sm:pt-4">
-          <button onClick={onBack} className="p-2 text-white hover:scale-110 transition-transform">
-            <ArrowLeft size={28} />
-          </button>
-          <div className="flex gap-4">
-             <span className="text-white/60 font-black text-sm uppercase tracking-widest border-b-2 border-transparent pb-1">Following</span>
-             <span className="text-white font-black text-sm uppercase tracking-widest border-b-2 border-blue-500 pb-1">Nexus Reel</span>
-          </div>
-          <div className="flex items-center gap-2">
-             <button 
-                onClick={() => setIsCreating(true)} 
-                className="p-3 text-white hover:bg-white/10 rounded-2xl transition-colors"
-                title="Post External Video"
-             >
-                <Plus size={24} />
-             </button>
-             <button 
-                onClick={() => setIsStudioOpen(true)}
-                className="bg-orange-500 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-600 transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-orange-500/20"
-             >
-                <Sparkles size={16} /> Studio
-             </button>
-          </div>
-       </div>
-
-       {/* Video Feed */}
-       <div className="relative flex-1 h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar bg-black scroll-smooth">
-          {videos.length === 0 ? (
-             <div className="h-full flex flex-col items-center justify-center text-white/40 space-y-4">
-                <Video size={64} className="animate-pulse" />
-                <p className="font-black uppercase tracking-widest text-xs">No videos in the Nexus Reel yet...</p>
-             </div>
-          ) : (
-            videos.map((vid) => (
-              <div key={vid.id} className="h-[100dvh] w-full snap-start snap-always relative flex items-center justify-center bg-black overflow-hidden">
-                 <div className="w-full h-full max-w-lg aspect-[9/16] relative flex items-center justify-center pt-20 pb-20">
-                    <VideoPlayer url={vid.videoUrl} fullScreen={true} />
-                 </div>
-                 
-                 {/* Overlay UI */}
-                 <div className="absolute bottom-24 right-4 flex flex-col items-center gap-6 z-[160]">
-                    <div className="flex flex-col items-center gap-1">
-                       <button 
-                         onClick={() => handleLike(vid.id, vid.likedBy || [])}
-                         className={`p-4 rounded-full backdrop-blur-md transition-all active:scale-75 ${vid.likedBy?.includes(user?.uid || '') ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/50' : 'bg-white/10 text-white hover:bg-white/20'}`}
-                       >
-                         <Flame size={28} className={vid.likedBy?.includes(user?.uid || '') ? "fill-white" : ""} />
-                       </button>
-                       <span className="text-white font-black text-xs drop-shadow-md">{vid.likes || 0}</span>
-                    </div>
-
-                    <div className="flex flex-col items-center gap-1">
-                       <button 
-                         onClick={() => {
-                           setSelectedVideo(vid);
-                           setIsShowingVideoComments(true);
-                         }}
-                         className="p-4 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all active:scale-75"
-                       >
-                         <MessageSquare size={28} />
-                       </button>
-                       <span className="text-white font-black text-xs drop-shadow-md">{vid.commentCount || 0}</span>
-                    </div>
-
-                    <div className="flex flex-col items-center gap-1">
-                       <button 
-                         onClick={() => handleSaveVideo(vid)}
-                         className={`p-4 rounded-full backdrop-blur-md transition-all active:scale-75 ${vid.savedBy?.includes(user?.uid || '') ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/50' : 'bg-white/10 text-white hover:bg-white/20'}`}
-                       >
-                         <Bookmark size={28} className={vid.savedBy?.includes(user?.uid || '') ? "fill-white" : ""} />
-                       </button>
-                       <span className="text-white font-black text-xs drop-shadow-md">{vid.saves || 0}</span>
-                    </div>
-
-                    <div className="flex flex-col items-center gap-1">
-                       <button 
-                         onClick={() => handleShareVideo(vid.id)}
-                         className="p-4 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all active:scale-75"
-                       >
-                         <Share2 size={28} />
-                       </button>
-                    </div>
-                 </div>
-
-                 <div className="absolute bottom-12 left-4 right-16 z-[160] text-white space-y-2 bg-gradient-to-t from-black/80 to-transparent p-4 rounded-3xl">
-                    <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full border-2 border-white overflow-hidden shadow-lg">
-                          {vid.userPhoto ? <img src={vid.userPhoto} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2 text-white/40" />}
-                       </div>
-                       <div>
-                          <h4 className="font-black text-sm drop-shadow-md">{vid.userName}</h4>
-                          {vid.isAuthorized && (
-                             <span className="text-[8px] bg-blue-500 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter shadow-sm">Verified {vid.platform === 'youtube' ? 'YT' : 'TikTok'}</span>
-                          )}
-                       </div>
-                    </div>
-                    <p className="text-xs font-semibold line-clamp-2 opacity-90 drop-shadow-sm">{vid.caption}</p>
-                    <div className="flex items-center gap-2 opacity-70">
-                       <Music size={12} className="animate-spin" />
-                       <span className="text-[10px] font-black uppercase tracking-widest">Nexus Original Audio</span>
-                    </div>
-                 </div>
-              </div>
-            ))
-          )}
-       </div>
-
-       {/* Create Video Modal */}
-       <AnimatePresence>
-         {isCreating && (
-            <motion.div 
-               initial={{ opacity: 0, scale: 0.9 }}
-               animate={{ opacity: 1, scale: 1 }}
-               exit={{ opacity: 0, scale: 0.9 }}
-               className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-lg"
-               onClick={() => setIsCreating(false)}
-            >
-               <div className="glass-card w-full max-w-md p-8 space-y-6 relative border-white/20 bg-white/10 text-white" onClick={e => e.stopPropagation()}>
-                  <button onClick={() => setIsCreating(false)} className="absolute top-4 right-4 p-2 text-white/40 hover:text-white">
-                    <X size={24} />
-                  </button>
-
-                  <div className="text-center space-y-2">
-                     <h2 className="text-2xl font-black tracking-tight">Post your Reel</h2>
-                     <p className="text-xs font-black text-blue-400 uppercase tracking-widest">Share with the Nexus, bro! 🎬</p>
-                  </div>
-
-                  <div className="space-y-4">
-                     <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-blue-300 uppercase tracking-widest ml-1">Video Link</label>
-                        <input 
-                           type="text" 
-                           value={videoUrl}
-                           onChange={e => setVideoUrl(e.target.value)}
-                           placeholder="TikTok or YouTube link..."
-                           className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder:text-white/20"
-                        />
-                        <p className="text-[8px] text-white/30 font-bold uppercase tracking-tighter px-2">Tip: Use the full desktop link for best results, bro!</p>
-                     </div>
-
-                     <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-blue-300 uppercase tracking-widest ml-1">Caption</label>
-                        <textarea 
-                           value={caption}
-                           onChange={e => setCaption(e.target.value)}
-                           placeholder="Describe the energy..."
-                           className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder:text-white/20 h-24 resize-none"
-                        />
-                     </div>
-
-                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
-                        <div className="flex items-center gap-3">
-                           <div className={`p-2 rounded-xl ${isAuthorized ? 'bg-blue-600' : 'bg-white/10'}`}>
-                              {videoUrl.includes('youtube') ? <Youtube size={16} /> : <Video size={16} />}
-                           </div>
-                           <div>
-                              <p className="text-[10px] font-black uppercase tracking-widest">Authorize Account</p>
-                              <p className="text-[8px] text-white/40 font-bold uppercase tracking-tighter">Verified post status</p>
-                           </div>
-                        </div>
-                        <button 
-                          onClick={() => { vibrate(VIBRATION_PATTERNS.CLICK); setIsAuthorized(!isAuthorized); }}
-                          className={`w-12 h-6 rounded-full transition-all relative ${isAuthorized ? 'bg-blue-600' : 'bg-white/20'}`}
-                        >
-                          <motion.div 
-                            animate={{ x: isAuthorized ? 24 : 4 }}
-                            className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-md" 
-                          />
-                        </button>
-                     </div>
-                  </div>
-
-                  <div className="space-y-3 pt-4">
-                    <button 
-                       onClick={handleCreateVideo}
-                       disabled={isSubmitting || !videoUrl.trim()}
-                       className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-orange-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
-                    >
-                       {isSubmitting ? 'Posting...' : 'Share Globally'} <Send size={18} />
-                    </button>
-
-                    <button 
-                      onClick={() => { setIsCreating(false); setIsStudioOpen(true); }}
-                      className="w-full py-4 text-orange-500 font-black uppercase tracking-widest text-[10px] hover:text-orange-400 transition-all flex items-center justify-center gap-2"
-                    >
-                      <Sparkles size={14} /> Create from Video from your own in Studio ✨
-                    </button>
-                  </div>
-               </div>
-            </motion.div>
-         )}
-       </AnimatePresence>
-
-       <AnimatePresence>
-          {isShowingVideoComments && selectedVideo && (
-            <VideoCommentsModal 
-              videoId={selectedVideo.id} 
-              user={user} 
-              settings={settings}
-              onClose={() => setIsShowingVideoComments(false)}
-              showToast={showToast}
-              onCommentCountChange={(delta) => {
-                setSelectedVideo(prev => prev ? { ...prev, commentCount: Math.max(0, (prev.commentCount || 0) + delta) } : null);
-                setVideos(prev => prev.map(v => v.id === selectedVideo.id ? { ...v, commentCount: Math.max(0, (v.commentCount || 0) + delta) } : v));
-              }}
-            />
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {isShowingVideoOptions && selectedVideo && (
-            <VideoOptionsModal 
-              video={selectedVideo}
-              user={user}
-              onClose={() => setIsShowingVideoOptions(false)}
-              onRepost={() => handleRepostVideo(selectedVideo)}
-              onDelete={() => handleVideoDelete(selectedVideo.id)}
-              onNotInterested={() => handleNotInterested(selectedVideo.id)}
-              onReport={() => setIsReporting({ id: selectedVideo.id, type: 'video', user: selectedVideo.userId })}
-              showToast={showToast}
-            />
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {isReporting && (
-            <div className="fixed inset-0 z-[400] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="glass-card w-full max-w-md p-8 space-y-6 bg-blue-900 border-white/20 text-white"
-              >
-                 <div className="text-center space-y-2">
-                    <AlertCircle size={48} className="mx-auto text-amber-500" />
-                    <h2 className="text-2xl font-black tracking-tight uppercase text-white">Nexus Report</h2>
-                    <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">Identifying the issue, bro. 🛡️</p>
-                 </div>
-
-                 <div className="space-y-4">
-                    <p className="text-xs font-bold text-white/60">Reporting {isReporting.type === 'video' ? 'video' : 'post'}: <span className="text-white">ID {isReporting.id.slice(0, 8)}...</span></p>
-                    
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-blue-300 uppercase tracking-widest pl-1">Reason for Report</label>
-                       <select 
-                         value={reportReason}
-                         onChange={e => setReportReason(e.target.value)}
-                         className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none"
-                         style={{ backgroundColor: '#1e3a8a', color: 'white' }}
-                       >
-                          <option value="Offensive Content">Offensive Content</option>
-                          <option value="Spam / Bot">Spam / Bot</option>
-                          <option value="Harassment">Harassment</option>
-                          <option value="Misinformation">Misinformation</option>
-                          <option value="Graphic Violence">Graphic Violence</option>
-                          <option value="Other">Other</option>
-                       </select>
-                    </div>
-                 </div>
-
-                 <div className="flex gap-3 pt-4">
-                    <button 
-                      onClick={() => setIsReporting(null)}
-                      className="flex-1 py-4 bg-white/5 border border-white/10 rounded-2xl font-black text-xs uppercase tracking-widest"
-                    >
-                       Cancel
-                    </button>
-                    <button 
-                      onClick={handleReportContent}
-                      className="flex-1 py-4 bg-amber-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-amber-900/40"
-                    >
-                       Submit
-                    </button>
-                 </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-      </>
-    )}
-    </div>
-  );
-}
-
-function VideoCommentsModal({ videoId, user, settings, onClose, showToast, onCommentCountChange }: { videoId: string, user: FirebaseUser | null, settings: UserSettings, onClose: () => void, showToast: any, onCommentCountChange?: (delta: number) => void }) {
-  const [comments, setComments] = useState<any[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [isPosting, setIsPosting] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<any | null>(null);
-
-  useEffect(() => {
-    const q = query(collection(db, 'social_videos', videoId, 'comments'), orderBy('createdAt', 'desc'));
-    const unsub = onSnapshot(q, (snapshot) => {
-      setComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (err) => {
-      console.error(err);
-    });
-    return unsub;
-  }, [videoId]);
-
-  const handlePost = async () => {
-    if (!newComment.trim()) return;
-    if (!user) {
-      showToast('You must be logged in to comment, bro! 🛡️', 'error');
-      return;
-    }
-    
-    setIsPosting(true);
-    try {
-      const commentData: any = {
-        videoId: videoId,
-        userId: user.uid,
-        userName: user.displayName || 'Anonymous',
-        userPhoto: user.photoURL || '',
-        content: newComment.trim(),
-        likes: 0,
-        likedBy: [],
-        createdAt: new Date().toISOString()
-      };
-      
-      // Use profile pic from settings if available for better resolution/consistency
-      if (typeof settings !== 'undefined' && (settings as any).profilePic) {
-        commentData.userPhoto = (settings as any).profilePic;
-      }
-      
-      if (replyingTo) {
-        commentData.parentId = replyingTo.id;
-      }
-      
-      console.log("Posting comment to video:", videoId, commentData);
-      const docRef = await addDoc(collection(db, 'social_videos', videoId, 'comments'), commentData);
-      console.log("Comment added with ID:", docRef.id);
-      
-      await updateDoc(doc(db, 'social_videos', videoId), {
-        commentCount: increment(1)
-      });
-      
-      onCommentCountChange?.(1);
-      setNewComment('');
-      setReplyingTo(null);
-      vibrate(VIBRATION_PATTERNS.SUCCESS);
-      showToast('Nexus vibe added! 🕯️', 'success');
-    } catch (err) {
-      console.error("Comment submission error:", err);
-      showToast('Comment failed, bro. Check your connection!', 'error');
-    } finally {
-      setIsPosting(false);
-    }
-  };
-
-  const handleDeleteComment = async (commentId: string) => {
-    if (!confirm('Delete this comment, bro?')) return;
-    try {
-      await deleteDoc(doc(db, 'social_videos', videoId, 'comments', commentId));
-      await updateDoc(doc(db, 'social_videos', videoId), {
-        commentCount: increment(-1)
-      });
-      showToast('Comment removed', 'success');
-      onCommentCountChange?.(-1);
-    } catch (err) {
-      console.error(err);
-      showToast('Delete failed', 'error');
-    }
-  };
-
-  return (
-    <motion.div 
-      initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-      className="fixed inset-x-0 bottom-0 top-20 bg-white rounded-t-3xl z-[300] flex flex-col shadow-2xl overflow-hidden"
-      onClick={e => e.stopPropagation()}
-    >
-      <div className="p-4 border-b flex items-center justify-between bg-slate-50">
-        <h3 className="font-black text-blue-900 uppercase tracking-widest text-xs flex items-center gap-2">
-           <MessageSquare size={16} /> Comments ({comments.length})
-        </h3>
-        <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
-           <X size={20} />
-        </button>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
-        {comments.map(c => (
-           <div key={c.id} className="flex gap-3 animate-in fade-in slide-in-from-bottom-2">
-              <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden shrink-0 border-2 border-white shadow-sm">
-                 {c.userPhoto ? <img src={c.userPhoto} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2 text-slate-400" />}
-              </div>
-              <div className="flex-1 space-y-1">
-                 <div className="flex items-center gap-2">
-                    <span className="font-black text-[12px] text-blue-900">{c.userName}</span>
-                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter">{format(parseISO(c.createdAt), 'MMM d, h:mm a')}</span>
-                 </div>
-                 <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                   {c.parentId && <span className="text-blue-500 font-black mr-1 text-[11px]">@reply</span>}
-                   {c.content}
-                 </p>
-                 <div className="flex items-center gap-6 pt-1">
-                    <button 
-                      onClick={() => {
-                        setReplyingTo(c);
-                        setNewComment(`@${c.userName} `);
-                      }}
-                      className="text-[10px] font-black text-blue-400 hover:text-blue-600 uppercase tracking-widest"
-                    >
-                      REPLY
-                    </button>
-                    <button className="flex items-center gap-1 text-[10px] font-black text-slate-300 hover:text-orange-500 transition-colors">
-                       <Flame size={12} /> {c.likes || 0}
-                    </button>
-                    {c.userId === user?.uid && (
-                      <button 
-                        onClick={() => handleDeleteComment(c.id)}
-                        className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all active:scale-75"
-                        title="Delete Comment"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                 </div>
-              </div>
-           </div>
-        ))}
-        {comments.length === 0 && (
-           <div className="h-full flex flex-col items-center justify-center text-slate-200 py-32 space-y-4">
-              <div className="p-6 bg-slate-50 rounded-full">
-                 <MessageSquare size={64} className="opacity-20" />
-              </div>
-              <div className="text-center">
-                 <p className="font-black text-xs uppercase tracking-widest leading-none">Silent Waters</p>
-                 <p className="text-[10px] font-bold opacity-40 uppercase mt-1">Be the first to drop a reaction, bro. 🏮</p>
-              </div>
-           </div>
-        )}
-      </div>
-
-      <div className="absolute bottom-0 inset-x-0 p-6 bg-white border-t border-slate-100 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-[310]">
-        <div className="max-w-2xl mx-auto space-y-4">
-           {replyingTo && (
-              <div className="flex items-center justify-between bg-blue-50/80 backdrop-blur-sm px-4 py-2 rounded-2xl border border-blue-100 animate-in slide-in-from-bottom-4">
-                 <div className="flex items-center gap-2">
-                    <div className="p-1 bg-blue-500 rounded-full text-white"><ArrowLeft size={10} className="rotate-90" /></div>
-                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Replying to {replyingTo.userName}</span>
-                 </div>
-                 <button onClick={() => { setReplyingTo(null); setNewComment(''); }} className="text-blue-400 hover:text-blue-600 transition-colors"><X size={14} /></button>
-              </div>
-           )}
-           <div className="flex gap-3">
-             <input 
-               type="text" 
-               value={newComment} 
-               onChange={e => setNewComment(e.target.value)}
-               placeholder={replyingTo ? "Write a reply..." : "Add to the Nexus vibe... 🏮"}
-               className="flex-1 bg-slate-100/80 border-2 border-transparent focus:border-blue-400 transition-all rounded-full px-6 py-4 text-sm font-medium focus:outline-none placeholder:text-slate-300"
-               onKeyDown={e => e.key === 'Enter' && handlePost()}
-             />
-             <button 
-               onClick={handlePost}
-               disabled={isPosting || !newComment.trim()}
-               className="p-4 bg-blue-600 text-white rounded-full active:scale-95 transition-all disabled:opacity-50 shadow-lg shadow-blue-200"
-             >
-               {isPosting ? <RefreshCw size={24} className="animate-spin" /> : <Send size={24} />}
-             </button>
-           </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function VideoOptionsModal({ video, user, onClose, onRepost, onDelete, onNotInterested, onReport, showToast }: { video: NexusVideo, user: FirebaseUser | null, onClose: () => void, onRepost: () => void, onDelete: () => void, onNotInterested: () => void, onReport: () => void, showToast: any }) {
-  const isOwner = user?.uid === video.userId;
-  
-  const handleCopyLink = () => {
-     navigator.clipboard.writeText(video.videoUrl);
-     showToast('Nexus Link Copied! 📋', 'success');
-     vibrate(VIBRATION_PATTERNS.SUCCESS);
-     onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-[350] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-       <motion.div 
-         initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
-         className="glass-card w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl"
-         onClick={e => e.stopPropagation()}
-       >
-          <div className="p-4 border-b flex justify-between items-center bg-slate-50">
-             <h3 className="font-black text-[10px] text-blue-900/40 uppercase tracking-widest pl-2">Vibe Control</h3>
-             <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"><X size={18} /></button>
-          </div>
-
-          <div className="p-4 space-y-2">
-             <button onClick={handleCopyLink} className="w-full p-4 flex items-center gap-4 bg-slate-50 hover:bg-blue-50 text-blue-900 rounded-2xl transition-all group">
-                <div className="p-3 bg-white rounded-xl shadow-sm text-blue-400 group-hover:scale-110 transition-transform"><Share2 size={24} /></div>
-                <div className="text-left">
-                   <p className="font-black text-sm uppercase tracking-tight">Copy Nexus Link</p>
-                   <p className="text-[10px] font-bold text-blue-900/30">Share the energy with the world, bro.</p>
-                </div>
-             </button>
-
-             <button onClick={onRepost} className="w-full p-4 flex items-center gap-4 bg-slate-50 hover:bg-emerald-50 text-emerald-600 rounded-2xl transition-all group">
-                <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><RefreshCw size={24} /></div>
-                <div className="text-left">
-                   <p className="font-black text-sm uppercase tracking-tight">Repost to Pulse</p>
-                   <p className="text-[10px] font-bold text-emerald-900/20">Boost this clip to your circle, bro.</p>
-                </div>
-             </button>
-
-             {!isOwner && (
-               <button onClick={onNotInterested} className="w-full p-4 flex items-center gap-4 bg-slate-50 hover:bg-slate-100 text-slate-400 rounded-2xl transition-all group">
-                  <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><EyeOff size={24} /></div>
-                  <div className="text-left">
-                     <p className="font-black text-sm uppercase tracking-tight">Not Interested</p>
-                     <p className="text-[10px] font-bold text-slate-300 uppercase">Hide clips like this from your Reel.</p>
-                  </div>
-               </button>
-             )}
-
-             <div className="pt-2 border-t mt-2">
-                {isOwner ? (
-                   <button onClick={onDelete} className="w-full p-4 flex items-center gap-4 bg-red-50 hover:bg-red-100 text-red-600 rounded-2xl transition-all group">
-                      <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><Trash2 size={24} /></div>
-                      <div className="text-left">
-                         <p className="font-black text-sm uppercase tracking-tight">Delete Permanently</p>
-                         <p className="text-[10px] font-bold opacity-60">This action's final, bro. No turning back.</p>
-                      </div>
-                   </button>
-                ) : (
-                  <button onClick={onReport} className="w-full p-4 flex items-center gap-4 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-2xl transition-all group">
-                     <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><Flag size={24} /></div>
-                     <div className="text-left">
-                        <p className="font-black text-sm uppercase tracking-tight">Report Violation</p>
-                        <p className="text-[10px] font-bold opacity-60">Protect the Nexus community, bro. 🛡️</p>
-                     </div>
-                  </button>
-                )}
-             </div>
-          </div>
-       </motion.div>
-    </div>
-  );
-}
-function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings, posts, circles, notifications, setActiveScreen }: { onBack: () => void, user: FirebaseUser | null, settings: UserSettings, stats: UserStats, showToast: (m: string, t?: 'success' | 'info' | 'error') => void, onUpdateSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, posts: Post[], circles: SocialCircle[], notifications: NexusNotification[], setActiveScreen: (s: Screen) => void }) {
   const [activeTab, setActiveTab] = useState<'feed' | 'circles' | 'inbox'>('feed');
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
