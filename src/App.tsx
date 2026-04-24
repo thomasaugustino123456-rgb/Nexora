@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 console.log("App.tsx is loading...");
-import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, BellOff, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout, MoreHorizontal, Flag, Bookmark, EyeOff, Share2, Search } from 'lucide-react';
+import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, BellOff, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout, MoreHorizontal, Flag, Bookmark, EyeOff, Share2, Search, Youtube, Video } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
@@ -4444,6 +4444,8 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
   });
   const [showCircleAbout, setShowCircleAbout] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
+  const [newVideoUrl, setNewVideoUrl] = useState('');
+  const [showVideoInput, setShowVideoInput] = useState(false);
   const [selectedCircleId, setSelectedCircleId] = useState('nexora-general');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -4546,7 +4548,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
   };
 
   const handleCreatePost = async () => {
-    if (!newPostContent.trim() || !user) return;
+    if ((!newPostContent.trim() && !newVideoUrl.trim()) || !user) return;
 
     // Check if joined selected circle if it's not general
     const isJoined = selectedCircleId === 'nexora-general' || (settings.joinedCircleIds || []).includes(selectedCircleId);
@@ -4558,6 +4560,7 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
     setIsSubmitting(true);
     try {
       const circle = circles.find(c => c.id === selectedCircleId);
+      const postType = newVideoUrl.trim() ? 'video' : 'text';
       const postData: any = {
         userId: user.uid,
         userName: settings.displayName || 'Nexora User',
@@ -4570,13 +4573,16 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
         shieldedBy: [],
         commentCount: 0,
         createdAt: new Date().toISOString(),
-        type: 'text'
+        type: postType
       };
 
+      if (newVideoUrl.trim()) postData.videoUrl = newVideoUrl.trim();
       if (settings.profilePic) postData.userPhoto = settings.profilePic;
 
       await setDoc(doc(collection(db, 'posts')), postData);
       setNewPostContent('');
+      setNewVideoUrl('');
+      setShowVideoInput(false);
       setIsCreatingPost(false);
       showToast('Shared with the Nexus! 🔥', 'success');
       vibrate(VIBRATION_PATTERNS.SUCCESS);
@@ -4585,6 +4591,60 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const getEmbedData = (url: string) => {
+    if (!url) return null;
+    
+    // YouTube
+    const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+    const ytMatch = url.match(ytRegex);
+    if (ytMatch) return { type: 'youtube', id: ytMatch[1] };
+
+    // TikTok
+    const ttRegex = /tiktok\.com\/.*video\/(\d+)/i;
+    const ttMatch = url.match(ttRegex);
+    if (ttMatch) return { type: 'tiktok', id: ttMatch[1] };
+
+    return null;
+  };
+
+  const VideoPlayer = ({ url }: { url: string }) => {
+    const embedData = getEmbedData(url);
+    if (!embedData) return (
+      <div className="p-6 bg-amber-50 border-2 border-amber-100 rounded-3xl text-center space-y-2">
+        <div className="text-2xl">⚠️</div>
+        <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Video Link Unverified</p>
+        <p className="text-[8px] font-bold text-amber-900/40">{url}</p>
+      </div>
+    );
+
+    if (embedData.type === 'youtube') {
+      return (
+        <div className="aspect-video w-full rounded-2xl overflow-hidden shadow-lg bg-black border-2 border-white/20">
+          <iframe 
+             src={`https://www.youtube.com/embed/${embedData.id}`} 
+             className="w-full h-full border-0" 
+             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+             allowFullScreen 
+          />
+        </div>
+      );
+    }
+
+    if (embedData.type === 'tiktok') {
+      return (
+        <div className="aspect-[9/16] w-full max-w-[320px] mx-auto rounded-3xl overflow-hidden shadow-2xl bg-black border-4 border-white/10">
+          <iframe 
+            src={`https://www.tiktok.com/embed/v2/${embedData.id}`} 
+            className="w-full h-full border-0" 
+            allowFullScreen
+          />
+        </div>
+      );
+    }
+
+    return null;
   };
 
   const handlePostComment = async () => {
@@ -5049,6 +5109,12 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                 {selectedPost.content}
               </div>
 
+              {selectedPost.type === 'video' && selectedPost.videoUrl && (
+                <div className="pt-2">
+                  <VideoPlayer url={selectedPost.videoUrl} />
+                </div>
+              )}
+
               {selectedPost.image && (
                 <div className="rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
                   <img src={selectedPost.image} className="w-full object-cover" referrerPolicy="no-referrer" />
@@ -5378,6 +5444,12 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                         <p className="text-blue-900/80 font-medium line-clamp-3 leading-relaxed">
                           {post.content}
                         </p>
+
+                        {post.type === 'video' && post.videoUrl && (
+                          <div className="pt-2" onClick={e => e.stopPropagation()}>
+                            <VideoPlayer url={post.videoUrl} />
+                          </div>
+                        )}
 
                         <div className="flex items-center gap-4 pt-4 border-t border-blue-50" onClick={(e) => e.stopPropagation()}>
                           <ActionButton 
@@ -5718,6 +5790,12 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                           {post.content}
                         </p>
 
+                        {post.type === 'video' && post.videoUrl && (
+                          <div className="pt-2" onClick={e => e.stopPropagation()}>
+                            <VideoPlayer url={post.videoUrl} />
+                          </div>
+                        )}
+
                         <div className="flex items-center gap-4 pt-4 border-t border-blue-50" onClick={(e) => e.stopPropagation()}>
                           <ActionButton 
                             type="flame" 
@@ -5968,11 +6046,42 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
                   placeholder="Drop some fuel into the Nexus, bro... 🔥"
                   className="w-full h-40 bg-blue-50/50 border-2 border-blue-100 rounded-2xl p-4 text-blue-900 font-medium focus:outline-none focus:border-blue-400 placeholder:text-blue-900/20 resize-none"
                 />
+
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => { vibrate(VIBRATION_PATTERNS.CLICK); setShowVideoInput(!showVideoInput); }}
+                    className={`p-2 rounded-xl transition-all shadow-sm ${showVideoInput ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-400 hover:bg-blue-100'}`}
+                  >
+                    <Video size={18} />
+                  </button>
+                  <p className="text-[10px] font-black text-blue-900/30 uppercase tracking-widest">Share from YouTube / TikTok</p>
+                </div>
+
+                <AnimatePresence>
+                  {showVideoInput && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }} 
+                      animate={{ height: 'auto', opacity: 1 }} 
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden space-y-2"
+                    >
+                      <input 
+                        autoFocus
+                        type="text"
+                        value={newVideoUrl}
+                        onChange={(e) => setNewVideoUrl(e.target.value)}
+                        placeholder="Paste URL here... 🔗"
+                        className="w-full bg-blue-50 border-2 border-blue-100 rounded-2xl p-4 font-bold text-blue-900 focus:border-blue-400 focus:outline-none"
+                      />
+                      <p className="text-[10px] font-bold text-blue-300 italic px-4 uppercase">Embeds will load automatically! 🚀</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               <button 
                 onClick={handleCreatePost}
-                disabled={isSubmitting || !newPostContent.trim()}
+                disabled={isSubmitting || (!newPostContent.trim() && !newVideoUrl.trim())}
                 className="btn-primary w-full py-4 flex items-center justify-center gap-2 font-black uppercase tracking-widest text-xs"
               >
                 {isSubmitting ? <RefreshCw className="animate-spin" /> : <>Post Blast! <Send size={18} /></>}

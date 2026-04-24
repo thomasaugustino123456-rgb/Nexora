@@ -218,7 +218,8 @@ export interface Post {
   shieldedBy?: string[]; // Array of user IDs who shielded
   commentCount: number;
   createdAt: string;
-  type: 'text' | 'image' | 'milestone';
+  type: 'text' | 'image' | 'milestone' | 'video';
+  videoUrl?: string;
   milestoneData?: {
     type: 'streak' | 'trophy' | 'level';
     value: string | number;
