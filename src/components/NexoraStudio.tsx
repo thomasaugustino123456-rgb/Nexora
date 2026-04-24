@@ -23,6 +23,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [selectedEffect, setSelectedEffect] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<{camera: string, mic: string}>({ camera: 'unknown', mic: 'unknown' });
   
   // Edit state for stage 2
   const [textOverlay, setTextOverlay] = useState('');
@@ -37,6 +38,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    checkPermissions();
     if (stage === 1) {
       startCamera();
     } else {
@@ -44,6 +46,27 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
     }
     return () => stopCamera();
   }, [stage, facingMode]);
+
+  const checkPermissions = async () => {
+    if (!navigator.permissions || !navigator.permissions.query) return;
+    try {
+      const cam = await navigator.permissions.query({ name: 'camera' as any });
+      const mic = await navigator.permissions.query({ name: 'microphone' as any });
+      
+      const updateStatus = () => {
+        setPermissionStatus({
+          camera: cam.state,
+          mic: mic.state
+        });
+      };
+      
+      updateStatus();
+      cam.onchange = updateStatus;
+      mic.onchange = updateStatus;
+    } catch (e) {
+      console.warn("Permissions API not fully supported", e);
+    }
+  };
 
   const startCamera = async () => {
     setCameraError(null);
@@ -92,18 +115,20 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
     } catch (err: any) {
       console.error("Primary camera access error:", err);
       
-      // Fallback 1: Absolute basics
+      // Fallback 1: Attempt ONLY video if combined fails (the "Out of the box" thinking)
       try {
-        console.log("Attempting fallback 1: simple video/audio...");
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        console.log("Attempting fallback 1: Video only (common fix for iframe mic blocks)...");
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         handleStream(stream);
+        // If successful, warn user that audio might be missing
+        console.warn("Camera started without audio due to block.");
       } catch (fallbackErr: any) {
-        console.error("Fallback 1 error:", fallbackErr);
+        console.error("Video-only fallback error:", fallbackErr);
         
-        // Fallback 2: Video only
+        // Fallback 2: Simple constraints
         try {
-          console.log("Attempting fallback 2: video only...");
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          console.log("Attempting fallback 2: Basic video/audio...");
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
           handleStream(stream);
         } catch (finalErr: any) {
           console.error("Final camera error:", finalErr);
@@ -111,11 +136,11 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
           let friendlyMsg = 'Connection Blocked. 🛡️';
           
           if (finalErr.name === 'NotAllowedError') {
-            friendlyMsg = 'Permission denied by browser! Click the LOCK icon in your address bar to reset camera permissions, then REFRESH the page.';
+            friendlyMsg = 'Permission denied by browser! Bro, you MUST click the LOCK icon in the address bar, find Camera, and set it to ALLOW. Then REFRESH!';
           } else if (finalErr.name === 'NotFoundError') {
             friendlyMsg = 'No camera found on this device, bro.';
           } else if (finalErr.name === 'NotReadableError' || finalErr.name === 'TrackStartError') {
-            friendlyMsg = 'Camera in use! Close other apps using your camera and try again.';
+            friendlyMsg = 'Camera in use! Another app (like Zoom or Discord) is using it, bro.';
           } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
             friendlyMsg = 'HTTPS REQUIRED! Camera access requires a secure connection.';
           }
@@ -250,32 +275,57 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
             </div>
 
             {cameraError && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-10 text-center">
-                 <div className="max-w-xs space-y-4">
-                    <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                       <Camera size={40} className="text-red-500" />
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-10 text-center backdrop-blur-md">
+                 <div className="max-w-md space-y-6">
+                    <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-red-500/50">
+                       <Camera size={48} className="text-red-500" />
                     </div>
-                    <p className="text-white font-black uppercase text-sm tracking-widest leading-loose">{cameraError}</p>
+                    
+                    <div className="space-y-2">
+                       <h3 className="text-white font-black uppercase text-xl tracking-[0.2em]">Access Blocked, Bro!</h3>
+                       <p className="text-white/60 font-medium text-xs leading-relaxed">{cameraError}</p>
+                    </div>
+
+                    <div className="bg-white/5 rounded-3xl p-6 border border-white/10 space-y-4">
+                       <p className="text-[10px] text-orange-500 font-black uppercase tracking-[0.3em]">Permission Checklist</p>
+                       <div className="flex justify-center gap-8">
+                          <div className="flex flex-col items-center gap-2">
+                             <div className={`w-3 h-3 rounded-full ${permissionStatus.camera === 'granted' ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`} />
+                             <span className="text-[8px] text-white font-black uppercase tracking-widest">Camera</span>
+                          </div>
+                          <div className="flex flex-col items-center gap-2">
+                             <div className={`w-3 h-3 rounded-full ${permissionStatus.mic === 'granted' ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`} />
+                             <span className="text-[8px] text-white font-black uppercase tracking-widest">Mic</span>
+                          </div>
+                       </div>
+                    </div>
+
                     <div className="flex flex-col gap-3 pt-2">
                       <button 
                         onClick={() => startCamera()}
-                        className="px-8 py-3 bg-white text-black rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                        className="px-8 py-4 bg-white text-black rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-orange-500 hover:text-white"
                       >
-                        Retry Connection
+                        Try Re-connecting ⚡
                       </button>
                       <button 
                         onClick={() => window.open(window.location.href, '_blank')}
-                        className="px-8 py-3 bg-blue-600 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                        className="px-8 py-4 bg-blue-600 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-blue-500"
                       >
-                        Open in New Tab ↗️
+                        Fix in New Tab ↗️
                       </button>
                     </div>
-                    <button 
-                      onClick={onClose}
-                      className="block mx-auto text-white/40 font-bold text-[10px] uppercase tracking-widest pt-4"
-                    >
-                      Go Back
-                    </button>
+
+                    <div className="pt-4 space-y-2">
+                      <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">
+                        Hint: Browser iframes sometimes block camera.
+                      </p>
+                      <button 
+                        onClick={onClose}
+                        className="text-white/40 font-bold text-[10px] uppercase tracking-widest hover:text-white underline underline-offset-4"
+                      >
+                        Exit Studio
+                      </button>
+                    </div>
                  </div>
               </div>
             )}
