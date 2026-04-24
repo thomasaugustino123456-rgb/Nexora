@@ -188,6 +188,18 @@ export interface CustomPlan {
 
 export type Screen = 'home' | 'progress' | 'profile' | 'social' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant' | 'nexus-video';
 
+export interface UserReport {
+  id: string;
+  reporterId: string;
+  reporterName: string;
+  reportedUserId: string;
+  reportedUserName: string;
+  contentId: string;
+  contentType: 'post' | 'video' | 'circle' | 'comment';
+  reason: string;
+  createdAt: string;
+}
+
 export interface NexusVideo {
   id: string;
   userId: string;
@@ -200,25 +212,14 @@ export interface NexusVideo {
   commentCount: number;
   createdAt: string;
   isAuthorized?: boolean;
-  platform?: 'youtube' | 'tiktok';
+  platform?: 'youtube' | 'tiktok' | 'nexora';
+  quality?: string;
   saves?: number;
   savedBy?: string[];
   repostCount?: number;
 }
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion';
 export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';
-
-export interface UserReport {
-  id: string;
-  reporterId: string;
-  reporterName: string;
-  reportedUserId: string;
-  reportedUserName: string;
-  contentId: string;
-  contentType: 'video' | 'post';
-  reason: string;
-  createdAt: string;
-}
 
 export interface SocialCircle {
   id: string;

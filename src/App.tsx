@@ -4,8 +4,9 @@ import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
-import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType, SocialCircle, Post, SocialComment, NexusNotification, NexusVideo } from './types';
+import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType, SocialCircle, Post, SocialComment, NexusNotification, NexusVideo, UserReport } from './types';
 import { HOUSE_ITEMS } from './constants/houseItems';
+import { NexoraStudio } from './components/NexoraStudio';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
@@ -2673,6 +2674,7 @@ export default function App() {
                         setFocusedVideoId(null);
                      }}
                      user={user}
+                     settings={settings}
                      showToast={showToast}
                      initialVideoId={focusedVideoId}
                   />
@@ -4560,7 +4562,7 @@ function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen, ci
   );
 }
 
-function NexusVideoScreen({ onBack, user, showToast, initialVideoId }: { onBack: () => void, user: FirebaseUser | null, showToast: (m: string, t?: 'success' | 'info' | 'error') => void, initialVideoId?: string | null }) {
+function NexusVideoScreen({ onBack, user, settings, showToast, initialVideoId }: { onBack: () => void, user: FirebaseUser | null, settings: UserSettings, showToast: (m: string, t?: 'success' | 'info' | 'error') => void, initialVideoId?: string | null }) {
   const [videos, setVideos] = useState<NexusVideo[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<NexusVideo | null>(null);
   const [isShowingVideoComments, setIsShowingVideoComments] = useState(false);
@@ -4572,6 +4574,7 @@ function NexusVideoScreen({ onBack, user, showToast, initialVideoId }: { onBack:
   const [caption, setCaption] = useState('');
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStudioOpen, setIsStudioOpen] = useState(false);
 
   useEffect(() => {
     let q = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'), limit(24));
@@ -4692,6 +4695,46 @@ function NexusVideoScreen({ onBack, user, showToast, initialVideoId }: { onBack:
     }
   };
 
+  const handleStudioPost = async (videoData: any) => {
+    if (!user) return;
+    setIsSubmitting(true);
+    try {
+      // For this implementation, we'll use the mock URL from the studio
+      // but in a real app, you'd upload the actual captured blob to Firebase Storage first
+      const postData: Omit<NexusVideo, 'id'> = {
+        userId: user.uid,
+        userName: videoData.userName,
+        userPhoto: videoData.userPhoto,
+        videoUrl: videoData.videoUrl, // In real app: storage download URL
+        caption: videoData.caption,
+        quality: videoData.quality,
+        likes: 0,
+        likedBy: [],
+        commentCount: 0,
+        createdAt: new Date().toISOString(),
+        isAuthorized: true,
+        platform: 'nexora'
+      };
+      
+      await addDoc(collection(db, 'social_videos'), postData);
+      setIsStudioOpen(false);
+      showToast('Nexus Studio: Vibe posted successfully! 🏮', 'success');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to post from studio', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleShareVideo = (vidId: string) => {
+    const url = `${window.location.origin}?video=${vidId}`;
+    navigator.clipboard.writeText(url);
+    showToast('Video link copied to clipboard, bro! 🏮', 'success');
+    vibrate(VIBRATION_PATTERNS.CLICK);
+  };
+
   const handleVideoDelete = async (vId: string) => {
      if (!confirm('Permanently delete this video from the Nexus, bro? 🛡️')) return;
      try {
@@ -4743,13 +4786,25 @@ function NexusVideoScreen({ onBack, user, showToast, initialVideoId }: { onBack:
              <span className="text-white/60 font-black text-sm uppercase tracking-widest border-b-2 border-transparent pb-1">Following</span>
              <span className="text-white font-black text-sm uppercase tracking-widest border-b-2 border-blue-500 pb-1">Nexus Reel</span>
           </div>
-          <button onClick={() => setIsCreating(true)} className="p-2 text-white hover:scale-110 transition-transform bg-blue-600 rounded-full">
-            <Plus size={24} />
-          </button>
+          <div className="flex items-center gap-2">
+             <button 
+                onClick={() => setIsCreating(true)} 
+                className="p-3 text-white hover:bg-white/10 rounded-2xl transition-colors"
+                title="Post External Video"
+             >
+                <Plus size={24} />
+             </button>
+             <button 
+                onClick={() => setIsStudioOpen(true)}
+                className="bg-orange-500 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-600 transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-orange-500/20"
+             >
+                <Sparkles size={16} /> Studio
+             </button>
+          </div>
        </div>
 
        {/* Video Feed */}
-       <div className="flex-1 overflow-y-scroll snap-y snap-mandatory h-screen no-scrollbar">
+       <div className="relative flex-1 h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar bg-black scroll-smooth">
           {videos.length === 0 ? (
              <div className="h-full flex flex-col items-center justify-center text-white/40 space-y-4">
                 <Video size={64} className="animate-pulse" />
@@ -4757,7 +4812,7 @@ function NexusVideoScreen({ onBack, user, showToast, initialVideoId }: { onBack:
              </div>
           ) : (
             videos.map((vid) => (
-              <div key={vid.id} className="h-full w-full snap-start relative flex items-center justify-center bg-black overflow-hidden">
+              <div key={vid.id} className="h-[100dvh] w-full snap-start snap-always relative flex items-center justify-center bg-black overflow-hidden">
                  <div className="w-full h-full max-w-lg aspect-[9/16] relative flex items-center justify-center pt-20 pb-20">
                     <VideoPlayer url={vid.videoUrl} fullScreen={true} />
                  </div>
@@ -4799,10 +4854,7 @@ function NexusVideoScreen({ onBack, user, showToast, initialVideoId }: { onBack:
 
                     <div className="flex flex-col items-center gap-1">
                        <button 
-                         onClick={() => {
-                           setSelectedVideo(vid);
-                           setIsShowingVideoOptions(true);
-                         }}
+                         onClick={() => handleShareVideo(vid.id)}
                          className="p-4 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all active:scale-75"
                        >
                          <Share2 size={28} />
@@ -4898,15 +4950,35 @@ function NexusVideoScreen({ onBack, user, showToast, initialVideoId }: { onBack:
                      </div>
                   </div>
 
-                  <button 
-                    onClick={handleCreateVideo}
-                    disabled={isSubmitting || !videoUrl.trim()}
-                    className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50"
-                  >
-                    {isSubmitting ? 'Posting...' : 'Drop it in ! 🎥'}
-                  </button>
+                  <div className="space-y-3 pt-4">
+                    <button 
+                       onClick={handleCreateVideo}
+                       disabled={isSubmitting || !videoUrl.trim()}
+                       className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-orange-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+                    >
+                       {isSubmitting ? 'Posting...' : 'Share Globally'} <Send size={18} />
+                    </button>
+
+                    <button 
+                      onClick={() => { setIsCreating(false); setIsStudioOpen(true); }}
+                      className="w-full py-4 text-orange-500 font-black uppercase tracking-widest text-[10px] hover:text-orange-400 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Sparkles size={14} /> Create from Video from your own in Studio ✨
+                    </button>
+                  </div>
                </div>
             </motion.div>
+         )}
+       </AnimatePresence>
+
+       {/* Studio Modal */}
+       <AnimatePresence>
+         {isStudioOpen && (
+           <NexoraStudio 
+             onClose={() => setIsStudioOpen(false)}
+             onPost={handleStudioPost}
+             user={user}
+           />
          )}
        </AnimatePresence>
 
@@ -4915,10 +4987,12 @@ function NexusVideoScreen({ onBack, user, showToast, initialVideoId }: { onBack:
             <VideoCommentsModal 
               videoId={selectedVideo.id} 
               user={user} 
+              settings={settings}
               onClose={() => setIsShowingVideoComments(false)}
               showToast={showToast}
-              onCommentAdded={() => {
-                setSelectedVideo(prev => prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : null);
+              onCommentCountChange={(delta) => {
+                setSelectedVideo(prev => prev ? { ...prev, commentCount: Math.max(0, (prev.commentCount || 0) + delta) } : null);
+                setVideos(prev => prev.map(v => v.id === selectedVideo.id ? { ...v, commentCount: Math.max(0, (v.commentCount || 0) + delta) } : v));
               }}
             />
           )}
@@ -4997,7 +5071,7 @@ function NexusVideoScreen({ onBack, user, showToast, initialVideoId }: { onBack:
   );
 }
 
-function VideoCommentsModal({ videoId, user, onClose, showToast, onCommentAdded }: { videoId: string, user: FirebaseUser | null, onClose: () => void, showToast: any, onCommentAdded?: () => void }) {
+function VideoCommentsModal({ videoId, user, settings, onClose, showToast, onCommentCountChange }: { videoId: string, user: FirebaseUser | null, settings: UserSettings, onClose: () => void, showToast: any, onCommentCountChange?: (delta: number) => void }) {
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isPosting, setIsPosting] = useState(false);
@@ -5014,32 +5088,67 @@ function VideoCommentsModal({ videoId, user, onClose, showToast, onCommentAdded 
   }, [videoId]);
 
   const handlePost = async () => {
-    if (!newComment.trim() || !user) return;
+    if (!newComment.trim()) return;
+    if (!user) {
+      showToast('You must be logged in to comment, bro! 🛡️', 'error');
+      return;
+    }
+    
     setIsPosting(true);
     try {
-      const commentData = {
+      const commentData: any = {
+        videoId: videoId,
         userId: user.uid,
         userName: user.displayName || 'Anonymous',
         userPhoto: user.photoURL || '',
         content: newComment.trim(),
         likes: 0,
         likedBy: [],
-        createdAt: new Date().toISOString(),
-        parentId: replyingTo?.id || null
+        createdAt: new Date().toISOString()
       };
-      await addDoc(collection(db, 'social_videos', videoId, 'comments'), commentData);
+      
+      // Use profile pic from settings if available for better resolution/consistency
+      if (typeof settings !== 'undefined' && (settings as any).profilePic) {
+        commentData.userPhoto = (settings as any).profilePic;
+      }
+      
+      if (replyingTo) {
+        commentData.parentId = replyingTo.id;
+      }
+      
+      console.log("Posting comment to video:", videoId, commentData);
+      const docRef = await addDoc(collection(db, 'social_videos', videoId, 'comments'), commentData);
+      console.log("Comment added with ID:", docRef.id);
+      
       await updateDoc(doc(db, 'social_videos', videoId), {
         commentCount: increment(1)
       });
-      onCommentAdded?.();
+      
+      onCommentCountChange?.(1);
       setNewComment('');
       setReplyingTo(null);
       vibrate(VIBRATION_PATTERNS.SUCCESS);
+      showToast('Nexus vibe added! 🕯️', 'success');
     } catch (err) {
-      console.error(err);
-      showToast('Comment failed, bro', 'error');
+      console.error("Comment submission error:", err);
+      showToast('Comment failed, bro. Check your connection!', 'error');
     } finally {
       setIsPosting(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Delete this comment, bro?')) return;
+    try {
+      await deleteDoc(doc(db, 'social_videos', videoId, 'comments', commentId));
+      await updateDoc(doc(db, 'social_videos', videoId), {
+        commentCount: increment(-1)
+      });
+      showToast('Comment removed', 'success');
+      onCommentCountChange?.(-1);
+    } catch (err) {
+      console.error(err);
+      showToast('Delete failed', 'error');
     }
   };
 
@@ -5086,6 +5195,15 @@ function VideoCommentsModal({ videoId, user, onClose, showToast, onCommentAdded 
                     <button className="flex items-center gap-1 text-[10px] font-black text-slate-300 hover:text-orange-500 transition-colors">
                        <Flame size={12} /> {c.likes || 0}
                     </button>
+                    {c.userId === user?.uid && (
+                      <button 
+                        onClick={() => handleDeleteComment(c.id)}
+                        className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all active:scale-75"
+                        title="Delete Comment"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                  </div>
               </div>
            </div>
@@ -5606,10 +5724,13 @@ function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettin
     try {
       await deleteDoc(doc(db, 'posts', selectedPost.id, 'comments', commentId));
       await updateDoc(doc(db, 'posts', selectedPost.id), {
-        commentCount: Math.max(0, (selectedPost.commentCount || 1) - 1)
+        commentCount: increment(-1)
       });
       showToast('Comment removed', 'success');
+      // Update local state for immediate feedback
+      setSelectedPost(prev => prev ? { ...prev, commentCount: Math.max(0, (prev.commentCount || 0) - 1) } : null);
     } catch (err) {
+      console.error(err);
       showToast('Failed to delete', 'error');
     }
   };
