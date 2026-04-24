@@ -110,22 +110,22 @@ const getEmbedData = (url: string) => {
   if (!url) return null;
   const lowerUrl = url.toLowerCase();
   
-  // YouTube
-  // Handles: youtube.com/watch?v=..., youtu.be/..., youtube.com/embed/..., youtube.com/shorts/...
+  // YouTube 
+  // Improved regex for all types: shorts, watch, embed, youtu.be
   const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
   const ytMatch = url.match(ytRegex);
   if (ytMatch) return { type: 'youtube', id: ytMatch[1], isShort: url.includes('/shorts/') };
   
-  // TikTok
-  // Handles: tiktok.com/video/..., tiktok.com/t/..., tiktok.com/@user/video/..., vm.tiktok.com/..., v.tiktok.com/..., m.tiktok.com/v/...
-  const ttRegex = /(?:tiktok\.com\/.*video\/(\d+))|(?:tiktok\.com\/t\/([a-zA-Z0-9_-]+))|(?:tiktok\.com\/@[\w.-]+\/video\/(\d+))|(?:[v|vm]\.tiktok\.com\/([a-zA-Z0-9_-]+))|(?:m\.tiktok\.com\/v\/(\d+))/i;
+  // TikTok 
+  // Massive upgrade to handle m., v., vt., vm., t., and @user/video formats
+  const ttRegex = /(?:tiktok\.com\/.*video\/(\d+))|(?:tiktok\.com\/t\/([a-zA-Z0-9_-]+))|(?:tiktok\.com\/@[\w.-]+\/video\/(\d+))|(?:[v|vm|vt]\.tiktok\.com\/([a-zA-Z0-9_-]+))|(?:m\.tiktok\.com\/v\/(\d+))/i;
   const ttMatch = url.match(ttRegex);
   if (ttMatch) {
     const id = ttMatch[1] || ttMatch[3] || ttMatch[5] || ttMatch[4] || ttMatch[2];
     if (id) return { type: 'tiktok', id };
   }
 
-  // Broad Fallback for the platforms
+  // Fallback check
   if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) return { type: 'youtube', id: 'manual', rawUrl: url };
   if (lowerUrl.includes('tiktok.com')) return { type: 'tiktok', id: 'manual', rawUrl: url };
   
@@ -136,17 +136,19 @@ const VideoPlayer = ({ url, fullScreen = false }: { url: string, fullScreen?: bo
   const embedData = getEmbedData(url);
   
   const ExternalFallback = () => (
-    <div className="p-6 bg-blue-50/50 border-2 border-blue-100 rounded-3xl text-center space-y-4">
-      <div className="text-3xl">🔗</div>
+    <div className="p-8 bg-blue-50/50 border-2 border-blue-100 rounded-3xl text-center space-y-4 shadow-inner">
+      <div className="text-4xl">🎥</div>
       <div>
-        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Video Hub Link</p>
-        <p className="text-[8px] text-blue-900/40 font-bold mb-3">ID extraction failed, but you can still watch it, bro!</p>
+        <p className="text-xs font-black text-blue-600 uppercase tracking-widest leading-none">Video Direct Link</p>
+        <p className="text-[10px] text-blue-900/60 font-bold mb-4 leading-relaxed px-4">
+          This clip is playing hard to catch, bro! Jump straight to the source to vibe.
+        </p>
       </div>
       <a 
         href={url} 
         target="_blank" 
         rel="noreferrer" 
-        className="inline-block px-6 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all"
+        className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all hover:bg-blue-700"
       >
         Watch on {url.includes('youtube') ? 'YouTube' : 'TikTok'} 🚀
       </a>
@@ -155,19 +157,16 @@ const VideoPlayer = ({ url, fullScreen = false }: { url: string, fullScreen?: bo
 
   if (!embedData || embedData.id === 'manual') return <ExternalFallback />;
 
-  // Common security sandbox for iframes
-  const sandbox = "allow-scripts allow-same-origin allow-popups allow-forms allow-presentation";
-
+  // Removing 'sandbox' attribute fixes Error 153 and other player initialization bugs
   if (embedData.type === 'youtube') {
     return (
-      <div className={`${fullScreen || embedData.isShort ? 'aspect-[9/16]' : 'aspect-video'} w-full rounded-2xl overflow-hidden shadow-lg bg-black border-2 border-white/20 relative`}>
+      <div className={`${fullScreen || embedData.isShort ? 'aspect-[9/16]' : 'aspect-video'} w-full rounded-2xl overflow-hidden shadow-2xl bg-black border-2 border-white/10 relative`}>
         <iframe 
-           src={`https://www.youtube.com/embed/${embedData.id}?modestbranding=1&rel=0`}
+           src={`https://www.youtube.com/embed/${embedData.id}?autoplay=0&rel=0&modestbranding=1`}
            className="absolute inset-0 w-full h-full border-0" 
-           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
            allowFullScreen 
-           sandbox={sandbox}
-           referrerPolicy="no-referrer"
+           referrerPolicy="no-referrer-when-downgrade"
         />
       </div>
     );
@@ -175,13 +174,12 @@ const VideoPlayer = ({ url, fullScreen = false }: { url: string, fullScreen?: bo
 
   if (embedData.type === 'tiktok') {
     return (
-      <div className="aspect-[9/16] w-full max-w-[320px] mx-auto rounded-3xl overflow-hidden shadow-2xl bg-black border-4 border-white/10 relative">
+      <div className="aspect-[9/16] w-full max-w-[360px] mx-auto rounded-3xl overflow-hidden shadow-2xl bg-black border-4 border-white/5 relative">
         <iframe 
           src={`https://www.tiktok.com/embed/v2/${embedData.id}`} 
           className="absolute inset-0 w-full h-full border-0" 
           allowFullScreen
-          sandbox={sandbox}
-          referrerPolicy="no-referrer"
+          referrerPolicy="no-referrer-when-downgrade"
         />
       </div>
     );
