@@ -114,14 +114,14 @@ const getEmbedData = (url: string) => {
   // Handles: youtube.com/watch?v=..., youtu.be/..., youtube.com/embed/..., youtube.com/shorts/...
   const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
   const ytMatch = url.match(ytRegex);
-  if (ytMatch) return { type: 'youtube', id: ytMatch[1] };
+  if (ytMatch) return { type: 'youtube', id: ytMatch[1], isShort: url.includes('/shorts/') };
   
   // TikTok
-  // Handles: tiktok.com/video/..., tiktok.com/t/..., tiktok.com/@user/video/...
-  const ttRegex = /(?:tiktok\.com\/.*video\/(\d+))|(?:tiktok\.com\/t\/([a-zA-Z0-9]+))|(?:tiktok\.com\/@[\w.-]+\/video\/(\d+))/i;
+  // Handles: tiktok.com/video/..., tiktok.com/t/..., tiktok.com/@user/video/..., vm.tiktok.com/..., v.tiktok.com/..., m.tiktok.com/v/...
+  const ttRegex = /(?:tiktok\.com\/.*video\/(\d+))|(?:tiktok\.com\/t\/([a-zA-Z0-9_-]+))|(?:tiktok\.com\/@[\w.-]+\/video\/(\d+))|(?:[v|vm]\.tiktok\.com\/([a-zA-Z0-9_-]+))|(?:m\.tiktok\.com\/v\/(\d+))/i;
   const ttMatch = url.match(ttRegex);
   if (ttMatch) {
-    const id = ttMatch[1] || ttMatch[3] || ttMatch[2];
+    const id = ttMatch[1] || ttMatch[3] || ttMatch[5] || ttMatch[4] || ttMatch[2];
     if (id) return { type: 'tiktok', id };
   }
 
@@ -132,14 +132,14 @@ const getEmbedData = (url: string) => {
   return null;
 };
 
-const VideoPlayer = ({ url }: { url: string }) => {
+const VideoPlayer = ({ url, fullScreen = false }: { url: string, fullScreen?: boolean }) => {
   const embedData = getEmbedData(url);
   
   const ExternalFallback = () => (
     <div className="p-6 bg-blue-50/50 border-2 border-blue-100 rounded-3xl text-center space-y-4">
       <div className="text-3xl">🔗</div>
       <div>
-        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">External Video link</p>
+        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Video Hub Link</p>
         <p className="text-[8px] text-blue-900/40 font-bold mb-3">ID extraction failed, but you can still watch it, bro!</p>
       </div>
       <a 
@@ -155,14 +155,19 @@ const VideoPlayer = ({ url }: { url: string }) => {
 
   if (!embedData || embedData.id === 'manual') return <ExternalFallback />;
 
+  // Common security sandbox for iframes
+  const sandbox = "allow-scripts allow-same-origin allow-popups allow-forms allow-presentation";
+
   if (embedData.type === 'youtube') {
     return (
-      <div className="aspect-video w-full rounded-2xl overflow-hidden shadow-lg bg-black border-2 border-white/20">
+      <div className={`${fullScreen || embedData.isShort ? 'aspect-[9/16]' : 'aspect-video'} w-full rounded-2xl overflow-hidden shadow-lg bg-black border-2 border-white/20 relative`}>
         <iframe 
-           src={`https://www.youtube.com/embed/${embedData.id}`}
-           className="w-full h-full border-0" 
+           src={`https://www.youtube.com/embed/${embedData.id}?modestbranding=1&rel=0`}
+           className="absolute inset-0 w-full h-full border-0" 
            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
            allowFullScreen 
+           sandbox={sandbox}
+           referrerPolicy="no-referrer"
         />
       </div>
     );
@@ -170,11 +175,13 @@ const VideoPlayer = ({ url }: { url: string }) => {
 
   if (embedData.type === 'tiktok') {
     return (
-      <div className="aspect-[9/16] w-full max-w-[320px] mx-auto rounded-3xl overflow-hidden shadow-2xl bg-black border-4 border-white/10">
+      <div className="aspect-[9/16] w-full max-w-[320px] mx-auto rounded-3xl overflow-hidden shadow-2xl bg-black border-4 border-white/10 relative">
         <iframe 
           src={`https://www.tiktok.com/embed/v2/${embedData.id}`} 
-          className="w-full h-full border-0" 
+          className="absolute inset-0 w-full h-full border-0" 
           allowFullScreen
+          sandbox={sandbox}
+          referrerPolicy="no-referrer"
         />
       </div>
     );
@@ -4602,7 +4609,7 @@ function NexusVideoScreen({ onBack, user, showToast }: { onBack: () => void, use
             videos.map((vid) => (
               <div key={vid.id} className="h-full w-full snap-start relative flex items-center justify-center bg-black overflow-hidden">
                  <div className="w-full h-full max-w-lg aspect-[9/16] relative flex items-center justify-center pt-20 pb-20">
-                    <VideoPlayer url={vid.videoUrl} />
+                    <VideoPlayer url={vid.videoUrl} fullScreen={true} />
                  </div>
                  
                  {/* Overlay UI */}
