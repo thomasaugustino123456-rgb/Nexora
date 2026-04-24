@@ -108,37 +108,58 @@ function WhatIsNewModal({ onClose }: { onClose: () => void }) {
 
 const getEmbedData = (url: string) => {
   if (!url) return null;
+  const lowerUrl = url.toLowerCase();
+  
   // YouTube
-  const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/i;
+  // Handles: youtube.com/watch?v=..., youtu.be/..., youtube.com/embed/..., youtube.com/shorts/...
+  const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
   const ytMatch = url.match(ytRegex);
   if (ytMatch) return { type: 'youtube', id: ytMatch[1] };
+  
   // TikTok
+  // Handles: tiktok.com/video/..., tiktok.com/t/..., tiktok.com/@user/video/...
   const ttRegex = /(?:tiktok\.com\/.*video\/(\d+))|(?:tiktok\.com\/t\/([a-zA-Z0-9]+))|(?:tiktok\.com\/@[\w.-]+\/video\/(\d+))/i;
   const ttMatch = url.match(ttRegex);
   if (ttMatch) {
-    const id = ttMatch[1] || ttMatch[3];
+    const id = ttMatch[1] || ttMatch[3] || ttMatch[2];
     if (id) return { type: 'tiktok', id };
-    // If it's a short T/ link, we might not be able to embed it directly without the full ID
-    // but we can try to return the short code and see if the embed handles it
-    if (ttMatch[2]) return { type: 'tiktok', id: ttMatch[2] };
   }
+
+  // Broad Fallback for the platforms
+  if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) return { type: 'youtube', id: 'manual', rawUrl: url };
+  if (lowerUrl.includes('tiktok.com')) return { type: 'tiktok', id: 'manual', rawUrl: url };
+  
   return null;
 };
 
 const VideoPlayer = ({ url }: { url: string }) => {
   const embedData = getEmbedData(url);
-  if (!embedData) return (
-    <div className="p-6 bg-amber-50 border-2 border-amber-100 rounded-3xl text-center space-y-2">
-      <div className="text-2xl">⚠️</div>
-      <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Video Link Unverified</p>
-      <p className="text-[8px] font-bold text-amber-900/40">{url}</p>
+  
+  const ExternalFallback = () => (
+    <div className="p-6 bg-blue-50/50 border-2 border-blue-100 rounded-3xl text-center space-y-4">
+      <div className="text-3xl">🔗</div>
+      <div>
+        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">External Video link</p>
+        <p className="text-[8px] text-blue-900/40 font-bold mb-3">ID extraction failed, but you can still watch it, bro!</p>
+      </div>
+      <a 
+        href={url} 
+        target="_blank" 
+        rel="noreferrer" 
+        className="inline-block px-6 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all"
+      >
+        Watch on {url.includes('youtube') ? 'YouTube' : 'TikTok'} 🚀
+      </a>
     </div>
   );
+
+  if (!embedData || embedData.id === 'manual') return <ExternalFallback />;
+
   if (embedData.type === 'youtube') {
     return (
       <div className="aspect-video w-full rounded-2xl overflow-hidden shadow-lg bg-black border-2 border-white/20">
         <iframe 
-           src={`https://www.youtube.com/embed/${embedData.id}`} 
+           src={`https://www.youtube.com/embed/${embedData.id}`}
            className="w-full h-full border-0" 
            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
            allowFullScreen 
@@ -146,6 +167,7 @@ const VideoPlayer = ({ url }: { url: string }) => {
       </div>
     );
   }
+
   if (embedData.type === 'tiktok') {
     return (
       <div className="aspect-[9/16] w-full max-w-[320px] mx-auto rounded-3xl overflow-hidden shadow-2xl bg-black border-4 border-white/10">
@@ -157,6 +179,7 @@ const VideoPlayer = ({ url }: { url: string }) => {
       </div>
     );
   }
+
   return null;
 };
 
@@ -2436,7 +2459,7 @@ export default function App() {
 
       <div className="w-full max-w-5xl flex flex-col min-h-screen relative z-10 mx-auto">
         
-        {activeScreen !== 'challenge' && activeScreen !== 'social' && (
+        {activeScreen !== 'challenge' && activeScreen !== 'social' && activeScreen !== 'nexus-video' && (
           <header className="px-6 pt-12 pb-4 flex items-center justify-between max-w-4xl mx-auto w-full">
             <div className="flex items-center gap-4">
               <img 
@@ -2485,7 +2508,7 @@ export default function App() {
                   // but we can use sessionStorage or just let them click Inbox in social.
                   // For now, let's just go to social.
                 }}
-                className={`p-2 transition-colors relative ${activeScreen === 'social' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+                className={`p-2 transition-colors relative text-blue-900/40 hover:text-blue-900/60`}
               >
                 <Bell size={24} className={unreadNotifCount > 0 ? "text-blue-600" : ""} />
                 {unreadNotifCount > 0 && (
@@ -4497,6 +4520,9 @@ function NexusVideoScreen({ onBack, user, showToast }: { onBack: () => void, use
     const q = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'), limit(24));
     const unsub = onSnapshot(q, (snapshot) => {
       setVideos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NexusVideo)));
+    }, (err) => {
+      console.error("Videos query error:", err);
+      handleFirestoreError(err, OperationType.LIST, 'social_videos');
     });
     return unsub;
   }, []);
@@ -4527,7 +4553,7 @@ function NexusVideoScreen({ onBack, user, showToast }: { onBack: () => void, use
       vibrate(VIBRATION_PATTERNS.SUCCESS);
     } catch (err) {
       console.error(err);
-      handleFirestoreError(err, 'create', 'social_videos');
+      handleFirestoreError(err, OperationType.CREATE, 'social_videos');
       showToast('Failed to post video - Check your connection or permissions, bro! ⚠️', 'error');
     } finally {
       setIsSubmitting(false);
