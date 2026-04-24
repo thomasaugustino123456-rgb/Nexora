@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Camera, Video, RotateCw, Check, Image as ImageIcon, 
   Type, Smile, Mic, Music, Sparkles, ArrowRight, Send, 
-  Trash2, Volume2, Monitor, Play, Pause, Layers, FlipHorizontal, Focus
+  Trash2, Volume2, Monitor, Play, Pause, Layers, FlipHorizontal, Focus,
+  Scissors, Palette, Wand2, Ghost
 } from 'lucide-react';
 
 interface NexoraStudioProps {
@@ -21,16 +22,19 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [selectedEffect, setSelectedEffect] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   
   // Edit state for stage 2
   const [textOverlay, setTextOverlay] = useState('');
   const [stickers, setStickers] = useState<{ id: string, type: string, x: number, y: number }[]>([]);
   const [quality, setQuality] = useState<'Standard' | 'HD' | '4K' | 'Ultra'>('HD');
   const [caption, setCaption] = useState('');
+  const [activeTool, setActiveTool] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (stage === 1) {
@@ -42,25 +46,47 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   }, [stage, facingMode]);
 
   const startCamera = async () => {
+    setCameraError(null);
     try {
-      if (streamRef.current) stopCamera();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
       
       const constraints = {
         video: { 
-          facingMode,
+          facingMode: { ideal: facingMode },
           width: { ideal: 1280 },
           height: { ideal: 720 }
         },
         audio: true
       };
 
+      console.log("Requesting camera with constraints:", constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log("Camera stream obtained:", stream.id);
+      
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(e => console.error("Video play error:", e));
       }
-    } catch (err) {
-      console.error("Camera access error:", err);
+    } catch (err: any) {
+      console.error("Camera access error details:", err);
+      setCameraError(err.message || 'Camera blocked or unavailable');
+      
+      // Try fallback to simpler constraints
+      try {
+        console.log("Attempting fallback camera constraints...");
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+          setCameraError(null);
+        }
+      } catch (fallbackErr) {
+        setCameraError('Fully blocked. Check browser permissions, bro! 🛡️');
+      }
     }
   };
 
@@ -82,13 +108,13 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
       canvas.height = videoRef.current.videoHeight;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // Handle mirroring for front camera
         if (facingMode === 'user') {
           ctx.translate(canvas.width, 0);
           ctx.scale(-1, 1);
         }
         ctx.drawImage(videoRef.current, 0, 0);
         
+        // Finalize effect drawing on capture if needed
         setCapturedMedia(canvas.toDataURL('image/jpeg'));
         setMediaType('photo');
         setStage(2);
@@ -97,7 +123,10 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   };
 
   const startRecording = () => {
-    if (!streamRef.current) return;
+    if (!streamRef.current) {
+      startCamera();
+      return;
+    }
     const chunks: Blob[] = [];
     mediaRecorderRef.current = new MediaRecorder(streamRef.current);
     mediaRecorderRef.current.ondataavailable = (e) => chunks.push(e.data);
@@ -134,16 +163,16 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
 
   const getEffectFilter = () => {
     switch(selectedEffect) {
-      case 'retro': return 'sepia(0.8) contrast(1.2)';
-      case 'neon': return 'hue-rotate(90deg) saturate(2)';
+      case 'retro': return 'sepia(0.8) contrast(1.2) brightness(0.9)';
+      case 'neon': return 'hue-rotate(90deg) saturate(2) brightness(1.2)';
       case 'noir': return 'grayscale(1) contrast(1.5)';
-      case 'chrome': return 'contrast(1.4) saturate(1.8) brightness(1.1)';
+      case 'cyber': return 'hue-rotate(180deg) invert(0.1) saturate(1.5)';
       default: return 'none';
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center overflow-hidden font-sans">
+    <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center overflow-hidden font-sans select-none">
       <AnimatePresence mode="wait">
         {stage === 1 && (
           <motion.div 
@@ -160,81 +189,116 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
               className="w-full h-full object-cover"
             />
             
-            {/* Visual Overlays for Effects */}
-            {selectedEffect === 'heart' && (
-              <div className="absolute top-1/4 left-1/2 -translate-x-1/2 pointer-events-none text-9xl animate-pulse">
-                ❤️
-              </div>
-            )}
-            {selectedEffect === 'sparkles' && (
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden opacity-50">
-                <div className="absolute top-10 left-10 animate-spin text-4xl">✨</div>
-                <div className="absolute bottom-40 right-20 animate-bounce text-4xl">✨</div>
-                <div className="absolute top-1/2 right-40 animate-pulse text-4xl">✨</div>
+            {/* Real-time Visual Overlays */}
+            <div className="absolute inset-0 pointer-events-none z-10">
+               {selectedEffect === 'heart' && (
+                 <div className="absolute top-[20%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-9xl animate-pulse drop-shadow-[0_0_50px_rgba(255,0,0,0.8)] z-10">
+                   ❤️
+                 </div>
+               )}
+               {selectedEffect === 'nexus' && (
+                 <div className="absolute inset-0 flex items-center justify-center opacity-60">
+                    <motion.div 
+                      animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.6, 0.3] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="w-[90vw] h-[90vw] border-[10px] border-orange-500/20 rounded-full"
+                    />
+                    <Sparkles className="text-orange-500 absolute w-48 h-48 animate-pulse" />
+                 </div>
+               )}
+               {selectedEffect === 'ghost' && (
+                 <div className="absolute inset-0 bg-white/5 backdrop-blur-sm mix-blend-overlay flex items-center justify-center opacity-20">
+                    <Ghost size={400} className="text-white animate-bounce" />
+                 </div>
+               )}
+            </div>
+
+            {cameraError && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-10 text-center">
+                 <div className="max-w-xs space-y-4">
+                    <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                       <Camera size={40} className="text-red-500" />
+                    </div>
+                    <p className="text-white font-black uppercase text-sm tracking-widest leading-loose">{cameraError}</p>
+                    <button 
+                      onClick={() => startCamera()}
+                      className="px-8 py-3 bg-white text-black rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                    >
+                      Retry Connection
+                    </button>
+                    <button 
+                      onClick={onClose}
+                      className="block mx-auto text-white/40 font-bold text-[10px] uppercase tracking-widest pt-4"
+                    >
+                      Go Back
+                    </button>
+                 </div>
               </div>
             )}
 
-            {/* Top Bar */}
-            <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-20">
-               <button onClick={onClose} className="p-3 bg-black/30 backdrop-blur-xl rounded-2xl text-white hover:bg-white/10 transition-all">
-                  <X size={24} />
+            {/* Stage 1 Top Interface */}
+            <div className="absolute top-0 left-0 right-0 p-8 flex justify-between items-start z-30">
+               <button onClick={onClose} className="w-14 h-14 bg-black/40 backdrop-blur-3xl rounded-3xl text-white flex items-center justify-center hover:bg-white/10 transition-all active:scale-90 shadow-2xl border border-white/10">
+                  <X size={28} />
                </button>
-               <div className="flex flex-col gap-4">
-                  <button onClick={toggleCamera} className="p-4 bg-black/30 backdrop-blur-xl rounded-2xl text-white hover:bg-white/10 transition-all" title="Switch Camera">
-                     <RotateCw size={24} />
+               
+               <div className="flex flex-col gap-5">
+                  <button onClick={toggleCamera} className="w-14 h-14 bg-black/40 backdrop-blur-3xl rounded-3xl text-white flex items-center justify-center hover:bg-white/10 transition-all active:scale-90 shadow-2xl border border-white/10">
+                     <RotateCw size={28} />
                   </button>
-                  <button className="p-4 bg-black/30 backdrop-blur-xl rounded-2xl text-white hover:bg-white/10 transition-all">
-                     <Volume2 size={24} />
+                  <button className="w-14 h-14 bg-black/40 backdrop-blur-3xl rounded-3xl text-white flex items-center justify-center hover:bg-white/10 transition-all active:scale-90 shadow-2xl border border-white/10">
+                     <Monitor size={28} />
                   </button>
                </div>
             </div>
 
-            {/* Bottom Controls */}
-            <div className="absolute bottom-0 left-0 right-0 p-8 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col items-center gap-10 z-20">
-              {/* Effects Row */}
-              <div className="flex gap-6 overflow-x-auto no-scrollbar w-full max-w-md px-4 py-2">
-                {['none', 'heart', 'sparkles', 'retro', 'neon', 'noir', 'chrome'].map(eff => (
+            {/* Stage 1 Bottom Feed */}
+            <div className="absolute bottom-0 left-0 right-0 p-10 pt-32 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col items-center gap-12 z-30">
+              {/* Horizontal Effects Selection */}
+              <div className="flex gap-4 overflow-x-auto no-scrollbar w-full max-w-lg px-8 pb-4">
+                {['none', 'heart', 'nexus', 'ghost', 'retro', 'neon', 'noir', 'cyber'].map(eff => (
                   <button 
                     key={eff}
                     onClick={() => setSelectedEffect(eff === 'none' ? null : eff)}
-                    className="group shrink-0 flex flex-col items-center gap-2"
+                    className="flex flex-col items-center gap-3 shrink-0"
                   >
-                    <div className={`w-14 h-14 rounded-2xl border-2 transition-all flex items-center justify-center overflow-hidden ${selectedEffect === eff || (eff === 'none' && !selectedEffect) ? 'border-orange-500 bg-orange-500/20' : 'border-white/20 bg-white/10 group-hover:border-white/40'}`}>
-                      {eff === 'none' ? <RotateCw className="text-white/40" size={20} /> : 
-                       eff === 'heart' ? <span className="text-xl">❤️</span> : 
-                       eff === 'sparkles' ? <Sparkles className="text-yellow-400" size={20} /> :
-                       <div className={`w-full h-full bg-gradient-to-br ${eff === 'retro' ? 'from-orange-800 to-amber-900' : eff === 'neon' ? 'from-purple-600 to-pink-600' : eff === 'noir' ? 'from-neutral-900 to-neutral-700' : 'from-blue-400 to-cyan-400'}`} />}
+                    <div className={`w-18 h-18 rounded-3xl border-2 transition-all flex items-center justify-center overflow-hidden ${selectedEffect === eff || (eff === 'none' && !selectedEffect) ? 'border-orange-500 bg-orange-500/20 scale-110 shadow-lg shadow-orange-500/20' : 'border-white/10 bg-white/5 hover:border-white/30'}`}>
+                      {eff === 'none' ? <div className="w-8 h-8 rounded-full border-2 border-white/20" /> : 
+                       eff === 'heart' ? <span className="text-2xl">❤️</span> : 
+                       eff === 'nexus' ? <Sparkles className="text-orange-500" size={24} /> :
+                       eff === 'ghost' ? <Ghost className="text-white/40" size={24} /> :
+                       <div className={`w-full h-full bg-gradient-to-br ${eff === 'retro' ? 'from-amber-800 to-orange-950' : eff === 'neon' ? 'from-pink-600 to-indigo-600' : eff === 'noir' ? 'from-neutral-900 to-neutral-700' : 'from-cyan-400 to-blue-600'}`} />}
                     </div>
-                    <span className="text-[9px] font-black uppercase text-white/40 tracking-widest">{eff}</span>
+                    <span className={`text-[8px] font-black uppercase tracking-[0.2em] transition-colors ${selectedEffect === eff || (eff === 'none' && !selectedEffect) ? 'text-orange-500' : 'text-white/30'}`}>{eff}</span>
                   </button>
                 ))}
               </div>
 
-              <div className="flex items-center gap-12">
-                <label className="p-4 bg-white/10 backdrop-blur-xl rounded-2xl text-white cursor-pointer hover:bg-white/20 transition-all active:scale-95 border border-white/10">
-                  <ImageIcon size={24} />
+              <div className="flex items-center gap-16">
+                <label className="w-16 h-16 bg-white/10 backdrop-blur-3xl rounded-3xl text-white flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all border border-white/10 shadow-2xl overflow-hidden active:scale-90">
+                  <ImageIcon size={22} />
                   <input type="file" accept="video/*,image/*" onChange={handleFileUpload} className="hidden" />
                 </label>
 
-                <div className="relative group">
+                <div className="relative">
                    <button 
                      onClick={isRecording ? stopRecording : handleCapturePhoto}
                      onMouseDown={() => startRecording()}
                      onMouseUp={() => stopRecording()}
                      onTouchStart={() => startRecording()}
                      onTouchEnd={() => stopRecording()}
-                     className={`w-24 h-24 rounded-full border-4 ${isRecording ? 'border-red-500 p-2' : 'border-white p-1.5'} transition-all hover:scale-105 active:scale-90`}
+                     className={`w-28 h-28 rounded-full border-8 ${isRecording ? 'border-red-500 animate-pulse active:scale-95' : 'border-white hover:scale-105 active:scale-90'} shadow-2xl transition-all flex items-center justify-center p-2.5`}
                    >
-                     <div className={`w-full h-full rounded-full ${isRecording ? 'bg-red-500 rounded-lg animate-pulse' : 'bg-white'} transition-all`} />
+                     <div className={`w-full h-full rounded-full ${isRecording ? 'bg-red-500 rounded-2xl' : 'bg-white'} transition-all`} />
                    </button>
                    {!isRecording && (
-                     <div className="absolute -top-14 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-xl px-4 py-1.5 rounded-full border border-white/10">
-                       <p className="text-[10px] text-white font-black uppercase tracking-widest whitespace-nowrap">Tap for Photo • Hold for Video</p>
+                     <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-xl px-5 py-2 rounded-full border border-white/10 shadow-2xl">
+                       <p className="text-[9px] text-white font-black uppercase tracking-[0.2em] whitespace-nowrap">Tap: Take • Hold: Film</p>
                      </div>
                    )}
                 </div>
 
-                <div className="w-12 h-12" /> {/* Layout Balance */}
+                <div className="w-16 h-16" /> {/* Placeholder for symmetrical balance */}
               </div>
             </div>
           </motion.div>
@@ -244,99 +308,126 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
           <motion.div 
             key="stage2"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="w-full h-full relative bg-neutral-950 flex flex-col md:flex-row"
+            className="w-full h-full relative bg-black flex items-center justify-center"
           >
-            {/* Main Preview */}
-            <div className="flex-1 overflow-hidden relative flex items-center justify-center p-4">
-               <div className="relative w-full h-full max-w-sm aspect-[9/16] bg-black shadow-3xl rounded-[3rem] overflow-hidden border-8 border-white/5">
+            {/* Full Screen Live Edit Preview */}
+            <div className="absolute inset-x-0 top-0 bottom-0 overflow-hidden flex items-center justify-center">
+               <div className="relative w-full h-full max-w-md aspect-[9/16] bg-neutral-900 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden">
                   {mediaType === 'video' ? (
                     <video src={capturedMedia!} autoPlay loop playsInline className="w-full h-full object-cover" />
                   ) : (
                     <img src={capturedMedia!} className="w-full h-full object-cover" />
                   )}
 
-                  {/* Rendering Text Overlay */}
-                  <AnimatePresence>
-                    {textOverlay && (
-                      <motion.div 
-                        initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                        className="absolute inset-x-0 top-1/4 flex items-center justify-center p-6 pointer-events-none"
-                      >
-                        <p className="text-white text-4xl font-black italic drop-shadow-[0_4px_16px_rgba(0,0,0,1)] text-center leading-tight uppercase tracking-tighter">
-                          {textOverlay}
-                        </p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {/* Overlays */}
+                  <div className="absolute inset-0 z-20 pointer-events-none">
+                    <AnimatePresence>
+                      {textOverlay && (
+                        <motion.div 
+                          initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                          className="absolute inset-0 flex items-center justify-center p-12"
+                        >
+                          <p className="text-white text-5xl font-black italic text-center leading-none uppercase tracking-tighter drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]">
+                            {textOverlay}
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
-                  {/* Rendering Stickers */}
-                  {stickers.map(s => (
-                    <motion.div 
-                      key={s.id} 
-                      drag 
-                      dragConstraints={{ top: -200, left: -100, right: 100, bottom: 200 }}
-                      className="absolute text-5xl cursor-grab active:cursor-grabbing z-30" 
-                      style={{ top: `${s.y}%`, left: `${s.x}%` }}
-                    >
-                      {s.type === 'fire' ? '🔥' : s.type === 'nexus' ? '✨' : s.type === 'diamond' ? '💎' : '🚀'}
-                    </motion.div>
-                  ))}
+                    {stickers.map(s => (
+                      <motion.div 
+                        key={s.id} 
+                        drag 
+                        dragMomentum={false}
+                        className="absolute text-7xl cursor-grab active:cursor-grabbing" 
+                        style={{ top: `${s.y}%`, left: `${s.x}%` }}
+                      >
+                        {s.type === 'fire' ? '🔥' : s.type === 'nexus' ? '✨' : s.type === 'diamond' ? '💎' : '🚀'}
+                      </motion.div>
+                    ))}
+                  </div>
                </div>
             </div>
 
-            {/* Vertical Bar (Right Side) */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 p-6 flex flex-col gap-5 z-40">
+            {/* TOP ACTIONS ROW - HORIZONTAL & TRANSPARENT GLASS (TikTok Style Request) */}
+            <div className="absolute top-16 right-6 left-auto flex flex-row items-center gap-4 z-50">
                {[
-                 { id: 'text', icon: <Type size={22} />, label: 'Type' },
-                 { id: 'stickers', icon: <Smile size={22} />, label: 'Vibe' },
-                 { id: 'music', icon: <Music size={22} />, label: 'Audio' },
-                 { id: 'quality', icon: <Monitor size={22} />, label: 'Res' },
-                 { id: 'layers', icon: <Sparkles size={22} />, label: 'Magic' }
+                 { id: 'text', icon: <Type size={22} />, label: 'Text' },
+                 { id: 'vibe', icon: <Smile size={22} />, label: 'Sticker' },
+                 { id: 'audio', icon: <Music size={22} />, label: 'Voices' },
+                 { id: 'magic', icon: <Wand2 size={22} />, label: 'Lenses' },
+                 { id: 'cut', icon: <Scissors size={22} />, label: 'Trim' }
                ].map(tool => (
                  <button 
                   key={tool.id}
-                  className="flex flex-col items-center gap-1.5 group"
+                  onClick={() => setActiveTool(activeTool === tool.id ? null : tool.id)}
+                  className="flex flex-col items-center gap-1.5"
                  >
-                    <div className="w-14 h-14 bg-white/10 backdrop-blur-3xl rounded-2xl border border-white/10 flex items-center justify-center text-white hover:bg-orange-500 hover:border-orange-500 active:scale-90 transition-all shadow-2xl group-hover:shadow-orange-500/20">
+                    <div className={`w-14 h-14 bg-white/10 backdrop-blur-3xl rounded-2xl border border-white/10 flex items-center justify-center text-white transition-all shadow-xl ${activeTool === tool.id ? 'bg-orange-500 border-orange-500 scale-110' : 'hover:bg-white/20 active:scale-90'}`}>
                       {tool.icon}
                     </div>
-                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest group-hover:text-orange-500 transition-colors">{tool.label}</span>
+                    <span className={`text-[8px] font-black uppercase tracking-widest ${activeTool === tool.id ? 'text-orange-500' : 'text-white/40'}`}>{tool.label}</span>
                  </button>
                ))}
             </div>
 
-            {/* Edit Drawer (Top Centered) */}
-            <div className="absolute top-10 left-1/2 -translate-x-1/2 w-full max-w-sm px-6 z-40">
-               <input 
-                 type="text" 
-                 value={textOverlay} 
-                 onChange={(e) => setTextOverlay(e.target.value)}
-                 placeholder="CAPTION THE VIBE..."
-                 className="w-full bg-black/60 backdrop-blur-3xl border border-white/10 rounded-3xl p-6 text-white placeholder-white/10 font-black focus:border-orange-500 outline-none text-center uppercase tracking-[0.2em] shadow-3xl text-sm"
-               />
-               <div className="mt-4 flex justify-center gap-4">
-                 {['fire', 'nexus', 'diamond', 'rocket'].map(s => (
-                   <button 
-                    key={s} 
-                    onClick={() => addSticker(s)} 
-                    className="w-12 h-12 bg-white/5 backdrop-blur-xl rounded-2xl hover:bg-orange-500/20 hover:border-orange-500 border border-white/10 transition-all text-2xl flex items-center justify-center"
-                   >
-                      {s === 'fire' ? '🔥' : s === 'nexus' ? '✨' : s === 'diamond' ? '💎' : '🚀'}
-                   </button>
-                 ))}
-               </div>
-            </div>
+            {/* CONTEXTUAL TOOL DRAWER - Only shows for active tool */}
+            <AnimatePresence>
+              {activeTool && (
+                <motion.div 
+                  initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
+                  className="absolute bottom-32 left-1/2 -translate-x-1/2 w-full max-w-sm p-6 z-50"
+                >
+                   <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 shadow-3xl">
+                      {activeTool === 'text' && (
+                        <div className="space-y-4">
+                           <p className="text-[10px] text-orange-500 font-black uppercase tracking-[0.3em] text-center">Type Your Energy</p>
+                           <input 
+                              autoFocus
+                              type="text" 
+                              value={textOverlay} 
+                              onChange={(e) => setTextOverlay(e.target.value)}
+                              placeholder="CAPTION IT..."
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black text-center text-xl uppercase tracking-tighter outline-none focus:border-orange-500"
+                           />
+                           <button onClick={() => setActiveTool(null)} className="w-full py-4 bg-orange-500 rounded-2xl text-black font-black uppercase text-[10px] tracking-widest">Done</button>
+                        </div>
+                      )}
+                      {activeTool === 'vibe' && (
+                        <div className="flex justify-center gap-5">
+                           {['fire', 'nexus', 'diamond', 'rocket'].map(s => (
+                             <button key={s} onClick={() => addSticker(s)} className="w-16 h-16 bg-white/5 rounded-3xl hover:bg-orange-500/20 hover:border-orange-500 border border-white/10 transition-all text-3xl flex items-center justify-center">
+                                {s === 'fire' ? '🔥' : s === 'nexus' ? '✨' : s === 'diamond' ? '💎' : '🚀'}
+                             </button>
+                           ))}
+                        </div>
+                      )}
+                      {activeTool === 'audio' && (
+                         <div className="flex flex-col gap-4">
+                            <button className="p-5 bg-white/5 border border-white/10 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest flex items-center justify-between">
+                               Import From Phone <Music size={16} />
+                            </button>
+                            <button className="p-5 bg-orange-500/20 border border-orange-500/30 rounded-2xl text-orange-500 font-black uppercase text-[10px] tracking-widest flex items-center justify-between">
+                               Record Voiceover <Mic size={16} />
+                            </button>
+                         </div>
+                      )}
+                   </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* Navigation */}
-            <div className="absolute bottom-10 inset-x-0 px-10 flex justify-between items-center z-40">
-               <button onClick={() => setStage(1)} className="px-6 py-3 text-white/40 font-black uppercase text-xs tracking-widest hover:text-white transition-all">
-                  Retake
+            {/* Bottom Nav Stage 2 */}
+            <div className="absolute bottom-10 inset-x-0 px-10 flex justify-between items-center z-50">
+               <button onClick={() => setStage(1)} className="w-16 h-16 bg-white/10 backdrop-blur-3xl rounded-3xl text-white/40 hover:text-white flex items-center justify-center transition-all border border-white/10">
+                  <RotateCw size={24} />
                </button>
+               
                <button 
                 onClick={() => setStage(3)}
-                className="group px-10 py-5 bg-orange-500 text-white rounded-3xl font-black uppercase text-xs tracking-[0.2em] flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-orange-500/20"
+                className="px-12 py-6 bg-white text-black rounded-[2.5rem] font-black uppercase text-xs tracking-[0.3em] flex items-center gap-4 hover:scale-105 active:scale-95 transition-all shadow-[0_20px_50px_rgba(255,255,255,0.1)]"
                >
-                Continue <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                Next <ArrowRight size={20} />
                </button>
             </div>
           </motion.div>
@@ -345,81 +436,90 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
         {stage === 3 && (
           <motion.div 
             key="stage3"
-            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-            className="w-full h-full flex flex-col md:flex-row items-center justify-center p-8 gap-12"
+            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+            className="w-full h-full relative bg-neutral-950 flex flex-col items-center justify-center p-10"
           >
-            {/* Minimalist Preview */}
-            <div className="w-full max-w-[260px] aspect-[9/16] rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.8)] border-4 border-white/5 relative">
-               {mediaType === 'video' ? (
-                 <video src={capturedMedia!} autoPlay loop playsInline className="w-full h-full object-cover" />
-               ) : (
-                 <img src={capturedMedia!} className="w-full h-full object-cover" />
-               )}
-               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-            </div>
+            <div className="w-full max-w-5xl grid md:grid-cols-2 gap-16 items-center">
+               {/* Final Gaze Preview */}
+               <div className="relative group mx-auto">
+                  <div className="w-[300px] aspect-[9/16] rounded-[3rem] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,1)] border-8 border-white/5 relative bg-black transform -rotate-2 group-hover:rotate-0 transition-transform duration-700">
+                    {mediaType === 'video' ? (
+                      <video src={capturedMedia!} autoPlay loop playsInline className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={capturedMedia!} className="w-full h-full object-cover" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                    <div className="absolute bottom-10 left-8 right-8 text-white">
+                       <p className="text-xs font-black italic mb-2">@{user?.displayName?.replace(/\s+/g, '')}</p>
+                       <p className="text-[10px] opacity-60 leading-relaxed line-clamp-2">{caption || 'Vibe captured.'}</p>
+                    </div>
+                  </div>
+               </div>
 
-            {/* Final Posting Form */}
-            <div className="w-full max-w-md bg-white/10 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 flex flex-col gap-8 shadow-3xl">
-               <div className="flex justify-between items-start">
+               {/* Configuration */}
+               <div className="space-y-10">
                   <div>
-                    <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">Publish</h2>
-                    <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.5em]">Global Nexus Release</p>
+                    <h2 className="text-6xl font-black text-white italic tracking-tighter uppercase leading-none mb-3">Post Vibe</h2>
+                    <p className="text-orange-500 text-[10px] font-black uppercase tracking-[0.5em] pl-1">Stage 3/3: Digital Release</p>
                   </div>
-                  <div className="w-12 h-12 bg-orange-500/20 rounded-2xl flex items-center justify-center">
-                    <Sparkles size={20} className="text-orange-500" />
-                  </div>
-               </div>
 
-               <div className="space-y-4">
-                  <div className="flex items-center justify-between px-2">
-                     <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest">Description</p>
-                     <span className="px-2 py-0.5 bg-white/5 rounded-full text-[8px] text-white/30 font-black uppercase">Auth: @{user?.displayName?.replace(/\s+/g, '')}</span>
-                  </div>
-                  <textarea 
-                    value={caption}
-                    onChange={(e) => setCaption(e.target.value)}
-                    placeholder="Capture the vibe of this moment forever..."
-                    className="w-full h-40 bg-black/40 border border-white/10 rounded-[2rem] p-6 text-white placeholder-white/10 outline-none focus:border-orange-500 transition-all resize-none font-bold"
-                  />
-               </div>
-
-               <div className="grid grid-cols-2 gap-4">
-                  <div className="p-6 bg-white/5 border border-white/5 rounded-3xl">
-                     <div className="flex items-center gap-2 mb-2">
-                        <Monitor size={14} className="text-purple-400" />
-                        <span className="text-[10px] text-white/20 font-black uppercase tracking-widest">Quality</span>
+                  <div className="space-y-4">
+                     <div className="flex items-center justify-between px-2">
+                        <p className="text-[9px] text-white/40 font-black uppercase tracking-widest">Add Description</p>
+                        <Palette size={14} className="text-orange-500" />
                      </div>
-                     <p className="text-base text-white font-black">{quality} Vibe</p>
+                     <textarea 
+                        value={caption}
+                        onChange={(e) => setCaption(e.target.value)}
+                        placeholder="Say something about your edit, bro!  Lanterns up. 🏮"
+                        className="w-full h-44 bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-white placeholder-white/10 font-bold focus:border-orange-500 outline-none transition-all resize-none shadow-inner"
+                     />
                   </div>
-                  <div className="p-6 bg-white/5 border border-white/5 rounded-3xl">
-                     <div className="flex items-center gap-2 mb-2">
-                        <ArrowRight size={14} className="text-blue-400" />
-                        <span className="text-[10px] text-white/20 font-black uppercase tracking-widest">Share</span>
-                     </div>
-                     <p className="text-base text-white font-black truncate">The Nexus</p>
-                  </div>
-               </div>
 
-               <div className="flex gap-4 pt-4 mt-auto">
-                  <button onClick={() => setStage(2)} className="w-16 h-16 bg-white/5 rounded-3xl text-white/20 hover:text-white transition-all flex items-center justify-center">
-                     <RotateCw size={24} />
-                  </button>
-                  <button 
-                    onClick={() => onPost({ 
-                      videoUrl: capturedMedia, 
-                      caption,
-                      userName: user?.displayName || 'Anonymous',
-                      userPhoto: user?.photoURL || '',
-                      quality,
-                      platform: 'nexora',
-                      type: mediaType
-                    })}
-                    className="flex-1 p-5 bg-white text-black rounded-3xl font-black uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-2xl hover:scale-[1.02] active:scale-95 transition-all"
-                  >
-                    Post Now <Send size={22} />
-                  </button>
+                  <div className="flex gap-4">
+                     <div className="flex-1 p-6 bg-white/5 rounded-[2rem] border border-white/10">
+                        <p className="text-[8px] text-white/20 font-black uppercase tracking-widest mb-2">Quality</p>
+                        <select 
+                          value={quality}
+                          onChange={(e: any) => setQuality(e.target.value)}
+                          className="bg-transparent text-white font-black text-base outline-none cursor-pointer w-full"
+                        >
+                           <option value="Standard">Standard</option>
+                           <option value="HD">High Definition</option>
+                           <option value="4K">4K Master</option>
+                           <option value="Ultra">Ultra Raw</option>
+                        </select>
+                     </div>
+                     <div className="p-6 bg-white/5 rounded-[2rem] border border-white/10 w-24 flex items-center justify-center">
+                        <FlipHorizontal className="text-white/20" size={24} />
+                     </div>
+                  </div>
+
+                  <div className="pt-8 flex gap-5">
+                    <button onClick={() => setStage(2)} className="w-20 h-20 bg-white/5 rounded-[2rem] border border-white/10 flex items-center justify-center text-white/30 hover:text-white transition-all">
+                       <Scissors size={28} />
+                    </button>
+                    <button 
+                      onClick={() => onPost({ 
+                        videoUrl: capturedMedia, 
+                        caption,
+                        userName: user?.displayName || 'Anonymous',
+                        userPhoto: user?.photoURL || '',
+                        quality,
+                        platform: 'nexora',
+                        type: mediaType
+                      })}
+                      className="flex-1 h-20 bg-orange-500 text-white rounded-[2rem] font-black uppercase text-sm tracking-[0.4em] flex items-center justify-center gap-4 shadow-[0_20px_60px_rgba(249,115,22,0.3)] hover:scale-[1.02] active:scale-95 transition-all"
+                    >
+                      Post Globally <Send size={24} />
+                    </button>
+                  </div>
                </div>
             </div>
+            
+            <button onClick={onClose} className="absolute bottom-12 text-[10px] text-white/20 font-black uppercase tracking-[0.5em] hover:text-red-500 transition-colors">
+               Cancel & Discard Edit
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

@@ -4777,8 +4777,20 @@ function NexusVideoScreen({ onBack, user, settings, showToast, initialVideoId }:
 
   return (
     <div className="fixed inset-0 bg-black z-[150] flex flex-col">
-       {/* TikTok Header */}
-       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-[160] bg-gradient-to-b from-black/60 to-transparent pt-12 sm:pt-4">
+       <AnimatePresence>
+         {isStudioOpen && (
+           <NexoraStudio 
+             onClose={() => setIsStudioOpen(false)}
+             onPost={handleStudioPost}
+             user={user}
+           />
+         )}
+       </AnimatePresence>
+
+       {!isStudioOpen && (
+         <>
+           {/* TikTok Header */}
+           <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-[160] bg-gradient-to-b from-black/60 to-transparent pt-12 sm:pt-4">
           <button onClick={onBack} className="p-2 text-white hover:scale-110 transition-transform">
             <ArrowLeft size={28} />
           </button>
@@ -4971,18 +4983,7 @@ function NexusVideoScreen({ onBack, user, settings, showToast, initialVideoId }:
          )}
        </AnimatePresence>
 
-       {/* Studio Modal */}
        <AnimatePresence>
-         {isStudioOpen && (
-           <NexoraStudio 
-             onClose={() => setIsStudioOpen(false)}
-             onPost={handleStudioPost}
-             user={user}
-           />
-         )}
-       </AnimatePresence>
-
-        <AnimatePresence>
           {isShowingVideoComments && selectedVideo && (
             <VideoCommentsModal 
               videoId={selectedVideo.id} 
@@ -5067,6 +5068,8 @@ function NexusVideoScreen({ onBack, user, settings, showToast, initialVideoId }:
             </div>
           )}
         </AnimatePresence>
+      </>
+    )}
     </div>
   );
 }
