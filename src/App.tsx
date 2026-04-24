@@ -109,13 +109,19 @@ function WhatIsNewModal({ onClose }: { onClose: () => void }) {
 const getEmbedData = (url: string) => {
   if (!url) return null;
   // YouTube
-  const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+  const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/i;
   const ytMatch = url.match(ytRegex);
   if (ytMatch) return { type: 'youtube', id: ytMatch[1] };
   // TikTok
-  const ttRegex = /tiktok\.com\/.*video\/(\d+)/i;
+  const ttRegex = /(?:tiktok\.com\/.*video\/(\d+))|(?:tiktok\.com\/t\/([a-zA-Z0-9]+))|(?:tiktok\.com\/@[\w.-]+\/video\/(\d+))/i;
   const ttMatch = url.match(ttRegex);
-  if (ttMatch) return { type: 'tiktok', id: ttMatch[1] };
+  if (ttMatch) {
+    const id = ttMatch[1] || ttMatch[3];
+    if (id) return { type: 'tiktok', id };
+    // If it's a short T/ link, we might not be able to embed it directly without the full ID
+    // but we can try to return the short code and see if the embed handles it
+    if (ttMatch[2]) return { type: 'tiktok', id: ttMatch[2] };
+  }
   return null;
 };
 
@@ -4521,7 +4527,8 @@ function NexusVideoScreen({ onBack, user, showToast }: { onBack: () => void, use
       vibrate(VIBRATION_PATTERNS.SUCCESS);
     } catch (err) {
       console.error(err);
-      showToast('Failed to post video', 'error');
+      handleFirestoreError(err, 'create', 'social_videos');
+      showToast('Failed to post video - Check your connection or permissions, bro! ⚠️', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -4651,6 +4658,7 @@ function NexusVideoScreen({ onBack, user, showToast }: { onBack: () => void, use
                            placeholder="TikTok or YouTube link..."
                            className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder:text-white/20"
                         />
+                        <p className="text-[8px] text-white/30 font-bold uppercase tracking-tighter px-2">Tip: Use the full desktop link for best results, bro!</p>
                      </div>
 
                      <div className="space-y-1.5">

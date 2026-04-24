@@ -227,6 +227,26 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "userId", "userName", "circleId", "circleName", "content", "type", "createdAt"]
+    },
+    "NexusVideo": {
+      "title": "NexusVideo",
+      "description": "A short-form video shared in the Nexus Reel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "caption": { "type": "string" },
+        "likes": { "type": "number" },
+        "likedBy": { "type": "array", "items": { "type": "string" } },
+        "commentCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "isAuthorized": { "type": "boolean" },
+        "platform": { "type": "string", "enum": ["youtube", "tiktok"] }
+      },
+      "required": ["userId", "userName", "videoUrl", "createdAt"]
     }
   },
   "firestore": {
@@ -292,6 +312,10 @@
         }
       },
       "description": "Comments on community posts"
+    },
+    "/social_videos/{videoId}": {
+      "schema": { "$ref": "NexusVideo" },
+      "description": "User shared videos in the Nexus Reel"
     }
   }
 }

@@ -232,6 +232,18 @@ service cloud.firestore {
              (!('likedBy' in data) || data.likedBy is list);
     }
 
+    function isValidVideo(data) {
+      return data.keys().hasAll(['userId', 'userName', 'videoUrl', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.userName is string && data.userName.size() < 100 &&
+             data.videoUrl is string && data.videoUrl.size() < 1000 &&
+             (!('caption' in data) || (data.caption is string && data.caption.size() < 1000)) &&
+             (!('likes' in data) || data.likes is number) &&
+             (!('likedBy' in data) || data.likedBy is list) &&
+             (!('commentCount' in data) || data.commentCount is number) &&
+             (!('platform' in data) || data.platform in ['youtube', 'tiktok']);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -349,6 +361,16 @@ service cloud.firestore {
           isAdmin()
         );
       }
+    }
+
+    match /social_videos/{videoId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidVideo(request.resource.data);
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && isValidVideo(request.resource.data)) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy', 'commentCount']))
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
   }
 }
