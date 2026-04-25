@@ -31,7 +31,7 @@ export function ProgressScreen({ stats, history, settings, setSettings, userRank
             <Flame size={24} />
           </div>
           <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1">Max Streak</p>
-          <p className="text-2xl font-black text-blue-900">{stats.maxStreak || 0}</p>
+          <p className="text-2xl font-black text-blue-900">{stats.bestStreak || 0}</p>
         </div>
         <div className="glass-card p-6 flex flex-col items-center">
           <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-500 mb-3 shadow-inner">

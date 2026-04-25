@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Book, Plus, X, Tag, Calendar, History, Trash2, Save, ArrowLeft, Pencil, BookOpen, PenTool, Brain, Sparkles } from 'lucide-react';
+import { Book, Plus, X, Tag, Calendar, History, Trash2, Save, ArrowLeft, Pencil, BookOpen, PenTool, Brain, Sparkles, ChevronLeft } from 'lucide-react';
 import { UserStats } from '../types';
 
 export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: UserStats, setStats: (s: UserStats | ((prev: UserStats) => UserStats)) => void, onBack: () => void, showToast: (msg: string, type?: 'success' | 'info' | 'error') => void }) {
@@ -10,27 +10,25 @@ export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: 
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('Growth');
   
-  const notes = stats.notes || [];
+  const entries = stats.gratitudeEntries || [];
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) return;
-    const newNote = {
+    const newEntry = {
       id: activeNote?.id || Date.now().toString(),
-      title,
-      content,
-      category,
-      updatedAt: new Date().toISOString()
+      text: `${title}: ${content}`,
+      date: new Date().toISOString()
     };
     
-    let newNotes;
+    let newEntries;
     if (activeNote) {
-      newNotes = notes.map((n: any) => n.id === activeNote.id ? newNote : n);
+      newEntries = entries.map((e: any) => e.id === activeNote.id ? newEntry : e);
     } else {
-      newNotes = [newNote, ...notes];
+      newEntries = [newEntry, ...entries];
     }
     
-    setStats({ ...stats, notes: newNotes });
-    setActiveNote(newNote);
+    setStats({ ...stats, gratitudeEntries: newEntries });
+    setActiveNote(newEntry);
     setIsCreating(false);
     showToast('Manifest Saved! 📓', 'success');
   };
@@ -61,25 +59,32 @@ export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: 
       </div>
 
       <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4 custom-scrollbar">
-         {notes.length === 0 && !isCreating ? (
+         {entries.length === 0 && !isCreating ? (
            <div className="h-full flex flex-col items-center justify-center opacity-20 space-y-4 pointer-events-none grayscale">
               <Brain size={120} />
               <p className="font-black uppercase tracking-[0.5em] text-xs">Awaiting Genius Output...</p>
            </div>
          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-               {notes.map((note: any) => (
+               {entries.map((note: any) => (
                  <motion.div 
                    key={note.id} 
                    layoutId={note.id}
-                   onClick={() => { setActiveNote(note); setTitle(note.title); setContent(note.content); setCategory(note.category); setIsCreating(true); }}
+                   onClick={() => { 
+                     setActiveNote(note); 
+                     // Try to split title and content back
+                     const parts = note.text.split(': ');
+                     setTitle(parts[0] || '');
+                     setContent(parts.slice(1).join(': ') || '');
+                     setIsCreating(true); 
+                   }}
                    className="bg-white p-8 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all cursor-pointer group active:scale-[0.98] relative overflow-hidden"
                  >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-bl-[4rem] group-hover:scale-110 transition-transform" />
                     <div className="relative z-10 space-y-3">
-                       <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full">{note.category}</span>
-                       <h3 className="text-xl font-black text-blue-900 line-clamp-1">{note.title}</h3>
-                       <p className="text-sm font-medium text-blue-900/40 line-clamp-3 leading-relaxed italic">"{note.content}"</p>
+                       <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full">{note.category || 'Focus'}</span>
+                       <h3 className="text-xl font-black text-blue-900 line-clamp-1">{note.text.split(': ')[0]}</h3>
+                       <p className="text-sm font-medium text-blue-900/40 line-clamp-3 leading-relaxed italic">"{note.text.split(': ')[1] || note.text}"</p>
                     </div>
                  </motion.div>
                ))}
@@ -128,8 +133,8 @@ export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: 
              <div className="pt-8 flex items-center justify-between">
                 <button 
                   onClick={() => {
-                    const newNotes = notes.filter((n: any) => n.id !== activeNote?.id);
-                    setStats({ ...stats, notes: newNotes });
+                    const newEntries = entries.filter((e: any) => e.id !== activeNote?.id);
+                    setStats({ ...stats, gratitudeEntries: newEntries });
                     setIsCreating(false);
                     showToast('Note Deleted', 'info');
                   }}

@@ -1,11 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Video, Bookmark, History, Search } from 'lucide-react';
+import { ArrowLeft, Video, Bookmark, History, Search, Image as ImageIcon, Sparkles, Download } from 'lucide-react';
 import { UserStats } from '../types';
-import { VideoPlayer } from './VideoPlayer';
 
 export function GalleryScreen({ stats, onBack }: { stats: UserStats, onBack: () => void }) {
-  const savedVideos = stats.savedVideos || [];
+  const drawings = stats.drawings || [];
 
   return (
     <motion.div
@@ -18,26 +17,27 @@ export function GalleryScreen({ stats, onBack }: { stats: UserStats, onBack: () 
            <ArrowLeft size={24} />
         </button>
         <div>
-           <h2 className="text-3xl font-black text-blue-900 tracking-tight">The Library</h2>
-           <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">Curated Focus Collection</p>
+           <h2 className="text-3xl font-black text-blue-900 tracking-tight">Masterpieces</h2>
+           <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">Your Creative Evolution</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        {savedVideos.length === 0 ? (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+        {drawings.length === 0 ? (
           <div className="col-span-full py-20 text-center opacity-20 space-y-4">
-             <Bookmark size={64} className="mx-auto" />
-             <p className="font-black uppercase tracking-widest text-xs">Your library is waiting for vibes, bro...</p>
+             <ImageIcon size={64} className="mx-auto" />
+             <p className="font-black uppercase tracking-widest text-xs">No masterpieces yet, bro!</p>
           </div>
         ) : (
-          savedVideos.map((vid: any) => (
-            <motion.div key={vid.id} className="glass-card p-6 space-y-4">
-               <div className="flex items-center justify-between mb-2">
-                 <h4 className="font-black text-blue-900 text-xs uppercase tracking-tighter">Saved Experience</h4>
-                 <Video size={16} className="text-blue-200" />
+          drawings.map((drawing: string, i: number) => (
+            <motion.div key={i} className="glass-card p-2 aspect-square relative group overflow-hidden">
+               <img src={drawing} alt={`Masterpiece ${i}`} className="w-full h-full object-cover rounded-2xl" />
+               <div className="absolute inset-0 bg-blue-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                 <button className="p-2 bg-white text-blue-600 rounded-xl shadow-lg">
+                   <Download size={18} />
+                 </button>
+                 <Sparkles size={18} className="text-yellow-400 animate-pulse" />
                </div>
-               <VideoPlayer url={vid.url} />
-               <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest text-center italic">{new Date(vid.savedAt).toLocaleDateString()}</p>
             </motion.div>
           ))
         )}

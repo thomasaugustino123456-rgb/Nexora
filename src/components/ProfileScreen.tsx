@@ -5,7 +5,7 @@ import { User as FirebaseUser } from 'firebase/auth';
 import { UserSettings, UserStats, SocialCircle, Screen } from '../types';
 
 export function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen, circles }: { settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, stats: UserStats, user: FirebaseUser | null, setActiveScreen: (screen: Screen) => void, circles: SocialCircle[] }) {
-  const currentXP = stats.totalXP || 0;
+  const currentXP = stats.xp || 0;
   const nextLevelXP = (stats.level || 1) * 1000;
   const progressPercent = (currentXP / nextLevelXP) * 100;
 
