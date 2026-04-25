@@ -139,7 +139,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                <ArrowLeft size={24} />
             </button>
             <div>
-               <h2 className="text-3xl font-black text-blue-900 tracking-tighter">Nexus Reel</h2>
+               <h2 className="text-3xl font-black text-blue-900 tracking-tighter">Nexo Reels</h2>
                <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">Vertical Vibe Lab</p>
             </div>
           </div>
@@ -176,9 +176,28 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
               user={user}
               onClose={() => setIsStudioOpen(false)} 
               onPost={async (data) => {
-                // Simplified post logic for extraction
-                setIsStudioOpen(false);
-                showToast('Studio vibe posted! 🏮', 'success');
+                if (!user) return;
+                try {
+                  const videoData: Omit<NexusVideo, 'id'> = {
+                    userId: user.uid,
+                    userName: settings.displayName || 'Anonymous',
+                    userPhoto: settings.profilePic || '',
+                    videoUrl: data.videoUrl,
+                    caption: data.caption || 'New Studio Vibe! 🏮',
+                    likes: 0,
+                    likedBy: [],
+                    commentCount: 0,
+                    createdAt: new Date().toISOString(),
+                    isAuthorized: true,
+                    platform: 'nexora'
+                  };
+                  await addDoc(collection(db, 'social_videos'), videoData);
+                  setIsStudioOpen(false);
+                  showToast('Studio vibe posted to Reels! 🏮', 'success');
+                  vibrate(VIBRATION_PATTERNS.SUCCESS);
+                } catch (err) {
+                  showToast('Failed to post vibe', 'error');
+                }
               }}
             />
           </div>

@@ -232,7 +232,62 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
     } catch (err) { showToast('Sync failed', 'error'); }
   };
 
+  const handleCreatePost = async () => {
+    if (!newPostContent.trim() || !user) return;
+    setIsSubmitting(true);
+    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    try {
+      const circle = circles.find(c => c.id === selectedCircleId);
+      const postData: Omit<Post, 'id'> = {
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        userPhoto: user.photoURL || '',
+        circleId: selectedCircleId,
+        circleName: circle?.name || 'General',
+        content: newPostContent.trim(),
+        type: newVideoUrl.trim() ? 'video' : 'text',
+        videoUrl: newVideoUrl.trim() || undefined,
+        flames: 0,
+        shields: 0,
+        likedBy: [],
+        shieldedBy: [],
+        commentCount: 0,
+        createdAt: new Date().toISOString()
+      };
+      await addDoc(collection(db, 'posts'), postData);
+      setIsCreatingPost(false);
+      setNewPostContent('');
+      setNewVideoUrl('');
+      showToast('Post transmitted to the Nexus! 🚀', 'success');
+    } catch (err) { showToast('Transmission failed', 'error'); }
+    finally { setIsSubmitting(false); }
+  };
+
+  const handlePostComment = async () => {
+    if (!newComment.trim() || !selectedPost || !user) return;
+    setIsPostingComment(true);
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    try {
+      const commentData: Omit<SocialComment, 'id'> = {
+        postId: selectedPost.id,
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        userPhoto: user.photoURL || '',
+        content: newComment.trim(),
+        createdAt: new Date().toISOString(),
+        likes: 0,
+        parentId: replyingTo ? replyingTo.id : undefined
+      };
+      await addDoc(collection(db, 'posts', selectedPost.id, 'comments'), commentData);
+      await updateDoc(doc(db, 'posts', selectedPost.id), { commentCount: increment(1) });
+      setNewComment('');
+      setReplyingTo(null);
+    } catch (err) { showToast('Comment failed', 'error'); }
+    finally { setIsPostingComment(false); }
+  };
+
   const filteredPosts = posts.filter(p => !hiddenPosts.includes(p.id));
+  const activeCirclePosts = viewingCircle ? posts.filter(p => p.circleId === viewingCircle.id) : [];
 
   return (
     <motion.div
@@ -241,51 +296,346 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       exit={{ opacity: 0, x: -20 }}
       className="max-w-4xl mx-auto w-full space-y-6 pb-24"
     >
-      {/* Shortened rendering for example purposes - actual logic kept same but decoupled */}
       <div className="flex items-center justify-between sticky top-0 bg-blue-50/80 backdrop-blur-md z-[100] py-4">
           <div className="flex items-center gap-4">
             <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm text-blue-900 hover:scale-105 active:scale-95 transition-transform">
               <ArrowLeft size={24} />
             </button>
-            <div>
-              <h2 className="text-3xl font-black text-blue-900 tracking-tight">The Nexus</h2>
-              <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">Efficiency Optimized 🚀</p>
+            <div onClick={() => setActiveScreen('nexus-video')} className="cursor-pointer group">
+              <h2 className="text-3xl font-black text-blue-900 tracking-tight group-hover:text-blue-600 transition-colors">The Nexus</h2>
+              <p className="text-xs font-bold text-blue-500 uppercase tracking-widest flex items-center gap-2">
+                <Video size={12} /> Watch Nexo Reels
+              </p>
             </div>
           </div>
-          <button onClick={() => setIsCreatingPost(true)} className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200">
-             <Plus size={20} />
-          </button>
+          <div className="flex items-center gap-3">
+             <button onClick={() => setShowSearch(!showSearch)} className="p-4 bg-white text-blue-900 rounded-2xl shadow-sm">
+                <Search size={20} />
+             </button>
+             <button onClick={() => setIsCreatingPost(true)} className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200">
+                <Plus size={20} />
+             </button>
+          </div>
       </div>
 
+      <AnimatePresence>
+        {showSearch && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <input 
+              autoFocus
+              type="text" 
+              value={searchQuery} 
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search the pulse, nodes, or frequencies..."
+              className="w-full bg-white border-2 border-blue-100 rounded-2xl p-4 font-bold text-blue-900 placeholder-blue-200 focus:outline-none focus:border-blue-300"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex items-center gap-2 p-1.5 bg-blue-50/50 rounded-2xl w-fit">
-        <button onClick={() => setActiveTab('feed')} className={`px-6 py-2 rounded-xl text-sm font-bold ${activeTab === 'feed' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40'}`}>Pulse Feed</button>
-        <button onClick={() => setActiveTab('circles')} className={`px-6 py-2 rounded-xl text-sm font-bold ${activeTab === 'circles' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40'}`}>Nodes</button>
+        <button onClick={() => setActiveTab('feed')} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'feed' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Pulse Feed</button>
+        <button onClick={() => setActiveTab('circles')} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'circles' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Nodes</button>
+        <button onClick={() => setActiveTab('inbox')} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all relative ${activeTab === 'inbox' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>
+          Inbox
+          {notifications.some(n => !n.isRead) && <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full animate-ping" />}
+        </button>
       </div>
 
       {activeTab === 'feed' && (
         <div className="grid grid-cols-1 gap-6">
-          {filteredPosts.map(post => (
-            <PostCard 
-              key={post.id}
-              post={post}
-              user={user}
-              settings={settings}
-              circles={circles}
-              savedPosts={savedPosts}
-              toggleSavePost={toggleSavePost}
-              handleAction={handleAction}
-              setSelectedPost={setSelectedPost}
-              setViewingCircle={setViewingCircle}
-              handleToggleJoin={handleToggleJoin}
-              hidePost={(id: string) => setHiddenPosts(prev => [...prev, id])}
-              handleDeletePost={handleDeletePost}
-              showToast={showToast}
-            />
-          ))}
+          {filteredPosts.length === 0 ? (
+            <div className="py-20 text-center opacity-20">
+               <RefreshCw size={64} className="mx-auto mb-4 animate-spin-slow" />
+               <p className="font-black uppercase tracking-widest text-xs">Waiting for Signal...</p>
+            </div>
+          ) : (
+            filteredPosts.map(post => (
+              <PostCard 
+                key={post.id}
+                post={post}
+                user={user}
+                settings={settings}
+                circles={circles}
+                savedPosts={savedPosts}
+                toggleSavePost={toggleSavePost}
+                handleAction={handleAction}
+                setSelectedPost={setSelectedPost}
+                setViewingCircle={setViewingCircle}
+                handleToggleJoin={handleToggleJoin}
+                hidePost={(id: string) => setHiddenPosts(prev => [...prev, id])}
+                handleDeletePost={handleDeletePost}
+                showToast={showToast}
+              />
+            ))
+          )}
         </div>
       )}
-      
-      {/* Rest of the UI elements like Inbox and Circles tabs would go here, simplified to optimize loading */}
+
+      {activeTab === 'circles' && (
+        <div className="space-y-6">
+           <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-blue-900 italic">Active Nodes</h3>
+              <button 
+                onClick={() => setIsCreatingCircle(true)}
+                className="flex items-center gap-2 text-xs font-black text-blue-600 uppercase tracking-widest hover:translate-x-1 transition-transform"
+              >
+                 Initialize Node <Plus size={14} />
+              </button>
+           </div>
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {circles.map(circle => (
+                <motion.div 
+                  key={circle.id}
+                  layoutId={circle.id}
+                  onClick={() => setViewingCircle(circle)}
+                  className="glass-card p-6 cursor-pointer group hover:bg-white transition-colors"
+                >
+                   <div className="flex items-center justify-between mb-4">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-sm group-hover:rotate-12 transition-transform ${circle.color || 'bg-blue-100'}`}>
+                         {circle.icon || '🏮'}
+                      </div>
+                      <div className="text-right">
+                         <span className="block text-[8px] font-black text-blue-400 uppercase tracking-widest">Efficiency</span>
+                         <span className="text-sm font-black text-blue-900">{circle.memberCount || 0}</span>
+                      </div>
+                   </div>
+                   <h4 className="text-lg font-black text-blue-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{circle.name}</h4>
+                   <p className="text-xs font-medium text-blue-900/40 line-clamp-2 mt-2 leading-relaxed">
+                      {circle.description}
+                   </p>
+                </motion.div>
+              ))}
+           </div>
+        </div>
+      )}
+
+      {activeTab === 'inbox' && (
+        <div className="space-y-4">
+           {notifications.length === 0 ? (
+             <div className="py-20 text-center opacity-20">
+                <Bookmark size={64} className="mx-auto mb-4" />
+                <p className="font-black uppercase tracking-widest text-xs">Awaiting Transmissions...</p>
+             </div>
+           ) : (
+             notifications.map(notif => (
+               <div key={notif.id} className={`glass-card p-4 flex items-center gap-4 ${!notif.isRead ? 'border-l-4 border-l-orange-500 bg-orange-50/30' : ''}`}>
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                     {notif.type === 'like' ? <Heart size={20} /> : notif.type === 'reply' ? <MessageSquare size={20} /> : <Award size={20} />}
+                  </div>
+                  <div className="flex-1">
+                     <p className="text-sm font-bold text-blue-900">{notif.senderName}</p>
+                     <p className="text-xs font-medium text-blue-900/60 mt-0.5">{notif.message}</p>
+                     <p className="text-[8px] font-black text-blue-400 uppercase mt-2">{format(parseISO(notif.createdAt), 'MMM d, h:mm a')}</p>
+                  </div>
+               </div>
+             ))
+           )}
+        </div>
+      )}
+
+
+      {/* Modals and Overlays */}
+      <AnimatePresence>
+        {selectedPost && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-blue-900/60 backdrop-blur-xl p-4 sm:p-8" onClick={() => setSelectedPost(null)}>
+             <motion.div 
+               initial={{ scale: 0.95, opacity: 0, y: 20 }}
+               animate={{ scale: 1, opacity: 1, y: 0 }}
+               exit={{ scale: 0.95, opacity: 0, y: 20 }}
+               onClick={e => e.stopPropagation()}
+               className="bg-white w-full max-w-2xl h-full max-h-[85vh] rounded-[2.5rem] shadow-[0_0_80px_rgba(30,58,138,0.3)] overflow-hidden flex flex-col relative"
+             >
+                <div className="absolute top-6 right-6 z-10">
+                   <button onClick={() => setSelectedPost(null)} className="p-3 bg-blue-50 text-blue-900 rounded-2xl hover:scale-110 active:scale-90 transition-all">
+                      <X size={24} />
+                   </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-8">
+                   <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-full bg-blue-100 overflow-hidden border-2 border-white shadow-xl">
+                         {selectedPost.userPhoto ? <img src={selectedPost.userPhoto} className="w-full h-full object-cover" /> : <User className="w-full h-full p-3 text-blue-400" />}
+                      </div>
+                      <div>
+                         <h3 className="text-xl font-black text-blue-900">{selectedPost.userName}</h3>
+                         <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{format(parseISO(selectedPost.createdAt), 'MMMM do, yyyy')}</p>
+                      </div>
+                   </div>
+
+                   <p className="text-2xl font-black text-blue-900 leading-tight tracking-tight italic">
+                      "{selectedPost.content}"
+                   </p>
+
+                   {selectedPost.type === 'video' && selectedPost.videoUrl && (
+                     <div className="rounded-[2rem] overflow-hidden shadow-2xl border-4 border-blue-50">
+                        <VideoPlayer url={selectedPost.videoUrl} />
+                     </div>
+                   )}
+
+                   <div className="space-y-6">
+                      <div className="flex items-center justify-between border-b-2 border-blue-50 pb-4">
+                         <h4 className="text-sm font-black text-blue-900 uppercase tracking-widest">Signal Comments</h4>
+                         <span className="text-xs font-bold text-blue-400">{comments.length} Transmissions</span>
+                      </div>
+                      
+                      <div className="space-y-4">
+                         {comments.map(comment => (
+                           <div key={comment.id} className="flex gap-4 group">
+                              <div className="w-10 h-10 rounded-2xl bg-blue-50 overflow-hidden shrink-0">
+                                 {comment.userPhoto ? <img src={comment.userPhoto} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2 text-blue-200" />}
+                              </div>
+                              <div className="bg-blue-50/50 p-4 rounded-2xl rounded-tl-none flex-1">
+                                 <h5 className="text-[10px] font-black text-blue-900 uppercase mb-1">{comment.userName}</h5>
+                                 <p className="text-sm font-medium text-blue-900/80">{comment.content}</p>
+                              </div>
+                           </div>
+                         ))}
+                      </div>
+                   </div>
+                </div>
+
+                <div className="p-6 bg-blue-50/50 border-t-2 border-white backdrop-blur-sm">
+                   <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-lg">
+                         <User size={20} />
+                      </div>
+                      <input 
+                        type="text" 
+                        value={newComment} 
+                        onChange={e => setNewComment(e.target.value)}
+                        placeholder="Join the frequency..." 
+                        className="flex-1 bg-transparent text-sm font-bold text-blue-900 placeholder-blue-300 focus:outline-none"
+                      />
+                      <button 
+                        onClick={handlePostComment}
+                        disabled={isPostingComment || !newComment.trim()}
+                        className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 active:scale-90 transition-all disabled:opacity-50"
+                      >
+                         <Send size={20} />
+                      </button>
+                   </div>
+                </div>
+             </motion.div>
+          </div>
+        )}
+
+        {isCreatingPost && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-blue-900/60 backdrop-blur-xl p-4" onClick={() => setIsCreatingPost(false)}>
+             <motion.div 
+               initial={{ scale: 0.9, opacity: 0 }}
+               animate={{ scale: 1, opacity: 1 }}
+               exit={{ scale: 0.9, opacity: 0 }}
+               onClick={e => e.stopPropagation()}
+               className="bg-white w-full max-w-md p-8 rounded-[2.5rem] shadow-2xl relative"
+             >
+                <button onClick={() => setIsCreatingPost(false)} className="absolute top-6 right-6 p-2 text-blue-900/20 hover:text-blue-900">
+                   <X size={24} />
+                </button>
+                <h3 className="text-3xl font-black text-blue-900 mb-8 italic tracking-tighter uppercase">Nexus Burst</h3>
+                
+                <div className="space-y-6">
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-4">Target Node</label>
+                      <select 
+                        value={selectedCircleId} 
+                        onChange={e => setSelectedCircleId(e.target.value)}
+                        className="w-full bg-blue-50 rounded-2xl p-4 font-bold text-blue-900 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      >
+                         {circles.map(c => <option key={c.id} value={c.id}>n/{c.name.toLowerCase()}</option>)}
+                      </select>
+                   </div>
+
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-4">Signal Content</label>
+                      <textarea 
+                        value={newPostContent} 
+                        onChange={e => setNewPostContent(e.target.value)}
+                        placeholder="Broadcast your frequency..."
+                        className="w-full bg-blue-50 rounded-3xl p-6 font-bold text-blue-900 min-h-[140px] focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+                      />
+                   </div>
+
+                   <button 
+                     onClick={() => setShowVideoInput(!showVideoInput)}
+                     className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full transition-all ${showVideoInput ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-400'}`}
+                   >
+                      <Video size={14} /> {showVideoInput ? 'Active Signal' : 'Add Video Signal'}
+                   </button>
+
+                   {showVideoInput && (
+                     <input 
+                        type="text"
+                        value={newVideoUrl}
+                        onChange={e => setNewVideoUrl(e.target.value)}
+                        placeholder="Enter URL (YouTube/TikTok)"
+                        className="w-full bg-blue-50 rounded-2xl p-4 font-bold text-blue-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 border-2 border-blue-100"
+                     />
+                   )}
+
+                   <button 
+                     onClick={handleCreatePost}
+                     disabled={isSubmitting || !newPostContent.trim()}
+                     className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.4em] shadow-xl shadow-blue-100 active:scale-95 transition-all disabled:opacity-50"
+                   >
+                      {isSubmitting ? 'Sychnronizing...' : 'Go Live! 🚀'}
+                   </button>
+                </div>
+             </motion.div>
+          </div>
+        )}
+
+        {viewingCircle && (
+          <div className="fixed inset-0 z-[1000] flex flex-col bg-white" onClick={() => setViewingCircle(null)}>
+             <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 p-6 flex items-center justify-between border-b border-blue-50">
+                <div className="flex items-center gap-4">
+                   <button onClick={() => setViewingCircle(null)} className="p-3 bg-blue-50 text-blue-900 rounded-2xl">
+                      <ArrowLeft size={24} />
+                   </button>
+                   <div>
+                      <h3 className="text-xl font-black text-blue-900 italic">n/{viewingCircle.name.toLowerCase()}</h3>
+                      <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{viewingCircle.memberCount} Focused Members</p>
+                   </div>
+                </div>
+                <button 
+                  onClick={() => handleToggleJoin(viewingCircle)}
+                  className={`px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg transition-all active:scale-95 ${settings.joinedCircleIds?.includes(viewingCircle.id) ? 'bg-blue-50 text-blue-900' : 'bg-blue-600 text-white shadow-blue-200'}`}
+                >
+                   {settings.joinedCircleIds?.includes(viewingCircle.id) ? 'LEAVE NODE' : 'JOIN NODE'}
+                </button>
+             </div>
+             
+             <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar" onClick={e => e.stopPropagation()}>
+                <div className="glass-card p-8 bg-blue-600 relative overflow-hidden text-white mb-8 shadow-2xl shadow-blue-100">
+                   <div className="relative z-10">
+                      <div className="w-16 h-16 bg-white/20 rounded-[2rem] flex items-center justify-center text-4xl mb-6 backdrop-blur-sm border border-white/30">
+                        {viewingCircle.icon}
+                      </div>
+                      <h4 className="text-3xl font-black italic mb-2">The Node Pulse</h4>
+                      <p className="font-medium text-blue-50/80 leading-relaxed max-w-lg italic">"{viewingCircle.description}"</p>
+                   </div>
+                   <Award size={180} className="absolute -bottom-10 -right-10 text-white/10 rotate-12" />
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                   {activeCirclePosts.length === 0 ? (
+                      <div className="py-20 text-center opacity-20">
+                         <RefreshCw size={64} className="mx-auto mb-4 animate-spin-slow" />
+                         <p className="font-black uppercase tracking-widest text-xs">Waiting for Signal in this Node...</p>
+                      </div>
+                   ) : (
+                      activeCirclePosts.map(post => (
+                        <PostCard 
+                          key={post.id} post={post} user={user} settings={settings} circles={circles} savedPosts={savedPosts} toggleSavePost={toggleSavePost} handleAction={handleAction} setSelectedPost={setSelectedPost} setViewingCircle={setViewingCircle} handleToggleJoin={handleToggleJoin} hidePost={() => {}} handleDeletePost={handleDeletePost} showToast={showToast}
+                        />
+                      ))
+                   )}
+                </div>
+             </div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
+
