@@ -91,12 +91,21 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
           facingMode: { ideal: facingMode },
           width: { ideal: 1280 },
           height: { ideal: 720 }
-        },
-        audio: true
+        }
       };
 
-      console.log("Requesting Camera & Mic...");
+      console.log("Requesting Camera...");
+      // We try just camera first for maximum reliability in "Studio Mode"
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Now try to add audio separately so we don't crash the whole thing if mic is busy
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioStream.getAudioTracks().forEach(track => stream.addTrack(track));
+        console.log("Added Audio successfully.");
+      } catch (audioErr) {
+        console.warn("Microphone access skipped or failed, continuing with video only.", audioErr);
+      }
       
       streamRef.current = stream;
       if (videoRef.current) {
@@ -109,9 +118,9 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
     } catch (err: any) {
       console.error("Camera access failed:", err);
       
-      // Fallback: Try Video Only (sometimes mic is blocked by system)
+      // Final hard fallback
       try {
-        console.log("Attempting Video-only fallback...");
+        console.log("Attempting fundamental video fallback...");
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         streamRef.current = stream;
         if (videoRef.current) {
@@ -119,13 +128,12 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
           videoRef.current.play().catch(console.error);
         }
         setCameraError(null);
-        console.warn("Started without audio.");
       } catch (fallbackErr: any) {
-        let msg = "Could not access camera. 🛡️";
+        let msg = "Camera Blocked. 🛡️";
         if (fallbackErr.name === 'NotAllowedError') {
-          msg = "Permission Denied! Click the LOCK icon in your browser URL bar and set Camera to 'Allow'.";
+          msg = "Permission Denied! Click the LOCK icon in your browser URL bar and set Camera to 'Allow'. Then refresh, bro!";
         } else if (fallbackErr.name === 'NotFoundError') {
-          msg = "No camera found on this device.";
+          msg = "No camera hardware detected.";
         }
         setCameraError(msg);
       }
