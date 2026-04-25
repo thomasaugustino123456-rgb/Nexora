@@ -5,6 +5,7 @@ import {
   RotateCcw, History, Plus, ChevronRight, Layers, Volume2 
 } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
+import { showToast } from '../lib/toast';
 
 interface ProVideoEditorProps {
   media: {url: string, type: 'video' | 'photo'}[];
@@ -13,21 +14,32 @@ interface ProVideoEditorProps {
 }
 
 export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProps) {
-  const [clips, setClips] = useState(media.map((item, i) => ({ 
-    id: i.toString(), 
-    url: item.url, 
-    type: item.type,
-    duration: 5, 
-    startTime: i * 5 
-  })));
+  const [clips, setClips] = useState<{ id: string, url: string, type: string, duration: number, startTime: number }[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [selectedClipId, setSelectedClipId] = useState<string | null>(clips[0]?.id || null);
+  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+
+  // Initialize clips with a default duration or try to fetch it
+  useEffect(() => {
+    if (media.length > 0 && clips.length === 0) {
+      const initialClips = media.map((item, i) => ({ 
+        id: i.toString(), 
+        url: item.url, 
+        type: item.type,
+        duration: 10, // Default 10s for now
+        startTime: i * 10 
+      }));
+      setClips(initialClips);
+      setSelectedClipId(initialClips[0].id);
+      setIsReady(true);
+    }
+  }, [media]);
 
   const totalDuration = clips.reduce((acc, clip) => acc + clip.duration, 0);
 
@@ -132,8 +144,13 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
 
       {/* Main Preview Area */}
       <div className="flex-1 relative flex items-center justify-center p-8">
-         <div className="relative aspect-[9/16] h-full max-h-[500px] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10">
-            {activeClip?.type === 'video' ? (
+         <div className="relative aspect-[9/16] h-full max-h-[500px] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center">
+            {!isReady ? (
+              <div className="flex flex-col items-center gap-4">
+                 <RotateCcw className="text-white/20 animate-spin" size={48} />
+                 <p className="text-white/40 text-[10px] font-black uppercase tracking-widest text-center">Reconstructing<br/>Digital Reality...</p>
+              </div>
+            ) : activeClip?.type === 'video' ? (
               <video 
                 ref={videoRef}
                 src={activeClip.url} 
@@ -142,9 +159,14 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
                 loop 
                 muted 
                 playsInline
+                onError={() => showToast('Video Load Error 🚫', 'error')}
               />
             ) : (
-              <img src={activeClip?.url} className="w-full h-full object-cover" />
+              <img 
+                src={activeClip?.url} 
+                className="w-full h-full object-cover" 
+                onError={() => showToast('Image Load Error 🚫', 'error')}
+              />
             )}
             {audioUrl && <audio src={audioUrl} autoPlay={isPlaying} />}
             

@@ -41,11 +41,12 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (stage === 2 && mediaType === 'video' && videoRef.current) {
+    const currentMedia = capturedMedia[currentMediaIndex];
+    if (stage === 2 && currentMedia?.type === 'video' && videoRef.current) {
       if (isPaused) videoRef.current.pause();
       else videoRef.current.play().catch(() => {});
     }
-  }, [isPaused, stage, currentMediaIndex]);
+  }, [isPaused, stage, currentMediaIndex, capturedMedia]);
 
   useEffect(() => {
     let interval: any;
@@ -61,18 +62,18 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const urls = files.map(file => ({
+    // We keep the old URLs for now to avoid blank screens if the browser is slow
+    const newMedia = files.map(file => ({
       url: URL.createObjectURL(file),
       type: (file.type.startsWith('video') ? 'video' : 'photo') as 'video' | 'photo'
     }));
-    setCapturedMedia(prev => [...prev, ...urls]);
     
-    if (!mediaType) {
-      setMediaType(urls[0].type);
-    }
-    
+    setCapturedMedia(newMedia);
+    setCurrentMediaIndex(0);
+    setMediaType(newMedia[0].type);
     setStage(2);
     vibrate(VIBRATION_PATTERNS.SUCCESS);
+    showToast(`${newMedia.length} Media Loaded! 🏮`, 'success');
   };
 
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,7 +156,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                   >
                     Import From Phone <ImageIcon size={20} className="group-hover:scale-110 transition-transform" />
                   </button>
-                  <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={handleFileUpload} className="hidden" />
+                  <input ref={fileInputRef} type="file" accept="video/*,image/*" multiple onChange={handleFileUpload} className="hidden" />
                   
                   <p className="text-[9px] text-white/20 font-black uppercase tracking-widest pt-4">
                     Optimized for 9:16 mobile vlogs 🏮
@@ -178,25 +179,34 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
             {/* Full Screen Editor Preview */}
             <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
                <div 
-                className="relative w-full h-full max-w-md aspect-[9/16] bg-neutral-900 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer"
+                className="relative w-full h-full max-w-md aspect-[9/16] bg-neutral-900 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer flex items-center justify-center"
                 style={{ filter: getEffectFilter() }}
                 onClick={() => setIsPaused(!isPaused)}
                >
-                  {capturedMedia[currentMediaIndex]?.type === 'video' ? (
-                    <video 
-                      ref={videoRef}
-                      src={capturedMedia[currentMediaIndex].url} 
-                      key={capturedMedia[currentMediaIndex].url}
-                      autoPlay={!isPaused} 
-                      loop 
-                      muted 
-                      playsInline 
-                      className="w-full h-full object-cover" 
-                    />
-                  ) : (
-                    capturedMedia[currentMediaIndex] && (
-                      <img src={capturedMedia[currentMediaIndex].url} key={capturedMedia[currentMediaIndex].url} className="w-full h-full object-cover" />
+                  {capturedMedia.length > 0 ? (
+                    capturedMedia[currentMediaIndex]?.type === 'video' ? (
+                      <video 
+                        ref={videoRef}
+                        src={capturedMedia[currentMediaIndex].url} 
+                        key={capturedMedia[currentMediaIndex].url}
+                        autoPlay={!isPaused} 
+                        loop 
+                        muted 
+                        playsInline 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      <img 
+                        src={capturedMedia[currentMediaIndex]?.url} 
+                        key={capturedMedia[currentMediaIndex]?.url} 
+                        className="w-full h-full object-cover" 
+                      />
                     )
+                  ) : (
+                    <div className="flex flex-col items-center gap-4">
+                       <RotateCw className="text-white/20 animate-spin" size={48} />
+                       <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Warping Reality...</p>
+                    </div>
                   )}
 
                   {/* Play/Pause Overlay */}
