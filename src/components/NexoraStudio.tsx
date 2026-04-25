@@ -37,15 +37,17 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  const [hasStarted, setHasStarted] = useState(false);
+
   useEffect(() => {
     checkPermissions();
-    if (stage === 1) {
+    if (stage === 1 && hasStarted) {
       startCamera();
     } else {
       stopCamera();
     }
     return () => stopCamera();
-  }, [stage, facingMode]);
+  }, [stage, facingMode, hasStarted]);
 
   const checkPermissions = async () => {
     if (!navigator.permissions || !navigator.permissions.query) return;
@@ -58,6 +60,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
           camera: cam.state,
           mic: mic.state
         });
+        if (cam.state === 'granted') setHasStarted(true);
       };
       
       updateStatus();
@@ -72,81 +75,59 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
     setCameraError(null);
     
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setCameraError("Secure context (HTTPS) or browser support missing! 🛡️ Try opening this app in a new tab if you're in a restricted environment.");
+      setCameraError("Secure context (HTTPS) or browser support missing! 🛡️ Use a modern browser like Chrome/Safari.");
       return;
     }
 
-    const handleStream = (stream: MediaStream) => {
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch(e => {
-            console.error("Video play error:", e);
-          });
-        };
-        setCameraError(null);
-      } else {
-        // Fallback for ref availability
-        setTimeout(() => {
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.play().catch(console.error);
-          }
-        }, 100);
-      }
-    };
+    // Stop existing tracks safely
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
 
     try {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-      
+      // Constraints optimized for mobile & desktop
       const constraints = {
         video: { 
-          facingMode: { ideal: facingMode }
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         },
         audio: true
       };
 
-      console.log("Requesting camera with primary constraints:", constraints);
+      console.log("Requesting Camera & Mic...");
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      handleStream(stream);
-    } catch (err: any) {
-      console.error("Primary camera access error:", err);
       
-      // Fallback 1: Attempt ONLY video if combined fails (the "Out of the box" thinking)
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(e => console.error("Autoplay blocked:", e));
+        };
+      }
+      setCameraError(null);
+    } catch (err: any) {
+      console.error("Camera access failed:", err);
+      
+      // Fallback: Try Video Only (sometimes mic is blocked by system)
       try {
-        console.log("Attempting fallback 1: Video only (common fix for iframe mic blocks)...");
+        console.log("Attempting Video-only fallback...");
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        handleStream(stream);
-        // If successful, warn user that audio might be missing
-        console.warn("Camera started without audio due to block.");
-      } catch (fallbackErr: any) {
-        console.error("Video-only fallback error:", fallbackErr);
-        
-        // Fallback 2: Simple constraints
-        try {
-          console.log("Attempting fallback 2: Basic video/audio...");
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          handleStream(stream);
-        } catch (finalErr: any) {
-          console.error("Final camera error:", finalErr);
-          
-          let friendlyMsg = 'Connection Blocked. 🛡️';
-          
-          if (finalErr.name === 'NotAllowedError') {
-            friendlyMsg = 'Permission denied by browser! Bro, you MUST click the LOCK icon in the address bar, find Camera, and set it to ALLOW. Then REFRESH!';
-          } else if (finalErr.name === 'NotFoundError') {
-            friendlyMsg = 'No camera found on this device, bro.';
-          } else if (finalErr.name === 'NotReadableError' || finalErr.name === 'TrackStartError') {
-            friendlyMsg = 'Camera in use! Another app (like Zoom or Discord) is using it, bro.';
-          } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-            friendlyMsg = 'HTTPS REQUIRED! Camera access requires a secure connection.';
-          }
-          
-          setCameraError(`${friendlyMsg} (Code: ${finalErr.name})`);
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(console.error);
         }
+        setCameraError(null);
+        console.warn("Started without audio.");
+      } catch (fallbackErr: any) {
+        let msg = "Could not access camera. 🛡️";
+        if (fallbackErr.name === 'NotAllowedError') {
+          msg = "Permission Denied! Click the LOCK icon in your browser URL bar and set Camera to 'Allow'.";
+        } else if (fallbackErr.name === 'NotFoundError') {
+          msg = "No camera found on this device.";
+        }
+        setCameraError(msg);
       }
     }
   };
@@ -241,14 +222,40 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="w-full h-full relative"
           >
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline 
-              muted 
-              style={{ filter: getEffectFilter(), transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
-              className="w-full h-full object-cover"
-            />
+            {!hasStarted ? (
+              <div className="absolute inset-0 z-[100] bg-black flex items-center justify-center p-12 text-center">
+                 <div className="space-y-8">
+                    <div className="w-24 h-24 bg-orange-500 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(249,115,22,0.4)]">
+                       <Camera size={40} className="text-white" />
+                    </div>
+                    <div className="space-y-2">
+                       <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Studio Ready</h2>
+                       <p className="text-white/40 text-xs font-medium max-w-xs mx-auto">Click below to grant camera access and start creating your vlog, bro! 🏮</p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setHasStarted(true);
+                        startCamera();
+                      }}
+                      className="w-full py-5 bg-white text-black rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] shadow-2xl active:scale-95 transition-all"
+                    >
+                      Enter Studio
+                    </button>
+                    <button onClick={onClose} className="text-white/20 text-[10px] font-black uppercase tracking-widest hover:text-white">
+                      Nevermind
+                    </button>
+                 </div>
+              </div>
+            ) : (
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted 
+                style={{ filter: getEffectFilter(), transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+                className="w-full h-full object-cover"
+              />
+            )}
             
             {/* Real-time Visual Overlays */}
             <div className="absolute inset-0 pointer-events-none z-10">
