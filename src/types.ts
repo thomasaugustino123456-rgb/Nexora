@@ -214,6 +214,7 @@ export interface NexusVideo {
   isAuthorized?: boolean;
   platform?: 'youtube' | 'tiktok' | 'nexora';
   quality?: string;
+  type?: 'video' | 'photo';
   saves?: number;
   savedBy?: string[];
   repostCount?: number;

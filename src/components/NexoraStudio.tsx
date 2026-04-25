@@ -19,11 +19,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   const [stage, setStage] = useState<StudioStage>(1);
   const [capturedMedia, setCapturedMedia] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'video' | 'photo' | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [selectedEffect, setSelectedEffect] = useState<string | null>(null);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [permissionStatus, setPermissionStatus] = useState<{camera: string, mic: string}>({ camera: 'unknown', mic: 'unknown' });
   
   // Edit state for stage 2
   const [textOverlay, setTextOverlay] = useState('');
@@ -32,193 +28,23 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   const [caption, setCaption] = useState('');
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  const [hasStarted, setHasStarted] = useState(false);
-
-  useEffect(() => {
-    checkPermissions();
-    if (stage === 1 && hasStarted) {
-      startCamera();
-    } else {
-      stopCamera();
-    }
-    return () => stopCamera();
-  }, [stage, facingMode, hasStarted]);
-
-  const checkPermissions = async () => {
-    if (!navigator.permissions || !navigator.permissions.query) return;
-    try {
-      const cam = await navigator.permissions.query({ name: 'camera' as any });
-      const mic = await navigator.permissions.query({ name: 'microphone' as any });
-      
-      const updateStatus = () => {
-        setPermissionStatus({
-          camera: cam.state,
-          mic: mic.state
-        });
-        if (cam.state === 'granted') setHasStarted(true);
-      };
-      
-      updateStatus();
-      cam.onchange = updateStatus;
-      mic.onchange = updateStatus;
-    } catch (e) {
-      console.warn("Permissions API not fully supported", e);
-    }
-  };
-
-  const startCamera = async () => {
-    setCameraError(null);
-    
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setCameraError("Secure context (HTTPS) or browser support missing! 🛡️ Use a modern browser like Chrome/Safari.");
-      return;
-    }
-
-    // Stop existing tracks safely
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-    }
-
-    try {
-      // Constraints optimized for mobile & desktop
-      const constraints = {
-        video: { 
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      };
-
-      console.log("Requesting Camera...");
-      // We try just camera first for maximum reliability in "Studio Mode"
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
-      // Now try to add audio separately so we don't crash the whole thing if mic is busy
-      try {
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioStream.getAudioTracks().forEach(track => stream.addTrack(track));
-        console.log("Added Audio successfully.");
-      } catch (audioErr) {
-        console.warn("Microphone access skipped or failed, continuing with video only.", audioErr);
-      }
-      
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch(e => console.error("Autoplay blocked:", e));
-        };
-      }
-      setCameraError(null);
-    } catch (err: any) {
-      console.error("Camera access failed:", err);
-      
-      // Final hard fallback
-      try {
-        console.log("Attempting fundamental video fallback...");
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(console.error);
-        }
-        setCameraError(null);
-      } catch (fallbackErr: any) {
-        let msg = "Camera Blocked. 🛡️";
-        if (fallbackErr.name === 'NotAllowedError') {
-          msg = "Permission Denied! Click the LOCK icon in your browser URL bar and set Camera to 'Allow'. Then refresh, bro!";
-        } else if (fallbackErr.name === 'NotFoundError') {
-          msg = "No camera hardware detected.";
-        }
-        setCameraError(msg);
-      }
-    }
-  };
-
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-  };
-
-  const toggleCamera = () => {
-    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
-  };
-
-  const handleCapturePhoto = () => {
-    const canvas = document.createElement('canvas');
-    if (videoRef.current) {
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        if (facingMode === 'user') {
-          ctx.translate(canvas.width, 0);
-          ctx.scale(-1, 1);
-        }
-        ctx.drawImage(videoRef.current, 0, 0);
-        
-        // Finalize effect drawing on capture if needed
-        setCapturedMedia(canvas.toDataURL('image/jpeg'));
-        setMediaType('photo');
-        setStage(2);
-      }
-    }
-  };
-
-  const startRecording = () => {
-    if (!streamRef.current) {
-      startCamera();
-      return;
-    }
-    const chunks: Blob[] = [];
-    mediaRecorderRef.current = new MediaRecorder(streamRef.current);
-    mediaRecorderRef.current.ondataavailable = (e) => chunks.push(e.data);
-    mediaRecorderRef.current.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/mp4' });
-      setCapturedMedia(URL.createObjectURL(blob));
-      setMediaType('video');
-      setStage(2);
-    };
-    mediaRecorderRef.current.start();
-    setIsRecording(true);
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (capturedMedia) URL.revokeObjectURL(capturedMedia);
       const url = URL.createObjectURL(file);
       setCapturedMedia(url);
       setMediaType(file.type.startsWith('video') ? 'video' : 'photo');
       setStage(2);
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
     }
   };
 
   const addSticker = (type: string) => {
     setStickers([...stickers, { id: Math.random().toString(), type, x: 40 + Math.random() * 20, y: 40 + Math.random() * 20 }]);
-  };
-
-  const getEffectFilter = () => {
-    switch(selectedEffect) {
-      case 'retro': return 'sepia(0.8) contrast(1.2) brightness(0.9)';
-      case 'neon': return 'hue-rotate(90deg) saturate(2) brightness(1.2)';
-      case 'noir': return 'grayscale(1) contrast(1.5)';
-      case 'cyber': return 'hue-rotate(180deg) invert(0.1) saturate(1.5)';
-      default: return 'none';
-    }
+    vibrate(VIBRATION_PATTERNS.CLICK);
   };
 
   return (
@@ -228,187 +54,48 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
           <motion.div 
             key="stage1"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="w-full h-full relative"
+            className="w-full h-full relative flex flex-col items-center justify-center p-8 text-center bg-gradient-to-b from-blue-950 to-black"
           >
-            {!hasStarted ? (
-              <div className="absolute inset-0 z-[100] bg-black flex items-center justify-center p-12 text-center">
-                 <div className="space-y-8">
-                    <div className="w-24 h-24 bg-orange-500 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(249,115,22,0.4)]">
-                       <Camera size={40} className="text-white" />
-                    </div>
-                    <div className="space-y-2">
-                       <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Studio Ready</h2>
-                       <p className="text-white/40 text-xs font-medium max-w-xs mx-auto">Click below to grant camera access and start creating your vlog, bro! 🏮</p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setHasStarted(true);
-                        startCamera();
-                      }}
-                      className="w-full py-5 bg-white text-black rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] shadow-2xl active:scale-95 transition-all"
-                    >
-                      Enter Studio
-                    </button>
-                    <button onClick={onClose} className="text-white/20 text-[10px] font-black uppercase tracking-widest hover:text-white">
-                      Nevermind
-                    </button>
-                 </div>
-              </div>
-            ) : (
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
-                muted 
-                style={{ filter: getEffectFilter(), transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
-                className="w-full h-full object-cover"
-              />
-            )}
-            
-            {/* Real-time Visual Overlays */}
-            <div className="absolute inset-0 pointer-events-none z-10">
-               {selectedEffect === 'heart' && (
-                 <div className="absolute top-[20%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-9xl animate-pulse drop-shadow-[0_0_50px_rgba(255,0,0,0.8)] z-10">
-                   ❤️
-                 </div>
-               )}
-               {selectedEffect === 'nexus' && (
-                 <div className="absolute inset-0 flex items-center justify-center opacity-60">
-                    <motion.div 
-                      animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.6, 0.3] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="w-[90vw] h-[90vw] border-[10px] border-orange-500/20 rounded-full"
-                    />
-                    <Sparkles className="text-orange-500 absolute w-48 h-48 animate-pulse" />
-                 </div>
-               )}
-               {selectedEffect === 'ghost' && (
-                 <div className="absolute inset-0 bg-white/5 backdrop-blur-sm mix-blend-overlay flex items-center justify-center opacity-20">
-                    <Ghost size={400} className="text-white animate-bounce" />
-                 </div>
-               )}
+            {/* Background Vibe */}
+            <div className="absolute inset-0 opacity-20 overflow-hidden">
+               <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2070')] bg-cover bg-center mix-blend-overlay" />
+               <div className="absolute inset-0 bg-blue-900/40 backdrop-blur-3xl" />
             </div>
 
-            {cameraError && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-10 text-center backdrop-blur-md">
-                 <div className="max-w-md space-y-6">
-                    <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-red-500/50">
-                       <Camera size={48} className="text-red-500" />
-                    </div>
-                    
-                    <div className="space-y-2">
-                       <h3 className="text-white font-black uppercase text-xl tracking-[0.2em]">Access Blocked, Bro!</h3>
-                       <p className="text-white/60 font-medium text-xs leading-relaxed">{cameraError}</p>
-                    </div>
-
-                    <div className="bg-white/5 rounded-3xl p-6 border border-white/10 space-y-4">
-                       <p className="text-[10px] text-orange-500 font-black uppercase tracking-[0.3em]">Permission Checklist</p>
-                       <div className="flex justify-center gap-8">
-                          <div className="flex flex-col items-center gap-2">
-                             <div className={`w-3 h-3 rounded-full ${permissionStatus.camera === 'granted' ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`} />
-                             <span className="text-[8px] text-white font-black uppercase tracking-widest">Camera</span>
-                          </div>
-                          <div className="flex flex-col items-center gap-2">
-                             <div className={`w-3 h-3 rounded-full ${permissionStatus.mic === 'granted' ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`} />
-                             <span className="text-[8px] text-white font-black uppercase tracking-widest">Mic</span>
-                          </div>
-                       </div>
-                    </div>
-
-                    <div className="flex flex-col gap-3 pt-2">
-                      <button 
-                        onClick={() => startCamera()}
-                        className="px-8 py-4 bg-white text-black rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-orange-500 hover:text-white"
-                      >
-                        Try Re-connecting ⚡
-                      </button>
-                      <button 
-                        onClick={() => window.open(window.location.href, '_blank')}
-                        className="px-8 py-4 bg-blue-600 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-blue-500"
-                      >
-                        Fix in New Tab ↗️
-                      </button>
-                    </div>
-
-                    <div className="pt-4 space-y-2">
-                      <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">
-                        Hint: Browser iframes sometimes block camera.
-                      </p>
-                      <button 
-                        onClick={onClose}
-                        className="text-white/40 font-bold text-[10px] uppercase tracking-widest hover:text-white underline underline-offset-4"
-                      >
-                        Exit Studio
-                      </button>
-                    </div>
+            <div className="relative z-10 space-y-10 max-w-sm w-full">
+               <div className="relative w-32 h-32 mx-auto">
+                 <motion.div 
+                   animate={{ rotate: 360 }}
+                   transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                   className="absolute inset-0 rounded-[3rem] border-2 border-dashed border-orange-500/30"
+                 />
+                 <div className="absolute inset-2 bg-orange-500 rounded-[2.5rem] flex items-center justify-center shadow-[0_0_80px_rgba(249,115,22,0.4)]">
+                    <Video size={48} className="text-white" />
                  </div>
-              </div>
-            )}
-
-            {/* Stage 1 Top Interface */}
-            <div className="absolute top-0 left-0 right-0 p-8 flex justify-between items-start z-30">
-               <button onClick={onClose} className="w-14 h-14 bg-black/40 backdrop-blur-3xl rounded-3xl text-white flex items-center justify-center hover:bg-white/10 transition-all active:scale-90 shadow-2xl border border-white/10">
-                  <X size={28} />
-               </button>
-               
-               <div className="flex flex-col gap-5">
-                  <button onClick={toggleCamera} className="w-14 h-14 bg-black/40 backdrop-blur-3xl rounded-3xl text-white flex items-center justify-center hover:bg-white/10 transition-all active:scale-90 shadow-2xl border border-white/10">
-                     <RotateCw size={28} />
-                  </button>
-                  <button className="w-14 h-14 bg-black/40 backdrop-blur-3xl rounded-3xl text-white flex items-center justify-center hover:bg-white/10 transition-all active:scale-90 shadow-2xl border border-white/10">
-                     <Monitor size={28} />
-                  </button>
                </div>
-            </div>
 
-            {/* Stage 1 Bottom Feed */}
-            <div className="absolute bottom-0 left-0 right-0 p-10 pt-32 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col items-center gap-12 z-30">
-              {/* Horizontal Effects Selection */}
-              <div className="flex gap-4 overflow-x-auto no-scrollbar w-full max-w-lg px-8 pb-4">
-                {['none', 'heart', 'nexus', 'ghost', 'retro', 'neon', 'noir', 'cyber'].map(eff => (
+               <div className="space-y-4">
+                  <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter leading-none">Nexora<br /><span className="text-orange-500">Video Lab</span></h2>
+                  <p className="text-white/40 text-xs font-black uppercase tracking-[0.3em]">Vertical Vibe Studio</p>
+               </div>
+
+               <div className="pt-8 space-y-4">
                   <button 
-                    key={eff}
-                    onClick={() => setSelectedEffect(eff === 'none' ? null : eff)}
-                    className="flex flex-col items-center gap-3 shrink-0"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-6 bg-white text-black rounded-[2rem] font-black uppercase text-xs tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 group hover:bg-orange-500 hover:text-white"
                   >
-                    <div className={`w-18 h-18 rounded-3xl border-2 transition-all flex items-center justify-center overflow-hidden ${selectedEffect === eff || (eff === 'none' && !selectedEffect) ? 'border-orange-500 bg-orange-500/20 scale-110 shadow-lg shadow-orange-500/20' : 'border-white/10 bg-white/5 hover:border-white/30'}`}>
-                      {eff === 'none' ? <div className="w-8 h-8 rounded-full border-2 border-white/20" /> : 
-                       eff === 'heart' ? <span className="text-2xl">❤️</span> : 
-                       eff === 'nexus' ? <Sparkles className="text-orange-500" size={24} /> :
-                       eff === 'ghost' ? <Ghost className="text-white/40" size={24} /> :
-                       <div className={`w-full h-full bg-gradient-to-br ${eff === 'retro' ? 'from-amber-800 to-orange-950' : eff === 'neon' ? 'from-pink-600 to-indigo-600' : eff === 'noir' ? 'from-neutral-900 to-neutral-700' : 'from-cyan-400 to-blue-600'}`} />}
-                    </div>
-                    <span className={`text-[8px] font-black uppercase tracking-[0.2em] transition-colors ${selectedEffect === eff || (eff === 'none' && !selectedEffect) ? 'text-orange-500' : 'text-white/30'}`}>{eff}</span>
+                    Import From Phone <ImageIcon size={20} className="group-hover:scale-110 transition-transform" />
                   </button>
-                ))}
-              </div>
+                  <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={handleFileUpload} className="hidden" />
+                  
+                  <p className="text-[9px] text-white/20 font-black uppercase tracking-widest pt-4">
+                    Optimized for 9:16 mobile vlogs 🏮
+                  </p>
+               </div>
 
-              <div className="flex items-center gap-16">
-                <label className="w-16 h-16 bg-white/10 backdrop-blur-3xl rounded-3xl text-white flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all border border-white/10 shadow-2xl overflow-hidden active:scale-90">
-                  <ImageIcon size={22} />
-                  <input type="file" accept="video/*,image/*" onChange={handleFileUpload} className="hidden" />
-                </label>
-
-                <div className="relative">
-                   <button 
-                     onClick={isRecording ? stopRecording : handleCapturePhoto}
-                     onMouseDown={() => startRecording()}
-                     onMouseUp={() => stopRecording()}
-                     onTouchStart={() => startRecording()}
-                     onTouchEnd={() => stopRecording()}
-                     className={`w-28 h-28 rounded-full border-8 ${isRecording ? 'border-red-500 animate-pulse active:scale-95' : 'border-white hover:scale-105 active:scale-90'} shadow-2xl transition-all flex items-center justify-center p-2.5`}
-                   >
-                     <div className={`w-full h-full rounded-full ${isRecording ? 'bg-red-500 rounded-2xl' : 'bg-white'} transition-all`} />
-                   </button>
-                   {!isRecording && (
-                     <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-xl px-5 py-2 rounded-full border border-white/10 shadow-2xl">
-                       <p className="text-[9px] text-white font-black uppercase tracking-[0.2em] whitespace-nowrap">Tap: Take • Hold: Film</p>
-                     </div>
-                   )}
-                </div>
-
-                <div className="w-16 h-16" /> {/* Placeholder for symmetrical balance */}
-              </div>
+               <button onClick={onClose} className="text-white/20 text-[10px] font-black uppercase tracking-[0.5em] hover:text-white pt-10">
+                 Exit Studio
+               </button>
             </div>
           </motion.div>
         )}
@@ -417,9 +104,9 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
           <motion.div 
             key="stage2"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="w-full h-full relative bg-black flex items-center justify-center"
+            className="w-full h-full relative bg-black flex flex-center justify-center"
           >
-            {/* Full Screen Live Edit Preview */}
+            {/* Full Screen Editor Preview */}
             <div className="absolute inset-x-0 top-0 bottom-0 overflow-hidden flex items-center justify-center">
                <div className="relative w-full h-full max-w-md aspect-[9/16] bg-neutral-900 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden">
                   {mediaType === 'video' ? (
@@ -436,7 +123,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                           initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                           className="absolute inset-0 flex items-center justify-center p-12"
                         >
-                          <p className="text-white text-5xl font-black italic text-center leading-none uppercase tracking-tighter drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]">
+                          <p className="text-white text-4xl font-black italic text-center leading-tight uppercase tracking-tighter drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]">
                             {textOverlay}
                           </p>
                         </motion.div>
@@ -448,7 +135,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                         key={s.id} 
                         drag 
                         dragMomentum={false}
-                        className="absolute text-7xl cursor-grab active:cursor-grabbing" 
+                        className="absolute text-7xl cursor-grab active:cursor-grabbing pointer-events-auto" 
                         style={{ top: `${s.y}%`, left: `${s.x}%` }}
                       >
                         {s.type === 'fire' ? '🔥' : s.type === 'nexus' ? '✨' : s.type === 'diamond' ? '💎' : '🚀'}
@@ -458,85 +145,93 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                </div>
             </div>
 
-            {/* TOP ACTIONS ROW - HORIZONTAL & TRANSPARENT GLASS (TikTok Style Request) */}
-            <div className="absolute top-16 right-6 left-auto flex flex-row items-center gap-4 z-50">
+            {/* Sidebar Actions (TikTok Style) */}
+            <div className="absolute top-1/2 -translate-y-1/2 right-6 flex flex-col items-center gap-6 z-50">
                {[
-                 { id: 'text', icon: <Type size={22} />, label: 'Text' },
-                 { id: 'vibe', icon: <Smile size={22} />, label: 'Sticker' },
-                 { id: 'audio', icon: <Music size={22} />, label: 'Voices' },
-                 { id: 'magic', icon: <Wand2 size={22} />, label: 'Lenses' },
-                 { id: 'cut', icon: <Scissors size={22} />, label: 'Trim' }
+                 { id: 'text', icon: <Type size={20} />, label: 'Text' },
+                 { id: 'vibe', icon: <Smile size={20} />, label: 'Vibe' },
+                 { id: 'cut', icon: <Scissors size={20} />, label: 'Trim' },
+                 { id: 'magic', icon: <Wand2 size={20} />, label: 'Lens' }
                ].map(tool => (
                  <button 
                   key={tool.id}
-                  onClick={() => setActiveTool(activeTool === tool.id ? null : tool.id)}
-                  className="flex flex-col items-center gap-1.5"
+                  onClick={() => {
+                    setActiveTool(activeTool === tool.id ? null : tool.id);
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                  }}
+                  className="flex flex-col items-center gap-1.5 group"
                  >
-                    <div className={`w-14 h-14 bg-white/10 backdrop-blur-3xl rounded-2xl border border-white/10 flex items-center justify-center text-white transition-all shadow-xl ${activeTool === tool.id ? 'bg-orange-500 border-orange-500 scale-110' : 'hover:bg-white/20 active:scale-90'}`}>
+                    <div className={`w-14 h-14 bg-black/40 backdrop-blur-3xl rounded-3xl border border-white/10 flex items-center justify-center text-white transition-all shadow-xl group-hover:bg-white/10 ${activeTool === tool.id ? 'bg-orange-500 border-orange-500 scale-110 shadow-orange-500/20' : 'active:scale-90'}`}>
                       {tool.icon}
                     </div>
                     <span className={`text-[8px] font-black uppercase tracking-widest ${activeTool === tool.id ? 'text-orange-500' : 'text-white/40'}`}>{tool.label}</span>
                  </button>
                ))}
+               
+               <button 
+                 onClick={() => setStage(1)}
+                 className="flex flex-col items-center gap-1.5 group"
+               >
+                  <div className="w-14 h-14 bg-black/40 backdrop-blur-3xl rounded-3xl border border-white/10 flex items-center justify-center text-white/40 transition-all hover:text-white shadow-xl hover:bg-white/10 active:scale-90">
+                    <RotateCw size={20} />
+                  </div>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white/20">Swap</span>
+               </button>
             </div>
 
-            {/* CONTEXTUAL TOOL DRAWER - Only shows for active tool */}
+            {/* Top Close */}
+            <div className="absolute top-8 left-8 z-50">
+               <button onClick={onClose} className="w-14 h-14 bg-black/40 backdrop-blur-3xl rounded-3xl text-white flex items-center justify-center hover:bg-white/10 transition-all active:scale-90 shadow-2xl border border-white/10">
+                  <X size={24} />
+               </button>
+            </div>
+
+            {/* Contextual UI */}
             <AnimatePresence>
-              {activeTool && (
+              {activeTool === 'text' && (
                 <motion.div 
-                  initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
+                  initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
+                  className="absolute bottom-32 left-1/2 -translate-x-1/2 w-full max-w-sm p-6 z-50 pointer-events-auto"
+                >
+                   <div className="bg-black/80 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 shadow-3xl">
+                      <input 
+                          autoFocus
+                          type="text" 
+                          value={textOverlay} 
+                          onChange={(e) => setTextOverlay(e.target.value)}
+                          placeholder="CAPTION VIBE..."
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-black text-center text-lg uppercase tracking-tighter outline-none focus:border-orange-500"
+                      />
+                      <button onClick={() => setActiveTool(null)} className="w-full py-3 mt-4 bg-orange-500 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest">Apply</button>
+                   </div>
+                </motion.div>
+              )}
+              {activeTool === 'vibe' && (
+                <motion.div 
+                  initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
                   className="absolute bottom-32 left-1/2 -translate-x-1/2 w-full max-w-sm p-6 z-50"
                 >
-                   <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 shadow-3xl">
-                      {activeTool === 'text' && (
-                        <div className="space-y-4">
-                           <p className="text-[10px] text-orange-500 font-black uppercase tracking-[0.3em] text-center">Type Your Energy</p>
-                           <input 
-                              autoFocus
-                              type="text" 
-                              value={textOverlay} 
-                              onChange={(e) => setTextOverlay(e.target.value)}
-                              placeholder="CAPTION IT..."
-                              className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black text-center text-xl uppercase tracking-tighter outline-none focus:border-orange-500"
-                           />
-                           <button onClick={() => setActiveTool(null)} className="w-full py-4 bg-orange-500 rounded-2xl text-black font-black uppercase text-[10px] tracking-widest">Done</button>
-                        </div>
-                      )}
-                      {activeTool === 'vibe' && (
-                        <div className="flex justify-center gap-5">
-                           {['fire', 'nexus', 'diamond', 'rocket'].map(s => (
-                             <button key={s} onClick={() => addSticker(s)} className="w-16 h-16 bg-white/5 rounded-3xl hover:bg-orange-500/20 hover:border-orange-500 border border-white/10 transition-all text-3xl flex items-center justify-center">
-                                {s === 'fire' ? '🔥' : s === 'nexus' ? '✨' : s === 'diamond' ? '💎' : '🚀'}
-                             </button>
-                           ))}
-                        </div>
-                      )}
-                      {activeTool === 'audio' && (
-                         <div className="flex flex-col gap-4">
-                            <button className="p-5 bg-white/5 border border-white/10 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest flex items-center justify-between">
-                               Import From Phone <Music size={16} />
-                            </button>
-                            <button className="p-5 bg-orange-500/20 border border-orange-500/30 rounded-2xl text-orange-500 font-black uppercase text-[10px] tracking-widest flex items-center justify-between">
-                               Record Voiceover <Mic size={16} />
-                            </button>
-                         </div>
-                      )}
+                   <div className="bg-black/80 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 shadow-3xl flex justify-center gap-4">
+                      {['fire', 'nexus', 'diamond', 'rocket'].map(s => (
+                        <button key={s} onClick={() => addSticker(s)} className="w-14 h-14 bg-white/5 rounded-2xl hover:bg-orange-500/20 border border-white/10 transition-all text-2xl flex items-center justify-center">
+                           {s === 'fire' ? '🔥' : s === 'nexus' ? '✨' : s === 'diamond' ? '💎' : '🚀'}
+                        </button>
+                      ))}
                    </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Bottom Nav Stage 2 */}
-            <div className="absolute bottom-10 inset-x-0 px-10 flex justify-between items-center z-50">
-               <button onClick={() => setStage(1)} className="w-16 h-16 bg-white/10 backdrop-blur-3xl rounded-3xl text-white/40 hover:text-white flex items-center justify-center transition-all border border-white/10">
-                  <RotateCw size={24} />
-               </button>
-               
+            {/* Bottom Primary Action */}
+            <div className="absolute bottom-12 inset-x-0 px-8 flex justify-center items-center z-50">
                <button 
-                onClick={() => setStage(3)}
-                className="px-12 py-6 bg-white text-black rounded-[2.5rem] font-black uppercase text-xs tracking-[0.3em] flex items-center gap-4 hover:scale-105 active:scale-95 transition-all shadow-[0_20px_50px_rgba(255,255,255,0.1)]"
+                onClick={() => {
+                  setStage(3);
+                  vibrate(VIBRATION_PATTERNS.SUCCESS);
+                }}
+                className="w-full py-6 bg-white text-black rounded-[2rem] font-black uppercase text-xs tracking-[0.4em] flex items-center justify-center gap-4 hover:scale-105 active:scale-95 transition-all shadow-[0_20px_50px_rgba(255,255,255,0.1)]"
                >
-                Next <ArrowRight size={20} />
+                Proceed To Post <ArrowRight size={20} />
                </button>
             </div>
           </motion.div>
@@ -546,88 +241,86 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
           <motion.div 
             key="stage3"
             initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="w-full h-full relative bg-neutral-950 flex flex-col items-center justify-center p-10"
+            className="w-full h-full relative bg-neutral-950 flex flex-col items-center justify-center p-8"
           >
-            <div className="w-full max-w-5xl grid md:grid-cols-2 gap-16 items-center">
-               {/* Final Gaze Preview */}
+            <div className="w-full max-w-4xl grid md:grid-cols-2 gap-12 items-center">
+               {/* Preview Card */}
                <div className="relative group mx-auto">
-                  <div className="w-[300px] aspect-[9/16] rounded-[3rem] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,1)] border-8 border-white/5 relative bg-black transform -rotate-2 group-hover:rotate-0 transition-transform duration-700">
+                  <div className="w-[280px] aspect-[9/16] rounded-[2.5rem] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,1)] border-4 border-white/5 relative bg-black transform rotate-1 group-hover:rotate-0 transition-transform duration-700">
                     {mediaType === 'video' ? (
                       <video src={capturedMedia!} autoPlay loop playsInline className="w-full h-full object-cover" />
                     ) : (
                       <img src={capturedMedia!} className="w-full h-full object-cover" />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                    <div className="absolute bottom-10 left-8 right-8 text-white">
-                       <p className="text-xs font-black italic mb-2">@{user?.displayName?.replace(/\s+/g, '')}</p>
-                       <p className="text-[10px] opacity-60 leading-relaxed line-clamp-2">{caption || 'Vibe captured.'}</p>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute bottom-8 left-6 right-6 text-white">
+                       <p className="text-[10px] font-black italic mb-1 uppercase tracking-widest">@{user?.displayName?.replace(/\s+/g, '')}</p>
+                       <p className="text-[8px] opacity-60 leading-none">{caption || 'Nexora Studio Release'}</p>
                     </div>
                   </div>
                </div>
 
-               {/* Configuration */}
-               <div className="space-y-10">
+               {/* Meta Data */}
+               <div className="space-y-8">
                   <div>
-                    <h2 className="text-6xl font-black text-white italic tracking-tighter uppercase leading-none mb-3">Post Vibe</h2>
-                    <p className="text-orange-500 text-[10px] font-black uppercase tracking-[0.5em] pl-1">Stage 3/3: Digital Release</p>
+                    <h2 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-none mb-3">Broadcast</h2>
+                    <p className="text-orange-500 text-[9px] font-black uppercase tracking-[0.4em]">Nexora Content Engine 🏮</p>
                   </div>
 
                   <div className="space-y-4">
-                     <div className="flex items-center justify-between px-2">
-                        <p className="text-[9px] text-white/40 font-black uppercase tracking-widest">Add Description</p>
-                        <Palette size={14} className="text-orange-500" />
-                     </div>
                      <textarea 
                         value={caption}
                         onChange={(e) => setCaption(e.target.value)}
-                        placeholder="Say something about your edit, bro!  Lanterns up. 🏮"
-                        className="w-full h-44 bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-white placeholder-white/10 font-bold focus:border-orange-500 outline-none transition-all resize-none shadow-inner"
+                        placeholder="What's the frequency, bro? 🏮"
+                        className="w-full h-32 bg-white/5 border border-white/10 rounded-[2rem] p-6 text-white placeholder-white/20 font-bold focus:border-orange-500 outline-none transition-all resize-none shadow-inner text-sm"
                      />
                   </div>
 
-                  <div className="flex gap-4">
-                     <div className="flex-1 p-6 bg-white/5 rounded-[2rem] border border-white/10">
-                        <p className="text-[8px] text-white/20 font-black uppercase tracking-widest mb-2">Quality</p>
+                  <div className="grid grid-cols-2 gap-4">
+                     <div className="p-5 bg-white/5 rounded-2xl border border-white/10">
+                        <p className="text-[7px] text-white/20 font-black uppercase tracking-widest mb-1">Renderer</p>
                         <select 
                           value={quality}
                           onChange={(e: any) => setQuality(e.target.value)}
-                          className="bg-transparent text-white font-black text-base outline-none cursor-pointer w-full"
+                          className="bg-transparent text-white font-black text-sm outline-none cursor-pointer w-full"
                         >
                            <option value="Standard">Standard</option>
-                           <option value="HD">High Definition</option>
-                           <option value="4K">4K Master</option>
-                           <option value="Ultra">Ultra Raw</option>
+                           <option value="HD">HD Max</option>
+                           <option value="4K">4K Vibe</option>
                         </select>
                      </div>
-                     <div className="p-6 bg-white/5 rounded-[2rem] border border-white/10 w-24 flex items-center justify-center">
-                        <FlipHorizontal className="text-white/20" size={24} />
+                     <div className="p-5 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center text-white/20">
+                        <Palette size={20} />
                      </div>
                   </div>
 
-                  <div className="pt-8 flex gap-5">
-                    <button onClick={() => setStage(2)} className="w-20 h-20 bg-white/5 rounded-[2rem] border border-white/10 flex items-center justify-center text-white/30 hover:text-white transition-all">
-                       <Scissors size={28} />
+                  <div className="pt-4 flex gap-4">
+                    <button onClick={() => setStage(2)} className="w-16 h-16 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center text-white/30 hover:text-white transition-all">
+                       <Scissors size={24} />
                     </button>
                     <button 
-                      onClick={() => onPost({ 
-                        videoUrl: capturedMedia, 
-                        caption,
-                        userName: user?.displayName || 'Anonymous',
-                        userPhoto: user?.photoURL || '',
-                        quality,
-                        platform: 'nexora',
-                        type: mediaType
-                      })}
-                      className="flex-1 h-20 bg-orange-500 text-white rounded-[2rem] font-black uppercase text-sm tracking-[0.4em] flex items-center justify-center gap-4 shadow-[0_20px_60px_rgba(249,115,22,0.3)] hover:scale-[1.02] active:scale-95 transition-all"
+                      onClick={() => {
+                        vibrate(VIBRATION_PATTERNS.SUCCESS);
+                        onPost({ 
+                          videoUrl: capturedMedia, 
+                          caption,
+                          userName: user?.displayName || 'Anonymous',
+                          userPhoto: user?.photoURL || '',
+                          quality,
+                          platform: 'nexora',
+                          type: mediaType
+                        });
+                      }}
+                      className="flex-1 h-16 bg-orange-500 text-white rounded-[1.5rem] font-black uppercase text-[10px] tracking-[0.4em] flex items-center justify-center gap-3 shadow-[0_15px_40px_rgba(249,115,22,0.3)] hover:bg-orange-600 transition-all active:scale-95"
                     >
-                      Post Globally <Send size={24} />
+                      Publish to Reels <Send size={20} />
                     </button>
                   </div>
                </div>
             </div>
             
-            <button onClick={onClose} className="absolute bottom-12 text-[10px] text-white/20 font-black uppercase tracking-[0.5em] hover:text-red-500 transition-colors">
-               Cancel & Discard Edit
+            <button onClick={onClose} className="absolute bottom-10 text-[9px] text-white/20 font-black uppercase tracking-[0.4em] hover:text-white transition-colors">
+               Cancel Broadcast
             </button>
           </motion.div>
         )}
@@ -635,3 +328,16 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
     </div>
   );
 }
+
+const VIBRATION_PATTERNS = {
+  CLICK: [10],
+  SUCCESS: [10, 50, 10],
+  ERROR: [50, 100, 50],
+  LONG: [200]
+};
+
+const vibrate = (pattern: number[]) => {
+  if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+    window.navigator.vibrate(pattern);
+  }
+};

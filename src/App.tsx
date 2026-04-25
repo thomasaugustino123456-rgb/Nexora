@@ -3005,7 +3005,7 @@ export default function App() {
           />
         )}
 
-        {activeScreen !== 'challenge' && (
+        {activeScreen !== 'challenge' && activeScreen !== 'nexus-video' && (
           <motion.div 
             initial={false}
             animate={{ 

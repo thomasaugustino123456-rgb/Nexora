@@ -26,8 +26,12 @@ const VideoCard = React.memo(({ video, user, handleLike, handleShareVideo, setSe
       {/* Background Video Layer */}
       <div className="absolute inset-0 w-full h-full z-0">
         <div className="w-full h-full flex items-center justify-center">
-          <div className="w-full h-full max-w-[500px] relative">
-            <VideoPlayer url={video.videoUrl} fullScreen={true} />
+          <div className="w-full h-full max-w-[500px] relative bg-neutral-900">
+            {video.type === 'photo' ? (
+              <img src={video.videoUrl} className="w-full h-full object-cover" />
+            ) : (
+              <VideoPlayer url={video.videoUrl} fullScreen={true} />
+            )}
           </div>
         </div>
       </div>
@@ -254,7 +258,8 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                     commentCount: 0,
                     createdAt: new Date().toISOString(),
                     isAuthorized: true,
-                    platform: 'nexora'
+                    platform: 'nexora',
+                    type: data.type || 'video'
                   };
                   await addDoc(collection(db, 'social_videos'), videoData);
                   setIsStudioOpen(false);
