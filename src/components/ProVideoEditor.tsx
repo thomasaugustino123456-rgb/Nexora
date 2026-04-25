@@ -47,6 +47,11 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
 
   const activeClip = clips.find(c => currentTime >= c.startTime && currentTime < c.startTime + c.duration) || clips[clips.length - 1];
 
+  const isVideo = (url: string) => {
+    // Robust check for blob videos or mp4s
+    return url.includes('video') || url.endsWith('.mp4') || url.includes('blob') && !url.includes('image');
+  };
+
   const handleSplit = () => {
     if (!selectedClipId) return;
     const clipIndex = clips.findIndex(c => c.id === selectedClipId);
@@ -127,25 +132,37 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
       {/* Main Preview Area */}
       <div className="flex-1 relative flex items-center justify-center p-8">
          <div className="relative aspect-[9/16] h-full max-h-[500px] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10">
-            {activeClip?.url.endsWith('.mp4') || activeClip?.url.includes('video') ? (
+            {activeClip && isVideo(activeClip.url) ? (
               <video 
                 ref={videoRef}
                 src={activeClip.url} 
                 className="w-full h-full object-cover"
-                autoPlay loop muted
+                autoPlay={isPlaying}
+                loop 
+                muted 
+                playsInline
               />
             ) : (
               <img src={activeClip?.url} className="w-full h-full object-cover" />
             )}
             {audioUrl && <audio src={audioUrl} autoPlay={isPlaying} />}
             
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-                <button 
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center text-white pointer-events-auto active:scale-90 transition-all border border-white/20"
-                >
-                   {isPlaying ? <Pause size={32} /> : <Play size={32} className="ml-2" />}
-                </button>
+            <div 
+              className="absolute inset-0 flex items-center justify-center bg-transparent cursor-pointer"
+              onClick={() => setIsPlaying(!isPlaying)}
+            >
+                <AnimatePresence>
+                  {!isPlaying && (
+                    <motion.button 
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.5 }}
+                      className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center text-white transition-all border border-white/20"
+                    >
+                      <Play size={40} className="ml-2" />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
             </div>
          </div>
       </div>

@@ -31,12 +31,21 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   const [quality, setQuality] = useState<'Standard' | 'HD' | '4K' | 'Ultra'>('HD');
   const [caption, setCaption] = useState('');
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
   const [isDraggingToDelete, setIsDraggingToDelete] = useState(false);
   const [audioFile, setAudioFile] = useState<string | null>(null);
   const [isProEditing, setIsProEditing] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (stage === 2 && mediaType === 'video' && videoRef.current) {
+      if (isPaused) videoRef.current.pause();
+      else videoRef.current.play().catch(() => {});
+    }
+  }, [isPaused, stage, currentMediaIndex]);
 
   useEffect(() => {
     let interval: any;
@@ -166,19 +175,40 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
             {/* Full Screen Editor Preview */}
             <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
                <div 
-                className="relative w-full h-full max-w-md aspect-[9/16] bg-neutral-900 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden"
+                className="relative w-full h-full max-w-md aspect-[9/16] bg-neutral-900 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer"
                 style={{ filter: getEffectFilter() }}
+                onClick={() => setIsPaused(!isPaused)}
                >
                   {mediaType === 'video' ? (
                     <video 
+                      ref={videoRef}
                       src={capturedMedia[currentMediaIndex]} 
                       key={capturedMedia[currentMediaIndex]}
-                      autoPlay loop muted playsInline 
+                      autoPlay={!isPaused} 
+                      loop 
+                      muted 
+                      playsInline 
                       className="w-full h-full object-cover" 
                     />
                   ) : (
                     <img src={capturedMedia[currentMediaIndex]} key={capturedMedia[currentMediaIndex]} className="w-full h-full object-cover" />
                   )}
+
+                  {/* Play/Pause Overlay */}
+                  <AnimatePresence>
+                    {isPaused && (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.5 }}
+                        className="absolute inset-0 flex items-center justify-center bg-black/20 z-[60]"
+                      >
+                         <div className="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/30 shadow-2xl">
+                            <Play size={40} className="text-white ml-2" />
+                         </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {audioFile && <audio src={audioFile} autoPlay loop />}
 
