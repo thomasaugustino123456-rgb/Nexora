@@ -7,13 +7,19 @@ import {
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 
 interface ProVideoEditorProps {
-  media: string[];
+  media: {url: string, type: 'video' | 'photo'}[];
   onBack: () => void;
-  onComplete: (newMedia: string[]) => void;
+  onComplete: (newMedia: {url: string, type: 'video' | 'photo'}[]) => void;
 }
 
 export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProps) {
-  const [clips, setClips] = useState(media.map((url, i) => ({ id: i.toString(), url, duration: 5, startTime: i * 5 })));
+  const [clips, setClips] = useState(media.map((item, i) => ({ 
+    id: i.toString(), 
+    url: item.url, 
+    type: item.type,
+    duration: 5, 
+    startTime: i * 5 
+  })));
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(clips[0]?.id || null);
@@ -46,11 +52,6 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
   }, [isPlaying, totalDuration]);
 
   const activeClip = clips.find(c => currentTime >= c.startTime && currentTime < c.startTime + c.duration) || clips[clips.length - 1];
-
-  const isVideo = (url: string) => {
-    // Robust check for blob videos or mp4s
-    return url.includes('video') || url.endsWith('.mp4') || url.includes('blob') && !url.includes('image');
-  };
 
   const handleSplit = () => {
     if (!selectedClipId) return;
@@ -122,7 +123,7 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
             <p className="text-[10px] font-bold text-orange-500">{currentTime.toFixed(2)}s / {totalDuration.toFixed(2)}s</p>
          </div>
          <button 
-          onClick={() => onComplete(clips.map(c => c.url))}
+          onClick={() => onComplete(clips.map(c => ({ url: c.url, type: c.type as 'video' | 'photo' })))}
           className="px-6 py-2 bg-white text-black rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl"
          >
             Finish
@@ -132,7 +133,7 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
       {/* Main Preview Area */}
       <div className="flex-1 relative flex items-center justify-center p-8">
          <div className="relative aspect-[9/16] h-full max-h-[500px] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10">
-            {activeClip && isVideo(activeClip.url) ? (
+            {activeClip?.type === 'video' ? (
               <video 
                 ref={videoRef}
                 src={activeClip.url} 
@@ -179,9 +180,16 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
                   setCurrentTime(clip.startTime);
                 }}
                 style={{ width: `${(clip.duration / totalDuration) * 100}%` }}
-                className={`h-16 rounded-lg overflow-hidden border-2 transition-all cursor-pointer grow-0 flex-shrink-0 ${selectedClipId === clip.id ? 'border-orange-500 scale-[1.02] shadow-[0_0_20px_rgba(249,115,22,0.3)]' : 'border-white/10 grayscale-[0.8]'}`}
+                className={`h-16 rounded-lg overflow-hidden border-2 transition-all cursor-pointer grow-0 flex-shrink-0 relative ${selectedClipId === clip.id ? 'border-orange-500 scale-[1.02] shadow-[0_0_20px_rgba(249,115,22,0.3)]' : 'border-white/10 grayscale-[0.8]'}`}
                >
-                  <img src={clip.url} className="w-full h-full object-cover" />
+                  {clip.type === 'video' ? (
+                    <div className="w-full h-full flex items-center justify-center bg-neutral-800">
+                       <Play size={16} className="text-white/40" />
+                       <video src={clip.url} className="absolute inset-0 w-full h-full object-cover opacity-30" />
+                    </div>
+                  ) : (
+                    <img src={clip.url} className="w-full h-full object-cover" />
+                  )}
                </div>
             ))}
 

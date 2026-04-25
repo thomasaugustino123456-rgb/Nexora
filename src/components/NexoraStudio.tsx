@@ -19,7 +19,7 @@ type StudioStage = 1 | 2 | 3;
 
 export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   const [stage, setStage] = useState<StudioStage>(1);
-  const [capturedMedia, setCapturedMedia] = useState<string[]>([]);
+  const [capturedMedia, setCapturedMedia] = useState<{url: string, type: 'video' | 'photo'}[]>([]);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [isAutoSwitch, setIsAutoSwitch] = useState(false);
   const [mediaType, setMediaType] = useState<'video' | 'photo' | null>(null);
@@ -61,11 +61,14 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const urls = files.map(file => URL.createObjectURL(file));
+    const urls = files.map(file => ({
+      url: URL.createObjectURL(file),
+      type: (file.type.startsWith('video') ? 'video' : 'photo') as 'video' | 'photo'
+    }));
     setCapturedMedia(prev => [...prev, ...urls]);
     
     if (!mediaType) {
-      setMediaType(files[0].type.startsWith('video') ? 'video' : 'photo');
+      setMediaType(urls[0].type);
     }
     
     setStage(2);
@@ -179,11 +182,11 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                 style={{ filter: getEffectFilter() }}
                 onClick={() => setIsPaused(!isPaused)}
                >
-                  {mediaType === 'video' ? (
+                  {capturedMedia[currentMediaIndex]?.type === 'video' ? (
                     <video 
                       ref={videoRef}
-                      src={capturedMedia[currentMediaIndex]} 
-                      key={capturedMedia[currentMediaIndex]}
+                      src={capturedMedia[currentMediaIndex].url} 
+                      key={capturedMedia[currentMediaIndex].url}
                       autoPlay={!isPaused} 
                       loop 
                       muted 
@@ -191,7 +194,9 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                       className="w-full h-full object-cover" 
                     />
                   ) : (
-                    <img src={capturedMedia[currentMediaIndex]} key={capturedMedia[currentMediaIndex]} className="w-full h-full object-cover" />
+                    capturedMedia[currentMediaIndex] && (
+                      <img src={capturedMedia[currentMediaIndex].url} key={capturedMedia[currentMediaIndex].url} className="w-full h-full object-cover" />
+                    )
                   )}
 
                   {/* Play/Pause Overlay */}
@@ -472,10 +477,10 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                {/* Preview Card */}
                <div className="relative group mx-auto">
                   <div className="w-[280px] aspect-[9/16] rounded-[2.5rem] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,1)] border-4 border-white/5 relative bg-black transform rotate-1 group-hover:rotate-0 transition-transform duration-700">
-                    {mediaType === 'video' ? (
-                      <video src={capturedMedia[currentMediaIndex]} autoPlay loop playsInline className="w-full h-full object-cover" />
+                    {capturedMedia[currentMediaIndex]?.type === 'video' ? (
+                      <video src={capturedMedia[currentMediaIndex].url} autoPlay loop playsInline className="w-full h-full object-cover" />
                     ) : (
-                      <img src={capturedMedia[currentMediaIndex]} className="w-full h-full object-cover" />
+                      capturedMedia[currentMediaIndex] && <img src={capturedMedia[currentMediaIndex].url} className="w-full h-full object-cover" />
                     )}
                     {audioFile && <audio src={audioFile} autoPlay loop />}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -528,13 +533,13 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                       onClick={() => {
                         vibrate(VIBRATION_PATTERNS.SUCCESS);
                           onPost({ 
-                          videoUrl: capturedMedia[0], 
+                          videoUrl: capturedMedia[0]?.url || '', 
                           caption,
                           userName: user?.displayName || 'Anonymous',
                           userPhoto: user?.photoURL || '',
                           quality,
                           platform: 'nexora',
-                          type: mediaType
+                          type: capturedMedia[0]?.type || 'video'
                         });
                       }}
                       className="flex-1 h-16 bg-orange-500 text-white rounded-[1.5rem] font-black uppercase text-[10px] tracking-[0.4em] flex items-center justify-center gap-3 shadow-[0_15px_40px_rgba(249,115,22,0.3)] hover:bg-orange-600 transition-all active:scale-95"
