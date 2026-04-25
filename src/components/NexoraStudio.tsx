@@ -191,7 +191,6 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                         key={capturedMedia[currentMediaIndex].url}
                         autoPlay={!isPaused} 
                         loop 
-                        muted 
                         playsInline 
                         className="w-full h-full object-cover" 
                       />
@@ -567,10 +566,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
         )}
       </AnimatePresence>
     </div>
-  )}
-</AnimatePresence>
-</div>
-);
+  );
 }
 
 const VIBRATION_PATTERNS = {

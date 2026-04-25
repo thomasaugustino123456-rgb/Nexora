@@ -157,7 +157,6 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
                 className="w-full h-full object-cover"
                 autoPlay={isPlaying}
                 loop 
-                muted 
                 playsInline
                 onError={() => showToast('Video Load Error 🚫', 'error')}
               />
