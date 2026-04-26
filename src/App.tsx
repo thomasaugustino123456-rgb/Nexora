@@ -195,6 +195,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   mascotPos: { x: 400, y: 300 },
   mascotPinnedItemId: null,
   spaceOnboardingCompleted: false,
+  plantOnboardingCompleted: false,
   plantState: {
     type: 'sprout',
     stage: 0,
@@ -204,8 +205,10 @@ const DEFAULT_SETTINGS: UserSettings = {
     health: 100,
     isDead: false,
     isThirsty: false,
-    unlockedTypes: ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano']
-  }
+    unlockedTypes: ['sprout']
+  },
+  unlockedHouses: [0],
+  unlockedPlants: ['sprout']
 };
 
 const DEFAULT_STATS: UserStats = {
@@ -322,7 +325,7 @@ function LevelUpCelebration({ level, onComplete }: { level: number, onComplete: 
   );
 }
 
-function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSettings }) {
+function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: UserSettings, showToast?: (m: string, t: any) => void }) {
   const [message, setMessage] = useState<string>("");
   const [response, setResponse] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -351,7 +354,7 @@ function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSetting
     } catch (error: any) {
       console.error('Mascot AI Chat Error:', error);
       setResponse("I'm a bit parched right now, but I'm still cheering for you! 🚀");
-      showToast(`AI Error: ${error.message || 'Connection failed'}`, 'error');
+      showToast?.(`AI Error: ${error.message || 'Connection failed'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -373,7 +376,7 @@ function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSetting
     } catch (error: any) {
       console.error('Mascot AI Motivation Error:', error);
       setResponse("I'm always here to cheer you on! Let's crush today! 🚀");
-      showToast(`Motivation AI Error: ${error.message || 'Sync failed'}`, 'error');
+      showToast?.(`Motivation AI Error: ${error.message || 'Sync failed'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -1220,6 +1223,14 @@ export default function App() {
           completed: !!settings.spaceOnboardingCompleted,
           updatedAt: serverTimestamp()
         }, { merge: true });
+
+        // Sync unlocks to the new path as requested
+        const unlocksRef = doc(db, 'users', user.uid, 'progress', 'unlocks');
+        await setDoc(unlocksRef, {
+          houses: settings.unlockedHouses || [0],
+          plants: settings.unlockedPlants || ['sprout'],
+          updatedAt: serverTimestamp()
+        }, { merge: true });
       } catch (error) {
         try {
           handleFirestoreError(error, OperationType.UPDATE, path);
@@ -1625,7 +1636,7 @@ export default function App() {
       } catch (error: any) {
         console.warn("Firestore status check:", error);
         if (error.message?.includes("reach Cloud Firestore")) {
-          showToast("Firestore Unreachable. Please check your internet or reload. App will use offline cache.", 'warning');
+          showToast("Firestore Unreachable. Please check your internet or reload. App will use offline cache.", 'info');
         } else if (error.message?.includes("permissions")) {
           showToast("Firestore Permissions Error. Some features might be restricted.", 'error');
         }
@@ -1668,11 +1679,21 @@ export default function App() {
           } else {
             console.log("Firestore: Loading existing data");
             const data = userDoc.data();
-            setNeedsOnboarding(data.onboardingCompleted === false);
             
             // Source of Truth is NOW Firestore on login
-            const firestoreSettings = { ...DEFAULT_SETTINGS, ...data };
-            const firestoreStats = { ...DEFAULT_STATS, ...(data.stats || {}) };
+            // We use deep merge logic to prevent losing nested fields like trophies
+            const firestoreSettings = { 
+              ...DEFAULT_SETTINGS, 
+              ...data,
+              plantState: { ...DEFAULT_SETTINGS.plantState, ...(data.plantState || {}) }
+            };
+            
+            const firestoreStats = { 
+              ...DEFAULT_STATS, 
+              ...(data.stats || {}),
+              pointsByCategory: { ...DEFAULT_STATS.pointsByCategory, ...(data.stats?.pointsByCategory || {}) },
+              trophies: data.stats?.trophies || []
+            };
 
             // Fetch specific settings
             const spaceSettingsDoc = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'space'));
@@ -1680,14 +1701,29 @@ export default function App() {
               firestoreSettings.spaceOnboardingCompleted = !!spaceSettingsDoc.data().completed;
             }
 
-            // Fetch detailed stats
+            // Fetch unlocks from new path as requested
+            const unlocksDoc = await getDoc(doc(db, 'users', currentUser.uid, 'progress', 'unlocks'));
+            if (unlocksDoc.exists()) {
+              const uData = unlocksDoc.data();
+              firestoreSettings.unlockedHouses = uData.houses || [0];
+              firestoreSettings.unlockedPlants = uData.plants || ['sprout'];
+              if (firestoreSettings.plantState) {
+                firestoreSettings.plantState.unlockedTypes = uData.plants || ['sprout'];
+              }
+            }
+
+            // Fetch detailed stats (secondary source of truth for trophies/xp)
             const detailedStatsDoc = await getDoc(doc(db, 'users', currentUser.uid, 'stats', 'main'));
             if (detailedStatsDoc.exists()) {
-              Object.assign(firestoreStats, detailedStatsDoc.data());
+              const detailedData = detailedStatsDoc.data();
+              // Merge detailed stats, prioritizing them over the summary in main doc
+              Object.assign(firestoreStats, detailedData);
+              if (detailedData.trophies) firestoreStats.trophies = detailedData.trophies;
             }
 
             setSettings(firestoreSettings);
             setStats(firestoreStats);
+            setNeedsOnboarding(data.onboardingCompleted === false);
             
             const progressDoc = await getDoc(doc(db, 'users', currentUser.uid, 'progress', today));
             if (progressDoc.exists()) {
@@ -1700,9 +1736,11 @@ export default function App() {
           }
         } catch (error) {
           console.error("Load critical failure:", error);
-          // Fallback to local if fetch fails (prevents complete wipe)
-          dataLoadedFromFirestore.current = true;
-          setIsDataReady(true);
+          // CRITICAL: DO NOT set dataLoadedFromFirestore.current = true here 
+          // because if fetch fails (e.g. network), we don't want to overwrite 
+          // the server with local defaults in the next sync cycle.
+          setIsDataReady(false); 
+          showToast("Failed to load your progress. Please check your connection.", 'error');
         }
         setLoading(false);
       } else {
@@ -2583,6 +2621,7 @@ export default function App() {
                   fcmToken={fcmToken}
                   setupFCM={setupFCM}
                   fcmError={fcmError}
+                  showToast={showToast}
                 />
               </motion.div>
             )}
@@ -3041,28 +3080,23 @@ export default function App() {
                 className="w-full"
               >
                 <PlantScreen 
-                  plantState={settings.plantState}
+                  plantState={settings.plantState!}
                   onboardingCompleted={!!settings.plantOnboardingCompleted}
                   onCompleteOnboarding={() => onUpdateSettings({ plantOnboardingCompleted: true })}
                   onExit={() => { vibrate(5); setActiveScreen('home'); }}
                   onSaveToLibrary={(imageData) => {
-                    onUpdateStats(prev => ({
-                      ...prev,
-                      drawings: [imageData, ...(prev.drawings || [])]
-                    }));
+                    onUpdateStats({
+                      drawings: [imageData, ...(stats.drawings || [])]
+                    });
                   }}
                   onSwitchType={(type) => {
                     vibrate(10);
-                    onUpdateSettings(prev => ({
-                      ...prev,
+                    onUpdateSettings({
                       plantState: {
-                        ...prev.plantState!,
+                        ...settings.plantState!,
                         type,
-                        // If they haven't finished this one yet, keep stage.
-                        // If they want independent tracking per plant, we'd need a map.
-                        // For now, let's keep it as one active progression.
                       }
-                    }));
+                    });
                   }}
                   onRecover={() => {
                     onUpdateSettings({
@@ -3078,6 +3112,9 @@ export default function App() {
                     });
                     showToast("Ecosystem restored! 🌿", "info");
                   }}
+                  onUpdateSettings={onUpdateSettings}
+                  play={play}
+                  showToast={showToast}
                   settings={settings}
                   stats={stats}
                 />
@@ -3366,7 +3403,7 @@ function CountdownToMidnight() {
   return <span>{timeLeft}</span>;
 }
 
-function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, fcmToken, setupFCM, fcmError }: { 
+function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, fcmToken, setupFCM, fcmError, showToast }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
@@ -3384,7 +3421,8 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
   onOpenPlant: () => void,
   fcmToken: string | null,
   setupFCM: () => void,
-  fcmError: string | null
+  fcmError: string | null,
+  showToast?: (m: string, t: any) => void
 }) {
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
@@ -3492,7 +3530,7 @@ function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, 
         )}
       </AnimatePresence>
 
-      <MascotAI stats={stats} settings={settings} />
+      <MascotAI stats={stats} settings={settings} showToast={showToast} />
       
       {/* Daily Quest Card */}
       {dailyQuest && (

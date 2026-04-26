@@ -79,6 +79,8 @@ export interface UserSettings {
   mascotPinnedItemId?: string | null;
   joinedCircleIds?: string[];
   notifEnabledCircleIds?: string[];
+  unlockedHouses?: number[];
+  unlockedPlants?: string[];
 }
 
 export interface ShopItem {

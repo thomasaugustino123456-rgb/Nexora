@@ -44,6 +44,34 @@
               "purchasedAt": { "type": "string" }
             }
           }
+        },
+        "trophies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string" },
+              "earnedDate": { "type": "string" },
+              "lastUpdated": { "type": "string" }
+            }
+          }
+        },
+        "plantOnboardingCompleted": { "type": "boolean" },
+        "spaceOnboardingCompleted": { "type": "boolean" },
+        "plantState": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "stage": { "type": "number" },
+            "growthPoints": { "type": "number" },
+            "lastGrowthDate": { "type": "string" },
+            "lastCheckDate": { "type": "string" },
+            "health": { "type": "number" },
+            "isDead": { "type": "boolean" },
+            "isThirsty": { "type": "boolean" },
+            "unlockedTypes": { "type": "array", "items": { "type": "string" } }
+          }
         }
       },
       "required": ["uid", "displayName", "email", "role"]
@@ -284,6 +312,20 @@
     "/users/{userId}/progress/{date}": {
       "schema": { "$ref": "DailyProgress" },
       "description": "Daily progress for challenges"
+    },
+    "/users/{userId}/settings/{docId}": {
+      "schema": { "type": "object", "properties": { "completed": { "type": "boolean" } } },
+      "description": "Sub-settings for specific app areas like 'space'"
+    },
+    "/users/{userId}/progress/unlocks": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "houses": { "type": "array", "items": { "type": "number" } },
+          "plants": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "description": "Sequential unlocks for houses and plant types"
     },
     "/users/{userId}/shop/purchases": {
       "schema": { "$ref": "ShopPurchases" },

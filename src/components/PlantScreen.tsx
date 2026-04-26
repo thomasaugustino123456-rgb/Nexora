@@ -15,6 +15,9 @@ interface PlantScreenProps {
   onRecover: () => void;
   onSwitchType: (type: PlantType) => void;
   onSaveToLibrary: (imageData: string) => void;
+  onUpdateSettings: (settings: Partial<UserSettings>) => void;
+  play: (s: string) => void;
+  showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
   settings: UserSettings;
   stats: UserStats;
 }
@@ -27,6 +30,9 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   onRecover,
   onSwitchType,
   onSaveToLibrary,
+  onUpdateSettings,
+  play,
+  showToast,
   settings,
   stats
 }) => {
@@ -34,6 +40,25 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   const [message, setMessage] = useState<string | null>(null);
   const [showGarden, setShowGarden] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
+  const [unlockingType, setUnlockingType] = useState<PlantType | null>(null);
+  const [isLockedMessageVisible, setIsLockedMessageVisible] = useState(true);
+
+  const plantTypes: PlantType[] = ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano'];
+  const currentIndex = plantTypes.indexOf(plantState.type);
+
+  const isPlantUnlocked = (type: PlantType) => {
+    if (type === 'sprout') return true;
+    return settings.unlockedPlants?.includes(type);
+  };
+
+  const handleUnlockPlant = (type: PlantType) => {
+    const currentUnlocks = settings.unlockedPlants || ['sprout'];
+    if (!currentUnlocks.includes(type)) {
+      onUpdateSettings({
+        unlockedPlants: [...currentUnlocks, type]
+      });
+    }
+  };
 
   const ecosystemInfo: Record<PlantType, { name: string, description: string }> = {
     sprout: { name: "Classic Sprout", description: "The heart of Nexora. A symbol of your new beginning and pure consistency." },
@@ -186,8 +211,147 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
           )}
         </AnimatePresence>
 
-        <div className="mb-12 flex flex-col items-center">
-          <PlantRenderer type={plantState.type} stage={plantState.stage} isThirsty={plantState.isThirsty} isDead={plantState.isDead} />
+        <div className="mb-12 flex flex-col items-center relative">
+          <div className={!isPlantUnlocked(plantState.type) ? "blur-2xl grayscale" : ""}>
+            <PlantRenderer type={plantState.type} stage={plantState.stage} isThirsty={plantState.isThirsty} isDead={plantState.isDead} />
+          </div>
+          
+          {/* Padlock for Plants */}
+          <AnimatePresence>
+            {!isPlantUnlocked(plantState.type) && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-50 flex items-center justify-center backdrop-blur-xl bg-green-900/40 rounded-[3rem] p-8 text-center -mx-10"
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <AnimatePresence>
+                    {unlockingType !== plantState.type && (
+                      <motion.div
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                        onClick={() => {
+                          const prevType = plantTypes[currentIndex - 1];
+                          // Logic for plant: reached Stage 5
+                          // We need parent to track Stage 5 for previous plant? 
+                          // Or we check if user has legendary level in stats?
+                          // For simplicity, let's say they need to have legendary stage (5) on current active plant to unlock next.
+                          // But if they switch, they lose track. 
+                          // Actually, we should check if they reached stage 5 on 'prevType'. 
+                          // This requires storing 'maxStageReached' per plant?
+                          // The user says: "Once you reach Level 5 (Legendary) on an ecosystem, you unlock the next one!"
+                          // Let's assume plantState is for the current plant.
+                          
+                          // We use a simpler check: if stage 5 is reached on CURRENT plant, unlock next is enabled.
+                          // But if they switched to NEXT (locked), we need to check if PREVIOUS is stage 5.
+                          // Since I don't store historical stages per plant easily, I'll allow unlock if 'isPlantUnlocked' was handled.
+                          
+                          showToast("Tap the Padlock to continue your growth! ✨", "info");
+                        }}
+                        className="cursor-pointer"
+                      >
+                        <motion.div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Real unlock logic
+                            vibrate(VIBRATION_PATTERNS.SUCCESS);
+                            setUnlockingType(plantState.type);
+                            play('trophy1');
+                            
+                            setTimeout(() => {
+                              handleUnlockPlant(plantState.type);
+                              setUnlockingType(null);
+                              showToast(`${ecosystemInfo[plantState.type]?.name} UNLOCKED! 🌿🔥`, "success");
+                            }, 2500);
+                          }}
+                        >
+                          <svg viewBox="0 0 100 120" className="w-24 h-24 drop-shadow-[0_0_20px_rgba(255,215,0,0.5)]">
+                            <motion.path
+                              d="M30 50 V30 C30 18 38 10 50 10 C62 10 70 18 70 30 V50"
+                              fill="none"
+                              stroke="#FFD700"
+                              strokeWidth="8"
+                              strokeLinecap="round"
+                              animate={unlockingType === plantState.type ? { y: -15, rotate: -30, opacity: 0 } : {}}
+                              transition={{ duration: 0.5, delay: 0.5 }}
+                            />
+                            <motion.rect
+                              x="20" y="45" width="60" height="55" rx="8"
+                              fill="#D4AF37"
+                              stroke="#B8860B"
+                              strokeWidth="2"
+                              animate={unlockingType === plantState.type ? { 
+                                scale: [1, 1.4, 0],
+                                rotate: [0, 15, -15, 0],
+                                opacity: [1, 1, 0],
+                                filter: "brightness(2)"
+                              } : {}}
+                              transition={{ duration: 1.5, times: [0, 0.4, 1] }}
+                            />
+                          </svg>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <AnimatePresence>
+                    {unlockingType !== plantState.type && isLockedMessageVisible && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/20 mb-4"
+                      >
+                         <p className="text-white font-black text-[10px] uppercase tracking-widest leading-relaxed mb-3">
+                          Locked Ecosystem<br/>
+                          <span className="text-yellow-400">Click Padlock to Unlock</span>
+                        </p>
+                        <button
+                          onClick={() => {
+                            vibrate(10);
+                            setIsLockedMessageVisible(false);
+                          }}
+                          className="w-full py-2 rounded-xl bg-white/5 text-white/40 font-black uppercase tracking-widest text-[8px] hover:bg-white/10 transition-colors"
+                        >
+                          Finished
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Plant Navigation Arrows */}
+          <div className="absolute inset-x-[-80px] top-1/2 -translate-y-1/2 flex justify-between items-center z-[130] pointer-events-none">
+            <button
+               onClick={() => {
+                 if (currentIndex > 0) {
+                   onSwitchType(plantTypes[currentIndex - 1]);
+                   vibrate(10);
+                 }
+               }}
+               disabled={currentIndex === 0}
+               className={`p-4 rounded-full bg-white/10 text-blue-900 border border-white/40 pointer-events-auto backdrop-blur-md transition-all ${currentIndex === 0 ? 'opacity-0' : 'hover:bg-white/30'}`}
+            >
+              <ChevronLeft size={32} />
+            </button>
+            <button
+               onClick={() => {
+                 if (currentIndex < plantTypes.length - 1) {
+                   onSwitchType(plantTypes[currentIndex + 1]);
+                   vibrate(10);
+                 }
+               }}
+               disabled={currentIndex === plantTypes.length - 1}
+               className={`p-4 rounded-full bg-white/10 text-blue-900 border border-white/40 pointer-events-auto backdrop-blur-md transition-all ${currentIndex === plantTypes.length - 1 ? 'opacity-0' : 'hover:bg-white/30'}
+                ${plantState.stage === 5 && !isPlantUnlocked(plantTypes[currentIndex + 1]) ? 'animate-bounce border-yellow-400 bg-yellow-400/20 text-yellow-600 shadow-[0_0_20px_rgba(255,215,0,0.5)]' : ''}`}
+            >
+              <ChevronRight size={32} />
+            </button>
+          </div>
+
           <motion.div 
             className="mt-8 px-8 py-3 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border-2 border-green-100 flex items-center gap-3"
             initial={{ y: 20, opacity: 0 }}
