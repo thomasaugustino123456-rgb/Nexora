@@ -1,10 +1,10 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, LogOut, Bell, Shield, User, Globe, Mail, MessageSquare, 
   Trash2, ChevronLeft, RefreshCw, Smartphone, Zap, Flame, 
   Droplets, Target, Clock, Volume2, Palette, Sparkles, 
-  ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen
+  ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle
 } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { UserSettings } from '../types';
@@ -22,6 +22,10 @@ interface SettingsScreenProps {
   onSendTestNotification: () => void;
   onSendMotivation: () => void;
   onSendTestEmail: () => void;
+  onClearCache: () => void;
+  onExportData: () => void;
+  onSubmitFeedback: (f: { rating: number, message: string, category: string }) => void;
+  onShowManifesto: () => void;
   showToast: (m: string, t?: 'success' | 'info' | 'error') => void;
   sendNotification: (title: string, body: string) => void;
 }
@@ -29,8 +33,12 @@ interface SettingsScreenProps {
 export function SettingsScreen({ 
   user, settings, setSettings, isPro, onBack, onLogout, 
   fcmToken, fcmError, onRetryFCM, onSendTestNotification, 
-  onSendMotivation, onSendTestEmail, showToast, sendNotification 
+  onSendMotivation, onSendTestEmail, onClearCache, onExportData,
+  onSubmitFeedback, onShowManifesto, showToast, sendNotification 
 }: SettingsScreenProps) {
+  const [showFeedbackModal, setShowFeedbackModal] = React.useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = React.useState(false);
+  const [feedback, setFeedback] = React.useState({ rating: 5, message: '', category: 'General' });
   
   const COLORS = [
     { name: 'Classic Blue', value: '#3b82f6' },
@@ -57,6 +65,139 @@ export function SettingsScreen({
            <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">Global Control Center</p>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showPrivacyModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[500] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-[32px] p-8 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-600" />
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
+                  <ShieldCheck size={24} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-blue-900 leading-tight">Privacy Protocol</h3>
+                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Security Level: Maximum</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4 text-blue-900/70 text-sm font-medium leading-relaxed">
+                <p>Bro, your privacy is our top priority. Here's how we keep your data strong:</p>
+                <ul className="space-y-3">
+                  <li className="flex gap-3">
+                    <Check size={16} className="text-green-500 shrink-0 mt-0.5" />
+                    <span>Your workout stats and habits are encrypted and tied directly to your unique Bio-ID.</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <Check size={16} className="text-green-500 shrink-0 mt-0.5" />
+                    <span>We never share your location or identity with 3rd party protocols.</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <Check size={16} className="text-green-500 shrink-0 mt-0.5" />
+                    <span>All communication is signed with advanced certificate verification.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <button 
+                onClick={() => setShowPrivacyModal(false)}
+                className="w-full bg-blue-900 text-white py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-transform"
+              >
+                DISMISS PROTOCOL
+              </button>
+            </motion.div>
+          </div>
+        )}
+
+        {showFeedbackModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[500] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-[32px] p-8 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-400 via-teal-500 to-blue-600" />
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
+                  <MessageSquare size={24} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-blue-900 leading-tight">Sync Feedback</h3>
+                  <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Direct Link to HQ</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest block mb-2 px-1">Satisfaction Level</label>
+                  <div className="flex justify-between gap-2">
+                    {[1, 2, 3, 4, 5].map(num => (
+                      <button 
+                        key={num}
+                        onClick={() => setFeedback(prev => ({ ...prev, rating: num }))}
+                        className={`flex-1 py-3 rounded-xl font-black transition-all ${feedback.rating === num ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-blue-50 text-blue-900/40'}`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest block mb-2 px-1">Data Category</label>
+                  <select 
+                    value={feedback.category}
+                    onChange={(e) => setFeedback(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full bg-blue-50 border-none rounded-xl py-3 px-4 font-bold text-blue-900 focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option>General</option>
+                    <option>Bug Report</option>
+                    <option>Feature Request</option>
+                    <option>UI/UX Design</option>
+                    <option>Motivation Sync</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest block mb-2 px-1">Detailed Log</label>
+                  <textarea 
+                    value={feedback.message}
+                    onChange={(e) => setFeedback(prev => ({ ...prev, message: e.target.value }))}
+                    placeholder="Tell us what's on your mind, bro..."
+                    className="w-full bg-blue-50 border-none rounded-2xl py-3 px-4 font-bold text-blue-900 min-h-[120px] focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowFeedbackModal(false)}
+                  className="flex-1 bg-gray-100 text-gray-500 py-4 rounded-2xl font-black shadow-sm active:scale-95 transition-transform"
+                >
+                  CANCEL
+                </button>
+                <button 
+                  onClick={() => {
+                    onSubmitFeedback(feedback);
+                    setShowFeedbackModal(false);
+                    setFeedback({ rating: 5, message: '', category: 'General' });
+                  }}
+                  disabled={!feedback.message.trim()}
+                  className="flex-[2] bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-transform disabled:opacity-50"
+                >
+                  TRANSMIT
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 gap-6">
         {/* Account Section */}
@@ -277,7 +418,7 @@ export function SettingsScreen({
               <div className="p-4 bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-between mt-4">
                  <div className="flex items-center gap-3">
                     <div className="bg-red-500 p-2 rounded-xl text-white">
-                       <AlertCircle size={16} />
+                       <AlertCircleStatus size={16} />
                     </div>
                     <div>
                       <p className="text-[10px] text-red-600 font-black uppercase mb-1">Frequency Sync Error</p>
@@ -325,17 +466,17 @@ export function SettingsScreen({
           </div>
           
           <div className="grid grid-cols-2 gap-3">
-             <button onClick={onSendTestNotification} className="p-4 bg-white border border-blue-100 rounded-2xl text-[10px] font-black text-blue-600 uppercase tracking-widest hover:bg-blue-50 transition-all flex flex-col items-center gap-2">
+             <button onClick={onSendTestNotification} className="p-4 bg-white border border-blue-100 rounded-2xl text-[10px] font-black text-blue-600 uppercase tracking-widest hover:bg-blue-50 transition-all flex flex-col items-center gap-2 active:scale-95">
                 <Smartphone size={16} /> Notification Test
              </button>
-             <button onClick={onSendMotivation} className="p-4 bg-white border border-orange-100 rounded-2xl text-[10px] font-black text-orange-600 uppercase tracking-widest hover:bg-orange-50 transition-all flex flex-col items-center gap-2">
+             <button onClick={onSendMotivation} className="p-4 bg-white border border-orange-100 rounded-2xl text-[10px] font-black text-orange-600 uppercase tracking-widest hover:bg-orange-50 transition-all flex flex-col items-center gap-2 active:scale-95">
                 <Zap size={16} /> AI Motivation
              </button>
-             <button onClick={onSendTestEmail} className="p-4 bg-white border border-indigo-100 rounded-2xl text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:bg-indigo-50 transition-all flex flex-col items-center gap-2">
-                <Mail size={16} /> Data Export (Email)
+             <button onClick={onExportData} className="p-4 bg-white border border-indigo-100 rounded-2xl text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:bg-indigo-50 transition-all flex flex-col items-center gap-2 active:scale-95">
+                <Mail size={16} /> Data Export
              </button>
-             <button onClick={() => showToast("Cache Cleared! 🧼", "success")} className="p-4 bg-white border border-neutral-100 rounded-2xl text-[10px] font-black text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-all flex flex-col items-center gap-2">
-                <RefreshCw size={16} /> Clear Static Cache
+             <button onClick={onClearCache} className="p-4 bg-white border border-neutral-100 rounded-2xl text-[10px] font-black text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-all flex flex-col items-center gap-2 active:scale-95">
+                <RefreshCw size={16} /> Clear Static
              </button>
           </div>
         </div>
@@ -348,21 +489,30 @@ export function SettingsScreen({
           </div>
           
           <div className="grid grid-cols-1 gap-2">
-            <button className="flex items-center justify-between p-4 bg-white rounded-2xl border border-blue-50 text-blue-900 hover:bg-blue-50 transition-all group">
+            <button 
+              onClick={() => setShowPrivacyModal(true)}
+              className="flex items-center justify-between p-4 bg-white rounded-2xl border border-blue-50 text-blue-900 hover:bg-blue-50 transition-all group active:scale-95"
+            >
                <div className="flex items-center gap-3">
                   <ShieldCheck size={16} className="text-blue-400" />
                   <span className="text-xs font-black uppercase tracking-tight">Privacy Protocol</span>
                </div>
                <ChevronLeft size={16} className="rotate-180 opacity-20 group-hover:opacity-100 transition-opacity" />
             </button>
-            <button className="flex items-center justify-between p-4 bg-white rounded-2xl border border-blue-50 text-blue-900 hover:bg-blue-50 transition-all group">
+            <button 
+              onClick={() => setShowFeedbackModal(true)}
+              className="flex items-center justify-between p-4 bg-white rounded-2xl border border-blue-50 text-blue-900 hover:bg-blue-50 transition-all group active:scale-95"
+            >
                <div className="flex items-center gap-3">
                   <BookOpen size={16} className="text-blue-400" />
-                  <span className="text-xs font-black uppercase tracking-tight">Terms of Engagement</span>
+                  <span className="text-xs font-black uppercase tracking-tight">Terms of Engagement & Feedback</span>
                </div>
                <ChevronLeft size={16} className="rotate-180 opacity-20 group-hover:opacity-100 transition-opacity" />
             </button>
-            <button className="flex items-center justify-between p-4 bg-white rounded-2xl border border-blue-50 text-blue-900 hover:bg-blue-50 transition-all group">
+            <button 
+              onClick={onShowManifesto}
+              className="flex items-center justify-between p-4 bg-white rounded-2xl border border-blue-50 text-blue-900 hover:bg-blue-50 transition-all group active:scale-95"
+            >
                <div className="flex items-center gap-3">
                   <RefreshCw size={16} className="text-blue-400" />
                   <span className="text-xs font-black uppercase tracking-tight">Nexora Manifesto v1.2</span>
@@ -407,7 +557,7 @@ function Crown({ size, className }: { size: number, className?: string }) {
   return <Sparkles size={size} className={className} />;
 }
 
-function AlertCircle({ size, className }: { size: number, className?: string }) {
+function AlertCircleStatus({ size, className }: { size: number, className?: string }) {
   return <Shield size={size} className={className} />;
 }
 

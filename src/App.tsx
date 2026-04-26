@@ -43,12 +43,11 @@ const NotebookScreen = lazy(() => import('./components/NotebookScreen').then(m =
 const SOCIAL_LOCKED = false;
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
 import { requestNotificationPermission, setupOnMessageListener } from './lib/notifications';
 
-// const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
-const ai = { models: { generateContent: async () => ({ text: "AI disabled" }) } } as any;
+const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 function WhatIsNewModal({ onClose }: { onClose: () => void }) {
   const [updates, setUpdates] = useState<any>(null);
@@ -329,11 +328,9 @@ function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSetting
       User stats: Streak ${stats.streak}, Points ${stats.totalPoints}, Level ${stats.level || 1}.
       Your current outfit is: ${settings.activeSkin || 'none'}.`;
       
-      const result = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-      });
-      setResponse(result.text || "I'm here for you, bro! 🌊");
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      setResponse(result.response.text() || "I'm here for you, bro! 🌊");
     } catch (error) {
       setResponse("I'm a bit parched right now, but I'm still cheering for you! 🚀");
     } finally {
@@ -351,11 +348,9 @@ function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSetting
       Give them a short, punchy, and super friendly motivational message (max 2 sentences). 
       Be encouraging and maybe a bit bubbly!`;
       
-      const result = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-      });
-      setResponse(result.text || "You're doing great, bro! Keep that streak alive! 🌊");
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      setResponse(result.response.text() || "You're doing great, bro! Keep that streak alive! 🌊");
     } catch (error) {
       setResponse("I'm always here to cheer you on! Let's crush today! 🚀");
     } finally {
@@ -1599,6 +1594,8 @@ export default function App() {
         setLoading(true);
         setIsDataReady(false);
         setUser(currentUser);
+        setIsDataReady(false);
+        dataLoadedFromFirestore.current = false;
         
         try {
           // Force fetch from server for critical initial load
@@ -1606,6 +1603,10 @@ export default function App() {
           
           if (!userDoc.exists()) {
             console.log("Firestore: New user setup");
+            // Important: Set default states first, then say data is ready
+            setSettings(DEFAULT_SETTINGS);
+            setStats(DEFAULT_STATS);
+            
             const newUser = {
               uid: currentUser.uid,
               displayName: currentUser.displayName || 'Nexora User',
@@ -1617,8 +1618,6 @@ export default function App() {
               createdAt: serverTimestamp()
             };
             await setDoc(doc(db, 'users', currentUser.uid), newUser);
-            setSettings(DEFAULT_SETTINGS);
-            setStats(DEFAULT_STATS);
             setNeedsOnboarding(true);
             dataLoadedFromFirestore.current = true;
             setIsDataReady(true);
@@ -1626,32 +1625,32 @@ export default function App() {
             console.log("Firestore: Loading existing data");
             const data = userDoc.data();
             setNeedsOnboarding(data.onboardingCompleted === false);
-            setIsPro(!!data.isPro);
             
-            // Merge sequence
-            const mergedSettings = { ...DEFAULT_SETTINGS, ...(JSON.parse(localStorage.getItem('nexora_settings') || '{}')), ...data };
-            const mergedStats = { ...DEFAULT_STATS, ...(JSON.parse(localStorage.getItem('nexora_stats') || '{}')), ...(data.stats || {}) };
+            // Source of Truth is NOW Firestore on login
+            const firestoreSettings = { ...DEFAULT_SETTINGS, ...data };
+            const firestoreStats = { ...DEFAULT_STATS, ...(data.stats || {}) };
 
             // Fetch specific settings
             const spaceSettingsDoc = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'space'));
             if (spaceSettingsDoc.exists()) {
-              mergedSettings.spaceOnboardingCompleted = !!spaceSettingsDoc.data().completed;
+              firestoreSettings.spaceOnboardingCompleted = !!spaceSettingsDoc.data().completed;
             }
 
             // Fetch detailed stats
             const detailedStatsDoc = await getDoc(doc(db, 'users', currentUser.uid, 'stats', 'main'));
             if (detailedStatsDoc.exists()) {
-              Object.assign(mergedStats, detailedStatsDoc.data());
+              Object.assign(firestoreStats, detailedStatsDoc.data());
             }
 
-            setSettings(mergedSettings);
-            setStats(mergedStats);
+            setSettings(firestoreSettings);
+            setStats(firestoreStats);
             
             const progressDoc = await getDoc(doc(db, 'users', currentUser.uid, 'progress', today));
             if (progressDoc.exists()) {
               setDailyProgress(prev => ({ ...prev, ...progressDoc.data() }));
             }
             
+            // Only after state is set, we allow syncing BACK to firestore
             dataLoadedFromFirestore.current = true;
             setIsDataReady(true);
           }
@@ -2171,6 +2170,71 @@ export default function App() {
     return d.toISOString().split('T')[0];
   };
 
+  const onClearCache = async () => {
+    try {
+      // 1. Clear Service Worker Caches
+      if ('caches' in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map(name => caches.delete(name)));
+      }
+      // 2. Clear critical localStorage keys (but KEEP auth/settings/stats)
+      const keysToKeep = ['nexora_settings', 'nexora_stats', 'firebase:authUser'];
+      Object.keys(localStorage).forEach(key => {
+        if (!keysToKeep.some(k => key.includes(k))) {
+          localStorage.removeItem(key);
+        }
+      });
+      showToast('Static cache cleared! 🧹', 'success');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+      console.error(err);
+      showToast('Cache clear failed', 'error');
+    }
+  };
+
+  const onExportData = () => {
+    const data = {
+      settings,
+      stats,
+      history,
+      exportedAt: new Date().toISOString(),
+      user: user?.email
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nexora_data_${today}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Data exported! Check downloads. 📥', 'success');
+  };
+
+  const onSubmitFeedback = async (feedbackData: { rating: number, message: string, category: string }) => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, 'feedback'), {
+        ...feedbackData,
+        userId: user.uid,
+        userEmail: user.email,
+        createdAt: serverTimestamp(),
+        version: currentAppVersion
+      });
+      showToast('Feedback sent! Thanks bro! 🏮', 'success');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to send feedback', 'error');
+    }
+  };
+
+  const onShowManifesto = () => {
+    setShowUpdatePopup(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-blue-50">
@@ -2570,6 +2634,10 @@ export default function App() {
                     onSendTestNotification={sendTestNotification}
                     onSendMotivation={sendMotivation}
                     onSendTestEmail={sendTestEmail}
+                    onClearCache={onClearCache}
+                    onExportData={onExportData}
+                    onSubmitFeedback={onSubmitFeedback}
+                    onShowManifesto={onShowManifesto}
                     showToast={showToast}
                     sendNotification={(title, body) => sendNotification(title, { body })}
                   />

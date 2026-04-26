@@ -167,13 +167,15 @@
       "description": "User feedback messages",
       "type": "object",
       "properties": {
-        "name": { "type": "string" },
-        "email": { "type": "string" },
+        "rating": { "type": "number", "minimum": 1, "maximum": 5 },
+        "category": { "type": "string" },
         "message": { "type": "string" },
-        "createdAt": { "type": "string" },
-        "userId": { "type": "string" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "version": { "type": "string" }
       },
-      "required": ["name", "email", "message", "createdAt", "userId"]
+      "required": ["rating", "category", "message", "createdAt", "userId"]
     },
     "CustomPlan": {
       "title": "CustomPlan",
