@@ -29,6 +29,9 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   const [textOverlay, setTextOverlay] = useState('');
   const [stickers, setStickers] = useState<{ id: string, type: string, x: number, y: number }[]>([]);
   const [quality, setQuality] = useState<'Standard' | 'HD' | '4K' | 'Ultra'>('HD');
+  const [useWatermark, setUseWatermark] = useState(true);
+  const [aiEnhanced, setAiEnhanced] = useState(false);
+  const [isCinematic, setIsCinematic] = useState(false);
   const [caption, setCaption] = useState('');
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -110,13 +113,20 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   };
 
   const getEffectFilter = () => {
+    let filter = '';
     switch(selectedEffect) {
-      case 'retro': return 'sepia(0.8) contrast(1.2) brightness(0.9)';
-      case 'neon': return 'hue-rotate(90deg) saturate(2) brightness(1.2)';
-      case 'noir': return 'grayscale(1) contrast(1.5)';
-      case 'cyber': return 'hue-rotate(180deg) invert(0.1) saturate(1.5)';
-      default: return 'none';
+      case 'retro': filter = 'sepia(0.8) contrast(1.2) brightness(0.9)'; break;
+      case 'neon': filter = 'hue-rotate(90deg) saturate(2) brightness(1.2)'; break;
+      case 'noir': filter = 'grayscale(1) contrast(1.5)'; break;
+      case 'cyber': filter = 'hue-rotate(180deg) invert(0.1) saturate(1.5)'; break;
+      default: filter = 'none';
     }
+    
+    if (aiEnhanced) {
+      filter = filter === 'none' ? 'saturate(1.4) brightness(1.1) contrast(1.1)' : `${filter} saturate(1.3) contrast(1.1)`;
+    }
+    
+    return filter;
   };
 
   return (
@@ -195,10 +205,16 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
             {/* Full Screen Editor Preview */}
             <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
                <div 
-                className="relative w-full h-full max-w-md aspect-[9/16] bg-neutral-900 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer flex items-center justify-center"
+                className="relative w-full h-full max-w-md aspect-[9/16] bg-neutral-900 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer flex items-center justify-center transition-all duration-700"
                 style={{ filter: getEffectFilter() }}
                 onClick={() => setIsPaused(!isPaused)}
                >
+                {isCinematic && (
+                  <>
+                    <div className="absolute top-0 inset-x-0 h-[12%] bg-black z-50 transition-all duration-700" />
+                    <div className="absolute bottom-0 inset-x-0 h-[12%] bg-black z-50 transition-all duration-700" />
+                  </>
+                )}
                 <AnimatePresence mode="wait">
                   <motion.div 
                     key={`${currentMediaIndex}-${capturedMedia[currentMediaIndex]?.url}`}
@@ -211,6 +227,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                     {capturedMedia.length > 0 ? (
                       capturedMedia[currentMediaIndex]?.type === 'video' ? (
                         <video 
+                          key={`video-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}`}
                           ref={videoRef}
                           src={capturedMedia[currentMediaIndex].url} 
                           autoPlay={!isPaused} 
@@ -219,7 +236,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                           className="w-full h-full object-cover"
                           onLoadedData={(e) => {
                             const video = e.currentTarget;
-                            video.muted = false; // Turn on audio
+                            video.muted = false;
                             if (!isPaused) {
                               video.play().catch(err => {
                                 console.log("Audio autoplay prevented - waiting for click:", err);
@@ -320,6 +337,13 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                       {s.type === 'fire' ? '🔥' : s.type === 'nexus' ? '✨' : s.type === 'diamond' ? '💎' : s.type === 'rocket' ? '🚀' : s.type}
                     </motion.div>
                   ))}
+                  
+                  {useWatermark && (
+                    <div className="absolute top-6 right-6 opacity-30 z-50 pointer-events-none flex flex-col items-end">
+                       <p className="text-[10px] font-black italic tracking-tighter text-white">NEXORA</p>
+                       <div className="w-8 h-[1px] bg-orange-500" />
+                    </div>
+                  )}
                </div>
             </div>
 
@@ -347,6 +371,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                  { id: 'vibe', icon: <Smile size={20} />, label: 'Vibe' },
                  { id: 'music', icon: <Music size={20} />, label: 'Audio' },
                  { id: 'magic', icon: <Wand2 size={20} />, label: 'Lens' },
+                 { id: 'settings', icon: <Monitor size={20} />, label: 'Setup' },
                  { id: 'edit', icon: <Scissors size={20} />, label: 'Sync' }
                ].map(tool => (
                  <button 
@@ -493,6 +518,50 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                    </div>
                 </motion.div>
               )}
+              {activeTool === 'settings' && (
+                <motion.div 
+                  initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
+                  className="absolute bottom-32 left-1/2 -translate-x-1/2 w-full max-w-sm p-6 z-50"
+                >
+                   <div className="bg-black/80 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 shadow-3xl space-y-6">
+                      <div className="space-y-4">
+                         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Render Quality</p>
+                         <div className="grid grid-cols-4 gap-2">
+                           {['Standard', 'HD', '4K', 'Ultra'].map(q => (
+                             <button 
+                                key={q}
+                                onClick={() => setQuality(q as any)}
+                                className={`py-2 rounded-xl border text-[10px] font-black uppercase transition-all ${quality === q ? 'bg-orange-500 border-orange-500 text-white' : 'bg-white/5 border-white/10 text-white/40'}`}
+                             >
+                               {q}
+                             </button>
+                           ))}
+                         </div>
+                      </div>
+
+                      <div className="space-y-3">
+                         {[
+                           { id: 'watermark', label: 'Nexora Watermark', state: useWatermark, setter: setUseWatermark },
+                           { id: 'ai', label: 'AI Vibe Enhancer', state: aiEnhanced, setter: setAiEnhanced },
+                           { id: 'cinematic', label: 'Cinematic Ratio', state: isCinematic, setter: setIsCinematic }
+                         ].map(setting => (
+                           <div key={setting.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-white/60">{setting.label}</span>
+                              <button 
+                                onClick={() => setting.setter(!setting.state)}
+                                className={`w-12 h-6 rounded-full relative transition-colors ${setting.state ? 'bg-orange-500' : 'bg-white/10'}`}
+                              >
+                                 <motion.div 
+                                    animate={{ x: setting.state ? 24 : 4 }}
+                                    className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-lg"
+                                 />
+                              </button>
+                           </div>
+                         ))}
+                      </div>
+                   </div>
+                </motion.div>
+              )}
             </AnimatePresence>
 
             {/* Bottom Primary Action */}
@@ -520,6 +589,12 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                {/* Preview Card */}
                <div className="relative group mx-auto">
                   <div className="w-[280px] aspect-[9/16] rounded-[2.5rem] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,1)] border-4 border-white/5 relative bg-black transform rotate-1 group-hover:rotate-0 transition-transform duration-700">
+                    {isCinematic && (
+                      <>
+                        <div className="absolute top-0 inset-x-0 h-[10%] bg-black z-50 pointer-events-none" />
+                        <div className="absolute bottom-0 inset-x-0 h-[10%] bg-black z-50 pointer-events-none" />
+                      </>
+                    )}
                     <AnimatePresence mode="wait">
                       <motion.div 
                         key={`${currentMediaIndex}-${capturedMedia[currentMediaIndex]?.url}`}
@@ -531,6 +606,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                       >
                         {capturedMedia[currentMediaIndex]?.type === 'video' ? (
                           <video 
+                            key={`preview-video-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}`}
                             src={capturedMedia[currentMediaIndex].url} 
                             autoPlay 
                             playsInline 
@@ -555,6 +631,12 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                     </AnimatePresence>
                     {audioFile && <audio src={audioFile} autoPlay loop />}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    {useWatermark && (
+                      <div className="absolute top-6 right-6 opacity-30 z-50 pointer-events-none flex flex-col items-end">
+                         <p className="text-[10px] font-black italic tracking-tighter text-white">NEXORA</p>
+                         <div className="w-8 h-[1px] bg-orange-500" />
+                      </div>
+                    )}
                     <div className="absolute bottom-8 left-6 right-6 text-white">
                        <p className="text-[10px] font-black italic mb-1 uppercase tracking-widest">@{user?.displayName?.replace(/\s+/g, '')}</p>
                        <p className="text-[8px] opacity-60 leading-none">{caption || 'Nexora Studio Release'}</p>
