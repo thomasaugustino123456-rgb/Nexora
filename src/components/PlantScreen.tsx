@@ -177,7 +177,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
                     <button
                       key={type}
                       disabled={!isUnlocked}
-                      onClick={() => { vibrate(10); onSwitchType(type); setShowGarden(false); }}
+                      onClick={() => { vibrate(10); if (settings.soundEnabled) play('tab'); onSwitchType(type); setShowGarden(false); }}
                       className={`relative group flex flex-col items-center p-6 rounded-[2rem] transition-all ${
                         isUnlocked 
                           ? isActive ? 'bg-green-500 text-white shadow-xl shadow-green-500/20' : 'bg-gray-100 hover:bg-gray-200'

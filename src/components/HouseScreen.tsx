@@ -493,6 +493,7 @@ export function HouseScreen({
           <button 
             onClick={() => {
               vibrate(10);
+              if (settings.soundEnabled) play('tab');
               setActiveRoom(prev => (prev + 1) % 3);
             }}
             className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md flex items-center gap-2"
@@ -530,6 +531,7 @@ export function HouseScreen({
                   exit={{ opacity: 0, x: -20 }}
                   onClick={() => {
                     vibrate(10);
+                    if (settings.soundEnabled) play('tab');
                     setActiveRoom(prev => prev - 1);
                   }}
                   className="p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md border border-white/10 shadow-2xl group"
@@ -559,6 +561,7 @@ export function HouseScreen({
                   exit={{ opacity: 0, x: 20 }}
                   onClick={() => {
                     vibrate(10);
+                    if (settings.soundEnabled) play('tab');
                     setActiveRoom(prev => prev + 1);
                   }}
                   style={isRoomCompleted(activeRoom) && !isHouseUnlocked(activeRoom + 1) ? {

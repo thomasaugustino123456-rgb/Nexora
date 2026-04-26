@@ -668,6 +668,17 @@ export default function App() {
   }, [stats]);
 
   const { play, stop, playMusic, stopAllMusic } = useSound();
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (settings.soundEnabled) {
+      play('nav');
+    }
+  }, [activeScreen, settings.soundEnabled]);
   const [history, setHistory] = useState<DailyProgress[]>([]);
   const [earnedTrophyToday, setEarnedTrophyToday] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);

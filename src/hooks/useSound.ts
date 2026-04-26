@@ -22,6 +22,8 @@ const SOUNDS = {
   'music-complicated': "https://res.cloudinary.com/dfoty883a/video/upload/v1775223497/mixkit-complicated-281_iqtv8a.mp3",
   coin: "https://actions.google.com/sounds/v1/ui/gameshow_correct_answer.ogg",
   water: "https://res.cloudinary.com/dfoty883a/video/upload/v1775302429/mixkit-liquid-bubble-3000_dvewrr.wav",
+  nav: "https://res.cloudinary.com/ddtfq9acc/video/upload/q_auto/f_auto/v1777215538/mixkit-retro-arcade-casino-notification-211_chrmoj.wav",
+  tab: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1777215960/mixkit-explainer-video-game-alert-sweep-236_xmqkot.wav",
 };
 
 // Module-level cache for audio objects
