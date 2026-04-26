@@ -1301,8 +1301,18 @@ export default function App() {
   };
   
   const sendTestNotification = async () => {
+    // Diagnose health first if needed
+    try {
+      const health = await fetch('/api/health');
+      if (!health.ok) {
+        showToast('Server Health Check Failed. Is the server running?', 'error');
+      }
+    } catch (e) {
+      console.warn('Health check failed', e);
+    }
+
     if (!fcmToken) {
-      showToast('No device token found. Please enable notifications.', 'error');
+      showToast('No device token found. Please ensure notifications are enabled in browser settings.', 'error');
       return;
     }
 
@@ -1321,7 +1331,7 @@ export default function App() {
 
       if (!response.ok) {
         const text = await response.text();
-        showToast('Server Error: ' + (text.substring(0, 50) || response.statusText), 'error');
+        showToast(`Server Error (${response.status}): ` + (text.substring(0, 50) || response.statusText), 'error');
         return;
       }
 

@@ -13,22 +13,35 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize Firebase Admin
-const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
-const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
+let db: admin.firestore.Firestore;
+try {
+  const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
+  const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
 
-const app = !admin.apps.length 
-  ? admin.initializeApp({
+  if (!admin.apps.length) {
+    admin.initializeApp({
       projectId: firebaseConfig.projectId,
       credential: admin.credential.applicationDefault()
-    })
-  : admin.app();
-
-const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || undefined);
+    });
+    console.log("Firebase Admin: Initialized with Application Default Credentials");
+  }
+  
+  db = getFirestore(admin.app(), firebaseConfig.firestoreDatabaseId || undefined);
+  console.log("Firestore Admin: Connected to database", firebaseConfig.firestoreDatabaseId || "(default)");
+} catch (err: any) {
+  console.error("Firebase Admin Initialization Failed:", err.message);
+  // Fail-safe: if it fails, we still want the server to start for the frontend
+  // but we should provide a way to see the error.
+}
 
 // Background Scheduler for Reminders
 const startScheduler = () => {
   console.log("Notification Scheduler: Starting... (Checking every minute)");
   setInterval(async () => {
+    if (!db) {
+      console.warn("Scheduler: Firestore DB not initialized, skipping tick.");
+      return;
+    }
     const now = new Date();
     console.log(`Notification Scheduler: Universal Tick at ${now.toISOString()}`);
 
@@ -61,22 +74,16 @@ const startScheduler = () => {
         // Get user's local time string "HH:mm"
         let userTimeStr = "";
         try {
-          const formatter = new Intl.DateTimeFormat('en-GB', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-            timeZone: tz
-          });
-          userTimeStr = formatter.format(now);
+          const localDate = new Date(now.toLocaleString("en-US", {timeZone: tz}));
+          const userHour = localDate.getHours().toString().padStart(2, '0');
+          const userMin = localDate.getMinutes().toString().padStart(2, '0');
+          userTimeStr = `${userHour}:${userMin}`;
+          console.log(`Scheduler Debug: User ${userDoc.id} local time is ${userTimeStr} (${tz})`);
         } catch (e) {
-          // Fallback to UTC if timezone is invalid
-          const formatter = new Intl.DateTimeFormat('en-GB', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-            timeZone: 'UTC'
-          });
-          userTimeStr = formatter.format(now);
+          // Fallback to UTC
+          const userHour = now.getUTCHours().toString().padStart(2, '0');
+          const userMin = now.getUTCMinutes().toString().padStart(2, '0');
+          userTimeStr = `${userHour}:${userMin}`;
         }
 
         // 1. Task Reminders (Main & Streak Protection)
@@ -265,11 +272,32 @@ const MOTIVATIONAL_QUOTES = [
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
+
+  // Basic CORS and Body Parsing
+  app.use(express.json());
+  
+  // Health Check & Diagnostics
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "ok", 
+      firebase: !!db,
+      node_env: process.env.NODE_ENV,
+      port: PORT,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  app.get("/api/ping", (req, res) => res.send("pong"));
+
+  // Logging Middleware for API
+  app.use("/api", (req, res, next) => {
+    console.log(`[API Request] ${req.method} ${req.path}`);
+    next();
+  });
 
   // Middleware for Lemon Squeezy Webhook (needs raw body for signature verification)
   app.use("/api/webhook/lemonsqueezy", bodyParser.raw({ type: "application/json" }));
-  app.use(express.json());
 
   // Lemon Squeezy Webhook Endpoint
   app.post("/api/webhook/lemonsqueezy", async (req, res) => {

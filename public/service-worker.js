@@ -69,6 +69,11 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - network-first for navigation, cache-first for others
 self.addEventListener('fetch', (event) => {
+  // EXCLUDE API calls from service worker interception
+  if (event.request.url.includes('/api/')) {
+    return;
+  }
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
