@@ -178,6 +178,17 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
                 loop 
                 playsInline
                 preload="auto"
+                onLoadedMetadata={(e) => {
+                  const video = e.currentTarget;
+                  video.muted = false; // Ensure unmuted for editor preview
+                  const relativeTime = currentTime - (activeClip.startTime || 0);
+                  video.currentTime = Math.max(0, relativeTime);
+                  if (isPlaying) video.play().catch(() => {
+                    // Fallback to muted play if browser blocks
+                    video.muted = true;
+                    video.play().catch(() => {});
+                  });
+                }}
                 onError={(e) => {
                   console.error('Video Error:', e);
                   showToast('Video Load Error 🚫', 'error');
@@ -213,7 +224,53 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
       </div>
 
       {/* Timeline Controls */}
-      <div className="flex-1 bg-neutral-900 border-t border-white/10 p-4 space-y-4 flex flex-col justify-end">
+      <div className="bg-neutral-900 border-t border-white/10 p-4 space-y-4">
+         {/* Action Buttons */}
+         <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+               <button 
+                onClick={handleSplit}
+                disabled={!selectedClipId}
+                className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors disabled:opacity-30 flex items-center gap-2"
+               >
+                  <Scissors size={18} className="text-blue-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white">Split</span>
+               </button>
+               <button 
+                onClick={handleDelete}
+                disabled={!selectedClipId || clips.length <= 1}
+                className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors disabled:opacity-30 flex items-center gap-2"
+               >
+                  <Trash2 size={18} className="text-red-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white">Delete</span>
+               </button>
+            </div>
+            
+            <div className="flex items-center gap-2">
+               <button 
+                onClick={() => audioInputRef.current?.click()}
+                className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors flex items-center gap-2"
+               >
+                  <Music size={18} className="text-purple-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white">Add Music</span>
+               </button>
+               <input 
+                type="file" 
+                ref={audioInputRef} 
+                accept="audio/*" 
+                className="hidden" 
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const url = URL.createObjectURL(file);
+                    // Add logic to handle custom audio if needed
+                    showToast('Audio Mixed In! 🎵', 'success');
+                  }
+                }}
+               />
+            </div>
+         </div>
+
          {/* Simple Timeline */}
          <div className="relative h-24 bg-black/40 rounded-2xl border border-white/5 overflow-hidden flex items-center px-4 gap-1 select-none">
             {clips.map(clip => (

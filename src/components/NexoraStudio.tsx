@@ -218,10 +218,13 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                           playsInline 
                           className="w-full h-full object-cover"
                           onLoadedData={(e) => {
-                            // Force unmute and try to play if needed
                             const video = e.currentTarget;
-                            video.muted = false;
-                            if (!isPaused) video.play().catch(() => {});
+                            video.muted = false; // Turn on audio
+                            if (!isPaused) {
+                              video.play().catch(err => {
+                                console.log("Audio autoplay prevented - waiting for click:", err);
+                              });
+                            }
                           }}
                         />
                       ) : (
