@@ -1,21 +1,61 @@
 {
-  "version": "1.5.2",
-  "releaseDate": "2026-04-17",
-  "updates": [
+  "currentVersion": "1.5.2",
+  "history": [
     {
-      "category": "House System",
-      "title": "Furniture Stability v2",
-      "description": "Fixed the 'messy room' bug! Your furniture arrangements are now perfectly preserved across all room styles using stable ID tracking."
+      "version": "1.5.2",
+      "date": "2026-04-26",
+      "title": "Connectivity & AI Boost",
+      "updates": [
+        {
+          "category": "System",
+          "title": "Firestore Hybrid Sync",
+          "description": "Improved connection reliability. The app now handles offline states and permission errors gracefully."
+        },
+        {
+          "category": "AI",
+          "title": "Gemini 1.5 Integration",
+          "description": "Mascot AI is now powered by Gemini 1.5 Flash for faster, more intelligent motivational responses."
+        },
+        {
+          "category": "Notifications",
+          "title": "Scheduler V2",
+          "description": "Server-side notification scheduler is now project-aware, ensuring reminders hit your device exactly on time."
+        }
+      ]
     },
     {
-      "category": "UX Improvement",
-      "title": "Bring to Front Logic",
-      "description": "Moved items now automatically jump to the top layer, making it much easier to layer your furniture."
+      "version": "1.5.1",
+      "date": "2026-04-17",
+      "title": "House Decor Update",
+      "updates": [
+        {
+          "category": "House System",
+          "title": "Furniture Stability",
+          "description": "Fixed the 'messy room' bug! Your furniture arrangements are now perfectly preserved across sessions."
+        },
+        {
+          "category": "UX",
+          "title": "Layering Logic",
+          "description": "Moved items now automatically jump to the top layer for easier interior design."
+        }
+      ]
     },
     {
-      "category": "System",
-      "title": "Sync+ Optimization",
-      "description": "Optimized firestore sync logic for even more reliable data persistence across sessions."
+      "version": "1.5.0",
+      "date": "2026-04-10",
+      "title": "The Nexora Reflected",
+      "updates": [
+        {
+          "category": "UI",
+          "title": "Glassmorphism 2.0",
+          "description": "Entire app redesigned with premium glass-blur effects and fluid transitions."
+        },
+        {
+          "category": "Gamification",
+          "title": "Leveling System",
+          "description": "New XP and Level system to track your productivity progress."
+        }
+      ]
     }
   ]
 }

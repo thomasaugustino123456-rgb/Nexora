@@ -13,11 +13,15 @@ const firebaseConfig = {
   appId: firebaseConfigData.appId,
 };
 
+console.log("Firebase Initialization: Using project", firebaseConfigData.projectId);
+const databaseId = firebaseConfigData.firestoreDatabaseId || "(default)";
+console.log("Firestore Initialization: Using database", databaseId);
+
 const app = initializeApp(firebaseConfig);
 
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
-}, firebaseConfigData.firestoreDatabaseId);
+}, databaseId === "(default)" ? undefined : databaseId);
 
 export const auth = getAuth(app);
 

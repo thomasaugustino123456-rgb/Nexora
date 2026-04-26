@@ -50,69 +50,86 @@ import { requestNotificationPermission, setupOnMessageListener } from './lib/not
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 function WhatIsNewModal({ onClose }: { onClose: () => void }) {
-  const [updates, setUpdates] = useState<any>(null);
+  const [data, setData] = useState<any>(null);
 
   useEffect(() => {
     fetch('/updates.json')
       .then(res => res.json())
-      .then(data => setUpdates(data))
+      .then(d => setData(d))
       .catch(err => console.error('Failed to fetch updates:', err));
   }, []);
 
-  if (!updates) return null;
+  if (!data) return null;
 
   return (
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-blue-900/40 backdrop-blur-md"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-blue-900/60 backdrop-blur-md"
       onClick={onClose}
     >
       <motion.div 
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
-        className="glass-card w-full max-w-md p-8 space-y-6 relative overflow-hidden"
+        className="glass-card w-full max-w-2xl p-6 sm:p-8 space-y-6 relative overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         <div className="absolute top-0 right-0 p-4">
-          <button onClick={onClose} className="p-2 hover:bg-blue-50 rounded-full text-blue-400 transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full text-blue-100 transition-colors" title="Close">
             <X size={20} />
           </button>
         </div>
 
         <div className="flex items-center gap-4 mb-2">
           <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-200">
-            <Sparkles size={24} />
+            <History size={24} />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-blue-900 leading-tight">What's New!</h2>
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest">Version {updates.version}</p>
+            <h2 className="text-2xl font-black text-blue-900 leading-tight">Nexora Manifesto</h2>
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest">Version History & Review</p>
           </div>
         </div>
 
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-          {updates.updates.map((update: any, i: number) => (
-            <div key={i} className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-[10px] font-black uppercase rounded-md">
-                  {update.category}
-                </span>
-                <h4 className="font-bold text-blue-900 text-sm">{update.title}</h4>
+        <div className="space-y-8 max-h-[70vh] overflow-y-auto pr-4 custom-scrollbar">
+          {(data.history || []).map((release: any) => (
+            <div key={release.version} className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-[2px] flex-1 bg-blue-100"></div>
+                <div className="px-3 py-1 bg-blue-50 rounded-full text-[10px] font-black text-blue-600 uppercase tracking-tighter">
+                  v{release.version} — {release.date}
+                </div>
+                <div className="h-[2px] flex-1 bg-blue-100"></div>
               </div>
-              <p className="text-xs text-blue-900/60 leading-relaxed pl-2 border-l-2 border-blue-100 ml-1">
-                {update.description}
-              </p>
+              
+              <div className="pl-4 border-l-2 border-blue-500/20 space-y-4">
+                <h3 className="text-lg font-black text-blue-900 uppercase tracking-tight">{release.title}</h3>
+                {release.updates.map((update: any, idx: number) => (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-blue-600 text-white text-[8px] font-black uppercase rounded-md">
+                        {update.category}
+                      </span>
+                      <h4 className="text-sm font-black text-blue-900 tracking-tight">{update.title}</h4>
+                    </div>
+                    <p className="text-xs text-blue-700/80 leading-relaxed font-medium">
+                      {update.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
 
-        <button 
-          onClick={onClose}
-          className="btn-primary w-full py-4 text-sm font-black uppercase tracking-widest shadow-xl shadow-blue-200"
-        >
-          Awesome! 🚀
-        </button>
+        <div className="pt-4 border-t border-blue-100 flex justify-center">
+          <button 
+            onClick={onClose}
+            className="px-8 py-3 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100 hover:scale-105 active:scale-95 transition-all"
+          >
+            Got it, bro!
+          </button>
+        </div>
       </motion.div>
     </motion.div>
   );
@@ -331,8 +348,10 @@ function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSetting
       const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
       const result = await model.generateContent(prompt);
       setResponse(result.response.text() || "I'm here for you, bro! 🌊");
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Mascot AI Chat Error:', error);
       setResponse("I'm a bit parched right now, but I'm still cheering for you! 🚀");
+      showToast(`AI Error: ${error.message || 'Connection failed'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -351,8 +370,10 @@ function MascotAI({ stats, settings }: { stats: UserStats, settings: UserSetting
       const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
       const result = await model.generateContent(prompt);
       setResponse(result.response.text() || "You're doing great, bro! Keep that streak alive! 🌊");
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Mascot AI Motivation Error:', error);
       setResponse("I'm always here to cheer you on! Let's crush today! 🚀");
+      showToast(`Motivation AI Error: ${error.message || 'Sync failed'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -1313,9 +1334,11 @@ export default function App() {
 
     if (!fcmToken) {
       showToast('No device token found. Please ensure notifications are enabled in browser settings.', 'error');
+      console.error('FCM Token missing');
       return;
     }
 
+    console.log('Sending test notification to token:', fcmToken);
     try {
       const response = await fetch('/api/send-notification', {
         method: 'POST',
@@ -1331,29 +1354,32 @@ export default function App() {
 
       if (!response.ok) {
         const text = await response.text();
-        showToast(`Server Error (${response.status}): ` + (text.substring(0, 50) || response.statusText), 'error');
+        console.error('Server Error (Notification):', response.status, text);
+        showToast(`Server Error (${response.status}): ` + (text.substring(0, 100) || response.statusText), 'error');
         return;
       }
 
       const data = await response.json();
 
       if (data.success) {
-        showToast('Test notification sent!', 'success');
+        showToast('Test notification sent! Check your device.', 'success');
       } else {
+        console.error('Notification send failure:', data.error);
         showToast('Failed to send: ' + data.error, 'error');
       }
     } catch (error: any) {
       console.error('Error sending test notification:', error);
-      showToast('Error: ' + error.message, 'error');
+      showToast('Connection Error: ' + error.message, 'error');
     }
   };
 
   const sendMotivation = async () => {
     if (!fcmToken) {
-      showToast('No device token found.', 'error');
+      showToast('Notification token missing. Enable notifications first!', 'error');
       return;
     }
 
+    console.log('Requesting AI Motivation for token:', fcmToken);
     try {
       const response = await fetch('/api/send-motivation', {
         method: 'POST',
@@ -1367,20 +1393,22 @@ export default function App() {
 
       if (!response.ok) {
         const text = await response.text();
-        showToast('Server Error: ' + (text.substring(0, 50) || response.statusText), 'error');
+        console.error('Server Error (Motivation):', response.status, text);
+        showToast('Server Error: ' + (text.substring(0, 100) || response.statusText), 'error');
         return;
       }
 
       const data = await response.json();
 
       if (data.success) {
-        showToast('Motivation sent! 🔥', 'success');
+        showToast('AI Motivation transmitted! 🔥', 'success');
       } else {
-        showToast('Failed: ' + data.error, 'error');
+        console.error('Motivation send failure:', data.error);
+        showToast('Sync Failed: ' + data.error, 'error');
       }
     } catch (error: any) {
       console.error('Error sending motivation:', error);
-      showToast('Error: ' + error.message, 'error');
+      showToast('Sync Error: ' + error.message, 'error');
     }
   };
 
@@ -1591,10 +1619,16 @@ export default function App() {
 
     async function testConnection() {
       try {
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         await getDocFromServer(doc(db, 'test', 'connection'));
-      } catch (error) {
+        console.log("Firestore: Connection verified");
+      } catch (error: any) {
         console.warn("Firestore status check:", error);
+        if (error.message?.includes("reach Cloud Firestore")) {
+          showToast("Firestore Unreachable. Please check your internet or reload. App will use offline cache.", 'warning');
+        } else if (error.message?.includes("permissions")) {
+          showToast("Firestore Permissions Error. Some features might be restricted.", 'error');
+        }
       }
     }
     testConnection();
@@ -2226,18 +2260,21 @@ export default function App() {
   const onSubmitFeedback = async (feedbackData: { rating: number, message: string, category: string }) => {
     if (!user) return;
     try {
+      const userLocation = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown';
       await addDoc(collection(db, 'feedback'), {
         ...feedbackData,
-        userId: user.uid,
+        userName: user.displayName || user.email?.split('@')[0] || 'Unknown User',
+        userLocation: userLocation,
         userEmail: user.email,
+        userId: user.uid,
         createdAt: serverTimestamp(),
         version: currentAppVersion
       });
-      showToast('Feedback sent! Thanks bro! 🏮', 'success');
+      showToast('Feedback transmitted! HQ is on it, bro! 🏮', 'success');
       vibrate(VIBRATION_PATTERNS.SUCCESS);
     } catch (err) {
-      console.error(err);
-      showToast('Failed to send feedback', 'error');
+      console.error('Feedback Error:', err);
+      showToast('Transmission failed. Connectivity issue?', 'error');
     }
   };
 
@@ -2427,6 +2464,12 @@ export default function App() {
               </button>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showUpdatePopup && (
+          <WhatIsNewModal onClose={() => setShowUpdatePopup(false)} />
         )}
       </AnimatePresence>
 

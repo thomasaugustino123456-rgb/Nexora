@@ -170,12 +170,14 @@
         "rating": { "type": "number", "minimum": 1, "maximum": 5 },
         "category": { "type": "string" },
         "message": { "type": "string" },
+        "userName": { "type": "string" },
+        "userLocation": { "type": "string" },
+        "userEmail": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" },
-        "userEmail": { "type": "string" },
         "version": { "type": "string" }
       },
-      "required": ["rating", "category", "message", "createdAt", "userId"]
+      "required": ["rating", "category", "message", "userName", "userLocation", "userEmail", "createdAt", "userId"]
     },
     "CustomPlan": {
       "title": "CustomPlan",

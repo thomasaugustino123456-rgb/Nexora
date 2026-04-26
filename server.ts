@@ -8,6 +8,7 @@ import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 import { Resend } from "resend";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,21 +18,59 @@ let db: admin.firestore.Firestore;
 try {
   const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
   const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
+  
+  const projectId = firebaseConfig.projectId || process.env.GOOGLE_CLOUD_PROJECT;
+  const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
+
+  console.log("Firebase Debug: GOOGLE_APPLICATION_CREDENTIALS =", process.env.GOOGLE_APPLICATION_CREDENTIALS || "not set");
+  console.log("Firebase Debug: GOOGLE_CLOUD_PROJECT =", process.env.GOOGLE_CLOUD_PROJECT || "not set");
 
   if (!admin.apps.length) {
-    admin.initializeApp({
-      projectId: firebaseConfig.projectId,
-      credential: admin.credential.applicationDefault()
-    });
-    console.log("Firebase Admin: Initialized with Application Default Credentials");
+    try {
+      // Try default initialization first
+      admin.initializeApp();
+      console.log("Firebase Admin: Initialized with default settings");
+    } catch (e) {
+      // Fallback to explicit config if default fails
+      admin.initializeApp({
+        projectId: projectId,
+        credential: admin.credential.applicationDefault()
+      });
+      console.log(`Firebase Admin: Initialized project [${projectId}] via explicit config`);
+    }
   }
   
-  db = getFirestore(admin.app(), firebaseConfig.firestoreDatabaseId || undefined);
-  console.log("Firestore Admin: Connected to database", firebaseConfig.firestoreDatabaseId || "(default)");
+  // Use the named database if provided, otherwise default
+  try {
+    db = getFirestore(admin.app(), databaseId === "(default)" ? undefined : databaseId);
+    console.log(`Firestore Admin: Connected to database [${databaseId}]`);
+
+    // Verify connection/permissions immediately on startup
+    (async () => {
+      try {
+        await db.collection("users").limit(1).get();
+        console.log("Firestore Admin: Startup connection verification successful.");
+      } catch (e: any) {
+        console.error("Firestore Admin: Startup connection verification FAILED:", e.message);
+        
+        // If the named database failed with permission denied or not found, try falling back to (default)
+        if (databaseId !== "(default)" && (e.message.includes("PERMISSION_DENIED") || e.message.includes("NOT_FOUND") || e.message.includes("not found"))) {
+          console.warn(`Firestore Admin: Falling back to (default) database because [${databaseId}] failed.`);
+          db = getFirestore(admin.app(), undefined);
+          try {
+             await db.collection("users").limit(1).get();
+             console.log("Firestore Admin: Fallback to (default) successful.");
+          } catch (ee: any) {
+             console.error("Firestore Admin: Fallback to (default) also FAILED:", ee.message);
+          }
+        }
+      }
+    })();
+  } catch (err: any) {
+    console.error("Firestore Admin initialization failed at call site:", err.message);
+  }
 } catch (err: any) {
   console.error("Firebase Admin Initialization Failed:", err.message);
-  // Fail-safe: if it fails, we still want the server to start for the frontend
-  // but we should provide a way to see the error.
 }
 
 // Background Scheduler for Reminders
@@ -42,16 +81,22 @@ const startScheduler = () => {
       console.warn("Scheduler: Firestore DB not initialized, skipping tick.");
       return;
     }
+    
     const now = new Date();
     console.log(`Notification Scheduler: Universal Tick at ${now.toISOString()}`);
 
     try {
+      // Periodic connectivity check - if it fails, the catch block will handle it
       // 1. Get all users with notifications enabled
       let usersSnapshot;
       try {
         usersSnapshot = await db.collection("users").get();
       } catch (e: any) {
         console.error("Scheduler Error (Fetching Users):", e.message);
+        if (e.message.includes("PERMISSION_DENIED") || e.message.includes("not found")) {
+           console.warn("Scheduler: Detected permission/connectivity error, attempting to re-verify DB identity...");
+           // This will be caught by the outer catch and the next tick might work if we fixed db in init
+        }
         throw e;
       }
       
@@ -278,10 +323,22 @@ async function startServer() {
   app.use(express.json());
   
   // Health Check & Diagnostics
-  app.get("/api/health", (req, res) => {
+  app.get("/api/health", async (req, res) => {
+    let firebaseStatus = "unknown";
+    try {
+      if (db) {
+        await db.collection("users").limit(1).get();
+        firebaseStatus = "connected";
+      } else {
+        firebaseStatus = "not_initialized";
+      }
+    } catch (e: any) {
+      firebaseStatus = "error: " + e.message;
+    }
+    
     res.json({ 
       status: "ok", 
-      firebase: !!db,
+      firebase: firebaseStatus,
       node_env: process.env.NODE_ENV,
       port: PORT,
       timestamp: new Date().toISOString()
@@ -347,23 +404,61 @@ async function startServer() {
     }
 
     try {
-      const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+      let title = "Nexora Motivation 🔥";
+      let body = "Don't let your streak die! You're a beast, bro!";
+      
+      // Try to use Gemini to generate a fresh quote
+      if (process.env.GEMINI_API_KEY) {
+        try {
+          const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+          const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+          const prompt = "You are Nexora, a friendly water-bottle mascot for a productivity app. Generate a super short, punchy, and aggressive-but-friendly motivational push notification message for a user who needs to finish their habits today. Max 20 words. Include one emoji. Format: Title | Body";
+          const result = await model.generateContent(prompt);
+          const text = result.response.text().trim();
+          if (text.includes("|")) {
+            const parts = text.split("|");
+            title = parts[0].trim();
+            body = parts[1].trim();
+          } else {
+            body = text;
+          }
+        } catch (aiErr) {
+          console.error("AI Quote Generation failed, using static fallback:", aiErr);
+          const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+          title = randomQuote.title;
+          body = randomQuote.body;
+        }
+      } else {
+        const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+        title = randomQuote.title;
+        body = randomQuote.body;
+      }
       
       const message = {
         notification: {
-          title: randomQuote.title,
-          body: randomQuote.body,
+          title: title,
+          body: body,
+        },
+        webpush: {
+          notification: {
+            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png',
+            tag: 'motivation-sync',
+            renotify: true
+          },
+          fcmOptions: {
+            link: 'https://ais-pre-fhmpooizvatwhyk3zv744s-317478625149.europe-west2.run.app'
+          }
         },
         token: token,
       };
 
       console.log("Attempting to send motivation message:", message);
-      const response = await admin.messaging().send(message);
+      const response = await admin.messaging().send(message as any);
       console.log("Successfully sent motivation message:", response);
-      res.json({ success: true, messageId: response, quote: randomQuote });
+      res.json({ success: true, messageId: response, quote: { title, body } });
     } catch (error: any) {
       console.error("Error sending motivation:", error);
-      res.status(500).json({ error: error.message, stack: error.stack });
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -408,19 +503,32 @@ async function startServer() {
         return res.json({ success: true, messageId: data?.id });
       }
 
+      // Push Notification
       const message = {
         notification: {
-          title: title || "Nexora Challenge",
-          body: body || "Hey bro, it's time for your challenge!",
+          title: title || "Nexora Alert",
+          body: body || "You have a new message from Nexora!",
+        },
+        webpush: {
+          notification: {
+            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png',
+            badge: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png',
+            vibrate: [200, 100, 200],
+            tag: 'nexora-alert',
+            renotify: true
+          },
+          fcmOptions: {
+            link: 'https://ais-pre-fhmpooizvatwhyk3zv744s-317478625149.europe-west2.run.app'
+          }
         },
         token: token,
       };
 
-      const response = await admin.messaging().send(message);
-      console.log("Successfully sent message:", response);
-      res.json({ success: true, messageId: response });
+      console.log("Sending push notification:", message);
+      const pushRes = await admin.messaging().send(message as any);
+      res.json({ success: true, messageId: pushRes });
     } catch (error: any) {
-      console.error("Error sending message:", error);
+      console.error("Error sending notification:", error);
       res.status(500).json({ error: error.message });
     }
   });

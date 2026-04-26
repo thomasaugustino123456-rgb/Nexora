@@ -330,10 +330,13 @@ service cloud.firestore {
 
     match /feedback/{feedbackId} {
       allow create: if isAuthenticated() && 
-                    request.resource.data.keys().hasAll(['rating', 'category', 'message', 'createdAt', 'userId']) &&
+                    request.resource.data.keys().hasAll(['rating', 'category', 'message', 'userName', 'userLocation', 'userEmail', 'createdAt', 'userId']) &&
                     request.resource.data.rating is number && request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
                     request.resource.data.category is string && request.resource.data.category.size() < 100 &&
                     request.resource.data.message is string && request.resource.data.message.size() > 0 && request.resource.data.message.size() < 5000 &&
+                    request.resource.data.userName is string &&
+                    request.resource.data.userLocation is string &&
+                    request.resource.data.userEmail is string &&
                     request.resource.data.createdAt is timestamp &&
                     request.resource.data.userId == request.auth.uid;
       allow read: if isAdmin();
