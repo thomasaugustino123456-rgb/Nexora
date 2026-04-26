@@ -25,21 +25,21 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
   const timelineRef = useRef<HTMLDivElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize clips with a default duration or try to fetch it
+  // Normalize clips whenever media changes if we don't have clips yet
   useEffect(() => {
     if (media.length > 0 && clips.length === 0) {
       const initialClips = media.map((item, i) => ({ 
-        id: i.toString(), 
+        id: Math.random().toString(36).substr(2, 9), 
         url: item.url, 
         type: item.type,
-        duration: 10, // Default 10s for now
+        duration: 10, 
         startTime: i * 10 
       }));
       setClips(initialClips);
       setSelectedClipId(initialClips[0].id);
       setIsReady(true);
     }
-  }, [media]);
+  }, [media, clips.length]);
 
   const totalDuration = clips.reduce((acc, clip) => acc + clip.duration, 0);
 
@@ -64,6 +64,25 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
   }, [isPlaying, totalDuration]);
 
   const activeClip = clips.find(c => currentTime >= c.startTime && currentTime < c.startTime + c.duration) || clips[clips.length - 1];
+
+  // Sync video time with timeline
+  useEffect(() => {
+    if (videoRef.current && activeClip?.type === 'video') {
+      const video = videoRef.current;
+      const relativeTime = currentTime - (activeClip.startTime || 0);
+
+      // Only sync if significant difference to avoid flickering
+      if (Math.abs(video.currentTime - relativeTime) > 0.15) {
+        video.currentTime = Math.max(0, relativeTime);
+      }
+      
+      if (isPlaying) {
+        video.play().catch(e => console.log("Play error:", e));
+      } else {
+        video.pause();
+      }
+    }
+  }, [currentTime, isPlaying, activeClip?.id, activeClip?.url]);
 
   const handleSplit = () => {
     if (!selectedClipId) return;
@@ -143,8 +162,8 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
       </div>
 
       {/* Main Preview Area */}
-      <div className="flex-1 relative flex items-center justify-center p-8">
-         <div className="relative aspect-[9/16] h-full max-h-[500px] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center">
+      <div className="flex-[1.5] relative flex items-center justify-center p-4 min-h-0 bg-black/20">
+         <div className="relative aspect-[9/16] h-full max-h-[420px] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center">
             {!isReady ? (
               <div className="flex flex-col items-center gap-4">
                  <RotateCcw className="text-white/20 animate-spin" size={48} />
@@ -154,11 +173,15 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
               <video 
                 ref={videoRef}
                 src={activeClip.url} 
+                key={`${activeClip.id}-${activeClip.url}`}
                 className="w-full h-full object-cover"
-                autoPlay={isPlaying}
                 loop 
                 playsInline
-                onError={() => showToast('Video Load Error 🚫', 'error')}
+                preload="auto"
+                onError={(e) => {
+                  console.error('Video Error:', e);
+                  showToast('Video Load Error 🚫', 'error');
+                }}
               />
             ) : (
               <img 
@@ -190,7 +213,7 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
       </div>
 
       {/* Timeline Controls */}
-      <div className="bg-neutral-900/50 backdrop-blur-3xl border-t border-white/5 p-6 space-y-6 pb-12">
+      <div className="flex-1 bg-neutral-900 border-t border-white/10 p-4 space-y-4 flex flex-col justify-end">
          {/* Simple Timeline */}
          <div className="relative h-24 bg-black/40 rounded-2xl border border-white/5 overflow-hidden flex items-center px-4 gap-1 select-none">
             {clips.map(clip => (

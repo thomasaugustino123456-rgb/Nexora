@@ -43,10 +43,22 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
   useEffect(() => {
     const currentMedia = capturedMedia[currentMediaIndex];
     if (stage === 2 && currentMedia?.type === 'video' && videoRef.current) {
-      if (isPaused) videoRef.current.pause();
-      else videoRef.current.play().catch(() => {});
+      const video = videoRef.current;
+      if (isPaused) {
+        if (!video.paused) video.pause();
+      } else {
+        // Only trigger play if it's not actually playing
+        if (video.paused) {
+          const playPromise = video.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(error => {
+              console.log("Auto-play prevented, waiting for interaction:", error);
+            });
+          }
+        }
+      }
     }
-  }, [isPaused, stage, currentMediaIndex, capturedMedia]);
+  }, [isPaused, stage, currentMediaIndex, capturedMedia, selectedEffect, activeTool]);
 
   useEffect(() => {
     let interval: any;
@@ -68,9 +80,11 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
       type: (file.type.startsWith('video') ? 'video' : 'photo') as 'video' | 'photo'
     }));
     
-    setCapturedMedia(newMedia);
-    setCurrentMediaIndex(0);
-    setMediaType(newMedia[0].type);
+    setCapturedMedia(prev => [...prev, ...newMedia]);
+    if (capturedMedia.length === 0) {
+      setCurrentMediaIndex(0);
+      setMediaType(newMedia[0].type);
+    }
     setStage(2);
     vibrate(VIBRATION_PATTERNS.SUCCESS);
     showToast(`${newMedia.length} Media Loaded! 🏮`, 'success');
@@ -114,7 +128,9 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
             onBack={() => setIsProEditing(false)}
             onComplete={(newMedia) => {
               setCapturedMedia(newMedia);
+              setCurrentMediaIndex(0); // Reset to first clip after edit
               setIsProEditing(false);
+              showToast('Edits Locked In! 🔒', 'success');
             }}
           />
         ) : (
@@ -183,30 +199,45 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                 style={{ filter: getEffectFilter() }}
                 onClick={() => setIsPaused(!isPaused)}
                >
-                  {capturedMedia.length > 0 ? (
-                    capturedMedia[currentMediaIndex]?.type === 'video' ? (
-                      <video 
-                        ref={videoRef}
-                        src={capturedMedia[currentMediaIndex].url} 
-                        key={capturedMedia[currentMediaIndex].url}
-                        autoPlay={!isPaused} 
-                        loop 
-                        playsInline 
-                        className="w-full h-full object-cover" 
-                      />
+                <AnimatePresence mode="wait">
+                  <motion.div 
+                    key={`${currentMediaIndex}-${capturedMedia[currentMediaIndex]?.url}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="w-full h-full"
+                  >
+                    {capturedMedia.length > 0 ? (
+                      capturedMedia[currentMediaIndex]?.type === 'video' ? (
+                        <video 
+                          ref={videoRef}
+                          src={capturedMedia[currentMediaIndex].url} 
+                          autoPlay={!isPaused} 
+                          loop 
+                          playsInline 
+                          className="w-full h-full object-cover"
+                          onLoadedData={(e) => {
+                            // Force unmute and try to play if needed
+                            const video = e.currentTarget;
+                            video.muted = false;
+                            if (!isPaused) video.play().catch(() => {});
+                          }}
+                        />
+                      ) : (
+                        <img 
+                          src={capturedMedia[currentMediaIndex]?.url} 
+                          className="w-full h-full object-cover" 
+                        />
+                      )
                     ) : (
-                      <img 
-                        src={capturedMedia[currentMediaIndex]?.url} 
-                        key={capturedMedia[currentMediaIndex]?.url} 
-                        className="w-full h-full object-cover" 
-                      />
-                    )
-                  ) : (
-                    <div className="flex flex-col items-center gap-4">
-                       <RotateCw className="text-white/20 animate-spin" size={48} />
-                       <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Warping Reality...</p>
-                    </div>
-                  )}
+                      <div className="flex flex-col items-center gap-4 h-full justify-center">
+                         <RotateCw className="text-white/20 animate-spin" size={48} />
+                         <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Warping Reality...</p>
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
 
                   {/* Play/Pause Overlay */}
                   <AnimatePresence>
@@ -486,11 +517,39 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                {/* Preview Card */}
                <div className="relative group mx-auto">
                   <div className="w-[280px] aspect-[9/16] rounded-[2.5rem] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,1)] border-4 border-white/5 relative bg-black transform rotate-1 group-hover:rotate-0 transition-transform duration-700">
-                    {capturedMedia[currentMediaIndex]?.type === 'video' ? (
-                      <video src={capturedMedia[currentMediaIndex].url} autoPlay loop playsInline className="w-full h-full object-cover" />
-                    ) : (
-                      capturedMedia[currentMediaIndex] && <img src={capturedMedia[currentMediaIndex].url} className="w-full h-full object-cover" />
-                    )}
+                    <AnimatePresence mode="wait">
+                      <motion.div 
+                        key={`${currentMediaIndex}-${capturedMedia[currentMediaIndex]?.url}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="w-full h-full"
+                      >
+                        {capturedMedia[currentMediaIndex]?.type === 'video' ? (
+                          <video 
+                            src={capturedMedia[currentMediaIndex].url} 
+                            autoPlay 
+                            playsInline 
+                            onEnded={() => setCurrentMediaIndex((currentMediaIndex + 1) % capturedMedia.length)}
+                            className="w-full h-full object-cover"
+                            onLoadedData={(e) => { e.currentTarget.muted = false; }}
+                          />
+                        ) : (
+                          capturedMedia[currentMediaIndex] && (
+                            <img 
+                              src={capturedMedia[currentMediaIndex].url} 
+                              className="w-full h-full object-cover" 
+                              onLoad={() => {
+                                setTimeout(() => {
+                                  if (stage === 3) setCurrentMediaIndex((currentMediaIndex + 1) % capturedMedia.length);
+                                }, 3000);
+                              }}
+                            />
+                          )
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
                     {audioFile && <audio src={audioFile} autoPlay loop />}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     <div className="absolute bottom-8 left-6 right-6 text-white">
@@ -566,7 +625,10 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
         )}
       </AnimatePresence>
     </div>
-  );
+  )}
+</AnimatePresence>
+</div>
+);
 }
 
 const VIBRATION_PATTERNS = {
