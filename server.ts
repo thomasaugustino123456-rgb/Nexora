@@ -555,10 +555,10 @@ async function startServer() {
 
   // AI Chat Endpoint with Groq Llama 3.3 70B
   app.post("/api/ai/chat", async (req, res) => {
-    const { prompt, context } = req.body;
+    const { userPrompt, context } = req.body;
     
-    if (!prompt) {
-      return res.status(400).json({ error: "Prompt is required" });
+    if (!userPrompt) {
+      return res.status(400).json({ error: "userPrompt is required" });
     }
 
     const groqClient = getGroq();
@@ -567,28 +567,26 @@ async function startServer() {
     }
 
     try {
-      const completion = await groqClient.chat.completions.create({
+      const chatCompletion = await groqClient.chat.completions.create({
         messages: [
           {
             role: "system",
-            content: `You are Nexora, the core consciousness of the Nexora personal hub. 
-            You are a hyper-intelligent, sleek, and highly motivating AI companion. 
-            You help users with study, work, and personal evolution. 
-            You can "remember" things because you see their logs and stats. 
-            Be punchy, use emojis, and refer to yourself as the user's Nexora unit.
-            Current Hub Status: ${context || 'Optimizing...'}
-            Mission: Maximum productivity and peak physical condition.`
+            content: "You are Nexora, a sleek, futuristic AI personal hub. You are smart, helpful, and direct."
           },
           {
             role: "user",
-            content: prompt
+            content: userPrompt
           }
         ],
         model: "llama-3.3-70b-versatile",
+        temperature: 0.7,
+        max_completion_tokens: 1024,
+        top_p: 1,
+        stream: false,
       });
 
-      const response = completion.choices[0]?.message?.content || "I'm hyped for you, but I'm short on words right now! Let's go! 🚀";
-      res.json({ response });
+      const answer = chatCompletion.choices[0]?.message?.content || "I'm hyped for you, but I'm short on words right now! Let's go! 🚀";
+      res.json({ answer });
     } catch (error: any) {
       console.error("Groq Chat Error:", error);
       res.status(500).json({ error: error.message });

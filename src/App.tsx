@@ -342,7 +342,7 @@ function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: userMsg,
+          userPrompt: userMsg,
           context: `User streak: ${stats.streak}, Points: ${stats.totalPoints}, Level: ${stats.level || 1}, Active Skin: ${settings.activeSkin || 'none'}`
         })
       });
@@ -350,7 +350,7 @@ function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'AI Chat failed');
       
-      setResponse(data.response || "I'm here for you, bro! 🌊");
+      setResponse(data.answer || "I'm here for you, bro! 🌊");
     } catch (error: any) {
       console.error('Mascot AI Chat Error:', error);
       setResponse("I'm a bit parched right now, but I'm still cheering for you! 🚀");
@@ -367,7 +367,7 @@ function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: "Give me a super short, punchy, and friendly motivational message to start my day.",
+          userPrompt: "Give me a super short, punchy, and friendly motivational message to start my day.",
           context: `User streak is ${stats.streak} days. They have ${stats.trophies.length} trophies.`
         })
       });
@@ -375,7 +375,7 @@ function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'AI Motivation failed');
       
-      setResponse(data.response || "You're doing great, bro! Keep that streak alive! 🌊");
+      setResponse(data.answer || "You're doing great, bro! Keep that streak alive! 🌊");
     } catch (error: any) {
       console.error('Mascot AI Motivation Error:', error);
       setResponse("I'm always here to cheer you on! Let's crush today! 🚀");
