@@ -43,8 +43,11 @@ const NotebookScreen = lazy(() => import('./components/NotebookScreen').then(m =
 const SOCIAL_LOCKED = false;
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Groq } from "groq-sdk";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
 import { requestNotificationPermission, setupOnMessageListener } from './lib/notifications';
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || "", dangerouslyAllowBrowser: true });
 
 function WhatIsNewModal({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<any>(null);
@@ -338,19 +341,24 @@ function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: 
     setResponse("");
     
     try {
-      const response = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: userMsg,
-          context: `User streak: ${stats.streak}, Points: ${stats.totalPoints}, Level: ${stats.level || 1}, Active Skin: ${settings.activeSkin || 'none'}`
-        })
+      const prompt = `You are Nexora, a friendly water-bottle mascot for a productivity and wellness app. 
+      The user says: "${userMsg}"
+      Respond as Nexora. Be friendly, helpful, and encouraging. 
+      Keep it short (max 2-3 sentences). 
+      User stats: Streak ${stats.streak}, Points ${stats.totalPoints}, Level ${stats.level || 1}.
+      Your current outfit is: ${settings.activeSkin || 'none'}.`;
+      
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          { role: "system", content: "You are Nexora, a friendly and motivational productivity mascot." },
+          { role: "user", content: prompt }
+        ],
+        model: "llama-3.3-70b-versatile",
+        temperature: 1,
+        max_completion_tokens: 1024,
+        top_p: 1,
       });
-      
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'AI Chat failed');
-      
-      setResponse(data.response || "I'm here for you, bro! 🌊");
+      setResponse(chatCompletion.choices[0]?.message?.content || "I'm here for you, bro! 🌊");
     } catch (error: any) {
       console.error('Mascot AI Chat Error:', error);
       setResponse("I'm a bit parched right now, but I'm still cheering for you! 🚀");
@@ -363,19 +371,24 @@ function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: 
   const generateMotivation = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: "Give me a super short, punchy, and friendly motivational message to start my day.",
-          context: `User streak is ${stats.streak} days. They have ${stats.trophies.length} trophies.`
-        })
+      const prompt = `You are Nexora, a friendly water-bottle mascot for a productivity and wellness app. 
+      The user's current streak is ${stats.streak} days. 
+      Their total points are ${stats.totalPoints}.
+      They have ${stats.trophies.length} trophies.
+      Give them a short, punchy, and super friendly motivational message (max 2 sentences). 
+      Be encouraging and maybe a bit bubbly!`;
+      
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          { role: "system", content: "You are Nexora, a bubbly and motivational productivity mascot." },
+          { role: "user", content: prompt }
+        ],
+        model: "llama-3.3-70b-versatile",
+        temperature: 1,
+        max_completion_tokens: 1024,
+        top_p: 1,
       });
-      
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'AI Motivation failed');
-      
-      setResponse(data.response || "You're doing great, bro! Keep that streak alive! 🌊");
+      setResponse(chatCompletion.choices[0]?.message?.content || "You're doing great, bro! Keep that streak alive! 🌊");
     } catch (error: any) {
       console.error('Mascot AI Motivation Error:', error);
       setResponse("I'm always here to cheer you on! Let's crush today! 🚀");

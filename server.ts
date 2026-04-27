@@ -305,20 +305,6 @@ const getResend = () => {
   return resend;
 };
 
-// Lazy Groq initialization
-let groq: Groq | null = null;
-const getGroq = () => {
-  if (!groq) {
-    const key = process.env.GROQ_API_KEY;
-    if (!key) {
-      console.warn("GROQ_API_KEY is not set. AI features will be disabled.");
-      return null;
-    }
-    groq = new Groq({ apiKey: key });
-  }
-  return groq;
-};
-
 const MOTIVATIONAL_QUOTES = [
   { title: "Crush It Bro! 🚀", body: "Don't let your streak die today. You're a beast!" },
   { title: "Level Up! 🔥", body: "Consistency is the key to greatness. Get your habits done!" },
@@ -421,20 +407,24 @@ async function startServer() {
       let title = "Nexora Motivation 🔥";
       let body = "Don't let your streak die! You're a beast, bro!";
       
-      // Try to use Groq Llama 3.3 70B to generate a fresh quote
-      const groqClient = getGroq();
-      if (groqClient) {
+      // Try to use Groq to generate a fresh quote
+      if (process.env.GROQ_API_KEY) {
         try {
-          const completion = await groqClient.chat.completions.create({
+          const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+          const prompt = "You are Nexora, a friendly water-bottle mascot for a productivity app. Generate a super short, punchy, and aggressive-but-friendly motivational push notification message for a user who needs to finish their habits today. Max 20 words. Include one emoji. Format: Title | Body";
+          
+          const chatCompletion = await groq.chat.completions.create({
             messages: [
-              {
-                role: "system",
-                content: "You are Nexora, a friendly water-bottle mascot for a productivity app. Generate a super short, punchy, and aggressive-but-friendly motivational push notification message for a user who needs to finish their habits today. Max 20 words. Include one emoji. Format: Title | Body"
-              }
+              { role: "system", content: "You are a helpful assistant." },
+              { role: "user", content: prompt }
             ],
             model: "llama-3.3-70b-versatile",
+            temperature: 1,
+            max_completion_tokens: 1024,
+            top_p: 1,
           });
-          const text = completion.choices[0]?.message?.content?.trim() || "";
+
+          const text = chatCompletion.choices[0]?.message?.content?.trim() || "";
           if (text.includes("|")) {
             const parts = text.split("|");
             title = parts[0].trim();
@@ -443,7 +433,7 @@ async function startServer() {
             body = text;
           }
         } catch (aiErr) {
-          console.error("Groq AI Quote Generation failed, using static fallback:", aiErr);
+          console.error("Groq Quote Generation failed, using static fallback:", aiErr);
           const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
           title = randomQuote.title;
           body = randomQuote.body;
@@ -549,48 +539,6 @@ async function startServer() {
       res.json({ success: true, messageId: pushRes });
     } catch (error: any) {
       console.error("Error sending notification:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // AI Chat Endpoint with Groq Llama 3.3 70B
-  app.post("/api/ai/chat", async (req, res) => {
-    const { prompt, context } = req.body;
-    
-    if (!prompt) {
-      return res.status(400).json({ error: "Prompt is required" });
-    }
-
-    const groqClient = getGroq();
-    if (!groqClient) {
-      return res.status(503).json({ error: "Groq AI service is not configured" });
-    }
-
-    try {
-      const completion = await groqClient.chat.completions.create({
-        messages: [
-          {
-            role: "system",
-            content: `You are Nexora, the core consciousness of the Nexora personal hub. 
-            You are a hyper-intelligent, sleek, and highly motivating AI companion. 
-            You help users with study, work, and personal evolution. 
-            You can "remember" things because you see their logs and stats. 
-            Be punchy, use emojis, and refer to yourself as the user's Nexora unit.
-            Current Hub Status: ${context || 'Optimizing...'}
-            Mission: Maximum productivity and peak physical condition.`
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        model: "llama-3.3-70b-versatile",
-      });
-
-      const response = completion.choices[0]?.message?.content || "I'm hyped for you, but I'm short on words right now! Let's go! 🚀";
-      res.json({ response });
-    } catch (error: any) {
-      console.error("Groq Chat Error:", error);
       res.status(500).json({ error: error.message });
     }
   });
