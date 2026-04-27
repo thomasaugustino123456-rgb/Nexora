@@ -43,11 +43,8 @@ const NotebookScreen = lazy(() => import('./components/NotebookScreen').then(m =
 const SOCIAL_LOCKED = false;
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
 import { requestNotificationPermission, setupOnMessageListener } from './lib/notifications';
-
-const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 function WhatIsNewModal({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<any>(null);
@@ -341,16 +338,19 @@ function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: 
     setResponse("");
     
     try {
-      const prompt = `You are Nexora, a friendly water-bottle mascot for a productivity and wellness app. 
-      The user says: "${userMsg}"
-      Respond as Nexora. Be friendly, helpful, and encouraging. 
-      Keep it short (max 2-3 sentences). 
-      User stats: Streak ${stats.streak}, Points ${stats.totalPoints}, Level ${stats.level || 1}.
-      Your current outfit is: ${settings.activeSkin || 'none'}.`;
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: userMsg,
+          context: `User streak: ${stats.streak}, Points: ${stats.totalPoints}, Level: ${stats.level || 1}, Active Skin: ${settings.activeSkin || 'none'}`
+        })
+      });
       
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await model.generateContent(prompt);
-      setResponse(result.response.text() || "I'm here for you, bro! 🌊");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'AI Chat failed');
+      
+      setResponse(data.response || "I'm here for you, bro! 🌊");
     } catch (error: any) {
       console.error('Mascot AI Chat Error:', error);
       setResponse("I'm a bit parched right now, but I'm still cheering for you! 🚀");
@@ -363,16 +363,19 @@ function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: 
   const generateMotivation = async () => {
     setLoading(true);
     try {
-      const prompt = `You are Nexora, a friendly water-bottle mascot for a productivity and wellness app. 
-      The user's current streak is ${stats.streak} days. 
-      Their total points are ${stats.totalPoints}.
-      They have ${stats.trophies.length} trophies.
-      Give them a short, punchy, and super friendly motivational message (max 2 sentences). 
-      Be encouraging and maybe a bit bubbly!`;
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: "Give me a super short, punchy, and friendly motivational message to start my day.",
+          context: `User streak is ${stats.streak} days. They have ${stats.trophies.length} trophies.`
+        })
+      });
       
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await model.generateContent(prompt);
-      setResponse(result.response.text() || "You're doing great, bro! Keep that streak alive! 🌊");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'AI Motivation failed');
+      
+      setResponse(data.response || "You're doing great, bro! Keep that streak alive! 🌊");
     } catch (error: any) {
       console.error('Mascot AI Motivation Error:', error);
       setResponse("I'm always here to cheer you on! Let's crush today! 🚀");
