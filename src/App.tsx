@@ -27,6 +27,8 @@ import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './compon
 import { LibraryScreen } from './components/LibraryScreen';
 import { ShopScreen, SHOP_ITEMS } from './components/ShopScreen';
 import { PlantScreen } from './components/PlantScreen';
+import { HappyMascot } from './components/HappyMascot';
+import { WaterStep } from './components/WaterStep';
 import { Calendar } from './components/Calendar';
 import { StatsCharts } from './components/StatsCharts';
 import { VideoPlayer } from './components/VideoPlayer';
@@ -47,7 +49,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
 import { requestNotificationPermission, setupOnMessageListener } from './lib/notifications';
 
-const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const GEMINI_API_KEY = typeof process !== 'undefined' ? (process.env.GEMINI_API_KEY || "") : "";
+const ai = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 function WhatIsNewModal({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<any>(null);
@@ -137,33 +140,6 @@ function WhatIsNewModal({ onClose }: { onClose: () => void }) {
 
 // Moved to separate files: Calendar, StatsCharts, VideoPlayer
 
-function HappyMascot({ size = 32, hat = 'none', settings }: { size?: number, hat?: string, settings: UserSettings }) {
-  return (
-    <motion.div
-      initial={{ scale: 0, y: 20 }}
-      animate={{ 
-        scale: 1, 
-        y: [0, -20, 0],
-      }}
-      transition={{ 
-        scale: { type: "spring", damping: 12 },
-        y: { repeat: Infinity, duration: 0.8, ease: "easeInOut" }
-      }}
-      className="flex flex-col items-center gap-2 mb-4"
-    >
-      <div className={`w-${size} h-${size} relative`}>
-        <Mascot className="w-full h-full drop-shadow-lg" hat={hat} soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'} />
-      </div>
-      <motion.div 
-        animate={{ scale: [1, 1.1, 1] }}
-        transition={{ repeat: Infinity, duration: 1.5 }}
-        className="bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-black shadow-lg"
-      >
-        AWESOME! 🌟
-      </motion.div>
-    </motion.div>
-  );
-}
 
 const DEFAULT_SETTINGS: UserSettings = {
   pushupsGoal: 5,
@@ -566,7 +542,9 @@ export default function App() {
       return {
         ...DEFAULT_SETTINGS,
         ...parsed,
-        plantState: parsed.plantState ? { ...DEFAULT_SETTINGS.plantState, ...parsed.plantState } : DEFAULT_SETTINGS.plantState
+        plantState: (parsed.plantState && typeof parsed.plantState === 'object') 
+          ? { ...DEFAULT_SETTINGS.plantState, ...parsed.plantState } 
+          : DEFAULT_SETTINGS.plantState
       };
     } catch (e) {
       return DEFAULT_SETTINGS;
@@ -4189,65 +4167,6 @@ function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none', settings, play
   );
 }
 
-export function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = 'none', settings, play }: { goal: number, progress: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
-  const isFinished = progress >= goal;
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 1.1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full"
-    >
-      <div className="w-full max-w-[300px] lg:max-w-[400px]">
-        <WaterMascot progress={Math.min(progress / goal, 1)} className="drop-shadow-2xl" />
-      </div>
-      
-      <div className="glass-card w-full p-10 text-center space-y-8">
-        <div className="space-y-4">
-          <h2 className="text-3xl font-bold text-blue-900/80">Drink Water</h2>
-          <p className="text-blue-900/50 font-medium">{progress} / {goal} glasses</p>
-          
-          <div className="h-3 bg-blue-100 rounded-full overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min((progress / goal) * 100, 100)}%` }}
-              className="h-full bg-blue-400 rounded-full"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {isFinished && <HappyMascot size={40} hat={activeSkin} settings={settings} />}
-          {!isFinished ? (
-            <button 
-              onClick={() => {
-                vibrate(VIBRATION_PATTERNS.CLICK);
-                if (settings.soundEnabled) {
-                  play('water');
-                }
-                onUpdate(progress + 1);
-              }} 
-              className="btn-primary w-full flex items-center justify-center gap-2"
-            >
-              Drink +1 💧
-            </button>
-          ) : (
-            <button 
-              onClick={() => {
-                vibrate(VIBRATION_PATTERNS.SUCCESS);
-                onContinue();
-              }} 
-              className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600"
-            >
-              Continue <ChevronRight size={20} />
-            </button>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
 
 function BreathingStep({ onDone, activeSkin = 'none', settings }: { onDone: () => void, activeSkin?: string, settings: UserSettings }) {
   const [phase, setPhase] = useState<'In' | 'Out'>('In');

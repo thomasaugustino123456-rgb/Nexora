@@ -716,15 +716,3 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
 );
 }
 
-const VIBRATION_PATTERNS = {
-  CLICK: [10],
-  SUCCESS: [10, 50, 10],
-  ERROR: [50, 100, 50],
-  LONG: [200]
-};
-
-const vibrate = (pattern: number[]) => {
-  if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
-    window.navigator.vibrate(pattern);
-  }
-};
