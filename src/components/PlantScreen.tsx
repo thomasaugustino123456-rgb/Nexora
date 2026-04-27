@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout, Target, Trophy } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { PlantState, UserSettings, UserStats, PlantType } from '../types';
-import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
+import { vibrate } from '../lib/vibrate';
 import { PlantRenderer } from './PlantRenderer';
 import { PlantCompletionCard } from './PlantCompletionCard';
 

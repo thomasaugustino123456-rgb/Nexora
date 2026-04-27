@@ -43,11 +43,11 @@ const NotebookScreen = lazy(() => import('./components/NotebookScreen').then(m =
 const SOCIAL_LOCKED = false;
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Groq } from "groq-sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
 import { requestNotificationPermission, setupOnMessageListener } from './lib/notifications';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || "", dangerouslyAllowBrowser: true });
+const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 function WhatIsNewModal({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<any>(null);
@@ -348,17 +348,9 @@ function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: 
       User stats: Streak ${stats.streak}, Points ${stats.totalPoints}, Level ${stats.level || 1}.
       Your current outfit is: ${settings.activeSkin || 'none'}.`;
       
-      const chatCompletion = await groq.chat.completions.create({
-        messages: [
-          { role: "system", content: "You are Nexora, a friendly and motivational productivity mascot." },
-          { role: "user", content: prompt }
-        ],
-        model: "llama-3.3-70b-versatile",
-        temperature: 1,
-        max_completion_tokens: 1024,
-        top_p: 1,
-      });
-      setResponse(chatCompletion.choices[0]?.message?.content || "I'm here for you, bro! 🌊");
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      setResponse(result.response.text() || "I'm here for you, bro! 🌊");
     } catch (error: any) {
       console.error('Mascot AI Chat Error:', error);
       setResponse("I'm a bit parched right now, but I'm still cheering for you! 🚀");
@@ -378,17 +370,9 @@ function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: 
       Give them a short, punchy, and super friendly motivational message (max 2 sentences). 
       Be encouraging and maybe a bit bubbly!`;
       
-      const chatCompletion = await groq.chat.completions.create({
-        messages: [
-          { role: "system", content: "You are Nexora, a bubbly and motivational productivity mascot." },
-          { role: "user", content: prompt }
-        ],
-        model: "llama-3.3-70b-versatile",
-        temperature: 1,
-        max_completion_tokens: 1024,
-        top_p: 1,
-      });
-      setResponse(chatCompletion.choices[0]?.message?.content || "You're doing great, bro! Keep that streak alive! 🌊");
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      setResponse(result.response.text() || "You're doing great, bro! Keep that streak alive! 🌊");
     } catch (error: any) {
       console.error('Mascot AI Motivation Error:', error);
       setResponse("I'm always here to cheer you on! Let's crush today! 🚀");

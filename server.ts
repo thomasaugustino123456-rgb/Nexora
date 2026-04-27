@@ -8,7 +8,7 @@ import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 import { Resend } from "resend";
-import { Groq } from "groq-sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -407,24 +407,14 @@ async function startServer() {
       let title = "Nexora Motivation 🔥";
       let body = "Don't let your streak die! You're a beast, bro!";
       
-      // Try to use Groq to generate a fresh quote
-      if (process.env.GROQ_API_KEY) {
+      // Try to use Gemini to generate a fresh quote
+      if (process.env.GEMINI_API_KEY) {
         try {
-          const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+          const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+          const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
           const prompt = "You are Nexora, a friendly water-bottle mascot for a productivity app. Generate a super short, punchy, and aggressive-but-friendly motivational push notification message for a user who needs to finish their habits today. Max 20 words. Include one emoji. Format: Title | Body";
-          
-          const chatCompletion = await groq.chat.completions.create({
-            messages: [
-              { role: "system", content: "You are a helpful assistant." },
-              { role: "user", content: prompt }
-            ],
-            model: "llama-3.3-70b-versatile",
-            temperature: 1,
-            max_completion_tokens: 1024,
-            top_p: 1,
-          });
-
-          const text = chatCompletion.choices[0]?.message?.content?.trim() || "";
+          const result = await model.generateContent(prompt);
+          const text = result.response.text().trim();
           if (text.includes("|")) {
             const parts = text.split("|");
             title = parts[0].trim();
@@ -433,7 +423,7 @@ async function startServer() {
             body = text;
           }
         } catch (aiErr) {
-          console.error("Groq Quote Generation failed, using static fallback:", aiErr);
+          console.error("AI Quote Generation failed, using static fallback:", aiErr);
           const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
           title = randomQuote.title;
           body = randomQuote.body;
