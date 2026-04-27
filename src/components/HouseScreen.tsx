@@ -7,7 +7,7 @@ import { HOUSE_ITEMS } from '../constants/houseItems';
 import { HouseItemSVG } from './HouseItemSVG';
 import { SpaceMascot } from './SpaceMascot';
 import { Mascot } from './Mascot';
-import { WaterStep } from './WaterStep';
+import { WaterStep } from '../App';
 
 export function HouseScreen({ 
   onBack, 
@@ -63,30 +63,6 @@ export function HouseScreen({
   const [isMascotOnFire, setIsMascotOnFire] = useState(false);
   const [itemToRemove, setItemToRemove] = useState<string | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<any>(null);
-  const [unlockingHouse, setUnlockingHouse] = useState<number | null>(null);
-  const [isLockedMessageVisible, setIsLockedMessageVisible] = useState(true);
-
-  // Helper: Check if room is fully furnished (bought all items)
-  const isRoomCompleted = (roomIndex: number) => {
-    const roomItems = HOUSE_ITEMS.filter(item => item.room === roomIndex);
-    const purchasedIds = settings.purchasedHouseItemIds || [];
-    return roomItems.length > 0 && roomItems.every(item => purchasedIds.includes(item.id));
-  };
-
-  // Helper: Check if house is unlocked
-  const isHouseUnlocked = (roomIndex: number) => {
-    if (roomIndex === 0) return true;
-    return settings.unlockedHouses?.includes(roomIndex);
-  };
-
-  const handleUnlockHouse = (roomIndex: number) => {
-    const currentUnlocks = settings.unlockedHouses || [0];
-    if (!currentUnlocks.includes(roomIndex)) {
-      onUpdateSettings({
-        unlockedHouses: [...currentUnlocks, roomIndex]
-      });
-    }
-  };
 
   // Water Challenge Repeat Logic
   const [waterSessionKey, setWaterSessionKey] = useState(0);
@@ -546,36 +522,15 @@ export function HouseScreen({
               {activeRoom < 2 && (
                 <motion.button
                   initial={{ opacity: 0, x: 20 }}
-                  animate={isRoomCompleted(activeRoom) && !isHouseUnlocked(activeRoom + 1) ? { 
-                    opacity: 1, 
-                    x: 0,
-                    y: [0, -5, 0],
-                    boxShadow: ["0px 0px 0px rgba(255,215,0,0)", "0px 0px 20px rgba(255,215,0,0.5)", "0px 0px 0px rgba(255,215,0,0)"]
-                  } : { opacity: 1, x: 0, y: 0 }}
-                  transition={isRoomCompleted(activeRoom) && !isHouseUnlocked(activeRoom + 1) ? {
-                    y: { repeat: Infinity, duration: 2, ease: "easeInOut" },
-                    boxShadow: { repeat: Infinity, duration: 2, ease: "easeInOut" }
-                  } : {}}
+                  animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   onClick={() => {
                     vibrate(10);
                     setActiveRoom(prev => prev + 1);
                   }}
-                  style={isRoomCompleted(activeRoom) && !isHouseUnlocked(activeRoom + 1) ? {
-                    backgroundColor: 'rgba(255, 215, 0, 0.2)',
-                    borderColor: 'rgba(255, 215, 0, 0.4)',
-                    color: '#FFD700'
-                  } : {}}
-                  className="p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md border border-white/10 shadow-2xl group relative"
+                  className="p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md border border-white/10 shadow-2xl group"
                 >
                   <ChevronRight size={32} className="group-hover:translate-x-1 transition-transform" />
-                  {isRoomCompleted(activeRoom) && !isHouseUnlocked(activeRoom + 1) && (
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="absolute -inset-1 rounded-full border-2 border-yellow-400/50 pointer-events-none"
-                    />
-                  )}
                 </motion.button>
               )}
             </AnimatePresence>
@@ -583,135 +538,11 @@ export function HouseScreen({
         </div>
 
         <AnimatePresence mode="wait">
-          {!isHouseUnlocked(activeRoom) ? (
-            <motion.div
-              key={`locked-room-${activeRoom}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-[60] flex items-center justify-center backdrop-blur-xl bg-black/40 rounded-[3rem] p-8 text-center"
-            >
-              <div className="flex flex-col items-center gap-8">
-                <AnimatePresence>
-                  {unlockingHouse !== activeRoom && (
-                    <motion.div
-                      animate={{ 
-                        y: [0, -20, 0],
-                        scale: [1, 1.05, 1]
-                      }}
-                      transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                      onClick={async () => {
-                        if (!isRoomCompleted(activeRoom - 1)) {
-                          showToast(`Finish the previous house first, bro! 🏠`, "info");
-                          return;
-                        }
-                        
-                        vibrate(VIBRATION_PATTERNS.SUCCESS);
-                        setUnlockingHouse(activeRoom);
-                        play('trophy1');
-                        
-                        // Start unlock animation sequence
-                        // 1. Jump and bounce
-                        // Handled by framer motion below
-                        
-                        setTimeout(() => {
-                          handleUnlockHouse(activeRoom);
-                          setUnlockingHouse(null);
-                          showToast("NEW HOUSE UNLOCKED! 🔥🚀", "success");
-                        }, 2500);
-                      }}
-                      className="cursor-pointer relative"
-                    >
-                      <svg viewBox="0 0 100 120" className="w-48 h-48 drop-shadow-[0_0_30px_rgba(255,215,0,0.3)]">
-                        <motion.path
-                          d="M30 50 V30 C30 18 38 10 50 10 C62 10 70 18 70 30 V50"
-                          fill="none"
-                          stroke="#FFD700"
-                          strokeWidth="8"
-                          strokeLinecap="round"
-                          animate={unlockingHouse === activeRoom ? { y: -20, rotate: -30, opacity: [1, 1, 0] } : {}}
-                          transition={{ duration: 0.5, delay: 0.5 }}
-                        />
-                        <motion.rect
-                          x="20" y="45" width="60" height="55" rx="8"
-                          fill="#D4AF37"
-                          stroke="#B8860B"
-                          strokeWidth="2"
-                          animate={unlockingHouse === activeRoom ? { 
-                            scale: [1, 1.4, 0],
-                            rotate: [0, 15, -15, 0],
-                            opacity: [1, 1, 0],
-                            filter: "brightness(2)"
-                          } : {}}
-                          transition={{ duration: 1.5, times: [0, 0.4, 1] }}
-                        />
-                        <circle cx="50" cy="72" r="6" fill="#1A1A1A" />
-                        <rect x="47" y="72" width="6" height="12" fill="#1A1A1A" />
-                      </svg>
-                      
-                      {unlockingHouse === activeRoom && (
-                        <motion.div
-                          initial={{ scale: 0, opacity: 1 }}
-                          animate={{ scale: 4, opacity: 0 }}
-                          transition={{ duration: 1, delay: 1 }}
-                          className="absolute inset-0 bg-white rounded-full blur-3xl"
-                        />
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <AnimatePresence>
-                  {unlockingHouse !== activeRoom && isLockedMessageVisible && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/20 max-w-xs shadow-2xl relative"
-                    >
-                      <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-2">House Locked! 🔒</h3>
-                      <p className="text-white/70 text-sm mb-6 leading-relaxed">
-                        {!isRoomCompleted(activeRoom - 1) 
-                          ? "You need to buy all items for the previous house to unlock this one, bro! 🏠" 
-                          : "Ready to expand your space? Click the padlock to unlock this new house! ✨"}
-                      </p>
-                      
-                      <div className="flex flex-col gap-2">
-                        {isRoomCompleted(activeRoom - 1) && (
-                          <button
-                            onClick={() => showToast("Tap the Padlock to unlock, bro! 🔥", "info")}
-                            className="w-full py-3 rounded-2xl bg-yellow-500 text-black font-black uppercase tracking-widest text-[10px] hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-500/20"
-                          >
-                            Click the padlock
-                          </button>
-                        )}
-                        <button
-                          onClick={() => {
-                            vibrate(10);
-                            setIsLockedMessageVisible(false);
-                          }}
-                          className="w-full py-2 rounded-xl bg-white/5 text-white/40 font-black uppercase tracking-widest text-[8px] hover:bg-white/10 transition-colors"
-                        >
-                          Finished
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </motion.div>
-          ) : null}
-
           {activeRoom === 0 ? (
             <motion.div 
               key="room-0"
               initial={{ opacity: 0, scale: 0.8, rotateY: -20 }}
-              animate={{ 
-                opacity: 1, 
-                scale: zoom, 
-                rotateY: 0,
-                filter: !isHouseUnlocked(0) ? "blur(20px) grayscale(1)" : "blur(0px) grayscale(0)"
-              }}
+              animate={{ opacity: 1, scale: zoom, rotateY: 0 }}
               exit={{ opacity: 0, scale: 1.2, rotateY: 20 }}
               transition={{ type: "spring", stiffness: 200, damping: 25 }}
               className="w-full max-w-4xl aspect-[4/3] relative"
@@ -772,12 +603,7 @@ export function HouseScreen({
             <motion.div 
               key="room-1"
               initial={{ opacity: 0, scale: 0.8, rotateY: 20 }}
-              animate={{ 
-                opacity: 1, 
-                scale: zoom, 
-                rotateY: 0,
-                filter: !isHouseUnlocked(1) ? "blur(20px) grayscale(1)" : "blur(0px) grayscale(0)"
-              }}
+              animate={{ opacity: 1, scale: zoom, rotateY: 0 }}
               exit={{ opacity: 0, scale: 1.2, rotateY: -20 }}
               transition={{ type: "spring", stiffness: 200, damping: 25 }}
               className="w-full max-w-4xl aspect-[4/3] relative"
@@ -842,12 +668,7 @@ export function HouseScreen({
             <motion.div 
               key="room-2"
               initial={{ opacity: 0, scale: 0.8, rotateY: 20 }}
-              animate={{ 
-                opacity: 1, 
-                scale: zoom, 
-                rotateY: 0,
-                filter: !isHouseUnlocked(2) ? "blur(20px) grayscale(1)" : "blur(0px) grayscale(0)"
-              }}
+              animate={{ opacity: 1, scale: zoom, rotateY: 0 }}
               exit={{ opacity: 0, scale: 1.2, rotateY: -20 }}
               transition={{ type: "spring", stiffness: 200, damping: 25 }}
               className="w-full max-w-4xl aspect-[4/3] relative"

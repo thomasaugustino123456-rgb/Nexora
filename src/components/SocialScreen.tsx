@@ -21,6 +21,7 @@ interface SocialScreenProps {
   circles: SocialCircle[];
   notifications: NexusNotification[];
   setActiveScreen: (s: Screen) => void;
+  play: (soundKey: any) => void;
 }
 
 // Memoized Post Card for speed
@@ -143,7 +144,7 @@ const PostCard = React.memo(({ post, user, settings, circles, savedPosts, toggle
   );
 });
 
-export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings, posts, circles, notifications, setActiveScreen }: SocialScreenProps) {
+export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings, posts, circles, notifications, setActiveScreen, play }: SocialScreenProps) {
   const [activeTab, setActiveTab] = useState<'feed' | 'circles' | 'inbox'>('feed');
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
@@ -334,9 +335,18 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       </AnimatePresence>
 
       <div className="flex items-center gap-2 p-1.5 bg-blue-50/50 rounded-2xl w-fit">
-        <button onClick={() => setActiveTab('feed')} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'feed' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Pulse Feed</button>
-        <button onClick={() => setActiveTab('circles')} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'circles' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Nodes</button>
-        <button onClick={() => setActiveTab('inbox')} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all relative ${activeTab === 'inbox' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>
+        <button onClick={() => {
+          if (settings.soundEnabled) play('header_switch');
+          setActiveTab('feed');
+        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'feed' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Pulse Feed</button>
+        <button onClick={() => {
+          if (settings.soundEnabled) play('header_switch');
+          setActiveTab('circles');
+        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'circles' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Nodes</button>
+        <button onClick={() => {
+          if (settings.soundEnabled) play('header_switch');
+          setActiveTab('inbox');
+        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all relative ${activeTab === 'inbox' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>
           Inbox
           {notifications.some(n => !n.isRead) && <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full animate-ping" />}
         </button>
