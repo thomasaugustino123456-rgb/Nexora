@@ -176,15 +176,29 @@ export default function App() {
   };
 
   useEffect(() => {
+    let ticking = false;
+    let prevScrollY = window.scrollY;
+    
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY && currentScrollY > 50) setScrollDirection('down');
-      else if (currentScrollY < lastScrollY) setScrollDirection('up');
-      setLastScrollY(currentScrollY);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          if (currentScrollY > prevScrollY && currentScrollY > 50) {
+            setScrollDirection('down');
+          } else if (currentScrollY < prevScrollY) {
+            setScrollDirection('up');
+          }
+          prevScrollY = currentScrollY;
+          setLastScrollY(currentScrollY);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
+    
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  }, []);
 
   const isPro = settings.isPro;
   const setIsPro = (val: boolean) => setSettings(prev => ({ ...prev, isPro: val }));
@@ -1856,7 +1870,12 @@ export default function App() {
 
       <AnimatePresence>
         {showUpdatePopup && (
-          <WhatIsNewModalWrapper onClose={() => setShowUpdatePopup(false)} />
+          <WhatIsNewModalWrapper onClose={() => {
+            if (updateInfo) {
+              localStorage.setItem('nexora_dismissed_version', updateInfo.version);
+            }
+            setShowUpdatePopup(false);
+          }} />
         )}
       </AnimatePresence>
 
@@ -1871,9 +1890,18 @@ export default function App() {
                 className="w-20 h-20 object-contain"
                 referrerPolicy="no-referrer"
               />
-              <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexora</h1>
+              <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexo</h1>
             </div>
             <div className="flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  if (settings.soundEnabled) play('header_switch');
+                  setActiveScreen('social');
+                }}
+                className="p-2 transition-colors text-blue-900/40 hover:text-blue-900/60"
+              >
+                <Users size={24} />
+              </button>
               <button 
                 onClick={() => {
                   if (settings.soundEnabled) play('header_switch');
@@ -2651,7 +2679,12 @@ export default function App() {
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="text-lg font-black text-blue-900">Nexora Update v{updateInfo.version}</h3>
                       <button 
-                        onClick={() => setShowUpdatePopup(false)}
+                        onClick={() => {
+                          if (updateInfo) {
+                            localStorage.setItem('nexora_dismissed_version', updateInfo.version);
+                          }
+                          setShowUpdatePopup(false);
+                        }}
                         className="p-1 hover:bg-blue-50 rounded-lg text-blue-400"
                       >
                         <X size={18} />

@@ -111,18 +111,28 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
         if (type === 'video') {
           const video = document.createElement('video');
           video.src = url;
+          video.preload = 'metadata';
+          
+          const timeoutId = setTimeout(() => {
+             // Fallback if metadata takes too long (e.g. mobile Safari issues)
+             resolve({ url, type, duration: 10, originalDuration: 10, trimStart: 0 });
+          }, 3000);
+
           video.onloadedmetadata = () => {
+            clearTimeout(timeoutId);
             resolve({ 
               url, 
               type, 
-              duration: video.duration, 
-              originalDuration: video.duration, 
+              duration: video.duration || 10, 
+              originalDuration: video.duration || 10, 
               trimStart: 0 
             });
           };
           video.onerror = () => {
+            clearTimeout(timeoutId);
             resolve({ url, type, duration: 10, originalDuration: 10, trimStart: 0 });
           };
+          video.load();
         } else {
           resolve({ url, type, duration: 5, originalDuration: 5, trimStart: 0 });
         }
@@ -137,6 +147,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
     setStage(2);
     vibrate(VIBRATION_PATTERNS.SUCCESS);
     showToast(`${newMedia.length} Media Loaded! 🏮`, 'success');
+    e.target.value = '';
   };
 
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,6 +158,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
       setAudioFile(newAudioUrl);
       showToast('Audio Link Synced! 🎵', 'success');
     }
+    e.target.value = '';
   };
 
   const addSticker = (type: string) => {
@@ -278,7 +290,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                     {capturedMedia.length > 0 ? (
                       capturedMedia[currentMediaIndex]?.type === 'video' ? (
                         <video 
-                          key={`video-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}`}
+                          key={`video-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}-${capturedMedia[currentMediaIndex].trimStart || 0}-${capturedMedia[currentMediaIndex].duration || 0}`}
                           ref={videoRef}
                           src={capturedMedia[currentMediaIndex].url} 
                           autoPlay={!isPaused} 
@@ -677,7 +689,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                       >
                         {capturedMedia[currentMediaIndex]?.type === 'video' ? (
                           <video 
-                            key={`preview-video-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}`}
+                            key={`preview-video-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}-${capturedMedia[currentMediaIndex].trimStart || 0}-${capturedMedia[currentMediaIndex].duration || 0}`}
                             src={capturedMedia[currentMediaIndex].url} 
                             autoPlay 
                             playsInline 
