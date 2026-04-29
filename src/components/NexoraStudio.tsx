@@ -79,17 +79,16 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
     return () => clearInterval(interval);
   }, [isAutoSwitch, capturedMedia, stage]);
 
+  const createdUrls = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     return () => {
-      // Cleanup object URLs when studio unmounts
-      capturedMedia.forEach(media => {
-        URL.revokeObjectURL(media.url);
+      // Cleanup object URLs ONLY when studio completely unmounts
+      createdUrls.current.forEach(url => {
+        URL.revokeObjectURL(url);
       });
-      if (audioFile) {
-        URL.revokeObjectURL(audioFile);
-      }
     };
-  }, [capturedMedia, audioFile]);
+  }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -106,6 +105,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
         trimStart: number
       }>((resolve) => {
         const url = URL.createObjectURL(file);
+        createdUrls.current.add(url);
         const type = file.type.startsWith('video') ? 'video' : 'photo';
         
         if (type === 'video') {
@@ -142,8 +142,9 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (audioFile) URL.revokeObjectURL(audioFile);
-      setAudioFile(URL.createObjectURL(file));
+      const newAudioUrl = URL.createObjectURL(file);
+      createdUrls.current.add(newAudioUrl);
+      setAudioFile(newAudioUrl);
       showToast('Audio Link Synced! 🎵', 'success');
     }
   };

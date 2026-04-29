@@ -43,8 +43,18 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
         dataLoadedFromFirestore.current = false;
         
         try {
-          // Rapid fetch: Get core document first
-          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          // Rapid fetch: Get core document and subcollections in parallel to halve network time
+          const userDocRef = doc(db, 'users', currentUser.uid);
+          const spaceDocRef = doc(db, 'users', currentUser.uid, 'settings', 'space');
+          const statsDocRef = doc(db, 'users', currentUser.uid, 'stats', 'main');
+          const progressDocRef = doc(db, 'users', currentUser.uid, 'progress', today);
+
+          const [userDoc, spaceDoc, statsDoc, progressDoc] = await Promise.all([
+            getDoc(userDocRef),
+            getDoc(spaceDocRef),
+            getDoc(statsDocRef),
+            getDoc(progressDocRef)
+          ]);
           
           if (!userDoc.exists()) {
             console.log("Hooks: New user setup");
@@ -80,13 +90,7 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
               trophies: data.stats?.trophies || []
             };
 
-            // Parallel fetch sub-collections
-            const [spaceDoc, statsDoc, progressDoc] = await Promise.all([
-              getDoc(doc(db, 'users', currentUser.uid, 'settings', 'space')),
-              getDoc(doc(db, 'users', currentUser.uid, 'stats', 'main')),
-              getDoc(doc(db, 'users', currentUser.uid, 'progress', today))
-            ]);
-
+            // Docs already fetched in parallel above
             if (spaceDoc.exists()) firestoreSettings.spaceOnboardingCompleted = !!spaceDoc.data().completed;
             if (statsDoc.exists()) {
               const d = statsDoc.data();

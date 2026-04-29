@@ -434,19 +434,6 @@ export default function App() {
     }
 
     if (!settings.plantState) return;
-
-    // FORCE UNLOCK & SET TO DISTRESSED ROSE FOR TESTING (Per User Request)
-    if (settings.plantState.type !== 'distressedRose' || settings.plantState.stage < 5) {
-        onUpdateSettings({
-            plantState: {
-                ...settings.plantState,
-                type: 'distressedRose',
-                stage: 5,
-                growthPoints: 100,
-                unlockedTypes: [...ECOSYSTEM_PATH]
-            }
-        });
-    }
     
     const checkPlant = () => {
       const now = new Date();

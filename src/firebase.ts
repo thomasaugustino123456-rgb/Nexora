@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore } from 'firebase/firestore';
+import { initializeFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import firebaseConfigData from './firebase-applet-config.json';
 
@@ -22,6 +22,14 @@ const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 }, databaseId === "(default)" ? undefined : databaseId);
+
+enableIndexedDbPersistence(db).catch((err) => {
+  if (err.code == 'failed-precondition') {
+    console.log("Multiple tabs open, persistence disabled.");
+  } else if (err.code == 'unimplemented') {
+    console.log("Persistence not supported.");
+  }
+});
 
 export const auth = getAuth(app);
 

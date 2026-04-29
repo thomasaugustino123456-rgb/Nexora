@@ -1320,6 +1320,14 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
 
       {getEcosystemRenderer()}
 
+      {stage === 0 && !isDead && type !== 'sprout' && (
+        <motion.ellipse 
+          cx="100" cy="145" rx="6" ry="4"
+          fill="#D7CCC8" stroke="black" strokeWidth="2"
+          initial={{ scale: 0 }} animate={{ scale: 1 }}
+        />
+      )}
+
       {/* Dead State Marker */}
       {isDead && (
         <motion.g initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>

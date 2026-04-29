@@ -72,25 +72,32 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
 
   const activeClip = clips.find(c => currentTime >= c.startTime && currentTime < c.startTime + c.duration) || clips[clips.length - 1];
 
-  // Sync video time with timeline
+  // Sync video time with timeline (only when NOT playing natively or when jumping)
   useEffect(() => {
     if (videoRef.current && activeClip?.type === 'video') {
       const video = videoRef.current;
       const relativeTime = currentTime - (activeClip.startTime || 0);
       const sourceTime = (activeClip.trimStart || 0) + relativeTime;
 
-      // Only sync if significant difference to avoid flickering
-      if (Math.abs(video.currentTime - sourceTime) > 0.15) {
-        video.currentTime = Math.max(0, sourceTime);
+      if (!isPlaying || Math.abs(video.currentTime - sourceTime) > 0.5) {
+        if (Math.abs(video.currentTime - sourceTime) > 0.15) {
+          video.currentTime = Math.max(0, sourceTime);
+        }
       }
-      
+    }
+  }, [currentTime, isPlaying, activeClip?.id, activeClip?.url]);
+
+  // Handle play/pause state changes
+  useEffect(() => {
+    if (videoRef.current && activeClip?.type === 'video') {
+      const video = videoRef.current;
       if (isPlaying) {
         video.play().catch(e => console.log("Play error:", e));
       } else {
         video.pause();
       }
     }
-  }, [currentTime, isPlaying, activeClip?.id, activeClip?.url]);
+  }, [isPlaying, activeClip?.id]);
 
   const handleSplit = () => {
     if (!selectedClipId) return;
