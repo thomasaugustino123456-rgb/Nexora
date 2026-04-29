@@ -284,21 +284,18 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
               onPost={async (data) => {
                 if (!user) return;
                 try {
-                  // Capture the blob locally so it doesn't break when switching tabs/users
+                  // Upload to Firebase Storage so it's publicly accessible
                   let finalVideoUrl = data.videoUrl;
                   if (finalVideoUrl.startsWith('blob:')) {
-                    const localId = `localMedia_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-                    try {
-                        const response = await fetch(finalVideoUrl);
-                        const blob = await response.blob();
-                        const { saveMediaToLocal } = await import('../lib/localMedia');
-                        await saveMediaToLocal(localId, blob);
-                        finalVideoUrl = `local://${localId}`;
-                    } catch (e) {
-                        console.error("Failed to store blob in IndexedDB:", e);
-                    }
+                    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+                    const storage = getStorage();
+                    const response = await fetch(finalVideoUrl);
+                    const blob = await response.blob();
+                    const storageRef = ref(storage, `videos/${user.uid}/${Date.now()}.mp4`);
+                    await uploadBytes(storageRef, blob);
+                    finalVideoUrl = await getDownloadURL(storageRef);
                   }
-
+                  
                   const videoData: Omit<NexusVideo, 'id'> = {
                     userId: user.uid,
                     userName: settings.displayName || 'Anonymous',
@@ -318,6 +315,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                   showToast('Studio vibe posted to Reels! 🏮', 'success');
                   vibrate(VIBRATION_PATTERNS.SUCCESS);
                 } catch (err) {
+                  console.error(err);
                   showToast('Failed to post vibe', 'error');
                 }
               }}

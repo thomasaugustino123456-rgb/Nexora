@@ -1,13 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, Shield, Target, Award, Star, History, Camera, Crown, Globe, MessageSquare, Zap, Clock, MoreHorizontal } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { UserSettings, UserStats, SocialCircle, Screen } from '../types';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen, circles }: { settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, stats: UserStats, user: FirebaseUser | null, setActiveScreen: (screen: Screen) => void, circles: SocialCircle[] }) {
   const currentXP = stats.xp || 0;
   const nextLevelXP = (stats.level || 1) * 1000;
   const progressPercent = (currentXP / nextLevelXP) * 100;
+
+  const [userVideos, setUserVideos] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      setUserVideos(snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter((vid: any) => vid.userId === user.uid));
+    });
+    return () => unsub();
+  }, [user]);
 
   return (
     <motion.div
@@ -67,6 +82,24 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
          </button>
       </div>
 
+
+      <div className="glass-card p-8">
+        <h3 className="text-xs font-black text-blue-900/30 uppercase tracking-[0.25em] mb-6">Nexus Reels</h3>
+        <div className="grid grid-cols-3 gap-2">
+           {userVideos.map(video => (
+             <div key={video.id} className="relative aspect-[9/16] bg-blue-50 rounded-2xl overflow-hidden shadow-sm">
+                <video src={video.videoUrl} className="w-full h-full object-cover" muted />
+                <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white bg-black/50 px-2 py-0.5 rounded-lg text-[10px] font-bold">
+                   <Zap size={10} /> {video.likes || 0}
+                </div>
+             </div>
+           ))}
+           {userVideos.length === 0 && (
+             <div className="col-span-3 py-10 text-center text-blue-900/40 text-xs font-black uppercase tracking-widest italic">No pulses yet...</div>
+           )}
+        </div>
+      </div>
+      
       <div className="glass-card p-8">
          <h3 className="text-xs font-black text-blue-900/30 uppercase tracking-[0.25em] mb-6">Achievements Unlock</h3>
          <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">

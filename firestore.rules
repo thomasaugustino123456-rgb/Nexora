@@ -219,6 +219,7 @@ service cloud.firestore {
              data.content is string && data.content.size() < 5000 &&
              data.type in ['text', 'image', 'milestone'] &&
              (!('image' in data) || (data.image is string && data.image.size() < 1048576)) &&
+             (!('userPhoto' in data) || (data.userPhoto is string && data.userPhoto.size() < 1048576)) &&
              (!('flames' in data) || data.flames is number) &&
              (!('shields' in data) || data.shields is number) &&
              (!('commentCount' in data) || data.commentCount is number);
@@ -230,6 +231,7 @@ service cloud.firestore {
              data.postId is string &&
              data.content is string && data.content.size() > 0 && data.content.size() < 1000 &&
              (!('parentId' in data) || (data.parentId is string && data.parentId.size() < 100)) &&
+             (!('userPhoto' in data) || (data.userPhoto is string && data.userPhoto.size() < 1048576)) &&
              (!('likes' in data) || data.likes is number) &&
              (!('likedBy' in data) || data.likedBy is list);
     }
@@ -240,6 +242,7 @@ service cloud.firestore {
              data.userName is string && data.userName.size() < 100 &&
              data.videoUrl is string && data.videoUrl.size() < 5000000 &&
              (!('caption' in data) || (data.caption is string && data.caption.size() < 5000)) &&
+             (!('userPhoto' in data) || (data.userPhoto is string && data.userPhoto.size() < 1048576)) &&
              (!('likes' in data) || data.likes is number) &&
              (!('likedBy' in data) || data.likedBy is list) &&
              (!('saves' in data) || data.saves is number) &&
@@ -256,6 +259,7 @@ service cloud.firestore {
              data.videoId is string &&
              data.content is string && data.content.size() > 0 && data.content.size() < 1000 &&
              (!('parentId' in data) || (data.parentId is string && data.parentId.size() < 100)) &&
+             (!('userPhoto' in data) || (data.userPhoto is string && data.userPhoto.size() < 1048576)) &&
              (!('likes' in data) || data.likes is number) &&
              (!('likedBy' in data) || data.likedBy is list);
     }
