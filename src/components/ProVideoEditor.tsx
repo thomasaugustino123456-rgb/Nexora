@@ -153,7 +153,7 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      if (audioUrl && audioUrl !== initialAudio) URL.revokeObjectURL(audioUrl);
       setAudioUrl(URL.createObjectURL(file));
       vibrate(VIBRATION_PATTERNS.SUCCESS);
     }
