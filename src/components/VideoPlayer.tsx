@@ -4,6 +4,11 @@ const getEmbedData = (url: string) => {
   if (!url) return null;
   const lowerUrl = url.toLowerCase();
   
+  // Check for direct video files
+  if (lowerUrl.endsWith('.mp4') || lowerUrl.endsWith('.webm') || lowerUrl.endsWith('.mov') || lowerUrl.includes('video/upload')) {
+    return { type: 'raw', url };
+  }
+
   const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
   const ytMatch = url.match(ytRegex);
   if (ytMatch) return { type: 'youtube', id: ytMatch[1], isShort: url.includes('/shorts/') };
@@ -39,12 +44,28 @@ export const VideoPlayer = ({ url, fullScreen = false }: { url: string, fullScre
         rel="noreferrer" 
         className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all hover:bg-blue-700"
       >
-        Watch on {url.includes('youtube') ? 'YouTube' : 'TikTok'} 🚀
+        Watch Source 🚀
       </a>
     </div>
   );
 
   if (!embedData || embedData.id === 'manual') return <ExternalFallback />;
+
+  if (embedData.type === 'raw') {
+    return (
+      <div className={`${fullScreen ? 'aspect-[9/16]' : 'aspect-video'} w-full rounded-2xl overflow-hidden shadow-2xl bg-black border-2 border-white/10 relative`}>
+        <video 
+          src={embedData.url} 
+          controls 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
 
   if (embedData.type === 'youtube') {
     return (

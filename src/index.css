@@ -15,17 +15,17 @@
 
 @layer components {
   .glass-card {
-    @apply bg-white/[0.7] backdrop-blur-xl border border-white/40 rounded-[32px] shadow-xl shadow-blue-900/5;
+    @apply bg-white/[0.7] backdrop-blur-xl border border-white/40 rounded-[32px] shadow-xl shadow-blue-900/5 transition-all duration-500;
   }
   
   .btn-primary {
     background: var(--accent-color, #3B82F6);
-    @apply text-white font-bold py-4 px-8 rounded-full shadow-lg active:scale-95 transition-all;
+    @apply text-white font-bold py-4 px-8 rounded-full shadow-lg active:scale-95 transition-all duration-300;
     box-shadow: 0 10px 20px -5px var(--accent-color, #3B82F6);
   }
 
   .btn-secondary {
-    @apply bg-white/[0.5] backdrop-blur-md font-bold py-4 px-8 rounded-full border border-white/40 active:scale-95 transition-all;
+    @apply bg-white/[0.5] backdrop-blur-md font-bold py-4 px-8 rounded-full border border-white/40 active:scale-95 transition-all duration-300;
     color: var(--accent-color, #3B82F6);
   }
 }
@@ -36,31 +36,31 @@
   border-radius: 50%;
   opacity: 0.6;
   filter: blur(1px);
-  animation: twinkle var(--duration) infinite ease-in-out;
+  animation: twinkle var(--duration, 3s) infinite ease-in-out;
 }
 
-@keyframes twinkle-mascot {
+@keyframes twinkle {
   0%, 100% { opacity: 0.3; transform: scale(0.8) rotate(0deg); }
   50% { opacity: 1; transform: scale(1.2) rotate(45deg); }
 }
 
 .sparkle-mascot {
   transform-origin: center;
-  animation: twinkle-mascot 3s infinite ease-in-out;
+  animation: twinkle 3s infinite ease-in-out;
 }
 
 @keyframes bodyPush {
-  0%, 100% { transform: rotate(0deg); } /* Up position */
-  50% { transform: rotate(22deg); }    /* Down position */
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(22deg); }
 }
 .main-body-pivot {
   animation: bodyPush 1.5s infinite ease-in-out;
-  transform-origin: 160px 480px; /* Pivoting at the toes */
+  transform-origin: 160px 480px;
 }
 
 @keyframes elbowBend {
-  0%, 100% { d: path("M 440,380 L 450,430 L 460,480"); } /* Straight-ish */
-  50% { d: path("M 440,380 L 510,400 L 460,480"); }      /* Bent Elbow */
+  0%, 100% { d: path("M 440,380 L 450,430 L 460,480"); }
+  50% { d: path("M 440,380 L 510,400 L 460,480"); }
 }
 .arm-muscle {
   animation: elbowBend 1.5s infinite ease-in-out;

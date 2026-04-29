@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout, Target, Trophy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout, Target, Trophy, Play, X } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { PlantState, UserSettings, UserStats, PlantType } from '../types';
 import { vibrate } from '../lib/vibrate';
 import { PlantRenderer } from './PlantRenderer';
 import { PlantCompletionCard } from './PlantCompletionCard';
+import { VIDEO_URLS } from '../constants/videos';
+
+const VideoPlayer = lazy(() => import('./VideoPlayer').then(m => ({ default: m.VideoPlayer })));
 
 interface PlantScreenProps {
   plantState: PlantState;
@@ -34,6 +37,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   const [message, setMessage] = useState<string | null>(null);
   const [showGarden, setShowGarden] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const ecosystemInfo: Record<PlantType, { name: string, description: string }> = {
     sprout: { name: "Classic Sprout", description: "The heart of Nexora. A symbol of your new beginning and pure consistency." },
@@ -186,6 +190,32 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
           )}
         </AnimatePresence>
 
+        <AnimatePresence>
+          {showTutorial && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
+            >
+              <div className="w-full max-w-lg space-y-4">
+                <div className="flex justify-between items-center text-white">
+                  <h3 className="font-black uppercase tracking-widest text-xs italic">Ecosystem Tutorial</h3>
+                  <button onClick={() => setShowTutorial(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                    <X size={24} />
+                  </button>
+                </div>
+                <Suspense fallback={<div className="aspect-video bg-white/5 rounded-2xl flex items-center justify-center text-white/20 text-xs font-black uppercase tracking-widest animate-pulse">Loading Video...</div>}>
+                  <VideoPlayer url={VIDEO_URLS.PLANT_TUTORIAL} />
+                </Suspense>
+                <p className="text-[10px] text-white/40 font-bold text-center uppercase tracking-widest px-8">
+                  Learn how to master your garden and keep your level 5 legendary plants alive, bro!
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="mb-12 flex flex-col items-center">
           <PlantRenderer type={plantState.type} stage={plantState.stage} isThirsty={plantState.isThirsty} isDead={plantState.isDead} />
           <motion.div 
@@ -272,6 +302,13 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
               className="w-full py-4 bg-white/40 hover:bg-white/60 border border-white/60 rounded-2xl text-[10px] font-black uppercase text-blue-900/60 tracking-widest"
             >
               Enter Garden Room
+            </button>
+
+            <button 
+              onClick={() => { vibrate(5); setShowTutorial(true); }}
+              className="w-full py-4 bg-blue-100/50 hover:bg-blue-200/50 text-blue-600 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+            >
+              <Play size={14} /> Watch Tutorial
             </button>
 
             <p className="text-[9px] leading-relaxed text-blue-900/20 text-center font-bold px-8 uppercase tracking-tighter opacity-50">
