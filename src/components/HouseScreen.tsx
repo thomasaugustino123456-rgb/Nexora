@@ -7,7 +7,7 @@ import { HOUSE_ITEMS } from '../constants/houseItems';
 import { HouseItemSVG } from './HouseItemSVG';
 import { SpaceMascot } from './SpaceMascot';
 import { Mascot } from './Mascot';
-import { WaterStep } from '../App';
+import { WaterStep } from './ChallengeFlow';
 
 export function HouseScreen({ 
   onBack, 
