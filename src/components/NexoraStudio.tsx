@@ -81,12 +81,18 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
 
   const createdUrls = useRef<Set<string>>(new Set());
 
+  // Improved cleanup
+  const revokeUrl = (url: string) => {
+    if (url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+      createdUrls.current.delete(url);
+    }
+  };
+
   useEffect(() => {
     return () => {
       // Cleanup object URLs ONLY when studio completely unmounts
-      createdUrls.current.forEach(url => {
-        URL.revokeObjectURL(url);
-      });
+      createdUrls.current.forEach(url => URL.revokeObjectURL(url));
     };
   }, []);
 
@@ -154,6 +160,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (audioFile) revokeUrl(audioFile);
       const newAudioUrl = URL.createObjectURL(file);
       createdUrls.current.add(newAudioUrl);
       setAudioFile(newAudioUrl);

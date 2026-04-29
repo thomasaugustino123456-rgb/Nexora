@@ -144,7 +144,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
     vibrate(VIBRATION_PATTERNS.CLICK);
     try {
       const commentData = {
-        postId: selectedVideo.id,
+        videoId: selectedVideo.id,
         userId: user.uid,
         userName: settings.displayName || 'Anonymous',
         userPhoto: settings.profilePic || '',
