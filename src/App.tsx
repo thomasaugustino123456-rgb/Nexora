@@ -14,19 +14,19 @@ import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection
 import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
-import { OnboardingScreen } from './components/OnboardingScreen';
-import { PlanBuilder } from './components/PlanBuilder';
+const OnboardingScreen = lazy(() => import('./components/OnboardingScreen').then(m => ({ default: m.OnboardingScreen })));
+const PlanBuilder = lazy(() => import('./components/PlanBuilder').then(m => ({ default: m.PlanBuilder })));
 import { Mascot } from './components/Mascot';
 import { ArtistMascot } from './components/ArtistMascot';
 import { BreathingMascot } from './components/BreathingMascot';
 import { PushupMascot } from './components/PushupMascot';
 import { WaterMascot } from './components/WaterMascot';
 import { WritingMascot } from './components/WritingMascot';
-import { HouseScreen } from './components/HouseScreen';
+const HouseScreen = lazy(() => import('./components/HouseScreen').then(m => ({ default: m.HouseScreen })));
 import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './components/Trophies';
-import { LibraryScreen } from './components/LibraryScreen';
-import { ShopScreen, SHOP_ITEMS } from './components/ShopScreen';
-import { PlantScreen } from './components/PlantScreen';
+const LibraryScreen = lazy(() => import('./components/LibraryScreen').then(m => ({ default: m.LibraryScreen })));
+const ShopScreen = lazy(() => import('./components/ShopScreen').then(m => ({ default: m.ShopScreen })));
+const PlantScreen = lazy(() => import('./components/PlantScreen').then(m => ({ default: m.PlantScreen })));
 import { Calendar } from './components/Calendar';
 import { StatsCharts } from './components/StatsCharts';
 import { VideoPlayer } from './components/VideoPlayer';
@@ -2738,55 +2738,57 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <ShopScreen 
-                  streak={stats.streak}
-                  coins={stats.coins || 0}
-                  purchasedItems={settings.purchasedItems || []}
-                  isPro={isPro}
-                  onBuy={(item, currency) => {
-                    vibrate(VIBRATION_PATTERNS.SUCCESS);
-                    
-                    const newItem: any = {
-                      id: `${item.id}-${Date.now()}`,
-                      itemId: item.id,
-                      name: item.name,
-                      icon: item.icon,
-                      activated: false,
-                      type: item.effect === 'skin' ? 'skin' : item.effect === 'gift' ? 'gift' : item.effect === 'sound-pack' ? 'sound-pack' : item.effect === 'music' ? 'music' : 'power-up',
-                      purchasedAt: new Date().toISOString()
-                    };
-
-                    const bonusItems: any[] = [];
-                    if (item.effect === 'gift') {
-                      // Add an automatic bonus gift
-                      bonusItems.push({
-                        id: `bonus-${item.id}-${Date.now()}`,
-                        itemId: `bonus-${item.id}`,
-                        name: `Bonus ${item.name}`,
-                        icon: `✨${item.icon}`,
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">CURATING WARES...</div>}>
+                  <ShopScreen 
+                    streak={stats.streak}
+                    coins={stats.coins || 0}
+                    purchasedItems={settings.purchasedItems || []}
+                    isPro={isPro}
+                    onBuy={(item, currency) => {
+                      vibrate(VIBRATION_PATTERNS.SUCCESS);
+                      
+                      const newItem: any = {
+                        id: `${item.id}-${Date.now()}`,
+                        itemId: item.id,
+                        name: item.name,
+                        icon: item.icon,
                         activated: false,
-                        type: 'gift',
+                        type: item.effect === 'skin' ? 'skin' : item.effect === 'gift' ? 'gift' : item.effect === 'sound-pack' ? 'sound-pack' : item.effect === 'music' ? 'music' : 'power-up',
                         purchasedAt: new Date().toISOString()
-                      });
-                    }
+                      };
 
-                    setSettings(prev => ({
-                      ...prev,
-                      purchasedItems: [...(prev.purchasedItems || []), item.id],
-                      inventory: [...(prev.inventory || []), newItem, ...bonusItems],
-                    }));
+                      const bonusItems: any[] = [];
+                      if (item.effect === 'gift') {
+                        // Add an automatic bonus gift
+                        bonusItems.push({
+                          id: `bonus-${item.id}-${Date.now()}`,
+                          itemId: `bonus-${item.id}`,
+                          name: `Bonus ${item.name}`,
+                          icon: `✨${item.icon}`,
+                          activated: false,
+                          type: 'gift',
+                          purchasedAt: new Date().toISOString()
+                        });
+                      }
 
-                    setStats(prev => ({
-                      ...prev,
-                      streak: currency === 'streak' ? prev.streak - item.price : prev.streak,
-                      coins: currency === 'coins' ? (prev.coins || 0) - (item.coinPrice || 0) : (prev.coins || 0)
-                    }));
-                  }}
-                  onBack={() => {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    setActiveScreen('home');
-                  }}
-                />
+                      setSettings(prev => ({
+                        ...prev,
+                        purchasedItems: [...(prev.purchasedItems || []), item.id],
+                        inventory: [...(prev.inventory || []), newItem, ...bonusItems],
+                      }));
+
+                      setStats(prev => ({
+                        ...prev,
+                        streak: currency === 'streak' ? prev.streak - item.price : prev.streak,
+                        coins: currency === 'coins' ? (prev.coins || 0) - (item.coinPrice || 0) : (prev.coins || 0)
+                      }));
+                    }}
+                    onBack={() => {
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                      setActiveScreen('home');
+                    }}
+                  />
+                </Suspense>
               </motion.div>
             )}
             {activeScreen === 'subscription' && (
@@ -2812,13 +2814,15 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <PlanBuilder 
-                  onBack={() => setActiveScreen('home')}
-                  onSave={handleSaveCustomPlan}
-                  isPro={isPro}
-                  existingPlansCount={customPlans.length}
-                  settings={settings}
-                />
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">ARCHITECTING FLOW...</div>}>
+                  <PlanBuilder 
+                    onBack={() => setActiveScreen('home')}
+                    onSave={handleSaveCustomPlan}
+                    isPro={isPro}
+                    existingPlansCount={customPlans.length}
+                    settings={settings}
+                  />
+                </Suspense>
               </motion.div>
             )}
             {activeScreen === 'library' && (
@@ -3047,21 +3051,23 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="w-full"
               >
-                <HouseScreen 
-                  onBack={() => setActiveScreen('home')} 
-                  stats={stats}
-                  settings={settings}
-                  dailyProgress={dailyProgress}
-                  onUpdateDailyProgress={onUpdateDailyProgress}
-                  onBuyItem={buyHouseItem}
-                  onPlaceItem={placeHouseItem}
-                  onRemoveItem={removeHouseItem}
-                  onUpdateItemPosition={updateHouseItemPosition}
-                  onUpdateSettings={onUpdateSettings}
-                  onUpdateStats={onUpdateStats}
-                  showToast={showToast}
-                  play={play}
-                />
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black italic">HOUSE LOADING...</div>}>
+                  <HouseScreen 
+                    onBack={() => setActiveScreen('home')} 
+                    stats={stats}
+                    settings={settings}
+                    dailyProgress={dailyProgress}
+                    onUpdateDailyProgress={onUpdateDailyProgress}
+                    onBuyItem={buyHouseItem}
+                    onPlaceItem={placeHouseItem}
+                    onRemoveItem={removeHouseItem}
+                    onUpdateItemPosition={updateHouseItemPosition}
+                    onUpdateSettings={onUpdateSettings}
+                    onUpdateStats={onUpdateStats}
+                    showToast={showToast}
+                    play={play}
+                  />
+                </Suspense>
               </motion.div>
             )}
             {activeScreen === 'plant' && settings.plantState && (
@@ -3072,47 +3078,46 @@ export default function App() {
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="w-full"
               >
-                <PlantScreen 
-                  plantState={settings.plantState}
-                  onboardingCompleted={!!settings.plantOnboardingCompleted}
-                  onCompleteOnboarding={() => onUpdateSettings({ plantOnboardingCompleted: true })}
-                  onExit={() => { vibrate(5); setActiveScreen('home'); }}
-                  onSaveToLibrary={(imageData) => {
-                    onUpdateStats(prev => ({
-                      ...prev,
-                      drawings: [imageData, ...(prev.drawings || [])]
-                    }));
-                  }}
-                  onSwitchType={(type) => {
-                    vibrate(10);
-                    onUpdateSettings(prev => ({
-                      ...prev,
-                      plantState: {
-                        ...prev.plantState!,
-                        type,
-                        // If they haven't finished this one yet, keep stage.
-                        // If they want independent tracking per plant, we'd need a map.
-                        // For now, let's keep it as one active progression.
-                      }
-                    }));
-                  }}
-                  onRecover={() => {
-                    onUpdateSettings({
-                      plantState: {
-                        ...settings.plantState!,
-                        stage: 0,
-                        growthPoints: 0,
-                        isDead: false,
-                        isThirsty: false,
-                        health: 100,
-                        lastCheckDate: new Date().toISOString()
-                      }
-                    });
-                    showToast("Ecosystem restored! 🌿", "info");
-                  }}
-                  settings={settings}
-                  stats={stats}
-                />
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-green-700 font-black italic uppercase tracking-widest">NURTURING ECOSYSTEM...</div>}>
+                  <PlantScreen 
+                    plantState={settings.plantState}
+                    onboardingCompleted={!!settings.plantOnboardingCompleted}
+                    onCompleteOnboarding={() => onUpdateSettings({ plantOnboardingCompleted: true })}
+                    onExit={() => { vibrate(5); setActiveScreen('home'); }}
+                    onSaveToLibrary={(imageData) => {
+                      onUpdateStats(prev => ({
+                        ...prev,
+                        drawings: [imageData, ...(prev.drawings || [])]
+                      }));
+                    }}
+                    onSwitchType={(type) => {
+                      vibrate(10);
+                      onUpdateSettings(prev => ({
+                        ...prev,
+                        plantState: {
+                          ...prev.plantState!,
+                          type,
+                        }
+                      }));
+                    }}
+                    onRecover={() => {
+                      onUpdateSettings({
+                        plantState: {
+                          ...settings.plantState!,
+                          stage: 0,
+                          growthPoints: 0,
+                          isDead: false,
+                          isThirsty: false,
+                          health: 100,
+                          lastCheckDate: new Date().toISOString()
+                        }
+                      });
+                      showToast("Ecosystem restored! 🌿", "info");
+                    }}
+                    settings={settings}
+                    stats={stats}
+                  />
+                </Suspense>
               </motion.div>
             )}
             {activeScreen === 'challenge' && (
