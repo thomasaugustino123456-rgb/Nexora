@@ -10,14 +10,14 @@ import { ProVideoEditor } from './ProVideoEditor';
 import { showToast } from '../lib/toast';
 
 interface NexoraStudioProps {
-  onClose: () => void;
-  onPost: (videoData: any) => void;
+  onBack: () => void;
+  onPost?: (videoData: any) => void;
   user: any;
 }
 
 type StudioStage = 1 | 2 | 3;
 
-export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
+export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
   const [stage, setStage] = useState<StudioStage>(1);
   const [capturedMedia, setCapturedMedia] = useState<{url: string, type: 'video' | 'photo'}[]>([]);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
@@ -189,7 +189,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                   </p>
                </div>
 
-               <button onClick={onClose} className="text-white/20 text-[10px] font-black uppercase tracking-[0.5em] hover:text-white pt-10">
+               <button onClick={onBack} className="text-white/20 text-[10px] font-black uppercase tracking-[0.5em] hover:text-white pt-10">
                  Exit Studio
                </button>
             </div>
@@ -410,7 +410,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
 
             {/* Top Close */}
             <div className="absolute top-8 left-8 z-50">
-               <button onClick={onClose} className="w-14 h-14 bg-black/40 backdrop-blur-3xl rounded-3xl text-white flex items-center justify-center hover:bg-white/10 transition-all active:scale-90 shadow-2xl border border-white/10">
+               <button onClick={onBack} className="w-14 h-14 bg-black/40 backdrop-blur-3xl rounded-3xl text-white flex items-center justify-center hover:bg-white/10 transition-all active:scale-90 shadow-2xl border border-white/10">
                   <X size={24} />
                </button>
             </div>
@@ -477,9 +477,9 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                         onClick={() => audioInputRef.current?.click()}
                         className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3"
                       >
-                         Add Music from Phone <Music size={16} />
+                         Add Music or Sounds <Music size={16} />
                       </button>
-                      <input ref={audioInputRef} type="file" accept="audio/*" onChange={handleAudioUpload} className="hidden" />
+                      <input ref={audioInputRef} type="file" accept="audio/*,video/*,image/*,.mp3,.wav,.m4a,.aac,.ogg" onChange={handleAudioUpload} className="hidden" />
                       
                       {audioFile && (
                         <div className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/10">
@@ -685,15 +685,25 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                     <button 
                       onClick={() => {
                         vibrate(VIBRATION_PATTERNS.SUCCESS);
+                        if (onPost) {
                           onPost({ 
-                          videoUrl: capturedMedia[0]?.url || '', 
-                          caption,
-                          userName: user?.displayName || 'Anonymous',
-                          userPhoto: user?.photoURL || '',
-                          quality,
-                          platform: 'nexora',
-                          type: capturedMedia[0]?.type || 'video'
-                        });
+                            userId: user?.uid,
+                            videoUrl: capturedMedia[0]?.url || '', 
+                            caption,
+                            userName: user?.displayName || 'Anonymous',
+                            userPhoto: user?.photoURL || '',
+                            quality,
+                            platform: 'nexora',
+                            type: capturedMedia[0]?.type || 'video',
+                            createdAt: new Date().toISOString(),
+                            likes: 0,
+                            likedBy: [],
+                            saves: 0,
+                            savedBy: [],
+                            commentCount: 0,
+                            repostCount: 0
+                          });
+                        }
                       }}
                       className="flex-1 h-16 bg-orange-500 text-white rounded-[1.5rem] font-black uppercase text-[10px] tracking-[0.4em] flex items-center justify-center gap-3 shadow-[0_15px_40px_rgba(249,115,22,0.3)] hover:bg-orange-600 transition-all active:scale-95"
                     >
@@ -703,7 +713,7 @@ export function NexoraStudio({ onClose, onPost, user }: NexoraStudioProps) {
                </div>
             </div>
             
-            <button onClick={onClose} className="absolute bottom-10 text-[9px] text-white/20 font-black uppercase tracking-[0.4em] hover:text-white transition-colors">
+            <button onClick={onBack} className="absolute bottom-10 text-[9px] text-white/20 font-black uppercase tracking-[0.4em] hover:text-white transition-colors">
                Cancel Broadcast
             </button>
           </motion.div>

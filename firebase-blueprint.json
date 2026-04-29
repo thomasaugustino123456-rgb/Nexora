@@ -279,7 +279,8 @@
         "repostCount": { "type": "number" },
         "createdAt": { "type": "string" },
         "isAuthorized": { "type": "boolean" },
-        "platform": { "type": "string", "enum": ["youtube", "tiktok"] }
+        "platform": { "type": "string", "enum": ["youtube", "tiktok", "nexora"] },
+        "type": { "type": "string", "enum": ["video", "photo"] }
       },
       "required": ["userId", "userName", "videoUrl", "createdAt"]
     },

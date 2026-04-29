@@ -246,7 +246,8 @@ service cloud.firestore {
              (!('savedBy' in data) || data.savedBy is list) &&
              (!('commentCount' in data) || data.commentCount is number) &&
              (!('repostCount' in data) || data.repostCount is number) &&
-             (!('platform' in data) || data.platform in ['youtube', 'tiktok']);
+             (!('type' in data) || data.type in ['video', 'photo']) &&
+             (!('platform' in data) || data.platform in ['youtube', 'tiktok', 'nexora']);
     }
 
     function isValidVideoComment(data) {

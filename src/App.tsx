@@ -224,6 +224,27 @@ export default function App() {
     }
   };
 
+  const handlePostVideo = async (videoData: any) => {
+    if (!user) return;
+    try {
+      const postData = {
+        ...videoData,
+        userId: user.uid,
+        createdAt: new Date().toISOString(),
+        isAuthorized: true
+      };
+      
+      await addDoc(collection(db, 'social_videos'), postData);
+      showToast('Nexus Reel Published! 🚀', 'success');
+      setActiveScreen('home'); 
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (err) {
+      console.error("Studio Post Error:", err);
+      showToast('Error fail to post', 'error');
+      handleFirestoreError(err, OperationType.WRITE, 'social_videos');
+    }
+  };
+
   const buyHouseItem = (id: string, currency: 'streak' | 'coins') => {
     const item = HOUSE_ITEMS.find(i => i.id === id);
     if (!item) return;
@@ -2420,6 +2441,7 @@ export default function App() {
                 <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black italic tracking-widest">NEXORA STUDIO LOADING...</div>}>
                   <NexoraStudio 
                     onBack={() => setActiveScreen('home')}
+                    onPost={handlePostVideo}
                     user={user}
                   />
                 </Suspense>
