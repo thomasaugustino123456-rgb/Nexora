@@ -491,13 +491,26 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
                       
                       <div className="space-y-4">
                          {comments.map(comment => (
-                           <div key={comment.id} className="flex gap-4 group">
+                           <div key={comment.id} className={`flex gap-4 group ${comment.parentId ? 'ml-12 border-l-2 border-blue-200 pl-4' : ''}`}>
                               <div className="w-10 h-10 rounded-2xl bg-blue-50 overflow-hidden shrink-0">
                                  {comment.userPhoto ? <img src={comment.userPhoto} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2 text-blue-200" />}
                               </div>
-                              <div className="bg-blue-50/50 p-4 rounded-2xl rounded-tl-none flex-1">
-                                 <h5 className="text-[10px] font-black text-blue-900 uppercase mb-1">{comment.userName}</h5>
-                                 <p className="text-sm font-medium text-blue-900/80">{comment.content}</p>
+                              <div className="flex-1">
+                                <div className="bg-blue-50/50 p-4 rounded-2xl rounded-tl-none">
+                                   <div className="flex justify-between items-start">
+                                      <h5 className="text-[10px] font-black text-blue-900 uppercase mb-1">{comment.userName}</h5>
+                                   </div>
+                                   <p className="text-sm font-medium text-blue-900/80">{comment.content}</p>
+                                </div>
+                                <div className="flex items-center gap-4 mt-2 px-2">
+                                   <button 
+                                     onClick={() => setReplyingTo(comment)}
+                                     className="text-[10px] font-black uppercase text-blue-400 hover:text-blue-600 transition-colors flex items-center gap-1"
+                                   >
+                                     <MessageSquare size={10} /> Reply
+                                   </button>
+                                   <span className="text-[10px] font-bold text-blue-300">{format(parseISO(comment.createdAt), 'MMM d, h:mm a')}</span>
+                                </div>
                               </div>
                            </div>
                          ))}
@@ -506,6 +519,12 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
                 </div>
 
                 <div className="p-6 bg-blue-50/50 border-t-2 border-white backdrop-blur-sm">
+                   {replyingTo && (
+                     <div className="flex items-center justify-between mb-4 bg-blue-100/50 px-4 py-2 rounded-xl">
+                       <span className="text-[10px] font-black uppercase text-blue-600">Replying to {replyingTo.userName}</span>
+                       <button onClick={() => setReplyingTo(null)} className="text-blue-400 hover:text-blue-600 p-1"><X size={12} /></button>
+                     </div>
+                   )}
                    <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-lg">
                          <User size={20} />

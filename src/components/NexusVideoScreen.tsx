@@ -124,6 +124,43 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
   const [isStudioOpen, setIsStudioOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
 
+  const [videoComments, setVideoComments] = useState<any[]>([]);
+  const [newVideoComment, setNewVideoComment] = useState('');
+  const [isPostingComment, setIsPostingComment] = useState(false);
+  const [replyingToComment, setReplyingToComment] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (!selectedVideo) return;
+    const qComments = query(collection(db, 'social_videos', selectedVideo.id, 'comments'), orderBy('createdAt', 'asc'));
+    const unsubComments = onSnapshot(qComments, (snapshot) => {
+      setVideoComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubComments();
+  }, [selectedVideo]);
+
+  const handlePostVideoComment = async () => {
+    if (!newVideoComment.trim() || !selectedVideo || !user) return;
+    setIsPostingComment(true);
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    try {
+      const commentData = {
+        postId: selectedVideo.id,
+        userId: user.uid,
+        userName: settings.displayName || 'Anonymous',
+        userPhoto: settings.profilePic || '',
+        content: newVideoComment.trim(),
+        createdAt: new Date().toISOString(),
+        likes: 0,
+        parentId: replyingToComment ? replyingToComment.id : undefined
+      };
+      await addDoc(collection(db, 'social_videos', selectedVideo.id, 'comments'), commentData);
+      await updateDoc(doc(db, 'social_videos', selectedVideo.id), { commentCount: increment(1) });
+      setNewVideoComment('');
+      setReplyingToComment(null);
+    } catch (err) { showToast('Comment failed', 'error'); }
+    finally { setIsPostingComment(false); }
+  };
+
   useEffect(() => {
     let q = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'), limit(30));
     const unsub = onSnapshot(q, (snapshot) => {
@@ -247,11 +284,26 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
               onPost={async (data) => {
                 if (!user) return;
                 try {
+                  // Capture the blob locally so it doesn't break when switching tabs/users
+                  let finalVideoUrl = data.videoUrl;
+                  if (finalVideoUrl.startsWith('blob:')) {
+                    const localId = `localMedia_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+                    try {
+                        const response = await fetch(finalVideoUrl);
+                        const blob = await response.blob();
+                        const { saveMediaToLocal } = await import('../lib/localMedia');
+                        await saveMediaToLocal(localId, blob);
+                        finalVideoUrl = `local://${localId}`;
+                    } catch (e) {
+                        console.error("Failed to store blob in IndexedDB:", e);
+                    }
+                  }
+
                   const videoData: Omit<NexusVideo, 'id'> = {
                     userId: user.uid,
                     userName: settings.displayName || 'Anonymous',
                     userPhoto: settings.profilePic || '',
-                    videoUrl: data.videoUrl,
+                    videoUrl: finalVideoUrl,
                     caption: data.caption || 'New Studio Vibe! 🏮',
                     likes: 0,
                     likedBy: [],
@@ -340,22 +392,61 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                    </button>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-8 pt-0 custom-scrollbar">
-                   <div className="py-20 text-center opacity-20 space-y-4">
-                      <div className="w-20 h-20 bg-blue-100 rounded-3xl flex items-center justify-center mx-auto">
-                        <MessageSquare size={40} className="text-blue-600" />
-                      </div>
-                      <p className="font-black uppercase tracking-[0.3em] text-[10px] italic">Quantum signals being processed...</p>
-                   </div>
+                <div className="flex-1 overflow-y-auto p-8 pt-0 custom-scrollbar space-y-4">
+                   {videoComments.length === 0 ? (
+                     <div className="py-20 text-center opacity-20 space-y-4">
+                        <div className="w-20 h-20 bg-blue-100 rounded-3xl flex items-center justify-center mx-auto">
+                          <MessageSquare size={40} className="text-blue-600" />
+                        </div>
+                        <p className="font-black uppercase tracking-[0.3em] text-[10px] italic">Quantum signals being processed...</p>
+                     </div>
+                   ) : (
+                     videoComments.map(comment => (
+                       <div key={comment.id} className={`flex gap-4 group ${comment.parentId ? 'ml-12 border-l-2 border-blue-200 pl-4' : ''}`}>
+                          <div className="w-10 h-10 rounded-2xl bg-blue-50 overflow-hidden shrink-0">
+                             {comment.userPhoto ? <img src={comment.userPhoto} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2 text-blue-200" />}
+                          </div>
+                          <div className="flex-1">
+                            <div className="bg-blue-50/50 p-4 rounded-2xl rounded-tl-none">
+                               <div className="flex justify-between items-start">
+                                  <h5 className="text-[10px] font-black text-blue-900 uppercase mb-1">{comment.userName}</h5>
+                               </div>
+                               <p className="text-sm font-medium text-blue-900/80">{comment.content}</p>
+                            </div>
+                            <div className="flex items-center gap-4 mt-2 px-2">
+                               <button 
+                                 onClick={() => setReplyingToComment(comment)}
+                                 className="text-[10px] font-black uppercase text-blue-400 hover:text-blue-600 transition-colors flex items-center gap-1"
+                               >
+                                 <MessageSquare size={10} /> Reply
+                               </button>
+                            </div>
+                          </div>
+                       </div>
+                     ))
+                   )}
                 </div>
 
                 <div className="p-8 bg-white border-t border-blue-50 rounded-t-[2.5rem]">
+                   {replyingToComment && (
+                     <div className="flex items-center justify-between mb-4 bg-blue-100/50 px-4 py-2 rounded-xl">
+                       <span className="text-[10px] font-black uppercase text-blue-600">Replying to {replyingToComment.userName}</span>
+                       <button onClick={() => setReplyingToComment(null)} className="text-blue-400 hover:text-blue-600 p-1"><X size={12} /></button>
+                     </div>
+                   )}
                    <div className="flex items-center gap-4 bg-blue-50 p-4 rounded-3xl border border-blue-100 shadow-inner group">
                       <input 
                         type="text" placeholder="Add a transmission..." 
+                        value={newVideoComment}
+                        onChange={(e) => setNewVideoComment(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handlePostVideoComment()}
                         className="bg-transparent border-none focus:outline-none flex-1 text-blue-900 font-bold text-sm ml-2" 
                       />
-                      <button className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg active:scale-90 transition-all hover:rotate-12">
+                      <button 
+                        onClick={handlePostVideoComment}
+                        disabled={!newVideoComment.trim() || isPostingComment}
+                        className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg active:scale-90 transition-all hover:rotate-12 disabled:opacity-50"
+                      >
                          <Send size={20} />
                       </button>
                    </div>

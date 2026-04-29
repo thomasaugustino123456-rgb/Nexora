@@ -9,16 +9,17 @@ import { showToast } from '../lib/toast';
 
 interface ProVideoEditorProps {
   media: {url: string, type: 'video' | 'photo', duration?: number, trimStart?: number}[];
+  initialAudio?: string | null;
   onBack: () => void;
-  onComplete: (newMedia: {url: string, type: 'video' | 'photo', duration?: number, trimStart?: number}[]) => void;
+  onComplete: (newMedia: {url: string, type: 'video' | 'photo', duration?: number, trimStart?: number}[], newAudioUrl?: string | null) => void;
 }
 
-export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProps) {
+export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProVideoEditorProps) {
   const [clips, setClips] = useState<{ id: string, url: string, type: string, duration: number, startTime: number, trimStart: number }[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(initialAudio || null);
   const [isReady, setIsReady] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -170,7 +171,7 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
             <p className="text-[10px] font-bold text-orange-500">{currentTime.toFixed(2)}s / {totalDuration.toFixed(2)}s</p>
          </div>
          <button 
-          onClick={() => onComplete(clips.map(c => ({ url: c.url, type: c.type as 'video' | 'photo', duration: c.duration, trimStart: c.trimStart })))}
+          onClick={() => onComplete(clips.map(c => ({ url: c.url, type: c.type as 'video' | 'photo', duration: c.duration, trimStart: c.trimStart })), audioUrl)}
           className="px-6 py-2 bg-white text-black rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl"
          >
             Finish

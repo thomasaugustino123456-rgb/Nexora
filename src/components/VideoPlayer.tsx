@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const getEmbedData = (url: string) => {
   if (!url) return null;
   const lowerUrl = url.toLowerCase();
+  
+  // Check for local storage videos
+  if (lowerUrl.startsWith('local://') || lowerUrl.startsWith('blob:')) {
+    return { type: 'local', id: url.replace('local://', '') };
+  }
   
   // Check for direct video files
   if (lowerUrl.endsWith('.mp4') || lowerUrl.endsWith('.webm') || lowerUrl.endsWith('.mov') || lowerUrl.includes('video/upload')) {
@@ -28,7 +33,31 @@ const getEmbedData = (url: string) => {
 
 export const VideoPlayer = ({ url, fullScreen = false }: { url: string, fullScreen?: boolean }) => {
   const embedData = getEmbedData(url);
-  
+  const [localUrl, setLocalUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (embedData?.type === 'local') {
+      if (url.startsWith('blob:')) {
+        setLocalUrl(url);
+      } else {
+        const loadLocal = async () => {
+          try {
+            const { getMediaFromLocal } = await import('../lib/localMedia');
+            const blob = await getMediaFromLocal(embedData.id);
+            if (blob) {
+              setLocalUrl(URL.createObjectURL(blob));
+            } else {
+              console.error("Local media not found in IndexedDB");
+            }
+          } catch (e) {
+            console.error("Error loading local media:", e);
+          }
+        };
+        loadLocal();
+      }
+    }
+  }, [url, embedData?.type, embedData?.id]);
+
   const ExternalFallback = () => (
     <div className="p-8 bg-blue-50/50 border-2 border-blue-100 rounded-3xl text-center space-y-4 shadow-inner">
       <div className="text-4xl">🎥</div>
@@ -50,6 +79,22 @@ export const VideoPlayer = ({ url, fullScreen = false }: { url: string, fullScre
   );
 
   if (!embedData || embedData.id === 'manual') return <ExternalFallback />;
+
+  if (embedData.type === 'local' && localUrl) {
+    return (
+      <div className={`${fullScreen ? 'aspect-[9/16]' : 'aspect-video'} w-full rounded-2xl overflow-hidden shadow-2xl bg-black border-2 border-white/10 relative`}>
+        <video 
+          src={localUrl} 
+          controls 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
 
   if (embedData.type === 'raw') {
     return (
