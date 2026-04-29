@@ -238,8 +238,8 @@ service cloud.firestore {
       return data.keys().hasAll(['userId', 'userName', 'videoUrl', 'createdAt']) &&
              data.userId == request.auth.uid &&
              data.userName is string && data.userName.size() < 100 &&
-             data.videoUrl is string && data.videoUrl.size() < 1000 &&
-             (!('caption' in data) || (data.caption is string && data.caption.size() < 1000)) &&
+             data.videoUrl is string && data.videoUrl.size() < 5000000 &&
+             (!('caption' in data) || (data.caption is string && data.caption.size() < 5000)) &&
              (!('likes' in data) || data.likes is number) &&
              (!('likedBy' in data) || data.likedBy is list) &&
              (!('saves' in data) || data.saves is number) &&

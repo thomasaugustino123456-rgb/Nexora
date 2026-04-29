@@ -257,7 +257,7 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
                <input 
                 type="file" 
                 ref={audioInputRef} 
-                accept="audio/*,video/*,image/*,.mp3,.wav,.m4a,.aac,.ogg,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/aac" 
+                accept="*/*" 
                 className="hidden" 
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -310,7 +310,7 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
                   <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{audioUrl ? 'Synced Beat Track' : 'Add Background Audio'}</span>
                </div>
                <button onClick={() => audioInputRef.current?.click()} className="text-orange-500"><Plus size={18} /></button>
-               <input ref={audioInputRef} type="file" accept="audio/*,video/*,image/*,.mp3,.wav,.m4a,.aac,.ogg,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/aac" onChange={handleAudioUpload} className="hidden" />
+               <input ref={audioInputRef} type="file" accept="*/*" onChange={handleAudioUpload} className="hidden" />
             </div>
          </div>
 

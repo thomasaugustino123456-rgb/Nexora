@@ -73,14 +73,35 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
     return () => clearInterval(interval);
   }, [isAutoSwitch, capturedMedia, stage]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    return () => {
+      // Cleanup object URLs when studio unmounts
+      capturedMedia.forEach(media => {
+        URL.revokeObjectURL(media.url);
+      });
+      if (audioFile) {
+        URL.revokeObjectURL(audioFile);
+      }
+    };
+  }, [capturedMedia, audioFile]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    // We keep the old URLs for now to avoid blank screens if the browser is slow
-    const newMedia = files.map(file => ({
-      url: URL.createObjectURL(file),
-      type: (file.type.startsWith('video') ? 'video' : 'photo') as 'video' | 'photo'
+    showToast(`Loading ${files.length} Media... ⏳`, 'info');
+    
+    const newMedia = await Promise.all(files.map(file => {
+      return new Promise<{url: string, type: 'video' | 'photo'}>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve({
+            url: reader.result as string,
+            type: file.type.startsWith('video') ? 'video' : 'photo'
+          });
+        };
+        reader.readAsDataURL(file);
+      });
     }));
     
     setCapturedMedia(prev => [...prev, ...newMedia]);
@@ -479,7 +500,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                       >
                          Add Music or Sounds <Music size={16} />
                       </button>
-                      <input ref={audioInputRef} type="file" accept="audio/*,video/*,image/*,.mp3,.wav,.m4a,.aac,.ogg" onChange={handleAudioUpload} className="hidden" />
+                      <input ref={audioInputRef} type="file" accept="*/*" onChange={handleAudioUpload} className="hidden" />
                       
                       {audioFile && (
                         <div className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/10">
@@ -583,9 +604,13 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
           <motion.div 
             key="stage3"
             initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="w-full h-full relative bg-neutral-950 flex flex-col items-center justify-center p-8"
+            className="w-full h-full relative bg-neutral-950 p-8 overflow-y-auto overflow-x-hidden flex flex-col"
           >
-            <div className="w-full max-w-4xl grid md:grid-cols-2 gap-12 items-center">
+             <button onClick={() => setStage(2)} className="absolute top-8 left-8 w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-white/50 hover:text-white transition-all z-[100]">
+               <ArrowLeft size={24} />
+             </button>
+
+            <div className="w-full max-w-4xl grid md:grid-cols-2 gap-12 items-start mx-auto mt-16 md:mt-0 pb-32">
                {/* Preview Card */}
                <div className="relative group mx-auto">
                   <div className="w-[280px] aspect-[9/16] rounded-[2.5rem] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,1)] border-4 border-white/5 relative bg-black transform rotate-1 group-hover:rotate-0 transition-transform duration-700">

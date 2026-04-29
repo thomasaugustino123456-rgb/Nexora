@@ -186,7 +186,7 @@ export interface CustomPlan {
   createdAt: string;
 }
 
-export type Screen = 'home' | 'progress' | 'profile' | 'social' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant' | 'nexus-video' | 'studio';
+export type Screen = 'home' | 'progress' | 'profile' | 'social' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant' | 'nexus-video';
 
 export interface UserReport {
   id: string;

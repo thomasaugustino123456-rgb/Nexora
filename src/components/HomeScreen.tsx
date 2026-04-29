@@ -37,7 +37,7 @@ function CountdownToMidnight() {
   return <span>{timeLeft}</span>;
 }
 
-export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenStudio, fcmToken, setupFCM, fcmError, showToast }: { 
+export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, fcmToken, setupFCM, fcmError, showToast }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
@@ -53,7 +53,6 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
   onDeleteCustomPlan: (id: string) => void,
   onOpenPlanBuilder: () => void,
   onOpenPlant: () => void,
-  onOpenStudio: () => void,
   fcmToken: string | null,
   setupFCM: () => void,
   fcmError: string | null,
@@ -341,27 +340,6 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
                 </div>
               </div>
               <ChevronRight size={20} className="text-emerald-500 group-hover:translate-x-1 transition-transform" />
-            </button>
-
-            <button 
-              onClick={() => {
-                vibrate(VIBRATION_PATTERNS.CLICK);
-                onOpenStudio();
-              }}
-              className="w-full flex items-center justify-between p-4 glass-card bg-purple-50/30 border-2 border-purple-100/50 hover:bg-purple-50 transition-all group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-400 to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-purple-200 group-hover:scale-110 transition-transform">
-                  <Star size={24} />
-                </div>
-                <div className="text-left">
-                  <h4 className="font-black text-blue-900 leading-none">Nexora Studio</h4>
-                  <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest mt-1">
-                    Create & Edit Neural Reels 🎨
-                  </p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-purple-500 group-hover:translate-x-1 transition-transform" />
             </button>
 
             {dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3) && (

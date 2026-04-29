@@ -1993,10 +1993,6 @@ export default function App() {
                     vibrate(VIBRATION_PATTERNS.CLICK);
                     setActiveScreen('plant');
                   }}
-                  onOpenStudio={() => {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    setActiveScreen('studio');
-                  }}
                   fcmToken={fcmToken}
                   setupFCM={setupFCM}
                   fcmError={fcmError}
@@ -2425,24 +2421,6 @@ export default function App() {
                       vibrate(VIBRATION_PATTERNS.CLICK);
                       setActiveScreen('home');
                     }}
-                  />
-                </Suspense>
-              </motion.div>
-            )}
-            {activeScreen === 'studio' && (
-              <motion.div
-                key="studio"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="w-full"
-              >
-                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black italic tracking-widest">NEXORA STUDIO LOADING...</div>}>
-                  <NexoraStudio 
-                    onBack={() => setActiveScreen('home')}
-                    onPost={handlePostVideo}
-                    user={user}
                   />
                 </Suspense>
               </motion.div>
