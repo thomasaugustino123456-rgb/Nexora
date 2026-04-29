@@ -8,13 +8,13 @@ import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { showToast } from '../lib/toast';
 
 interface ProVideoEditorProps {
-  media: {url: string, type: 'video' | 'photo'}[];
+  media: {url: string, type: 'video' | 'photo', duration?: number, trimStart?: number}[];
   onBack: () => void;
-  onComplete: (newMedia: {url: string, type: 'video' | 'photo'}[]) => void;
+  onComplete: (newMedia: {url: string, type: 'video' | 'photo', duration?: number, trimStart?: number}[]) => void;
 }
 
 export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProps) {
-  const [clips, setClips] = useState<{ id: string, url: string, type: string, duration: number, startTime: number }[]>([]);
+  const [clips, setClips] = useState<{ id: string, url: string, type: string, duration: number, startTime: number, trimStart: number }[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
@@ -28,13 +28,20 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
   // Normalize clips whenever media changes if we don't have clips yet
   useEffect(() => {
     if (media.length > 0 && clips.length === 0) {
-      const initialClips = media.map((item, i) => ({ 
-        id: Math.random().toString(36).substr(2, 9), 
-        url: item.url, 
-        type: item.type,
-        duration: 10, 
-        startTime: i * 10 
-      }));
+      let currentStartTime = 0;
+      const initialClips = media.map((item) => {
+        const duration = item.duration || (item.type === 'video' ? 10 : 5);
+        const clip = { 
+          id: Math.random().toString(36).substr(2, 9), 
+          url: item.url, 
+          type: item.type,
+          duration,
+          startTime: currentStartTime,
+          trimStart: item.trimStart || 0 
+        };
+        currentStartTime += duration;
+        return clip;
+      });
       setClips(initialClips);
       setSelectedClipId(initialClips[0].id);
       setIsReady(true);
@@ -70,10 +77,11 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
     if (videoRef.current && activeClip?.type === 'video') {
       const video = videoRef.current;
       const relativeTime = currentTime - (activeClip.startTime || 0);
+      const sourceTime = (activeClip.trimStart || 0) + relativeTime;
 
       // Only sync if significant difference to avoid flickering
-      if (Math.abs(video.currentTime - relativeTime) > 0.15) {
-        video.currentTime = Math.max(0, relativeTime);
+      if (Math.abs(video.currentTime - sourceTime) > 0.15) {
+        video.currentTime = Math.max(0, sourceTime);
       }
       
       if (isPlaying) {
@@ -99,6 +107,7 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
       ...clip, 
       id: Math.random().toString(), 
       duration: clip.duration - relativeTime,
+      trimStart: clip.trimStart + relativeTime,
       startTime: clip.startTime + relativeTime 
     };
 
@@ -154,7 +163,7 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
             <p className="text-[10px] font-bold text-orange-500">{currentTime.toFixed(2)}s / {totalDuration.toFixed(2)}s</p>
          </div>
          <button 
-          onClick={() => onComplete(clips.map(c => ({ url: c.url, type: c.type as 'video' | 'photo' })))}
+          onClick={() => onComplete(clips.map(c => ({ url: c.url, type: c.type as 'video' | 'photo', duration: c.duration, trimStart: c.trimStart })))}
           className="px-6 py-2 bg-white text-black rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl"
          >
             Finish
@@ -182,7 +191,8 @@ export function ProVideoEditor({ media, onBack, onComplete }: ProVideoEditorProp
                   const video = e.currentTarget;
                   video.muted = false; // Ensure unmuted for editor preview
                   const relativeTime = currentTime - (activeClip.startTime || 0);
-                  video.currentTime = Math.max(0, relativeTime);
+                  const sourceTime = (activeClip.trimStart || 0) + relativeTime;
+                  video.currentTime = Math.max(0, sourceTime);
                   if (isPlaying) video.play().catch(() => {
                     // Fallback to muted play if browser blocks
                     video.muted = true;

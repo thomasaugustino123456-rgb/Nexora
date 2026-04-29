@@ -19,7 +19,13 @@ type StudioStage = 1 | 2 | 3;
 
 export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
   const [stage, setStage] = useState<StudioStage>(1);
-  const [capturedMedia, setCapturedMedia] = useState<{url: string, type: 'video' | 'photo'}[]>([]);
+  const [capturedMedia, setCapturedMedia] = useState<{
+    url: string, 
+    type: 'video' | 'photo',
+    duration?: number,
+    originalDuration?: number,
+    trimStart?: number
+  }[]>([]);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [isAutoSwitch, setIsAutoSwitch] = useState(false);
   const [mediaType, setMediaType] = useState<'video' | 'photo' | null>(null);
@@ -92,15 +98,34 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
     showToast(`Loading ${files.length} Media... ⏳`, 'info');
     
     const newMedia = await Promise.all(files.map(file => {
-      return new Promise<{url: string, type: 'video' | 'photo'}>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          resolve({
-            url: reader.result as string,
-            type: file.type.startsWith('video') ? 'video' : 'photo'
-          });
-        };
-        reader.readAsDataURL(file);
+      return new Promise<{
+        url: string, 
+        type: 'video' | 'photo', 
+        duration: number, 
+        originalDuration: number, 
+        trimStart: number
+      }>((resolve) => {
+        const url = URL.createObjectURL(file);
+        const type = file.type.startsWith('video') ? 'video' : 'photo';
+        
+        if (type === 'video') {
+          const video = document.createElement('video');
+          video.src = url;
+          video.onloadedmetadata = () => {
+            resolve({ 
+              url, 
+              type, 
+              duration: video.duration, 
+              originalDuration: video.duration, 
+              trimStart: 0 
+            });
+          };
+          video.onerror = () => {
+            resolve({ url, type, duration: 10, originalDuration: 10, trimStart: 0 });
+          };
+        } else {
+          resolve({ url, type, duration: 5, originalDuration: 5, trimStart: 0 });
+        }
       });
     }));
     
@@ -223,6 +248,10 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="w-full h-full relative bg-black flex items-center justify-center overflow-hidden"
           >
+             <button onClick={onBack} className="absolute top-8 left-8 w-12 h-12 bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center text-white hover:bg-white/20 transition-all z-[100] shadow-lg border border-white/10">
+               <ArrowLeft size={24} />
+             </button>
+
             {/* Full Screen Editor Preview */}
             <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
                <div 
@@ -252,19 +281,35 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                           ref={videoRef}
                           src={capturedMedia[currentMediaIndex].url} 
                           autoPlay={!isPaused} 
-                          loop 
                           playsInline 
                           className="w-full h-full object-cover"
                           onLoadedData={(e) => {
-                            const video = e.currentTarget;
-                            video.muted = false;
-                            if (!isPaused) {
-                              video.play().catch(err => {
-                                console.log("Audio autoplay prevented - waiting for click:", err);
-                              });
-                            }
-                          }}
-                        />
+                             const video = e.currentTarget;
+                             video.muted = false;
+                             if (capturedMedia[currentMediaIndex].trimStart) {
+                               video.currentTime = capturedMedia[currentMediaIndex].trimStart!;
+                             }
+                             if (!isPaused) {
+                               video.play().catch(err => {
+                                 console.log("Audio autoplay prevented - waiting for click:", err);
+                               });
+                             }
+                           }}
+                           onTimeUpdate={(e) => {
+                             const video = e.currentTarget;
+                             const media = capturedMedia[currentMediaIndex];
+                             const endTime = (media.trimStart || 0) + (media.duration || video.duration);
+                             if (video.currentTime >= endTime) {
+                               video.currentTime = media.trimStart || 0;
+                               video.play().catch(()=>{});
+                             }
+                           }}
+                           onEnded={(e) => {
+                              const media = capturedMedia[currentMediaIndex];
+                              e.currentTarget.currentTime = media.trimStart || 0;
+                              e.currentTarget.play().catch(()=>{});
+                           }}
+                         />
                       ) : (
                         <img 
                           src={capturedMedia[currentMediaIndex]?.url} 
@@ -604,13 +649,13 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
           <motion.div 
             key="stage3"
             initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="w-full h-full relative bg-neutral-950 p-8 overflow-y-auto overflow-x-hidden flex flex-col"
+            className="fixed inset-0 bg-neutral-950 p-8 overflow-y-auto overflow-x-hidden z-50 flex flex-col"
           >
-             <button onClick={() => setStage(2)} className="absolute top-8 left-8 w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-white/50 hover:text-white transition-all z-[100]">
+             <button onClick={() => setStage(2)} className="fixed top-8 left-8 w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white hover:bg-white/20 transition-all z-[100] shadow-lg">
                <ArrowLeft size={24} />
              </button>
 
-            <div className="w-full max-w-4xl grid md:grid-cols-2 gap-12 items-start mx-auto mt-16 md:mt-0 pb-32">
+            <div className="w-full max-w-4xl grid md:grid-cols-2 gap-12 items-start mx-auto mt-20 md:mt-16 pb-32">
                {/* Preview Card */}
                <div className="relative group mx-auto">
                   <div className="w-[280px] aspect-[9/16] rounded-[2.5rem] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,1)] border-4 border-white/5 relative bg-black transform rotate-1 group-hover:rotate-0 transition-transform duration-700">
@@ -635,9 +680,23 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                             src={capturedMedia[currentMediaIndex].url} 
                             autoPlay 
                             playsInline 
-                            onEnded={() => setCurrentMediaIndex((currentMediaIndex + 1) % capturedMedia.length)}
                             className="w-full h-full object-cover"
-                            onLoadedData={(e) => { e.currentTarget.muted = false; }}
+                            onLoadedData={(e) => { 
+                              const video = e.currentTarget;
+                              video.muted = false; 
+                              if (capturedMedia[currentMediaIndex].trimStart) {
+                                video.currentTime = capturedMedia[currentMediaIndex].trimStart!;
+                              }
+                            }}
+                            onTimeUpdate={(e) => {
+                              const video = e.currentTarget;
+                              const media = capturedMedia[currentMediaIndex];
+                              const endTime = (media.trimStart || 0) + (media.duration || video.duration);
+                              if (video.currentTime >= endTime) {
+                                setCurrentMediaIndex((currentMediaIndex + 1) % capturedMedia.length);
+                              }
+                            }}
+                            onEnded={() => setCurrentMediaIndex((currentMediaIndex + 1) % capturedMedia.length)}
                           />
                         ) : (
                           capturedMedia[currentMediaIndex] && (
