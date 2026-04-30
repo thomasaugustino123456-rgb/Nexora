@@ -51,13 +51,18 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
         className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]"
       >
         <div className="bg-blue-600 p-8 text-white relative shrink-0">
-          <div className="relative z-10">
-            <h3 className="text-2xl font-black italic uppercase tracking-tight">Initialize Node</h3>
-            <p className="text-xs font-bold text-white/60 mt-1">Refining Sector {step} of 3</p>
+          <div className="relative z-10 flex items-center justify-between">
+            <div>
+              <h3 className="text-2xl font-black italic uppercase tracking-tight">{initialData ? 'Decrypt Node' : 'Initialize Node'}</h3>
+              <p className="text-xs font-bold text-white/60 mt-1">Refining Sector {step} of 3</p>
+            </div>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onClose(); }} 
+              className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all backdrop-blur-md"
+            >
+              <X size={24} />
+            </button>
           </div>
-          <button onClick={onClose} className="absolute top-8 right-8 p-1 text-white/40 hover:text-white transition-colors">
-            <X size={24} />
-          </button>
           
           <div className="absolute top-0 right-0 w-32 h-full flex items-center justify-center opacity-10 pointer-events-none overflow-hidden">
              <Plus size={160} className="rotate-12 translate-x-12" />

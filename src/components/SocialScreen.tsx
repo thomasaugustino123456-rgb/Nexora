@@ -31,119 +31,205 @@ const PostCard = React.memo(({ post, user, settings, circles, savedPosts, toggle
   const isSaved = savedPosts.includes(post.id);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  const [isReporting, setIsReporting] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const shareUrl = `${window.location.origin}/post/${post.id}`;
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('Link copied to clipboard! 🔗', 'info');
+      } catch (err) {
+        showToast('Failed to copy link', 'error');
+      }
+    }
+  };
+
+  const handleReport = async () => {
+    if (!reportReason.trim() || !user) return;
+    setIsSubmittingReport(true);
+    try {
+      await addDoc(collection(db, 'reports'), {
+        reporterId: user.uid,
+        reporterName: user.displayName,
+        reporterEmail: user.email,
+        postId: post.id,
+        postAuthorId: post.userId,
+        postAuthorName: post.userName,
+        postContent: post.content,
+        reason: reportReason,
+        location: window.location.href,
+        createdAt: new Date().toISOString()
+      });
+      showToast('Nexus Security alerted. Thank you.', 'success');
+      setIsReporting(false);
+      setReportReason('');
+    } catch (err) {
+      showToast('Failed to send report', 'error');
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   return (
-    <motion.div 
-      layoutId={post.id}
-      className="bg-white border border-slate-200/60 p-5 space-y-4 hover:border-blue-200 transition-all cursor-pointer group active:scale-[0.99] rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
-      onClick={() => setSelectedPost(post)}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-slate-100 overflow-hidden ring-2 ring-slate-50 shadow-sm shrink-0">
-            {post.userPhoto ? <img src={post.userPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User className="w-full h-full p-2.5 text-slate-400" />}
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <h4 className="font-bold text-slate-900 text-sm">{post.userName}</h4>
-              {post.milestoneData && <Award size={14} className="text-orange-500" />}
-              <span className="text-[10px] text-slate-400 font-medium ml-1">· {format(parseISO(post.createdAt), 'h:mm a')}</span>
+    <>
+      <motion.div 
+        layoutId={post.id}
+        className="bg-white border border-slate-200/60 p-5 space-y-4 hover:border-blue-200 transition-all cursor-pointer group active:scale-[0.99] rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
+        onClick={() => setSelectedPost(post)}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-slate-100 overflow-hidden ring-2 ring-slate-50 shadow-sm shrink-0">
+              {post.userPhoto ? <img src={post.userPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User className="w-full h-full p-2.5 text-slate-400" />}
             </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const circle = circles.find((c: any) => c.id === post.circleId);
-                  if (circle) setViewingCircle(circle);
-                }}
-                className="text-[10px] font-bold text-blue-500 hover:underline transition-all"
-              >
-                n/{post.circleName.replace(/\s+/g, '').toLowerCase()}
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div className="relative">
-          <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }} className="p-2 text-slate-300 hover:text-slate-600 transition-colors">
-            <MoreHorizontal size={18} />
-          </button>
-          <AnimatePresence>
-            {isMenuOpen && (
-              <>
-                <div className="fixed inset-0 z-[120]" onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); }} />
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                  className="absolute right-0 top-10 bg-white rounded-xl shadow-2xl border border-slate-100 py-1.5 w-48 z-[130] overflow-hidden"
+            <div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h4 className="font-bold text-slate-900 text-sm">{post.userName}</h4>
+                {post.milestoneData && <Award size={14} className="text-orange-500" />}
+                <span className="text-[10px] text-slate-400 font-medium ml-1">· {format(parseISO(post.createdAt), 'h:mm a')}</span>
+              </div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const circle = circles.find((c: any) => c.id === post.circleId);
+                    if (circle) setViewingCircle(circle);
+                  }}
+                  className="text-[10px] font-bold text-blue-500 hover:underline transition-all"
                 >
-                  {isOwner ? (
-                    <>
-                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); handleDeletePost(post.id); }} className="w-full px-4 py-2.5 text-left text-xs font-bold text-red-500 hover:bg-red-50 flex items-center gap-3">
-                        <Trash2 size={14} /> Delete Signal
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); toggleSavePost(post.id); }} className={`w-full px-4 py-2.5 text-left text-xs font-bold flex items-center gap-3 ${isSaved ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
-                        <Bookmark size={14} className={isSaved ? "fill-blue-600" : ""} /> {isSaved ? 'Saved in Library' : 'Save Signal'}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); toggleSavePost(post.id); }} className={`w-full px-4 py-2.5 text-left text-xs font-bold flex items-center gap-3 ${isSaved ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
-                        <Bookmark size={14} className={isSaved ? "fill-blue-600" : ""} /> {isSaved ? 'Saved' : 'Save Signal'}
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); showToast('Post Reported', 'error'); }} className="w-full px-4 py-2.5 text-left text-xs font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3">
-                        <Flag size={14} /> Report Pulse
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); hidePost(post.id); }} className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-400 hover:bg-slate-50 flex items-center gap-3">
-                        <EyeOff size={14} /> Not Interested
-                      </button>
-                    </>
-                  )}
-                  <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); showToast('Link copied!', 'info'); }} className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-3 border-t border-slate-50 mt-1">
-                    <Share2 size={14} /> Share Link
-                  </button>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-
-      <p className="text-slate-900 font-medium text-[15px] leading-relaxed whitespace-pre-wrap">
-        {post.content}
-      </p>
-
-      {post.type === 'video' && post.videoUrl && (
-        <div className="pt-1 rounded-2xl overflow-hidden shadow-inner bg-black/5" onClick={e => e.stopPropagation()}>
-          <VideoPlayer url={post.videoUrl} />
-        </div>
-      )}
-
-      <div className="flex items-center justify-between pt-2" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-1.5 transition-all active:scale-90 text-slate-400 hover:text-orange-500 cursor-pointer" onClick={() => handleAction(post.id, 'flame')}>
-             <motion.div whileTap={{ scale: 1.5 }}>
-               <Flame size={18} className={(post.likedBy || []).includes(user?.uid || '') ? "fill-orange-500 text-orange-500" : ""} />
-             </motion.div>
-             <span className="text-xs font-bold">{post.flames || 0}</span>
+                  n/{post.circleName.replace(/\s+/g, '').toLowerCase()}
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 transition-all active:scale-90 text-slate-400 hover:text-blue-500 cursor-pointer" onClick={() => handleAction(post.id, 'shield')}>
-             <motion.div whileTap={{ scale: 1.5 }}>
-               <Award size={18} className={(post.shieldedBy || []).includes(user?.uid || '') ? "fill-blue-500 text-blue-500" : ""} />
-             </motion.div>
-             <span className="text-xs font-bold">{post.shields || 0}</span>
+          
+          <div className="relative">
+            <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }} className="p-2 text-slate-300 hover:text-slate-600 transition-colors">
+              <MoreHorizontal size={18} />
+            </button>
+            <AnimatePresence>
+              {isMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-[120]" onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); }} />
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                    className="absolute right-0 top-10 bg-white rounded-xl shadow-2xl border border-slate-100 py-1.5 w-48 z-[130] overflow-hidden"
+                  >
+                    {isOwner ? (
+                      <>
+                        <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); handleDeletePost(post.id); }} className="w-full px-4 py-2.5 text-left text-xs font-bold text-red-500 hover:bg-red-50 flex items-center gap-3">
+                          <Trash2 size={14} /> Delete Signal
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); toggleSavePost(post.id); }} className={`w-full px-4 py-2.5 text-left text-xs font-bold flex items-center gap-3 ${isSaved ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+                          <Bookmark size={14} className={isSaved ? "fill-blue-600" : ""} /> {isSaved ? 'Saved in Library' : 'Save Signal'}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); toggleSavePost(post.id); }} className={`w-full px-4 py-2.5 text-left text-xs font-bold flex items-center gap-3 ${isSaved ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+                          <Bookmark size={14} className={isSaved ? "fill-blue-600" : ""} /> {isSaved ? 'Saved' : 'Save Signal'}
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); setIsReporting(true); }} className="w-full px-4 py-2.5 text-left text-xs font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3">
+                          <Flag size={14} /> Report Pulse
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); hidePost(post.id); }} className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-400 hover:bg-slate-50 flex items-center gap-3">
+                          <EyeOff size={14} /> Not Interested
+                        </button>
+                      </>
+                    )}
+                    <button onClick={handleShare} className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-3 border-t border-slate-50 mt-1">
+                      <Share2 size={14} /> Share Link
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
-          <button onClick={() => setSelectedPost(post)} className="flex items-center gap-1.5 text-slate-400 hover:text-blue-600 transition-all">
-            <MessageSquare size={18} />
-            <span className="text-xs font-bold">{post.commentCount || 0}</span>
+        </div>
+
+        <p className="text-slate-900 font-medium text-[15px] leading-relaxed whitespace-pre-wrap">
+          {post.content}
+        </p>
+
+        {post.type === 'video' && post.videoUrl && (
+          <div className="pt-1 rounded-2xl overflow-hidden shadow-inner bg-black/5" onClick={e => e.stopPropagation()}>
+            <VideoPlayer url={post.videoUrl} />
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-6">
+            <button 
+              className="flex items-center gap-1.5 transition-all active:scale-90 text-slate-400 hover:text-orange-500 cursor-pointer" 
+              onClick={(e) => { e.stopPropagation(); handleAction(post.id, 'flame'); }}
+            >
+               <motion.div whileTap={{ scale: 1.5 }}>
+                 <Flame size={18} className={(post.likedBy || []).includes(user?.uid || '') ? "fill-orange-500 text-orange-500" : ""} />
+               </motion.div>
+               <span className="text-xs font-bold">{post.flames || 0}</span>
+            </button>
+            <button 
+              className="flex items-center gap-1.5 transition-all active:scale-90 text-slate-400 hover:text-blue-500 cursor-pointer" 
+              onClick={(e) => { e.stopPropagation(); handleAction(post.id, 'shield'); }}
+            >
+               <motion.div whileTap={{ scale: 1.5 }}>
+                 <Award size={18} className={(post.shieldedBy || []).includes(user?.uid || '') ? "fill-blue-500 text-blue-500" : ""} />
+               </motion.div>
+               <span className="text-xs font-bold">{post.shields || 0}</span>
+            </button>
+            <button onClick={() => setSelectedPost(post)} className="flex items-center gap-1.5 text-slate-400 hover:text-blue-600 transition-all">
+              <MessageSquare size={18} />
+              <span className="text-xs font-bold">{post.commentCount || 0}</span>
+            </button>
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); toggleSavePost(post.id); }} className={`p-2 rounded-full transition-all ${isSaved ? 'text-blue-600' : 'text-slate-300 hover:bg-slate-100'}`}>
+            <Bookmark size={18} className={isSaved ? "fill-current" : ""} />
           </button>
         </div>
-        <button onClick={(e) => { e.stopPropagation(); toggleSavePost(post.id); }} className={`p-2 rounded-full transition-all ${isSaved ? 'text-blue-600' : 'text-slate-300 hover:bg-slate-100'}`}>
-          <Bookmark size={18} className={isSaved ? "fill-current" : ""} />
-        </button>
-      </div>
-    </motion.div>
+      </motion.div>
+
+      {/* Report Modal */}
+      <AnimatePresence>
+        {isReporting && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-blue-900/60 backdrop-blur-xl p-4" onClick={() => setIsReporting(false)}>
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white w-full max-w-sm p-8 rounded-[2rem] shadow-2xl relative"
+            >
+              <h3 className="text-xl font-black text-slate-900 mb-4 italic uppercase tracking-tighter">Report Pulse</h3>
+              <p className="text-xs text-slate-500 mb-6 font-bold leading-relaxed">Broadcast the violation to Security. Detail exactly what's wrong.</p>
+              <textarea 
+                value={reportReason}
+                onChange={e => setReportReason(e.target.value)}
+                placeholder="Reason for report..."
+                className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold h-32 resize-none focus:ring-2 focus:ring-blue-100 outline-none"
+              />
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => setIsReporting(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest">Cancel</button>
+                <button 
+                  disabled={isSubmittingReport || !reportReason.trim()}
+                  onClick={handleReport}
+                  className="flex-[2] py-3 bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest disabled:opacity-50"
+                >
+                  {isSubmittingReport ? 'Reporting...' : 'Alert Security'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
   );
+
 });
 
 export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings, posts, circles, notifications, setActiveScreen, play }: SocialScreenProps) {
@@ -352,7 +438,24 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
         commentCount: 0,
         createdAt: new Date().toISOString()
       };
-      await addDoc(collection(db, 'posts'), postData);
+      const docRef = await addDoc(collection(db, 'posts'), postData);
+      
+      // Broadcast notifications to followers
+      if (circle && circle.followerIds) {
+        const followersToNotify = circle.followerIds.filter(id => id !== user.uid);
+        for (const followerId of followersToNotify) {
+          await addDoc(collection(db, 'users', followerId, 'notifications'), {
+            type: 'post',
+            senderId: user.uid,
+            senderName: user.displayName || 'Anonymous',
+            message: `posted a new Signal in n/${circle.name.toLowerCase()}`,
+            targetId: docRef.id,
+            isRead: false,
+            createdAt: new Date().toISOString()
+          });
+        }
+      }
+
       setIsCreatingPost(false);
       setNewPostContent('');
       setNewVideoUrl('');
@@ -387,12 +490,14 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
   const filteredPosts = posts.filter(p => !hiddenPosts.includes(p.id));
   const activeCirclePosts = viewingCircle ? posts.filter(p => p.circleId === viewingCircle.id) : [];
 
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="max-w-4xl mx-auto w-full space-y-6 pb-24"
+      className="max-w-4xl mx-auto w-full space-y-6 pb-24 scroll-smooth"
     >
       <div className="flex items-center justify-between sticky top-0 bg-blue-50/90 backdrop-blur-xl z-[100] py-4">
           <div className="flex items-center gap-4">
@@ -451,21 +556,47 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       </div>
 
       {activeTab === 'feed' && (
-        <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl w-fit mb-4">
-          {[
-            { id: 'hot', icon: <Flame size={14} />, label: 'Hot' },
-            { id: 'new', icon: <RefreshCw size={14} />, label: 'New' },
-            { id: 'top', icon: <Award size={14} />, label: 'Top' },
-            { id: 'best', icon: <Heart size={14} />, label: 'Best' }
-          ].map(btn => (
-            <button 
-              key={btn.id}
-              onClick={() => setSortOrder(btn.id as any)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${sortOrder === btn.id ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              {btn.icon} {btn.label}
-            </button>
-          ))}
+        <div className="relative">
+          <button 
+            onClick={() => setShowSortDropdown(!showSortDropdown)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:border-blue-300 transition-all shadow-sm"
+          >
+            {sortOrder === 'hot' && <Flame size={14} className="text-orange-500" />}
+            {sortOrder === 'new' && <RefreshCw size={14} className="text-blue-500" />}
+            {sortOrder === 'top' && <Award size={14} className="text-purple-500" />}
+            {sortOrder === 'best' && <Heart size={14} className="text-red-500" />}
+            <span className="uppercase tracking-widest">{sortOrder}</span>
+            <ChevronRight size={14} className={`transition-transform ${showSortDropdown ? 'rotate-90' : ''}`} />
+          </button>
+          
+          <AnimatePresence>
+            {showSortDropdown && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowSortDropdown(false)} />
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute top-full left-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl p-1 z-50 min-w-[140px] overflow-hidden"
+                >
+                  {[
+                    { id: 'hot', icon: <Flame size={14} />, label: 'Hot' },
+                    { id: 'new', icon: <RefreshCw size={14} />, label: 'New' },
+                    { id: 'top', icon: <Award size={14} />, label: 'Top' },
+                    { id: 'best', icon: <Heart size={14} />, label: 'Best' }
+                  ].map(btn => (
+                    <button 
+                      key={btn.id}
+                      onClick={() => { setSortOrder(btn.id as any); setShowSortDropdown(false); }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${sortOrder === btn.id ? 'bg-blue-50 text-blue-600' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}
+                    >
+                      {btn.icon} {btn.label}
+                    </button>
+                  ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -511,27 +642,57 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
                    Initialize Node <Plus size={14} />
                 </button>
              </div>
-             <div className="grid grid-cols-1 gap-4">
+             <div className="grid grid-cols-1 gap-6">
                 {circles.map(circle => (
                   <motion.div 
                     key={circle.id}
                     layoutId={circle.id}
-                    onClick={() => setViewingCircle(circle)}
-                    className="bg-white border border-slate-200 p-5 rounded-[24px] cursor-pointer group hover:border-blue-300 transition-all flex items-center gap-4 active:scale-[0.98] shadow-sm"
+                    className="bg-white border border-slate-200/60 p-6 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:border-blue-300 transition-all group active:scale-[0.98]"
                   >
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm group-hover:rotate-12 transition-transform shrink-0 ${circle.color || 'bg-blue-100'}`}>
-                       {circle.icon || '🏮'}
+                    <div className="flex items-start gap-5">
+                       <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center text-3xl shadow-inner group-hover:rotate-6 transition-transform shrink-0 ${circle.color || 'bg-blue-100'}`} onClick={() => setViewingCircle(circle)}>
+                          {circle.icon || '🏮'}
+                       </div>
+                       <div className="flex-1 min-w-0" onClick={() => setViewingCircle(circle)}>
+                         <div className="flex items-center justify-between">
+                            <h4 className="text-xl font-black text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight truncate">n/{circle.name.replace(/\s+/g, '').toLowerCase()}</h4>
+                         </div>
+                         <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{circle.memberCount || 0} Members · {circle.category}</p>
+                         <p className="text-sm font-medium text-slate-500 line-clamp-2 mt-3 leading-relaxed">
+                            {circle.description}
+                         </p>
+                       </div>
+                       
+                       <div className="flex flex-col gap-2">
+                         <button 
+                           onClick={(e) => { e.stopPropagation(); handleToggleFollowNode(circle.id); }}
+                           className={`p-3 rounded-2xl transition-all ${settings.notifEnabledCircleIds?.includes(circle.id) ? 'bg-orange-500 text-white shadow-lg shadow-orange-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                         >
+                            <Bell size={18} />
+                         </button>
+                         <button 
+                           onClick={(e) => { e.stopPropagation(); setViewingCircle(circle); }}
+                           className="p-3 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-100 transition-all"
+                         >
+                            <ChevronRight size={18} />
+                         </button>
+                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                         <h4 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight truncate">n/{circle.name.replace(/\s+/g, '').toLowerCase()}</h4>
-                         <span className="text-[10px] font-bold text-slate-400">{circle.memberCount || 0} members</span>
-                      </div>
-                      <p className="text-xs font-medium text-slate-500 line-clamp-1 mt-1">
-                         {circle.description}
-                      </p>
+                    
+                    <div className="flex items-center gap-3 mt-6 pt-6 border-t border-slate-50">
+                       <button 
+                         onClick={(e) => { e.stopPropagation(); handleToggleJoin(circle); }}
+                         className={`flex-1 py-3 rounded-2xl font-black text-[10px] tracking-[0.2em] transition-all ${settings.joinedCircleIds?.includes(circle.id) ? 'bg-blue-50 text-blue-600' : 'bg-blue-600 text-white shadow-xl shadow-blue-100'}`}
+                       >
+                          {settings.joinedCircleIds?.includes(circle.id) ? 'CONNECTED' : 'INITIALIZE CONNECTION'}
+                       </button>
+                       <button 
+                         onClick={(e) => { e.stopPropagation(); setViewingCircle(circle); setExpandedRules(true); }}
+                         className="px-6 py-3 bg-slate-50 text-slate-400 rounded-2xl font-black text-[10px] tracking-[0.2em] hover:bg-slate-100 transition-all"
+                       >
+                         RULES
+                       </button>
                     </div>
-                    <ChevronRight size={18} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
                   </motion.div>
                 ))}
              </div>
@@ -761,16 +922,47 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
 
                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-8 pt-20">
                   <div className="md:col-span-2 space-y-6">
-                    <div className="flex items-center gap-4 border-b border-slate-100 pb-4 overflow-x-auto no-scrollbar">
-                      {['hot', 'new', 'top'].map(s => (
+                    <div className="flex items-center gap-4 border-b border-slate-100 pb-4 overflow-x-auto no-scrollbar relative">
+                      <div className="relative">
                         <button 
-                          key={s}
-                          onClick={() => setSortOrder(s as any)}
-                          className={`text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all whitespace-nowrap ${sortOrder === s ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                          onClick={() => setShowSortDropdown(!showSortDropdown)}
+                          className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 shadow-sm"
                         >
-                          {s}
+                          {sortOrder === 'hot' && <Flame size={14} className="text-orange-500" />}
+                          {sortOrder === 'new' && <RefreshCw size={14} className="text-blue-500" />}
+                          {sortOrder === 'top' && <Award size={14} className="text-purple-500" />}
+                          <span className="uppercase tracking-widest">{sortOrder}</span>
+                          <ChevronRight size={14} className={`transition-transform ${showSortDropdown ? 'rotate-90' : ''}`} />
                         </button>
-                      ))}
+                        
+                        <AnimatePresence>
+                          {showSortDropdown && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setShowSortDropdown(false)} />
+                              <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                className="absolute top-full left-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl p-1 z-50 min-w-[140px] overflow-hidden"
+                              >
+                                {['hot', 'new', 'top'].map(s => (
+                                  <button 
+                                    key={s}
+                                    onClick={() => { setSortOrder(s as any); setShowSortDropdown(false); }}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${sortOrder === s ? 'bg-blue-50 text-blue-600' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}
+                                  >
+                                    {s === 'hot' && <Flame size={12} />}
+                                    {s === 'new' && <RefreshCw size={12} />}
+                                    {s === 'top' && <Award size={12} />}
+                                    {s}
+                                  </button>
+                                ))}
+                              </motion.div>
+                            </>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                      
                       <button onClick={() => { setIsCreatingPost(true); setSelectedCircleId(viewingCircle.id); }} className="ml-auto w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-100 active:scale-90 transition-all">
                         <Plus size={20} />
                       </button>

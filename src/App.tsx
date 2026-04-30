@@ -2055,7 +2055,7 @@ export default function App() {
                 <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">ENTERING THE NEXUS...</div>}>
                   <SocialScreen 
                     play={play}
-                    onBack={() => setActiveScreen('profile')} 
+                    onBack={() => setActiveScreen('home')} 
                     user={user}
                     settings={settings}
                     stats={stats}
