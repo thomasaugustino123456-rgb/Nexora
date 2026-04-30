@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
-import { ArrowLeft, Plus, Video, MoreHorizontal, Trash2, Bookmark, Flag, EyeOff, Share2, MessageSquare, Heart, RefreshCw, Send, X, Search, Award, User, Flame } from 'lucide-react';
+import { ArrowLeft, Plus, Video, MoreHorizontal, Trash2, Bookmark, Flag, EyeOff, Share2, MessageSquare, Heart, RefreshCw, Send, X, Search, Award, User, Flame, ChevronRight, Bell } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { User as FirebaseUser } from 'firebase/auth';
 import { doc, collection, query, orderBy, onSnapshot, setDoc, updateDoc, increment, addDoc, deleteDoc } from 'firebase/firestore';
@@ -33,81 +33,73 @@ const PostCard = React.memo(({ post, user, settings, circles, savedPosts, toggle
   return (
     <motion.div 
       layoutId={post.id}
-      className="glass-card p-6 space-y-4 hover:shadow-xl transition-all cursor-pointer group hover:translate-y-[-2px] active:scale-[0.99]"
+      className="bg-white border border-slate-200/60 p-5 space-y-4 hover:border-blue-200 transition-all cursor-pointer group active:scale-[0.99] rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
       onClick={() => setSelectedPost(post)}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-100 overflow-hidden border border-white shadow-sm">
-            {post.userPhoto ? <img src={post.userPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User className="w-full h-full p-2 text-blue-400" />}
+          <div className="w-11 h-11 rounded-full bg-slate-100 overflow-hidden ring-2 ring-slate-50 shadow-sm shrink-0">
+            {post.userPhoto ? <img src={post.userPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User className="w-full h-full p-2.5 text-slate-400" />}
           </div>
           <div>
-            <h4 className="font-black text-blue-900 text-sm leading-none">{post.userName}</h4>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h4 className="font-bold text-slate-900 text-sm">{post.userName}</h4>
+              {post.milestoneData && <Award size={14} className="text-orange-500" />}
+              <span className="text-[10px] text-slate-400 font-medium ml-1">· {format(parseISO(post.createdAt), 'h:mm a')}</span>
+            </div>
+            <div className="flex items-center gap-2 mt-0.5">
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
                   const circle = circles.find((c: any) => c.id === post.circleId);
                   if (circle) setViewingCircle(circle);
                 }}
-                className="text-[10px] font-black text-blue-400 uppercase tracking-tighter hover:text-blue-600 active:scale-95 transition-all"
+                className="text-[10px] font-bold text-blue-500 hover:underline transition-all"
               >
                 n/{post.circleName.replace(/\s+/g, '').toLowerCase()}
               </button>
-              {!(settings.joinedCircleIds || []).includes(post.circleId) && post.circleId !== 'nexora-general' && (
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const circle = circles.find((c: any) => c.id === post.circleId);
-                    if (circle) handleToggleJoin(circle);
-                  }}
-                  className="text-[8px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full hover:scale-105 active:scale-95 transition-all shadow-sm"
-                >
-                  JOIN
-                </button>
-              )}
             </div>
           </div>
         </div>
         
         <div className="relative">
-          <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }} className="p-2 text-blue-900/20 hover:text-blue-900/60 transition-colors">
-            <MoreHorizontal size={20} />
+          <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }} className="p-2 text-slate-300 hover:text-slate-600 transition-colors">
+            <MoreHorizontal size={18} />
           </button>
           <AnimatePresence>
             {isMenuOpen && (
               <>
                 <div className="fixed inset-0 z-[120]" onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); }} />
                 <motion.div 
-                  initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                  initial={{ opacity: 0, scale: 0.95, y: -5 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                  className="absolute right-0 top-10 bg-white rounded-2xl shadow-2xl border border-blue-50 py-2 w-48 z-[130] overflow-hidden"
+                  exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                  className="absolute right-0 top-10 bg-white rounded-xl shadow-2xl border border-slate-100 py-1.5 w-48 z-[130] overflow-hidden"
                 >
                   {isOwner ? (
                     <>
-                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); handleDeletePost(post.id); }} className="w-full px-4 py-3 text-left text-sm font-bold text-red-500 hover:bg-red-50 flex items-center gap-3">
-                        <Trash2 size={16} /> Delete Post
+                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); handleDeletePost(post.id); }} className="w-full px-4 py-2.5 text-left text-xs font-bold text-red-500 hover:bg-red-50 flex items-center gap-3">
+                        <Trash2 size={14} /> Delete Signal
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); toggleSavePost(post.id); }} className={`w-full px-4 py-3 text-left text-sm font-bold flex items-center gap-3 ${isSaved ? 'text-blue-600 bg-blue-50' : 'text-blue-900/60 hover:bg-blue-50'}`}>
-                        <Bookmark size={16} className={isSaved ? "fill-blue-600" : ""} /> {isSaved ? 'Saved in Library' : 'Save to Library'}
+                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); toggleSavePost(post.id); }} className={`w-full px-4 py-2.5 text-left text-xs font-bold flex items-center gap-3 ${isSaved ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+                        <Bookmark size={14} className={isSaved ? "fill-blue-600" : ""} /> {isSaved ? 'Saved in Library' : 'Save Signal'}
                       </button>
                     </>
                   ) : (
                     <>
-                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); toggleSavePost(post.id); }} className={`w-full px-4 py-3 text-left text-sm font-bold flex items-center gap-3 ${isSaved ? 'text-blue-600 bg-blue-50' : 'text-blue-900/60 hover:bg-blue-50'}`}>
-                        <Bookmark size={16} className={isSaved ? "fill-blue-600" : ""} /> {isSaved ? 'Saved' : 'Save Post'}
+                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); toggleSavePost(post.id); }} className={`w-full px-4 py-2.5 text-left text-xs font-bold flex items-center gap-3 ${isSaved ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+                        <Bookmark size={14} className={isSaved ? "fill-blue-600" : ""} /> {isSaved ? 'Saved' : 'Save Signal'}
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); showToast('Post Reported', 'error'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3">
-                        <Flag size={16} /> Report Post
+                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); showToast('Post Reported', 'error'); }} className="w-full px-4 py-2.5 text-left text-xs font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3">
+                        <Flag size={14} /> Report Pulse
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); hidePost(post.id); }} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/30 hover:bg-blue-50 flex items-center gap-3">
-                        <EyeOff size={16} /> Not Interested
+                      <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); hidePost(post.id); }} className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-400 hover:bg-slate-50 flex items-center gap-3">
+                        <EyeOff size={14} /> Not Interested
                       </button>
                     </>
                   )}
-                  <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); showToast('Link copied!', 'info'); }} className="w-full px-4 py-3 text-left text-sm font-bold text-blue-900/60 hover:bg-blue-50 flex items-center gap-3 border-t border-blue-50 mt-1">
-                    <Share2 size={16} /> Share Link
+                  <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); showToast('Link copied!', 'info'); }} className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-3 border-t border-slate-50 mt-1">
+                    <Share2 size={14} /> Share Link
                   </button>
                 </motion.div>
               </>
@@ -116,28 +108,37 @@ const PostCard = React.memo(({ post, user, settings, circles, savedPosts, toggle
         </div>
       </div>
 
-      <p className="text-blue-900/80 font-medium line-clamp-3 leading-relaxed">
+      <p className="text-slate-900 font-medium text-[15px] leading-relaxed whitespace-pre-wrap">
         {post.content}
       </p>
 
       {post.type === 'video' && post.videoUrl && (
-        <div className="pt-2" onClick={e => e.stopPropagation()}>
+        <div className="pt-1 rounded-2xl overflow-hidden shadow-inner bg-black/5" onClick={e => e.stopPropagation()}>
           <VideoPlayer url={post.videoUrl} />
         </div>
       )}
 
-      <div className="flex items-center gap-4 pt-4 border-t border-blue-50" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-1.5 px-4 py-2 rounded-2xl transition-all active:scale-90 text-blue-900/30 hover:bg-blue-50" onClick={() => handleAction(post.id, 'flame')}>
-           <Flame size={20} className={(post.likedBy || []).includes(user?.uid || '') ? "fill-orange-500 text-orange-500" : ""} />
-           <span className="text-sm font-black">{post.flames || 0}</span>
+      <div className="flex items-center justify-between pt-2" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-1.5 transition-all active:scale-90 text-slate-400 hover:text-orange-500 cursor-pointer" onClick={() => handleAction(post.id, 'flame')}>
+             <motion.div whileTap={{ scale: 1.5 }}>
+               <Flame size={18} className={(post.likedBy || []).includes(user?.uid || '') ? "fill-orange-500 text-orange-500" : ""} />
+             </motion.div>
+             <span className="text-xs font-bold">{post.flames || 0}</span>
+          </div>
+          <div className="flex items-center gap-1.5 transition-all active:scale-90 text-slate-400 hover:text-blue-500 cursor-pointer" onClick={() => handleAction(post.id, 'shield')}>
+             <motion.div whileTap={{ scale: 1.5 }}>
+               <Award size={18} className={(post.shieldedBy || []).includes(user?.uid || '') ? "fill-blue-500 text-blue-500" : ""} />
+             </motion.div>
+             <span className="text-xs font-bold">{post.shields || 0}</span>
+          </div>
+          <button onClick={() => setSelectedPost(post)} className="flex items-center gap-1.5 text-slate-400 hover:text-blue-600 transition-all">
+            <MessageSquare size={18} />
+            <span className="text-xs font-bold">{post.commentCount || 0}</span>
+          </button>
         </div>
-        <div className="flex items-center gap-1.5 px-4 py-2 rounded-2xl transition-all active:scale-90 text-blue-900/30 hover:bg-blue-50" onClick={() => handleAction(post.id, 'shield')}>
-           <Award size={20} className={(post.shieldedBy || []).includes(user?.uid || '') ? "fill-blue-500 text-blue-500" : ""} />
-           <span className="text-sm font-black">{post.shields || 0}</span>
-        </div>
-        <button onClick={() => setSelectedPost(post)} className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-slate-400 hover:bg-slate-50 ml-auto transition-all">
-          <MessageSquare size={20} />
-          <span className="text-sm font-black">{post.commentCount || 0}</span>
+        <button onClick={(e) => { e.stopPropagation(); toggleSavePost(post.id); }} className={`p-2 rounded-full transition-all ${isSaved ? 'text-blue-600' : 'text-slate-300 hover:bg-slate-100'}`}>
+          <Bookmark size={18} className={isSaved ? "fill-current" : ""} />
         </button>
       </div>
     </motion.div>
@@ -297,24 +298,25 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       exit={{ opacity: 0, x: -20 }}
       className="max-w-4xl mx-auto w-full space-y-6 pb-24"
     >
-      <div className="flex items-center justify-between sticky top-0 bg-blue-50/80 backdrop-blur-md z-[100] py-4">
+      <div className="flex items-center justify-between sticky top-0 bg-blue-50/90 backdrop-blur-xl z-[100] py-4">
           <div className="flex items-center gap-4">
-            <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm text-blue-900 hover:scale-105 active:scale-95 transition-transform">
-              <ArrowLeft size={24} />
+            <button onClick={onBack} className="p-3 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-900 hover:scale-105 active:scale-95 transition-all">
+              <ArrowLeft size={22} />
             </button>
-            <div onClick={() => setActiveScreen('nexus-video')} className="cursor-pointer group">
-              <h2 className="text-3xl font-black text-blue-900 tracking-tight group-hover:text-blue-600 transition-colors">The Nexus</h2>
-              <p className="text-xs font-bold text-blue-500 uppercase tracking-widest flex items-center gap-2">
-                <Video size={12} /> Watch Nexo Reels
-              </p>
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">Nexus Pulse</h2>
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global Relay Active</p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-             <button onClick={() => setShowSearch(!showSearch)} className="p-4 bg-white text-blue-900 rounded-2xl shadow-sm">
-                <Search size={20} />
+          <div className="flex items-center gap-2">
+             <button onClick={() => setShowSearch(!showSearch)} className="p-3.5 bg-white text-slate-600 rounded-2xl shadow-sm border border-slate-100 hover:bg-slate-50 transition-all">
+                <Search size={18} />
              </button>
-             <button onClick={() => setIsCreatingPost(true)} className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200">
-                <Plus size={20} />
+             <button onClick={() => setIsCreatingPost(true)} className="p-3.5 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all">
+                <Plus size={18} />
              </button>
           </div>
       </div>
@@ -383,62 +385,114 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       )}
 
       {activeTab === 'circles' && (
-        <div className="space-y-6">
-           <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black text-blue-900 italic">Active Nodes</h3>
-              <button 
-                onClick={() => setIsCreatingCircle(true)}
-                className="flex items-center gap-2 text-xs font-black text-blue-600 uppercase tracking-widest hover:translate-x-1 transition-transform"
-              >
-                 Initialize Node <Plus size={14} />
-              </button>
-           </div>
-           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {circles.map(circle => (
-                <motion.div 
-                  key={circle.id}
-                  layoutId={circle.id}
-                  onClick={() => setViewingCircle(circle)}
-                  className="glass-card p-6 cursor-pointer group hover:bg-white transition-colors"
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 space-y-4">
+             <div className="flex items-center justify-between px-2 mb-2">
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Active Committes</h3>
+                <button 
+                  onClick={() => setIsCreatingCircle(true)}
+                  className="flex items-center gap-2 text-xs font-black text-blue-600 uppercase tracking-widest hover:translate-x-1 transition-transform"
                 >
-                   <div className="flex items-center justify-between mb-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-sm group-hover:rotate-12 transition-transform ${circle.color || 'bg-blue-100'}`}>
-                         {circle.icon || '🏮'}
+                   Initialize Node <Plus size={14} />
+                </button>
+             </div>
+             <div className="grid grid-cols-1 gap-4">
+                {circles.map(circle => (
+                  <motion.div 
+                    key={circle.id}
+                    layoutId={circle.id}
+                    onClick={() => setViewingCircle(circle)}
+                    className="bg-white border border-slate-200 p-5 rounded-[24px] cursor-pointer group hover:border-blue-300 transition-all flex items-center gap-4 active:scale-[0.98] shadow-sm"
+                  >
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm group-hover:rotate-12 transition-transform shrink-0 ${circle.color || 'bg-blue-100'}`}>
+                       {circle.icon || '🏮'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                         <h4 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight truncate">n/{circle.name.replace(/\s+/g, '').toLowerCase()}</h4>
+                         <span className="text-[10px] font-bold text-slate-400">{circle.memberCount || 0} members</span>
                       </div>
-                      <div className="text-right">
-                         <span className="block text-[8px] font-black text-blue-400 uppercase tracking-widest">Efficiency</span>
-                         <span className="text-sm font-black text-blue-900">{circle.memberCount || 0}</span>
+                      <p className="text-xs font-medium text-slate-500 line-clamp-1 mt-1">
+                         {circle.description}
+                      </p>
+                    </div>
+                    <ChevronRight size={18} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
+                  </motion.div>
+                ))}
+             </div>
+          </div>
+          <div className="space-y-6">
+            <div className="bg-white border border-slate-200 rounded-[24px] p-6 space-y-6 sticky top-24 shadow-sm">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
+                  <Flame size={20} className="text-orange-500" />
+                  Hot Nodes
+                </h3>
+                <div className="space-y-4">
+                  {circles.slice(0, 5).map((circle, i) => (
+                    <div key={circle.id} className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-colors" onClick={() => setViewingCircle(circle)}>
+                      <span className="text-sm font-black text-slate-300 w-4">{i + 1}</span>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${circle.color || 'bg-blue-100'}`}>
+                        {circle.icon}
                       </div>
-                   </div>
-                   <h4 className="text-lg font-black text-blue-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{circle.name}</h4>
-                   <p className="text-xs font-medium text-blue-900/40 line-clamp-2 mt-2 leading-relaxed">
-                      {circle.description}
-                   </p>
-                </motion.div>
-              ))}
-           </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-900 leading-none truncate underline decoration-transparent group-hover:decoration-blue-500 transition-all">n/{circle.name.split(' ')[0].toLowerCase()}</p>
+                        <p className="text-[9px] font-bold text-slate-400 mt-1">Active Now</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="pt-4 border-t border-slate-100">
+                <p className="text-[10px] font-bold text-slate-400 mb-4">You have joined {(settings.joinedCircleIds || []).length} community nodes.</p>
+                <button onClick={() => showToast('Rules of the Nexus applied!', 'info')} className="w-full py-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-600 transition-all border border-slate-100">
+                  Community Charter
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {activeTab === 'inbox' && (
-        <div className="space-y-4">
+        <div className="max-w-2xl mx-auto w-full space-y-4">
+           <div className="flex items-center justify-between mb-4 px-2">
+             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Incoming Signals</h3>
+             <button onClick={() => showToast('All marked as read', 'info')} className="text-[10px] font-bold text-blue-500 hover:underline">Mark all read</button>
+           </div>
            {notifications.length === 0 ? (
-             <div className="py-20 text-center opacity-20">
-                <Bookmark size={64} className="mx-auto mb-4" />
-                <p className="font-black uppercase tracking-widest text-xs">Awaiting Transmissions...</p>
+             <div className="py-32 flex flex-col items-center justify-center text-center space-y-4 bg-white border border-slate-100 rounded-[32px]">
+                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
+                  <Bell size={40} />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900">Awaiting Transmissions</p>
+                  <p className="text-xs text-slate-400 max-w-[200px] mx-auto mt-1">Your personal signal relay is quiet. Check back later for activity in your nodes.</p>
+                </div>
              </div>
            ) : (
              notifications.map(notif => (
-               <div key={notif.id} className={`glass-card p-4 flex items-center gap-4 ${!notif.isRead ? 'border-l-4 border-l-orange-500 bg-orange-50/30' : ''}`}>
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                     {notif.type === 'like' ? <Heart size={20} /> : notif.type === 'reply' ? <MessageSquare size={20} /> : <Award size={20} />}
+               <motion.div 
+                 key={notif.id}
+                 initial={{ opacity: 0, y: 10 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 className={`p-4 rounded-3xl border transition-all cursor-pointer flex items-start gap-4 ${!notif.isRead ? 'bg-blue-50 border-blue-100 shadow-sm' : 'bg-white border-slate-100'}`}
+               >
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${!notif.isRead ? 'bg-blue-500 text-white shadow-lg shadow-blue-200' : 'bg-slate-100 text-slate-400'}`}>
+                     {notif.type === 'like' ? <Flame size={18} /> : 
+                      notif.type === 'reply' ? <MessageSquare size={18} /> : 
+                      <Award size={18} />}
                   </div>
-                  <div className="flex-1">
-                     <p className="text-sm font-bold text-blue-900">{notif.senderName}</p>
-                     <p className="text-xs font-medium text-blue-900/60 mt-0.5">{notif.message}</p>
-                     <p className="text-[8px] font-black text-blue-400 uppercase mt-2">{format(parseISO(notif.createdAt), 'MMM d, h:mm a')}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm leading-relaxed ${!notif.isRead ? 'font-bold text-slate-900' : 'text-slate-600'}`}>
+                      <span className="font-black">{notif.senderName}</span> {notif.message}
+                    </p>
+                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">
+                      {format(parseISO(notif.createdAt), 'MMM d, h:mm a')}
+                    </p>
                   </div>
-               </div>
+                  {!notif.isRead && <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />}
+               </motion.div>
              ))
            )}
         </div>

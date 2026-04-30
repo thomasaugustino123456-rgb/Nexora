@@ -77,6 +77,7 @@ export interface UserSettings {
   mascotSize?: number;
   mascotPos?: { x: number, y: number };
   mascotPinnedItemId?: string | null;
+  isReelsDisabled?: boolean; // New setting to lock/disable reels
   joinedCircleIds?: string[];
   notifEnabledCircleIds?: string[];
 }

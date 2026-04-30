@@ -285,23 +285,23 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
           <ProVideoEditor 
             media={capturedMedia}
             initialAudio={audioFile}
+            onBack={() => setIsProEditing(false)}
             onComplete={(newMedia, newAudioUrl) => {
               try {
                 // Use a functional update to ensure state consistency and avoid losing refs
                 setCapturedMedia((prev) => {
-                  const validatedMedia = newMedia.map(m => {
+                  const validatedMedia = newMedia.map((m: any) => {
                     // Try to find existing media metadata if URL matches to preserve original info
                     const existing = prev.find(p => p.url === m.url);
                     return {
-                      ...m,
                       url: m.url,
-                      type: m.type || existing?.type || 'video',
+                      type: (m.type as 'video' | 'photo') || existing?.type || 'video',
                       duration: m.duration || existing?.duration || 10,
                       originalDuration: m.originalDuration || existing?.originalDuration || 10,
                       trimStart: m.trimStart ?? 0
                     };
                   });
-                  return [...validatedMedia] as any;
+                  return [...validatedMedia];
                 });
                 
                 setCurrentMediaIndex(0); 

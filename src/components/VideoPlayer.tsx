@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { RefreshCw } from 'lucide-react';
 
 const getEmbedData = (url: string) => {
   if (!url) return null;
