@@ -118,6 +118,8 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
           const video = document.createElement('video');
           video.src = url;
           video.preload = 'metadata';
+          video.playsInline = true;
+          video.muted = true;
           
           const timeoutId = setTimeout(() => {
              // Fallback if metadata takes too long (e.g. mobile Safari issues)
@@ -281,7 +283,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
             <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
                <div 
                 className="relative w-full h-full max-w-md aspect-[9/16] bg-neutral-900 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer flex items-center justify-center transition-all duration-700"
-                style={{ filter: getEffectFilter() }}
+                style={{ filter: getEffectFilter(), WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
                 onClick={() => setIsPaused(!isPaused)}
                >
                 {isCinematic && (
@@ -305,18 +307,19 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                           key={`video-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}-${capturedMedia[currentMediaIndex].trimStart || 0}-${capturedMedia[currentMediaIndex].duration || 0}`}
                           ref={videoRef}
                           src={capturedMedia[currentMediaIndex].url} 
-                          autoPlay={!isPaused} 
                           playsInline 
                           className="w-full h-full object-cover"
+                          style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
                           onLoadedData={(e) => {
                              const video = e.currentTarget;
-                             video.muted = false;
                              if (capturedMedia[currentMediaIndex].trimStart) {
                                video.currentTime = capturedMedia[currentMediaIndex].trimStart!;
                              }
                              if (!isPaused) {
                                video.play().catch(err => {
-                                 console.log("Audio autoplay prevented - waiting for click:", err);
+                                 console.log("Audio autoplay prevented - trying muted:", err);
+                                 video.muted = true;
+                                 video.play().catch(()=>{});
                                });
                              }
                            }}
@@ -705,15 +708,18 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                           <video 
                             key={`preview-video-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}-${capturedMedia[currentMediaIndex].trimStart || 0}-${capturedMedia[currentMediaIndex].duration || 0}`}
                             src={capturedMedia[currentMediaIndex].url} 
-                            autoPlay 
                             playsInline 
                             className="w-full h-full object-cover"
+                            style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
                             onLoadedData={(e) => { 
                               const video = e.currentTarget;
-                              video.muted = false; 
                               if (capturedMedia[currentMediaIndex].trimStart) {
                                 video.currentTime = capturedMedia[currentMediaIndex].trimStart!;
                               }
+                              video.play().catch(() => {
+                                video.muted = true;
+                                video.play().catch(()=>{});
+                              });
                             }}
                             onTimeUpdate={(e) => {
                               const video = e.currentTarget;

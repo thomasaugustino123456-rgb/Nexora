@@ -195,9 +195,9 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
                 loop 
                 playsInline
                 preload="auto"
+                style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
                 onLoadedMetadata={(e) => {
                   const video = e.currentTarget;
-                  video.muted = false; // Ensure unmuted for editor preview
                   const relativeTime = currentTime - (activeClip.startTime || 0);
                   const sourceTime = (activeClip.trimStart || 0) + relativeTime;
                   video.currentTime = Math.max(0, sourceTime);
