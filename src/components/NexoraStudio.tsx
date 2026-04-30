@@ -102,12 +102,18 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
 
     showToast(`Initializing Import Engine... 🚀`, 'info');
     
-    // Load files sequentially to prevent browser memory locking on long videos
-    const loadedMedia: any[] = [];
+    // If starting from stage 1, clear previous media to prevent memory clashes
+    if (stage === 1) {
+      createdUrls.current.forEach(url => URL.revokeObjectURL(url));
+      createdUrls.current.clear();
+      setCapturedMedia([]);
+    }
+    
+    setStage(2);
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      showToast(`Syncing Block ${i + 1}/${files.length}... ⛓️`, 'info');
+      const blockId = i + 1;
       
       try {
         const mediaItem = await new Promise<{
@@ -119,68 +125,54 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
         }>((resolve) => {
           const url = URL.createObjectURL(file);
           createdUrls.current.add(url);
-          const type = file.type.startsWith('video') ? 'video' : 'photo';
+          
+          // More robust type detection
+          const isVideo = file.type.includes('video') || file.name.match(/\.(mp4|mov|webm|quicktime)$/i);
+          const type = isVideo ? 'video' : 'photo';
           
           if (type === 'video') {
             const video = document.createElement('video');
             video.src = url;
             video.preload = 'metadata';
-            video.playsInline = true;
             video.muted = true;
             
-            // Hard timeout with "Safe Exit" for long videos
             const timeoutId = setTimeout(() => {
-               console.warn("Metadata timeout - using safe duration");
+               console.warn(`Block ${blockId} metadata fallback`);
                resolve({ url, type, duration: 60, originalDuration: 60, trimStart: 0 });
-            }, 10000); 
+            }, 12000); // Give long videos more wiggle room
 
             video.onloadedmetadata = () => {
               clearTimeout(timeoutId);
-              let validDuration = video.duration && isFinite(video.duration) ? video.duration : 60;
-              
-              // Mobile Safari Fix for Infinite Duration (often happens on long videos)
-              if (validDuration === Infinity || validDuration <= 0) {
-                video.currentTime = 1e101;
-                video.ontimeupdate = () => {
-                  video.ontimeupdate = null;
-                  const dur = isFinite(video.duration) ? video.duration : 60;
-                  video.currentTime = 0;
-                  resolve({ url, type, duration: dur, originalDuration: dur, trimStart: 0 });
-                };
-              } else {
-                resolve({ url, type, duration: validDuration, originalDuration: validDuration, trimStart: 0 });
-              }
+              let dur = video.duration;
+              if (!dur || !isFinite(dur) || dur <= 0) dur = 60;
+              resolve({ url, type, duration: dur, originalDuration: dur, trimStart: 0 });
             };
             
-            video.onerror = (err) => {
-              console.error("Critical Video Load Error:", err);
+            video.onerror = () => {
               clearTimeout(timeoutId);
-              // Resolve anyway to prevent blocking the queue
-              resolve({ url, type, duration: 10, originalDuration: 10, trimStart: 0 });
+              // Fallback to "Photo" mode if video engine strictly fails to read the stream
+              resolve({ url, type: 'photo', duration: 5, originalDuration: 5, trimStart: 0 });
             };
-            
             video.load();
           } else {
-            resolve({ url, type, duration: 4, originalDuration: 4, trimStart: 0 });
+            resolve({ url, type, duration: 5, originalDuration: 5, trimStart: 0 });
           }
         });
-        loadedMedia.push(mediaItem);
+
+        setCapturedMedia(prev => {
+          const newList = [...prev, mediaItem];
+          if (prev.length === 0) setMediaType(mediaItem.type);
+          return newList;
+        });
+        
+        if (i === files.length - 1) {
+          showToast(`Full Sequence Synthesized! 🏮`, 'success');
+          vibrate(VIBRATION_PATTERNS.SUCCESS);
+        }
       } catch (err) {
         console.error("Batch load error:", err);
+        showToast(`Block ${blockId} corrupted 🚫`, 'info');
       }
-    }
-    
-    if (loadedMedia.length > 0) {
-      setCapturedMedia(prev => [...prev, ...loadedMedia]);
-      if (capturedMedia.length === 0) {
-        setCurrentMediaIndex(0);
-        setMediaType(loadedMedia[0].type);
-      }
-      setStage(2);
-      vibrate(VIBRATION_PATTERNS.SUCCESS);
-      showToast(`${loadedMedia.length} Media Blocks Synthesized! 🏮`, 'success');
-    } else {
-      showToast('Neural Connection Failed 🚫', 'error');
     }
     
     e.target.value = '';
@@ -199,7 +191,8 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
   };
 
   const addSticker = (type: string) => {
-    setStickers([...stickers, { id: Math.random().toString(), type, x: 50, y: 50 }]);
+    if (!type.trim()) return;
+    setStickers([...stickers, { id: Math.random().toString(36).substr(2, 9), type, x: 50, y: 50 }]);
     vibrate(VIBRATION_PATTERNS.CLICK);
   };
 
