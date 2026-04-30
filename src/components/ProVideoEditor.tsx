@@ -186,30 +186,30 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
                  <RotateCcw className="text-white/20 animate-spin" size={48} />
                  <p className="text-white/40 text-[10px] font-black uppercase tracking-widest text-center">Reconstructing<br/>Digital Reality...</p>
               </div>
-            ) : activeClip?.type === 'video' ? (
-              <video 
-                ref={videoRef}
-                src={activeClip.url} 
-                key={`${activeClip.id}-${activeClip.url}`}
-                className="w-full h-full object-cover"
-                loop 
-                playsInline
-                muted
-                preload="auto"
-                style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
-                onLoadedMetadata={(e) => {
-                  const video = e.currentTarget;
-                  const relativeTime = currentTime - (activeClip.startTime || 0);
-                  const sourceTime = (activeClip.trimStart || 0) + relativeTime;
-                  video.currentTime = Math.max(0, sourceTime);
-                  if (isPlaying) video.play().catch(() => {});
-                }}
-                onError={(e) => {
-                  console.error('Video Error:', e);
-                  showToast('Video Load Error 🚫', 'error');
-                }}
-              />
-            ) : (
+             ) : activeClip?.type === 'video' ? (
+                <video 
+                  ref={videoRef}
+                  src={activeClip.url} 
+                  key={activeClip.url} // Key based on URL to keep element mounted during splits of same file
+                  className="w-full h-full object-cover"
+                  loop 
+                  playsInline
+                  muted
+                  preload="auto"
+                  style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)', willChange: 'transform' }}
+                  onLoadedMetadata={(e) => {
+                    const video = e.currentTarget;
+                    const relativeTime = currentTime - (activeClip.startTime || 0);
+                    const sourceTime = (activeClip.trimStart || 0) + relativeTime;
+                    video.currentTime = Math.max(0, sourceTime);
+                    if (isPlaying) video.play().catch(() => {});
+                  }}
+                  onError={(e) => {
+                    console.error('Video Error:', e);
+                    showToast('Video Engine Lost 🚫', 'error');
+                  }}
+                />
+              ) : (
               <img 
                 src={activeClip?.url} 
                 className="w-full h-full object-cover" 

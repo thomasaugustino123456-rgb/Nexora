@@ -120,27 +120,38 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
           video.preload = 'metadata';
           video.playsInline = true;
           video.muted = true;
-          video.setAttribute('muted', ''); // Extra safe for mobile
           
           const timeoutId = setTimeout(() => {
              // Fallback if metadata takes too long (e.g. mobile Safari issues)
-             resolve({ url, type, duration: 10, originalDuration: 10, trimStart: 0 });
-          }, 4000); // Increased timeout
+             resolve({ url, type, duration: 30, originalDuration: 30, trimStart: 0 });
+          }, 8000); // More time for mobile
 
           video.onloadedmetadata = () => {
             clearTimeout(timeoutId);
-            const validDuration = video.duration && isFinite(video.duration) ? video.duration : 10;
-            resolve({ 
-              url, 
-              type, 
-              duration: validDuration, 
-              originalDuration: validDuration, 
-              trimStart: 0 
-            });
+            const validDuration = video.duration && isFinite(video.duration) ? video.duration : 30;
+            // Safari mobile duration fix
+            if (validDuration === Infinity) {
+              video.currentTime = 1e101;
+              video.ontimeupdate = () => {
+                video.ontimeupdate = null;
+                const dur = video.duration;
+                video.currentTime = 0;
+                resolve({ url, type, duration: dur, originalDuration: dur, trimStart: 0 });
+              };
+            } else {
+              resolve({ 
+                url, 
+                type, 
+                duration: validDuration, 
+                originalDuration: validDuration, 
+                trimStart: 0 
+              });
+            }
           };
-          video.onerror = () => {
+          video.onerror = (e) => {
+            console.error("Video error during metadata load:", e);
             clearTimeout(timeoutId);
-            resolve({ url, type, duration: 10, originalDuration: 10, trimStart: 0 });
+            resolve({ url, type, duration: 15, originalDuration: 15, trimStart: 0 });
           };
           video.load();
         } else {
@@ -208,13 +219,26 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
             initialAudio={audioFile}
             onBack={() => setIsProEditing(false)}
             onComplete={(newMedia, newAudioUrl) => {
-              setCapturedMedia(newMedia);
-              setCurrentMediaIndex(0); // Reset to first clip after edit
-              if (newAudioUrl !== undefined) {
-                setAudioFile(newAudioUrl);
+              try {
+                // Ensure media has required properties for Studio stage
+                const validatedMedia = newMedia.map(m => ({
+                  ...m,
+                  originalDuration: m.duration || 10,
+                  trimStart: m.trimStart || 0
+                }));
+                
+                setCapturedMedia(validatedMedia as any);
+                setCurrentMediaIndex(0); 
+                if (newAudioUrl !== undefined) {
+                  setAudioFile(newAudioUrl);
+                }
+                setIsProEditing(false);
+                vibrate(VIBRATION_PATTERNS.SUCCESS);
+                showToast('Edits Locked In! 🔒', 'success');
+              } catch (err) {
+                console.error("Editor completion error:", err);
+                showToast('Failed to lock edits 🚫', 'error');
               }
-              setIsProEditing(false);
-              showToast('Edits Locked In! 🔒', 'success');
             }}
           />
         ) : (
@@ -258,9 +282,22 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                   </button>
                   <input ref={fileInputRef} type="file" accept="video/*,image/*" multiple onChange={handleFileUpload} className="hidden" />
                   
-                  <p className="text-[9px] text-white/20 font-black uppercase tracking-widest pt-4">
-                    Optimized for 9:16 mobile vlogs 🏮
-                  </p>
+                  <div className="flex flex-col items-center gap-2 pt-4">
+                    <p className="text-[9px] text-white/20 font-black uppercase tracking-widest">
+                      Optimized for 9:16 mobile vlogs 🏮
+                    </p>
+                    <button 
+                      onClick={() => {
+                        createdUrls.current.forEach(url => URL.revokeObjectURL(url));
+                        createdUrls.current.clear();
+                        setCapturedMedia([]);
+                        showToast('Memory Sanitized! 🧼', 'success');
+                      }}
+                      className="text-[8px] text-orange-500/40 font-black uppercase tracking-widest hover:text-orange-500"
+                    >
+                      Clear Memory Cache
+                    </button>
+                  </div>
                </div>
 
                <button onClick={onBack} className="text-white/20 text-[10px] font-black uppercase tracking-[0.5em] hover:text-white pt-10">
@@ -305,13 +342,19 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                     {capturedMedia.length > 0 && capturedMedia[currentMediaIndex] ? (
                       capturedMedia[currentMediaIndex].type === 'video' ? (
                         <video 
-                          key={`video-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}-${capturedMedia[currentMediaIndex].trimStart || 0}-${capturedMedia[currentMediaIndex].duration || 0}`}
+                          key={`video-${capturedMedia[currentMediaIndex].url}`}
                           ref={videoRef}
                           src={capturedMedia[currentMediaIndex].url} 
                           playsInline 
                           muted 
+                          loop
                           className="w-full h-full object-cover"
-                          style={{ filter: getEffectFilter(), WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
+                          style={{ 
+                            filter: getEffectFilter(), 
+                            WebkitTransform: 'translateZ(0)', 
+                            transform: 'translateZ(0)',
+                            willChange: 'transform, filter'
+                          }}
                           onLoadedData={(e) => {
                              const video = e.currentTarget;
                              if (capturedMedia[currentMediaIndex].trimStart) {
@@ -319,9 +362,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                              }
                              if (!isPaused) {
                                video.play().catch(err => {
-                                 console.log("Audio autoplay prevented - trying muted:", err);
-                                 video.muted = true;
-                                 video.play().catch(()=>{});
+                                 console.log("Play failed, waiting for user:", err);
                                });
                              }
                            }}
@@ -332,7 +373,6 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                              const endTime = (media.trimStart || 0) + (media.duration || video.duration);
                              if (video.currentTime >= endTime) {
                                video.currentTime = media.trimStart || 0;
-                               video.play().catch(()=>{});
                              }
                            }}
                            onEnded={(e) => {
@@ -708,13 +748,13 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                       >
                         {capturedMedia[currentMediaIndex]?.type === 'video' ? (
                           <video 
-                            key={`preview-video-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}-${capturedMedia[currentMediaIndex].trimStart || 0}-${capturedMedia[currentMediaIndex].duration || 0}`}
+                            key={`preview-v-${capturedMedia[currentMediaIndex].url}`}
                             src={capturedMedia[currentMediaIndex].url} 
                             playsInline 
                             muted
                             autoPlay
                             className="w-full h-full object-cover"
-                            style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
+                            style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)', willChange: 'transform' }}
                             onLoadedData={(e) => { 
                               const video = e.currentTarget;
                               if (capturedMedia[currentMediaIndex].trimStart) {
@@ -725,12 +765,13 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                             onTimeUpdate={(e) => {
                               const video = e.currentTarget;
                               const media = capturedMedia[currentMediaIndex];
+                              if (!media) return;
+                              const currentValidTime = video.currentTime;
                               const endTime = (media.trimStart || 0) + (media.duration || video.duration);
-                              if (video.currentTime >= endTime) {
+                              if (currentValidTime >= endTime) {
                                 setCurrentMediaIndex((currentMediaIndex + 1) % capturedMedia.length);
                               }
                             }}
-                            onEnded={() => setCurrentMediaIndex((currentMediaIndex + 1) % capturedMedia.length)}
                           />
                         ) : (
                           capturedMedia[currentMediaIndex] && (
