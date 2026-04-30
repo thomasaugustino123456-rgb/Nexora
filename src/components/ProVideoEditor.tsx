@@ -100,6 +100,25 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
     }
   }, [isPlaying, activeClip?.id]);
 
+  // Precise Sync Engine
+  useEffect(() => {
+    if (activeClip?.type === 'video' && videoRef.current && isReady) {
+      const relativeTime = currentTime - (activeClip.startTime || 0);
+      const targetTime = (activeClip.trimStart || 0) + relativeTime;
+      
+      // Only seek if the difference is significant (>100ms) to avoid stutter
+      if (Math.abs(videoRef.current.currentTime - targetTime) > 0.1) {
+        videoRef.current.currentTime = targetTime;
+      }
+
+      if (isPlaying) {
+        videoRef.current.play().catch(() => {});
+      } else {
+        videoRef.current.pause();
+      }
+    }
+  }, [currentTime, activeClip?.id, isPlaying, isReady]);
+
   const handleSplit = () => {
     if (!selectedClipId) return;
     const clipIndex = clips.findIndex(c => c.id === selectedClipId);
@@ -108,9 +127,9 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
     const clip = clips[clipIndex];
     const relativeTime = currentTime - clip.startTime;
     
-    // Safety boundaries (0.5s minimum)
-    if (relativeTime <= 0.5 || relativeTime >= clip.duration - 0.5) {
-      showToast('Split area too narrow ✂️', 'info');
+    // Safety boundaries (1.0s minimum to prevent engine stall)
+    if (relativeTime <= 1.0 || relativeTime >= clip.duration - 1.0) {
+      showToast('Split area too narrow (min 1s) ✂️', 'info');
       return;
     }
 
@@ -119,14 +138,14 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
       ...clip, 
       id: Math.random().toString(36).substr(2, 9), 
       duration: clip.duration - relativeTime,
-      trimStart: clip.trimStart + relativeTime,
+      trimStart: (clip.trimStart || 0) + relativeTime,
       startTime: clip.startTime + relativeTime 
     };
 
     const newClips = [...clips];
     newClips.splice(clipIndex, 1, newClip1, newClip2);
     
-    // Recalculate all start times to ensure absolute precision
+    // Recalculate all start times with absolute precision to avoid gaps
     let currentStart = 0;
     const updatedClips = newClips.map(c => {
       const updated = { ...c, startTime: currentStart };
@@ -138,11 +157,14 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
     // Keep focus on the second half of the split
     setSelectedClipId(newClip2.id); 
     vibrate(VIBRATION_PATTERNS.SUCCESS);
-    showToast('Dimensions Severed! ✂️', 'success');
+    showToast('Sequence Severed ✂️', 'success');
   };
 
   const handleDelete = () => {
-    if (!selectedClipId || clips.length <= 1) return;
+    if (!selectedClipId || clips.length <= 1) {
+      showToast('Cannot delete last block 🚫', 'info');
+      return;
+    }
     
     const clipIndex = clips.findIndex(c => c.id === selectedClipId);
     const filtered = clips.filter(c => c.id !== selectedClipId);
@@ -156,17 +178,17 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
 
     setClips(updatedClips);
     
-    // Safety: Adjust currentTime if it was in the deleted clip
-    if (currentTime >= updatedClips[updatedClips.length - 1].startTime + updatedClips[updatedClips.length - 1].duration) {
-      setCurrentTime(updatedClips[updatedClips.length - 1].startTime);
+    // Select nearest neighbor
+    const nextSelectedIndex = Math.min(filtered.length - 1, Math.max(0, clipIndex - 1));
+    setSelectedClipId(updatedClips[nextSelectedIndex]?.id || null);
+    
+    // Adjust currentTime if it was in the deleted zone
+    if (currentTime > currentStart) {
+      setCurrentTime(Math.max(0, currentStart - 0.1));
     }
 
-    // Select the previous or first clip
-    const nextSelectedIndex = Math.max(0, clipIndex - 1);
-    setSelectedClipId(updatedClips[nextSelectedIndex]?.id || updatedClips[0].id);
-    
     vibrate(VIBRATION_PATTERNS.SUCCESS);
-    showToast('Block Sanitized 🧼', 'success');
+    showToast('Block Purged 🧼', 'success');
   };
 
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,21 +238,9 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
                   muted
                   preload="auto"
                   style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)', willChange: 'transform' }}
-                  onLoadedMetadata={(e) => {
-                    const video = e.currentTarget;
-                    const relativeTime = currentTime - (activeClip.startTime || 0);
-                    const sourceTime = (activeClip.trimStart || 0) + relativeTime;
-                    video.currentTime = Math.max(0, sourceTime);
-                    if (isPlaying) video.play().catch(() => {});
-                  }}
                   onError={(e) => {
                     console.error('Video Engine Error:', e);
-                    showToast('Syncing with GPU... 🔄', 'info');
-                    // Attempt auto-recovery by reloading the source
-                    const video = e.currentTarget;
-                    const savedTime = video.currentTime;
-                    video.load();
-                    video.currentTime = savedTime;
+                    e.currentTarget.load();
                   }}
                 />
               ) : (

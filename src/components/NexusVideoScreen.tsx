@@ -300,21 +300,32 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                     // Upload all unique clips in sequence
                     const updatedSequence = [];
                     for (const item of sequence) {
-                      if (!urlMap[item.url]) {
-                        if (item.url.startsWith('blob:')) {
-                           const response = await fetch(item.url);
-                           const blob = await response.blob();
-                           const storageRef = ref(storage, `videos/${user.uid}/${Date.now()}_${Math.random().toString(36).substr(2, 5)}.mp4`);
-                           await uploadBytes(storageRef, blob);
-                           urlMap[item.url] = await getDownloadURL(storageRef);
-                        } else {
-                           urlMap[item.url] = item.url;
+                      try {
+                        if (!urlMap[item.url]) {
+                          if (item.url.startsWith('blob:')) {
+                             const response = await fetch(item.url);
+                             if (!response.ok) throw new Error('Blob access denied');
+                             const blob = await response.blob();
+                             const storageRef = ref(storage, `videos/${user.uid}/${Date.now()}_${Math.random().toString(36).substr(2, 5)}.mp4`);
+                             await uploadBytes(storageRef, blob, { contentType: 'video/mp4' });
+                             urlMap[item.url] = await getDownloadURL(storageRef);
+                          } else {
+                             urlMap[item.url] = item.url;
+                          }
                         }
+                        updatedSequence.push({
+                          ...item,
+                          url: urlMap[item.url]
+                        });
+                      } catch (clipErr) {
+                        console.error("Clip upload failed, skipping:", clipErr);
+                        // We still push it but marked as failed or just skip
+                        continue; 
                       }
-                      updatedSequence.push({
-                        ...item,
-                        url: urlMap[item.url]
-                      });
+                    }
+
+                    if (updatedSequence.length === 0) {
+                      throw new Error('No valid media clips to post');
                     }
 
                     // Handle primary video URL (first clip)

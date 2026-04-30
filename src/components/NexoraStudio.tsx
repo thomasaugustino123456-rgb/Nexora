@@ -138,13 +138,13 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
             
             const timeoutId = setTimeout(() => {
                console.warn(`Block ${blockId} metadata fallback`);
-               resolve({ url, type, duration: 60, originalDuration: 60, trimStart: 0 });
-            }, 12000); // Give long videos more wiggle room
+               resolve({ url, type, duration: 30, originalDuration: 30, trimStart: 0 });
+            }, 15000); // Massive timeout for heavy videos
 
             video.onloadedmetadata = () => {
               clearTimeout(timeoutId);
               let dur = video.duration;
-              if (!dur || !isFinite(dur) || dur <= 0) dur = 60;
+              if (!dur || !isFinite(dur) || dur <= 0) dur = 30;
               resolve({ url, type, duration: dur, originalDuration: dur, trimStart: 0 });
             };
             
@@ -159,7 +159,9 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
           }
         });
 
+        // Use functional update to avoid race conditions in fast uploads
         setCapturedMedia(prev => {
+          if (prev.some(m => m.url === mediaItem.url)) return prev;
           const newList = [...prev, mediaItem];
           if (prev.length === 0) setMediaType(mediaItem.type);
           return newList;
@@ -228,24 +230,30 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
             onBack={() => setIsProEditing(false)}
             onComplete={(newMedia, newAudioUrl) => {
               try {
-                // Ensure media has required properties for Studio stage
+                // Critical: Map the editor structure exactly to the Studio structure
                 const validatedMedia = newMedia.map(m => ({
                   ...m,
-                  originalDuration: m.duration || 10,
+                  url: m.url, // Ensure URL isn't corrupted
+                  type: m.type || 'video',
+                  duration: m.duration || 10,
+                  originalDuration: m.originalDuration || m.duration || 10,
                   trimStart: m.trimStart || 0
                 }));
                 
-                setCapturedMedia(validatedMedia as any);
+                // Use a functional update to ensure state consistency
+                setCapturedMedia(() => [...validatedMedia] as any);
                 setCurrentMediaIndex(0); 
+                
                 if (newAudioUrl !== undefined) {
                   setAudioFile(newAudioUrl);
                 }
+                
                 setIsProEditing(false);
                 vibrate(VIBRATION_PATTERNS.SUCCESS);
                 showToast('Edits Locked In! 🔒', 'success');
               } catch (err) {
                 console.error("Editor completion error:", err);
-                showToast('Failed to lock edits 🚫', 'error');
+                showToast('Sync Failure 🚫', 'error');
               }
             }}
           />
@@ -350,7 +358,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                     {capturedMedia.length > 0 && capturedMedia[currentMediaIndex] ? (
                       capturedMedia[currentMediaIndex].type === 'video' ? (
                         <video 
-                          key={`video-${capturedMedia[currentMediaIndex].url}`}
+                          key={`studio-player-${capturedMedia[currentMediaIndex].url}-${currentMediaIndex}`}
                           ref={videoRef}
                           src={capturedMedia[currentMediaIndex].url} 
                           playsInline 
@@ -756,10 +764,10 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                       >
                         {capturedMedia[currentMediaIndex]?.type === 'video' ? (
                           <video 
-                            key={`preview-v-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}`}
+                            key={`studio-preview-v-${capturedMedia[currentMediaIndex].url}-${currentMediaIndex}`}
                             src={capturedMedia[currentMediaIndex].url} 
                             playsInline 
-                            muted
+                            muted={isPaused}
                             autoPlay
                             className="w-full h-full object-cover"
                             style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)', willChange: 'transform' }}
