@@ -304,10 +304,16 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                         if (!urlMap[item.url]) {
                           if (item.url.startsWith('blob:')) {
                              const response = await fetch(item.url);
-                             if (!response.ok) throw new Error('Blob access denied');
+                             if (!response.ok) throw new Error('Blob access denied or expired');
                              const blob = await response.blob();
-                             const storageRef = ref(storage, `videos/${user.uid}/${Date.now()}_${Math.random().toString(36).substr(2, 5)}.mp4`);
-                             await uploadBytes(storageRef, blob, { contentType: 'video/mp4' });
+                             
+                             // Detect type for correct cloud storage metadata
+                             const isVideo = item.type === 'video';
+                             const extension = isVideo ? 'mp4' : 'jpg';
+                             const contentType = isVideo ? 'video/mp4' : 'image/jpeg';
+                             
+                             const storageRef = ref(storage, `${isVideo ? 'videos' : 'photos'}/${user.uid}/${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${extension}`);
+                             await uploadBytes(storageRef, blob, { contentType });
                              urlMap[item.url] = await getDownloadURL(storageRef);
                           } else {
                              urlMap[item.url] = item.url;
@@ -318,8 +324,9 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                           url: urlMap[item.url]
                         });
                       } catch (clipErr) {
-                        console.error("Clip upload failed, skipping:", clipErr);
-                        // We still push it but marked as failed or just skip
+                        console.error("Clip sequence upload failed:", clipErr);
+                        // If it's the only clip, we must fail. If it's one of many, we skip to save the post.
+                        if (sequence.length === 1) throw clipErr;
                         continue; 
                       }
                     }
@@ -334,11 +341,18 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                     // Handle audio release
                     let finalAudioUrl = data.audioUrl;
                     if (finalAudioUrl && finalAudioUrl.startsWith('blob:')) {
-                      const response = await fetch(finalAudioUrl);
-                      const blob = await response.blob();
-                      const storageRef = ref(storage, `audio/${user.uid}/${Date.now()}_audio.mp3`);
-                      await uploadBytes(storageRef, blob);
-                      finalAudioUrl = await getDownloadURL(storageRef);
+                      try {
+                        const response = await fetch(finalAudioUrl);
+                        if (response.ok) {
+                          const blob = await response.blob();
+                          const storageRef = ref(storage, `audio/${user.uid}/${Date.now()}_audio.mp3`);
+                          await uploadBytes(storageRef, blob, { contentType: 'audio/mpeg' });
+                          finalAudioUrl = await getDownloadURL(storageRef);
+                        }
+                      } catch (audioErr) {
+                        console.warn("Background audio upload failed, proceeding without it:", audioErr);
+                        finalAudioUrl = '';
+                      }
                     }
                     
                     const videoData: Omit<NexusVideo, 'id'> = {

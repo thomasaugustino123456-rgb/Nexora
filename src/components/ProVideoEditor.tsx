@@ -21,6 +21,19 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(initialAudio || null);
   const [isReady, setIsReady] = useState(false);
+
+  // Hard reload if stuck for too long
+  useEffect(() => {
+    if (!isReady && isPlaying) {
+      const timer = setTimeout(() => {
+        if (!isReady && videoRef.current) {
+          console.warn("ProEditor engine stalled - forcing reload");
+          videoRef.current.load();
+        }
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedClipId, isReady, isPlaying]);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);

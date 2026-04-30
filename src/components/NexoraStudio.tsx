@@ -102,11 +102,10 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
 
     showToast(`Initializing Import Engine... 🚀`, 'info');
     
-    // If starting from stage 1, clear previous media to prevent memory clashes
-    if (stage === 1) {
+    // If starting from stage 1, only clear if explicitly requested or if we have no media
+    if (stage === 1 && capturedMedia.length === 0) {
       createdUrls.current.forEach(url => URL.revokeObjectURL(url));
       createdUrls.current.clear();
-      setCapturedMedia([]);
     }
     
     setStage(2);
@@ -777,7 +776,10 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                               if (media?.trimStart) {
                                 video.currentTime = media.trimStart;
                               }
-                              video.play().catch(err => console.warn("Stage 3 autoplay failed:", err));
+                              video.play().catch(err => {
+                                console.warn("Autoplay blocked/failed, retrying in 500ms");
+                                setTimeout(() => video.play().catch(() => {}), 500);
+                              });
                             }}
                             onTimeUpdate={(e) => {
                               const video = e.currentTarget;
@@ -874,6 +876,9 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                           // For now, we'll send the primary media sequence context.
                           const mainMedia = capturedMedia[0];
                           
+                          // Show a final processing toast
+                          showToast('Finalizing Media Sequence... 🏮', 'info');
+
                           onPost({ 
                             userId: user?.uid,
                             videoUrl: mainMedia?.url || '', 
@@ -881,8 +886,8 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                             mediaSequence: capturedMedia.map(m => ({
                               url: m.url,
                               type: m.type,
-                              duration: m.duration,
-                              trimStart: m.trimStart
+                              duration: m.duration || 5,
+                              trimStart: m.trimStart || 0
                             })),
                             caption,
                             userName: user?.displayName || 'Anonymous',
