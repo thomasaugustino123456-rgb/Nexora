@@ -226,33 +226,37 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
           <ProVideoEditor 
             media={capturedMedia}
             initialAudio={audioFile}
-            onBack={() => setIsProEditing(false)}
             onComplete={(newMedia, newAudioUrl) => {
               try {
-                // Critical: Map the editor structure exactly to the Studio structure
-                const validatedMedia = newMedia.map(m => ({
-                  ...m,
-                  url: m.url, // Ensure URL isn't corrupted
-                  type: m.type || 'video',
-                  duration: m.duration || 10,
-                  originalDuration: m.originalDuration || m.duration || 10,
-                  trimStart: m.trimStart || 0
-                }));
+                // Use a functional update to ensure state consistency and avoid losing refs
+                setCapturedMedia((prev) => {
+                  const validatedMedia = newMedia.map(m => {
+                    // Try to find existing media metadata if URL matches to preserve original info
+                    const existing = prev.find(p => p.url === m.url);
+                    return {
+                      ...m,
+                      url: m.url,
+                      type: m.type || existing?.type || 'video',
+                      duration: m.duration || existing?.duration || 10,
+                      originalDuration: m.originalDuration || existing?.originalDuration || 10,
+                      trimStart: m.trimStart ?? 0
+                    };
+                  });
+                  return [...validatedMedia] as any;
+                });
                 
-                // Use a functional update to ensure state consistency
-                setCapturedMedia(() => [...validatedMedia] as any);
                 setCurrentMediaIndex(0); 
-                
                 if (newAudioUrl !== undefined) {
                   setAudioFile(newAudioUrl);
                 }
                 
                 setIsProEditing(false);
                 vibrate(VIBRATION_PATTERNS.SUCCESS);
-                showToast('Edits Locked In! 🔒', 'success');
+                showToast('Sequence Synced! 🏮', 'success');
               } catch (err) {
-                console.error("Editor completion error:", err);
-                showToast('Sync Failure 🚫', 'error');
+                console.error("Critical Sync Error:", err);
+                showToast('Re-Syncing Engine... 🔄', 'info');
+                setIsProEditing(false); // Still return to studio
               }
             }}
           />
@@ -398,10 +402,40 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                            }}
                          />
                       ) : (
-                        <img 
-                          src={capturedMedia[currentMediaIndex].url} 
-                          className="w-full h-full object-cover" 
-                        />
+                        <div className="relative w-full h-full">
+                          <img 
+                            key={`studio-preview-img-${capturedMedia[currentMediaIndex].url}-${currentMediaIndex}`}
+                            src={capturedMedia[currentMediaIndex].url} 
+                            className="w-full h-full object-cover"
+                            style={{ 
+                              filter: getEffectFilter(), 
+                              WebkitTransform: 'translateZ(0)', 
+                              transform: 'translateZ(0)' 
+                            }}
+                            onError={(e) => {
+                              console.error("Image load error:", e);
+                              showToast('Signal Interrupted 📡', 'error');
+                            }}
+                            onLoad={() => {
+                              console.log("Image signal locked");
+                            }}
+                          />
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showToast('Re-Syncing Image... 📸', 'info');
+                              const img = e.currentTarget.previousSibling as HTMLImageElement;
+                              if (img) {
+                                const oldSrc = img.src;
+                                img.src = '';
+                                setTimeout(() => img.src = oldSrc, 100);
+                              }
+                            }}
+                            className="absolute top-2 right-2 p-1 bg-black/40 rounded-full text-white/40 hover:text-white"
+                          >
+                            <RotateCw size={14} />
+                          </button>
+                        </div>
                       )
                     ) : (
                       <div className="flex flex-col items-center gap-4 h-full justify-center">
@@ -762,52 +796,80 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                         className="w-full h-full"
                       >
                         {capturedMedia[currentMediaIndex]?.type === 'video' ? (
-                          <video 
-                            key={`studio-preview-v-${capturedMedia[currentMediaIndex].url}-${currentMediaIndex}`}
-                            src={capturedMedia[currentMediaIndex].url} 
-                            playsInline 
-                            muted={isPaused}
-                            autoPlay
-                            className="w-full h-full object-cover"
-                            style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)', willChange: 'transform' }}
-                            onLoadedData={(e) => { 
-                              const video = e.currentTarget;
-                              const media = capturedMedia[currentMediaIndex];
-                              if (media?.trimStart) {
-                                video.currentTime = media.trimStart;
-                              }
-                              video.play().catch(err => {
-                                console.warn("Autoplay blocked/failed, retrying in 500ms");
-                                setTimeout(() => video.play().catch(() => {}), 500);
-                              });
-                            }}
-                            onTimeUpdate={(e) => {
-                              const video = e.currentTarget;
-                              const media = capturedMedia[currentMediaIndex];
-                              if (!media) return;
-                              const currentValidTime = video.currentTime;
-                              const endTime = (media.trimStart || 0) + (media.duration || video.duration);
-                              
-                              if (currentValidTime >= endTime) {
-                                if (capturedMedia.length > 1) {
-                                  setCurrentMediaIndex((currentMediaIndex + 1) % capturedMedia.length);
-                                } else {
-                                  video.currentTime = media.trimStart || 0;
-                                  video.play().catch(() => {});
+                          <div className="relative w-full h-full">
+                            <video 
+                              key={`studio-preview-${capturedMedia[currentMediaIndex].url}-${currentMediaIndex}`}
+                              src={capturedMedia[currentMediaIndex].url} 
+                              playsInline 
+                              muted={isPaused}
+                              autoPlay
+                              className="w-full h-full object-cover"
+                              style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)', willChange: 'transform' }}
+                              onLoadedData={(e) => { 
+                                const video = e.currentTarget;
+                                const media = capturedMedia[currentMediaIndex];
+                                if (media?.trimStart) {
+                                  video.currentTime = media.trimStart;
                                 }
-                              }
-                            }}
-                          />
+                                video.play().catch(err => {
+                                  console.warn("Autoplay blocked, retry scheduled");
+                                  setTimeout(() => video.play().catch(() => {}), 300);
+                                });
+                              }}
+                              onTimeUpdate={(e) => {
+                                const video = e.currentTarget;
+                                const media = capturedMedia[currentMediaIndex];
+                                if (!media) return;
+                                const currentValidTime = video.currentTime;
+                                const endTime = (media.trimStart || 0) + (media.duration || video.duration);
+                                
+                                if (currentValidTime >= endTime) {
+                                  if (capturedMedia.length > 1) {
+                                    setCurrentMediaIndex((currentMediaIndex + 1) % capturedMedia.length);
+                                  } else {
+                                    video.currentTime = media.trimStart || 0;
+                                    video.play().catch(() => {});
+                                  }
+                                }
+                              }}
+                              onError={(e) => {
+                                console.error("Preview video error:", e);
+                                // Fallback loop if video source hangs
+                                const video = e.currentTarget;
+                                setTimeout(() => {
+                                  if (video.src) video.load();
+                                }, 1000);
+                              }}
+                            />
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const vid = e.currentTarget.previousSibling as HTMLVideoElement;
+                                if (vid) {
+                                  vid.load();
+                                  showToast('Engine Reloaded 🔄', 'info');
+                                }
+                              }}
+                              className="absolute top-2 right-2 p-1 bg-black/40 rounded-full text-white/40 hover:text-white"
+                            >
+                              <RotateCcw size={14} />
+                            </button>
+                          </div>
                         ) : (
                           capturedMedia[currentMediaIndex] && (
                             <img 
+                              key={`studio-final-img-${capturedMedia[currentMediaIndex].url}-${currentMediaIndex}`}
                               src={capturedMedia[currentMediaIndex].url} 
                               className="w-full h-full object-cover" 
                               onLoad={() => {
-                                setTimeout(() => {
-                                  if (stage === 3) setCurrentMediaIndex((currentMediaIndex + 1) % capturedMedia.length);
-                                }, 3000);
+                                // Auto-advance images after 4 seconds
+                                if (capturedMedia.length > 1) {
+                                  setTimeout(() => {
+                                    if (stage === 3) setCurrentMediaIndex((prev) => (prev + 1) % capturedMedia.length);
+                                  }, 4000);
+                                }
                               }}
+                              onError={() => showToast('Image Sync Failure 📡', 'error')}
                             />
                           )
                         )}

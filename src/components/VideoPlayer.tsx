@@ -31,13 +31,36 @@ const getEmbedData = (url: string) => {
   return null;
 };
 
-export const VideoPlayer = ({ url, fullScreen = false, mediaSequence }: { url: string, fullScreen?: boolean, mediaSequence?: any[] }) => {
+export const VideoPlayer = ({ url, fullScreen = false, mediaSequence, audioUrl }: { url: string, fullScreen?: boolean, mediaSequence?: any[], audioUrl?: string }) => {
   const [currentClipIndex, setCurrentClipIndex] = useState(0);
   const activeMediaSequence = mediaSequence && mediaSequence.length > 0 ? mediaSequence : null;
   const currentUrl = activeMediaSequence ? activeMediaSequence[currentClipIndex].url : url;
   
   const embedData = getEmbedData(currentUrl);
   const [localUrl, setLocalUrl] = useState<string | null>(null);
+  const audioRef = React.useRef<HTMLAudioElement>(null);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+
+  // Sync seek when clip changes on same source
+  useEffect(() => {
+    if (activeMediaSequence && videoRef.current) {
+      const clip = activeMediaSequence[currentClipIndex];
+      if (clip) {
+        const targetTime = clip.trimStart || 0;
+        // If we are on the same URL, we just seek instead of reloading
+        if (Math.abs(videoRef.current.currentTime - targetTime) > 0.5) {
+          videoRef.current.currentTime = targetTime;
+        }
+      }
+    }
+  }, [currentClipIndex, activeMediaSequence]);
+
+  useEffect(() => {
+    // Sync audio with video play/pause
+    if (audioRef.current) {
+      audioRef.current.volume = 0.8;
+    }
+  }, [audioUrl]);
 
   useEffect(() => {
     // Reset index if sequence changes
@@ -77,13 +100,24 @@ export const VideoPlayer = ({ url, fullScreen = false, mediaSequence }: { url: s
     }
   };
 
-  const onVideoLoadedData = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+  const onVideoLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = e.currentTarget;
     const clip = activeMediaSequence ? activeMediaSequence[currentClipIndex] : null;
     if (clip?.trimStart) {
       video.currentTime = clip.trimStart;
     }
     video.play().catch(() => {});
+    if (audioRef.current) {
+      audioRef.current.play().catch(() => {});
+    }
+  };
+
+  const onVideoPlay = () => {
+    if (audioRef.current) audioRef.current.play().catch(() => {});
+  };
+
+  const onVideoPause = () => {
+    if (audioRef.current) audioRef.current.pause();
   };
 
   const ExternalFallback = () => (
@@ -112,16 +146,27 @@ export const VideoPlayer = ({ url, fullScreen = false, mediaSequence }: { url: s
     const videoSrc = localUrl || embedData.url || currentUrl;
     return (
       <div className={`${fullScreen ? 'aspect-[9/16]' : 'aspect-video'} w-full rounded-2xl overflow-hidden shadow-2xl bg-black border-2 border-white/10 relative`}>
+        {audioUrl && (
+          <audio 
+            ref={audioRef} 
+            src={audioUrl} 
+            loop 
+            className="hidden"
+          />
+        )}
         <video 
-          key={videoSrc + currentClipIndex} // Key ensures re-mount if URL or clip index changes
+          ref={videoRef}
+          key={videoSrc} // ONLY re-mount if the source file changed
           src={videoSrc} 
           controls={!fullScreen}
           autoPlay 
-          muted={fullScreen}
+          muted={fullScreen || !!audioUrl} // Mute video if we have custom background audio
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
           onTimeUpdate={onVideoTimeUpdate}
-          onLoadedData={onVideoLoadedData}
+          onLoadedMetadata={onVideoLoadedMetadata}
+          onPlay={onVideoPlay}
+          onPause={onVideoPause}
           onEnded={() => {
             if (activeMediaSequence) {
               setCurrentClipIndex((currentClipIndex + 1) % activeMediaSequence.length);

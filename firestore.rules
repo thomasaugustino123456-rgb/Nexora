@@ -240,7 +240,7 @@ service cloud.firestore {
       return data.keys().hasAll(['userId', 'userName', 'videoUrl', 'createdAt']) &&
              data.userId == request.auth.uid &&
              data.userName is string && data.userName.size() < 100 &&
-             data.videoUrl is string && data.videoUrl.size() < 5000000 &&
+             data.videoUrl is string && data.videoUrl.size() < 5000 && // Reduced from 5M to reasonable 5k
              (!('caption' in data) || (data.caption is string && data.caption.size() < 5000)) &&
              (!('userPhoto' in data) || (data.userPhoto is string && data.userPhoto.size() < 1048576)) &&
              (!('likes' in data) || data.likes is number) &&
@@ -250,7 +250,10 @@ service cloud.firestore {
              (!('commentCount' in data) || data.commentCount is number) &&
              (!('repostCount' in data) || data.repostCount is number) &&
              (!('type' in data) || data.type in ['video', 'photo']) &&
-             (!('platform' in data) || data.platform in ['youtube', 'tiktok', 'nexora']);
+             (!('platform' in data) || data.platform in ['youtube', 'tiktok', 'nexora']) &&
+             (!('audioUrl' in data) || (data.audioUrl is string && data.audioUrl.size() < 5000)) &&
+             (!('isAuthorized' in data) || data.isAuthorized is bool) &&
+             (!('mediaSequence' in data) || (data.mediaSequence is list && data.mediaSequence.size() <= 50));
     }
 
     function isValidVideoComment(data) {

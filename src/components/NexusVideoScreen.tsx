@@ -34,6 +34,7 @@ const VideoCard = React.memo(({ video, user, handleLike, handleShareVideo, setSe
                 url={video.videoUrl} 
                 fullScreen={true} 
                 mediaSequence={video.mediaSequence}
+                audioUrl={video.audioUrl}
               />
             )}
           </div>
