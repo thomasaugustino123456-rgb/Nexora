@@ -38,6 +38,7 @@ export const VideoPlayer = ({ url, fullScreen = false, mediaSequence, audioUrl }
   
   const embedData = getEmbedData(currentUrl);
   const [localUrl, setLocalUrl] = useState<string | null>(null);
+  const [hasError, setHasError] = useState(false);
   const audioRef = React.useRef<HTMLAudioElement>(null);
   const videoRef = React.useRef<HTMLVideoElement>(null);
 
@@ -101,6 +102,7 @@ export const VideoPlayer = ({ url, fullScreen = false, mediaSequence, audioUrl }
   };
 
   const onVideoLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    setHasError(false);
     const video = e.currentTarget;
     const clip = activeMediaSequence ? activeMediaSequence[currentClipIndex] : null;
     if (clip?.trimStart) {
@@ -110,6 +112,11 @@ export const VideoPlayer = ({ url, fullScreen = false, mediaSequence, audioUrl }
     if (audioRef.current) {
       audioRef.current.play().catch(() => {});
     }
+  };
+
+  const onVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    console.error("Video Player Load Error:", e);
+    setHasError(true);
   };
 
   const onVideoPlay = () => {
@@ -165,6 +172,7 @@ export const VideoPlayer = ({ url, fullScreen = false, mediaSequence, audioUrl }
           className="absolute inset-0 w-full h-full object-cover"
           onTimeUpdate={onVideoTimeUpdate}
           onLoadedMetadata={onVideoLoadedMetadata}
+          onError={onVideoError}
           onPlay={onVideoPlay}
           onPause={onVideoPause}
           onEnded={() => {
@@ -173,6 +181,24 @@ export const VideoPlayer = ({ url, fullScreen = false, mediaSequence, audioUrl }
             }
           }}
         />
+
+        {hasError && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm p-4 text-center">
+            <RefreshCw className="text-orange-500 mb-2 animate-pulse" size={32} />
+            <p className="text-sm font-bold text-white mb-2">Signal Connection Lost</p>
+            <button 
+              onClick={() => {
+                setHasError(false);
+                if (videoRef.current) {
+                  videoRef.current.load();
+                }
+              }}
+              className="px-4 py-1.5 bg-orange-500 text-black text-xs font-black uppercase tracking-widest rounded-full"
+            >
+              Re-Sync
+            </button>
+          </div>
+        )}
       </div>
     );
   }

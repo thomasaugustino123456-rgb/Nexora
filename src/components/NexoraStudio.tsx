@@ -44,6 +44,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
   const [isDraggingToDelete, setIsDraggingToDelete] = useState(false);
   const [audioFile, setAudioFile] = useState<string | null>(null);
   const [isProEditing, setIsProEditing] = useState(false);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -101,6 +102,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
     if (files.length === 0) return;
 
     showToast(`Initializing Import Engine... 🚀`, 'info');
+    setImportProgress({ current: 0, total: files.length });
     
     // If starting from stage 1, only clear if explicitly requested or if we have no media
     if (stage === 1 && capturedMedia.length === 0) {
@@ -125,40 +127,43 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
           const url = URL.createObjectURL(file);
           createdUrls.current.add(url);
           
-          // More robust type detection
           const isVideo = file.type.includes('video') || file.name.match(/\.(mp4|mov|webm|quicktime)$/i);
           const type = isVideo ? 'video' : 'photo';
           
           if (type === 'video') {
             const video = document.createElement('video');
-            video.src = url;
             video.preload = 'metadata';
             video.muted = true;
+            video.playsInline = true;
             
             const timeoutId = setTimeout(() => {
                console.warn(`Block ${blockId} metadata fallback`);
-               resolve({ url, type, duration: 30, originalDuration: 30, trimStart: 0 });
-            }, 15000); // Massive timeout for heavy videos
+               // Resolve with a reasonable default if the file is massive and taking too long
+               resolve({ url, type, duration: 10, originalDuration: 10, trimStart: 0 });
+            }, 30000); // 30 second massive timeout for mobile connections
 
             video.onloadedmetadata = () => {
               clearTimeout(timeoutId);
               let dur = video.duration;
-              if (!dur || !isFinite(dur) || dur <= 0) dur = 30;
+              if (!dur || !isFinite(dur) || dur <= 0) dur = 10;
               resolve({ url, type, duration: dur, originalDuration: dur, trimStart: 0 });
             };
             
-            video.onerror = () => {
+            video.onerror = (err) => {
+              console.error("Video parse error:", err);
               clearTimeout(timeoutId);
-              // Fallback to "Photo" mode if video engine strictly fails to read the stream
+              // Fallback to "Photo" mode instead of breaking the whole app
               resolve({ url, type: 'photo', duration: 5, originalDuration: 5, trimStart: 0 });
             };
+            
+            // Set source LAST to ensure listeners are ready
+            video.src = url;
             video.load();
           } else {
             resolve({ url, type, duration: 5, originalDuration: 5, trimStart: 0 });
           }
         });
 
-        // Use functional update to avoid race conditions in fast uploads
         setCapturedMedia(prev => {
           if (prev.some(m => m.url === mediaItem.url)) return prev;
           const newList = [...prev, mediaItem];
@@ -166,13 +171,16 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
           return newList;
         });
         
+        setImportProgress({ current: i + 1, total: files.length });
+
         if (i === files.length - 1) {
           showToast(`Full Sequence Synthesized! 🏮`, 'success');
           vibrate(VIBRATION_PATTERNS.SUCCESS);
+          setTimeout(() => setImportProgress(null), 1000);
         }
       } catch (err) {
         console.error("Batch load error:", err);
-        showToast(`Block ${blockId} corrupted 🚫`, 'info');
+        setImportProgress(prev => prev ? { ...prev, current: prev.current + 1 } : null);
       }
     }
     
@@ -221,6 +229,57 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
 
   return (
     <div className="fixed inset-0 z-[500] bg-black text-white font-sans">
+      <AnimatePresence>
+        {importProgress && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center"
+          >
+            <div className="relative w-48 h-48 mb-8">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle
+                  cx="96"
+                  cy="96"
+                  r="80"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  fill="transparent"
+                  className="text-white/10"
+                />
+                <motion.circle
+                  cx="96"
+                  cy="96"
+                  r="80"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  fill="transparent"
+                  strokeDasharray={2 * Math.PI * 80}
+                  initial={{ strokeDashoffset: 2 * Math.PI * 80 }}
+                  animate={{ strokeDashoffset: 2 * Math.PI * 80 * (1 - importProgress.current / importProgress.total) }}
+                  className="text-orange-500"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-4xl font-black italic">{Math.round((importProgress.current / importProgress.total) * 100)}%</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold">Syncing Sequence</span>
+              </div>
+            </div>
+            
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="space-y-2"
+            >
+              <h3 className="text-xl font-black italic uppercase tracking-tighter">Importing Block {importProgress.current} / {importProgress.total}</h3>
+              <p className="text-sm text-white/50 max-w-xs leading-relaxed">Please keep this window open while we lock in your creative dimensions.</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
         {isProEditing ? (
           <ProVideoEditor 

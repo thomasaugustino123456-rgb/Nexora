@@ -300,7 +300,9 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                     
                     // Upload all unique clips in sequence
                     const updatedSequence = [];
-                    for (const item of sequence) {
+                    for (let i = 0; i < sequence.length; i++) {
+                      const item = sequence[i];
+                      showToast(`Syncing Block ${i + 1}/${sequence.length}... ⛓️`, 'info');
                       try {
                         if (!urlMap[item.url]) {
                           if (item.url.startsWith('blob:')) {
