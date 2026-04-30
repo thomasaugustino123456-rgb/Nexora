@@ -286,14 +286,25 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                 try {
                   // Upload to Firebase Storage so it's publicly accessible
                   let finalVideoUrl = data.videoUrl;
+                  let finalAudioUrl = data.audioUrl;
+
+                  const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+                  const storage = getStorage();
+
                   if (finalVideoUrl.startsWith('blob:')) {
-                    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-                    const storage = getStorage();
                     const response = await fetch(finalVideoUrl);
                     const blob = await response.blob();
                     const storageRef = ref(storage, `videos/${user.uid}/${Date.now()}.mp4`);
                     await uploadBytes(storageRef, blob);
                     finalVideoUrl = await getDownloadURL(storageRef);
+                  }
+
+                  if (finalAudioUrl && finalAudioUrl.startsWith('blob:')) {
+                    const response = await fetch(finalAudioUrl);
+                    const blob = await response.blob();
+                    const storageRef = ref(storage, `audio/${user.uid}/${Date.now()}_audio.mp3`);
+                    await uploadBytes(storageRef, blob);
+                    finalAudioUrl = await getDownloadURL(storageRef);
                   }
                   
                   const videoData: Omit<NexusVideo, 'id'> = {
@@ -301,6 +312,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                     userName: settings.displayName || 'Anonymous',
                     userPhoto: settings.profilePic || '',
                     videoUrl: finalVideoUrl,
+                    audioUrl: finalAudioUrl || '',
                     caption: data.caption || 'New Studio Vibe! 🏮',
                     likes: 0,
                     likedBy: [],

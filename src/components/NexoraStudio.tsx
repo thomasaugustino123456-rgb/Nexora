@@ -120,11 +120,12 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
           video.preload = 'metadata';
           video.playsInline = true;
           video.muted = true;
+          video.setAttribute('muted', ''); // Extra safe for mobile
           
           const timeoutId = setTimeout(() => {
              // Fallback if metadata takes too long (e.g. mobile Safari issues)
              resolve({ url, type, duration: 10, originalDuration: 10, trimStart: 0 });
-          }, 3000);
+          }, 4000); // Increased timeout
 
           video.onloadedmetadata = () => {
             clearTimeout(timeoutId);
@@ -283,7 +284,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
             <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
                <div 
                 className="relative w-full h-full max-w-md aspect-[9/16] bg-neutral-900 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer flex items-center justify-center transition-all duration-700"
-                style={{ filter: getEffectFilter(), WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
+                style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
                 onClick={() => setIsPaused(!isPaused)}
                >
                 {isCinematic && (
@@ -308,8 +309,9 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                           ref={videoRef}
                           src={capturedMedia[currentMediaIndex].url} 
                           playsInline 
+                          muted 
                           className="w-full h-full object-cover"
-                          style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
+                          style={{ filter: getEffectFilter(), WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
                           onLoadedData={(e) => {
                              const video = e.currentTarget;
                              if (capturedMedia[currentMediaIndex].trimStart) {
@@ -709,6 +711,8 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                             key={`preview-video-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}-${capturedMedia[currentMediaIndex].trimStart || 0}-${capturedMedia[currentMediaIndex].duration || 0}`}
                             src={capturedMedia[currentMediaIndex].url} 
                             playsInline 
+                            muted
+                            autoPlay
                             className="w-full h-full object-cover"
                             style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
                             onLoadedData={(e) => { 
@@ -716,10 +720,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                               if (capturedMedia[currentMediaIndex].trimStart) {
                                 video.currentTime = capturedMedia[currentMediaIndex].trimStart!;
                               }
-                              video.play().catch(() => {
-                                video.muted = true;
-                                video.play().catch(()=>{});
-                              });
+                              video.play().catch(() => {});
                             }}
                             onTimeUpdate={(e) => {
                               const video = e.currentTarget;
@@ -806,6 +807,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                           onPost({ 
                             userId: user?.uid,
                             videoUrl: capturedMedia[0]?.url || '', 
+                            audioUrl: audioFile,
                             caption,
                             userName: user?.displayName || 'Anonymous',
                             userPhoto: user?.photoURL || '',

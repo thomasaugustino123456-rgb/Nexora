@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Shield, Target, Award, Star, History, Camera, Crown, Globe, MessageSquare, Zap, Clock, MoreHorizontal } from 'lucide-react';
+import { User, Shield, Target, Award, Star, History, Camera, Crown, Globe, MessageSquare, Zap, Clock, MoreHorizontal, Video } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { UserSettings, UserStats, SocialCircle, Screen } from '../types';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -12,6 +12,7 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
   const progressPercent = (currentXP / nextLevelXP) * 100;
 
   const [userVideos, setUserVideos] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'posts' | 'reels'>('reels');
 
   useEffect(() => {
     if (!user) return;
@@ -67,37 +68,82 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
          </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-         <button onClick={() => setActiveScreen('social')} className="glass-card p-6 flex flex-col items-center text-center space-y-2 hover:border-blue-400 transition-all active:scale-95 group">
-            <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-               <Globe size={24} />
-            </div>
-            <span className="font-black text-blue-900 uppercase text-[10px] tracking-widest pt-1">The Nexus</span>
-         </button>
-         <button onClick={() => setActiveScreen('notebook')} className="glass-card p-6 flex flex-col items-center text-center space-y-2 hover:border-blue-400 transition-all active:scale-95 group">
-            <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-               <Zap size={24} />
-            </div>
-            <span className="font-black text-blue-900 uppercase text-[10px] tracking-widest pt-1">Brain Hub</span>
-         </button>
+      {/* Tab Switcher */}
+      <div className="flex gap-2 p-1.5 bg-blue-50/50 backdrop-blur-xl rounded-[2rem] border border-white/50">
+        <button 
+          onClick={() => setActiveTab('reels')}
+          className={`flex-1 py-4 rounded-[1.5rem] flex flex-col items-center gap-1 transition-all ${activeTab === 'reels' ? 'bg-white shadow-xl text-blue-600' : 'text-blue-900/30 hover:bg-white/50'}`}
+        >
+          <Video size={18} className={activeTab === 'reels' ? 'animate-pulse' : ''} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Pulses</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('posts')}
+          className={`flex-1 py-4 rounded-[1.5rem] flex flex-col items-center gap-1 transition-all ${activeTab === 'posts' ? 'bg-white shadow-xl text-blue-600' : 'text-blue-900/30 hover:bg-white/50'}`}
+        >
+          <Target size={18} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Feed</span>
+        </button>
       </div>
 
-
-      <div className="glass-card p-8">
-        <h3 className="text-xs font-black text-blue-900/30 uppercase tracking-[0.25em] mb-6">Nexus Reels</h3>
-        <div className="grid grid-cols-3 gap-2">
-           {userVideos.map(video => (
-             <div key={video.id} className="relative aspect-[9/16] bg-blue-50 rounded-2xl overflow-hidden shadow-sm">
-                <video src={video.videoUrl} className="w-full h-full object-cover" muted />
-                <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white bg-black/50 px-2 py-0.5 rounded-lg text-[10px] font-bold">
-                   <Zap size={10} /> {video.likes || 0}
-                </div>
-             </div>
-           ))}
-           {userVideos.length === 0 && (
-             <div className="col-span-3 py-10 text-center text-blue-900/40 text-xs font-black uppercase tracking-widest italic">No pulses yet...</div>
-           )}
-        </div>
+      <div className="min-h-[400px]">
+        {activeTab === 'reels' ? (
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-6 px-2">
+              <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.25em]">Nexus Reels</h3>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping" />
+                <span className="text-[8px] font-black text-orange-500 uppercase tracking-widest">Live</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+               {userVideos.map(video => (
+                 <div key={video.id} className="relative aspect-[9/16] bg-blue-50 rounded-2xl overflow-hidden shadow-sm border border-white/5 group cursor-pointer active:scale-95 transition-all">
+                    <video 
+                      src={video.videoUrl} 
+                      className="w-full h-full object-cover" 
+                      muted 
+                      playsInline
+                      onMouseOver={(e) => e.currentTarget.play().catch(()=>{})}
+                      onMouseOut={(e) => {
+                        e.currentTarget.pause();
+                        e.currentTarget.currentTime = 0;
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white bg-black/50 px-2 py-0.5 rounded-lg text-[9px] font-bold backdrop-blur-sm">
+                       <Zap size={10} className="text-orange-400" /> {video.likes || 0}
+                    </div>
+                 </div>
+               ))}
+               {userVideos.length === 0 && (
+                 <div className="col-span-3 py-16 text-center space-y-4">
+                   <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-200">
+                     <Video size={32} />
+                   </div>
+                   <p className="text-blue-900/20 text-[10px] font-black uppercase tracking-[0.3em] italic">No pulses broadcasted yet...</p>
+                 </div>
+               )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+               <button onClick={() => setActiveScreen('social')} className="glass-card p-6 flex flex-col items-center text-center space-y-2 hover:border-blue-400 transition-all active:scale-95 group">
+                  <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                     <Globe size={24} />
+                  </div>
+                  <span className="font-black text-blue-900 uppercase text-[10px] tracking-widest pt-1">The Nexus</span>
+               </button>
+               <button onClick={() => setActiveScreen('notebook')} className="glass-card p-6 flex flex-col items-center text-center space-y-2 hover:border-blue-400 transition-all active:scale-95 group">
+                  <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                     <Zap size={24} />
+                  </div>
+                  <span className="font-black text-blue-900 uppercase text-[10px] tracking-widest pt-1">Brain Hub</span>
+               </button>
+            </div>
+          </div>
+        )}
       </div>
       
       <div className="glass-card p-8">

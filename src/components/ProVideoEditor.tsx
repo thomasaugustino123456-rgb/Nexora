@@ -194,6 +194,7 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
                 className="w-full h-full object-cover"
                 loop 
                 playsInline
+                muted
                 preload="auto"
                 style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}
                 onLoadedMetadata={(e) => {
@@ -201,11 +202,7 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
                   const relativeTime = currentTime - (activeClip.startTime || 0);
                   const sourceTime = (activeClip.trimStart || 0) + relativeTime;
                   video.currentTime = Math.max(0, sourceTime);
-                  if (isPlaying) video.play().catch(() => {
-                    // Fallback to muted play if browser blocks
-                    video.muted = true;
-                    video.play().catch(() => {});
-                  });
+                  if (isPlaying) video.play().catch(() => {});
                 }}
                 onError={(e) => {
                   console.error('Video Error:', e);

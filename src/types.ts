@@ -206,6 +206,7 @@ export interface NexusVideo {
   userName: string;
   userPhoto?: string;
   videoUrl: string;
+  audioUrl?: string;
   caption: string;
   likes: number;
   likedBy?: string[];
