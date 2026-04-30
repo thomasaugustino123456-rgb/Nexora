@@ -292,26 +292,36 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
     const userId = user.uid;
     const isLiked = likedBy.includes(userId);
     const isShielded = shieldedBy.includes(userId);
+    
     vibrate(VIBRATION_PATTERNS.CLICK);
     const postRef = doc(db, 'posts', postId);
     try {
       if (type === 'flame') {
         const newLikedBy = isLiked ? likedBy.filter(id => id !== userId) : [...likedBy, userId];
-        await updateDoc(postRef, { likedBy: newLikedBy, flames: newLikedBy.length });
+        await updateDoc(postRef, { 
+          likedBy: newLikedBy, 
+          flames: newLikedBy.length 
+        });
       } else {
         const newShieldedBy = isShielded ? shieldedBy.filter(id => id !== userId) : [...shieldedBy, userId];
-        await updateDoc(postRef, { shieldedBy: newShieldedBy, shields: newShieldedBy.length });
+        await updateDoc(postRef, { 
+          shieldedBy: newShieldedBy, 
+          shields: newShieldedBy.length 
+        });
       }
-    } catch (err) { console.error('Action failed:', err); }
+    } catch (err) { 
+      showToast('Interaction failed', 'error');
+      console.error('Action failed:', err); 
+    }
   };
 
   const handleDeletePost = async (postId: string) => {
-    if (!confirm('Are you sure you want to delete this post, bro? 🛡️')) return;
+    if (!confirm('Erase this Signal from the Nexus permanently? 🛡️')) return;
     try {
       await deleteDoc(doc(db, 'posts', postId));
-      showToast('Post deleted', 'success');
+      showToast('Signal erased.', 'success');
       if (selectedPost?.id === postId) setSelectedPost(null);
-    } catch (err) { showToast('Failed to delete', 'error'); }
+    } catch (err) { showToast('Operation failed', 'error'); }
   };
 
   const toggleSavePost = (id: string) => {
@@ -319,7 +329,12 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
     const newSaved = isSaved ? savedPosts.filter(i => i !== id) : [...savedPosts, id];
     setSavedPosts(newSaved);
     vibrate(VIBRATION_PATTERNS.CLICK);
-    showToast(isSaved ? 'Removed from Library' : 'Saved to Library! 📚', 'success');
+    showToast(isSaved ? 'Removed from Library' : 'Saved to Library! 📡', 'success');
+  };
+
+  const hidePost = (id: string) => {
+    setHiddenPosts(prev => [...prev, id]);
+    showToast('Signal dampened.', 'info');
   };
 
   const handleToggleJoin = async (circle: SocialCircle) => {
@@ -642,55 +657,49 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
                    Initialize Node <Plus size={14} />
                 </button>
              </div>
-             <div className="grid grid-cols-1 gap-6">
+             <div className="grid grid-cols-1 gap-4">
                 {circles.map(circle => (
                   <motion.div 
                     key={circle.id}
                     layoutId={circle.id}
-                    className="bg-white border border-slate-200/60 p-6 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:border-blue-300 transition-all group active:scale-[0.98]"
+                    onClick={() => setViewingCircle(circle)}
+                    className="bg-white border border-slate-200/80 p-5 rounded-[28px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:border-blue-300 transition-all cursor-pointer group active:scale-[0.99] flex flex-col gap-4"
                   >
-                    <div className="flex items-start gap-5">
-                       <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center text-3xl shadow-inner group-hover:rotate-6 transition-transform shrink-0 ${circle.color || 'bg-blue-100'}`} onClick={() => setViewingCircle(circle)}>
-                          {circle.icon || '🏮'}
-                       </div>
-                       <div className="flex-1 min-w-0" onClick={() => setViewingCircle(circle)}>
-                         <div className="flex items-center justify-between">
-                            <h4 className="text-xl font-black text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight truncate">n/{circle.name.replace(/\s+/g, '').toLowerCase()}</h4>
-                         </div>
-                         <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{circle.memberCount || 0} Members · {circle.category}</p>
-                         <p className="text-sm font-medium text-slate-500 line-clamp-2 mt-3 leading-relaxed">
-                            {circle.description}
-                         </p>
-                       </div>
-                       
-                       <div className="flex flex-col gap-2">
-                         <button 
-                           onClick={(e) => { e.stopPropagation(); handleToggleFollowNode(circle.id); }}
-                           className={`p-3 rounded-2xl transition-all ${settings.notifEnabledCircleIds?.includes(circle.id) ? 'bg-orange-500 text-white shadow-lg shadow-orange-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
-                         >
-                            <Bell size={18} />
-                         </button>
-                         <button 
-                           onClick={(e) => { e.stopPropagation(); setViewingCircle(circle); }}
-                           className="p-3 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-100 transition-all"
-                         >
-                            <ChevronRight size={18} />
-                         </button>
-                       </div>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:rotate-6 transition-transform shrink-0 ${circle.color || 'bg-blue-100'}`}>
+                         {circle.icon || '🏮'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                         <h4 className="text-lg font-black text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight truncate">n/{circle.name.replace(/\s+/g, '').toLowerCase()}</h4>
+                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{circle.memberCount || 0} Members · {circle.category}</p>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleToggleFollowNode(circle.id); }}
+                          className={`p-2.5 rounded-xl transition-all ${settings.notifEnabledCircleIds?.includes(circle.id) ? 'bg-orange-500 text-white shadow-lg shadow-orange-100' : 'bg-slate-50 text-slate-300 hover:text-slate-500 hover:bg-slate-100'}`}
+                        >
+                           <Bell size={18} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setViewingCircle(circle); setExpandedRules(true); }}
+                          className="p-2.5 bg-blue-50 text-blue-500 rounded-xl hover:bg-blue-100 transition-all"
+                        >
+                           <Search size={18} />
+                        </button>
+                      </div>
                     </div>
-                    
-                    <div className="flex items-center gap-3 mt-6 pt-6 border-t border-slate-50">
+
+                    <p className="text-xs font-semibold text-slate-500 line-clamp-2 leading-relaxed px-1">
+                       {circle.description}
+                    </p>
+
+                    <div className="flex items-center gap-2 pt-2">
                        <button 
                          onClick={(e) => { e.stopPropagation(); handleToggleJoin(circle); }}
-                         className={`flex-1 py-3 rounded-2xl font-black text-[10px] tracking-[0.2em] transition-all ${settings.joinedCircleIds?.includes(circle.id) ? 'bg-blue-50 text-blue-600' : 'bg-blue-600 text-white shadow-xl shadow-blue-100'}`}
+                         className={`flex-1 py-2.5 rounded-xl font-black text-[10px] tracking-widest transition-all ${settings.joinedCircleIds?.includes(circle.id) ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-blue-600 text-white shadow-lg shadow-blue-100'}`}
                        >
-                          {settings.joinedCircleIds?.includes(circle.id) ? 'CONNECTED' : 'INITIALIZE CONNECTION'}
-                       </button>
-                       <button 
-                         onClick={(e) => { e.stopPropagation(); setViewingCircle(circle); setExpandedRules(true); }}
-                         className="px-6 py-3 bg-slate-50 text-slate-400 rounded-2xl font-black text-[10px] tracking-[0.2em] hover:bg-slate-100 transition-all"
-                       >
-                         RULES
+                          {settings.joinedCircleIds?.includes(circle.id) ? 'CONNECTED' : 'INITIALIZE'}
                        </button>
                     </div>
                   </motion.div>
@@ -891,16 +900,22 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
         {viewingCircle && (
           <div className="fixed inset-0 z-[1000] flex flex-col bg-slate-50/95 backdrop-blur-xl overflow-y-auto" onClick={() => setViewingCircle(null)}>
              <div className="w-full max-w-4xl mx-auto min-h-screen bg-white shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
-               <div className={`h-48 relative ${viewingCircle.color || 'bg-blue-600'}`}>
+               <div className={`h-48 relative ${viewingCircle.color || 'bg-blue-600'} transition-all`}>
                   <button onClick={() => setViewingCircle(null)} className="absolute top-6 left-6 p-2.5 bg-white/20 hover:bg-white/40 text-white rounded-2xl transition-all backdrop-blur-md">
                     <ArrowLeft size={20} />
                   </button>
                   <div className="absolute top-6 right-6 flex items-center gap-3">
                     <button 
-                      onClick={() => handleToggleFollowNode(viewingCircle.id)}
-                      className={`p-2.5 rounded-2xl transition-all backdrop-blur-md ${settings.notifEnabledCircleIds?.includes(viewingCircle.id) ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' : 'bg-white/20 text-white hover:bg-white/40'}`}
+                      onClick={(e) => { e.stopPropagation(); handleToggleFollowNode(viewingCircle.id); }}
+                      className={`p-2.5 rounded-2xl transition-all backdrop-blur-md ${settings.notifEnabledCircleIds?.includes(viewingCircle.id) ? 'bg-orange-500 text-white shadow-lg' : 'bg-white/20 text-white hover:bg-white/40'}`}
                     >
                       <Bell size={20} />
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setExpandedRules(true); }}
+                      className="p-2.5 bg-white/20 hover:bg-white/40 text-white rounded-2xl transition-all backdrop-blur-md"
+                    >
+                      <Info size={20} />
                     </button>
                     <button 
                       onClick={() => handleToggleJoin(viewingCircle)}
@@ -914,128 +929,135 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
                       {viewingCircle.icon}
                     </div>
                     <div className="pb-4">
-                      <h3 className="text-3xl font-black text-slate-900 italic tracking-tighter px-4 py-1 rounded-xl">n/{viewingCircle.name.replace(/\s+/g, '').toLowerCase()}</h3>
-                      <p className="text-xs font-bold text-slate-400 mt-1 pl-4">{viewingCircle.memberCount} active transponders</p>
+                      <h3 className="text-3xl font-black text-slate-900 italic tracking-tighter">n/{viewingCircle.name.replace(/\s+/g, '').toLowerCase()}</h3>
+                      <p className="text-xs font-bold text-slate-400 mt-1">{viewingCircle.memberCount} active transponders</p>
                     </div>
                   </div>
                </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-8 pt-20">
-                  <div className="md:col-span-2 space-y-6">
-                    <div className="flex items-center gap-4 border-b border-slate-100 pb-4 overflow-x-auto no-scrollbar relative">
-                      <div className="relative">
-                        <button 
-                          onClick={() => setShowSortDropdown(!showSortDropdown)}
-                          className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 shadow-sm"
-                        >
-                          {sortOrder === 'hot' && <Flame size={14} className="text-orange-500" />}
-                          {sortOrder === 'new' && <RefreshCw size={14} className="text-blue-500" />}
-                          {sortOrder === 'top' && <Award size={14} className="text-purple-500" />}
-                          <span className="uppercase tracking-widest">{sortOrder}</span>
-                          <ChevronRight size={14} className={`transition-transform ${showSortDropdown ? 'rotate-90' : ''}`} />
-                        </button>
-                        
-                        <AnimatePresence>
-                          {showSortDropdown && (
-                            <>
-                              <div className="fixed inset-0 z-40" onClick={() => setShowSortDropdown(false)} />
-                              <motion.div 
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                                className="absolute top-full left-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl p-1 z-50 min-w-[140px] overflow-hidden"
-                              >
-                                {['hot', 'new', 'top'].map(s => (
-                                  <button 
-                                    key={s}
-                                    onClick={() => { setSortOrder(s as any); setShowSortDropdown(false); }}
-                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${sortOrder === s ? 'bg-blue-50 text-blue-600' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}
-                                  >
-                                    {s === 'hot' && <Flame size={12} />}
-                                    {s === 'new' && <RefreshCw size={12} />}
-                                    {s === 'top' && <Award size={12} />}
-                                    {s}
-                                  </button>
-                                ))}
-                              </motion.div>
-                            </>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                      
-                      <button onClick={() => { setIsCreatingPost(true); setSelectedCircleId(viewingCircle.id); }} className="ml-auto w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-100 active:scale-90 transition-all">
-                        <Plus size={20} />
+               <div className="flex-1 p-8 pt-20">
+                  <div className="flex items-center gap-4 border-b border-slate-100 pb-4 mb-6 relative">
+                    <div className="relative">
+                      <button 
+                        onClick={() => setShowSortDropdown(!showSortDropdown)}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 shadow-sm"
+                      >
+                        {sortOrder === 'hot' && <Flame size={14} className="text-orange-500" />}
+                        {sortOrder === 'new' && <RefreshCw size={14} className="text-blue-500" />}
+                        {sortOrder === 'top' && <Award size={14} className="text-purple-500" />}
+                        <span className="uppercase tracking-widest">{sortOrder}</span>
+                        <ChevronRight size={14} className={`transition-transform ${showSortDropdown ? 'rotate-90' : ''}`} />
                       </button>
-                    </div>
-
-                    <div className="space-y-6">
-                       {sortPosts(posts.filter(p => p.circleId === viewingCircle.id)).length === 0 ? (
-                          <div className="py-24 text-center bg-slate-50/50 rounded-[32px] border border-dashed border-slate-200">
-                             <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4 text-slate-300">
-                               <RefreshCw size={32} className="animate-spin-slow" />
-                             </div>
-                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Awaiting first frequency broadcast...</p>
-                          </div>
-                       ) : (
-                          sortPosts(posts.filter(p => p.circleId === viewingCircle.id)).map(post => (
-                            <PostCard 
-                              key={post.id} post={post} user={user} settings={settings} circles={circles} savedPosts={savedPosts} toggleSavePost={toggleSavePost} handleAction={handleAction} setSelectedPost={setSelectedPost} setViewingCircle={setViewingCircle} handleToggleJoin={handleToggleJoin} hidePost={() => {}} handleDeletePost={handleDeletePost} showToast={showToast}
-                            />
-                          ))
-                       )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="bg-slate-50 rounded-[32px] p-6 space-y-6 border border-slate-100 sticky top-4">
-                      <div>
-                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4">About Node</h4>
-                        <p className="text-sm font-medium text-slate-600 leading-relaxed italic">"{viewingCircle.description}"</p>
-                      </div>
-
-                      <div className="pt-6 border-t border-slate-200">
-                        <button 
-                          onClick={() => setExpandedRules(!expandedRules)}
-                          className="w-full flex items-center justify-between group"
-                        >
-                          <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Protocol Rules</h4>
-                          <ChevronRight size={18} className={`text-slate-400 transition-transform ${expandedRules ? 'rotate-90' : ''}`} />
-                        </button>
-                        <AnimatePresence>
-                          {expandedRules && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-4 space-y-3">
-                              {(viewingCircle.rules || ['Be respectful', 'Stay on topic', 'No spam']).map((rule, i) => (
-                                <div key={i} className="bg-white p-3 rounded-xl border border-slate-100 flex gap-3 shadow-sm group hover:border-blue-200 transition-all">
-                                  <span className="text-[10px] font-black text-blue-500 w-4">{i + 1}.</span>
-                                  <p className="text-[11px] font-bold text-slate-600 line-clamp-2 group-hover:line-clamp-none">{rule}</p>
-                                </div>
+                      
+                      <AnimatePresence>
+                        {showSortDropdown && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setShowSortDropdown(false)} />
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 10 }}
+                              className="absolute top-full left-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl p-1 z-50 min-w-[140px] overflow-hidden"
+                            >
+                              {['hot', 'new', 'top'].map(s => (
+                                <button 
+                                  key={s}
+                                  onClick={() => { setSortOrder(s as any); setShowSortDropdown(false); }}
+                                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${sortOrder === s ? 'bg-blue-50 text-blue-600' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}
+                                >
+                                  {s === 'hot' && <Flame size={12} />}
+                                  {s === 'new' && <RefreshCw size={12} />}
+                                  {s === 'top' && <Award size={12} />}
+                                  {s}
+                                </button>
                               ))}
                             </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-
-                      <div className="pt-6 border-t border-slate-200 space-y-2">
-                        <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          <span>Focus Index</span>
-                          <span className="text-blue-600 font-black">{viewingCircle.category}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          <span>Creation Date</span>
-                          <span className="text-slate-600">{format(parseISO(viewingCircle.createdAt || new Date().toISOString()), 'MMM d, yyyy')}</span>
-                        </div>
-                      </div>
-                      
-                      {user?.uid === viewingCircle.ownerId && (
-                        <div className="pt-6 border-t border-slate-200 flex flex-col gap-2">
-                          <button onClick={() => { setCircleToEdit(viewingCircle); setViewingCircle(null); }} className="w-full py-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-100">Edit Node</button>
-                          <button onClick={() => { if(confirm('Erase this Node from existence? 🧨')) deleteDoc(doc(db, 'circles', viewingCircle.id)); setViewingCircle(null); }} className="w-full py-3 bg-red-50 text-red-500 rounded-xl text-xs font-black uppercase tracking-widest border border-red-100">Terminate Node</button>
-                        </div>
-                      )}
+                          </>
+                        )}
+                      </AnimatePresence>
                     </div>
+                    
+                    <button onClick={() => { setIsCreatingPost(true); setSelectedCircleId(viewingCircle.id); }} className="ml-auto flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 active:scale-90 transition-all">
+                      <Plus size={16} /> New Signal
+                    </button>
+                  </div>
+
+                  <div className="space-y-6 max-w-2xl mx-auto">
+                     {sortPosts(posts.filter(p => p.circleId === viewingCircle.id)).length === 0 ? (
+                        <div className="py-24 text-center bg-slate-50/50 rounded-[32px] border border-dashed border-slate-200">
+                           <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4 text-slate-300">
+                             <RefreshCw size={32} className="animate-spin-slow" />
+                           </div>
+                           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Awaiting first frequency broadcast...</p>
+                        </div>
+                     ) : (
+                        sortPosts(posts.filter(p => p.circleId === viewingCircle.id)).map(post => (
+                          <PostCard 
+                            key={post.id} post={post} user={user} settings={settings} circles={circles} savedPosts={savedPosts} toggleSavePost={toggleSavePost} handleAction={handleAction} setSelectedPost={setSelectedPost} setViewingCircle={setViewingCircle} handleToggleJoin={handleToggleJoin} hidePost={() => {}} handleDeletePost={handleDeletePost} showToast={showToast}
+                          />
+                        ))
+                     )}
                   </div>
                </div>
              </div>
+
+             {/* Community Info Overlay */}
+             <AnimatePresence>
+                {expandedRules && (
+                  <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4" onClick={() => setExpandedRules(false)}>
+                    <motion.div 
+                      key="community-info"
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.9, opacity: 0 }}
+                      onClick={e => e.stopPropagation()}
+                      className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden"
+                    >
+                      <div className={`p-8 ${viewingCircle.color || 'bg-blue-600'} text-white`}>
+                        <div className="flex items-center justify-between mb-6">
+                           <h3 className="text-2xl font-black italic uppercase tracking-tighter">Node Protocol</h3>
+                           <button onClick={() => setExpandedRules(false)} className="p-2 bg-white/20 rounded-xl hover:bg-white/30 transition-all">
+                              <X size={20} />
+                           </button>
+                        </div>
+                        <div className="flex items-center gap-4">
+                           <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl backdrop-blur-sm border border-white/30">
+                              {viewingCircle.icon}
+                           </div>
+                           <div>
+                              <h4 className="text-xl font-black italic">n/{viewingCircle.name.toLowerCase()}</h4>
+                              <p className="text-[10px] font-black uppercase opacity-60 tracking-widest">{viewingCircle.category} Spectrum</p>
+                           </div>
+                        </div>
+                      </div>
+                      
+                      <div className="p-8 space-y-8 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                        <section>
+                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Mission Statement</h5>
+                           <p className="text-sm font-medium text-slate-600 leading-relaxed italic">"{viewingCircle.description}"</p>
+                        </section>
+
+                        <section>
+                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Frequency Rules</h5>
+                           <div className="space-y-3">
+                              {(viewingCircle.rules || ['Be respectful', 'Stay on topic', 'No spam']).map((rule, i) => (
+                                <div key={i} className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-blue-200 transition-all">
+                                   <span className="text-xs font-black text-blue-500">{i + 1}</span>
+                                   <p className="text-xs font-bold text-slate-600 leading-tight">{rule}</p>
+                                </div>
+                              ))}
+                           </div>
+                        </section>
+
+                        <div className="pt-4 border-t border-slate-50 flex justify-between items-center opacity-40">
+                           <span className="text-[9px] font-black uppercase tracking-widest">Est. {format(parseISO(viewingCircle.createdAt || new Date().toISOString()), 'MMM yyyy')}</span>
+                           <Award size={16} />
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
+             </AnimatePresence>
           </div>
         )}
       </AnimatePresence>
