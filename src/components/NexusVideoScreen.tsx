@@ -128,17 +128,22 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isStudioOpen, setIsStudioOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [postProgress, setPostProgress] = useState<{ current: number; total: number; percent: number } | null>(null);
 
   const [videoComments, setVideoComments] = useState<any[]>([]);
   const [newVideoComment, setNewVideoComment] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [replyingToComment, setReplyingToComment] = useState<any | null>(null);
 
+  const isReelsDisabled = settings.isReelsDisabled || false;
+
   useEffect(() => {
     if (!selectedVideo) return;
     const qComments = query(collection(db, 'social_videos', selectedVideo.id, 'comments'), orderBy('createdAt', 'asc'));
     const unsubComments = onSnapshot(qComments, (snapshot) => {
       setVideoComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, `social_videos/${selectedVideo.id}/comments`);
     });
     return () => unsubComments();
   }, [selectedVideo]);
@@ -151,8 +156,8 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
       const commentData = {
         videoId: selectedVideo.id,
         userId: user.uid,
-        userName: settings.displayName || 'Anonymous',
-        userPhoto: settings.profilePic || '',
+        userName: settings.displayName || user.displayName || 'Anonymous',
+        userPhoto: settings.profilePic || user.photoURL || '',
         content: newVideoComment.trim(),
         createdAt: new Date().toISOString(),
         likes: 0,
@@ -162,7 +167,10 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
       await updateDoc(doc(db, 'social_videos', selectedVideo.id), { commentCount: increment(1) });
       setNewVideoComment('');
       setReplyingToComment(null);
-    } catch (err) { showToast('Comment failed', 'error'); }
+    } catch (err) { 
+      showToast('Comment failed', 'error');
+      handleFirestoreError(err, OperationType.WRITE, `social_videos/${selectedVideo.id}/comments`);
+    }
     finally { setIsPostingComment(false); }
   };
 
@@ -172,9 +180,31 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
       setVideos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NexusVideo)));
     }, (err) => {
       console.error("Videos query error:", err);
+      handleFirestoreError(err, OperationType.GET, 'social_videos');
     });
     return unsub;
   }, []);
+
+  const uploadWithProgress = async (storage: any, path: string, blob: Blob): Promise<string> => {
+    const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
+    const fileRef = ref(storage, path);
+    const uploadTask = uploadBytesResumable(fileRef, blob);
+
+    return new Promise((resolve, reject) => {
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setPostProgress(prev => prev ? { ...prev, percent: progress } : null);
+        }, 
+        (error) => reject(error), 
+        () => {
+          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+            resolve(downloadURL);
+          });
+        }
+      );
+    });
+  };
 
   const handleLike = async (vId: string, likedBy: string[]) => {
     if (!user) return;
@@ -220,7 +250,65 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
       animate={{ opacity: 1 }}
       className="fixed inset-0 bg-black z-50 flex flex-col h-screen overflow-hidden"
     >
-      {/* Top Controls Overlay */}
+      {/* Post Progress Overlay */}
+      <AnimatePresence>
+        {postProgress && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-12 text-center"
+          >
+            <div className="relative w-48 h-48 mb-8">
+              <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 200 200">
+                <circle 
+                  cx="100" cy="100" r="80" 
+                  className="fill-none stroke-white/5 stroke-[12]" 
+                />
+                <motion.circle 
+                  cx="100" cy="100" r="80" 
+                  className="fill-none stroke-orange-500 stroke-[12] stroke-linecap-round" 
+                  strokeDasharray={2 * Math.PI * 80}
+                  animate={{ strokeDashoffset: 2 * Math.PI * 80 * (1 - postProgress.percent / 100) }}
+                  transition={{ type: 'spring', damping: 20, stiffness: 60 }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-4xl font-black text-white">{Math.round(postProgress.percent)}%</span>
+                <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-1">
+                  Syncing Block {postProgress.current}/{postProgress.total}
+                </span>
+              </div>
+            </div>
+            <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2 animate-pulse">
+              Transmitting Sequence...
+            </h3>
+            <p className="text-xs font-bold text-white/40 max-w-xs">
+              Synchronizing with the Nexus Relay Nodes. Keep the connection open, bro! 🛰️
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {isReelsDisabled ? (
+        <div className="flex-1 bg-black flex flex-col items-center justify-center p-8 text-center">
+          <div className="w-24 h-24 bg-white/5 rounded-[2.5rem] flex items-center justify-center mb-6 border border-white/5 shadow-2xl">
+            <EyeOff size={40} className="text-white/20" />
+          </div>
+          <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase mb-4 leading-none">Node Offline</h1>
+          <p className="text-sm font-bold text-white/40 max-w-sm leading-relaxed mb-8">
+            The Nexora Reels relay has been manually severed. Re-initialize in System Settings to watch frequencies.
+          </p>
+          <button 
+            onClick={onBack}
+            className="px-10 py-5 bg-white text-black rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all shadow-xl"
+          >
+            Return to Pulse 🏮
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Top Controls Overlay */}
       <div className="absolute top-0 inset-x-0 z-[100] p-6 flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-4 pointer-events-auto">
           <button onClick={onBack} className="p-3 bg-black/20 backdrop-blur-2xl border border-white/10 rounded-2xl text-white shadow-2xl active:scale-90 transition-all hover:bg-black/40">
@@ -284,25 +372,33 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
         {isStudioOpen && (
           <div className="fixed inset-0 z-[200]">
             <NexoraStudio 
-              user={user}
-              onBack={() => setIsStudioOpen(false)} 
-                onPost={async (data) => {
+               user={user}
+               onBack={() => setIsStudioOpen(false)} 
+               onPost={async (data) => {
                   if (!user) return;
                   try {
-                    showToast('Transmitting Sequence... 🛰️', 'info');
+                    setIsStudioOpen(false);
+                    const sequence = data.mediaSequence || [];
                     
-                    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+                    if (sequence.length === 0) {
+                      showToast('Empty sequence skipped 🚫', 'info');
+                      return;
+                    }
+
+                    const { getStorage } = await import('firebase/storage');
                     const storage = getStorage();
+                    const updatedSequence = [];
+                    
+                    setPostProgress({ current: 1, total: (data.audioUrl?.startsWith('blob:') ? 1 : 0) + sequence.length, percent: 0 });
 
                     // Map of local blob URLs to cloud URLs to avoid duplicate uploads
                     const urlMap: {[key: string]: string} = {};
-                    const sequence = data.mediaSequence || [];
+                    let blocksCompleted = 0;
                     
-                    // Upload all unique clips in sequence
-                    const updatedSequence = [];
                     for (let i = 0; i < sequence.length; i++) {
                       const item = sequence[i];
-                      showToast(`Syncing Block ${i + 1}/${sequence.length}... ⛓️`, 'info');
+                      setPostProgress(prev => prev ? { ...prev, current: blocksCompleted + 1, percent: 0 } : null);
+                      
                       try {
                         if (!urlMap[item.url]) {
                           if (item.url.startsWith('blob:')) {
@@ -315,9 +411,8 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                              const extension = isVideo ? 'mp4' : 'jpg';
                              const contentType = isVideo ? 'video/mp4' : 'image/jpeg';
                              
-                             const storageRef = ref(storage, `${isVideo ? 'videos' : 'photos'}/${user.uid}/${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${extension}`);
-                             await uploadBytes(storageRef, blob, { contentType });
-                             urlMap[item.url] = await getDownloadURL(storageRef);
+                             const path = `${isVideo ? 'videos' : 'photos'}/${user.uid}/${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${extension}`;
+                             urlMap[item.url] = await uploadWithProgress(storage, path, blob);
                           } else {
                              urlMap[item.url] = item.url;
                           }
@@ -328,29 +423,27 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                         });
                       } catch (clipErr) {
                         console.error("Clip sequence upload failed:", clipErr);
-                        // If it's the only clip, we must fail. If it's one of many, we skip to save the post.
                         if (sequence.length === 1) throw clipErr;
                         continue; 
                       }
+                      blocksCompleted++;
+                      await new Promise(r => setTimeout(r, 100));
                     }
 
                     if (updatedSequence.length === 0) {
                       throw new Error('No valid media clips to post');
                     }
 
-                    // Handle primary video URL (first clip)
-                    let finalVideoUrl = updatedSequence[0]?.url || data.videoUrl;
-                    
                     // Handle audio release
                     let finalAudioUrl = data.audioUrl;
                     if (finalAudioUrl && finalAudioUrl.startsWith('blob:')) {
                       try {
+                        setPostProgress(prev => prev ? { ...prev, current: blocksCompleted + 1, percent: 0 } : null);
                         const response = await fetch(finalAudioUrl);
                         if (response.ok) {
                           const blob = await response.blob();
-                          const storageRef = ref(storage, `audio/${user.uid}/${Date.now()}_audio.mp3`);
-                          await uploadBytes(storageRef, blob, { contentType: 'audio/mpeg' });
-                          finalAudioUrl = await getDownloadURL(storageRef);
+                          const path = `audio/${user.uid}/${Date.now()}_audio.mp3`;
+                          finalAudioUrl = await uploadWithProgress(storage, path, blob);
                         }
                       } catch (audioErr) {
                         console.warn("Background audio upload failed, proceeding without it:", audioErr);
@@ -358,11 +451,18 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                       }
                     }
                     
+                    const detectPlatform = (url: string): 'youtube' | 'tiktok' | 'nexora' => {
+                      if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+                      if (url.includes('tiktok.com')) return 'tiktok';
+                      return 'nexora';
+                    };
+                    const detectedPlatform = detectPlatform(updatedSequence[0]?.url || '');
+
                     const videoData: Omit<NexusVideo, 'id'> = {
                       userId: user.uid,
-                      userName: settings.displayName || 'Anonymous',
-                      userPhoto: settings.profilePic || '',
-                      videoUrl: finalVideoUrl,
+                      userName: settings.displayName || user.displayName || 'Anonymous',
+                      userPhoto: settings.profilePic || user.photoURL || '',
+                      videoUrl: updatedSequence[0]?.url || '',
                       audioUrl: finalAudioUrl || '',
                       mediaSequence: updatedSequence,
                       caption: data.caption || 'New Studio Vibe! 🏮',
@@ -371,17 +471,21 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                       commentCount: 0,
                       createdAt: new Date().toISOString(),
                       isAuthorized: true,
-                      platform: 'nexora',
-                      type: data.type || 'video'
+                      platform: detectedPlatform,
+                      type: data.type || 'video',
+                      saves: 0,
+                      savedBy: []
                     };
                     
                     await addDoc(collection(db, 'social_videos'), videoData);
-                    setIsStudioOpen(false);
-                    showToast('Nexus Pulse Released! 📡', 'success');
+                    showToast('Nexus Reels Synchronized! 📡', 'success');
                     vibrate(VIBRATION_PATTERNS.SUCCESS);
                   } catch (err) {
                     console.error("Studio Publish Error:", err);
                     showToast('Transmission Interrupted 🚫', 'error');
+                    handleFirestoreError(err, OperationType.WRITE, 'social_videos');
+                  } finally {
+                    setPostProgress(null);
                   }
                 }}
             />
@@ -518,6 +622,8 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
           </div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </>
+  )}
+</motion.div>
   );
 }

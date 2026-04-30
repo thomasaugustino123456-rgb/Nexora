@@ -4,7 +4,7 @@ import {
   X, Camera, Video, RotateCw, Check, Image as ImageIcon, 
   Type, Smile, Mic, Music, Sparkles, ArrowRight, Send, 
   Trash2, Volume2, Monitor, Play, Pause, Layers, FlipHorizontal, Focus,
-  Scissors, Palette, Wand2, Ghost, ArrowLeft, RefreshCw
+  Scissors, Palette, Wand2, Ghost, ArrowLeft, RefreshCw, RotateCcw
 } from 'lucide-react';
 import { ProVideoEditor } from './ProVideoEditor';
 import { showToast } from '../lib/toast';

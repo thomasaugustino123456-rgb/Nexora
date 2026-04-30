@@ -4,7 +4,7 @@ import {
   Settings, LogOut, Bell, Shield, User, Globe, Mail, MessageSquare, 
   Trash2, ChevronLeft, RefreshCw, Smartphone, Zap, Flame, 
   Droplets, Target, Clock, Volume2, Palette, Sparkles, 
-  ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle
+  ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle, Video
 } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { UserSettings } from '../types';
@@ -413,6 +413,23 @@ export function SettingsScreen({
                 ))}
               </motion.div>
             )}
+
+            <div className="flex items-center justify-between p-4 bg-orange-600 text-white rounded-2xl shadow-xl shadow-orange-100 border-2 border-orange-400 mt-3 hover:translate-y-[-2px] transition-all cursor-pointer" onClick={() => setSettings({ isReelsDisabled: !settings.isReelsDisabled })}>
+               <div className="flex items-center gap-4">
+                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md">
+                    <Video size={18} />
+                 </div>
+                 <div>
+                   <p className="font-black text-sm uppercase">Nexora Reels Relay</p>
+                   <p className="text-[9px] opacity-70 font-bold uppercase tracking-widest">Main Media Feed Control</p>
+                 </div>
+               </div>
+               <div 
+                  className={`w-12 h-7 rounded-full transition-all relative ${!settings.isReelsDisabled ? 'bg-white' : 'bg-black/20'}`}
+               >
+                  <div className={`absolute top-1 w-5 h-5 rounded-full transition-all ${!settings.isReelsDisabled ? 'left-6 bg-orange-600' : 'left-1 bg-white/40'}`} />
+               </div>
+            </div>
 
             {fcmError && (
               <div className="p-4 bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-between mt-4">
