@@ -9,6 +9,7 @@ import { Post, SocialCircle, SocialComment, NexusNotification, Screen, UserSetti
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { VideoPlayer } from './VideoPlayer';
+import { CreateCircleWizard } from './CreateCircleWizard';
 
 interface SocialScreenProps {
   onBack: () => void;
@@ -155,6 +156,20 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   
+  // New States for Wizard and Sorting
+  const [wizardStep, setWizardStep] = useState(1);
+  const [wizardData, setWizardData] = useState({
+    category: '',
+    name: '',
+    description: '',
+    rules: [] as string[],
+    icon: '🏮',
+    color: 'bg-blue-100'
+  });
+  const [expandedRules, setExpandedRules] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'hot' | 'new' | 'top' | 'best'>('new');
+  const [isFollowingNode, setIsFollowingNode] = useState(false);
+  
   const [newPostContent, setNewPostContent] = useState('');
   const [newVideoUrl, setNewVideoUrl] = useState('');
   const [showVideoInput, setShowVideoInput] = useState(false);
@@ -232,6 +247,87 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       await updateDoc(doc(db, 'circles', circle.id), { memberCount: circle.memberCount + (isJoining ? 1 : -1) });
       showToast(isJoining ? `Joined ${circle.name}! 🏮` : `Left ${circle.name}`, 'success');
     } catch (err) { showToast('Sync failed', 'error'); }
+  };
+
+  const handleToggleFollowNode = async (circleId: string) => {
+    if (!user) return;
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    const notifIds = settings.notifEnabledCircleIds || [];
+    const isFollowing = notifIds.includes(circleId);
+    const newNotifIds = isFollowing ? notifIds.filter(id => id !== circleId) : [...notifIds, circleId];
+    
+    try {
+      onUpdateSettings({ notifEnabledCircleIds: newNotifIds });
+      // Update circle followerIds for server-side push notifications logic
+      const circleRef = doc(db, 'circles', circleId);
+      const circle = circles.find(c => c.id === circleId);
+      if (circle) {
+        const followerIds = circle.followerIds || [];
+        const newFollowers = isFollowing ? followerIds.filter(id => id !== user.uid) : [...followerIds, user.uid];
+        await updateDoc(circleRef, { followerIds: newFollowers });
+      }
+      setIsFollowingNode(!isFollowing);
+      showToast(isFollowing ? 'Notifications Muted' : 'Signals Subscribed! 🔔', 'success');
+    } catch (err) { showToast('Subscription failed', 'error'); }
+  };
+
+  const handleCreateCircleWizard = async (data: any) => {
+    if (!user) return;
+    setIsSubmitting(true);
+    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    try {
+      if (circleToEdit) {
+        const circleRef = doc(db, 'circles', circleToEdit.id);
+        await updateDoc(circleRef, {
+          name: data.name,
+          description: data.description,
+          rules: data.rules,
+          icon: data.icon,
+          color: data.color,
+          category: data.category
+        });
+        showToast('Node Decrypted & Rebuilt! 🏮', 'success');
+      } else {
+        const circleData: Omit<SocialCircle, 'id'> = {
+          name: data.name,
+          description: data.description,
+          rules: data.rules,
+          icon: data.icon,
+          color: data.color,
+          category: data.category || 'General',
+          memberCount: 1,
+          ownerId: user.uid,
+          followerIds: [user.uid],
+          createdAt: new Date().toISOString()
+        };
+        const docRef = await addDoc(collection(db, 'circles'), circleData);
+        // Join the circle automatically
+        const joinedIds = settings.joinedCircleIds || [];
+        onUpdateSettings({ joinedCircleIds: [...joinedIds, docRef.id] });
+        showToast('Node Initialized! 🏮', 'success');
+        play('quest_complete');
+      }
+      setIsCreatingCircle(false);
+      setCircleToEdit(null);
+    } catch (err) { 
+      showToast('Nexus sync failed', 'error'); 
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const sortPosts = (postsToSort: Post[]) => {
+    return [...postsToSort].sort((a, b) => {
+      if (sortOrder === 'new') return parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime();
+      if (sortOrder === 'top') return (b.flames + b.shields) - (a.flames + a.shields);
+      if (sortOrder === 'hot') {
+        const scoreA = (a.flames + a.shields) / ((Date.now() - parseISO(a.createdAt).getTime()) / 3600000 + 2);
+        const scoreB = (b.flames + b.shields) / ((Date.now() - parseISO(b.createdAt).getTime()) / 3600000 + 2);
+        return scoreB - scoreA;
+      }
+      return 0;
+    });
   };
 
   const handleCreatePost = async () => {
@@ -355,8 +451,27 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       </div>
 
       {activeTab === 'feed' && (
+        <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl w-fit mb-4">
+          {[
+            { id: 'hot', icon: <Flame size={14} />, label: 'Hot' },
+            { id: 'new', icon: <RefreshCw size={14} />, label: 'New' },
+            { id: 'top', icon: <Award size={14} />, label: 'Top' },
+            { id: 'best', icon: <Heart size={14} />, label: 'Best' }
+          ].map(btn => (
+            <button 
+              key={btn.id}
+              onClick={() => setSortOrder(btn.id as any)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${sortOrder === btn.id ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              {btn.icon} {btn.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activeTab === 'feed' && (
         <div className="grid grid-cols-1 gap-6">
-          {filteredPosts.length === 0 ? (
+          {sortPosts(filteredPosts).length === 0 ? (
             <div className="py-20 text-center opacity-20">
                <RefreshCw size={64} className="mx-auto mb-4 animate-spin-slow" />
                <p className="font-black uppercase tracking-widest text-xs">Waiting for Signal...</p>
@@ -603,117 +718,131 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
           </div>
         )}
 
-        {isCreatingPost && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-blue-900/60 backdrop-blur-xl p-4" onClick={() => setIsCreatingPost(false)}>
-             <motion.div 
-               initial={{ scale: 0.9, opacity: 0 }}
-               animate={{ scale: 1, opacity: 1 }}
-               exit={{ scale: 0.9, opacity: 0 }}
-               onClick={e => e.stopPropagation()}
-               className="bg-white w-full max-w-md p-8 rounded-[2.5rem] shadow-2xl relative"
-             >
-                <button onClick={() => setIsCreatingPost(false)} className="absolute top-6 right-6 p-2 text-blue-900/20 hover:text-blue-900">
-                   <X size={24} />
-                </button>
-                <h3 className="text-3xl font-black text-blue-900 mb-8 italic tracking-tighter uppercase">Nexus Burst</h3>
-                
-                <div className="space-y-6">
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-4">Target Node</label>
-                      <select 
-                        value={selectedCircleId} 
-                        onChange={e => setSelectedCircleId(e.target.value)}
-                        className="w-full bg-blue-50 rounded-2xl p-4 font-bold text-blue-900 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-200"
-                      >
-                         {circles.map(c => <option key={c.id} value={c.id}>n/{c.name.toLowerCase()}</option>)}
-                      </select>
-                   </div>
-
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-4">Signal Content</label>
-                      <textarea 
-                        value={newPostContent} 
-                        onChange={e => setNewPostContent(e.target.value)}
-                        placeholder="Broadcast your frequency..."
-                        className="w-full bg-blue-50 rounded-3xl p-6 font-bold text-blue-900 min-h-[140px] focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
-                      />
-                   </div>
-
-                   <button 
-                     onClick={() => setShowVideoInput(!showVideoInput)}
-                     className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full transition-all ${showVideoInput ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-400'}`}
-                   >
-                      <Video size={14} /> {showVideoInput ? 'Active Signal' : 'Add Video Signal'}
-                   </button>
-
-                   {showVideoInput && (
-                     <input 
-                        type="text"
-                        value={newVideoUrl}
-                        onChange={e => setNewVideoUrl(e.target.value)}
-                        placeholder="Enter URL (YouTube/TikTok)"
-                        className="w-full bg-blue-50 rounded-2xl p-4 font-bold text-blue-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 border-2 border-blue-100"
-                     />
-                   )}
-
-                   <button 
-                     onClick={handleCreatePost}
-                     disabled={isSubmitting || !newPostContent.trim()}
-                     className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.4em] shadow-xl shadow-blue-100 active:scale-95 transition-all disabled:opacity-50"
-                   >
-                      {isSubmitting ? 'Sychnronizing...' : 'Go Live! 🚀'}
-                   </button>
-                </div>
-             </motion.div>
-          </div>
+        {isCreatingCircle && (
+          <CreateCircleWizard 
+            onClose={() => { setIsCreatingCircle(false); setCircleToEdit(null); }}
+            onComplete={handleCreateCircleWizard}
+            isSubmitting={isSubmitting}
+            initialData={circleToEdit}
+          />
         )}
 
         {viewingCircle && (
-          <div className="fixed inset-0 z-[1000] flex flex-col bg-white" onClick={() => setViewingCircle(null)}>
-             <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 p-6 flex items-center justify-between border-b border-blue-50">
-                <div className="flex items-center gap-4">
-                   <button onClick={() => setViewingCircle(null)} className="p-3 bg-blue-50 text-blue-900 rounded-2xl">
-                      <ArrowLeft size={24} />
-                   </button>
-                   <div>
-                      <h3 className="text-xl font-black text-blue-900 italic">n/{viewingCircle.name.toLowerCase()}</h3>
-                      <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{viewingCircle.memberCount} Focused Members</p>
-                   </div>
-                </div>
-                <button 
-                  onClick={() => handleToggleJoin(viewingCircle)}
-                  className={`px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg transition-all active:scale-95 ${settings.joinedCircleIds?.includes(viewingCircle.id) ? 'bg-blue-50 text-blue-900' : 'bg-blue-600 text-white shadow-blue-200'}`}
-                >
-                   {settings.joinedCircleIds?.includes(viewingCircle.id) ? 'LEAVE NODE' : 'JOIN NODE'}
-                </button>
-             </div>
-             
-             <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar" onClick={e => e.stopPropagation()}>
-                <div className="glass-card p-8 bg-blue-600 relative overflow-hidden text-white mb-8 shadow-2xl shadow-blue-100">
-                   <div className="relative z-10">
-                      <div className="w-16 h-16 bg-white/20 rounded-[2rem] flex items-center justify-center text-4xl mb-6 backdrop-blur-sm border border-white/30">
-                        {viewingCircle.icon}
-                      </div>
-                      <h4 className="text-3xl font-black italic mb-2">The Node Pulse</h4>
-                      <p className="font-medium text-blue-50/80 leading-relaxed max-w-lg italic">"{viewingCircle.description}"</p>
-                   </div>
-                   <Award size={180} className="absolute -bottom-10 -right-10 text-white/10 rotate-12" />
-                </div>
+          <div className="fixed inset-0 z-[1000] flex flex-col bg-slate-50/95 backdrop-blur-xl overflow-y-auto" onClick={() => setViewingCircle(null)}>
+             <div className="w-full max-w-4xl mx-auto min-h-screen bg-white shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+               <div className={`h-48 relative ${viewingCircle.color || 'bg-blue-600'}`}>
+                  <button onClick={() => setViewingCircle(null)} className="absolute top-6 left-6 p-2.5 bg-white/20 hover:bg-white/40 text-white rounded-2xl transition-all backdrop-blur-md">
+                    <ArrowLeft size={20} />
+                  </button>
+                  <div className="absolute top-6 right-6 flex items-center gap-3">
+                    <button 
+                      onClick={() => handleToggleFollowNode(viewingCircle.id)}
+                      className={`p-2.5 rounded-2xl transition-all backdrop-blur-md ${settings.notifEnabledCircleIds?.includes(viewingCircle.id) ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' : 'bg-white/20 text-white hover:bg-white/40'}`}
+                    >
+                      <Bell size={20} />
+                    </button>
+                    <button 
+                      onClick={() => handleToggleJoin(viewingCircle)}
+                      className={`px-6 py-2.5 rounded-2xl font-black text-xs tracking-widest transition-all shadow-xl active:scale-95 ${settings.joinedCircleIds?.includes(viewingCircle.id) ? 'bg-white text-blue-600 shadow-blue-900/10' : 'bg-orange-600 text-white shadow-orange-900/10'}`}
+                    >
+                       {settings.joinedCircleIds?.includes(viewingCircle.id) ? 'LEAVE' : 'JOIN NODE'}
+                    </button>
+                  </div>
+                  <div className="absolute -bottom-12 left-8 flex items-end gap-5">
+                    <div className={`w-28 h-28 rounded-[32px] flex items-center justify-center text-5xl shadow-2xl ring-8 ring-white ${viewingCircle.color || 'bg-blue-100'}`}>
+                      {viewingCircle.icon}
+                    </div>
+                    <div className="pb-4">
+                      <h3 className="text-3xl font-black text-slate-900 italic tracking-tighter px-4 py-1 rounded-xl">n/{viewingCircle.name.replace(/\s+/g, '').toLowerCase()}</h3>
+                      <p className="text-xs font-bold text-slate-400 mt-1 pl-4">{viewingCircle.memberCount} active transponders</p>
+                    </div>
+                  </div>
+               </div>
 
-                <div className="grid grid-cols-1 gap-6">
-                   {activeCirclePosts.length === 0 ? (
-                      <div className="py-20 text-center opacity-20">
-                         <RefreshCw size={64} className="mx-auto mb-4 animate-spin-slow" />
-                         <p className="font-black uppercase tracking-widest text-xs">Waiting for Signal in this Node...</p>
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-8 pt-20">
+                  <div className="md:col-span-2 space-y-6">
+                    <div className="flex items-center gap-4 border-b border-slate-100 pb-4 overflow-x-auto no-scrollbar">
+                      {['hot', 'new', 'top'].map(s => (
+                        <button 
+                          key={s}
+                          onClick={() => setSortOrder(s as any)}
+                          className={`text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all whitespace-nowrap ${sortOrder === s ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                      <button onClick={() => { setIsCreatingPost(true); setSelectedCircleId(viewingCircle.id); }} className="ml-auto w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-100 active:scale-90 transition-all">
+                        <Plus size={20} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-6">
+                       {sortPosts(posts.filter(p => p.circleId === viewingCircle.id)).length === 0 ? (
+                          <div className="py-24 text-center bg-slate-50/50 rounded-[32px] border border-dashed border-slate-200">
+                             <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4 text-slate-300">
+                               <RefreshCw size={32} className="animate-spin-slow" />
+                             </div>
+                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Awaiting first frequency broadcast...</p>
+                          </div>
+                       ) : (
+                          sortPosts(posts.filter(p => p.circleId === viewingCircle.id)).map(post => (
+                            <PostCard 
+                              key={post.id} post={post} user={user} settings={settings} circles={circles} savedPosts={savedPosts} toggleSavePost={toggleSavePost} handleAction={handleAction} setSelectedPost={setSelectedPost} setViewingCircle={setViewingCircle} handleToggleJoin={handleToggleJoin} hidePost={() => {}} handleDeletePost={handleDeletePost} showToast={showToast}
+                            />
+                          ))
+                       )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="bg-slate-50 rounded-[32px] p-6 space-y-6 border border-slate-100 sticky top-4">
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4">About Node</h4>
+                        <p className="text-sm font-medium text-slate-600 leading-relaxed italic">"{viewingCircle.description}"</p>
                       </div>
-                   ) : (
-                      activeCirclePosts.map(post => (
-                        <PostCard 
-                          key={post.id} post={post} user={user} settings={settings} circles={circles} savedPosts={savedPosts} toggleSavePost={toggleSavePost} handleAction={handleAction} setSelectedPost={setSelectedPost} setViewingCircle={setViewingCircle} handleToggleJoin={handleToggleJoin} hidePost={() => {}} handleDeletePost={handleDeletePost} showToast={showToast}
-                        />
-                      ))
-                   )}
-                </div>
+
+                      <div className="pt-6 border-t border-slate-200">
+                        <button 
+                          onClick={() => setExpandedRules(!expandedRules)}
+                          className="w-full flex items-center justify-between group"
+                        >
+                          <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Protocol Rules</h4>
+                          <ChevronRight size={18} className={`text-slate-400 transition-transform ${expandedRules ? 'rotate-90' : ''}`} />
+                        </button>
+                        <AnimatePresence>
+                          {expandedRules && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-4 space-y-3">
+                              {(viewingCircle.rules || ['Be respectful', 'Stay on topic', 'No spam']).map((rule, i) => (
+                                <div key={i} className="bg-white p-3 rounded-xl border border-slate-100 flex gap-3 shadow-sm group hover:border-blue-200 transition-all">
+                                  <span className="text-[10px] font-black text-blue-500 w-4">{i + 1}.</span>
+                                  <p className="text-[11px] font-bold text-slate-600 line-clamp-2 group-hover:line-clamp-none">{rule}</p>
+                                </div>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      <div className="pt-6 border-t border-slate-200 space-y-2">
+                        <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          <span>Focus Index</span>
+                          <span className="text-blue-600 font-black">{viewingCircle.category}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          <span>Creation Date</span>
+                          <span className="text-slate-600">{format(parseISO(viewingCircle.createdAt || new Date().toISOString()), 'MMM d, yyyy')}</span>
+                        </div>
+                      </div>
+                      
+                      {user?.uid === viewingCircle.ownerId && (
+                        <div className="pt-6 border-t border-slate-200 flex flex-col gap-2">
+                          <button onClick={() => { setCircleToEdit(viewingCircle); setViewingCircle(null); }} className="w-full py-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-100">Edit Node</button>
+                          <button onClick={() => { if(confirm('Erase this Node from existence? 🧨')) deleteDoc(doc(db, 'circles', viewingCircle.id)); setViewingCircle(null); }} className="w-full py-3 bg-red-50 text-red-500 rounded-xl text-xs font-black uppercase tracking-widest border border-red-100">Terminate Node</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+               </div>
              </div>
           </div>
         )}

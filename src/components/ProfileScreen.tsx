@@ -12,7 +12,7 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
   const progressPercent = (currentXP / nextLevelXP) * 100;
 
   const [userVideos, setUserVideos] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'posts' | 'reels'>('reels');
+  const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'nodes'>('nodes');
 
   useEffect(() => {
     if (!user) return;
@@ -71,6 +71,13 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
       {/* Tab Switcher */}
       <div className="flex gap-2 p-1.5 bg-blue-50/50 backdrop-blur-xl rounded-[2rem] border border-white/50">
         <button 
+          onClick={() => setActiveTab('nodes')}
+          className={`flex-1 py-4 rounded-[1.5rem] flex flex-col items-center gap-1 transition-all ${activeTab === 'nodes' ? 'bg-white shadow-xl text-blue-600' : 'text-blue-900/30 hover:bg-white/50'}`}
+        >
+          <Globe size={18} className={activeTab === 'nodes' ? 'animate-pulse' : ''} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Nodes</span>
+        </button>
+        <button 
           onClick={() => setActiveTab('reels')}
           className={`flex-1 py-4 rounded-[1.5rem] flex flex-col items-center gap-1 transition-all ${activeTab === 'reels' ? 'bg-white shadow-xl text-blue-600' : 'text-blue-900/30 hover:bg-white/50'}`}
         >
@@ -87,7 +94,51 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
       </div>
 
       <div className="min-h-[400px]">
-        {activeTab === 'reels' ? (
+        {activeTab === 'nodes' ? (
+          <div className="glass-card p-6 space-y-6">
+            <div className="flex items-center justify-between mb-4 px-2">
+              <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.25em]">Established Nodes</h3>
+              <button 
+                onClick={() => setActiveScreen('social')}
+                className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all"
+              >
+                Create New <Plus size={12} />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-4">
+               {circles.filter(c => c.ownerId === user?.uid).map(circle => (
+                 <div key={circle.id} className="bg-blue-50/50 p-6 rounded-[2.5rem] border-2 border-white flex items-center justify-between group hover:border-blue-100 transition-all">
+                    <div className="flex items-center gap-4">
+                       <div className={`w-14 h-14 rounded-2xl ${circle.color || 'bg-blue-100'} flex items-center justify-center text-2xl shadow-inner border-2 border-white`}>
+                          {circle.icon}
+                       </div>
+                       <div>
+                          <h4 className="text-sm font-black text-blue-900 uppercase tracking-tight">n/{circle.name.toLowerCase()}</h4>
+                          <div className="flex items-center gap-2">
+                             <span className="text-[9px] font-black text-blue-400 uppercase">{circle.memberCount || 0} Followers</span>
+                          </div>
+                       </div>
+                    </div>
+                    <button 
+                      onClick={() => setActiveScreen('social')}
+                      className="p-3 bg-white rounded-2xl text-blue-400 hover:text-blue-600 hover:scale-110 active:scale-95 transition-all shadow-sm"
+                    >
+                       <MoreHorizontal size={20} />
+                    </button>
+                 </div>
+               ))}
+               {circles.filter(c => c.ownerId === user?.uid).length === 0 && (
+                 <div className="py-20 text-center space-y-4">
+                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-200">
+                       <Plus size={32} />
+                    </div>
+                    <p className="text-blue-900/20 text-[10px] font-black uppercase tracking-[0.3em] italic">You haven't initialized any nodes yet.</p>
+                 </div>
+               )}
+            </div>
+          </div>
+        ) : activeTab === 'reels' ? (
           <div className="glass-card p-6">
             <div className="flex items-center justify-between mb-6 px-2">
               <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.25em]">Nexus Reels</h3>

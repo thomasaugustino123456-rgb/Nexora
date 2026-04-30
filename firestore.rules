@@ -202,8 +202,10 @@ service cloud.firestore {
              data.icon is string && data.icon.size() < 50 &&
              data.color is string && data.color.size() < 50 &&
              data.memberCount is number &&
-             data.category in ['physical', 'mental', 'creative', 'general'] &&
-             data.ownerId == request.auth.uid;
+             data.category is string &&
+             data.ownerId == request.auth.uid &&
+             (!('rules' in data) || data.rules is list) &&
+             (!('followerIds' in data) || data.followerIds is list);
     }
 
     // Community Helpers
@@ -362,7 +364,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isValidCircle(request.resource.data);
       allow update: if isAuthenticated() && (
         (resource.data.ownerId == request.auth.uid && isValidCircle(request.resource.data)) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount']))
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount', 'followerIds']))
       );
       allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
     }

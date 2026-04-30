@@ -236,12 +236,12 @@ export interface SocialCircle {
   description: string;
   icon: string;
   color: string;
+  category: string; // The app progress focus (Pushups, Water, etc.)
   memberCount: number;
-  category: 'physical' | 'mental' | 'creative' | 'general';
-  ownerId?: string;
-  rules?: string[];
-  isPrivate?: boolean;
-  createdAt?: string;
+  ownerId: string; // Creator UID
+  rules: string[]; // Community rules
+  followerIds: string[]; // UIDs for notifications
+  createdAt: string;
   deleted?: boolean;
 }
 

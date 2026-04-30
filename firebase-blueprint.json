@@ -234,10 +234,14 @@
         "description": { "type": "string" },
         "icon": { "type": "string" },
         "color": { "type": "string" },
+        "category": { "type": "string" },
         "memberCount": { "type": "number" },
-        "category": { "type": "string", "enum": ["physical", "mental", "creative", "general"] }
+        "ownerId": { "type": "string" },
+        "rules": { "type": "array", "items": { "type": "string" } },
+        "followerIds": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string" }
       },
-      "required": ["id", "name", "icon", "memberCount", "category"]
+      "required": ["id", "name", "icon", "memberCount", "category", "ownerId", "createdAt"]
     },
     "CommunityPost": {
       "title": "CommunityPost",
