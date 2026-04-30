@@ -30,7 +30,11 @@ const VideoCard = React.memo(({ video, user, handleLike, handleShareVideo, setSe
             {video.type === 'photo' ? (
               <img src={video.videoUrl} className="w-full h-full object-cover" />
             ) : (
-              <VideoPlayer url={video.videoUrl} fullScreen={true} />
+              <VideoPlayer 
+                url={video.videoUrl} 
+                fullScreen={true} 
+                mediaSequence={video.mediaSequence}
+              />
             )}
           </div>
         </div>
@@ -281,56 +285,77 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
             <NexoraStudio 
               user={user}
               onBack={() => setIsStudioOpen(false)} 
-              onPost={async (data) => {
-                if (!user) return;
-                try {
-                  // Upload to Firebase Storage so it's publicly accessible
-                  let finalVideoUrl = data.videoUrl;
-                  let finalAudioUrl = data.audioUrl;
+                onPost={async (data) => {
+                  if (!user) return;
+                  try {
+                    showToast('Transmitting Sequence... 🛰️', 'info');
+                    
+                    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+                    const storage = getStorage();
 
-                  const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-                  const storage = getStorage();
+                    // Map of local blob URLs to cloud URLs to avoid duplicate uploads
+                    const urlMap: {[key: string]: string} = {};
+                    const sequence = data.mediaSequence || [];
+                    
+                    // Upload all unique clips in sequence
+                    const updatedSequence = [];
+                    for (const item of sequence) {
+                      if (!urlMap[item.url]) {
+                        if (item.url.startsWith('blob:')) {
+                           const response = await fetch(item.url);
+                           const blob = await response.blob();
+                           const storageRef = ref(storage, `videos/${user.uid}/${Date.now()}_${Math.random().toString(36).substr(2, 5)}.mp4`);
+                           await uploadBytes(storageRef, blob);
+                           urlMap[item.url] = await getDownloadURL(storageRef);
+                        } else {
+                           urlMap[item.url] = item.url;
+                        }
+                      }
+                      updatedSequence.push({
+                        ...item,
+                        url: urlMap[item.url]
+                      });
+                    }
 
-                  if (finalVideoUrl.startsWith('blob:')) {
-                    const response = await fetch(finalVideoUrl);
-                    const blob = await response.blob();
-                    const storageRef = ref(storage, `videos/${user.uid}/${Date.now()}.mp4`);
-                    await uploadBytes(storageRef, blob);
-                    finalVideoUrl = await getDownloadURL(storageRef);
+                    // Handle primary video URL (first clip)
+                    let finalVideoUrl = updatedSequence[0]?.url || data.videoUrl;
+                    
+                    // Handle audio release
+                    let finalAudioUrl = data.audioUrl;
+                    if (finalAudioUrl && finalAudioUrl.startsWith('blob:')) {
+                      const response = await fetch(finalAudioUrl);
+                      const blob = await response.blob();
+                      const storageRef = ref(storage, `audio/${user.uid}/${Date.now()}_audio.mp3`);
+                      await uploadBytes(storageRef, blob);
+                      finalAudioUrl = await getDownloadURL(storageRef);
+                    }
+                    
+                    const videoData: Omit<NexusVideo, 'id'> = {
+                      userId: user.uid,
+                      userName: settings.displayName || 'Anonymous',
+                      userPhoto: settings.profilePic || '',
+                      videoUrl: finalVideoUrl,
+                      audioUrl: finalAudioUrl || '',
+                      mediaSequence: updatedSequence,
+                      caption: data.caption || 'New Studio Vibe! 🏮',
+                      likes: 0,
+                      likedBy: [],
+                      commentCount: 0,
+                      createdAt: new Date().toISOString(),
+                      isAuthorized: true,
+                      platform: 'nexora',
+                      type: data.type || 'video'
+                    };
+                    
+                    await addDoc(collection(db, 'social_videos'), videoData);
+                    setIsStudioOpen(false);
+                    showToast('Nexus Pulse Released! 📡', 'success');
+                    vibrate(VIBRATION_PATTERNS.SUCCESS);
+                  } catch (err) {
+                    console.error("Studio Publish Error:", err);
+                    showToast('Transmission Interrupted 🚫', 'error');
                   }
-
-                  if (finalAudioUrl && finalAudioUrl.startsWith('blob:')) {
-                    const response = await fetch(finalAudioUrl);
-                    const blob = await response.blob();
-                    const storageRef = ref(storage, `audio/${user.uid}/${Date.now()}_audio.mp3`);
-                    await uploadBytes(storageRef, blob);
-                    finalAudioUrl = await getDownloadURL(storageRef);
-                  }
-                  
-                  const videoData: Omit<NexusVideo, 'id'> = {
-                    userId: user.uid,
-                    userName: settings.displayName || 'Anonymous',
-                    userPhoto: settings.profilePic || '',
-                    videoUrl: finalVideoUrl,
-                    audioUrl: finalAudioUrl || '',
-                    caption: data.caption || 'New Studio Vibe! 🏮',
-                    likes: 0,
-                    likedBy: [],
-                    commentCount: 0,
-                    createdAt: new Date().toISOString(),
-                    isAuthorized: true,
-                    platform: 'nexora',
-                    type: data.type || 'video'
-                  };
-                  await addDoc(collection(db, 'social_videos'), videoData);
-                  setIsStudioOpen(false);
-                  showToast('Studio vibe posted to Reels! 🏮', 'success');
-                  vibrate(VIBRATION_PATTERNS.SUCCESS);
-                } catch (err) {
-                  console.error(err);
-                  showToast('Failed to post vibe', 'error');
-                }
-              }}
+                }}
             />
           </div>
         )}

@@ -108,12 +108,16 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
     const clip = clips[clipIndex];
     const relativeTime = currentTime - clip.startTime;
     
-    if (relativeTime <= 0.5 || relativeTime >= clip.duration - 0.5) return;
+    // Safety boundaries (0.5s minimum)
+    if (relativeTime <= 0.5 || relativeTime >= clip.duration - 0.5) {
+      showToast('Split area too narrow ✂️', 'info');
+      return;
+    }
 
     const newClip1 = { ...clip, duration: relativeTime };
     const newClip2 = { 
       ...clip, 
-      id: Math.random().toString(), 
+      id: Math.random().toString(36).substr(2, 9), 
       duration: clip.duration - relativeTime,
       trimStart: clip.trimStart + relativeTime,
       startTime: clip.startTime + relativeTime 
@@ -122,7 +126,7 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
     const newClips = [...clips];
     newClips.splice(clipIndex, 1, newClip1, newClip2);
     
-    // Recalculate all start times
+    // Recalculate all start times to ensure absolute precision
     let currentStart = 0;
     const updatedClips = newClips.map(c => {
       const updated = { ...c, startTime: currentStart };
@@ -131,11 +135,16 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
     });
 
     setClips(updatedClips);
-    vibrate(VIBRATION_PATTERNS.CLICK);
+    // Keep focus on the second half of the split
+    setSelectedClipId(newClip2.id); 
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
+    showToast('Dimensions Severed! ✂️', 'success');
   };
 
   const handleDelete = () => {
     if (!selectedClipId || clips.length <= 1) return;
+    
+    const clipIndex = clips.findIndex(c => c.id === selectedClipId);
     const filtered = clips.filter(c => c.id !== selectedClipId);
     
     let currentStart = 0;
@@ -146,8 +155,18 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
     });
 
     setClips(updatedClips);
-    setSelectedClipId(updatedClips[0]?.id || null);
-    vibrate(VIBRATION_PATTERNS.CLICK);
+    
+    // Safety: Adjust currentTime if it was in the deleted clip
+    if (currentTime >= updatedClips[updatedClips.length - 1].startTime + updatedClips[updatedClips.length - 1].duration) {
+      setCurrentTime(updatedClips[updatedClips.length - 1].startTime);
+    }
+
+    // Select the previous or first clip
+    const nextSelectedIndex = Math.max(0, clipIndex - 1);
+    setSelectedClipId(updatedClips[nextSelectedIndex]?.id || updatedClips[0].id);
+    
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
+    showToast('Block Sanitized 🧼', 'success');
   };
 
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,17 +224,37 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
                     if (isPlaying) video.play().catch(() => {});
                   }}
                   onError={(e) => {
-                    console.error('Video Error:', e);
-                    showToast('Video Engine Lost 🚫', 'error');
+                    console.error('Video Engine Error:', e);
+                    showToast('Syncing with GPU... 🔄', 'info');
+                    // Attempt auto-recovery by reloading the source
+                    const video = e.currentTarget;
+                    const savedTime = video.currentTime;
+                    video.load();
+                    video.currentTime = savedTime;
                   }}
                 />
               ) : (
-              <img 
-                src={activeClip?.url} 
-                className="w-full h-full object-cover" 
-                onError={() => showToast('Image Load Error 🚫', 'error')}
-              />
-            )}
+                <img 
+                  src={activeClip?.url} 
+                  className="w-full h-full object-cover" 
+                  onError={() => showToast('Image Block Corrupt 🚫', 'error')}
+                />
+              )}
+              
+              {/* Recovery Button if stuck */}
+              <button 
+                onClick={() => {
+                  if (videoRef.current) {
+                    videoRef.current.load();
+                    const relativeTime = currentTime - (activeClip.startTime || 0);
+                    videoRef.current.currentTime = (activeClip.trimStart || 0) + relativeTime;
+                    showToast('Engine Rebooted 🛠️', 'success');
+                  }
+                }}
+                className="absolute top-4 right-4 p-2 bg-black/40 backdrop-blur-md rounded-xl text-white/40 hover:text-white transition-all z-[70]"
+              >
+                <RotateCcw size={16} />
+              </button>
             {audioUrl && <audio src={audioUrl} autoPlay={isPlaying} />}
             
             <div 

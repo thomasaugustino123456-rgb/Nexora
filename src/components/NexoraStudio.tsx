@@ -100,74 +100,89 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    showToast(`Loading ${files.length} Media... ⏳`, 'info');
+    showToast(`Initializing Import Engine... 🚀`, 'info');
     
-    const newMedia = await Promise.all(files.map(file => {
-      return new Promise<{
-        url: string, 
-        type: 'video' | 'photo', 
-        duration: number, 
-        originalDuration: number, 
-        trimStart: number
-      }>((resolve) => {
-        const url = URL.createObjectURL(file);
-        createdUrls.current.add(url);
-        const type = file.type.startsWith('video') ? 'video' : 'photo';
-        
-        if (type === 'video') {
-          const video = document.createElement('video');
-          video.src = url;
-          video.preload = 'metadata';
-          video.playsInline = true;
-          video.muted = true;
+    // Load files sequentially to prevent browser memory locking on long videos
+    const loadedMedia: any[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      showToast(`Syncing Block ${i + 1}/${files.length}... ⛓️`, 'info');
+      
+      try {
+        const mediaItem = await new Promise<{
+          url: string, 
+          type: 'video' | 'photo', 
+          duration: number, 
+          originalDuration: number, 
+          trimStart: number
+        }>((resolve) => {
+          const url = URL.createObjectURL(file);
+          createdUrls.current.add(url);
+          const type = file.type.startsWith('video') ? 'video' : 'photo';
           
-          const timeoutId = setTimeout(() => {
-             // Fallback if metadata takes too long (e.g. mobile Safari issues)
-             resolve({ url, type, duration: 30, originalDuration: 30, trimStart: 0 });
-          }, 8000); // More time for mobile
+          if (type === 'video') {
+            const video = document.createElement('video');
+            video.src = url;
+            video.preload = 'metadata';
+            video.playsInline = true;
+            video.muted = true;
+            
+            // Hard timeout with "Safe Exit" for long videos
+            const timeoutId = setTimeout(() => {
+               console.warn("Metadata timeout - using safe duration");
+               resolve({ url, type, duration: 60, originalDuration: 60, trimStart: 0 });
+            }, 10000); 
 
-          video.onloadedmetadata = () => {
-            clearTimeout(timeoutId);
-            const validDuration = video.duration && isFinite(video.duration) ? video.duration : 30;
-            // Safari mobile duration fix
-            if (validDuration === Infinity) {
-              video.currentTime = 1e101;
-              video.ontimeupdate = () => {
-                video.ontimeupdate = null;
-                const dur = video.duration;
-                video.currentTime = 0;
-                resolve({ url, type, duration: dur, originalDuration: dur, trimStart: 0 });
-              };
-            } else {
-              resolve({ 
-                url, 
-                type, 
-                duration: validDuration, 
-                originalDuration: validDuration, 
-                trimStart: 0 
-              });
-            }
-          };
-          video.onerror = (e) => {
-            console.error("Video error during metadata load:", e);
-            clearTimeout(timeoutId);
-            resolve({ url, type, duration: 15, originalDuration: 15, trimStart: 0 });
-          };
-          video.load();
-        } else {
-          resolve({ url, type, duration: 5, originalDuration: 5, trimStart: 0 });
-        }
-      });
-    }));
-    
-    setCapturedMedia(prev => [...prev, ...newMedia]);
-    if (capturedMedia.length === 0) {
-      setCurrentMediaIndex(0);
-      setMediaType(newMedia[0].type);
+            video.onloadedmetadata = () => {
+              clearTimeout(timeoutId);
+              let validDuration = video.duration && isFinite(video.duration) ? video.duration : 60;
+              
+              // Mobile Safari Fix for Infinite Duration (often happens on long videos)
+              if (validDuration === Infinity || validDuration <= 0) {
+                video.currentTime = 1e101;
+                video.ontimeupdate = () => {
+                  video.ontimeupdate = null;
+                  const dur = isFinite(video.duration) ? video.duration : 60;
+                  video.currentTime = 0;
+                  resolve({ url, type, duration: dur, originalDuration: dur, trimStart: 0 });
+                };
+              } else {
+                resolve({ url, type, duration: validDuration, originalDuration: validDuration, trimStart: 0 });
+              }
+            };
+            
+            video.onerror = (err) => {
+              console.error("Critical Video Load Error:", err);
+              clearTimeout(timeoutId);
+              // Resolve anyway to prevent blocking the queue
+              resolve({ url, type, duration: 10, originalDuration: 10, trimStart: 0 });
+            };
+            
+            video.load();
+          } else {
+            resolve({ url, type, duration: 4, originalDuration: 4, trimStart: 0 });
+          }
+        });
+        loadedMedia.push(mediaItem);
+      } catch (err) {
+        console.error("Batch load error:", err);
+      }
     }
-    setStage(2);
-    vibrate(VIBRATION_PATTERNS.SUCCESS);
-    showToast(`${newMedia.length} Media Loaded! 🏮`, 'success');
+    
+    if (loadedMedia.length > 0) {
+      setCapturedMedia(prev => [...prev, ...loadedMedia]);
+      if (capturedMedia.length === 0) {
+        setCurrentMediaIndex(0);
+        setMediaType(loadedMedia[0].type);
+      }
+      setStage(2);
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+      showToast(`${loadedMedia.length} Media Blocks Synthesized! 🏮`, 'success');
+    } else {
+      showToast('Neural Connection Failed 🚫', 'error');
+    }
+    
     e.target.value = '';
   };
 
@@ -748,7 +763,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                       >
                         {capturedMedia[currentMediaIndex]?.type === 'video' ? (
                           <video 
-                            key={`preview-v-${capturedMedia[currentMediaIndex].url}`}
+                            key={`preview-v-${currentMediaIndex}-${capturedMedia[currentMediaIndex].url}`}
                             src={capturedMedia[currentMediaIndex].url} 
                             playsInline 
                             muted
@@ -757,10 +772,11 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                             style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)', willChange: 'transform' }}
                             onLoadedData={(e) => { 
                               const video = e.currentTarget;
-                              if (capturedMedia[currentMediaIndex].trimStart) {
-                                video.currentTime = capturedMedia[currentMediaIndex].trimStart!;
+                              const media = capturedMedia[currentMediaIndex];
+                              if (media?.trimStart) {
+                                video.currentTime = media.trimStart;
                               }
-                              video.play().catch(() => {});
+                              video.play().catch(err => console.warn("Stage 3 autoplay failed:", err));
                             }}
                             onTimeUpdate={(e) => {
                               const video = e.currentTarget;
@@ -768,8 +784,14 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                               if (!media) return;
                               const currentValidTime = video.currentTime;
                               const endTime = (media.trimStart || 0) + (media.duration || video.duration);
+                              
                               if (currentValidTime >= endTime) {
-                                setCurrentMediaIndex((currentMediaIndex + 1) % capturedMedia.length);
+                                if (capturedMedia.length > 1) {
+                                  setCurrentMediaIndex((currentMediaIndex + 1) % capturedMedia.length);
+                                } else {
+                                  video.currentTime = media.trimStart || 0;
+                                  video.play().catch(() => {});
+                                }
                               }
                             }}
                           />
@@ -845,16 +867,28 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                       onClick={() => {
                         vibrate(VIBRATION_PATTERNS.SUCCESS);
                         if (onPost) {
+                          // Pick the best video representation
+                          // If multiple clips, they are all in capturedMedia
+                          // In a production environment, we'd merge them. 
+                          // For now, we'll send the primary media sequence context.
+                          const mainMedia = capturedMedia[0];
+                          
                           onPost({ 
                             userId: user?.uid,
-                            videoUrl: capturedMedia[0]?.url || '', 
+                            videoUrl: mainMedia?.url || '', 
                             audioUrl: audioFile,
+                            mediaSequence: capturedMedia.map(m => ({
+                              url: m.url,
+                              type: m.type,
+                              duration: m.duration,
+                              trimStart: m.trimStart
+                            })),
                             caption,
                             userName: user?.displayName || 'Anonymous',
                             userPhoto: user?.photoURL || '',
                             quality,
                             platform: 'nexora',
-                            type: capturedMedia[0]?.type || 'video',
+                            type: mainMedia?.type || 'video',
                             createdAt: new Date().toISOString(),
                             likes: 0,
                             likedBy: [],

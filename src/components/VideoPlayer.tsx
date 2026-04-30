@@ -31,23 +31,30 @@ const getEmbedData = (url: string) => {
   return null;
 };
 
-export const VideoPlayer = ({ url, fullScreen = false }: { url: string, fullScreen?: boolean }) => {
-  const embedData = getEmbedData(url);
+export const VideoPlayer = ({ url, fullScreen = false, mediaSequence }: { url: string, fullScreen?: boolean, mediaSequence?: any[] }) => {
+  const [currentClipIndex, setCurrentClipIndex] = useState(0);
+  const activeMediaSequence = mediaSequence && mediaSequence.length > 0 ? mediaSequence : null;
+  const currentUrl = activeMediaSequence ? activeMediaSequence[currentClipIndex].url : url;
+  
+  const embedData = getEmbedData(currentUrl);
   const [localUrl, setLocalUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (embedData?.type === 'local') {
-      if (url.startsWith('blob:')) {
-        setLocalUrl(url);
-      } else {
+    // Reset index if sequence changes
+    setCurrentClipIndex(0);
+  }, [mediaSequence]);
+
+  useEffect(() => {
+    if (embedData?.type === 'local' || currentUrl.startsWith('blob:')) {
+      if (currentUrl.startsWith('blob:')) {
+        setLocalUrl(currentUrl);
+      } else if (embedData?.type === 'local') {
         const loadLocal = async () => {
           try {
             const { getMediaFromLocal } = await import('../lib/localMedia');
             const blob = await getMediaFromLocal(embedData.id);
             if (blob) {
               setLocalUrl(URL.createObjectURL(blob));
-            } else {
-              console.error("Local media not found in IndexedDB");
             }
           } catch (e) {
             console.error("Error loading local media:", e);
@@ -56,7 +63,28 @@ export const VideoPlayer = ({ url, fullScreen = false }: { url: string, fullScre
         loadLocal();
       }
     }
-  }, [url, embedData?.type, embedData?.id]);
+  }, [currentUrl, embedData?.type, embedData?.id]);
+
+  const onVideoTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    if (!activeMediaSequence) return;
+    const video = e.currentTarget;
+    const clip = activeMediaSequence[currentClipIndex];
+    if (!clip) return;
+    
+    const endTime = (clip.trimStart || 0) + (clip.duration || video.duration);
+    if (video.currentTime >= endTime) {
+      setCurrentClipIndex((currentClipIndex + 1) % activeMediaSequence.length);
+    }
+  };
+
+  const onVideoLoadedData = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    const clip = activeMediaSequence ? activeMediaSequence[currentClipIndex] : null;
+    if (clip?.trimStart) {
+      video.currentTime = clip.trimStart;
+    }
+    video.play().catch(() => {});
+  };
 
   const ExternalFallback = () => (
     <div className="p-8 bg-blue-50/50 border-2 border-blue-100 rounded-3xl text-center space-y-4 shadow-inner">
@@ -80,33 +108,25 @@ export const VideoPlayer = ({ url, fullScreen = false }: { url: string, fullScre
 
   if (!embedData || embedData.id === 'manual') return <ExternalFallback />;
 
-  if (embedData.type === 'local' && localUrl) {
+  if ((embedData.type === 'local' && localUrl) || embedData.type === 'raw' || activeMediaSequence) {
+    const videoSrc = localUrl || embedData.url || currentUrl;
     return (
       <div className={`${fullScreen ? 'aspect-[9/16]' : 'aspect-video'} w-full rounded-2xl overflow-hidden shadow-2xl bg-black border-2 border-white/10 relative`}>
         <video 
-          src={localUrl} 
-          controls 
+          key={videoSrc + currentClipIndex} // Key ensures re-mount if URL or clip index changes
+          src={videoSrc} 
+          controls={!fullScreen}
           autoPlay 
-          loop 
-          muted 
+          muted={fullScreen}
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
-        />
-      </div>
-    );
-  }
-
-  if (embedData.type === 'raw') {
-    return (
-      <div className={`${fullScreen ? 'aspect-[9/16]' : 'aspect-video'} w-full rounded-2xl overflow-hidden shadow-2xl bg-black border-2 border-white/10 relative`}>
-        <video 
-          src={embedData.url} 
-          controls 
-          autoPlay 
-          loop 
-          muted 
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          onTimeUpdate={onVideoTimeUpdate}
+          onLoadedData={onVideoLoadedData}
+          onEnded={() => {
+            if (activeMediaSequence) {
+              setCurrentClipIndex((currentClipIndex + 1) % activeMediaSequence.length);
+            }
+          }}
         />
       </div>
     );

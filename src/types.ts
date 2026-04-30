@@ -207,6 +207,12 @@ export interface NexusVideo {
   userPhoto?: string;
   videoUrl: string;
   audioUrl?: string;
+  mediaSequence?: {
+    url: string;
+    type: 'video' | 'photo';
+    duration: number;
+    trimStart: number;
+  }[];
   caption: string;
   likes: number;
   likedBy?: string[];
