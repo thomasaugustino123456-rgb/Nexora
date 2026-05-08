@@ -15,7 +15,7 @@ export function HappyMascot({ size = 32, hat = 'none', settings }: { size?: numb
       }}
       transition={{ 
         scale: { type: "spring", damping: 12 },
-        y: { repeat: Infinity, duration: 0.8, ease: "easeInOut" }
+        y: { repeat: 0 /* performance */, duration: 0.8, ease: "easeInOut" }
       }}
       className="flex flex-col items-center gap-2 mb-4"
     >
@@ -24,7 +24,7 @@ export function HappyMascot({ size = 32, hat = 'none', settings }: { size?: numb
       </div>
       <motion.div 
         animate={{ scale: [1, 1.1, 1] }}
-        transition={{ repeat: Infinity, duration: 1.5 }}
+        transition={{ repeat: 0 /* fixed */, duration: 1.5 }}
         className="bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-black shadow-lg"
       >
         AWESOME! 🌟
@@ -141,7 +141,7 @@ export function CoinAnimation({ onComplete, play, settings }: { onComplete: () =
             exit={{ scale: 0.8, opacity: 0 }}
             transition={{ 
               duration: 1.5,
-              y: { repeat: Infinity, duration: 1.2, ease: "easeInOut" }
+              y: { repeat: 0 /* fixed */, duration: 1.2, ease: "easeInOut" }
             }}
             className="relative"
           >

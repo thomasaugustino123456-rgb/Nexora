@@ -1,18 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged, User as FirebaseUser, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocFromServer, onSnapshot, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { auth, db, handleFirestoreError, OperationType } from '../firebase';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { UserSettings, UserStats, DailyProgress } from '../types';
 
 const today = new Date().toISOString().split('T')[0];
 
 export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: UserStats, showToast: (msg: string, type: 'success' | 'error' | 'info') => void) {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Try to load cached user ID immediately to bypass slow loading screen
+  const cachedUserId = localStorage.getItem('nexora_cached_user') || null;
+  const [user, setUser] = useState<FirebaseUser | null>(cachedUserId ? { uid: cachedUserId } as FirebaseUser : null);
+  const [loading, setLoading] = useState(cachedUserId ? false : true); // Instantly false if cached!
   const [isDataReady, setIsDataReady] = useState(false);
-  const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
-  const [stats, setStats] = useState<UserStats>(DEFAULT_STATS);
-  const [dailyProgress, setDailyProgress] = useState<DailyProgress>({
+
+  // Load cached settings/stats immediately if available
+  const cachedSettings = localStorage.getItem('nexora_settings') ? JSON.parse(localStorage.getItem('nexora_settings')!) : DEFAULT_SETTINGS;
+  const cachedStats = localStorage.getItem('nexora_stats') ? JSON.parse(localStorage.getItem('nexora_stats')!) : DEFAULT_STATS;
+  const cachedProgress = localStorage.getItem('nexora_progress') ? JSON.parse(localStorage.getItem('nexora_progress')!) : null;
+
+  const [settings, setSettings] = useState<UserSettings>(cachedSettings);
+  const [stats, setStats] = useState<UserStats>(cachedStats);
+  const [dailyProgress, setDailyProgress] = useState<DailyProgress>(cachedProgress?.date === today ? cachedProgress : {
     date: today,
     completed: false,
     pushupsDone: false,
@@ -23,6 +31,7 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     bubblesDone: false,
     completionsCount: 0
   });
+
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const dataLoadedFromFirestore = useRef(false);
 
@@ -37,13 +46,16 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     initAuth();
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setLoading(true);
+      // Loading screen goes away immediately if cached, but we still ensure we disable loading for new users
+      setLoading(false); 
+      
       if (currentUser) {
+        // Cache user to instant-load next time
+        localStorage.setItem('nexora_cached_user', currentUser.uid);
         setUser(currentUser);
         dataLoadedFromFirestore.current = false;
         
         try {
-          // Rapid fetch: Get core document and subcollections in parallel to halve network time
           const userDocRef = doc(db, 'users', currentUser.uid);
           const spaceDocRef = doc(db, 'users', currentUser.uid, 'settings', 'space');
           const statsDocRef = doc(db, 'users', currentUser.uid, 'stats', 'main');
@@ -72,11 +84,14 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
             setSettings(DEFAULT_SETTINGS);
             setStats(DEFAULT_STATS);
             setNeedsOnboarding(true);
+            
+            localStorage.setItem('nexora_settings', JSON.stringify(DEFAULT_SETTINGS));
+            localStorage.setItem('nexora_stats', JSON.stringify(DEFAULT_STATS));
+            
           } else {
             console.log("Hooks: Loading existing data");
             const data = userDoc.data();
             
-            // Merge defaults for safety
             const firestoreSettings = { 
               ...DEFAULT_SETTINGS, 
               ...data,
@@ -90,34 +105,42 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
               trophies: data.stats?.trophies || []
             };
 
-            // Docs already fetched in parallel above
             if (spaceDoc.exists()) firestoreSettings.spaceOnboardingCompleted = !!spaceDoc.data().completed;
             if (statsDoc.exists()) {
               const d = statsDoc.data();
               Object.assign(firestoreStats, d);
               if (d.trophies) firestoreStats.trophies = d.trophies;
             }
-            if (progressDoc.exists()) setDailyProgress(prev => ({ ...prev, ...progressDoc.data() }));
+            if (progressDoc.exists()) {
+               setDailyProgress(prev => {
+                 const newProgress = { ...prev, ...progressDoc.data() };
+                 localStorage.setItem('nexora_progress', JSON.stringify(newProgress));
+                 return newProgress as DailyProgress;
+               });
+            }
 
             setSettings(firestoreSettings);
             setStats(firestoreStats);
             setNeedsOnboarding(data.onboardingCompleted === false);
+            
+            localStorage.setItem('nexora_settings', JSON.stringify(firestoreSettings));
+            localStorage.setItem('nexora_stats', JSON.stringify(firestoreStats));
           }
           dataLoadedFromFirestore.current = true;
           setIsDataReady(true);
         } catch (error) {
           console.error("Hooks: Load critical failure:", error);
-          showToast("Offline mode synced. Some features might be restricted.", 'info');
-          setIsDataReady(true); // Allow entry even if off-sync for resilience
+          showToast("Offline mode synced.", 'info');
+          setIsDataReady(true);
         }
       } else {
+        localStorage.removeItem('nexora_cached_user');
         setUser(null);
         setIsDataReady(false);
         dataLoadedFromFirestore.current = false;
         setSettings(DEFAULT_SETTINGS);
         setStats(DEFAULT_STATS);
       }
-      setLoading(false);
     });
 
     return unsubscribe;
@@ -125,6 +148,11 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
 
   // Background Sync Effect
   useEffect(() => {
+    // Also save to localStorage for instantaneous load next time
+    localStorage.setItem('nexora_settings', JSON.stringify(settings));
+    localStorage.setItem('nexora_stats', JSON.stringify(stats));
+    localStorage.setItem('nexora_progress', JSON.stringify(dailyProgress));
+
     if (user && isDataReady && dataLoadedFromFirestore.current) {
       const syncData = async () => {
         try {
@@ -141,7 +169,7 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
         }
       };
       
-      const timeout = setTimeout(syncData, 5000); // Debounced sync
+      const timeout = setTimeout(syncData, 5000); 
       return () => clearTimeout(timeout);
     }
   }, [settings, stats, dailyProgress, user, isDataReady]);

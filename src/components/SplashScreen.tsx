@@ -8,12 +8,12 @@ export function SplashScreen() {
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div 
           animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 4, repeat: 0 /* performance */, ease: "easeInOut" }}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-400 rounded-full blur-3xl"
         />
         <motion.div 
           animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.15, 0.1] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          transition={{ duration: 5, repeat: 0 /* fixed */, ease: "easeInOut", delay: 1 }}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-400 rounded-full blur-3xl"
         />
       </div>
@@ -41,14 +41,14 @@ export function SplashScreen() {
           {/* Sparkles around mascot */}
           <motion.div 
             animate={{ scale: [0, 1.2, 0], opacity: [0, 1, 0] }}
-            transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+            transition={{ duration: 2, repeat: 0 /* fixed */, delay: 0.5 }}
             className="absolute -top-4 -right-4 text-2xl"
           >
             ✨
           </motion.div>
           <motion.div 
             animate={{ scale: [0, 1.2, 0], opacity: [0, 1, 0] }}
-            transition={{ duration: 2, repeat: Infinity, delay: 1.2 }}
+            transition={{ duration: 2, repeat: 0 /* fixed */, delay: 1.2 }}
             className="absolute -bottom-2 -left-4 text-2xl"
           >
             🏮
@@ -75,7 +75,7 @@ export function SplashScreen() {
             <div className="w-48 h-1.5 bg-blue-100 rounded-full overflow-hidden mt-4 shadow-inner">
               <motion.div 
                 animate={{ x: [-200, 200] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                transition={{ duration: 1.5, repeat: 0 /* fixed */, ease: "linear" }}
                 className="w-1/2 h-full bg-gradient-to-r from-blue-400 to-indigo-600 rounded-full"
               />
             </div>

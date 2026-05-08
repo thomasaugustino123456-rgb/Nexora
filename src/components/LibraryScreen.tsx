@@ -334,7 +334,7 @@ function LibraryItemCard({
         {item.activated && (isMusic || isSoundPack) && (
           <motion.div 
             animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 1, repeat: Infinity }}
+            transition={{ duration: 1, repeat: 0 /* performance */ }}
             className="absolute -top-1 -right-1 bg-blue-500 text-white p-1 rounded-full shadow-md"
           >
             <Volume2 size={10} />

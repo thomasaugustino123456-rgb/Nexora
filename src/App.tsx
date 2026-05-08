@@ -37,7 +37,6 @@ import { ChallengeFlow } from './components/ChallengeFlow';
 
 const SOCIAL_LOCKED = false;
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
 import { requestNotificationPermission, setupOnMessageListener } from './lib/notifications';
 
@@ -1440,13 +1439,14 @@ export default function App() {
     const isCustomPlan = activeCustomPlan !== null;
     const nextCompletionsCount = isCustomPlan ? (progress.completionsCount || 0) : (progress.completionsCount || 0) + 1;
     const trophyLimit = isPro ? 10 : 3;
-    const canAwardTrophy = isCustomPlan ? progress.pushupsDone : (nextCompletionsCount <= trophyLimit && progress.pushupsDone);
     
     // Calculate how many tasks were actually completed in this session
     const completedTasks = Object.entries(progress).filter(([key, value]) => 
       ['pushupsDone', 'waterDrank', 'breathingDone', 'drawingDone', 'footballDone', 'bubblesDone', 'memoryDone', 'gratitudeDone', 'reactionDone', 'meditationDone', 'writingDone'].includes(key) && 
       (typeof value === 'boolean' ? value === true : (typeof value === 'number' ? value > 0 : false))
     ).length;
+
+    const canAwardTrophy = isCustomPlan ? completedTasks > 0 : (nextCompletionsCount <= trophyLimit && completedTasks > 0);
 
     if (canAwardTrophy) {
       console.log(`Awarding trophy for completion #${nextCompletionsCount} today!`);
@@ -1463,18 +1463,41 @@ export default function App() {
     }
 
     setStats((prevStats) => {
-      const isDailyQuest = progress.dailyQuestDone || (challengeStep === dailyQuest);
-      
-      // Base rewards for finishing the flow
-      let pointsToAdd = isDailyQuest ? 25 : 15;
-      let xpToAdd = isDailyQuest ? 50 : 30;
-      let coinsToAdd = isDailyQuest ? 30 : 20;
+      let pointsToAdd = 0;
+      let xpToAdd = 0;
+      let coinsToAdd = 0;
+      let streakIncrease = 1;
 
-      // Session Bonus: Only give full bonus if they completed at least 3 tasks
-      const sessionBonusMultiplier = completedTasks >= 3 ? 1.5 : 1.0;
-      pointsToAdd = Math.round(pointsToAdd * sessionBonusMultiplier);
-      xpToAdd = Math.round(xpToAdd * sessionBonusMultiplier);
-      coinsToAdd = Math.round(coinsToAdd * sessionBonusMultiplier);
+      if (isCustomPlan) {
+        const totalPlanTasks = activeCustomPlan?.challenges.length || 1;
+        // Scale rewards based on how "high" or "low" the user set their custom plan
+        // Max (like 9 challenges) gives 10 XP, 10 Coins, 5 Streak
+        const ratio = Math.min(1, totalPlanTasks / 9);
+        xpToAdd = Math.max(1, Math.round(ratio * 10));
+        coinsToAdd = Math.max(1, Math.round(ratio * 10));
+        streakIncrease = Math.max(1, Math.round(ratio * 5));
+        pointsToAdd = xpToAdd;
+      } else {
+        const isDailyQuest = progress.dailyQuestDone || (challengeStep === dailyQuest);
+        
+        // Base rewards for finishing the flow
+        pointsToAdd = isDailyQuest ? 25 : 15;
+        xpToAdd = isDailyQuest ? 50 : 30;
+        coinsToAdd = isDailyQuest ? 30 : 20;
+
+        // Session Bonus: Only give full bonus if they completed at least 3 tasks
+        const sessionBonusMultiplier = completedTasks >= 3 ? 1.5 : 1.0;
+        pointsToAdd = Math.round(pointsToAdd * sessionBonusMultiplier);
+        xpToAdd = Math.round(xpToAdd * sessionBonusMultiplier);
+        coinsToAdd = Math.round(coinsToAdd * sessionBonusMultiplier);
+
+        // If they did all 9 official challenges, add the full 5 streak, 10 coins, 10 XP bonus
+        if (completedTasks >= 9) {
+          xpToAdd += 10;
+          coinsToAdd += 10;
+          streakIncrease = 5;
+        }
+      }
 
       const oldLevel = prevStats.level || 1;
       
@@ -1485,13 +1508,26 @@ export default function App() {
       let newLastCompletedDate = prevStats.lastCompletedDate;
       let streakBonusPoints = 0;
 
-      if (prevStats.lastCompletedDate !== today) {
-        const baseStreak = prevStats.lastCompletedDate === getYesterday() ? (prevStats.streak || 0) + 1 : 1;
+      if (prevStats.lastCompletedDate !== today || streakIncrease > 1 || isCustomPlan) {
+        // Apply the streak increase.
+        // It always increments even if they already did it today, if it's custom or they got a bonus streak.
+        let baseStreak = 0;
+        if (prevStats.lastCompletedDate === getYesterday() || prevStats.lastCompletedDate === today) {
+           baseStreak = (prevStats.streak || 0) + streakIncrease;
+        } else {
+           baseStreak = streakIncrease; // Reset to the increase amount
+        }
+        
         const hasStreakProtection = settings.purchasedItems?.includes('streak-protection');
         finalStreak = hasStreakProtection ? Math.max(baseStreak, prevStats.streak || 0) : baseStreak;
         
         newBestStreak = Math.max(prevStats.bestStreak || 0, finalStreak);
-        newTotalCompletedDays = (prevStats.totalCompletedDays || 0) + 1;
+        
+        if (prevStats.lastCompletedDate !== today) {
+          newTotalCompletedDays = (prevStats.totalCompletedDays || 0) + 1;
+        } else {
+          newTotalCompletedDays = prevStats.totalCompletedDays || 0;
+        }
         newLastCompletedDate = today;
         
         const hasDoublePoints = settings.purchasedItems?.includes('double-points');
@@ -1907,7 +1943,7 @@ export default function App() {
               />
               <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexo</h1>
             </div>
-            <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex items-center justify-end w-full gap-5 sm:gap-8 ml-auto">
               <button 
                 onClick={() => {
                   if (settings.soundEnabled) play('header_switch');

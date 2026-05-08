@@ -49,7 +49,7 @@ export function GoldenTrophy() {
           transition={{ type: "spring", damping: 12, stiffness: 100 }}
           style={{ transformOrigin: '200px 200px' }}
         >
-          <motion.g animate={{ y: [0, -12, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}>
+          <motion.g animate={{ y: [0, -12, 0] }} transition={{ duration: 3, repeat: 0 /* performance */, ease: "easeInOut" }}>
             <g className="animate-glow">
               <path d="M 120,150 C 10,140 10,270 120,240" fill="none" stroke="#E5A900" strokeWidth="26" strokeLinecap="round"/>
               <path d="M 120,150 C 10,140 10,270 120,240" fill="none" stroke="#FFC800" strokeWidth="18" strokeLinecap="round"/>
@@ -100,7 +100,7 @@ export function IceTrophy() {
           transition={{ duration: 0.8, ease: "easeOut" }}
           style={{ transformOrigin: '200px 200px' }}
         >
-          <motion.g animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
+          <motion.g animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: 0 /* fixed */, ease: "easeInOut" }}>
             <g className="animate-cold">
               <path d="M 120,150 C 10,140 10,270 120,240" fill="none" stroke="#7CB9E8" strokeWidth="26" strokeLinecap="round"/>
               <path d="M 120,150 C 10,140 10,270 120,240" fill="none" stroke="#B0E0E6" strokeWidth="18" strokeLinecap="round"/>

@@ -338,7 +338,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                <div className="relative w-32 h-32 mx-auto">
                  <motion.div 
                    animate={{ rotate: 360 }}
-                   transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                   transition={{ duration: 20, repeat: 0 /* performance */, ease: "linear" }}
                    className="absolute inset-0 rounded-[3rem] border-2 border-dashed border-orange-500/30"
                  />
                  <div className="absolute inset-2 bg-orange-500 rounded-[2.5rem] flex items-center justify-center shadow-[0_0_80px_rgba(249,115,22,0.4)]">

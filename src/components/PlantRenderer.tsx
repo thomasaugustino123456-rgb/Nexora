@@ -153,7 +153,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
 
           {/* Growth Energy Sparks */}
           {stage >= 5 && (
-            <motion.g animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }}>
+            <motion.g animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: 0 /* performance */, duration: 2 }}>
               <Sparkles className="text-yellow-400 absolute top-0 left-0" style={{ transform: 'translate(40px, 40px)' }} />
               <Sparkles className="text-yellow-400 absolute top-0 right-0" style={{ transform: 'translate(140px, 60px)' }} />
             </motion.g>
@@ -444,7 +444,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
               fill="url(#glowRadial)" 
               initial={{ opacity: 0 }} 
               animate={{ opacity: [0.2, 0.4, 0.2] }} 
-              transition={{ repeat: Infinity, duration: 3 }}
+              transition={{ repeat: 0 /* fixed */, duration: 3 }}
             />
           )}
         </g>
@@ -473,7 +473,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
         strokeWidth="2" 
         fill="none"
         animate={{ opacity: [0.3, 0.8, 0.3] }}
-        transition={{ repeat: Infinity, duration: 2 }}
+        transition={{ repeat: 0 /* fixed */, duration: 2 }}
       />
       
       {!isDead && (
@@ -524,7 +524,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                  strokeWidth="2" 
                  initial={{ opacity: 0 }} 
                  animate={{ opacity: [0.4, 1, 0.4] }} 
-                 transition={{ repeat: Infinity, duration: 1.5 }}
+                 transition={{ repeat: 0 /* fixed */, duration: 1.5 }}
               />
             </g>
           )}
@@ -536,7 +536,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                  cx="100" cy="50" r="10" fill={colors.accent} 
                  initial={{ scale: 0 }} 
                  animate={{ scale: [1, 1.2, 1] }} 
-                 transition={{ repeat: Infinity, duration: 1 }}
+                 transition={{ repeat: 0 /* fixed */, duration: 1 }}
                />
                <motion.path 
                  d="M 100,150 Q 160,180 180,160" 
@@ -641,14 +641,14 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                     <motion.circle 
                       r="4" fill="black"
                       animate={{ cx: [-4, 4, -4] }}
-                      transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                      transition={{ duration: 6, repeat: 0 /* fixed */, ease: "easeInOut" }}
                     />
                     {/* Eyelid (Blinking) */}
                     <motion.rect 
                       x="-13" y="-11" width="26" height="22" fill={flowerColors.face}
                       initial={{ scaleY: 0.5 }}
                       animate={{ scaleY: [0.5, 0.5, 1, 0.5, 0.5] }}
-                      transition={{ duration: 4, repeat: Infinity, times: [0, 0.8, 0.85, 0.9, 1] }}
+                      transition={{ duration: 4, repeat: 0 /* fixed */, times: [0, 0.8, 0.85, 0.9, 1] }}
                       style={{ originY: 0 }}
                     />
                   </g>
@@ -659,14 +659,14 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                     <motion.circle 
                       r="4" fill="black"
                       animate={{ cx: [-4, 4, -4] }}
-                      transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                      transition={{ duration: 6, repeat: 0 /* fixed */, ease: "easeInOut" }}
                     />
                     {/* Eyelid (Blinking) */}
                     <motion.rect 
                       x="-13" y="-11" width="26" height="22" fill={flowerColors.face}
                       initial={{ scaleY: 0.5 }}
                       animate={{ scaleY: [0.5, 0.5, 1, 0.5, 0.5] }}
-                      transition={{ duration: 4, repeat: Infinity, times: [0, 0.8, 0.85, 0.9, 1] }}
+                      transition={{ duration: 4, repeat: 0 /* fixed */, times: [0, 0.8, 0.85, 0.9, 1] }}
                       style={{ originY: 0 }}
                     />
                   </g>
@@ -761,11 +761,11 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                        {/* Tears tracks */}
                        <motion.path 
                          d="M 85,78 L 85,95" stroke={mourningColors.tear} strokeWidth="2" strokeLinecap="round"
-                         animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ repeat: Infinity, duration: 2 }}
+                         animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ repeat: 0 /* fixed */, duration: 2 }}
                        />
                        <motion.path 
                          d="M 115,78 L 115,95" stroke={mourningColors.tear} strokeWidth="2" strokeLinecap="round"
-                         animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ repeat: Infinity, duration: 2, delay: 1 }}
+                         animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ repeat: 0 /* fixed */, duration: 2, delay: 1 }}
                        />
                     </motion.g>
 
@@ -792,7 +792,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                       }}
                       transition={{ 
                         duration: 2, 
-                        repeat: Infinity, 
+                        repeat: 0 /* fixed */, 
                         delay: i * 0.7,
                         ease: "easeIn" 
                       }}
@@ -801,11 +801,11 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                   {/* Puddles in sand */}
                   <motion.circle 
                     cx="85" cy="180" r="4" fill={mourningColors.tear} opacity="0.4"
-                    animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 2 }}
+                    animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: 0 /* fixed */, duration: 2 }}
                   />
                   <motion.circle 
                     cx="115" cy="182" r="4" fill={mourningColors.tear} opacity="0.4"
-                    animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 2, delay: 1 }}
+                    animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: 0 /* fixed */, duration: 2, delay: 1 }}
                   />
                </g>
             )}
@@ -857,7 +857,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
         {stage >= 1 && (
           <motion.g
             animate={{ rotate: [-2, 2, -2] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            transition={{ duration: 4, repeat: 0 /* fixed */, ease: "easeInOut" }}
             style={{ originX: "100px", originY: "160px" }}
           >
             {/* Stem */}
@@ -892,7 +892,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                         x="-14" y="-15" width="28" height="28" fill={tulipColors.petal}
                         initial={{ scaleY: 0 }}
                         animate={{ scaleY: [0, 0, 1, 0, 0] }}
-                        transition={{ duration: 5, repeat: Infinity, times: [0, 0.8, 0.85, 0.9, 1] }}
+                        transition={{ duration: 5, repeat: 0 /* fixed */, times: [0, 0.8, 0.85, 0.9, 1] }}
                         style={{ originY: 0 }}
                       />
                     </g>
@@ -904,7 +904,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                         x="-14" y="-15" width="28" height="28" fill={tulipColors.petal}
                         initial={{ scaleY: 0 }}
                         animate={{ scaleY: [0, 0, 1, 0, 0] }}
-                        transition={{ duration: 5, repeat: Infinity, times: [0, 0.8, 0.85, 0.9, 1] }}
+                        transition={{ duration: 5, repeat: 0 /* fixed */, times: [0, 0.8, 0.85, 0.9, 1] }}
                         style={{ originY: 0 }}
                       />
                     </g>
@@ -914,7 +914,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                       d="M -10,-35 Q 0,-25 10,-35" 
                       fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round"
                       animate={{ d: ["M -10,-35 Q 0,-25 10,-35", "M -15,-35 Q 0,-15 15,-35", "M -10,-35 Q 0,-25 10,-35"] }}
-                      transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                      transition={{ duration: 5, repeat: 0 /* fixed */, ease: "easeInOut" }}
                     />
                   </g>
                 )}
@@ -937,7 +937,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                 opacity="0.3"
                 initial={{ x: -100, opacity: 0 }}
                 animate={{ x: 300, opacity: [0, 0.3, 0] }}
-                transition={{ duration: 3, repeat: Infinity, delay: i * 1, ease: "linear" }}
+                transition={{ duration: 3, repeat: 0 /* fixed */, delay: i * 1, ease: "linear" }}
               />
             ))}
 
@@ -947,7 +947,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                 key={`sparkle-${i}`}
                 initial={{ x: -20, y: 50 + i * 30, opacity: 0 }}
                 animate={{ x: 220, opacity: [0, 1, 0] }}
-                transition={{ duration: 4, repeat: Infinity, delay: i * 1.5 }}
+                transition={{ duration: 4, repeat: 0 /* fixed */, delay: i * 1.5 }}
               >
                 <circle r="2" fill="#E1F5FE" />
               </motion.g>
@@ -966,7 +966,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                     opacity: [0, 0.4, 0],
                     scale: [1, 1.2, 0]
                   }}
-                  transition={{ duration: 3, repeat: Infinity, delay: i * 1 }}
+                  transition={{ duration: 3, repeat: 0 /* fixed */, delay: i * 1 }}
                />
             ))}
           </g>
@@ -1016,20 +1016,20 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
               d="M 100,115 Q 70,100 80,140" 
               fill={happyColors.leaf} stroke="#1B5E20" strokeWidth="2"
               animate={{ d: ["M 100,115 Q 70,100 80,140", "M 100,115 Q 60,95 85,145", "M 100,115 Q 70,100 80,140"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              transition={{ duration: 2, repeat: 0 /* fixed */, ease: "easeInOut" }}
             />
             <motion.path 
               d="M 100,105 Q 130,90 120,130" 
               fill={happyColors.leaf} stroke="#1B5E20" strokeWidth="2"
               animate={{ d: ["M 100,105 Q 130,90 120,130", "M 100,105 Q 140,85 115,135", "M 100,105 Q 130,90 120,130"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+              transition={{ duration: 2, repeat: 0 /* fixed */, ease: "easeInOut", delay: 0.5 }}
             />
 
             {/* Happy Tulip Head */}
             {stage >= 2 && (
               <motion.g
                 animate={{ rotate: [-3, 3, -3] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ duration: 3, repeat: 0 /* fixed */, ease: "easeInOut" }}
                 style={{ originX: "100px", originY: "110px" }}
               >
                 {/* Tulip Shape */}
@@ -1055,7 +1055,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                       <motion.rect 
                         x="-10" y="-15" width="20" height="30" fill={happyColors.petal}
                         animate={{ scaleY: [0, 0, 1, 0, 0] }}
-                        transition={{ duration: 4, repeat: Infinity, times: [0, 0.8, 0.85, 0.9, 1] }}
+                        transition={{ duration: 4, repeat: 0 /* fixed */, times: [0, 0.8, 0.85, 0.9, 1] }}
                         style={{ originY: 0 }}
                       />
                     </g>
@@ -1067,7 +1067,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                       <motion.rect 
                         x="-10" y="-15" width="20" height="30" fill={happyColors.petal}
                         animate={{ scaleY: [0, 0, 1, 0, 0] }}
-                        transition={{ duration: 4, repeat: Infinity, times: [0, 0.8, 0.85, 0.9, 1] }}
+                        transition={{ duration: 4, repeat: 0 /* fixed */, times: [0, 0.8, 0.85, 0.9, 1] }}
                         style={{ originY: 0 }}
                       />
                     </g>
@@ -1077,7 +1077,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                       d="M 90,95 Q 100,105 110,95 L 110,100 Q 100,110 90,100 Z"
                       fill="black"
                       animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 3, repeat: Infinity }}
+                      transition={{ duration: 3, repeat: 0 /* fixed */ }}
                       style={{ originX: "100px", originY: "100px" }}
                     />
                     <path d="M 90,95 Q 100,105 110,95" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" />
@@ -1099,7 +1099,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                         }}
                         transition={{ 
                           duration: 2, 
-                          repeat: Infinity, 
+                          repeat: 0 /* fixed */, 
                           delay: i * 0.5,
                           ease: "easeOut" 
                         }}
@@ -1162,7 +1162,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                 {/* Bite Mark 1 - Left */}
                 <motion.path 
                   animate={{ scale: [1, 1.2, 1] }} 
-                  transition={{ duration: 4, repeat: Infinity }}
+                  transition={{ duration: 4, repeat: 0 /* fixed */ }}
                   d="M -45,5 Q -48,0 -52,5 Q -55,10 -52,15" fill="#FFF3E0" stroke="#1B5E20" strokeWidth="1" 
                 />
               </g>
@@ -1173,7 +1173,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                 {/* Bite Mark 2 - Right */}
                 <motion.path 
                   animate={{ scale: [1, 1.3, 1] }} 
-                  transition={{ duration: 5, repeat: Infinity }}
+                  transition={{ duration: 5, repeat: 0 /* fixed */ }}
                   d="M 40,0 Q 45,-5 50,0 Q 55,5 50,10" fill="#FFF3E0" stroke="#1B5E20" strokeWidth="1" 
                 />
               </g>
@@ -1208,7 +1208,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                         d="M -5,0 A 5,5 0 1,1 5,0 A 5,5 0 1,1 -5,0 M -3,0 A 3,3 0 1,0 3,0" 
                         stroke="black" fill="none" strokeWidth="1"
                         animate={{ rotate: 360 }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        transition={{ duration: 2, repeat: 0 /* fixed */, ease: "linear" }}
                       />
                     </g>
                     <g transform="translate(15, 5)">
@@ -1216,7 +1216,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                         d="M -5,0 A 5,5 0 1,1 5,0 A 5,5 0 1,1 -5,0 M -3,0 A 3,3 0 1,0 3,0" 
                         stroke="black" fill="none" strokeWidth="1"
                         animate={{ rotate: -360 }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        transition={{ duration: 2, repeat: 0 /* fixed */, ease: "linear" }}
                       />
                     </g>
 
@@ -1229,7 +1229,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                 <g transform="translate(20, -35) rotate(30)">
                   <motion.path 
                     animate={{ x: [0, 1, 0], scaleY: [1, 1.1, 1] }}
-                    transition={{ duration: 0.3, repeat: Infinity }}
+                    transition={{ duration: 0.3, repeat: 0 /* fixed */ }}
                     d="M 0,0 Q 5,-10 10,0 Q 15,-10 20,0" stroke={roseColors.caterpillar} strokeWidth="6" fill="none" strokeLinecap="round" 
                   />
                   <circle cx="20" cy="0" r="1" fill="black" />
@@ -1250,7 +1250,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                           x: [0, (i - 1) * 20],
                           y: [0, -30]
                         }}
-                        transition={{ duration: 2, repeat: Infinity, delay: i * 0.6 }}
+                        transition={{ duration: 2, repeat: 0 /* fixed */, delay: i * 0.6 }}
                       />
                     ))}
                   </g>
@@ -1265,7 +1265,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                 <g transform="translate(50, 115) rotate(-20)">
                   <motion.path 
                     animate={{ x: [0, 0.5, 0], scaleY: [1, 1.2, 1] }}
-                    transition={{ duration: 0.25, repeat: Infinity }}
+                    transition={{ duration: 0.25, repeat: 0 /* fixed */ }}
                     d="M 0,0 Q 5,-8 10,0 Q 15,-8 20,0" stroke={roseColors.caterpillar} strokeWidth="5" fill="none" strokeLinecap="round" 
                   />
                   <circle cx="20" cy="0" r="1" fill="black" />
@@ -1275,7 +1275,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
                 <g transform="translate(130, 105) rotate(10)">
                   <motion.path 
                     animate={{ x: [0, -0.5, 0], scaleY: [1, 1.15, 1] }}
-                    transition={{ duration: 0.35, repeat: Infinity, delay: 0.1 }}
+                    transition={{ duration: 0.35, repeat: 0 /* fixed */, delay: 0.1 }}
                     d="M 0,0 Q 5,-8 10,0 Q 15,-8 20,0" stroke={roseColors.caterpillar} strokeWidth="5" fill="none" strokeLinecap="round" 
                   />
                   <circle cx="20" cy="0" r="1" fill="black" />
@@ -1337,7 +1337,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
 
       {/* Thirsty Effect */}
       {isThirsty && !isDead && (
-        <motion.g animate={{ y: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}>
+        <motion.g animate={{ y: [0, 5, 0] }} transition={{ repeat: 0 /* fixed */, duration: 2.5, ease: "easeInOut" }}>
            <text x="100" y="50" textAnchor="middle" fontSize="14" fill="#607D8B" className="font-black opacity-30 tracking-[0.2em]">THIRSTY</text>
         </motion.g>
       )}

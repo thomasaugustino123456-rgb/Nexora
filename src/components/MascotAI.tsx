@@ -1,63 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Sparkles, MessageSquare } from 'lucide-react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { X, Sparkles, MessageSquare } from 'lucide-react';
 import { UserStats, UserSettings } from '../types';
 
-const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
 export function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: UserSettings, showToast?: (m: string, t: any) => void }) {
-  const [message, setMessage] = useState<string>("");
   const [response, setResponse] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleChat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!message.trim()) return;
-    
-    const userMsg = message;
-    setMessage("");
-    setLoading(true);
-    setResponse("");
-    
-    try {
-      const prompt = `You are Nexora, a friendly water-bottle mascot for a productivity and wellness app. 
-      The user says: "${userMsg}"
-      Respond as Nexora. Be friendly, helpful, and encouraging. 
-      Keep it short (max 2-3 sentences). 
-      User stats: Streak ${stats.streak}, Points ${stats.totalPoints}, Level ${stats.level || 1}.
-      Your current outfit is: ${settings.activeSkin || 'none'}.`;
-      
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await model.generateContent(prompt);
-      setResponse(result.response.text() || "I'm here for you, bro! 🌊");
-    } catch (error: any) {
-      console.error('Mascot AI Chat Error:', error);
-      setResponse("I'm a bit parched right now, but I'm still cheering for you! 🚀");
-      showToast?.(`AI Error: ${error.message || 'Connection failed'}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const generateMotivation = async () => {
     setLoading(true);
     try {
-      const prompt = `You are Nexora, a friendly water-bottle mascot for a productivity and wellness app. 
-      The user's current streak is ${stats.streak} days. 
-      Their total points are ${stats.totalPoints}.
-      They have ${stats.trophies.length} trophies.
-      Give them a short, punchy, and super friendly motivational message (max 2 sentences). 
-      Be encouraging and maybe a bit bubbly!`;
+      // Free up space by removing the AI SDK entirely and using predefined motivation tailored to stats!
+      await new Promise(r => setTimeout(r, 800)); // Quick fake loading
       
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await model.generateContent(prompt);
-      setResponse(result.response.text() || "You're doing great, bro! Keep that streak alive! 🌊");
+      const predefinedMotivations = [
+        "You're crushing it, bro! Keep that streak alive! 🌊",
+        "Every drop of effort counts. Stay hydrated and stay focused! 💧",
+        "Don't let up now! You've got this! 🚀",
+        "Slow progress is still progress. Keep building! 🧱",
+        "Take a deep breath and keep pushing forward! 🌬️",
+        "Your future self will thank you for today's hard work! 🌟",
+        "Challenge yourself, bro! That's how we grow! 🌱",
+        "Another day, another victory! Let's get it! 🏆"
+      ];
+      
+      let msg = predefinedMotivations[Math.floor(Math.random() * predefinedMotivations.length)];
+      if (stats.streak > 3) msg = `A ${stats.streak}-day streak! That is absolute fire, bro! Keep it going! 🔥`;
+      if (stats.level && stats.level > 5 && Math.random() > 0.5) msg = `Level ${stats.level}?! You're a true legend! 👑`;
+      setResponse(msg);
     } catch (error: any) {
-      console.error('Mascot AI Motivation Error:', error);
+      console.error('Motivation Error:', error);
       setResponse("I'm always here to cheer you on! Let's crush today! 🚀");
-      showToast?.(`Motivation AI Error: ${error.message || 'Sync failed'}`, 'error');
     } finally {
       setLoading(false);
     }

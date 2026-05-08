@@ -92,7 +92,7 @@ export const PlantCompletionCard: React.FC<PlantCompletionCardProps> = ({
                 rotate: 360,
                 scale: [1, 1.2, 1],
               }}
-              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 10, repeat: 0 /* performance */, ease: "linear" }}
               className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-[radial-gradient(circle,_rgba(255,223,0,0.15)_0%,_transparent_70%)]"
             />
           </div>
@@ -145,7 +145,7 @@ export const PlantCompletionCard: React.FC<PlantCompletionCardProps> = ({
                 }}
                 transition={{ 
                   duration: 2, 
-                  repeat: Infinity, 
+                  repeat: 0 /* fixed */, 
                   delay: i * 0.4,
                   ease: "easeInOut"
                 }}

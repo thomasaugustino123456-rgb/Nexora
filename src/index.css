@@ -15,7 +15,7 @@
 
 @layer components {
   .glass-card {
-    @apply bg-white/[0.7] backdrop-blur-xl border border-white/40 rounded-[32px] shadow-xl shadow-blue-900/5 transition-all duration-500;
+    @apply bg-white/[0.85] border border-white/60 rounded-[32px] shadow-xl shadow-blue-900/5 transition-all duration-500;
   }
   
   .btn-primary {
@@ -25,7 +25,7 @@
   }
 
   .btn-secondary {
-    @apply bg-white/[0.5] backdrop-blur-md font-bold py-4 px-8 rounded-full border border-white/40 active:scale-95 transition-all duration-300;
+    @apply bg-white/[0.8] font-bold py-4 px-8 rounded-full border border-white/60 active:scale-95 transition-all duration-300;
     color: var(--accent-color, #3B82F6);
   }
 }
@@ -35,8 +35,6 @@
   background: white;
   border-radius: 50%;
   opacity: 0.6;
-  filter: blur(1px);
-  animation: twinkle var(--duration, 3s) infinite ease-in-out;
 }
 
 @keyframes twinkle {
@@ -46,7 +44,6 @@
 
 .sparkle-mascot {
   transform-origin: center;
-  animation: twinkle 3s infinite ease-in-out;
 }
 
 @keyframes bodyPush {
@@ -54,7 +51,6 @@
   50% { transform: rotate(22deg); }
 }
 .main-body-pivot {
-  animation: bodyPush 1.5s infinite ease-in-out;
   transform-origin: 160px 480px;
 }
 
@@ -63,7 +59,6 @@
   50% { d: path("M 440,380 L 510,400 L 460,480"); }
 }
 .arm-muscle {
-  animation: elbowBend 1.5s infinite ease-in-out;
 }
 
 @keyframes drip {
@@ -72,7 +67,6 @@
   100% { transform: translate(-30px, 80px); opacity: 0; }
 }
 .sweat {
-  animation: drip 1.2s infinite linear;
 }
 
 @keyframes shimmer {
@@ -80,7 +74,6 @@
   100% { transform: translateX(100%); }
 }
 .animate-shimmer {
-  animation: shimmer 2s infinite linear;
 }
 
 @keyframes spin-slow {
@@ -88,5 +81,4 @@
   to { transform: rotate(360deg); }
 }
 .animate-spin-slow {
-  animation: spin-slow 3s linear infinite;
 }
