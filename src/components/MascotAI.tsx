@@ -94,23 +94,6 @@ export function MascotAI({ stats, settings, showToast }: { stats: UserStats, set
             ) : (
               <p className="text-sm font-medium text-blue-900 leading-relaxed italic">"{response}"</p>
             )}
-            
-            <form onSubmit={handleChat} className="mt-4 flex gap-2">
-              <input
-                type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Say something..."
-                className="flex-1 text-[10px] bg-white/50 border border-blue-200 rounded-full px-3 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400 text-blue-900"
-              />
-              <button 
-                type="submit"
-                disabled={loading}
-                className="p-1 text-blue-500 hover:text-blue-700 disabled:opacity-50"
-              >
-                <Send size={12} />
-              </button>
-            </form>
 
             <button 
               onClick={() => { setResponse(""); generateMotivation(); }}

@@ -12,28 +12,28 @@ import { auth, db, messaging, handleFirestoreError, OperationType } from './fire
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs, addDoc, increment } from 'firebase/firestore';
 import { getToken } from 'firebase/messaging';
-const AuthScreen = lazy(() => import('./components/AuthScreen').then(m => ({ default: m.AuthScreen })));
-const LandingPage = lazy(() => import('./components/LandingPage').then(m => ({ default: m.LandingPage })));
-const OnboardingScreen = lazy(() => import('./components/OnboardingScreen').then(m => ({ default: m.OnboardingScreen })));
-const PlanBuilder = lazy(() => import('./components/PlanBuilder').then(m => ({ default: m.PlanBuilder })));
-const HomeScreen = lazy(() => import('./components/HomeScreen').then(m => ({ default: m.HomeScreen })));
+import { AuthScreen } from './components/AuthScreen';
+import { LandingPage } from './components/LandingPage';
+import { OnboardingScreen } from './components/OnboardingScreen';
+import { PlanBuilder } from './components/PlanBuilder';
+import { HomeScreen } from './components/HomeScreen';
 import { Mascot } from './components/Mascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './components/Trophies';
 import { WhatIsNewModalWrapper, HappyMascot, LevelUpCelebration, CoinAnimation, MascotAIWrapper } from './components/SuspenseWrappers';
 
-const HouseScreen = lazy(() => import('./components/HouseScreen').then(m => ({ default: m.HouseScreen })));
-const LibraryScreen = lazy(() => import('./components/LibraryScreen').then(m => ({ default: m.LibraryScreen })));
-const ShopScreen = lazy(() => import('./components/ShopScreen').then(m => ({ default: m.ShopScreen })));
-const PlantScreen = lazy(() => import('./components/PlantScreen').then(m => ({ default: m.PlantScreen })));
-const SocialScreen = lazy(() => import('./components/SocialScreen').then(m => ({ default: m.SocialScreen })));
-const NexusVideoScreen = lazy(() => import('./components/NexusVideoScreen').then(m => ({ default: m.NexusVideoScreen })));
-const LeaderboardScreen = lazy(() => import('./components/LeaderboardScreen').then(m => ({ default: m.LeaderboardScreen })));
-const ProgressScreen = lazy(() => import('./components/ProgressScreen').then(m => ({ default: m.ProgressScreen })));
-const ProfileScreen = lazy(() => import('./components/ProfileScreen').then(m => ({ default: m.ProfileScreen })));
-const SettingsScreen = lazy(() => import('./components/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
-const GalleryScreen = lazy(() => import('./components/GalleryScreen').then(m => ({ default: m.GalleryScreen })));
-const NotebookScreen = lazy(() => import('./components/NotebookScreen').then(m => ({ default: m.NotebookScreen })));
-const ChallengeFlow = lazy(() => import('./components/ChallengeFlow').then(m => ({ default: m.ChallengeFlow })));
+import { HouseScreen } from './components/HouseScreen';
+import { LibraryScreen } from './components/LibraryScreen';
+import { ShopScreen } from './components/ShopScreen';
+import { PlantScreen } from './components/PlantScreen';
+import { SocialScreen } from './components/SocialScreen';
+import { NexusVideoScreen } from './components/NexusVideoScreen';
+import { LeaderboardScreen } from './components/LeaderboardScreen';
+import { ProgressScreen } from './components/ProgressScreen';
+import { ProfileScreen } from './components/ProfileScreen';
+import { SettingsScreen } from './components/SettingsScreen';
+import { GalleryScreen } from './components/GalleryScreen';
+import { NotebookScreen } from './components/NotebookScreen';
+import { ChallengeFlow } from './components/ChallengeFlow';
 
 const SOCIAL_LOCKED = false;
 
@@ -1437,9 +1437,10 @@ export default function App() {
   const handleCompleteChallenge = (finalProgress?: DailyProgress) => {
     setEmergencyActive(false);
     const progress = finalProgress || dailyProgress;
-    const nextCompletionsCount = (progress.completionsCount || 0) + 1;
+    const isCustomPlan = activeCustomPlan !== null;
+    const nextCompletionsCount = isCustomPlan ? (progress.completionsCount || 0) : (progress.completionsCount || 0) + 1;
     const trophyLimit = isPro ? 10 : 3;
-    const canAwardTrophy = nextCompletionsCount <= trophyLimit && progress.pushupsDone;
+    const canAwardTrophy = isCustomPlan ? progress.pushupsDone : (nextCompletionsCount <= trophyLimit && progress.pushupsDone);
     
     // Calculate how many tasks were actually completed in this session
     const completedTasks = Object.entries(progress).filter(([key, value]) => 
@@ -1722,7 +1723,7 @@ export default function App() {
       className="min-h-screen flex flex-col items-center overflow-x-hidden"
       style={{ '--accent-color': settings.themeColor } as React.CSSProperties}
     >
-      {/* Sparkles Background Effect */}
+      {/* Performance optimized: Sparkles Background Effect removed to prevent heating
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {Array.from({ length: 20 }).map((_, i) => (
           <div 
@@ -1738,8 +1739,9 @@ export default function App() {
           />
         ))}
       </div>
+      */}
 
-      {/* Background Mascot Watermark */}
+      {/* Performance optimized: Background Mascot Watermark removed to prevent heating
       <div className="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0 opacity-[0.03]">
         <img 
           src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
@@ -1748,6 +1750,7 @@ export default function App() {
           referrerPolicy="no-referrer"
         />
       </div>
+      */}
 
       {/* PWA Install Button (Android/Chrome) */}
       <AnimatePresence>
@@ -1904,13 +1907,13 @@ export default function App() {
               />
               <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexo</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 sm:gap-4">
               <button 
                 onClick={() => {
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('social');
                 }}
-                className="p-2 transition-colors text-blue-900/40 hover:text-blue-900/60"
+                className="hidden p-2 transition-colors text-blue-900/40 hover:text-blue-900/60"
               >
                 <Users size={24} />
               </button>
@@ -1960,11 +1963,8 @@ export default function App() {
                   vibrate(VIBRATION_PATTERNS.CLICK);
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('social');
-                  // We can't easily set activeTab here without complex ref/callback, 
-                  // but we can use sessionStorage or just let them click Inbox in social.
-                  // For now, let's just go to social.
                 }}
-                className={`p-2 transition-colors relative text-blue-900/40 hover:text-blue-900/60`}
+                className={`hidden p-2 transition-colors relative text-blue-900/40 hover:text-blue-900/60`}
               >
                 <Bell size={24} className={unreadNotifCount > 0 ? "text-blue-600" : ""} />
                 {unreadNotifCount > 0 && (
