@@ -37,8 +37,14 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
   const colors = ['bg-blue-100', 'bg-orange-100', 'bg-green-100', 'bg-purple-100', 'bg-red-100', 'bg-yellow-100'];
 
   const handleNext = () => {
-    if (step < 3) setStep(step + 1);
-    else onComplete({ ...data, category: data.category === 'Custom' ? data.customCategory : data.category });
+    if (step < 3) {
+      setStep(step + 1);
+    } else {
+      onComplete({ 
+        ...data, 
+        category: data.category === 'Custom' ? data.customCategory : data.category 
+      });
+    }
   };
 
   return (
@@ -53,12 +59,13 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
         <div className="bg-blue-600 p-8 text-white relative shrink-0">
           <div className="relative z-10 flex items-center justify-between">
             <div>
-              <h3 className="text-2xl font-black italic uppercase tracking-tight">{initialData ? 'Decrypt Node' : 'Initialize Node'}</h3>
-              <p className="text-xs font-bold text-white/60 mt-1">Refining Sector {step} of 3</p>
+              <h3 className="text-2xl font-black italic uppercase tracking-tight leading-none">{initialData ? 'Decrypt Node' : 'Initialize Node'}</h3>
+              <p className="text-[10px] font-bold text-white/50 mt-2 uppercase tracking-widest">Protocol Sector {step} of 3</p>
             </div>
             <button 
               onClick={(e) => { e.stopPropagation(); onClose(); }} 
-              className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all backdrop-blur-md"
+              className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all backdrop-blur-md active:scale-90"
+              title="Close Protocol"
             >
               <X size={24} />
             </button>
@@ -80,7 +87,10 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
                 className="space-y-6"
               >
                 <div className="space-y-4">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Activity Nucleus</label>
+                  <div className="flex items-center justify-between ml-1">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Activity Nucleus</label>
+                    <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">Required</span>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     {categories.map(cat => (
                       <button 
@@ -94,15 +104,20 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
                     ))}
                   </div>
                   {data.category === 'Custom' && (
-                    <motion.input 
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      type="text" 
-                      placeholder="Specify focus (e.g. Weightlifting)"
-                      value={data.customCategory}
-                      onChange={(e) => setData(prev => ({ ...prev, customCategory: e.target.value }))}
-                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold placeholder-slate-300 focus:ring-2 focus:ring-blue-100 outline-none"
-                    />
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="pt-2"
+                    >
+                      <input 
+                        type="text" 
+                        placeholder="Specify focus (e.g. Weightlifting)"
+                        autoFocus
+                        value={data.customCategory}
+                        onChange={(e) => setData(prev => ({ ...prev, customCategory: e.target.value }))}
+                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold placeholder-slate-300 focus:ring-2 focus:ring-blue-100 outline-none shadow-inner"
+                      />
+                    </motion.div>
                   )}
                 </div>
               </motion.div>
@@ -118,30 +133,39 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
               >
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Node Identity</label>
+                    <div className="flex items-center justify-between ml-1">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Node Identity</label>
+                      <span className="text-[9px] font-bold text-slate-300">{data.name.length}/25</span>
+                    </div>
                     <input 
                       type="text" 
+                      maxLength={25}
                       placeholder="Collective Name (e.g. The Iron Protocol)"
                       value={data.name}
                       onChange={e => setData(prev => ({ ...prev, name: e.target.value }))}
-                      className="w-full p-5 bg-slate-50 border border-slate-100 rounded-3xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-100"
+                      className="w-full p-5 bg-slate-50 border border-slate-100 rounded-3xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-100 shadow-inner"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Mission Statement</label>
+                    <div className="flex items-center justify-between ml-1">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Mission Statement</label>
+                      <span className="text-[9px] font-bold text-slate-300">{data.description.length}/100</span>
+                    </div>
                     <textarea 
+                      maxLength={100}
                       placeholder="Brief description of the node's focus..."
                       value={data.description}
                       onChange={e => setData(prev => ({ ...prev, description: e.target.value }))}
-                      className="w-full p-5 bg-slate-50 border border-slate-100 rounded-3xl text-sm font-bold h-24 resize-none outline-none focus:ring-2 focus:ring-blue-100"
+                      className="w-full p-5 bg-slate-50 border border-slate-100 rounded-3xl text-sm font-bold h-24 resize-none outline-none focus:ring-2 focus:ring-blue-100 shadow-inner"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Protocol Rules</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Protocol Rules (One per line)</label>
                     <textarea 
                       placeholder="Rule 1\nRule 2\nRule 3..."
-                      onChange={e => setData(prev => ({ ...prev, rules: e.target.value.split('\n').filter(r => r.trim()) }))}
-                      className="w-full p-5 bg-slate-50 border border-slate-100 rounded-3xl text-[11px] font-bold h-24 resize-none outline-none focus:ring-2 focus:ring-blue-100 placeholder-slate-300"
+                      value={data.rules.join('\n')}
+                      onChange={e => setData(prev => ({ ...prev, rules: e.target.value.split('\n') }))}
+                      className="w-full p-5 bg-slate-50 border border-slate-100 rounded-3xl text-[11px] font-bold h-28 resize-none outline-none focus:ring-2 focus:ring-blue-100 placeholder-slate-300 shadow-inner"
                     />
                   </div>
                 </div>
@@ -158,12 +182,15 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
               >
                 <div className="flex flex-col items-center gap-6">
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Visual Signal</label>
-                  <div className={`w-28 h-28 rounded-[32px] ${data.color} flex items-center justify-center text-5xl shadow-2xl relative overflow-hidden`}>
+                  <motion.div 
+                    layoutId="node-preview"
+                    className={`w-28 h-28 rounded-[36px] ${data.color} flex items-center justify-center text-5xl shadow-2xl relative overflow-hidden ring-4 ring-white transition-all`}
+                  >
                      <span className="relative z-10">{data.icon}</span>
                      <div className="absolute inset-0 bg-white/10" />
-                  </div>
+                  </motion.div>
                   
-                  <div className="grid grid-cols-6 gap-3">
+                  <div className="grid grid-cols-6 gap-3 pt-2">
                     {emojis.map(emoji => (
                       <button 
                         key={emoji}
@@ -175,18 +202,21 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
                     ))}
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 pt-4">
                     {colors.map(color => (
                       <button 
                         key={color}
                         onClick={() => setData(prev => ({ ...prev, color }))}
-                        className={`w-8 h-8 rounded-full border-4 transition-all ${color} ${data.color === color ? 'border-primary scale-125' : 'border-transparent'}`}
+                        className={`w-8 h-8 rounded-full border-4 transition-all ${color} ${data.color === color ? 'border-blue-500 scale-125 shadow-lg shadow-blue-100' : 'border-white'}`}
                       />
                     ))}
                   </div>
                   
-                  <button className="flex items-center gap-2 text-[10px] font-black uppercase text-blue-500 tracking-tighter hover:bg-blue-50 px-4 py-2 rounded-full transition-all">
-                    <ImageIcon size={14} /> Upload Custom Signal (Optional)
+                  <button 
+                    onClick={() => onComplete({ ...data, category: data.category === 'Custom' ? data.customCategory : data.category })}
+                    className="flex items-center gap-2 text-[10px] font-black uppercase text-blue-500 tracking-tighter hover:bg-blue-50 px-4 py-2 rounded-full transition-all mt-4 border border-blue-100 bg-white shadow-sm"
+                  >
+                    <Check size={14} /> Skip Directly to Initialization
                   </button>
                 </div>
               </motion.div>
@@ -194,22 +224,26 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
           </AnimatePresence>
         </div>
 
-        <div className="p-8 border-t border-slate-50 shrink-0">
+        <div className="p-8 border-t border-slate-50 shrink-0 bg-slate-50/30">
           <div className="flex gap-4">
-            {step > 1 && (
-              <button 
-                onClick={() => setStep(step - 1)}
-                className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all"
-              >
-                Back
-              </button>
-            )}
+            <button 
+              onClick={() => {
+                if (step > 1) {
+                  setStep(step - 1);
+                } else {
+                  onClose();
+                }
+              }}
+              className="flex-1 py-4 bg-white border border-slate-200 text-slate-400 hover:text-slate-600 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all shadow-sm"
+            >
+              {step === 1 ? 'Abort' : 'Back'}
+            </button>
             <button 
               disabled={isSubmitting || (step === 1 && !data.category) || (step === 2 && (!data.name || !data.description))}
               onClick={handleNext}
-              className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all disabled:opacity-50"
+              className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-200 active:scale-95 transition-all disabled:opacity-50 disabled:bg-slate-200 disabled:shadow-none"
             >
-              {isSubmitting ? 'Syncing...' : step === 3 ? 'Initialize Node 🏮' : 'Continue Protocol'}
+              {isSubmitting ? 'Transmitting...' : step === 3 ? 'Initialize Node 🏮' : 'Continue Protocol'}
             </button>
           </div>
         </div>

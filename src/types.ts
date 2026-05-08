@@ -249,6 +249,7 @@ export interface Post {
   id: string;
   userId: string;
   userName: string;
+  userEmail?: string;
   userPhoto?: string;
   circleId: string;
   circleName: string;
@@ -274,8 +275,9 @@ export interface NexusNotification {
   senderId: string;
   senderName: string;
   senderPhoto?: string;
-  type: 'reply' | 'like' | 'mention';
-  postId: string;
+  type: 'reply' | 'like' | 'mention' | 'post';
+  postId?: string;
+  targetId?: string;
   commentId?: string;
   message: string;
   isRead: boolean;

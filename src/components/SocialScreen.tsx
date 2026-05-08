@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
-import { ArrowLeft, Plus, Video, MoreHorizontal, Trash2, Bookmark, Flag, EyeOff, Share2, MessageSquare, Heart, RefreshCw, Send, X, Search, Award, User, Flame, ChevronRight, Bell } from 'lucide-react';
+import { ArrowLeft, Plus, Video, MoreHorizontal, Trash2, Bookmark, Flag, EyeOff, Share2, MessageSquare, Heart, RefreshCw, Send, X, Search, Award, User, Flame, ChevronRight, Bell, Info } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { User as FirebaseUser } from 'firebase/auth';
 import { doc, collection, query, orderBy, onSnapshot, setDoc, updateDoc, increment, addDoc, deleteDoc } from 'firebase/firestore';
@@ -37,13 +37,14 @@ const PostCard = React.memo(({ post, user, settings, circles, savedPosts, toggle
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const shareUrl = `${window.location.origin}/post/${post.id}`;
+    // Create a "real" looking link
+    const shareUrl = `${window.location.origin}/post/${post.id}?ref=nexus_broadcast`;
     if (navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(shareUrl);
-        showToast('Link copied to clipboard! 🔗', 'info');
+        showToast('Nexus Link Encrypted & Copied! 🔗', 'info');
       } catch (err) {
-        showToast('Failed to copy link', 'error');
+        showToast('Signal Interrupted: Clipboard Denied', 'error');
       }
     }
   };
@@ -52,23 +53,26 @@ const PostCard = React.memo(({ post, user, settings, circles, savedPosts, toggle
     if (!reportReason.trim() || !user) return;
     setIsSubmittingReport(true);
     try {
+      // Detailed report as requested: reporter name, time, location, email, reported user, email, description
       await addDoc(collection(db, 'reports'), {
         reporterId: user.uid,
-        reporterName: user.displayName,
-        reporterEmail: user.email,
-        postId: post.id,
-        postAuthorId: post.userId,
-        postAuthorName: post.userName,
-        postContent: post.content,
+        reporterName: user.displayName || 'Anonymous User',
+        reporterEmail: user.email || 'N/A',
+        contentId: post.id,
+        reportedPostId: post.id,
+        reportedUserId: post.userId,
+        reportedUserName: post.userName,
+        reportedUserEmail: post.userEmail || 'N/A',
         reason: reportReason,
         location: window.location.href,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        status: 'pending'
       });
-      showToast('Nexus Security alerted. Thank you.', 'success');
+      showToast('Security Alert Transmitted. Node safety prioritized.', 'success');
       setIsReporting(false);
       setReportReason('');
     } catch (err) {
-      showToast('Failed to send report', 'error');
+      showToast('Transmission Failed: Security Relay Offline', 'error');
     } finally {
       setIsSubmittingReport(false);
     }
@@ -210,17 +214,17 @@ const PostCard = React.memo(({ post, user, settings, circles, savedPosts, toggle
               <textarea 
                 value={reportReason}
                 onChange={e => setReportReason(e.target.value)}
-                placeholder="Reason for report..."
-                className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold h-32 resize-none focus:ring-2 focus:ring-blue-100 outline-none"
+                placeholder="Describe the violation here..."
+                className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold h-32 resize-none focus:ring-2 focus:ring-blue-100 outline-none shadow-inner"
               />
               <div className="flex gap-3 mt-6">
-                <button onClick={() => setIsReporting(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest">Cancel</button>
+                <button onClick={() => setIsReporting(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
                 <button 
                   disabled={isSubmittingReport || !reportReason.trim()}
                   onClick={handleReport}
-                  className="flex-[2] py-3 bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest disabled:opacity-50"
+                  className="flex-[2] py-3 bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-red-200 disabled:opacity-50 active:scale-95 transition-all"
                 >
-                  {isSubmittingReport ? 'Reporting...' : 'Alert Security'}
+                  {isSubmittingReport ? 'Reporting...' : 'Authorize Alert'}
                 </button>
               </div>
             </motion.div>
@@ -233,7 +237,7 @@ const PostCard = React.memo(({ post, user, settings, circles, savedPosts, toggle
 });
 
 export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings, posts, circles, notifications, setActiveScreen, play }: SocialScreenProps) {
-  const [activeTab, setActiveTab] = useState<'feed' | 'circles' | 'inbox'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'circles' | 'inbox' | 'library'>('feed');
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
   const [circleToEdit, setCircleToEdit] = useState<SocialCircle | null>(null);
@@ -261,6 +265,7 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
   const [showVideoInput, setShowVideoInput] = useState(false);
   const [selectedCircleId, setSelectedCircleId] = useState('nexora-general');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingCircle, setIsSubmittingCircle] = useState(false);
   
   const [comments, setComments] = useState<SocialComment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -279,12 +284,17 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
     const qComments = query(collection(db, 'posts', selectedPost.id, 'comments'), orderBy('createdAt', 'asc'));
     const unsubComments = onSnapshot(qComments, (snapshot) => {
       setComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SocialComment)));
+    }, (error) => {
+      console.error("Comments error:", error);
     });
     return () => unsubComments();
   }, [selectedPost]);
 
   const handleAction = async (postId: string, type: 'flame' | 'shield') => {
-    if (!user) return;
+    if (!user) {
+      showToast('Nexus ID required to interact', 'info');
+      return;
+    }
     const post = posts.find(p => p.id === postId);
     if (!post) return;
     const likedBy = post.likedBy || [];
@@ -302,15 +312,17 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
           likedBy: newLikedBy, 
           flames: newLikedBy.length 
         });
+        showToast(isLiked ? 'Flame Extinguished' : 'Signal Amplified! 🔥', 'info');
       } else {
         const newShieldedBy = isShielded ? shieldedBy.filter(id => id !== userId) : [...shieldedBy, userId];
         await updateDoc(postRef, { 
           shieldedBy: newShieldedBy, 
           shields: newShieldedBy.length 
         });
+        showToast(isShielded ? 'Protection Recalled' : 'Shield Deployed! 🛡️', 'info');
       }
     } catch (err) { 
-      showToast('Interaction failed', 'error');
+      showToast('Transmission Failed: Update Node Manually', 'error');
       console.error('Action failed:', err); 
     }
   };
@@ -319,7 +331,7 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
     if (!confirm('Erase this Signal from the Nexus permanently? 🛡️')) return;
     try {
       await deleteDoc(doc(db, 'posts', postId));
-      showToast('Signal erased.', 'success');
+      showToast('Post Scrubbed from Timeline.', 'success');
       if (selectedPost?.id === postId) setSelectedPost(null);
     } catch (err) { showToast('Operation failed', 'error'); }
   };
@@ -329,12 +341,12 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
     const newSaved = isSaved ? savedPosts.filter(i => i !== id) : [...savedPosts, id];
     setSavedPosts(newSaved);
     vibrate(VIBRATION_PATTERNS.CLICK);
-    showToast(isSaved ? 'Removed from Library' : 'Saved to Library! 📡', 'success');
+    showToast(isSaved ? 'Removed from Data Library' : 'Saved to Local Storage! 📡', 'success');
   };
 
   const hidePost = (id: string) => {
     setHiddenPosts(prev => [...prev, id]);
-    showToast('Signal dampened.', 'info');
+    showToast('Pulse dampened for this session.', 'info');
   };
 
   const handleToggleJoin = async (circle: SocialCircle) => {
@@ -345,9 +357,9 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
     const newJoinedIds = isJoining ? [...joinedIds, circle.id] : joinedIds.filter(id => id !== circle.id);
     try {
       onUpdateSettings({ joinedCircleIds: newJoinedIds });
-      await updateDoc(doc(db, 'circles', circle.id), { memberCount: circle.memberCount + (isJoining ? 1 : -1) });
-      showToast(isJoining ? `Joined ${circle.name}! 🏮` : `Left ${circle.name}`, 'success');
-    } catch (err) { showToast('Sync failed', 'error'); }
+      await updateDoc(doc(db, 'circles', circle.id), { memberCount: Math.max(1, circle.memberCount + (isJoining ? 1 : -1)) });
+      showToast(isJoining ? `Synchronized with ${circle.name}! 🏮` : `Disconnected from ${circle.name}`, 'success');
+    } catch (err) { showToast('Frequency Sync Failed', 'error'); }
   };
 
   const handleToggleFollowNode = async (circleId: string) => {
@@ -359,7 +371,6 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
     
     try {
       onUpdateSettings({ notifEnabledCircleIds: newNotifIds });
-      // Update circle followerIds for server-side push notifications logic
       const circleRef = doc(db, 'circles', circleId);
       const circle = circles.find(c => c.id === circleId);
       if (circle) {
@@ -367,32 +378,35 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
         const newFollowers = isFollowing ? followerIds.filter(id => id !== user.uid) : [...followerIds, user.uid];
         await updateDoc(circleRef, { followerIds: newFollowers });
       }
-      setIsFollowingNode(!isFollowing);
-      showToast(isFollowing ? 'Notifications Muted' : 'Signals Subscribed! 🔔', 'success');
-    } catch (err) { showToast('Subscription failed', 'error'); }
+      showToast(isFollowing ? 'Broadcasts Muted' : 'Subscribed to Frequency! 🔔', 'success');
+    } catch (err) { showToast('Uplink Interrupted', 'error'); }
   };
 
   const handleCreateCircleWizard = async (data: any) => {
-    if (!user) return;
-    setIsSubmitting(true);
+    if (!user) {
+      showToast('Authentication check failed. Relogin.', 'error');
+      return;
+    }
+    setIsSubmittingCircle(true);
     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
     try {
       if (circleToEdit) {
         const circleRef = doc(db, 'circles', circleToEdit.id);
-        await updateDoc(circleRef, {
+        const updateData = {
           name: data.name,
           description: data.description,
-          rules: data.rules,
+          rules: (data.rules || []).filter((r: string) => r.trim()),
           icon: data.icon,
           color: data.color,
           category: data.category
-        });
-        showToast('Node Decrypted & Rebuilt! 🏮', 'success');
+        };
+        await updateDoc(circleRef, updateData);
+        showToast('Node Re-Initialized! 🏮', 'success');
       } else {
         const circleData: Omit<SocialCircle, 'id'> = {
-          name: data.name,
-          description: data.description,
-          rules: data.rules,
+          name: data.name.trim(),
+          description: data.description.trim(),
+          rules: (data.rules || []).filter((r: string) => r.trim()),
           icon: data.icon,
           color: data.color,
           category: data.category || 'General',
@@ -402,29 +416,28 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
           createdAt: new Date().toISOString()
         };
         const docRef = await addDoc(collection(db, 'circles'), circleData);
-        // Join the circle automatically
-        const joinedIds = settings.joinedCircleIds || [];
-        onUpdateSettings({ joinedCircleIds: [...joinedIds, docRef.id] });
-        showToast('Node Initialized! 🏮', 'success');
+        onUpdateSettings({ joinedCircleIds: [...(settings.joinedCircleIds || []), docRef.id] });
+        showToast('Node Constructed Successfully! 🏮', 'success');
         play('quest_complete');
       }
       setIsCreatingCircle(false);
       setCircleToEdit(null);
     } catch (err) { 
-      showToast('Nexus sync failed', 'error'); 
-      console.error(err);
+      showToast('Construction Blocked: Network Sync Error', 'error'); 
+      console.error('Circle creation failed:', err);
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingCircle(false);
     }
   };
 
   const sortPosts = (postsToSort: Post[]) => {
     return [...postsToSort].sort((a, b) => {
       if (sortOrder === 'new') return parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime();
-      if (sortOrder === 'top') return (b.flames + b.shields) - (a.flames + a.shields);
+      if (sortOrder === 'top') return (b.flames + b.shields + (b.commentCount || 0)) - (a.flames + a.shields + (a.commentCount || 0));
+      if (sortOrder === 'best') return b.flames - a.flames;
       if (sortOrder === 'hot') {
-        const scoreA = (a.flames + a.shields) / ((Date.now() - parseISO(a.createdAt).getTime()) / 3600000 + 2);
-        const scoreB = (b.flames + b.shields) / ((Date.now() - parseISO(b.createdAt).getTime()) / 3600000 + 2);
+        const scoreA = (a.flames + a.shields * 2 + (a.commentCount || 0) * 3) / ((Date.now() - parseISO(a.createdAt).getTime()) / 3600000 + 2);
+        const scoreB = (b.flames + b.shields * 2 + (b.commentCount || 0) * 3) / ((Date.now() - parseISO(b.createdAt).getTime()) / 3600000 + 2);
         return scoreB - scoreA;
       }
       return 0;
@@ -440,6 +453,7 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       const postData: Omit<Post, 'id'> = {
         userId: user.uid,
         userName: user.displayName || 'Anonymous',
+        userEmail: user.email || '',
         userPhoto: user.photoURL || '',
         circleId: selectedCircleId,
         circleName: circle?.name || 'General',
@@ -455,7 +469,6 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       };
       const docRef = await addDoc(collection(db, 'posts'), postData);
       
-      // Broadcast notifications to followers
       if (circle && circle.followerIds) {
         const followersToNotify = circle.followerIds.filter(id => id !== user.uid);
         for (const followerId of followersToNotify) {
@@ -463,7 +476,7 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
             type: 'post',
             senderId: user.uid,
             senderName: user.displayName || 'Anonymous',
-            message: `posted a new Signal in n/${circle.name.toLowerCase()}`,
+            message: `broadcasted a new Signal in n/${circle.name.toLowerCase()}`,
             targetId: docRef.id,
             isRead: false,
             createdAt: new Date().toISOString()
@@ -474,8 +487,11 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       setIsCreatingPost(false);
       setNewPostContent('');
       setNewVideoUrl('');
-      showToast('Post transmitted to the Nexus! 🚀', 'success');
-    } catch (err) { showToast('Transmission failed', 'error'); }
+      showToast('Signal transmitted to the Nexus! 🚀', 'success');
+    } catch (err) { 
+      showToast('Encryption Failure: Transmission Halted', 'error');
+      console.error('Post creation failed:', err);
+    }
     finally { setIsSubmitting(false); }
   };
 
@@ -498,7 +514,11 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       await updateDoc(doc(db, 'posts', selectedPost.id), { commentCount: increment(1) });
       setNewComment('');
       setReplyingTo(null);
-    } catch (err) { showToast('Comment failed', 'error'); }
+      showToast('Frequency Joined.', 'success');
+    } catch (err) { 
+      showToast('Comment Sync Failed. Check Link Interface', 'error'); 
+      console.error(err);
+    }
     finally { setIsPostingComment(false); }
   };
 
@@ -552,19 +572,23 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
         )}
       </AnimatePresence>
 
-      <div className="flex items-center gap-2 p-1.5 bg-blue-50/50 rounded-2xl w-fit">
+      <div className="flex items-center gap-2 p-1.5 bg-blue-50/50 rounded-2xl w-fit overflow-x-auto no-scrollbar">
         <button onClick={() => {
           if (settings.soundEnabled) play('header_switch');
           setActiveTab('feed');
-        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'feed' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Pulse Feed</button>
+        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'feed' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Pulse Feed</button>
         <button onClick={() => {
           if (settings.soundEnabled) play('header_switch');
           setActiveTab('circles');
-        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'circles' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Nodes</button>
+        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'circles' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Nodes</button>
+        <button onClick={() => {
+          if (settings.soundEnabled) play('header_switch');
+          setActiveTab('library');
+        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Saved</button>
         <button onClick={() => {
           if (settings.soundEnabled) play('header_switch');
           setActiveTab('inbox');
-        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all relative ${activeTab === 'inbox' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>
+        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all relative whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>
           Inbox
           {notifications.some(n => !n.isRead) && <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full animate-ping" />}
         </button>
@@ -623,7 +647,7 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
                <p className="font-black uppercase tracking-widest text-xs">Waiting for Signal...</p>
             </div>
           ) : (
-            filteredPosts.map(post => (
+            sortPosts(filteredPosts).map(post => (
               <PostCard 
                 key={post.id}
                 post={post}
@@ -636,7 +660,7 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
                 setSelectedPost={setSelectedPost}
                 setViewingCircle={setViewingCircle}
                 handleToggleJoin={handleToggleJoin}
-                hidePost={(id: string) => setHiddenPosts(prev => [...prev, id])}
+                hidePost={hidePost}
                 handleDeletePost={handleDeletePost}
                 showToast={showToast}
               />
@@ -645,14 +669,50 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
         </div>
       )}
 
+      {activeTab === 'library' && (
+        <div className="space-y-6">
+          <div className="px-2">
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">Archived Signals / Data Library</h3>
+            <p className="text-[10px] font-medium text-slate-300 mt-2 uppercase tracking-wide">Stored locally in your secure nexus interface</p>
+          </div>
+          {posts.filter(p => savedPosts.includes(p.id)).length === 0 ? (
+            <div className="py-32 text-center bg-white rounded-[32px] border border-dashed border-slate-100 flex flex-col items-center gap-4">
+              <Bookmark size={48} className="text-slate-100" />
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Library is empty. Save some signals, bro.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+              {posts.filter(p => savedPosts.includes(p.id)).map(post => (
+                <PostCard 
+                  key={post.id}
+                  post={post}
+                  user={user}
+                  settings={settings}
+                  circles={circles}
+                  savedPosts={savedPosts}
+                  toggleSavePost={toggleSavePost}
+                  handleAction={handleAction}
+                  setSelectedPost={setSelectedPost}
+                  setViewingCircle={setViewingCircle}
+                  handleToggleJoin={handleToggleJoin}
+                  hidePost={hidePost}
+                  handleDeletePost={handleDeletePost}
+                  showToast={showToast}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {activeTab === 'circles' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-4">
              <div className="flex items-center justify-between px-2 mb-2">
-                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Active Committes</h3>
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">Nexus Map / Available Nodes</h3>
                 <button 
-                  onClick={() => setIsCreatingCircle(true)}
-                  className="flex items-center gap-2 text-xs font-black text-blue-600 uppercase tracking-widest hover:translate-x-1 transition-transform"
+                   onClick={() => setIsCreatingCircle(true)}
+                   className="flex items-center gap-2 text-xs font-black text-blue-600 uppercase tracking-widest hover:translate-x-1 transition-transform bg-blue-50 px-4 py-2 rounded-xl"
                 >
                    Initialize Node <Plus size={14} />
                 </button>
@@ -663,10 +723,10 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
                     key={circle.id}
                     layoutId={circle.id}
                     onClick={() => setViewingCircle(circle)}
-                    className="bg-white border border-slate-200/80 p-5 rounded-[28px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:border-blue-300 transition-all cursor-pointer group active:scale-[0.99] flex flex-col gap-4"
+                    className="bg-white border border-slate-200/80 p-5 rounded-[28px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:border-blue-400 transition-all cursor-pointer group active:scale-[0.99] flex flex-col gap-4 relative overflow-hidden"
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:rotate-6 transition-transform shrink-0 ${circle.color || 'bg-blue-100'}`}>
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-inner group-hover:rotate-6 transition-transform shrink-0 ${circle.color || 'bg-blue-100'}`}>
                          {circle.icon || '🏮'}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -676,30 +736,32 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
                       
                       <div className="flex items-center gap-2">
                         <button 
+                          title="Toggle Notifications"
                           onClick={(e) => { e.stopPropagation(); handleToggleFollowNode(circle.id); }}
                           className={`p-2.5 rounded-xl transition-all ${settings.notifEnabledCircleIds?.includes(circle.id) ? 'bg-orange-500 text-white shadow-lg shadow-orange-100' : 'bg-slate-50 text-slate-300 hover:text-slate-500 hover:bg-slate-100'}`}
                         >
                            <Bell size={18} />
                         </button>
                         <button 
+                          title="View Info & Rules"
                           onClick={(e) => { e.stopPropagation(); setViewingCircle(circle); setExpandedRules(true); }}
                           className="p-2.5 bg-blue-50 text-blue-500 rounded-xl hover:bg-blue-100 transition-all"
                         >
-                           <Search size={18} />
+                           <Info size={18} />
                         </button>
                       </div>
                     </div>
 
-                    <p className="text-xs font-semibold text-slate-500 line-clamp-2 leading-relaxed px-1">
-                       {circle.description}
+                    <p className="text-xs font-semibold text-slate-500 line-clamp-2 leading-relaxed px-1 italic">
+                       "{circle.description}"
                     </p>
 
                     <div className="flex items-center gap-2 pt-2">
                        <button 
                          onClick={(e) => { e.stopPropagation(); handleToggleJoin(circle); }}
-                         className={`flex-1 py-2.5 rounded-xl font-black text-[10px] tracking-widest transition-all ${settings.joinedCircleIds?.includes(circle.id) ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-blue-600 text-white shadow-lg shadow-blue-100'}`}
+                         className={`flex-1 py-3 rounded-xl font-black text-[10px] tracking-widest transition-all ${settings.joinedCircleIds?.includes(circle.id) ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-blue-600 text-white shadow-lg shadow-blue-100'}`}
                        >
-                          {settings.joinedCircleIds?.includes(circle.id) ? 'CONNECTED' : 'INITIALIZE'}
+                          {settings.joinedCircleIds?.includes(circle.id) ? 'CONNECTED' : 'INITIALIZE CONNECTION'}
                        </button>
                     </div>
                   </motion.div>
@@ -829,28 +891,49 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
                       </div>
                       
                       <div className="space-y-4">
-                         {comments.map(comment => (
-                           <div key={comment.id} className={`flex gap-4 group ${comment.parentId ? 'ml-12 border-l-2 border-blue-200 pl-4' : ''}`}>
-                              <div className="w-10 h-10 rounded-2xl bg-blue-50 overflow-hidden shrink-0">
-                                 {comment.userPhoto ? <img src={comment.userPhoto} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2 text-blue-200" />}
-                              </div>
-                              <div className="flex-1">
-                                <div className="bg-blue-50/50 p-4 rounded-2xl rounded-tl-none">
-                                   <div className="flex justify-between items-start">
-                                      <h5 className="text-[10px] font-black text-blue-900 uppercase mb-1">{comment.userName}</h5>
-                                   </div>
-                                   <p className="text-sm font-medium text-blue-900/80">{comment.content}</p>
+                         {comments.filter(c => !c.parentId).map(comment => (
+                           <div key={comment.id} className="space-y-4">
+                             <div className="flex gap-4 group">
+                                <div className="w-10 h-10 rounded-2xl bg-blue-50 overflow-hidden shrink-0">
+                                   {comment.userPhoto ? <img src={comment.userPhoto} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2 text-blue-200" />}
                                 </div>
-                                <div className="flex items-center gap-4 mt-2 px-2">
-                                   <button 
-                                     onClick={() => setReplyingTo(comment)}
-                                     className="text-[10px] font-black uppercase text-blue-400 hover:text-blue-600 transition-colors flex items-center gap-1"
-                                   >
-                                     <MessageSquare size={10} /> Reply
-                                   </button>
-                                   <span className="text-[10px] font-bold text-blue-300">{format(parseISO(comment.createdAt), 'MMM d, h:mm a')}</span>
+                                <div className="flex-1">
+                                  <div className="bg-blue-50/50 p-4 rounded-2xl rounded-tl-none">
+                                     <div className="flex justify-between items-start">
+                                        <h5 className="text-[10px] font-black text-blue-900 uppercase mb-1">{comment.userName}</h5>
+                                     </div>
+                                     <p className="text-sm font-medium text-blue-900/80">{comment.content}</p>
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-2 px-2">
+                                     <button 
+                                       onClick={() => setReplyingTo(comment)}
+                                       className="text-[10px] font-black uppercase text-blue-400 hover:text-blue-600 transition-colors flex items-center gap-1"
+                                     >
+                                       <MessageSquare size={10} /> Reply
+                                     </button>
+                                     <span className="text-[10px] font-bold text-blue-300">{format(parseISO(comment.createdAt), 'MMM d, h:mm a')}</span>
+                                  </div>
                                 </div>
-                              </div>
+                             </div>
+
+                             {/* Replies */}
+                             {comments.filter(reply => reply.parentId === comment.id).map(reply => (
+                               <div key={reply.id} className="ml-10 flex gap-3 group relative">
+                                  <div className="absolute -left-5 top-0 bottom-6 w-px bg-blue-100" />
+                                  <div className="w-8 h-8 rounded-xl bg-slate-50 overflow-hidden shrink-0 mt-1">
+                                     {reply.userPhoto ? <img src={reply.userPhoto} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2 text-slate-300" />}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="bg-slate-50 p-3 rounded-xl rounded-tl-none border border-slate-100">
+                                       <h5 className="text-[9px] font-black text-slate-500 uppercase mb-0.5">{reply.userName}</h5>
+                                       <p className="text-xs font-semibold text-slate-600">{reply.content}</p>
+                                    </div>
+                                    <div className="flex items-center gap-3 mt-1 px-2">
+                                      <span className="text-[9px] font-bold text-slate-300">{format(parseISO(reply.createdAt), 'h:mm a')}</span>
+                                    </div>
+                                  </div>
+                               </div>
+                             ))}
                            </div>
                          ))}
                       </div>
@@ -892,7 +975,7 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
           <CreateCircleWizard 
             onClose={() => { setIsCreatingCircle(false); setCircleToEdit(null); }}
             onComplete={handleCreateCircleWizard}
-            isSubmitting={isSubmitting}
+            isSubmitting={isSubmittingCircle}
             initialData={circleToEdit}
           />
         )}

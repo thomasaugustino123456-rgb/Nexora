@@ -500,7 +500,19 @@ export default function App() {
       const circlesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SocialCircle));
       if (circlesData.length === 0) {
         setCircles([
-          { id: 'nexora-general', name: 'Nexora General', description: 'The main hub for all Nexora members.', icon: '🏛️', color: '#3b82f6', memberCount: 1250, category: 'general' }
+          { 
+            id: 'nexora-general', 
+            name: 'Nexora General', 
+            description: 'The main hub for all Nexora members.', 
+            icon: '🏛️', 
+            color: 'bg-blue-100', 
+            memberCount: 1250, 
+            category: 'general',
+            ownerId: 'system',
+            rules: ['Be respectful', 'No spam', 'Stay focused'],
+            followerIds: [],
+            createdAt: new Date().toISOString()
+          }
         ]);
       } else {
         setCircles(circlesData);

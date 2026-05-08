@@ -19,56 +19,34 @@ try {
   const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
   const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
   
-  const projectId = firebaseConfig.projectId || process.env.GOOGLE_CLOUD_PROJECT;
+  const projectId = firebaseConfig.projectId;
   const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
 
-  console.log("Firebase Debug: GOOGLE_APPLICATION_CREDENTIALS =", process.env.GOOGLE_APPLICATION_CREDENTIALS || "not set");
-  console.log("Firebase Debug: GOOGLE_CLOUD_PROJECT =", process.env.GOOGLE_CLOUD_PROJECT || "not set");
+  if (!projectId) {
+    throw new Error("projectId missing in firebase-applet-config.json");
+  }
 
   if (!admin.apps.length) {
-    try {
-      // Try default initialization first
-      admin.initializeApp();
-      console.log("Firebase Admin: Initialized with default settings");
-    } catch (e) {
-      // Fallback to explicit config if default fails
-      admin.initializeApp({
-        projectId: projectId,
-        credential: admin.credential.applicationDefault()
-      });
-      console.log(`Firebase Admin: Initialized project [${projectId}] via explicit config`);
-    }
+    admin.initializeApp({
+      projectId: projectId,
+      credential: admin.credential.applicationDefault()
+    });
+    console.log(`Firebase Admin: Initialized project [${projectId}]`);
   }
   
   // Use the named database if provided, otherwise default
-  try {
-    db = getFirestore(admin.app(), databaseId === "(default)" ? undefined : databaseId);
-    console.log(`Firestore Admin: Connected to database [${databaseId}]`);
+  db = getFirestore(admin.app(), databaseId === "(default)" ? undefined : databaseId);
+  console.log(`Firestore Admin: Connected to database [${databaseId}]`);
 
-    // Verify connection/permissions immediately on startup
-    (async () => {
-      try {
-        await db.collection("users").limit(1).get();
-        console.log("Firestore Admin: Startup connection verification successful.");
-      } catch (e: any) {
-        console.error("Firestore Admin: Startup connection verification FAILED:", e.message);
-        
-        // If the named database failed with permission denied or not found, try falling back to (default)
-        if (databaseId !== "(default)" && (e.message.includes("PERMISSION_DENIED") || e.message.includes("NOT_FOUND") || e.message.includes("not found"))) {
-          console.warn(`Firestore Admin: Falling back to (default) database because [${databaseId}] failed.`);
-          db = getFirestore(admin.app(), undefined);
-          try {
-             await db.collection("users").limit(1).get();
-             console.log("Firestore Admin: Fallback to (default) successful.");
-          } catch (ee: any) {
-             console.error("Firestore Admin: Fallback to (default) also FAILED:", ee.message);
-          }
-        }
-      }
-    })();
-  } catch (err: any) {
-    console.error("Firestore Admin initialization failed at call site:", err.message);
-  }
+  // Verify connection/permissions immediately on startup
+  (async () => {
+    try {
+      await db.collection("users").limit(1).get();
+      console.log("Firestore Admin: Startup connection verification successful.");
+    } catch (e: any) {
+      console.error("Firestore Admin: Startup connection verification FAILED:", e.message);
+    }
+  })();
 } catch (err: any) {
   console.error("Firebase Admin Initialization Failed:", err.message);
 }
