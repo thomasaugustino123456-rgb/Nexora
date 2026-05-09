@@ -37,6 +37,34 @@ function CountdownToMidnight() {
   return <span>{timeLeft}</span>;
 }
 
+function NextRestorationCountdown({ targetTime }: { targetTime: number | null }) {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    if (!targetTime) return;
+    const updateTime = () => {
+      const now = Date.now();
+      const diff = targetTime - now;
+      if (diff <= 0) {
+        setTimeLeft('Restoring...');
+        return;
+      }
+      
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setTimeLeft(`${h}h ${m}m ${s}s`);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, [targetTime]);
+
+  return <span>{timeLeft}</span>;
+}
+
 export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, fcmToken, setupFCM, fcmError, showToast }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
@@ -342,7 +370,17 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
               <ChevronRight size={20} className="text-emerald-500 group-hover:translate-x-1 transition-transform" />
             </button>
 
-            {dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3) && (
+            {dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3) ? (
+              <div className="text-center space-y-2 p-4 bg-blue-50 rounded-2xl">
+                 <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest flex items-center justify-center gap-2">
+                   <Clock size={12} /> Next Restoration
+                 </p>
+                 <div className="text-lg font-black text-blue-600">
+                    <NextRestorationCountdown targetTime={(dailyProgress as any).nextRestorationTime} />
+                 </div>
+                 <p className="text-[8px] font-bold text-blue-900/40 uppercase">1 use restored every 4 hours</p>
+              </div>
+            ) : (
               <div className="text-center space-y-1">
                 <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest">Resets in</p>
                 <div className="flex items-center justify-center gap-2 text-blue-900 font-black">

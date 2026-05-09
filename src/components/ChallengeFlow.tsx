@@ -140,6 +140,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 onDone={nextStep} 
                 activeSkin={settings.activeSkin}
                 settings={settings}
+                play={play}
               />
             )}
             {step === 'drawing' && (
@@ -152,6 +153,9 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                   }));
                   showToast('Drawing saved to library!', 'success');
                 }}
+                settings={settings}
+                activeSkin={settings.activeSkin}
+                play={play}
               />
             )}
             {step === 'football' && (
@@ -162,8 +166,8 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 settings={settings}
               />
             )}
-            {step === 'bubbles' && <BubbleStep onFinish={nextStep} />}
-            {step === 'memory' && <MemoryStep onComplete={nextStep} />}
+            {step === 'bubbles' && <BubbleStep onFinish={nextStep} settings={settings} activeSkin={settings.activeSkin} play={play} />}
+            {step === 'memory' && <MemoryStep onComplete={nextStep} settings={settings} activeSkin={settings.activeSkin} play={play} />}
             {step === 'gratitude' && (
               <GratitudeStep 
                 onComplete={nextStep} 
@@ -185,6 +189,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 onDone={nextStep} 
                 activeSkin={settings.activeSkin}
                 settings={settings}
+                play={play}
               />
             )}
             {step === 'writing' && (
@@ -192,6 +197,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 onDone={nextStep} 
                 activeSkin={settings.activeSkin}
                 settings={settings}
+                play={play}
               />
             )}
             {step === 'completion' && (
@@ -319,6 +325,7 @@ export function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none', setting
             <button 
               onClick={() => {
                 vibrate(VIBRATION_PATTERNS.CLICK);
+                if (settings.soundEnabled) play('challenge_unlock');
                 setIsReady(true);
               }} 
               className="btn-primary w-full flex items-center justify-center gap-2"
@@ -386,7 +393,10 @@ export function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = '
             <button 
               onClick={() => {
                 vibrate(VIBRATION_PATTERNS.CLICK);
-                if (settings.soundEnabled) play('water');
+                if (settings.soundEnabled) {
+                   if (progress + 1 >= goal) play('challenge_unlock');
+                   else play('water');
+                }
                 onUpdate(progress + 1);
               }} 
               className="btn-primary w-full flex items-center justify-center gap-2"
@@ -410,7 +420,7 @@ export function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = '
   );
 }
 
-export function BreathingStep({ onDone, activeSkin = 'none', settings }: { onDone: () => void, activeSkin?: string, settings: UserSettings }) {
+export function BreathingStep({ onDone, activeSkin = 'none', settings, play }: { onDone: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
   const [phase, setPhase] = useState<'In' | 'Out'>('In');
   const [timer, setTimer] = useState(5);
   const [cycles, setCycles] = useState(0);
@@ -430,11 +440,17 @@ export function BreathingStep({ onDone, activeSkin = 'none', settings }: { onDon
       setTimer(5);
       setPhase((p) => {
         const next = p === 'In' ? 'Out' : 'In';
-        if (next === 'In') setCycles((c) => c + 1);
+        if (next === 'In') {
+          const nextCycles = cycles + 1;
+          if (nextCycles >= 5 && settings.soundEnabled) {
+            play('challenge_unlock');
+          }
+          setCycles(nextCycles);
+        }
         return next;
       });
     }
-  }, [timer]);
+  }, [timer, settings.soundEnabled, play, cycles]);
 
   return (
     <motion.div 
@@ -496,13 +512,14 @@ export function BreathingStep({ onDone, activeSkin = 'none', settings }: { onDon
   );
 }
 
-export function DrawingStep({ onFinish, onSave }: { onFinish: (data: string) => void, onSave: (data: string) => void }) {
+export function DrawingStep({ onFinish, onSave, settings, activeSkin = 'none', play }: { onFinish: (data: string) => void, onSave: (data: string) => void, settings: UserSettings, activeSkin?: string, play: (s: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#3B82F6');
   const [tool, setTool] = useState<'pencil' | 'pen' | 'brush' | 'bucket'>('pen');
   const [hasDrawn, setHasDrawn] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isFinished, setIsFinished] = useState(false);
   const lastPoint = useRef<{ x: number, y: number } | null>(null);
   const lastMidPoint = useRef<{ x: number, y: number } | null>(null);
 
@@ -646,14 +663,45 @@ export function DrawingStep({ onFinish, onSave }: { onFinish: (data: string) => 
           <canvas ref={canvasRef} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} className="w-full h-full cursor-crosshair" />
         </div>
         <div className="flex flex-col items-center gap-4">
-          <div className="flex gap-2 w-full">
-            <button onClick={() => { vibrate(VIBRATION_PATTERNS.CLICK); onSave(saveDrawing()); setIsSaved(true); }} disabled={!hasDrawn || isSaved} className={`flex-1 py-3 bg-white border-2 border-blue-100 text-blue-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-all ${(!hasDrawn || isSaved) ? 'opacity-50 cursor-not-allowed' : ''}`}>
-              {isSaved ? 'Saved! ✨' : 'Save to Library'} <Save size={18} />
-            </button>
-            <button onClick={() => { vibrate(VIBRATION_PATTERNS.SUCCESS); onFinish(saveDrawing()); }} disabled={!hasDrawn} className={`flex-[2] btn-primary flex items-center justify-center gap-2 ${!hasDrawn ? 'opacity-50 cursor-not-allowed' : ''}`}>
-              Finish Masterpiece <CheckCircle2 size={20} />
-            </button>
-          </div>
+          {isFinished ? (
+            <div className="flex flex-col items-center gap-4 w-full">
+              <LazyHappyMascot size={48} hat={activeSkin} settings={settings} />
+              <button 
+                onClick={() => { 
+                  vibrate(VIBRATION_PATTERNS.SUCCESS); 
+                  onFinish(saveDrawing()); 
+                }} 
+                className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 shadow-xl"
+              >
+                Continue <ChevronRight size={20} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2 w-full">
+              <button 
+                onClick={() => { 
+                  vibrate(VIBRATION_PATTERNS.CLICK); 
+                  onSave(saveDrawing()); 
+                  setIsSaved(true); 
+                }} 
+                disabled={!hasDrawn || isSaved} 
+                className={`flex-1 py-3 bg-white border-2 border-blue-100 text-blue-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-all ${(!hasDrawn || isSaved) ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isSaved ? 'Saved! ✨' : 'Save'} <Save size={18} />
+              </button>
+              <button 
+                onClick={() => { 
+                  vibrate(VIBRATION_PATTERNS.SUCCESS); 
+                  if (settings.soundEnabled) play('challenge_unlock');
+                  setIsFinished(true); 
+                }} 
+                disabled={!hasDrawn} 
+                className={`flex-[2] btn-primary flex items-center justify-center gap-2 ${!hasDrawn ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                Finish <CheckCircle2 size={20} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -752,7 +800,7 @@ export function CompletionStep({ onFinish, streak, points, xp, coins, showTrophy
 // Given the volume, I'll group them but keep code clean.
 // Actually, I'll include the ones already edited in App.tsx.
 
-export function FootballStep({ onFinish, activeSkin = 'none', play, settings }: { onFinish: () => void, activeSkin?: string, play: (s: string) => void, settings: UserSettings }) {
+export function FootballStep({ onFinish, activeSkin = 'none', settings, play }: { onFinish: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [score, setScore] = useState(0);
   const [ballsLeft, setBallsLeft] = useState(5);
@@ -763,6 +811,14 @@ export function FootballStep({ onFinish, activeSkin = 'none', play, settings }: 
   const [aimLine, setAimLine] = useState({ x2: 400, y2: 520, opacity: 0 });
   const [ballScale, setBallScale] = useState(1);
   const [scoredBalls, setScoredBalls] = useState<{ x: number, y: number }[]>([]);
+  const [hasPlayedFinishSound, setHasPlayedFinishSound] = useState(false);
+
+  useEffect(() => {
+    if (score >= 5 && !hasPlayedFinishSound && settings.soundEnabled) {
+      play('challenge_unlock');
+      setHasPlayedFinishSound(true);
+    }
+  }, [score, hasPlayedFinishSound, settings.soundEnabled, play]);
 
   const getCoord = (e: any) => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -1041,10 +1097,18 @@ export function FootballStep({ onFinish, activeSkin = 'none', play, settings }: 
   );
 }
 
-export function BubbleStep({ onFinish }: { onFinish: () => void }) {
+export function BubbleStep({ onFinish, activeSkin = 'none', settings, play }: { onFinish: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
   const [bubbles, setBubbles] = useState<{ id: number; x: number; y: number; size: number; color: string }[]>([]);
   const [poppedCount, setPoppedCount] = useState(0);
+  const [hasPlayedFinishSound, setHasPlayedFinishSound] = useState(false);
   const audioContext = useRef<AudioContext | null>(null);
+
+  useEffect(() => {
+    if (poppedCount >= 20 && !hasPlayedFinishSound && settings.soundEnabled) {
+      play('challenge_unlock');
+      setHasPlayedFinishSound(true);
+    }
+  }, [poppedCount, hasPlayedFinishSound, settings.soundEnabled, play]);
 
   const playPopSound = () => {
     try {
@@ -1104,10 +1168,8 @@ export function BubbleStep({ onFinish }: { onFinish: () => void }) {
     if (poppedCount >= 20) {
       vibrate(VIBRATION_PATTERNS.SUCCESS);
       playPopSound();
-      const timer = setTimeout(onFinish, 2000);
-      return () => clearTimeout(timer);
     }
-  }, [poppedCount, onFinish]);
+  }, [poppedCount]);
 
   return (
     <motion.div 
@@ -1170,10 +1232,18 @@ export function BubbleStep({ onFinish }: { onFinish: () => void }) {
   );
 }
 
-export function MemoryStep({ onComplete }: { onComplete: () => void }) {
+export function MemoryStep({ onComplete, activeSkin = 'none', settings, play }: { onComplete: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
   const [cards, setCards] = useState<{ id: number, emoji: string, flipped: boolean, matched: boolean }[]>([]);
   const [flipped, setFlipped] = useState<number[]>([]);
+  const [hasPlayedFinishSound, setHasPlayedFinishSound] = useState(false);
   const emojis = ['💧', '🍎', '🏃', '🧘', '⚽', '🎨'];
+
+  useEffect(() => {
+    if (cards.length > 0 && cards.every(c => c.matched) && !hasPlayedFinishSound && settings.soundEnabled) {
+      play('challenge_unlock');
+      setHasPlayedFinishSound(true);
+    }
+  }, [cards, hasPlayedFinishSound, settings.soundEnabled, play]);
 
   useEffect(() => {
     const initialCards = [...emojis, ...emojis]
@@ -1374,11 +1444,19 @@ export function ReactionStep({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-export function MeditationStep({ onDone, activeSkin = 'none', settings }: { onDone: () => void, activeSkin?: string, settings: UserSettings }) {
+export function MeditationStep({ onDone, activeSkin = 'none', settings, play }: { onDone: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
   const duration = settings.isPro ? 60 : 30;
   const [timer, setTimer] = useState(duration);
   const [isActive, setIsActive] = useState(false);
+  const [hasPlayedMascotSound, setHasPlayedMascotSound] = useState(false);
   const isFinished = timer <= 0;
+
+  useEffect(() => {
+    if (isFinished && !hasPlayedMascotSound && settings.soundEnabled) {
+      play('challenge_unlock');
+      setHasPlayedMascotSound(true);
+    }
+  }, [isFinished, hasPlayedMascotSound, settings.soundEnabled, play]);
 
   useEffect(() => {
     let interval: any;
@@ -1447,9 +1525,10 @@ export function MeditationStep({ onDone, activeSkin = 'none', settings }: { onDo
   );
 }
 
-export function WritingStep({ onDone, activeSkin = 'none', settings }: { onDone: () => void, activeSkin?: string, settings: UserSettings }) {
+export function WritingStep({ onDone, activeSkin = 'none', settings, play }: { onDone: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
   const [text, setText] = useState('');
   const [prompt, setPrompt] = useState('');
+  const [isFinished, setIsFinished] = useState(false);
   const prompts = [
     "What's one thing you're proud of today?",
     "Describe your perfect morning routine.",

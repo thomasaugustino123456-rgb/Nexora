@@ -182,10 +182,16 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
         await updateDoc(userRef, {
           ...settings,
           stats: stats,
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
+          app_version: '2.5.1'
         });
         
         await setDoc(doc(db, 'users', user.uid, 'progress', today), dailyProgress, { merge: true });
+        
+        // Ensure local cache is always aligned with state
+        localStorage.setItem('nexora_settings', JSON.stringify(settings));
+        localStorage.setItem('nexora_stats', JSON.stringify(stats));
+        localStorage.setItem('nexora_progress', JSON.stringify(dailyProgress));
       } catch (e) {
         console.error("Sync error:", e);
       }

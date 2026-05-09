@@ -122,6 +122,7 @@ export interface DailyProgress {
   drawingDone: boolean;
   footballDone: boolean;
   bubblesDone: boolean;
+  nextRestorationTime: number | null;
   dailyQuestDone?: boolean;
   memoryDone?: boolean;
   gratitudeDone?: boolean;

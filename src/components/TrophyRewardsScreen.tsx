@@ -4,6 +4,8 @@ import { Trophy as TrophyIcon, Sparkles, Check, Download, Share2 } from 'lucide-
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
 import { useSound } from '../hooks/useSound';
 import { TrophyType } from '../types';
+import { auth } from '../firebase';
+import { vibrate } from '../lib/vibrate';
 
 interface TrophyRewardsScreenProps {
   trophyType: TrophyType;
@@ -107,10 +109,40 @@ export function TrophyRewardsScreen({ trophyType, onFinish }: TrophyRewardsScree
               </button>
               
               <div className="flex gap-4">
-                <button className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-blue-900 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all">
+                <button 
+                  onClick={async () => {
+                    const el = document.querySelector('.trophy-card-capture');
+                    if (el) {
+                      vibrate(20);
+                      const { toPng } = await import('html-to-image');
+                      const dataUrl = await toPng(el as HTMLElement, { backgroundColor: '#fff' });
+                      const link = document.createElement('a');
+                      link.download = `Nexora_Trophy_${trophyType}.png`;
+                      link.href = dataUrl;
+                      link.click();
+                    }
+                  }}
+                  className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-blue-900 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all"
+                >
                   <Download size={14} /> Save Card
                 </button>
-                <button className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-blue-900 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all">
+                <button 
+                  onClick={async () => {
+                    vibrate(10);
+                    const shareData = {
+                      title: 'Nexora Achievement',
+                      text: `Bro, I just earned a ${trophyType} trophy on Nexora! Check my rank!`,
+                      url: `${window.location.origin}?user=${auth.currentUser?.uid || ''}`
+                    };
+                    if (navigator.share) {
+                      await navigator.share(shareData);
+                    } else {
+                      await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+                      alert('Link copied to clipboard, bro! 🚀');
+                    }
+                  }}
+                  className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-blue-900 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all"
+                >
                   <Share2 size={14} /> Share Rank
                 </button>
               </div>
@@ -118,6 +150,24 @@ export function TrophyRewardsScreen({ trophyType, onFinish }: TrophyRewardsScree
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* Capture element for Save Card */}
+      <div className="fixed -left-[2000px] top-0">
+        <div className="trophy-card-capture bg-white w-[400px] p-12 flex flex-col items-center text-center gap-8 border-8 border-blue-500">
+           <h2 className="text-4xl font-black text-blue-900 italic uppercase">Nexora Champion</h2>
+           <div className="w-64 h-64">
+              {trophyType === 'golden' && <GoldenTrophy />}
+              {trophyType === 'ice' && <IceTrophy />}
+              {trophyType === 'broken' && <BrokenTrophy />}
+           </div>
+           <div className="space-y-4">
+              <p className="text-2xl font-black text-blue-600 uppercase tracking-widest">
+                {trophyType === 'golden' ? 'Golden Victory' : trophyType === 'ice' ? 'Frozen CONSISTENCY' : 'SHATTERED'}
+              </p>
+              <p className="text-gray-500 font-bold italic">"Discipline created a legend today."</p>
+           </div>
+        </div>
+      </div>
 
       {/* Floating Sparkles */}
       <div className="absolute inset-0 pointer-events-none">

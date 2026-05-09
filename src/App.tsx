@@ -114,6 +114,8 @@ const DEFAULT_STATS: UserStats = {
 
 
 
+import { PublicRankView } from './components/PublicRankView';
+
 export default function App() {
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ message, type });
@@ -163,6 +165,15 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeCustomPlan, setActiveCustomPlan] = useState<CustomPlan | null>(null);
   const [viewingTrophy, setViewingTrophy] = useState<Trophy | null>(null);
+  const [publicUserViewId, setPublicUserViewId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedUserId = params.get('user');
+    if (sharedUserId) {
+      setPublicUserViewId(sharedUserId);
+    }
+  }, []);
 
   const onUpdateSettings = (newSettings: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => {
     setSettings(prev => {
@@ -1393,20 +1404,49 @@ export default function App() {
         console.error("Failed to parse daily progress", e);
       }
     } else {
-      // Reset for new day
-      setDailyProgress({
-        date: today,
-        completed: false,
-        completionsCount: 0,
-        pushupsDone: false,
-        waterDrank: 0,
-        breathingDone: false,
-        drawingDone: false,
-        footballDone: false,
-        bubblesDone: false,
-      });
-    }
-  }, [today]);
+            // Reset for new day
+            setDailyProgress({
+              date: today,
+              completed: false,
+              completionsCount: 0,
+              pushupsDone: false,
+              waterDrank: 0,
+              breathingDone: false,
+              drawingDone: false,
+              footballDone: false,
+              bubblesDone: false,
+              nextRestorationTime: null
+            });
+          }
+        }, [today]);
+
+        // CHALLENGE LIMIT RESTORATION LOGIC
+        useEffect(() => {
+          if (dailyProgress.completionsCount > 0) {
+            const interval = setInterval(() => {
+              const now = Date.now();
+              if (dailyProgress.nextRestorationTime && now >= dailyProgress.nextRestorationTime) {
+                setDailyProgress(prev => {
+                  const newCount = Math.max(0, prev.completionsCount - 1);
+                  // Setup next restoration if still > 0
+                  const nextRest = newCount > 0 ? (Date.now() + 4 * 60 * 60 * 1000) : null; 
+                  return {
+                    ...prev,
+                    completionsCount: newCount,
+                    nextRestorationTime: nextRest
+                  };
+                });
+              } else if (!dailyProgress.nextRestorationTime) {
+                // Initialize next restoration if not set
+                setDailyProgress(prev => ({
+                  ...prev,
+                  nextRestorationTime: Date.now() + 4 * 60 * 60 * 1000
+                }));
+              }
+            }, 10000); // Check every 10s
+            return () => clearInterval(interval);
+          }
+        }, [dailyProgress.completionsCount, dailyProgress.nextRestorationTime]);
 
   // Optimized History calculation using useMemo to avoid O(N) calculation on every render
   const memoizedHistory = useMemo(() => {
@@ -2707,6 +2747,16 @@ export default function App() {
               />
             </nav>
           </motion.div>
+        )}
+
+        {publicUserViewId && (
+          <PublicRankView 
+            userId={publicUserViewId} 
+            onClose={() => {
+              setPublicUserViewId(null);
+              window.history.replaceState({}, '', window.location.pathname);
+            }} 
+          />
         )}
 
         {viewingTrophy && (
