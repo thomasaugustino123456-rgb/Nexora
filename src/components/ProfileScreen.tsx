@@ -6,24 +6,31 @@ import { UserSettings, UserStats, SocialCircle, Screen } from '../types';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 
-export function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen, circles }: { settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, stats: UserStats, user: FirebaseUser | null, setActiveScreen: (screen: Screen) => void, circles: SocialCircle[] }) {
+export function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen, circles, onUpdateProfile }: { settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, stats: UserStats, user: FirebaseUser | null, setActiveScreen: (screen: Screen) => void, circles: SocialCircle[], onUpdateProfile: (name: string, photo: string) => void }) {
   const currentXP = stats.xp || 0;
   const nextLevelXP = (stats.level || 1) * 1000;
   const progressPercent = (currentXP / nextLevelXP) * 100;
 
-  const [userVideos, setUserVideos] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'nodes'>('nodes');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(settings.displayName || user?.displayName || 'Nexora User');
+  const [editPhoto, setEditPhoto] = useState(settings.profilePic || user?.photoURL || '');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    const q = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'));
-    const unsub = onSnapshot(q, (snapshot) => {
-      setUserVideos(snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter((vid: any) => vid.userId === user.uid));
-    });
-    return () => unsub();
-  }, [user]);
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const saveProfile = () => {
+    onUpdateProfile(editName, editPhoto);
+    setIsEditing(false);
+  };
 
   return (
     <motion.div
@@ -36,19 +43,40 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
         <div className="relative group">
            <div className="absolute inset-0 bg-blue-500 rounded-[2.5rem] rotate-6 scale-105 opacity-20 blur-xl group-hover:rotate-12 transition-transform duration-500" />
            <div className="w-32 h-32 rounded-[2.5rem] bg-white border-4 border-white shadow-2xl relative z-10 overflow-hidden">
-              {user?.photoURL ? <img src={user.photoURL} className="w-full h-full object-cover shadow-inner" referrerPolicy="no-referrer" /> : <User size={64} className="m-8 text-blue-200" />}
+              {editPhoto ? <img src={editPhoto} className="w-full h-full object-cover shadow-inner" referrerPolicy="no-referrer" /> : <User size={64} className="m-8 text-blue-200" />}
            </div>
-           <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl z-20 border-4 border-white">
-              <Shield size={20} />
-           </div>
+           <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute -bottom-2 -right-2 w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl z-20 border-4 border-white hover:scale-110 active:scale-95 transition-all"
+           >
+              <Camera size={20} />
+           </button>
+           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
         </div>
 
         <div className="text-center space-y-2">
-           <h2 className="text-4xl font-black text-blue-900 tracking-tight leading-none">{settings.displayName || user?.displayName || 'Nexora User'}</h2>
+           {isEditing ? (
+             <div className="flex flex-col items-center gap-2">
+               <input 
+                type="text" 
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="text-4xl font-black text-blue-900 tracking-tight leading-none text-center bg-blue-50 border-none rounded-2xl p-2 w-full max-w-sm focus:ring-2 focus:ring-blue-400"
+               />
+               <button onClick={saveProfile} className="bg-blue-600 text-white px-6 py-2 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100">Sync Changes</button>
+             </div>
+           ) : (
+             <h2 onClick={() => setIsEditing(true)} className="text-4xl font-black text-blue-900 tracking-tight leading-none cursor-pointer hover:opacity-70">{settings.displayName || user?.displayName || 'Nexora User'}</h2>
+           ) }
            <div className="flex items-center gap-2 justify-center">
               <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full">Level {stats.level || 1} Pioneer</span>
               <div className="w-1.5 h-1.5 rounded-full bg-blue-200" />
-              <span className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest leading-loose">The Nexus Node</span>
+              <button 
+                onClick={() => setIsEditing(!isEditing)}
+                className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest leading-loose flex items-center gap-1 hover:text-blue-600"
+              >
+                {isEditing ? 'Cancel Sync' : 'Edit Protocol'}
+              </button>
            </div>
         </div>
       </div>
@@ -68,146 +96,92 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
          </div>
       </div>
 
-      {/* Tab Switcher */}
-      <div className="flex gap-2 p-1.5 bg-blue-50/50 backdrop-blur-xl rounded-[2rem] border border-white/50">
-        <button 
-          onClick={() => setActiveTab('nodes')}
-          className={`flex-1 py-4 rounded-[1.5rem] flex flex-col items-center gap-1 transition-all ${activeTab === 'nodes' ? 'bg-white shadow-xl text-blue-600' : 'text-blue-900/30 hover:bg-white/50'}`}
-        >
-          <Globe size={18} className={activeTab === 'nodes' ? 'animate-pulse' : ''} />
-          <span className="text-[9px] font-black uppercase tracking-widest">Nodes</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('reels')}
-          className={`flex-1 py-4 rounded-[1.5rem] flex flex-col items-center gap-1 transition-all ${activeTab === 'reels' ? 'bg-white shadow-xl text-blue-600' : 'text-blue-900/30 hover:bg-white/50'}`}
-        >
-          <Video size={18} className={activeTab === 'reels' ? 'animate-pulse' : ''} />
-          <span className="text-[9px] font-black uppercase tracking-widest">Pulses</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('posts')}
-          className={`flex-1 py-4 rounded-[1.5rem] flex flex-col items-center gap-1 transition-all ${activeTab === 'posts' ? 'bg-white shadow-xl text-blue-600' : 'text-blue-900/30 hover:bg-white/50'}`}
-        >
-          <Target size={18} />
-          <span className="text-[9px] font-black uppercase tracking-widest">Feed</span>
-        </button>
-      </div>
+      {/* Helpful Things Section */}
+      <div className="space-y-6">
+        <h3 className="text-center text-[10px] font-black text-blue-900/30 uppercase tracking-[0.4em]">Nexus Support Protocols</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button 
+            onClick={() => {
+              if (confirm('Are you sure? This will clear all data and refresh the app.')) {
+                localStorage.clear();
+                window.location.reload();
+              }
+            }}
+            className="glass-card p-6 flex flex-col items-center text-center gap-4 hover:border-red-400 group transition-all"
+          >
+            <div className="p-3 bg-red-50 rounded-2xl text-red-500 group-hover:scale-110 transition-transform">
+              <Zap size={24} />
+            </div>
+            <div>
+              <p className="font-black text-blue-900 text-[10px] uppercase tracking-widest">Master Reset</p>
+              <p className="text-[8px] text-blue-400 font-bold uppercase mt-1">Force Frequency Sync</p>
+            </div>
+          </button>
 
-      <div className="min-h-[400px]">
-        {activeTab === 'nodes' ? (
-          <div className="glass-card p-6 space-y-6">
-            <div className="flex items-center justify-between mb-4 px-2">
-              <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.25em]">Established Nodes</h3>
-              <button 
-                onClick={() => setActiveScreen('social')}
-                className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all"
-              >
-                Create New <Plus size={12} />
-              </button>
+          <button 
+            onClick={() => setActiveScreen('leaderboard')}
+            className="glass-card p-6 flex flex-col items-center text-center gap-4 hover:border-yellow-400 group transition-all"
+          >
+            <div className="p-3 bg-yellow-50 rounded-2xl text-yellow-600 group-hover:scale-110 transition-transform">
+              <Globe size={24} />
             </div>
-            
-            <div className="grid grid-cols-1 gap-4">
-               {circles.filter(c => c.ownerId === user?.uid).map(circle => (
-                 <div key={circle.id} className="bg-blue-50/50 p-6 rounded-[2.5rem] border-2 border-white flex items-center justify-between group hover:border-blue-100 transition-all">
-                    <div className="flex items-center gap-4">
-                       <div className={`w-14 h-14 rounded-2xl ${circle.color || 'bg-blue-100'} flex items-center justify-center text-2xl shadow-inner border-2 border-white`}>
-                          {circle.icon}
-                       </div>
-                       <div>
-                          <h4 className="text-sm font-black text-blue-900 uppercase tracking-tight">n/{circle.name.toLowerCase()}</h4>
-                          <div className="flex items-center gap-2">
-                             <span className="text-[9px] font-black text-blue-400 uppercase">{circle.memberCount || 0} Followers</span>
-                          </div>
-                       </div>
-                    </div>
-                    <button 
-                      onClick={() => setActiveScreen('social')}
-                      className="p-3 bg-white rounded-2xl text-blue-400 hover:text-blue-600 hover:scale-110 active:scale-95 transition-all shadow-sm"
-                    >
-                       <MoreHorizontal size={20} />
-                    </button>
-                 </div>
-               ))}
-               {circles.filter(c => c.ownerId === user?.uid).length === 0 && (
-                 <div className="py-20 text-center space-y-4">
-                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-200">
-                       <Plus size={32} />
-                    </div>
-                    <p className="text-blue-900/20 text-[10px] font-black uppercase tracking-[0.3em] italic">You haven't initialized any nodes yet.</p>
-                 </div>
-               )}
+            <div>
+              <p className="font-black text-blue-900 text-[10px] uppercase tracking-widest">Global Rank</p>
+              <p className="text-[8px] text-blue-400 font-bold uppercase mt-1">Check Peer Standing</p>
             </div>
-          </div>
-        ) : activeTab === 'reels' ? (
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-6 px-2">
-              <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.25em]">Nexus Reels</h3>
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping" />
-                <span className="text-[8px] font-black text-orange-500 uppercase tracking-widest">Live</span>
+          </button>
+
+          <button 
+            onClick={() => setActiveScreen('progress')}
+            className="glass-card p-6 flex flex-col items-center text-center gap-4 hover:border-indigo-400 group transition-all"
+          >
+            <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-500 group-hover:scale-110 transition-transform">
+              <Target size={24} />
+            </div>
+            <div>
+              <p className="font-black text-blue-900 text-[10px] uppercase tracking-widest">Brain Hub</p>
+              <p className="text-[8px] text-blue-400 font-bold uppercase mt-1">Access Neural Logs</p>
+            </div>
+          </button>
+        </div>
+
+        <div className="glass-card p-8 bg-blue-900 text-white border-none shadow-2xl relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+           <div className="relative z-10 flex items-center justify-between">
+              <div>
+                <h4 className="text-xl font-black flex items-center gap-2">Data Protection <Shield size={18} className="text-blue-400" /></h4>
+                <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest mt-1">Integrity: 100% Secured</p>
               </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-               {userVideos.map(video => (
-                 <div key={video.id} className="relative aspect-[9/16] bg-blue-50 rounded-2xl overflow-hidden shadow-sm border border-white/5 group cursor-pointer active:scale-95 transition-all">
-                    <video 
-                      src={video.videoUrl} 
-                      className="w-full h-full object-cover" 
-                      muted 
-                      playsInline
-                      onMouseOver={(e) => e.currentTarget.play().catch(()=>{})}
-                      onMouseOut={(e) => {
-                        e.currentTarget.pause();
-                        e.currentTarget.currentTime = 0;
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white bg-black/50 px-2 py-0.5 rounded-lg text-[9px] font-bold backdrop-blur-sm">
-                       <Zap size={10} className="text-orange-400" /> {video.likes || 0}
-                    </div>
-                 </div>
-               ))}
-               {userVideos.length === 0 && (
-                 <div className="col-span-3 py-16 text-center space-y-4">
-                   <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-200">
-                     <Video size={32} />
-                   </div>
-                   <p className="text-blue-900/20 text-[10px] font-black uppercase tracking-[0.3em] italic">No pulses broadcasted yet...</p>
-                 </div>
-               )}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-               <button onClick={() => setActiveScreen('social')} className="glass-card p-6 flex flex-col items-center text-center space-y-2 hover:border-blue-400 transition-all active:scale-95 group">
-                  <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                     <Globe size={24} />
-                  </div>
-                  <span className="font-black text-blue-900 uppercase text-[10px] tracking-widest pt-1">The Nexus</span>
-               </button>
-               <button onClick={() => setActiveScreen('notebook')} className="glass-card p-6 flex flex-col items-center text-center space-y-2 hover:border-blue-400 transition-all active:scale-95 group">
-                  <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                     <Zap size={24} />
-                  </div>
-                  <span className="font-black text-blue-900 uppercase text-[10px] tracking-widest pt-1">Brain Hub</span>
-               </button>
-            </div>
-          </div>
-        )}
+              <Info size={32} className="opacity-20" />
+           </div>
+           <p className="text-xs mt-4 opacity-80 leading-relaxed font-medium">Your progress and biological data are synchronized across the Nexus Grid. No hackers or bugs can breach the Bio-ID lock, bro. 🔥</p>
+        </div>
       </div>
       
       <div className="glass-card p-8">
          <h3 className="text-xs font-black text-blue-900/30 uppercase tracking-[0.25em] mb-6">Achievements Unlock</h3>
          <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-            {[1, 2, 3, 4, 5].map(i => (
-               <div key={i} className="min-w-[120px] aspect-[4/5] bg-blue-50 rounded-[2rem] border-2 border-white flex flex-col items-center justify-center p-4 text-center grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all">
-                  <div className="p-3 bg-white rounded-2xl shadow-sm mb-3">
-                     <Award size={24} className="text-blue-500" />
-                  </div>
-                  <p className="font-black text-blue-900 uppercase text-[8px] tracking-widest leading-tight">Elite Pioneer</p>
-               </div>
-            ))}
+            {stats.trophies && stats.trophies.length > 0 ? (
+              stats.trophies.map((t, i) => (
+                <div key={t.id || i} className="min-w-[120px] aspect-[4/5] bg-blue-50 rounded-[2rem] border-2 border-white flex flex-col items-center justify-center p-4 text-center hover:scale-105 transition-all">
+                   <div className={`p-3 rounded-2xl shadow-sm mb-3 ${t.type === 'golden' ? 'bg-yellow-50 text-yellow-600' : t.type === 'ice' ? 'bg-blue-50 text-blue-400' : 'bg-red-50 text-red-400'}`}>
+                      <Award size={24} />
+                   </div>
+                   <p className="font-black text-blue-900 uppercase text-[8px] tracking-widest leading-tight">{t.id.split('-')[0]} Rank</p>
+                   <p className="text-[6px] font-bold text-blue-400/60 mt-1 uppercase italic">{t.type}</p>
+                </div>
+              ))
+            ) : (
+              [1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="min-w-[120px] aspect-[4/5] bg-blue-50 rounded-[2rem] border-2 border-white flex flex-col items-center justify-center p-4 text-center grayscale opacity-40">
+                   <div className="p-3 bg-white rounded-2xl shadow-sm mb-3">
+                      <Award size={24} className="text-blue-500" />
+                   </div>
+                   <p className="font-black text-blue-900 uppercase text-[8px] tracking-widest leading-tight">Elite Pioneer</p>
+                </div>
+              ))
+            )}
          </div>
       </div>
     </motion.div>

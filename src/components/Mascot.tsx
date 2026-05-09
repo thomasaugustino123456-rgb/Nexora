@@ -62,16 +62,16 @@ export const Mascot: React.FC<MascotProps> = ({
     else if (newCount <= 12) play(isDog ? 'dogHungry' : 'catHungry');
 
     // Water Sloshing Effect
-    setSloshAmount(15);
-    setTimeout(() => setSloshAmount(0), 600);
+    setSloshAmount(25);
+    setTimeout(() => setSloshAmount(0), 800);
 
     // Professional "Bounce" Animation (Squash and Stretch)
     await controls.start({
-      scaleY: [1, 0.75, 1.15, 1],
-      scaleX: [1, 1.25, 0.85, 1],
-      y: [0, 15, -35, 0],
-      rotate: [0, -5, 5, 0],
-      transition: { duration: 0.6, ease: "easeInOut" }
+      scaleY: [1, 0.7, 1.2, 1],
+      scaleX: [1, 1.3, 0.8, 1],
+      y: [0, 20, -50, 0],
+      rotate: [0, -10, 10, 0],
+      transition: { duration: 0.8, ease: "circOut" }
     });
     
     if (onClick) onClick();
@@ -159,11 +159,13 @@ export const Mascot: React.FC<MascotProps> = ({
             <motion.g 
               animate={{ 
                 y: isBoiling ? [220, 215, 220] : 220,
-                rotate: sloshAmount ? [0, -sloshAmount, sloshAmount, 0] : 0,
-                x: sloshAmount ? [0, -5, 5, 0] : 0
+                rotate: sloshAmount ? [0, -(sloshAmount * 1.5), (sloshAmount * 1.2), 0] : 0,
+                skewX: sloshAmount ? [0, 8, -8, 0] : 0,
+                x: sloshAmount ? [0, -10, 10, 0] : 0
               }}
               transition={{ 
-                rotate: { duration: 0.6, ease: "easeInOut" },
+                rotate: { duration: 0.8, ease: "circOut" },
+                skewX: { duration: 0.8, ease: "circOut" },
                 y: { duration: 0.5, repeat: isBoiling ? Infinity : 0 }
               }}
               style={{ originX: "250px", originY: "330px" }}

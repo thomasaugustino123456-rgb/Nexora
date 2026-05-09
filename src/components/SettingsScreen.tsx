@@ -280,8 +280,8 @@ export function SettingsScreen({
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
                <div>
-                 <p className="font-bold text-blue-900 text-sm">Morning Routine Trigger</p>
-                 <p className="text-[10px] text-blue-900/40 font-medium tracking-tight">Main daily reset alert</p>
+                 <p className="font-bold text-blue-900 text-sm">Custom Plan Reminder 1</p>
+                 <p className="text-[10px] text-blue-900/40 font-medium tracking-tight">Applies to your created plans</p>
                </div>
                <input 
                 type="time" 
@@ -293,8 +293,8 @@ export function SettingsScreen({
 
             <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
                <div>
-                 <p className="font-bold text-blue-900 text-sm">Evening Checkpoint</p>
-                 <p className="text-[10px] text-blue-900/40 font-medium tracking-tight">End of day sync alert</p>
+                 <p className="font-bold text-blue-900 text-sm">Custom Plan Reminder 2</p>
+                 <p className="text-[10px] text-blue-900/40 font-medium tracking-tight">Optional second checkpoint</p>
                </div>
                <input 
                 type="time" 
@@ -303,18 +303,15 @@ export function SettingsScreen({
                 className="bg-white px-4 py-2 rounded-xl text-blue-900 font-black text-sm border-2 border-blue-100 shadow-sm focus:ring-0 focus:border-blue-300"
                />
             </div>
-
-            <div className="flex items-center justify-between p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50">
-               <div>
-                 <p className="font-black text-orange-600 text-sm">Peak Motivation Blast</p>
-                 <p className="text-[10px] text-orange-900/40 font-medium tracking-tight">AI-powered energy spike</p>
+            
+            <div className="p-4 bg-blue-600 rounded-2xl text-white shadow-xl shadow-blue-100">
+               <div className="flex items-center gap-3 mb-2">
+                  <ShieldCheck size={16} />
+                  <p className="font-black text-[10px] uppercase tracking-widest">System Protocol Active</p>
                </div>
-               <input 
-                type="time" 
-                value={settings.motivationTime || '12:00'} 
-                onChange={(e) => setSettings({ motivationTime: e.target.value })}
-                className="bg-white px-4 py-2 rounded-xl text-orange-600 font-black text-sm border-2 border-orange-100 shadow-sm focus:ring-0 focus:border-orange-300"
-               />
+               <p className="text-[10px] font-bold leading-relaxed opacity-90">
+                 The Nexora core schedule (7:30 AM, 10:00 AM, 2:30 PM, 6:30 PM, 8:30 PM) is now fixed and synchronized with your local timezone for maximum consistency, bro! 🔥
+               </p>
             </div>
           </div>
         </div>

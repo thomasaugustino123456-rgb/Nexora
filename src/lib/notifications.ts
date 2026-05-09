@@ -9,30 +9,51 @@ const VAPID_KEY = 'BCOW66fC_X-_q12_HqUKv9X0E0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK
 // For now, I'll use a standard way to request permission.
 
 export async function requestNotificationPermission(userId: string) {
+  if (!('Notification' in window)) {
+    console.warn('This browser does not support notifications.');
+    return null;
+  }
+
+  if (Notification.permission === 'granted') {
+    // If already granted, just try to get the token without asking again
+    return getAndSaveToken(userId);
+  }
+
+  if (Notification.permission === 'denied') {
+    console.warn('Notifications blocked by user.');
+    return null;
+  }
+
   try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      const messagingInstance = await messaging();
-      if (!messagingInstance) return null;
-
-      // Get FCM token
-      const token = await getToken(messagingInstance, {
-        vapidKey: undefined // Optional if not using web push certs yet, but recommended
-      });
-
-      if (token) {
-        console.log('FCM Token:', token);
-        // Save token to user settings in Firestore
-        const userRef = doc(db, 'users', userId);
-        await updateDoc(userRef, {
-          'settings.fcmToken': token,
-          'settings.notificationsEnabled': true
-        });
-        return token;
-      }
+      return getAndSaveToken(userId);
     }
   } catch (error) {
     console.error('Error requesting notification permission:', error);
+  }
+  return null;
+}
+
+async function getAndSaveToken(userId: string) {
+  try {
+    const messagingInstance = await messaging();
+    if (!messagingInstance) return null;
+
+    const token = await getToken(messagingInstance, {
+      vapidKey: 'BCOW66fC_X-_q12_HqUKv9X0E0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0'
+    });
+
+    if (token) {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        'fcmToken': token,
+        'notificationsEnabled': true
+      });
+      return token;
+    }
+  } catch (err) {
+    console.error('FCM Token error:', err);
   }
   return null;
 }

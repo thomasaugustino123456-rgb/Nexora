@@ -17,16 +17,25 @@ export function TrophyRewardsScreen({ trophyType, onFinish }: TrophyRewardsScree
   const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    // Play the reward song
+    // Play the reward song immediately with a slight retry logic as browsers sometimes block it
     const song = trophyType === 'golden' ? 'trophy1' : (trophyType === 'ice' ? 'losing' : 'losing');
-    play(song as any);
     
+    const playSong = () => {
+      try {
+        play(song as any);
+      } catch (e) {
+        console.error("Music blocked, retrying on first interaction");
+      }
+    };
+
+    playSong();
+
     const timer = setTimeout(() => {
       setShowButton(true);
-    }, 2000);
+    }, 2500);
 
     return () => {
-      // We don't necessarily stop the trophy song if they finish quickly, but the next screen might play music
+      // Optional: stop() song on unmount if requested
     };
   }, [play, trophyType]);
 
@@ -129,23 +138,25 @@ export function TrophyRewardsScreen({ trophyType, onFinish }: TrophyRewardsScree
                 <button 
                   onClick={async () => {
                     vibrate(10);
-                    const shareUrl = `${window.location.origin}${window.location.pathname}?user=${auth.currentUser?.uid || ''}`;
-                    const shareText = `Bro, check my discipline rank! I just earned a ${trophyType.toUpperCase()} trophy on Nexora! 🏆🚀`;
+                    // Use a clean origin URL so it works in any browser
+                    const baseUrl = window.location.origin + (window.location.pathname === '/' ? '' : window.location.pathname);
+                    const shareUrl = `${baseUrl}?user=${auth.currentUser?.uid || ''}`;
+                    const shareText = `Bro, check my discipline stats! I just earned a ${trophyType.toUpperCase()} trophy on Nexora! 🏆🚀`;
                     
                     if (navigator.share) {
                       try {
                         await navigator.share({
-                          title: 'Nexora Achievement',
+                          title: 'Nexora Elite Rank',
                           text: shareText,
                           url: shareUrl
                         });
                       } catch (e) {
-                         // Fallback to clipboard if share cancelled
-                         await navigator.clipboard.writeText(`${shareText}\n\nView here: ${shareUrl}`);
+                         await navigator.clipboard.writeText(shareUrl);
+                         alert('Profile link copied! 📋');
                       }
                     } else {
-                      await navigator.clipboard.writeText(`${shareText}\n\nView here: ${shareUrl}`);
-                      alert('Share link copied to clipboard! 📋 Past it anywhere, bro!');
+                      await navigator.clipboard.writeText(shareUrl);
+                      alert('Profile link copied to clipboard! 📋 Past it anywhere, bro!');
                     }
                   }}
                   className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-blue-900 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all"

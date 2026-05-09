@@ -257,9 +257,9 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
       )}
 
       <div className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-16 w-full">
-        <div className="relative w-72 h-72 lg:w-96 lg:h-96 flex items-center justify-center flex-shrink-0 mb-4 sm:mb-8">
+        <div className="relative w-80 h-80 lg:w-[480px] lg:h-[480px] flex items-center justify-center flex-shrink-0 mb-4 sm:mb-8">
           <div className="absolute inset-0 bg-blue-400/20 blur-[80px] rounded-full animate-pulse" />
-          <motion.div animate={mascotControls} className="w-64 h-64 lg:w-80 lg:h-80 relative z-10">
+          <motion.div animate={mascotControls} className="w-72 h-72 lg:w-[420px] lg:h-[420px] relative z-10">
             <Mascot 
               className="w-full h-full drop-shadow-[0_20px_50px_rgba(59,130,246,0.3)]" 
               mood={mascotMood}

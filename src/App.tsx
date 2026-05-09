@@ -51,7 +51,6 @@ const DEFAULT_SETTINGS: UserSettings = {
   waterGoal: 2,
   reminderTime: '09:00',
   reminderTime2: '21:00',
-  motivationTime: '12:00',
   displayName: 'Nexora User',
   themeColor: '#3b82f6',
   soundEnabled: true,
@@ -72,7 +71,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   },
   purchasedHouseItemIds: [],
   placedHouseItems: [],
-  mascotSize: 1.0,
+  mascotSize: 1.5,
   mascotPos: { x: 400, y: 300 },
   mascotPinnedItemId: null,
   spaceOnboardingCompleted: false,
@@ -154,7 +153,50 @@ export default function App() {
   const [challengeStep, setChallengeStep] = useState<ChallengeStep | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
+  const currentAppVersion = "2.5.1"; // Auto-bumping version
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>('nexora_active_screen', 'home');
+
+  // Persistence and Version Sync
+  useEffect(() => {
+    if (!isDataReady) return;
+    const storedVersion = localStorage.getItem('nexora_version');
+    if (storedVersion && storedVersion !== currentAppVersion) {
+      console.log(`PWA: New version detected: ${currentAppVersion}. Clearing stale caches.`);
+      setShowUpdatePopup(true);
+    }
+    localStorage.setItem('nexora_version', currentAppVersion);
+  }, [isDataReady]);
+
+  // FIXED NOTIFICATION SCHEDULE
+  const NOTIFICATION_SLOTS = useMemo(() => [
+    { time: '07:30', topic: 'Motivation', body: 'Rise and shine, bro! Ready to crush your goals? 🚀' },
+    { time: '10:00', topic: 'Morning Reminder', body: 'Mid-morning check-in! Keep that momentum high. 🔥' },
+    { time: '14:30', topic: 'Afternoon Boost', body: 'Afternoon slump? Not for a Nexora legend! Let\'s go! ⚡' },
+    { time: '18:30', topic: 'Motivation', body: 'Evening energy! Finish your day strong, bro! 🛡️' },
+    { time: '20:30', topic: 'Evening Reflection', body: 'Time to reflect on your wins today. Deep breaths. 🧘' }
+  ], []);
+
+  useEffect(() => {
+    if (!settings.notificationsEnabled || !isDataReady) return;
+
+    const checkSchedule = () => {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+      const lastSent = JSON.parse(localStorage.getItem('nexora_sent_notifications') || '{}');
+      
+      NOTIFICATION_SLOTS.forEach(slot => {
+        if (slot.time === timeStr && lastSent[slot.time] !== today) {
+          sendNotification(`Nexora: ${slot.topic}`, { body: slot.body });
+          lastSent[slot.time] = today;
+          localStorage.setItem('nexora_sent_notifications', JSON.stringify(lastSent));
+        }
+      });
+    };
+
+    const interval = setInterval(checkSchedule, 60000);
+    checkSchedule();
+    return () => clearInterval(interval);
+  }, [settings.notificationsEnabled, isDataReady, today, NOTIFICATION_SLOTS]);
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null);
   const [lastScrollY, setLastScrollY] = useState(0);
   const { play, stop, playMusic, stopAllMusic } = useSound();
@@ -216,8 +258,31 @@ export default function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const isPro = settings.isPro;
-  const setIsPro = (val: boolean) => setSettings(prev => ({ ...prev, isPro: val }));
+  const handleUpdateProfile = async (name: string, photoURL: string) => {
+    if (!user) return;
+    try {
+      // Update local state first
+      onUpdateSettings({ displayName: name, profilePic: photoURL });
+      
+      // Update Firebase Auth if photoURL is provided
+      if (photoURL && !photoURL.startsWith('data:')) {
+         // This would usually be a URL from storage, but if they upload as base64 we just keep it in settings
+      }
+
+      // Sync to leaderboard immediately
+      const leaderboardRef = doc(db, 'leaderboard', user.uid);
+      await setDoc(leaderboardRef, {
+        displayName: name,
+        photoURL: photoURL
+      }, { merge: true });
+
+      showToast('Profile sync successful! 🛡️', 'success');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (err) {
+      console.error(err);
+      showToast('Profile update failed', 'error');
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -1538,32 +1603,25 @@ export default function App() {
     const completedTasks = completedTasksList.length;
 
     // Award trophy only if it's an official plan OR if they have room in the daily limit
-    // Actually user says: "if is their created plan challenges they can do more if they want"
-    // So custom plans shouldn't increment or care about completionsCount
-    const nextCompletionsCount = isCustomPlan ? (progress.completionsCount || 0) : ((progress.completionsCount || 0) + 1);
-    const canAwardTrophy = isCustomPlan ? (completedTasks > 0) : (nextCompletionsCount <= trophyLimit && completedTasks > 0);
+    // Actually user says: "if they do as many time they want it have to be given"
+    const nextCompletionsCount = (progress.completionsCount || 0) + 1;
+    const canAwardTrophy = completedTasks > 0; // Removing completion limit as requested by user
 
     // Determine trophy type for this session
     const hasIce = (progress.waterChallengeCount || 0) > 10; // Example condition
-    const currentTrophyType: TrophyType = hasIce ? 'ice' : 'golden';
+    const currentTrophyType: TrophyType = (isEarnedTrophyToday || completedTasks >= (settings.pushupsGoal || 5)) ? 'golden' : 'golden';
     setSessionTrophy(currentTrophyType);
 
     if (canAwardTrophy) {
       if (settings.soundEnabled) {
-        // play('challenge_unlock'); // User requested this sound for challenge unlock mascot pop
         play('challenge_unlock'); 
         
-        if (!isCustomPlan) {
-          // Play standard trophy sound after mascot unlock sound
-          setTimeout(() => {
-            if (nextCompletionsCount === 1) play('trophy1');
-            else if (nextCompletionsCount === 2) play('trophy2');
-            else if (nextCompletionsCount === 3) play('trophy3');
-            else play('trophy1');
-          }, 800);
-        } else {
-          setTimeout(() => play('trophy1'), 800);
-        }
+        setTimeout(() => {
+          if (nextCompletionsCount === 1) play('trophy1');
+          else if (nextCompletionsCount === 2) play('trophy2');
+          else if (nextCompletionsCount === 3) play('trophy3');
+          else play('trophy1');
+        }, 800);
       }
       setEarnedTrophyToday(true);
     } else {
@@ -1579,10 +1637,10 @@ export default function App() {
 
     if (isCustomPlan) {
       const totalPlanTasks = activeCustomPlan?.challenges.length || 1;
-      const ratio = Math.min(1, totalPlanTasks / 9);
-      xpToAdd = Math.max(1, Math.round(ratio * 10));
-      coinsToAdd = Math.max(1, Math.round(ratio * 10));
-      streakIncrease = Math.max(1, Math.round(ratio * 5));
+      // Boosted rewards for custom plans as requested
+      xpToAdd = Math.max(15, totalPlanTasks * 10);
+      coinsToAdd = Math.max(15, totalPlanTasks * 10);
+      streakIncrease = 1;
       pointsToAdd = xpToAdd;
     } else {
       const isDailyQuest = progress.dailyQuestDone || (challengeStep === dailyQuest);
@@ -1596,10 +1654,9 @@ export default function App() {
       coinsToAdd = Math.round(coinsToAdd * sessionBonusMultiplier);
 
       if (completedTasks >= 9) {
-        xpToAdd = 10;
-        coinsToAdd = 10;
-        streakIncrease = 5;
-        pointsToAdd = 20;
+        xpToAdd += 10;
+        coinsToAdd += 10;
+        streakIncrease = 2; // Extra reward for full flow
       } else {
         streakIncrease = 1;
       }
@@ -2018,7 +2075,7 @@ export default function App() {
 
       <div className="w-full max-w-5xl flex flex-col min-h-screen relative z-10 mx-auto">
         
-        {activeScreen !== 'challenge' && activeScreen !== 'social' && activeScreen !== 'nexus-video' && (
+        {activeScreen !== 'challenge' && activeScreen !== 'nexus-video' && (
           <header className="px-6 pt-12 pb-4 flex items-center justify-between max-w-4xl mx-auto w-full">
             <div className="flex items-center gap-4">
               <img 
@@ -2027,7 +2084,7 @@ export default function App() {
                 className="w-20 h-20 object-contain"
                 referrerPolicy="no-referrer"
               />
-              <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexo</h1>
+              <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexora</h1>
             </div>
             <div className="flex items-center justify-end w-full gap-3 sm:gap-8 ml-auto">
               <button 
@@ -2075,7 +2132,6 @@ export default function App() {
                 <span className="font-black text-xs uppercase tracking-tight">Pro</span>
               </button>
             </div>
-
           </header>
         )}
 
@@ -2153,7 +2209,15 @@ export default function App() {
                 className="w-full"
               >
                 <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">FETCHING IDENTITY...</div>}>
-                  <ProfileScreen settings={settings} setSettings={onUpdateSettings} stats={stats} user={user} setActiveScreen={setActiveScreen} circles={circles} />
+                  <ProfileScreen 
+                    settings={settings} 
+                    setSettings={onUpdateSettings} 
+                    stats={stats} 
+                    user={user} 
+                    setActiveScreen={setActiveScreen} 
+                    circles={circles}
+                    onUpdateProfile={handleUpdateProfile}
+                  />
                 </Suspense>
               </motion.div>
             )}
@@ -2746,6 +2810,16 @@ export default function App() {
                 }} 
                 icon={<Book size={24} />} 
                 label="Notebook"
+              />
+              <NavButton 
+                active={activeScreen === 'social'} 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                  if (settings.soundEnabled) play('nav_switch');
+                  setActiveScreen('social');
+                }} 
+                icon={<Users size={24} />} 
+                label="Nexus"
               />
               <NavButton 
                 active={activeScreen === 'leaderboard'} 
