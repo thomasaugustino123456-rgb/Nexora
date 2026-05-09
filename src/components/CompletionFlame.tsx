@@ -18,13 +18,19 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
     // Initial sequence
     const timer = setTimeout(() => {
       setShowContent(true);
-      play('music-fanfare'); 
+      play('fire_streak'); // New unique sound for flame
       setIsBouncing(true);
       setTimeout(() => setIsBouncing(false), 1000);
+      
+      // Add fire crackling ambient
+      const fireLoop = setInterval(() => {
+        if (showContent) play('fire_ambient');
+      }, 3000);
+      return () => clearInterval(fireLoop);
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [play]);
+  }, [play, showContent]);
 
   return (
     <div className="fixed inset-0 z-[1000] bg-blue-900/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center overflow-hidden">
@@ -34,82 +40,70 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
             {/* Background Glow */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 0.3, scale: 1.5 }}
+              animate={{ opacity: 0.4, scale: 1.5 }}
               transition={{ duration: 2, repeat: Infinity, repeatType: "mirror" }}
-              className="absolute w-64 h-64 bg-orange-500 rounded-full blur-[100px] pointer-events-none"
+              className="absolute w-64 h-64 bg-orange-600 rounded-full blur-[120px] pointer-events-none"
             />
 
-            {/* The Flame Animation */}
+            {/* The Flame Animation (Duolingo Style) */}
             <motion.div
-              initial={{ scale: 0, y: 50, rotate: -20 }}
+              initial={{ scale: 0, y: 100 }}
               animate={{ 
-                scale: isBouncing ? [0, 1.4, 1] : 1,
-                y: 0,
-                rotate: 0
+                scale: isBouncing ? [0, 1.2, 1] : 1,
+                y: 0
               }}
-              transition={{ 
-                type: "spring",
-                damping: 12,
-                stiffness: 100,
-                duration: 0.8
-              }}
-              className="relative w-48 h-64 mb-8"
+              transition={{ type: "spring", damping: 15, stiffness: 150 }}
+              className="relative w-64 h-64 mb-6 flex items-center justify-center"
             >
-              <svg viewBox="0 0 100 120" className="w-full h-full filter drop-shadow-[0_0_20px_rgba(255,165,0,0.8)]">
+              <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-[0_0_30px_rgba(255,100,0,0.6)]">
                 <defs>
-                  <filter id="flameWarp">
-                    <feTurbulence type="fractalNoise" baseFrequency="0.05 0.1" numOctaves="2" seed="5">
-                      <animate attributeName="seed" values="1;100" dur="5s" repeatCount="indefinite" />
-                    </feTurbulence>
-                    <feDisplacementMap in="SourceGraphic" scale="10" />
-                  </filter>
-                  
-                  <linearGradient id="innerFlame" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#FFF700" />
-                    <stop offset="100%" stopColor="#FFD700" />
+                  <linearGradient id="duoFlame" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#FFC107" />
+                    <stop offset="50%" stopColor="#FF9800" />
+                    <stop offset="100%" stopColor="#FF5722" />
                   </linearGradient>
                 </defs>
 
-                {/* Outer Layer */}
+                {/* Outer Flame (Orange) */}
                 <motion.path
-                  d="M50,110 C80,100 90,70 80,40 C75,20 60,0 50,10 C40,0 25,20 20,40 C10,70 20,100 50,110"
-                  fill="#FF3D00"
-                  style={{ filter: "url(#flameWarp)" }}
-                  animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
-                  transition={{ duration: 0.5, repeat: Infinity }}
-                />
-                
-                {/* Middle Layer */}
-                <motion.path
-                  d="M50,105 C70,95 75,75 70,55 C65,40 55,25 50,30 C45,25 35,40 30,55 C25,75 30,95 50,105"
-                  fill="#FF9100"
-                  style={{ filter: "url(#flameWarp)" }}
-                  animate={{ scale: [1, 1.1, 1], y: [0, -2, 0] }}
-                  transition={{ duration: 0.4, repeat: Infinity, delay: 0.1 }}
+                  d="M100,180 C140,180 170,140 170,100 C170,40 100,10 100,10 C100,10 30,40 30,100 C30,140 60,180 100,180 Z"
+                  fill="#FF5722"
+                  animate={{ 
+                    scaleY: [1, 1.05, 1],
+                    d: [
+                      "M100,180 C140,180 170,140 170,100 C170,40 100,10 100,10 C100,10 30,40 30,100 C30,140 60,180 100,180 Z",
+                      "M100,185 C145,185 175,145 175,105 C175,45 100,5 100,5 C100,5 25,45 25,105 C25,145 55,185 100,185 Z",
+                      "M100,180 C140,180 170,140 170,100 C170,40 100,10 100,10 C100,10 30,40 30,100 C30,140 60,180 100,180 Z"
+                    ]
+                  }}
+                  transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
                 />
 
-                {/* Inner Layer */}
+                {/* Central Inner Drop (Yellow) */}
                 <motion.path
-                  d="M50,100 C60,90 62,80 60,70 C58,60 53,50 50,55 C47,50 42,60 40,70 C38,80 40,90 50,100"
-                  fill="url(#innerFlame)"
-                  style={{ filter: "url(#flameWarp)" }}
-                  animate={{ scale: [1, 1.15, 1], y: [0, -4, 0] }}
-                  transition={{ duration: 0.3, repeat: Infinity, delay: 0.2 }}
+                  d="M100,165 C125,165 145,140 145,110 C145,80 100,50 100,50 C100,50 55,80 55,110 C55,140 75,165 100,165 Z"
+                  fill="#FFC107"
+                  animate={{ 
+                    scale: [1, 0.95, 1],
+                    y: [0, 5, 0]
+                  }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
                 />
               </svg>
 
-              {/* Streak Number */}
+              {/* Day Number in the center of the flame drop */}
               <motion.div 
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.8 }}
-                className="absolute inset-0 flex items-center justify-center pt-12"
+                transition={{ delay: 0.6 }}
+                className="absolute inset-0 flex items-center justify-center pt-8"
               >
-                <div className="text-6xl font-black text-white drop-shadow-2xl italic tracking-tighter">
+                <div className="text-7xl font-black text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]">
                   {streak}
                 </div>
               </motion.div>
             </motion.div>
+
 
             {/* Labels */}
             <motion.div

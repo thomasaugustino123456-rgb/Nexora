@@ -1920,30 +1920,15 @@ export default function App() {
               />
               <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexo</h1>
             </div>
-            <div className="flex items-center justify-end w-full gap-2 sm:gap-6 ml-auto">
-              {/* Community (Locked/Inversible as requested) */}
-              <button 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.ERROR);
-                  showToast('Community Section is currently locked for maintenance 🔒', 'info');
-                }}
-                className="p-2 transition-all text-blue-900/10 grayscale hover:text-blue-900/20 relative group"
-                title="Community Locked"
-              >
-                <Users size={22} />
-                <div className="absolute -top-1 -right-1 bg-gray-400 text-white p-0.5 rounded-full scale-50 group-hover:scale-75 transition-transform">
-                  <Lock size={12} />
-                </div>
-              </button>
-
+            <div className="flex items-center justify-end w-full gap-3 sm:gap-8 ml-auto">
               <button 
                 onClick={() => {
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('house');
                 }}
-                className={`p-2.5 rounded-2xl transition-all ${activeScreen === 'house' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-blue-900/60 bg-white/50 hover:bg-white border border-white/40'}`}
+                className={`p-3 rounded-2xl transition-all ${activeScreen === 'house' ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-110' : 'text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm'}`}
               >
-                <Home size={22} />
+                <Home size={24} />
               </button>
 
               <button 
@@ -1951,9 +1936,9 @@ export default function App() {
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('settings');
                 }}
-                className={`p-2.5 rounded-2xl transition-all ${activeScreen === 'settings' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-blue-900/60 bg-white/50 hover:bg-white border border-white/40'}`}
+                className={`p-3 rounded-2xl transition-all ${activeScreen === 'settings' ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-110' : 'text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm'}`}
               >
-                <Settings size={22} />
+                <Settings size={24} />
               </button>
 
               <button 
@@ -1961,27 +1946,13 @@ export default function App() {
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('profile');
                 }}
-                className={`p-2.5 rounded-2xl transition-all ${activeScreen === 'profile' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-blue-900/60 bg-white/50 hover:bg-white border border-white/40'}`}
+                className={`p-3 rounded-2xl transition-all ${activeScreen === 'profile' ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-110' : 'text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm'}`}
               >
                 {settings.profilePic ? (
-                  <img src={settings.profilePic} alt="Profile" className="w-6 h-6 rounded-full object-cover border-2 border-white" referrerPolicy="no-referrer" />
+                  <img src={settings.profilePic} alt="Profile" className="w-7 h-7 rounded-full object-cover border-2 border-white" referrerPolicy="no-referrer" />
                 ) : (
-                  <User size={22} />
+                  <User size={24} />
                 )}
-              </button>
-
-              <button 
-                disabled
-                className="p-2.5 rounded-2xl transition-all text-gray-400 bg-gray-100/30 border border-gray-200/50 grayscale relative cursor-not-allowed group"
-                onClick={() => showToast("Community Zone is locked for maintenance 🛡️", "info")}
-              >
-                <Users size={22} className="opacity-50" />
-                <div className="absolute -top-1 -right-1 bg-gray-600 text-white rounded-full p-0.5 shadow-sm">
-                  <Lock size={10} />
-                </div>
-                <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                  Locked
-                </div>
               </button>
 
               <button 
@@ -1989,27 +1960,13 @@ export default function App() {
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('subscription');
                 }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl transition-all ${activeScreen === 'subscription' ? 'bg-amber-500 text-white shadow-lg shadow-amber-200' : 'bg-amber-500/10 text-amber-600 border border-amber-200'}`}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all ${activeScreen === 'subscription' ? 'bg-amber-500 text-white shadow-xl shadow-amber-200 scale-110' : 'bg-amber-500/10 text-amber-600 border border-amber-200 backdrop-blur-sm hover:bg-amber-500/20'}`}
               >
-                <Crown size={18} />
-                <span className="font-black text-[10px] uppercase tracking-tighter">Pro</span>
-              </button>
-              <button 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.CLICK);
-                  if (settings.soundEnabled) play('header_switch');
-                  setActiveScreen('social');
-                }}
-                className={`hidden p-2 transition-colors relative text-blue-900/40 hover:text-blue-900/60`}
-              >
-                <Bell size={24} className={unreadNotifCount > 0 ? "text-blue-600" : ""} />
-                {unreadNotifCount > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-black flex items-center justify-center rounded-full shadow-sm border border-white">
-                    {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
-                  </span>
-                )}
+                <Crown size={20} />
+                <span className="font-black text-xs uppercase tracking-tight">Pro</span>
               </button>
             </div>
+
           </header>
         )}
 
@@ -2608,7 +2565,7 @@ export default function App() {
             xpEarned={sessionXP}
             onContinue={() => {
               setShowCompletionFlame(false);
-              setActiveScreen('gallery');
+              setActiveScreen('library'); // Hall of Fame / Trophy screen
             }}
           />
         )}

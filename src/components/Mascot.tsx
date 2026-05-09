@@ -24,6 +24,7 @@ export const Mascot: React.FC<MascotProps> = ({
   const [clickCount, setClickCount] = useState(0);
   const [isBlinking, setIsBlinking] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [sloshAmount, setSloshAmount] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const { play } = useSound();
   const controls = useAnimation();
@@ -56,12 +57,17 @@ export const Mascot: React.FC<MascotProps> = ({
     if (newCount <= 5) play(isDog ? 'dogHappy' : 'catHappy');
     else if (newCount <= 12) play(isDog ? 'dogHungry' : 'catHungry');
 
+    // Water Sloshing Effect
+    setSloshAmount(15);
+    setTimeout(() => setSloshAmount(0), 600);
+
     // Professional "Bounce" Animation (Squash and Stretch)
     await controls.start({
-      scaleY: [1, 0.8, 1.1, 1],
-      scaleX: [1, 1.2, 0.9, 1],
-      y: [0, 10, -20, 0],
-      transition: { duration: 0.5, ease: "easeOut" }
+      scaleY: [1, 0.75, 1.15, 1],
+      scaleX: [1, 1.25, 0.85, 1],
+      y: [0, 15, -35, 0],
+      rotate: [0, -5, 5, 0],
+      transition: { duration: 0.6, ease: "easeInOut" }
     });
     
     if (onClick) onClick();
@@ -79,18 +85,23 @@ export const Mascot: React.FC<MascotProps> = ({
   return (
     <motion.div 
       ref={containerRef}
-      className={`bottle-container cursor-pointer select-none ${className || ''}`}
+      className={`bottle-container cursor-pointer select-none relative group ${className || ''}`}
       onClick={handleMascotClick}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setMousePos({ x: 0, y: 0 })}
       animate={controls}
-      whileHover={{ y: -5 }}
-      style={{ perspective: 1000 }}
+      whileHover={{ y: -5, scale: 1.02 }}
+      style={{ 
+        perspective: 1000,
+        width: '100%',
+        maxWidth: '512px', // User requested large size
+        aspectRatio: '1/1.2'
+      }}
     >
       <svg 
         viewBox="0 0 500 600" 
         xmlns="http://www.w3.org/2000/svg" 
-        className="w-full h-full"
+        className="w-full h-full drop-shadow-2xl"
       >
         <defs>
           <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -121,7 +132,11 @@ export const Mascot: React.FC<MascotProps> = ({
         <motion.ellipse 
           cx="250" cy="520" rx={150} ry={15} 
           fill="#000" fillOpacity="0.08"
-          animate={{ rx: [150, 155, 150], opacity: [0.08, 0.12, 0.08] }}
+          animate={{ 
+            rx: [150, 155, 150], 
+            opacity: [0.08, 0.12, 0.08],
+            scale: controls.isAnimating ? [1, 1.2, 0.8, 1] : 1
+          }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
 
@@ -137,20 +152,35 @@ export const Mascot: React.FC<MascotProps> = ({
           <g clipPath="url(#bottle-mask)">
             <rect x="0" y="0" width="500" height="600" fill="#F0FAFF" fillOpacity="0.3" />
             <motion.g 
-              animate={{ y: isBoiling ? [220, 215, 220] : 220 }}
-              transition={{ duration: 0.5, repeat: Infinity }}
+              animate={{ 
+                y: isBoiling ? [220, 215, 220] : 220,
+                rotate: sloshAmount ? [0, -sloshAmount, sloshAmount, 0] : 0,
+                x: sloshAmount ? [0, -5, 5, 0] : 0
+              }}
+              transition={{ 
+                rotate: { duration: 0.6, ease: "easeInOut" },
+                y: { duration: 0.5, repeat: isBoiling ? Infinity : 0 }
+              }}
+              style={{ originX: "250px", originY: "330px" }}
             >
-              <path 
-                d="M 0,0 Q 125,-25 250,0 T 500,0 T 750,0 T 1000,0 T 1250,0 T 1500,0 L 1500,400 L 0,400 Z" 
+              {/* Back wave */}
+              <motion.path 
+                d="M -500,0 Q -375,-25 -250,0 T 0,0 T 250,0 T 500,0 T 750,0 T 1000,0 L 1000,400 L -500,400 Z" 
                 fill={isBoiling ? "#FF8888" : "#66CCFF"} 
                 fillOpacity="0.6" 
+                animate={{ x: [-250, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
               />
-              <path 
-                d="M -1000,10 Q -875,35 -750,10 T -500,10 T -250,10 T 0,10 T 250,10 T 500,10 L 500,400 L -1000,400 Z" 
+              {/* Front wave */}
+              <motion.path 
+                d="M -500,10 Q -375,35 -250,10 T 0,10 T 250,10 T 500,10 T 750,10 T 1000,10 L 1000,400 L -500,400 Z" 
                 fill="url(#water-grad)" 
+                animate={{ x: [0, -250] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
               />
             </motion.g>
           </g>
+
 
           {/* GLASS BOTTLE HIGHLIGHTS & OUTLINES */}
           <g stroke="#88D4FF" strokeWidth="4" fill="none">

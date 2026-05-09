@@ -89,7 +89,7 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
             localStorage.setItem('nexora_stats', JSON.stringify(DEFAULT_STATS));
             
           } else {
-            console.log("Hooks: Loading existing data");
+            console.log("Hooks: Loading existing data from SERVER (Bypassing Cache)");
             const data = userDoc.data();
             
             const firestoreSettings = { 
@@ -112,13 +112,15 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
               if (d.trophies) firestoreStats.trophies = d.trophies;
             }
             if (progressDoc.exists()) {
+               const pData = progressDoc.data();
                setDailyProgress(prev => {
-                 const newProgress = { ...prev, ...progressDoc.data() };
+                 const newProgress = { ...prev, ...pData };
                  localStorage.setItem('nexora_progress', JSON.stringify(newProgress));
                  return newProgress as DailyProgress;
                });
             }
 
+            // Always update state and cache with fresh server data
             setSettings(firestoreSettings);
             setStats(firestoreStats);
             setNeedsOnboarding(data.onboardingCompleted === false);

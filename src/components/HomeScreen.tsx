@@ -229,11 +229,11 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
       )}
 
       <div className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-16 w-full">
-        <div className="relative w-64 h-64 lg:w-80 lg:h-80 flex items-center justify-center flex-shrink-0">
-          <div className="absolute inset-0 bg-blue-400/20 blur-3xl rounded-full" />
-          <motion.div animate={mascotControls} className="w-56 h-56 lg:w-72 lg:h-72 relative z-10">
+        <div className="relative w-72 h-72 lg:w-96 lg:h-96 flex items-center justify-center flex-shrink-0 mb-4 sm:mb-8">
+          <div className="absolute inset-0 bg-blue-400/20 blur-[80px] rounded-full animate-pulse" />
+          <motion.div animate={mascotControls} className="w-64 h-64 lg:w-80 lg:h-80 relative z-10">
             <Mascot 
-              className="w-full h-full drop-shadow-2xl" 
+              className="w-full h-full drop-shadow-[0_20px_50px_rgba(59,130,246,0.3)]" 
               mood={mascotMood}
               hat={settings.activeSkin}
               soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'}
