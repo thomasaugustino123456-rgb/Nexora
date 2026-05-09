@@ -151,6 +151,8 @@ export default function App() {
   const [emergencyActive, setEmergencyActive] = useState(false);
   const [challengeStep, setChallengeStep] = useState<ChallengeStep | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  
+  const isPro = settings?.isPro || false;
 
   const currentAppVersion = "2.5.1"; // Auto-bumping version
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>('nexora_active_screen', 'home');
