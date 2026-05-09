@@ -100,7 +100,14 @@ export const Mascot: React.FC<MascotProps> = ({
           
           <linearGradient id="water-grad" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor={isBoiling ? "#FF5C5C" : "#5CD6FF"} />
+            <stop offset="30%" stopColor={isBoiling ? "#FF2A2A" : "#0095FF"} />
             <stop offset="100%" stopColor={isBoiling ? "#D60000" : "#0047FF"} />
+          </linearGradient>
+
+          <linearGradient id="glass-edge" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.8" />
+            <stop offset="50%" stopColor="#C2EFFF" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.6" />
           </linearGradient>
 
           <clipPath id="bottle-mask">
@@ -113,16 +120,16 @@ export const Mascot: React.FC<MascotProps> = ({
         {/* Shadow */}
         <motion.ellipse 
           cx="250" cy="520" rx={150} ry={15} 
-          fill="#000" fillOpacity="0.1"
-          animate={{ rx: [150, 160, 150], opacity: [0.1, 0.15, 0.1] }}
+          fill="#000" fillOpacity="0.08"
+          animate={{ rx: [150, 155, 150], opacity: [0.08, 0.12, 0.08] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
 
         {/* Body Group with Squash/Stretch */}
         <motion.g
           animate={{ 
-            y: isSitting ? 20 : [0, -4, 0],
-            scaleY: isSitting ? 0.85 : [1, 1.02, 1] 
+            y: isSitting ? 20 : [0, -6, 0],
+            scaleY: isSitting ? 0.85 : [1, 1.03, 1] 
           }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         >
@@ -145,32 +152,38 @@ export const Mascot: React.FC<MascotProps> = ({
             </motion.g>
           </g>
 
-          {/* GLASS BOTTLE */}
+          {/* GLASS BOTTLE HIGHLIGHTS & OUTLINES */}
           <g stroke="#88D4FF" strokeWidth="4" fill="none">
-            <ellipse cx="250" cy="330" rx="190" ry="160" strokeOpacity="0.5" />
+            <ellipse cx="250" cy="330" rx="190" ry="160" strokeOpacity="0.4" />
             
             {/* Ears with Follow-through wobble */}
             <motion.path 
               d="M 120,210 C 100,150 110,120 120,110 C 140,110 160,150 180,180 Z" 
-              fill="#E0F7FF" fillOpacity="0.6"
-              animate={{ rotate: isAngry ? [-5, 5, -5] : [0, 2, 0] }}
-              transition={{ duration: isAngry ? 0.3 : 3, repeat: Infinity }}
+              fill="url(#glass-edge)" 
+              fillOpacity="0.8"
+              animate={{ rotate: isAngry ? [-5, 5, -5] : [0, 3, 0] }}
+              transition={{ duration: isAngry ? 0.3 : 3.5, repeat: Infinity }}
             />
             <motion.path 
               d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" 
-              fill="#E0F7FF" fillOpacity="0.6"
-              animate={{ rotate: isAngry ? [5, -5, 5] : [0, -2, 0] }}
-              transition={{ duration: isAngry ? 0.3 : 3, repeat: Infinity }}
+              fill="url(#glass-edge)" 
+              fillOpacity="0.8"
+              animate={{ rotate: isAngry ? [5, -5, 5] : [0, -3, 0] }}
+              transition={{ duration: isAngry ? 0.3 : 3.5, repeat: Infinity }}
             />
           </g>
 
+          {/* Reflections */}
+          <path d="M 90,300 A 160,130 0 0,1 200,190 A 150,120 0 0,0 110,310 Z" fill="#ffffff" fillOpacity="0.4" />
+          <path d="M 425,300 A 170,140 0 0,1 350,460" fill="none" stroke="#ffffff" strokeWidth="12" strokeLinecap="round" opacity="0.3" />
+
           {/* ARMS */}
           <motion.ellipse 
-            cx="60" cy="310" rx="15" ry="30" fill="#B3E5FC" 
+            cx="60" cy="310" rx="15" ry="30" fill="#B3E5FC" stroke="#88D4FF" strokeWidth="2"
             animate={{ rotate: isAngry ? -60 : -30, x: isAngry ? -5 : 0 }} 
           />
           <motion.ellipse 
-            cx="440" cy="310" rx="15" ry="30" fill="#B3E5FC" 
+            cx="440" cy="310" rx="15" ry="30" fill="#B3E5FC" stroke="#88D4FF" strokeWidth="2"
             animate={{ rotate: isAngry ? 60 : 30, x: isAngry ? 5 : 0 }} 
           />
 
@@ -180,11 +193,11 @@ export const Mascot: React.FC<MascotProps> = ({
             {!isAngry ? (
               <>
                 <motion.g animate={{ scaleY: isBlinking ? 0.1 : 1 }} transition={{ duration: 0.1 }}>
-                  <circle cx="180" cy="260" r="15" fill="#001845" />
-                  <circle cx="320" cy="260" r="15" fill="#001845" />
-                  {/* Highlights */}
-                  <circle cx="185" cy="255" r="5" fill="#fff" />
-                  <circle cx="325" cy="255" r="5" fill="#fff" />
+                  <circle cx="180" cy="260" r="16" fill="#001845" />
+                  <circle cx="320" cy="260" r="16" fill="#001845" />
+                  {/* High Quality Pupils */}
+                  <circle cx="185" cy="254" r="6" fill="#fff" />
+                  <circle cx="325" cy="254" r="6" fill="#fff" />
                 </motion.g>
               </>
             ) : (
@@ -194,7 +207,7 @@ export const Mascot: React.FC<MascotProps> = ({
               </>
             )}
 
-            {/* MOUTH */}
+            {/* MOUTH & BLUSH */}
             <AnimatePresence mode="wait">
               {isAngry ? (
                 <motion.path 
@@ -204,12 +217,14 @@ export const Mascot: React.FC<MascotProps> = ({
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 />
               ) : (
-                <motion.path 
-                  key="happy-mouth"
-                  d="M 210 295 Q 250 340 290 295" 
-                  fill="#FF4D6D" stroke="#001845" strokeWidth="4"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                />
+                <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} key="happy-face">
+                  <path 
+                    d="M 210 295 Q 250 345 290 295" 
+                    fill="#FF4D6D" stroke="#001845" strokeWidth="4"
+                  />
+                  <ellipse cx="145" cy="290" rx="18" ry="10" fill="#FF4D6D" fillOpacity="0.2" />
+                  <ellipse cx="355" cy="290" rx="18" ry="10" fill="#FF4D6D" fillOpacity="0.2" />
+                </motion.g>
               )}
             </AnimatePresence>
           </g>
@@ -217,7 +232,7 @@ export const Mascot: React.FC<MascotProps> = ({
           {/* Glowing N */}
           <motion.g 
             filter="url(#glow)"
-            animate={{ opacity: [0.5, 1, 0.5] }}
+            animate={{ opacity: [0.6, 1, 0.6] }}
             transition={{ duration: 2, repeat: Infinity }}
           >
             <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill="#fff" />

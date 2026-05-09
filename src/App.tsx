@@ -1442,23 +1442,31 @@ export default function App() {
     setEmergencyActive(false);
     const progress = finalProgress || dailyProgress;
     const isCustomPlan = activeCustomPlan !== null;
-    const nextCompletionsCount = (progress.completionsCount || 0) + 1;
     const trophyLimit = settings.isPro ? 10 : 3;
     
     // Calculate how many tasks were actually completed in this session
-    const completedTasks = Object.entries(progress).filter(([key, value]) => 
+    const completedTasksList = Object.entries(progress).filter(([key, value]) => 
       ['pushupsDone', 'waterDrank', 'breathingDone', 'drawingDone', 'footballDone', 'bubblesDone', 'memoryDone', 'gratitudeDone', 'reactionDone', 'meditationDone', 'writingDone'].includes(key) && 
       (typeof value === 'boolean' ? value === true : (typeof value === 'number' ? value > 0 : false))
-    ).length;
+    );
+    const completedTasks = completedTasksList.length;
 
-    const canAwardTrophy = isCustomPlan ? completedTasks > 0 : (nextCompletionsCount <= trophyLimit && completedTasks > 0);
+    // Award trophy only if it's an official plan OR if they have room in the daily limit
+    // Actually user says: "if is their created plan challenges they can do more if they want"
+    // So custom plans shouldn't increment or care about completionsCount
+    const nextCompletionsCount = isCustomPlan ? (progress.completionsCount || 0) : ((progress.completionsCount || 0) + 1);
+    const canAwardTrophy = isCustomPlan ? (completedTasks > 0) : (nextCompletionsCount <= trophyLimit && completedTasks > 0);
 
     if (canAwardTrophy) {
       if (settings.soundEnabled) {
-        if (nextCompletionsCount === 1) play('trophy1');
-        else if (nextCompletionsCount === 2) play('trophy2');
-        else if (nextCompletionsCount === 3) play('trophy3');
-        else play('trophy1');
+        if (!isCustomPlan) {
+          if (nextCompletionsCount === 1) play('trophy1');
+          else if (nextCompletionsCount === 2) play('trophy2');
+          else if (nextCompletionsCount === 3) play('trophy3');
+          else play('trophy1');
+        } else {
+          play('trophy1');
+        }
       }
       setEarnedTrophyToday(true);
     } else {
@@ -1466,73 +1474,66 @@ export default function App() {
       setEarnedTrophyToday(false);
     }
 
-    setStats((prevStats) => {
-      let pointsToAdd = 0;
-      let xpToAdd = 0;
-      let coinsToAdd = 0;
-      let streakIncrease = 0;
+    // CALCULATE REWARDS
+    let pointsToAdd = 0;
+    let xpToAdd = 0;
+    let coinsToAdd = 0;
+    let streakIncrease = 0;
 
-      if (isCustomPlan) {
-        const totalPlanTasks = activeCustomPlan?.challenges.length || 1;
-        const ratio = Math.min(1, totalPlanTasks / 9);
-        // User requested: 5 Streak, 10 Coins, 10 XP for "High" (9 items), scale for "Low"
-        xpToAdd = Math.max(1, Math.round(ratio * 10));
-        coinsToAdd = Math.max(1, Math.round(ratio * 10));
-        streakIncrease = Math.max(1, Math.round(ratio * 5));
-        pointsToAdd = xpToAdd;
+    if (isCustomPlan) {
+      const totalPlanTasks = activeCustomPlan?.challenges.length || 1;
+      const ratio = Math.min(1, totalPlanTasks / 9);
+      xpToAdd = Math.max(1, Math.round(ratio * 10));
+      coinsToAdd = Math.max(1, Math.round(ratio * 10));
+      streakIncrease = Math.max(1, Math.round(ratio * 5));
+      pointsToAdd = xpToAdd;
+    } else {
+      const isDailyQuest = progress.dailyQuestDone || (challengeStep === dailyQuest);
+      pointsToAdd = isDailyQuest ? 25 : 15;
+      xpToAdd = isDailyQuest ? 50 : 30;
+      coinsToAdd = isDailyQuest ? 30 : 20;
+
+      const sessionBonusMultiplier = completedTasks >= 3 ? 1.5 : 1.0;
+      pointsToAdd = Math.round(pointsToAdd * sessionBonusMultiplier);
+      xpToAdd = Math.round(xpToAdd * sessionBonusMultiplier);
+      coinsToAdd = Math.round(coinsToAdd * sessionBonusMultiplier);
+
+      if (completedTasks >= 9) {
+        xpToAdd = 10;
+        coinsToAdd = 10;
+        streakIncrease = 5;
+        pointsToAdd = 20;
       } else {
-        const isDailyQuest = progress.dailyQuestDone || (challengeStep === dailyQuest);
-        
-        // Base rewards
-        pointsToAdd = isDailyQuest ? 25 : 15;
-        xpToAdd = isDailyQuest ? 50 : 30;
-        coinsToAdd = isDailyQuest ? 30 : 20;
-
-        const sessionBonusMultiplier = completedTasks >= 3 ? 1.5 : 1.0;
-        pointsToAdd = Math.round(pointsToAdd * sessionBonusMultiplier);
-        xpToAdd = Math.round(xpToAdd * sessionBonusMultiplier);
-        coinsToAdd = Math.round(coinsToAdd * sessionBonusMultiplier);
-
-        // Official App Challenge Reward (9+ tasks)
-        if (completedTasks >= 9) {
-          xpToAdd = 10; // Explicit user request
-          coinsToAdd = 10; // Explicit user request
-          streakIncrease = 5; // Explicit user request
-          pointsToAdd = 20;
-        } else {
-          streakIncrease = 1;
-        }
+        streakIncrease = 1;
       }
+    }
 
+    let finalStreakAfterUpdate = stats.streak || 0;
+
+    setStats((prevStats) => {
       const oldLevel = prevStats.level || 1;
-      
-      // Streak logic
       let finalStreak = prevStats.streak || 0;
       let newBestStreak = prevStats.bestStreak || 0;
       let newTotalCompletedDays = prevStats.totalCompletedDays || 0;
       let newLastCompletedDate = prevStats.lastCompletedDate;
       let streakBonusPoints = 0;
 
-      // Increase streak if it's a new day OR if they got a bonus streak from high challenge count
       if (prevStats.lastCompletedDate !== today || streakIncrease > 1) {
         let baseStreak = (prevStats.streak || 0);
-
         if (prevStats.lastCompletedDate !== today && prevStats.lastCompletedDate !== getYesterday()) {
-          // Reset streak if more than a day missed
           baseStreak = 0;
         }
-        
         finalStreak = baseStreak + streakIncrease;
         newBestStreak = Math.max(prevStats.bestStreak || 0, finalStreak);
-        
         if (prevStats.lastCompletedDate !== today) {
           newTotalCompletedDays = (prevStats.totalCompletedDays || 0) + 1;
         }
         newLastCompletedDate = today;
-        
         const hasDoublePoints = settings.purchasedItems?.includes('double-points');
         streakBonusPoints = hasDoublePoints ? 10 : 5;
       }
+
+      finalStreakAfterUpdate = finalStreak; // Pass to closure for Flame screen
 
       const newPoints = (prevStats.totalPoints || 0) + pointsToAdd + streakBonusPoints;
       const newXP = (prevStats.xp || 0) + xpToAdd;
@@ -1550,12 +1551,9 @@ export default function App() {
       growPlant();
 
       const newTrophies = [...(prevStats.trophies || [])];
-      // Permanent first trophy
       if (newTotalCompletedDays === 1 && !newTrophies.find(t => t.id === 'first-steps')) {
         newTrophies.push({ id: 'first-steps', type: 'golden', earnedDate: new Date().toISOString(), lastUpdated: new Date().toISOString() });
       }
-
-      // Add a session trophy if they earned it
       if (canAwardTrophy) {
         newTrophies.unshift({
           id: `trophy-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -1577,7 +1575,7 @@ export default function App() {
         bestStreak: newBestStreak,
         totalCompletedDays: newTotalCompletedDays,
         lastCompletedDate: newLastCompletedDate,
-        trophies: newTrophies.slice(0, 50), // Cap trophies for performance
+        trophies: newTrophies.slice(0, 50),
         pointsByCategory: {
           physical: (prevStats.pointsByCategory?.physical || 0) + (completedTasks > 1 ? 10 : 5),
           mental: (prevStats.pointsByCategory?.mental || 0) + (completedTasks > 1 ? 10 : 5),
@@ -1585,7 +1583,6 @@ export default function App() {
         }
       };
 
-      // Atomic Update to Leaderboard
       if (user) {
         const leaderboardRef = doc(db, 'leaderboard', user.uid);
         setDoc(leaderboardRef, {
@@ -1611,9 +1608,10 @@ export default function App() {
       completionsCount: nextCompletionsCount,
     }));
     
-    // Set data for the Flame Screen
+    // Set data for the Flame Screen and trigger it
     setSessionXP(xpToAdd);
-    setSessionStreak(finalStreak);
+    // Use the functional calc result
+    setSessionStreak(finalStreakAfterUpdate || stats.streak || 0);
     setShowCompletionFlame(true);
     
     setChallengeStep('completion');
@@ -1951,6 +1949,16 @@ export default function App() {
               <button 
                 onClick={() => {
                   if (settings.soundEnabled) play('header_switch');
+                  setActiveScreen('settings');
+                }}
+                className={`p-2.5 rounded-2xl transition-all ${activeScreen === 'settings' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-blue-900/60 bg-white/50 hover:bg-white border border-white/40'}`}
+              >
+                <Settings size={22} />
+              </button>
+
+              <button 
+                onClick={() => {
+                  if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('profile');
                 }}
                 className={`p-2.5 rounded-2xl transition-all ${activeScreen === 'profile' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-blue-900/60 bg-white/50 hover:bg-white border border-white/40'}`}
@@ -1963,23 +1971,16 @@ export default function App() {
               </button>
 
               <button 
-                onClick={() => {
-                  if (settings.soundEnabled) play('header_switch');
-                  setActiveScreen('settings');
-                }}
-                className={`p-2.5 rounded-2xl transition-all ${activeScreen === 'settings' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-blue-900/60 bg-white/50 hover:bg-white border border-white/40'}`}
-              >
-                <Settings size={22} />
-              </button>
-
-              <button 
                 disabled
-                className="p-2.5 rounded-2xl transition-all text-gray-400 bg-gray-100/50 border border-gray-200 grayscale relative cursor-not-allowed"
+                className="p-2.5 rounded-2xl transition-all text-gray-400 bg-gray-100/30 border border-gray-200/50 grayscale relative cursor-not-allowed group"
                 onClick={() => showToast("Community Zone is locked for maintenance 🛡️", "info")}
               >
-                <Users size={22} />
-                <div className="absolute -top-1 -right-1 bg-gray-800 text-white rounded-full p-0.5">
+                <Users size={22} className="opacity-50" />
+                <div className="absolute -top-1 -right-1 bg-gray-600 text-white rounded-full p-0.5 shadow-sm">
                   <Lock size={10} />
+                </div>
+                <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  Locked
                 </div>
               </button>
 
