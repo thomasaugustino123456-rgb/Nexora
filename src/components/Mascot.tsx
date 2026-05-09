@@ -10,6 +10,8 @@ interface MascotProps {
   hat?: string;
   soundPack?: 'cat' | 'dog';
   onClick?: () => void;
+  onPointerMove?: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerLeave?: () => void;
   isSitting?: boolean;
 }
 
@@ -19,6 +21,8 @@ export const Mascot: React.FC<MascotProps> = ({
   hat = 'none', 
   soundPack = 'cat', 
   onClick,
+  onPointerMove,
+  onPointerLeave,
   isSitting = false
 }) => {
   const [clickCount, setClickCount] = useState(0);
@@ -89,6 +93,8 @@ export const Mascot: React.FC<MascotProps> = ({
       onClick={handleMascotClick}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setMousePos({ x: 0, y: 0 })}
+      onPointerMove={onPointerMove}
+      onPointerLeave={onPointerLeave}
       animate={controls}
       whileHover={{ y: -5, scale: 1.02 }}
       style={{ 
@@ -134,8 +140,7 @@ export const Mascot: React.FC<MascotProps> = ({
           fill="#000" fillOpacity="0.08"
           animate={{ 
             rx: [150, 155, 150], 
-            opacity: [0.08, 0.12, 0.08],
-            scale: controls.isAnimating ? [1, 1.2, 0.8, 1] : 1
+            opacity: [0.08, 0.12, 0.08]
           }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />

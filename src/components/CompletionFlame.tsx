@@ -18,7 +18,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
     // Initial sequence
     const timer = setTimeout(() => {
       setShowContent(true);
-      play('fire_streak'); // New unique sound for flame
+      play('flame_complete'); // New unique sound for flame completion
       setIsBouncing(true);
       setTimeout(() => setIsBouncing(false), 1000);
       
@@ -152,7 +152,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
               }}
               className="group relative bg-orange-500 hover:bg-orange-600 px-12 py-5 rounded-[2rem] flex items-center gap-4 transition-all shadow-[0_20px_40px_rgba(249,115,22,0.4)]"
             >
-              <span className="text-white font-black text-xl italic uppercase tracking-tighter">Continue to Hall of Fame</span>
+              <span className="text-white font-black text-xl italic uppercase tracking-tighter">Continue to Trophy Reward</span>
               <div className="bg-white/20 p-2 rounded-xl group-hover:translate-x-2 transition-transform">
                 <ChevronRight className="text-white" size={24} />
               </div>

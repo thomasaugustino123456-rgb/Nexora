@@ -39,6 +39,15 @@ export interface PlantState {
   unlockedTypes?: PlantType[];
 }
 
+export interface PlantProgress {
+  stage: number; // 0-5
+  growthPoints: number;
+  lastGrowthDate: string | null;
+  health: number; // 0-100
+  isDead: boolean;
+  isThirsty: boolean;
+}
+
 export interface UserSettings {
   pushupsGoal: number;
   waterGoal: number;
@@ -74,6 +83,7 @@ export interface UserSettings {
   spaceOnboardingCompleted?: boolean;
   plantOnboardingCompleted?: boolean;
   plantState?: PlantState;
+  plantsProgress?: Partial<Record<PlantType, PlantProgress>>;
   mascotSize?: number;
   mascotPos?: { x: number, y: number };
   mascotPinnedItemId?: string | null;
@@ -187,7 +197,7 @@ export interface CustomPlan {
   createdAt: string;
 }
 
-export type Screen = 'home' | 'progress' | 'profile' | 'social' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant' | 'nexus-video';
+export type Screen = 'home' | 'progress' | 'profile' | 'social' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant' | 'nexus-video' | 'trophy-rewards';
 
 export interface UserReport {
   id: string;

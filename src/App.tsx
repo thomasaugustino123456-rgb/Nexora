@@ -35,6 +35,7 @@ const GalleryScreen = lazy(() => import('./components/GalleryScreen').then(m => 
 const NotebookScreen = lazy(() => import('./components/NotebookScreen').then(m => ({ default: m.NotebookScreen })));
 const ChallengeFlow = lazy(() => import('./components/ChallengeFlow').then(m => ({ default: m.ChallengeFlow })));
 import { CompletionFlame } from './components/CompletionFlame';
+import { TrophyRewardsScreen } from './components/TrophyRewardsScreen';
 
 const SOCIAL_LOCKED = false;
 
@@ -142,6 +143,7 @@ export default function App() {
   const [showCompletionFlame, setShowCompletionFlame] = useState(false);
   const [sessionXP, setSessionXP] = useState(0);
   const [sessionStreak, setSessionStreak] = useState(0);
+  const [sessionTrophy, setSessionTrophy] = useState<TrophyType>('golden');
   const [globalSavedVideos, setGlobalSavedVideos] = useState<NexusVideo[]>([]);
   const [focusedVideoId, setFocusedVideoId] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
@@ -371,33 +373,33 @@ export default function App() {
 
   const growPlant = useCallback(() => {
     setSettings(prev => {
-      const current = prev.plantState || {
-        type: 'zen',
-        stage: 0,
-        growthPoints: 0,
-        lastGrowthDate: null,
-        lastCheckDate: new Date().toISOString(),
-        health: 100,
-        isDead: false,
-        isThirsty: false,
-        unlockedTypes: ['zen']
+      const type = prev.plantState?.type || 'sprout';
+      const plants = prev.plantsProgress || {};
+      
+      const current = plants[type] || {
+        stage: prev.plantState?.stage || 0,
+        growthPoints: prev.plantState?.growthPoints || 0,
+        lastGrowthDate: prev.plantState?.lastGrowthDate || null,
+        health: prev.plantState?.health || 100,
+        isDead: prev.plantState?.isDead || false,
+        isThirsty: prev.plantState?.isThirsty || false,
       };
       
       if (current.isDead) return prev;
 
       let newPoints = current.growthPoints + 15;
       let newStage = current.stage;
-      let newUnlocked = [...(current.unlockedTypes || ['zen'])];
+      let newUnlocked = [...(prev.plantState?.unlockedTypes || ['sprout'])];
       
       if (newPoints >= 100) {
         if (newStage < 5) {
           newStage += 1;
           newPoints = 0;
           vibrate(VIBRATION_PATTERNS.SUCCESS);
-          showToast(`Your ecosystem grew to Stage ${newStage}! 🌿✨`, 'success');
+          showToast(`Your ${type.toUpperCase()} grew to Stage ${newStage}! 🌿✨`, 'success');
           
           if (newStage === 5) {
-            const currentIdx = ECOSYSTEM_PATH.indexOf(current.type);
+            const currentIdx = ECOSYSTEM_PATH.indexOf(type);
             if (currentIdx !== -1 && currentIdx < ECOSYSTEM_PATH.length - 1) {
               const nextType = ECOSYSTEM_PATH[currentIdx + 1];
               if (!newUnlocked.includes(nextType)) {
@@ -410,24 +412,37 @@ export default function App() {
           newPoints = 100;
         }
       } else {
-        showToast(`Ecosystem nurtured! +15% Energy 💧`, 'success');
+        showToast(`Energy gathered for ${type}! +15% Energy 💧`, 'success');
       }
+
+      const updatedPlantProgress = {
+        ...current,
+        stage: newStage,
+        growthPoints: newPoints,
+        lastGrowthDate: new Date().toISOString(),
+        health: 100,
+        isThirsty: false
+      };
 
       return {
         ...prev,
+        plantsProgress: {
+          ...plants,
+          [type]: updatedPlantProgress
+        },
         plantState: {
-          ...current,
+          ...prev.plantState,
+          type,
           stage: newStage,
           growthPoints: newPoints,
           unlockedTypes: newUnlocked,
-          lastCheckDate: new Date().toISOString(),
-          lastGrowthDate: new Date().toISOString(),
-          health: 100,
-          isThirsty: false
+          isDead: false,
+          isThirsty: false,
+          health: 100
         }
       };
     });
-  }, [settings.plantState]);
+  }, [settings.plantState, settings.plantsProgress]);
 
   useEffect(() => {
     if (!user) return;
@@ -454,11 +469,23 @@ export default function App() {
     
     const checkPlant = () => {
       const now = new Date();
-      const lastCheck = new Date(settings.plantState!.lastCheckDate);
+      const lastCheck = new Date(settings.plantState!.lastCheckDate || now.toISOString());
       const diffMs = now.getTime() - lastCheck.getTime();
       const diffHours = diffMs / (1000 * 60 * 60);
       
       if (diffHours >= 48 && !settings.plantState!.isDead) { // 2 days
+        const type = settings.plantState!.type;
+        const currentProgress = settings.plantsProgress?.[type] || {
+          stage: settings.plantState!.stage,
+          growthPoints: settings.plantState!.growthPoints,
+          lastGrowthDate: settings.plantState!.lastGrowthDate,
+          health: 100,
+          isDead: false,
+          isThirsty: false
+        };
+
+        const updatedProgress = { ...currentProgress, isDead: true, health: 0, isThirsty: true };
+
         onUpdateSettings({
           plantState: {
             ...settings.plantState!,
@@ -466,14 +493,33 @@ export default function App() {
             health: 0,
             isThirsty: true,
             lastCheckDate: now.toISOString()
+          },
+          plantsProgress: {
+            ...(settings.plantsProgress || {}),
+            [type]: updatedProgress
           }
         });
         sendNotification("Your Nexora Ecosystem has died... 🥀", { body: "Bro, your plants need discipline! Restore the room and try again." });
       } else if (diffHours >= 36 && !settings.plantState!.isThirsty && !settings.plantState!.isDead) { // 1.5 days
+        const type = settings.plantState!.type;
+        const currentProgress = settings.plantsProgress?.[type] || {
+           stage: settings.plantState!.stage,
+           growthPoints: settings.plantState!.growthPoints,
+           lastGrowthDate: settings.plantState!.lastGrowthDate,
+           health: 100,
+           isDead: false,
+           isThirsty: false
+        };
+        const updatedProgress = { ...currentProgress, isThirsty: true };
+
         onUpdateSettings({
           plantState: {
             ...settings.plantState!,
             isThirsty: true
+          },
+          plantsProgress: {
+            ...(settings.plantsProgress || {}),
+            [type]: updatedProgress
           }
         });
         sendNotification("Your ecosystem is thirsty! 💧", { body: "Nurture your plants by completing your daily tasks, bro!" });
@@ -1457,15 +1503,26 @@ export default function App() {
     const nextCompletionsCount = isCustomPlan ? (progress.completionsCount || 0) : ((progress.completionsCount || 0) + 1);
     const canAwardTrophy = isCustomPlan ? (completedTasks > 0) : (nextCompletionsCount <= trophyLimit && completedTasks > 0);
 
+    // Determine trophy type for this session
+    const hasIce = (progress.waterChallengeCount || 0) > 10; // Example condition
+    const currentTrophyType: TrophyType = hasIce ? 'ice' : 'golden';
+    setSessionTrophy(currentTrophyType);
+
     if (canAwardTrophy) {
       if (settings.soundEnabled) {
+        // play('challenge_unlock'); // User requested this sound for challenge unlock mascot pop
+        play('challenge_unlock'); 
+        
         if (!isCustomPlan) {
-          if (nextCompletionsCount === 1) play('trophy1');
-          else if (nextCompletionsCount === 2) play('trophy2');
-          else if (nextCompletionsCount === 3) play('trophy3');
-          else play('trophy1');
+          // Play standard trophy sound after mascot unlock sound
+          setTimeout(() => {
+            if (nextCompletionsCount === 1) play('trophy1');
+            else if (nextCompletionsCount === 2) play('trophy2');
+            else if (nextCompletionsCount === 3) play('trophy3');
+            else play('trophy1');
+          }, 800);
         } else {
-          play('trophy1');
+          setTimeout(() => play('trophy1'), 800);
         }
       }
       setEarnedTrophyToday(true);
@@ -2565,8 +2622,15 @@ export default function App() {
             xpEarned={sessionXP}
             onContinue={() => {
               setShowCompletionFlame(false);
-              setActiveScreen('library'); // Hall of Fame / Trophy screen
+              setActiveScreen('trophy-rewards'); 
             }}
+          />
+        )}
+
+        {activeScreen === 'trophy-rewards' && (
+          <TrophyRewardsScreen 
+            trophyType={sessionTrophy} 
+            onFinish={() => setActiveScreen('home')}
           />
         )}
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout, Target, Trophy, Play, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout, Target, Trophy, Play, X, Lock } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { PlantState, UserSettings, UserStats, PlantType } from '../types';
 import { vibrate } from '../lib/vibrate';
@@ -90,7 +90,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     }
   };
 
-  const unlocked = plantState.unlockedTypes || ['zen'];
+  const ECOSYSTEM_PATH: PlantType[] = ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano', 'boredFlower', 'mourningSprout', 'breezeTulip', 'happyTulip', 'distressedRose'];
+  const unlocked = plantState.unlockedTypes || ['sprout'];
 
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-[#F0F9FF] to-[#E0F2FE] z-[120] flex flex-col items-center">
@@ -141,16 +142,20 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
               className="absolute inset-0 bg-white/95 backdrop-blur-md z-[150] p-8 overflow-y-auto"
             >
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-black text-blue-900 uppercase tracking-tighter italic">Your Garden Room</h2>
+                <div className="flex flex-col">
+                  <h2 className="text-2xl font-black text-blue-900 uppercase tracking-tighter italic">Your Garden Room</h2>
+                  <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Only active plant grows</p>
+                </div>
                 <button onClick={() => setShowGarden(false)} className="p-2 text-blue-900/40">
                   <ChevronRight size={32} />
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-6">
-                {(Object.keys(ecosystemInfo) as PlantType[]).map((type) => {
+                {ECOSYSTEM_PATH.map((type) => {
                   const isUnlocked = unlocked.includes(type);
                   const isActive = plantState.type === type;
+                  const plantData = settings.plantsProgress?.[type] || { stage: 0 };
                   
                   return (
                     <button
@@ -160,22 +165,39 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
                       className={`relative group flex flex-col items-center p-6 rounded-[2rem] transition-all duration-700 ${
                         isUnlocked 
                           ? isActive ? 'bg-green-500 text-white shadow-xl shadow-green-500/20' : 'bg-gray-100 hover:bg-gray-200'
-                          : 'bg-gray-50 opacity-50 grayscale blur-sm'
+                          : 'bg-gray-50'
                       }`}
                     >
-                      <div className="mb-2 scale-50 -mt-12 -mb-12">
-                        <PlantRenderer type={type} stage={isUnlocked ? 5 : 1} isThirsty={false} isDead={false} />
+                      <div className={`mb-2 scale-50 -mt-12 -mb-12 transition-all ${!isUnlocked ? 'grayscale brightness-50 opacity-20' : ''}`}>
+                        <PlantRenderer type={type} stage={isUnlocked ? (plantData.stage || (isActive ? plantState.stage : 0)) : 1} isThirsty={false} isDead={false} />
                       </div>
-                      <span className="text-[10px] font-black uppercase tracking-widest">{ecosystemInfo[type]?.name || "Ecosystem"}</span>
-                      {!isUnlocked && <div className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-[2rem] backdrop-blur-[2px]">🔒</div>}
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${isUnlocked ? (isActive ? 'text-white' : 'text-blue-900/40') : 'text-blue-900/20'}`}>
+                        {ecosystemInfo[type]?.name || "Ecosystem"}
+                      </span>
+                      {isUnlocked && (
+                        <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 mt-1">
+                          Stage {plantData.stage}/5
+                        </span>
+                      )}
+                      {!isUnlocked && (
+                        <motion.div 
+                          initial={{ scale: 1 }}
+                          whileHover={{ scale: 1.1 }}
+                          className="absolute inset-0 flex items-center justify-center rounded-[2rem] overflow-hidden"
+                        >
+                           <div className="bg-white/40 backdrop-blur-sm p-4 rounded-full shadow-lg border border-white/60">
+                             <Lock size={20} className="text-blue-900/40" />
+                           </div>
+                        </motion.div>
+                      )}
                       {isActive && <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-400 rounded-full border-2 border-white flex items-center justify-center text-[10px] shadow-md">✓</div>}
                     </button>
                   );
                 })}
               </div>
               
-              <p className="mt-8 text-[10px] text-center font-bold text-blue-900/30 uppercase leading-relaxed">
-                Reach Stage 5 (Legendary) to unlock the next ecosystem room in your garden.
+              <p className="mt-8 text-[10px] text-center font-bold text-blue-900/30 uppercase leading-relaxed px-8">
+                Reach Stage 5 (Legendary) on your current plant to unlock the next room in your garden. Only the plant you select will grow from your efforts!
               </p>
             </motion.div>
           )}
