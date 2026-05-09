@@ -146,32 +146,51 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     return unsubscribe;
   }, []);
 
-  // Background Sync Effect
-  useEffect(() => {
-    // Also save to localStorage for instantaneous load next time
-    localStorage.setItem('nexora_settings', JSON.stringify(settings));
-    localStorage.setItem('nexora_stats', JSON.stringify(stats));
-    localStorage.setItem('nexora_progress', JSON.stringify(dailyProgress));
+  const onUpdateSettings = (update: UserSettings | ((prev: UserSettings) => UserSettings)) => {
+    setSettings(prev => {
+      const next = typeof update === 'function' ? update(prev) : update;
+      localStorage.setItem('nexora_settings', JSON.stringify(next));
+      return next;
+    });
+  };
 
-    if (user && isDataReady && dataLoadedFromFirestore.current) {
-      const syncData = async () => {
-        try {
-          const userRef = doc(db, 'users', user.uid);
-          await updateDoc(userRef, {
-            ...settings,
-            stats: stats,
-            updatedAt: serverTimestamp()
-          });
-          
-          await setDoc(doc(db, 'users', user.uid, 'progress', today), dailyProgress, { merge: true });
-        } catch (e) {
-          console.error("Sync error:", e);
-        }
-      };
-      
-      const timeout = setTimeout(syncData, 5000); 
-      return () => clearTimeout(timeout);
-    }
+  const onUpdateStats = (update: UserStats | ((prev: UserStats) => UserStats)) => {
+    setStats(prev => {
+      const next = typeof update === 'function' ? update(prev) : update;
+      localStorage.setItem('nexora_stats', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const onUpdateDailyProgress = (update: DailyProgress | ((prev: DailyProgress) => DailyProgress)) => {
+    setDailyProgress(prev => {
+      const next = typeof update === 'function' ? update(prev) : update;
+      localStorage.setItem('nexora_progress', JSON.stringify({ ...next, date: today }));
+      return next;
+    });
+  };
+
+  // Background Sync Effect (Optimized for thermal performance - Firestore Only)
+  useEffect(() => {
+    if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
+
+    const syncData = async () => {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          ...settings,
+          stats: stats,
+          updatedAt: serverTimestamp()
+        });
+        
+        await setDoc(doc(db, 'users', user.uid, 'progress', today), dailyProgress, { merge: true });
+      } catch (e) {
+        console.error("Sync error:", e);
+      }
+    };
+    
+    const timeout = setTimeout(syncData, 5000); 
+    return () => clearTimeout(timeout);
   }, [settings, stats, dailyProgress, user, isDataReady]);
 
   return {
@@ -179,11 +198,11 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     loading,
     isDataReady,
     settings,
-    setSettings,
+    setSettings: onUpdateSettings,
     stats,
-    setStats,
+    setStats: onUpdateStats,
     dailyProgress,
-    setDailyProgress,
+    setDailyProgress: onUpdateDailyProgress,
     needsOnboarding,
     setNeedsOnboarding,
     dataLoadedFromFirestore

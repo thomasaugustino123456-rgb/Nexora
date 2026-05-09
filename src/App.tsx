@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 console.log("App.tsx is loading...");
-import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, BellOff, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout, MoreHorizontal, Flag, Bookmark, EyeOff, Share2, Search, Youtube, Video } from 'lucide-react';
+import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, BellOff, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout, MoreHorizontal, Flag, Bookmark, EyeOff, Share2, Search, Youtube, Video, Lock } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
@@ -21,19 +21,20 @@ import { Mascot } from './components/Mascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './components/Trophies';
 import { WhatIsNewModalWrapper, HappyMascot, LevelUpCelebration, CoinAnimation, MascotAIWrapper } from './components/SuspenseWrappers';
 
-import { HouseScreen } from './components/HouseScreen';
-import { LibraryScreen } from './components/LibraryScreen';
-import { ShopScreen } from './components/ShopScreen';
-import { PlantScreen } from './components/PlantScreen';
-import { SocialScreen } from './components/SocialScreen';
-import { NexusVideoScreen } from './components/NexusVideoScreen';
-import { LeaderboardScreen } from './components/LeaderboardScreen';
-import { ProgressScreen } from './components/ProgressScreen';
-import { ProfileScreen } from './components/ProfileScreen';
-import { SettingsScreen } from './components/SettingsScreen';
-import { GalleryScreen } from './components/GalleryScreen';
-import { NotebookScreen } from './components/NotebookScreen';
-import { ChallengeFlow } from './components/ChallengeFlow';
+const HouseScreen = lazy(() => import('./components/HouseScreen').then(m => ({ default: m.HouseScreen })));
+const LibraryScreen = lazy(() => import('./components/LibraryScreen').then(m => ({ default: m.LibraryScreen })));
+const ShopScreen = lazy(() => import('./components/ShopScreen').then(m => ({ default: m.ShopScreen })));
+const PlantScreen = lazy(() => import('./components/PlantScreen').then(m => ({ default: m.PlantScreen })));
+const SocialScreen = lazy(() => import('./components/SocialScreen').then(m => ({ default: m.SocialScreen })));
+const NexusVideoScreen = lazy(() => import('./components/NexusVideoScreen').then(m => ({ default: m.NexusVideoScreen })));
+const LeaderboardScreen = lazy(() => import('./components/LeaderboardScreen').then(m => ({ default: m.LeaderboardScreen })));
+const ProgressScreen = lazy(() => import('./components/ProgressScreen').then(m => ({ default: m.ProgressScreen })));
+const ProfileScreen = lazy(() => import('./components/ProfileScreen').then(m => ({ default: m.ProfileScreen })));
+const SettingsScreen = lazy(() => import('./components/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
+const GalleryScreen = lazy(() => import('./components/GalleryScreen').then(m => ({ default: m.GalleryScreen })));
+const NotebookScreen = lazy(() => import('./components/NotebookScreen').then(m => ({ default: m.NotebookScreen })));
+const ChallengeFlow = lazy(() => import('./components/ChallengeFlow').then(m => ({ default: m.ChallengeFlow })));
+import { CompletionFlame } from './components/CompletionFlame';
 
 const SOCIAL_LOCKED = false;
 
@@ -138,6 +139,9 @@ export default function App() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [notifications, setNotifications] = useState<NexusNotification[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [showCompletionFlame, setShowCompletionFlame] = useState(false);
+  const [sessionXP, setSessionXP] = useState(0);
+  const [sessionStreak, setSessionStreak] = useState(0);
   const [globalSavedVideos, setGlobalSavedVideos] = useState<NexusVideo[]>([]);
   const [focusedVideoId, setFocusedVideoId] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
@@ -1358,12 +1362,10 @@ export default function App() {
     }
   }, [today]);
 
-  useEffect(() => {
-    localStorage.setItem(`nexora_progress_${today}`, JSON.stringify(dailyProgress));
-    
-    // Update history whenever daily progress changes
+  // Optimized History calculation using useMemo to avoid O(N) calculation on every render
+  const memoizedHistory = useMemo(() => {
     const allKeys = Object.keys(localStorage).filter(k => k.startsWith('nexora_progress_'));
-    const allHistory = allKeys.map(k => {
+    return allKeys.map(k => {
       try {
         return JSON.parse(localStorage.getItem(k) || '{}');
       } catch (e) {
@@ -1372,8 +1374,11 @@ export default function App() {
     })
       .filter(item => item && item.date)
       .sort((a, b) => a.date.localeCompare(b.date));
-    setHistory(allHistory);
-  }, [dailyProgress, today]);
+  }, [dailyProgress.date]); // Only recalculate if date changes (new day)
+
+  useEffect(() => {
+    setHistory(memoizedHistory);
+  }, [memoizedHistory]);
 
   const checkTrophies = useCallback(() => {
     setStats((prevStats) => {
@@ -1437,8 +1442,8 @@ export default function App() {
     setEmergencyActive(false);
     const progress = finalProgress || dailyProgress;
     const isCustomPlan = activeCustomPlan !== null;
-    const nextCompletionsCount = isCustomPlan ? (progress.completionsCount || 0) : (progress.completionsCount || 0) + 1;
-    const trophyLimit = isPro ? 10 : 3;
+    const nextCompletionsCount = (progress.completionsCount || 0) + 1;
+    const trophyLimit = settings.isPro ? 10 : 3;
     
     // Calculate how many tasks were actually completed in this session
     const completedTasks = Object.entries(progress).filter(([key, value]) => 
@@ -1449,7 +1454,6 @@ export default function App() {
     const canAwardTrophy = isCustomPlan ? completedTasks > 0 : (nextCompletionsCount <= trophyLimit && completedTasks > 0);
 
     if (canAwardTrophy) {
-      console.log(`Awarding trophy for completion #${nextCompletionsCount} today!`);
       if (settings.soundEnabled) {
         if (nextCompletionsCount === 1) play('trophy1');
         else if (nextCompletionsCount === 2) play('trophy2');
@@ -1466,13 +1470,12 @@ export default function App() {
       let pointsToAdd = 0;
       let xpToAdd = 0;
       let coinsToAdd = 0;
-      let streakIncrease = 1;
+      let streakIncrease = 0;
 
       if (isCustomPlan) {
         const totalPlanTasks = activeCustomPlan?.challenges.length || 1;
-        // Scale rewards based on how "high" or "low" the user set their custom plan
-        // Max (like 9 challenges) gives 10 XP, 10 Coins, 5 Streak
         const ratio = Math.min(1, totalPlanTasks / 9);
+        // User requested: 5 Streak, 10 Coins, 10 XP for "High" (9 items), scale for "Low"
         xpToAdd = Math.max(1, Math.round(ratio * 10));
         coinsToAdd = Math.max(1, Math.round(ratio * 10));
         streakIncrease = Math.max(1, Math.round(ratio * 5));
@@ -1480,22 +1483,24 @@ export default function App() {
       } else {
         const isDailyQuest = progress.dailyQuestDone || (challengeStep === dailyQuest);
         
-        // Base rewards for finishing the flow
+        // Base rewards
         pointsToAdd = isDailyQuest ? 25 : 15;
         xpToAdd = isDailyQuest ? 50 : 30;
         coinsToAdd = isDailyQuest ? 30 : 20;
 
-        // Session Bonus: Only give full bonus if they completed at least 3 tasks
         const sessionBonusMultiplier = completedTasks >= 3 ? 1.5 : 1.0;
         pointsToAdd = Math.round(pointsToAdd * sessionBonusMultiplier);
         xpToAdd = Math.round(xpToAdd * sessionBonusMultiplier);
         coinsToAdd = Math.round(coinsToAdd * sessionBonusMultiplier);
 
-        // If they did all 9 official challenges, add the full 5 streak, 10 coins, 10 XP bonus
+        // Official App Challenge Reward (9+ tasks)
         if (completedTasks >= 9) {
-          xpToAdd += 10;
-          coinsToAdd += 10;
-          streakIncrease = 5;
+          xpToAdd = 10; // Explicit user request
+          coinsToAdd = 10; // Explicit user request
+          streakIncrease = 5; // Explicit user request
+          pointsToAdd = 20;
+        } else {
+          streakIncrease = 1;
         }
       }
 
@@ -1508,25 +1513,20 @@ export default function App() {
       let newLastCompletedDate = prevStats.lastCompletedDate;
       let streakBonusPoints = 0;
 
-      if (prevStats.lastCompletedDate !== today || streakIncrease > 1 || isCustomPlan) {
-        // Apply the streak increase.
-        // It always increments even if they already did it today, if it's custom or they got a bonus streak.
-        let baseStreak = 0;
-        if (prevStats.lastCompletedDate === getYesterday() || prevStats.lastCompletedDate === today) {
-           baseStreak = (prevStats.streak || 0) + streakIncrease;
-        } else {
-           baseStreak = streakIncrease; // Reset to the increase amount
+      // Increase streak if it's a new day OR if they got a bonus streak from high challenge count
+      if (prevStats.lastCompletedDate !== today || streakIncrease > 1) {
+        let baseStreak = (prevStats.streak || 0);
+
+        if (prevStats.lastCompletedDate !== today && prevStats.lastCompletedDate !== getYesterday()) {
+          // Reset streak if more than a day missed
+          baseStreak = 0;
         }
         
-        const hasStreakProtection = settings.purchasedItems?.includes('streak-protection');
-        finalStreak = hasStreakProtection ? Math.max(baseStreak, prevStats.streak || 0) : baseStreak;
-        
+        finalStreak = baseStreak + streakIncrease;
         newBestStreak = Math.max(prevStats.bestStreak || 0, finalStreak);
         
         if (prevStats.lastCompletedDate !== today) {
           newTotalCompletedDays = (prevStats.totalCompletedDays || 0) + 1;
-        } else {
-          newTotalCompletedDays = prevStats.totalCompletedDays || 0;
         }
         newLastCompletedDate = today;
         
@@ -1536,7 +1536,7 @@ export default function App() {
 
       const newPoints = (prevStats.totalPoints || 0) + pointsToAdd + streakBonusPoints;
       const newXP = (prevStats.xp || 0) + xpToAdd;
-      const newLevel = Math.floor(newXP / 1000) + 1; // 1000 XP per level
+      const newLevel = Math.floor(newXP / 1000) + 1;
       
       let levelUpBonusCoins = 0;
       if (newLevel > oldLevel) {
@@ -1547,16 +1547,25 @@ export default function App() {
       }
 
       showToast(`Session Complete! +${pointsToAdd + streakBonusPoints} Points, +${xpToAdd} XP & +${coinsToAdd} Coins! 🏆`, 'success');
-
-      // Grow the plant, bro!
       growPlant();
 
       const newTrophies = [...(prevStats.trophies || [])];
+      // Permanent first trophy
       if (newTotalCompletedDays === 1 && !newTrophies.find(t => t.id === 'first-steps')) {
         newTrophies.push({ id: 'first-steps', type: 'golden', earnedDate: new Date().toISOString(), lastUpdated: new Date().toISOString() });
       }
 
-      const newStats = {
+      // Add a session trophy if they earned it
+      if (canAwardTrophy) {
+        newTrophies.unshift({
+          id: `trophy-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          type: 'golden',
+          earnedDate: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+        });
+      }
+
+      const updatedStats = {
         ...prevStats,
         totalPoints: newPoints,
         weeklyPoints: (prevStats.weeklyPoints || 0) + pointsToAdd + streakBonusPoints,
@@ -1568,75 +1577,45 @@ export default function App() {
         bestStreak: newBestStreak,
         totalCompletedDays: newTotalCompletedDays,
         lastCompletedDate: newLastCompletedDate,
-        trophies: newTrophies,
+        trophies: newTrophies.slice(0, 50), // Cap trophies for performance
         pointsByCategory: {
-          physical: (prevStats.pointsByCategory?.physical || 0) + (isDailyQuest ? 10 : 5),
-          mental: (prevStats.pointsByCategory?.mental || 0) + (isDailyQuest ? 10 : 5),
-          creative: (prevStats.pointsByCategory?.creative || 0) + (isDailyQuest ? 5 : 2),
+          physical: (prevStats.pointsByCategory?.physical || 0) + (completedTasks > 1 ? 10 : 5),
+          mental: (prevStats.pointsByCategory?.mental || 0) + (completedTasks > 1 ? 10 : 5),
+          creative: (prevStats.pointsByCategory?.creative || 0) + (completedTasks > 2 ? 5 : 2),
         }
       };
 
-      // Update Leaderboard
+      // Atomic Update to Leaderboard
       if (user) {
-        const currentRank = leaderboard.findIndex(l => l.uid === user.uid) + 1;
-        let newLeague = settings.league || 'Bronze';
-        if (currentRank > 0 && currentRank <= 3 && newStats.weeklyPoints > 50) {
-          const LEAGUES = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'];
-          const leagueIndex = LEAGUES.indexOf(newLeague);
-          if (leagueIndex < LEAGUES.length - 1) {
-            newLeague = LEAGUES[leagueIndex + 1];
-            setSettings(prev => ({ ...prev, league: newLeague }));
-            showToast(`PROMOTED! Welcome to the ${newLeague} League! 🏆`, 'success');
-          }
-        }
-
         const leaderboardRef = doc(db, 'leaderboard', user.uid);
         setDoc(leaderboardRef, {
           uid: user.uid,
           displayName: settings.displayName || 'Anonymous',
           photoURL: user.photoURL || '',
-          streak: newStats.streak || 0,
-          totalPoints: newStats.totalPoints,
-          weeklyPoints: newStats.weeklyPoints,
-          weeklyXP: newStats.weeklyXP || 0,
-          xp: newStats.xp || 0,
+          streak: updatedStats.streak,
+          totalPoints: updatedStats.totalPoints,
+          weeklyPoints: updatedStats.weeklyPoints,
+          weeklyXP: updatedStats.weeklyXP,
+          xp: updatedStats.xp,
           level: newLevel,
-          league: newLeague
-        }, { merge: true }).catch(e => {
-          try {
-            handleFirestoreError(e, OperationType.WRITE, 'leaderboard');
-          } catch (err) {
-            console.error("Leaderboard update error handled:", err);
-          }
-        });
+          league: settings.league || 'Bronze'
+        }, { merge: true }).catch(err => console.error("Leaderboard error:", err));
       }
 
-      // Award Golden Trophy if within daily limit
-      if (canAwardTrophy) {
-        const newTrophy: Trophy = {
-          id: Math.random().toString(36).substr(2, 9),
-          type: 'golden',
-          earnedDate: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-        };
-        newStats.trophies = [newTrophy, ...(prevStats.trophies || [])];
-      }
-      return newStats;
+      return updatedStats;
     });
 
-    setDailyProgress({ 
-      ...progress, 
+    setDailyProgress(prev => ({ 
+      ...prev, 
       completed: true,
       completionsCount: nextCompletionsCount,
-      dailyQuestDone: progress.dailyQuestDone || (challengeStep === dailyQuest),
-      // Reset tasks for the next run if under limit
-      pushupsDone: false,
-      waterDrank: 0,
-      breathingDone: false,
-      drawingDone: false,
-      footballDone: false,
-      bubblesDone: false
-    });
+    }));
+    
+    // Set data for the Flame Screen
+    setSessionXP(xpToAdd);
+    setSessionStreak(finalStreak);
+    setShowCompletionFlame(true);
+    
     setChallengeStep('completion');
     setShowCoinAnimation(true);
   };
@@ -1943,56 +1922,76 @@ export default function App() {
               />
               <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexo</h1>
             </div>
-            <div className="flex items-center justify-end w-full gap-5 sm:gap-8 ml-auto">
+            <div className="flex items-center justify-end w-full gap-2 sm:gap-6 ml-auto">
+              {/* Community (Locked/Inversible as requested) */}
               <button 
                 onClick={() => {
-                  if (settings.soundEnabled) play('header_switch');
-                  setActiveScreen('social');
+                  vibrate(VIBRATION_PATTERNS.ERROR);
+                  showToast('Community Section is currently locked for maintenance 🔒', 'info');
                 }}
-                className="hidden p-2 transition-colors text-blue-900/40 hover:text-blue-900/60"
+                className="p-2 transition-all text-blue-900/10 grayscale hover:text-blue-900/20 relative group"
+                title="Community Locked"
               >
-                <Users size={24} />
+                <Users size={22} />
+                <div className="absolute -top-1 -right-1 bg-gray-400 text-white p-0.5 rounded-full scale-50 group-hover:scale-75 transition-transform">
+                  <Lock size={12} />
+                </div>
               </button>
-              <button 
-                onClick={() => {
-                  if (settings.soundEnabled) play('header_switch');
-                  setActiveScreen('subscription');
-                }}
-                className={`flex items-center gap-1 p-2 transition-colors ${activeScreen === 'subscription' ? 'text-amber-500' : 'text-amber-500/60 hover:text-amber-500'}`}
-              >
-                <Crown size={24} />
-                <span className="font-bold text-xs">Pro</span>
-              </button>
+
               <button 
                 onClick={() => {
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('house');
                 }}
-                className={`p-2 transition-colors ${activeScreen === 'house' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+                className={`p-2.5 rounded-2xl transition-all ${activeScreen === 'house' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-blue-900/60 bg-white/50 hover:bg-white border border-white/40'}`}
               >
-                <Home size={24} />
+                <Home size={22} />
               </button>
+
               <button 
                 onClick={() => {
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('profile');
                 }}
-                className={`p-2 transition-colors ${activeScreen === 'profile' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+                className={`p-2.5 rounded-2xl transition-all ${activeScreen === 'profile' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-blue-900/60 bg-white/50 hover:bg-white border border-white/40'}`}
               >
                 {settings.profilePic ? (
-                  <img src={settings.profilePic} alt="Profile" className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" referrerPolicy="no-referrer" loading="lazy" />
+                  <img src={settings.profilePic} alt="Profile" className="w-6 h-6 rounded-full object-cover border-2 border-white" referrerPolicy="no-referrer" />
                 ) : (
-                  <User size={24} />
+                  <User size={22} />
                 )}
               </button>
+
               <button 
                 onClick={() => {
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('settings');
                 }}
-                className={`p-2 transition-colors ${activeScreen === 'settings' ? 'text-blue-600' : 'text-blue-900/40 hover:text-blue-900/60'}`}
+                className={`p-2.5 rounded-2xl transition-all ${activeScreen === 'settings' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-blue-900/60 bg-white/50 hover:bg-white border border-white/40'}`}
               >
-                <Settings size={24} />
+                <Settings size={22} />
+              </button>
+
+              <button 
+                disabled
+                className="p-2.5 rounded-2xl transition-all text-gray-400 bg-gray-100/50 border border-gray-200 grayscale relative cursor-not-allowed"
+                onClick={() => showToast("Community Zone is locked for maintenance 🛡️", "info")}
+              >
+                <Users size={22} />
+                <div className="absolute -top-1 -right-1 bg-gray-800 text-white rounded-full p-0.5">
+                  <Lock size={10} />
+                </div>
+              </button>
+
+              <button 
+                onClick={() => {
+                  if (settings.soundEnabled) play('header_switch');
+                  setActiveScreen('subscription');
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl transition-all ${activeScreen === 'subscription' ? 'bg-amber-500 text-white shadow-lg shadow-amber-200' : 'bg-amber-500/10 text-amber-600 border border-amber-200'}`}
+              >
+                <Crown size={18} />
+                <span className="font-black text-[10px] uppercase tracking-tighter">Pro</span>
               </button>
               <button 
                 onClick={() => {
@@ -2599,6 +2598,17 @@ export default function App() {
             onComplete={() => setShowCoinAnimation(false)} 
             play={play}
             settings={settings}
+          />
+        )}
+
+        {showCompletionFlame && (
+          <CompletionFlame 
+            streak={sessionStreak}
+            xpEarned={sessionXP}
+            onContinue={() => {
+              setShowCompletionFlame(false);
+              setActiveScreen('gallery');
+            }}
           />
         )}
 
