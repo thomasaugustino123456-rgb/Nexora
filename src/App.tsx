@@ -26,7 +26,6 @@ const LibraryScreen = lazy(() => import('./components/LibraryScreen').then(m => 
 const ShopScreen = lazy(() => import('./components/ShopScreen').then(m => ({ default: m.ShopScreen })));
 const PlantScreen = lazy(() => import('./components/PlantScreen').then(m => ({ default: m.PlantScreen })));
 const SocialScreen = lazy(() => import('./components/SocialScreen').then(m => ({ default: m.SocialScreen })));
-const NexusVideoScreen = lazy(() => import('./components/NexusVideoScreen').then(m => ({ default: m.NexusVideoScreen })));
 const LeaderboardScreen = lazy(() => import('./components/LeaderboardScreen').then(m => ({ default: m.LeaderboardScreen })));
 const ProgressScreen = lazy(() => import('./components/ProgressScreen').then(m => ({ default: m.ProgressScreen })));
 const ProfileScreen = lazy(() => import('./components/ProfileScreen').then(m => ({ default: m.ProfileScreen })));
@@ -698,7 +697,6 @@ export default function App() {
   // Version Update Logic
   const [updateInfo, setUpdateInfo] = useState<{ version: string, releaseNotes: string[], forceUpdate: boolean, imageUrl?: string } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
-  const currentAppVersion = "1.5.1"; // Auto-bumping version to trigger update sync
   const [lastUpdateTime, setLastUpdateTime] = useState<string | null>(localStorage.getItem('nexora_last_update_time'));
 
   // Background Music Logic
@@ -932,7 +930,7 @@ export default function App() {
     }
 
     // Set last update time for 1.5.1 if not set
-    if (currentAppVersion === "1.5.1" && !localStorage.getItem('nexora_last_update_time')) {
+    if (!localStorage.getItem('nexora_last_update_time')) {
       const now = new Date().toISOString();
       localStorage.setItem('nexora_last_update_time', now);
       setLastUpdateTime(now);
@@ -2075,7 +2073,7 @@ export default function App() {
 
       <div className="w-full max-w-5xl flex flex-col min-h-screen relative z-10 mx-auto">
         
-        {activeScreen !== 'challenge' && activeScreen !== 'nexus-video' && (
+        {activeScreen !== 'challenge' && (
           <header className="px-6 pt-12 pb-4 flex items-center justify-between max-w-4xl mx-auto w-full">
             <div className="flex items-center gap-4">
               <img 
@@ -2247,28 +2245,6 @@ export default function App() {
                 </Suspense>
               </motion.div>
             )}
-            {activeScreen === 'nexus-video' && (
-               <motion.div
-                  key="nexus-video"
-                  initial={{ opacity: 0, y: 100 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 100 }}
-                  className="w-full"
-               >
-                  <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">TUNING FREQUENCIES...</div>}>
-                    <NexusVideoScreen 
-                       onBack={() => {
-                          setActiveScreen('social');
-                          setFocusedVideoId(null);
-                       }}
-                       user={user}
-                       settings={settings}
-                       showToast={showToast}
-                       initialVideoId={focusedVideoId}
-                    />
-                  </Suspense>
-               </motion.div>
-            )}
             {activeScreen === 'settings' && (
               <motion.div
                 key="settings"
@@ -2416,8 +2392,7 @@ export default function App() {
                   settings={settings}
                   savedVideos={globalSavedVideos}
                   onPlayVideo={(v) => {
-                    setFocusedVideoId(v.id);
-                    setActiveScreen('nexus-video');
+                    // Deleted as per request
                   }}
                   onDeleteVideo={handleDeleteSavedVideo}
                   onActivate={(id) => {
@@ -2750,7 +2725,7 @@ export default function App() {
           />
         )}
 
-        {activeScreen !== 'challenge' && activeScreen !== 'nexus-video' && (
+        {activeScreen !== 'challenge' && (
           <motion.div 
             initial={false}
             animate={{ 

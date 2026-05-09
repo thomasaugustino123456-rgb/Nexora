@@ -237,7 +237,7 @@ const PostCard = React.memo(({ post, user, settings, circles, savedPosts, toggle
 });
 
 export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings, posts, circles, notifications, setActiveScreen, play }: SocialScreenProps) {
-  const [activeTab, setActiveTab] = useState<'feed' | 'circles' | 'inbox' | 'library'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'circles' | 'inbox' | 'library'>('library');
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
   const [circleToEdit, setCircleToEdit] = useState<SocialCircle | null>(null);
@@ -575,16 +575,8 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       <div className="flex items-center gap-2 p-1.5 bg-blue-50/50 rounded-2xl w-fit overflow-x-auto no-scrollbar">
         <button onClick={() => {
           if (settings.soundEnabled) play('header_switch');
-          setActiveTab('feed');
-        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'feed' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Pulse Feed</button>
-        <button onClick={() => {
-          if (settings.soundEnabled) play('header_switch');
-          setActiveTab('circles');
-        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'circles' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Nodes</button>
-        <button onClick={() => {
-          if (settings.soundEnabled) play('header_switch');
           setActiveTab('library');
-        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Saved</button>
+        }} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-900/40 hover:text-blue-600'}`}>Saved Signals</button>
         <button onClick={() => {
           if (settings.soundEnabled) play('header_switch');
           setActiveTab('inbox');

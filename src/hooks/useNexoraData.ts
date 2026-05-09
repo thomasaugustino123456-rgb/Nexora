@@ -148,10 +148,32 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     return unsubscribe;
   }, []);
 
+  // Immediate Sync for critical actions
+  const syncToFirestore = async (newStats?: UserStats, newSettings?: UserSettings) => {
+    if (!user || !dataLoadedFromFirestore.current) return;
+    
+    // Merge with current state or use provided
+    const statsToSync = newStats || stats;
+    const settingsToSync = newSettings || settings;
+
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, {
+        stats: statsToSync,
+        settings: settingsToSync,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      console.log('✅ Immediate Firestore Sync Successful');
+    } catch (err) {
+      console.error('❌ Sync failed:', err);
+    }
+  };
+
   const onUpdateSettings = (update: UserSettings | ((prev: UserSettings) => UserSettings)) => {
     setSettings(prev => {
       const next = typeof update === 'function' ? update(prev) : update;
       localStorage.setItem('nexora_settings', JSON.stringify(next));
+      syncToFirestore(undefined, next);
       return next;
     });
   };
@@ -160,6 +182,7 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     setStats(prev => {
       const next = typeof update === 'function' ? update(prev) : update;
       localStorage.setItem('nexora_stats', JSON.stringify(next));
+      syncToFirestore(next, undefined);
       return next;
     });
   };

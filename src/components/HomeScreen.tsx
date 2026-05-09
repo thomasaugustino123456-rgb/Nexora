@@ -232,7 +232,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
       )}
 
       {/* Push Notification Onboarding Card */}
-      {!fcmToken && !fcmError && Notification.permission !== 'denied' && (
+      {!fcmToken && !fcmError && Notification.permission === 'default' && (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}

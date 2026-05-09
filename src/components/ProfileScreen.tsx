@@ -75,7 +75,7 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
                 onClick={() => setIsEditing(!isEditing)}
                 className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest leading-loose flex items-center gap-1 hover:text-blue-600"
               >
-                {isEditing ? 'Cancel Sync' : 'Edit Protocol'}
+                {isEditing ? 'Cancel Edit' : 'Edit Page'}
               </button>
            </div>
         </div>
@@ -116,6 +116,19 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
             <div>
               <p className="font-black text-blue-900 text-[10px] uppercase tracking-widest">Master Reset</p>
               <p className="text-[8px] text-blue-400 font-bold uppercase mt-1">Force Frequency Sync</p>
+            </div>
+          </button>
+
+          <button 
+            onClick={() => setActiveScreen('social')}
+            className="glass-card p-6 flex flex-col items-center text-center gap-4 hover:border-blue-400 group transition-all"
+          >
+            <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 group-hover:scale-110 transition-transform">
+              <Users size={24} />
+            </div>
+            <div>
+              <p className="font-black text-blue-900 text-[10px] uppercase tracking-widest">Nexus Hub</p>
+              <p className="text-[8px] text-blue-400 font-bold uppercase mt-1">Social Protocols</p>
             </div>
           </button>
 

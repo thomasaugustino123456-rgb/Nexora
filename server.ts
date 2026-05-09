@@ -154,17 +154,29 @@ const startScheduler = () => {
           }
         }
 
-        // 4. Daily Motivation
-        if (userTimeStr === (userData.motivationTime || '12:00')) {
-          const quotes = [
-            "Winning isn't everything, but wanting to win is. 🔥",
-            "Your only limit is you. 🚀",
-            "Be better than you were yesterday. 💪",
-            "Don't stop until you're proud. 🏆",
-            "Hard work beats talent when talent doesn't work hard. ⚡"
-          ];
-          const quote = quotes[Math.floor(Math.random() * quotes.length)];
-          await sendPush(fcmToken, 'Daily Fire! 💡', quote);
+        // 4. Motivation & Habit Reminders (Strict Times)
+        // Motivation: 7:30 AM and 6:30 PM
+        if (userTimeStr === '07:30' || userTimeStr === '18:30') {
+          await sendPush(fcmToken, 'Nexora Motivation 🔥', 'Your only limit is you, bro! Get those habits done! 🚀');
+        }
+
+        // Morning Reminder: 10:00 AM
+        if (userTimeStr === '10:00') {
+          await sendPush(fcmToken, 'Morning Flow ☀️', 'Bro, start your day strong! Complete your first challenge now!');
+        }
+
+        // Afternoon Boost: 2:30 PM
+        if (userTimeStr === '14:30') {
+          await sendPush(fcmToken, 'Afternoon Energy ⚡', 'Mid-day boost! Keep that momentum going, bro!');
+        }
+
+        // Evening Reflection: 8:30 PM
+        if (userTimeStr === '20:30') {
+          if (!userData.isTodayCompleted) {
+            await sendPush(fcmToken, 'Evening Reflection 🌙', 'Reflect on your wins today. Finish your streak before bed!');
+          } else {
+            await sendPush(fcmToken, 'Evening Win! 🌟', 'You crushed it today! Rest up for a bigger win tomorrow!');
+          }
         }
 
         // 5. Inactivity "We Miss You" (Check every Sunday at 3 PM)

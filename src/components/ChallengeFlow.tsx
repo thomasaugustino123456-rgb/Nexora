@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { 
   ChevronRight, Save, LogOut, Pencil, Pen, Palette, PaintBucket, 
   CheckCircle2, X, Star, Flame, Award, Heart, Brain, Zap, Crown
@@ -212,6 +212,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 coins={15}
                 showTrophy={earnedTrophyToday}
                 settings={settings}
+                play={play}
               />
             )}
           </AnimatePresence>
@@ -711,7 +712,9 @@ export function DrawingStep({ onFinish, onSave, settings, activeSkin = 'none', p
   );
 }
 
-export function CompletionStep({ onFinish, streak, points, xp, coins, showTrophy, settings }: { onFinish: () => void, streak: number, points: number, xp: number, coins: number, showTrophy: boolean, settings: UserSettings }) {
+export function CompletionStep({ onFinish, streak, points, xp, coins, showTrophy, settings, play }: { onFinish: () => void, streak: number, points: number, xp: number, coins: number, showTrophy: boolean, settings: UserSettings, play: (s: string) => void }) {
+  const mascotControls = useAnimationControls();
+
   useEffect(() => {
     if (showTrophy) {
       vibrate(VIBRATION_PATTERNS.TROPHY);
@@ -719,7 +722,14 @@ export function CompletionStep({ onFinish, streak, points, xp, coins, showTrophy
         playTrophySound('golden');
       }
     }
-  }, [showTrophy, settings.soundEnabled]);
+    // Animate mascot entry
+    mascotControls.start({ 
+      scale: [0, 1.2, 1],
+      rotate: [0, -10, 0],
+      opacity: 1,
+      transition: { type: "spring", damping: 10, stiffness: 100 }
+    });
+  }, [showTrophy, settings.soundEnabled, mascotControls]);
 
   return (
     <motion.div 
@@ -727,7 +737,17 @@ export function CompletionStep({ onFinish, streak, points, xp, coins, showTrophy
       animate={{ opacity: 1, scale: 1 }}
       className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-md mx-auto w-full"
     >
-      <div className="text-center space-y-2">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0 overflow-hidden w-full h-full flex items-center justify-center">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0 }}
+          animate={mascotControls}
+          className="w-[120%] h-[120%] opacity-10"
+        >
+          <HappyMascot size={300} settings={settings} />
+        </motion.div>
+      </div>
+
+      <div className="text-center space-y-2 z-10">
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -789,9 +809,10 @@ export function CompletionStep({ onFinish, streak, points, xp, coins, showTrophy
       <button 
         onClick={() => {
           vibrate(VIBRATION_PATTERNS.CLICK);
+          if (settings.soundEnabled) play('challenge_unlock');
           onFinish();
         }} 
-        className="btn-primary w-full py-5 text-lg shadow-2xl shadow-blue-500/20"
+        className="btn-primary w-full py-5 text-lg shadow-2xl shadow-blue-500/20 z-10"
       >
         Back to Home ✨
       </button>
