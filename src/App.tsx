@@ -1616,12 +1616,12 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [checkTrophies]);
 
-  const handleCompleteChallenge = (finalProgress?: DailyProgress) => {
+  const handleCompleteChallenge = async (finalProgress?: DailyProgress, isCustomPlanFlag?: boolean) => {
     setEmergencyActive(false);
     const progress = finalProgress || dailyProgress;
-    const isCustomPlan = activeCustomPlan !== null;
+    const isCustomPlan = isCustomPlanFlag ?? activeCustomPlan !== null;
     const trophyLimit = settings.isPro ? 10 : 3;
-    
+
     // Calculate how many tasks were actually completed in this session
     const completedTasksList = Object.entries(progress).filter(([key, value]) => 
       ['pushupsDone', 'waterDrank', 'breathingDone', 'drawingDone', 'footballDone', 'bubblesDone', 'memoryDone', 'gratitudeDone', 'reactionDone', 'meditationDone', 'writingDone'].includes(key) && 
@@ -1629,14 +1629,26 @@ export default function App() {
     );
     const completedTasks = completedTasksList.length;
 
-    // Award trophy only if it's an official plan OR if they have room in the daily limit
-    // Actually user says: "if they do as many time they want it have to be given"
-    const nextCompletionsCount = isCustomPlan ? (progress.completionsCount || 0) : ((progress.completionsCount || 0) + 1);
-    const canAwardTrophy = completedTasks > 0; // Removing completion limit as requested by user
+    if (isCustomPlan && user && activeCustomPlan) {
+      try {
+        const customPlanRef = doc(collection(db, 'users', user.uid, 'custom_progress'));
+        await setDoc(customPlanRef, {
+          planId: activeCustomPlan.id,
+          planName: activeCustomPlan.name,
+          completedAt: serverTimestamp(),
+          date: today
+        });
+      } catch (e) {
+        console.error("Failed to save custom plan progress", e);
+      }
+    }
+
+    const nextCompletionsCount = isCustomPlan ? (dailyProgress.completionsCount || 0) : ((dailyProgress.completionsCount || 0) + 1);
+    const canAwardTrophy = completedTasks > 0 || isCustomPlan; // Custom plans always get a trophy
 
     // Determine trophy type for this session
     const hasIce = (progress.waterChallengeCount || 0) > 10; // Example condition
-    const currentTrophyType: TrophyType = (isEarnedTrophyToday || completedTasks >= (settings.pushupsGoal || 5)) ? 'golden' : 'golden';
+    const currentTrophyType: TrophyType = (earnedTrophyToday || completedTasks >= (settings.pushupsGoal || 5)) ? 'golden' : 'golden';
     setSessionTrophy(currentTrophyType);
 
     if (canAwardTrophy) {
@@ -2722,6 +2734,7 @@ export default function App() {
                   showToast={showToast}
                   play={play}
                   dailyQuest={dailyQuest}
+                  isCustomPlan={activeCustomPlan !== null}
                 />
               </Suspense>
             )}

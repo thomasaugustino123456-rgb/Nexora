@@ -24,7 +24,7 @@ function LazyHappyMascot(props: any) {
   );
 }
 
-export function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest }: { 
+export function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest, isCustomPlan }: { 
   step: ChallengeStep, 
   setStep: (s: ChallengeStep) => void, 
   customSteps?: ChallengeStep[],
@@ -34,12 +34,13 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   setDailyProgress: (p: Partial<DailyProgress> | ((prev: DailyProgress) => DailyProgress)) => void,
   stats: UserStats,
   setStats: (s: Partial<UserStats> | ((prev: UserStats) => UserStats)) => void,
-  onFinish: (p?: DailyProgress) => void,
+  onFinish: (p?: DailyProgress, isCustom?: boolean) => void,
   onExit: () => void,
   earnedTrophyToday: boolean,
   showToast: (msg: string, type?: 'success' | 'info' | 'error') => void,
   play: (s: any) => void,
-  dailyQuest: ChallengeStep | null
+  dailyQuest: ChallengeStep | null,
+  isCustomPlan?: boolean
 }) {
   const baseSteps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'gratitude', 'reaction'];
   const defaultSteps: ChallengeStep[] = [...baseSteps, ...(settings.isPro ? ['writing' as ChallengeStep] : []), 'meditation' as ChallengeStep];
@@ -79,14 +80,14 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
 
     const finalProgress = { ...dailyProgress, ...updates };
 
-    if (Object.keys(updates).length > 0) {
+    if (!isCustomPlan && Object.keys(updates).length > 0) {
       setDailyProgress(finalProgress);
     }
 
     if (currentIdx < steps.length - 1) {
       setStep(steps[currentIdx + 1]);
     } else {
-      onFinish(finalProgress);
+      onFinish(isCustomPlan ? undefined : finalProgress, isCustomPlan);
     }
   };
 
@@ -127,8 +128,12 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
             {step === 'water' && (
               <WaterStep 
                 goal={settings.waterGoal} 
-                progress={dailyProgress.waterDrank}
-                onUpdate={(val) => setDailyProgress(prev => ({ ...prev, waterDrank: val }))}
+                progress={isCustomPlan ? 0 : dailyProgress.waterDrank}
+                onUpdate={(val) => {
+                  if (!isCustomPlan) {
+                    setDailyProgress(prev => ({ ...prev, waterDrank: val }))
+                  }
+                }}
                 onContinue={nextStep} 
                 activeSkin={settings.activeSkin}
                 settings={settings}
@@ -363,8 +368,9 @@ export function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none', setting
   );
 }
 
-export function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = 'none', settings, play }: { goal: number, progress: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
-  const isFinished = progress >= goal;
+export function WaterStep({ goal, progress: initialProgress, onUpdate, onContinue, activeSkin = 'none', settings, play }: { goal: number, progress?: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+  const [localProgress, setLocalProgress] = useState(0);
+  const isFinished = localProgress >= goal;
 
   return (
     <motion.div 
@@ -374,18 +380,18 @@ export function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = '
       className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full"
     >
       <div className="w-full max-w-[300px] lg:max-w-[400px]">
-        <WaterMascot progress={Math.min(progress / goal, 1)} className="drop-shadow-2xl" />
+        <WaterMascot progress={Math.min(localProgress / goal, 1)} className="drop-shadow-2xl" />
       </div>
       
       <div className="glass-card w-full p-10 text-center space-y-8">
         <div className="space-y-4">
           <h2 className="text-3xl font-bold text-blue-900/80">Drink Water</h2>
-          <p className="text-blue-900/50 font-medium">{progress} / {goal} glasses</p>
+          <p className="text-blue-900/50 font-medium">{localProgress} / {goal} glasses</p>
           
           <div className="h-3 bg-blue-100 rounded-full overflow-hidden">
             <motion.div 
               initial={{ width: 0 }}
-              animate={{ width: `${Math.min((progress / goal) * 100, 100)}%` }}
+              animate={{ width: `${Math.min((localProgress / goal) * 100, 100)}%` }}
               className="h-full bg-blue-400 rounded-full"
             />
           </div>
@@ -397,11 +403,12 @@ export function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = '
             <button 
               onClick={() => {
                 vibrate(VIBRATION_PATTERNS.CLICK);
+                const newProgress = localProgress + 1;
+                setLocalProgress(newProgress);
                 if (settings.soundEnabled) {
-                   if (progress + 1 >= goal) play('challenge_unlock');
+                   if (newProgress >= goal) play('challenge_unlock');
                    else play('water');
                 }
-                onUpdate(progress + 1);
               }} 
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
@@ -411,6 +418,7 @@ export function WaterStep({ goal, progress, onUpdate, onContinue, activeSkin = '
             <button 
               onClick={() => {
                 vibrate(VIBRATION_PATTERNS.SUCCESS);
+                onUpdate(goal); // Only update global progress when completing the step
                 onContinue();
               }} 
               className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600"
