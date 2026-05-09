@@ -181,9 +181,12 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                   }));
                 }}
                 showToast={showToast}
+                settings={settings}
+                activeSkin={settings.activeSkin}
+                play={play}
               />
             )}
-            {step === 'reaction' && <ReactionStep onComplete={nextStep} />}
+            {step === 'reaction' && <ReactionStep onComplete={nextStep} settings={settings} activeSkin={settings.activeSkin} play={play} />}
             {step === 'meditation' && (
               <MeditationStep 
                 onDone={nextStep} 
@@ -1308,7 +1311,7 @@ export function MemoryStep({ onComplete, activeSkin = 'none', settings, play }: 
   );
 }
 
-export function GratitudeStep({ onComplete, onSave, showToast }: { onComplete: () => void, onSave: (text: string) => void, showToast: (msg: string, type?: 'success' | 'info' | 'error') => void }) {
+export function GratitudeStep({ onComplete, onSave, showToast, settings, activeSkin = 'none', play }: { onComplete: () => void, onSave: (text: string) => void, showToast: (msg: string, type?: 'success' | 'info' | 'error') => void, settings: UserSettings, activeSkin?: string, play: (s: string) => void }) {
   const [text, setText] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -1347,16 +1350,19 @@ export function GratitudeStep({ onComplete, onSave, showToast }: { onComplete: (
                   onClick={handleSave}
                   disabled={text.trim().length < 3}
                   className="p-3 bg-amber-100 text-amber-600 rounded-xl font-bold shadow-sm disabled:opacity-50"
-                  title="Save to Library"
                 >
                   <Save size={24} />
                 </button>
                 <button
-                  onClick={handleSubmit}
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.SUCCESS);
+                    if (settings.soundEnabled) play('challenge_unlock');
+                    setSubmitted(true);
+                  }}
                   disabled={text.trim().length < 3}
                   className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
                 >
-                  Drop in Jar
+                  Drop in Jar ✨
                 </button>
               </div>
             </motion.div>
@@ -1364,10 +1370,15 @@ export function GratitudeStep({ onComplete, onSave, showToast }: { onComplete: (
             <motion.div
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="text-center"
+              className="text-center space-y-4"
             >
-              <div className="text-6xl mb-4">✨</div>
-              <p className="text-blue-900 font-bold">Saved to your jar!</p>
+               <LazyHappyMascot size={40} hat={activeSkin} settings={settings} />
+               <div className="space-y-1">
+                 <p className="text-blue-900 font-black uppercase tracking-widest text-sm">Grateful!</p>
+                 <button onClick={onComplete} className="text-blue-500 font-bold flex items-center gap-1 mx-auto group">
+                   Continue <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                 </button>
+               </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1376,8 +1387,8 @@ export function GratitudeStep({ onComplete, onSave, showToast }: { onComplete: (
   );
 }
 
-export function ReactionStep({ onComplete }: { onComplete: () => void }) {
-  const [state, setState] = useState<'waiting' | 'ready' | 'clicked' | 'too-soon'>('waiting');
+export function ReactionStep({ onComplete, activeSkin = 'none', settings, play }: { onComplete: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+  const [state, setState] = useState<'waiting' | 'ready' | 'clicked' | 'too-soon' | 'finished'>('waiting');
   const [startTime, setStartTime] = useState(0);
   const [reactionTime, setReactionTime] = useState(0);
   const timerRef = useRef<any>(null);
@@ -1407,7 +1418,10 @@ export function ReactionStep({ onComplete }: { onComplete: () => void }) {
       setReactionTime(time);
       setState('clicked');
       vibrate(VIBRATION_PATTERNS.SUCCESS);
-      setTimeout(onComplete, 2000);
+      setTimeout(() => {
+        if (settings.soundEnabled) play('challenge_unlock');
+        setState('finished');
+      }, 1000);
     }
   };
 
@@ -1417,29 +1431,54 @@ export function ReactionStep({ onComplete }: { onComplete: () => void }) {
         <h2 className="text-2xl font-black text-blue-900 mb-2">Reaction Test</h2>
         <p className="text-blue-600 font-medium">Tap when it turns GREEN!</p>
       </div>
-      <button
-        onClick={handleClick}
-        className={`w-full aspect-square rounded-3xl flex flex-col items-center justify-center transition-colors duration-75 shadow-xl ${
-          state === 'waiting' ? 'bg-blue-100' :
-          state === 'ready' ? 'bg-green-500' :
-          state === 'too-soon' ? 'bg-red-500' : 'bg-blue-500'
-        }`}
-      >
-        {state === 'waiting' && <p className="text-blue-400 font-bold text-xl">Wait...</p>}
-        {state === 'ready' && <p className="text-white font-black text-4xl animate-pulse">TAP!</p>}
-        {state === 'too-soon' && (
-          <div className="text-center text-white">
-            <p className="font-black text-2xl mb-2">Too soon!</p>
-            <button onClick={startTest} className="px-4 py-2 bg-white/20 rounded-lg font-bold">Try Again</button>
-          </div>
-        )}
-        {state === 'clicked' && (
-          <div className="text-center text-white">
-            <p className="font-black text-4xl mb-2">{reactionTime}ms</p>
-            <p className="font-bold">Great reflexes!</p>
-          </div>
-        )}
-      </button>
+
+      {state === 'finished' ? (
+        <div className="glass-card w-full p-10 flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300">
+           <LazyHappyMascot size={48} hat={activeSkin} settings={settings} />
+           <div className="text-center space-y-1">
+             <p className="text-3xl font-black text-blue-600">{reactionTime}ms</p>
+             <p className="text-blue-900/60 font-bold uppercase tracking-widest text-[10px]">Elite Reflexes!</p>
+           </div>
+           <button 
+             onClick={onComplete} 
+             className="btn-primary w-full bg-blue-600 hover:bg-blue-700 shadow-xl"
+           >
+             Continue <ChevronRight size={20} />
+           </button>
+        </div>
+      ) : (
+        <button
+          onClick={handleClick}
+          className={`w-full aspect-square rounded-3xl flex flex-col items-center justify-center transition-colors duration-75 shadow-xl ${
+            state === 'waiting' ? 'bg-blue-100' :
+            state === 'ready' ? 'bg-green-500' :
+            state === 'too-soon' ? 'bg-red-500' : 'bg-blue-500'
+          }`}
+        >
+          {state === 'waiting' && <p className="text-blue-400 font-bold text-xl">Wait...</p>}
+          {state === 'ready' && <p className="text-white font-black text-4xl animate-pulse">TAP!</p>}
+          {state === 'too-soon' && (
+            <div className="text-center text-white">
+              <p className="font-black text-2xl mb-2">Too soon!</p>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startTest();
+                }} 
+                className="px-4 py-2 bg-white/20 rounded-lg font-bold"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+          {state === 'clicked' && (
+            <div className="text-center text-white">
+              <p className="font-black text-4xl mb-2">{reactionTime}ms</p>
+              <p className="font-bold">Great reflexes!</p>
+            </div>
+          )}
+        </button>
+      )}
     </div>
   );
 }
@@ -1568,16 +1607,29 @@ export function WritingStep({ onDone, activeSkin = 'none', settings, play }: { o
           className="w-full h-40 bg-white/80 rounded-xl p-4 text-blue-900 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-medium border border-blue-100 shadow-sm"
         />
 
-        <button 
-          onClick={() => {
-            vibrate(VIBRATION_PATTERNS.SUCCESS);
-            onDone();
-          }} 
-          disabled={text.trim().length < 10}
-          className="btn-primary w-full bg-blue-500 hover:bg-blue-600 border-none disabled:opacity-50"
-        >
-          Finish Writing ✨
-        </button>
+        {isFinished ? (
+          <div className="space-y-4 w-full">
+            <LazyHappyMascot size={40} hat={activeSkin} settings={settings} />
+            <button 
+              onClick={onDone} 
+              className="btn-primary w-full bg-blue-500 hover:bg-blue-600 border-none shadow-xl"
+            >
+              Continue <ChevronRight size={20} />
+            </button>
+          </div>
+        ) : (
+          <button 
+            onClick={() => {
+              vibrate(VIBRATION_PATTERNS.SUCCESS);
+              if (settings.soundEnabled) play('challenge_unlock');
+              setIsFinished(true);
+            }} 
+            disabled={text.trim().length < 10}
+            className="btn-primary w-full bg-blue-500 hover:bg-blue-600 border-none disabled:opacity-50 shadow-lg"
+          >
+            Finish Writing ✨
+          </button>
+        )}
       </div>
     </motion.div>
   );

@@ -129,16 +129,23 @@ export function TrophyRewardsScreen({ trophyType, onFinish }: TrophyRewardsScree
                 <button 
                   onClick={async () => {
                     vibrate(10);
-                    const shareData = {
-                      title: 'Nexora Achievement',
-                      text: `Bro, I just earned a ${trophyType} trophy on Nexora! Check my rank!`,
-                      url: `${window.location.origin}?user=${auth.currentUser?.uid || ''}`
-                    };
+                    const shareUrl = `${window.location.origin}${window.location.pathname}?user=${auth.currentUser?.uid || ''}`;
+                    const shareText = `Bro, check my discipline rank! I just earned a ${trophyType.toUpperCase()} trophy on Nexora! 🏆🚀`;
+                    
                     if (navigator.share) {
-                      await navigator.share(shareData);
+                      try {
+                        await navigator.share({
+                          title: 'Nexora Achievement',
+                          text: shareText,
+                          url: shareUrl
+                        });
+                      } catch (e) {
+                         // Fallback to clipboard if share cancelled
+                         await navigator.clipboard.writeText(`${shareText}\n\nView here: ${shareUrl}`);
+                      }
                     } else {
-                      await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
-                      alert('Link copied to clipboard, bro! 🚀');
+                      await navigator.clipboard.writeText(`${shareText}\n\nView here: ${shareUrl}`);
+                      alert('Share link copied to clipboard! 📋 Past it anywhere, bro!');
                     }
                   }}
                   className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-blue-900 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all"

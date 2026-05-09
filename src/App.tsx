@@ -1422,13 +1422,14 @@ export default function App() {
 
         // CHALLENGE LIMIT RESTORATION LOGIC
         useEffect(() => {
-          if (dailyProgress.completionsCount > 0) {
+          if (dailyProgress && dailyProgress.completionsCount > 0) {
             const interval = setInterval(() => {
               const now = Date.now();
-              if (dailyProgress.nextRestorationTime && now >= dailyProgress.nextRestorationTime) {
+              const nextTime = dailyProgress.nextRestorationTime || (now + 4 * 60 * 60 * 1000);
+              
+              if (now >= nextTime) {
                 setDailyProgress(prev => {
                   const newCount = Math.max(0, prev.completionsCount - 1);
-                  // Setup next restoration if still > 0
                   const nextRest = newCount > 0 ? (Date.now() + 4 * 60 * 60 * 1000) : null; 
                   return {
                     ...prev,
@@ -1437,16 +1438,15 @@ export default function App() {
                   };
                 });
               } else if (!dailyProgress.nextRestorationTime) {
-                // Initialize next restoration if not set
                 setDailyProgress(prev => ({
                   ...prev,
-                  nextRestorationTime: Date.now() + 4 * 60 * 60 * 1000
+                  nextRestorationTime: nextTime
                 }));
               }
-            }, 10000); // Check every 10s
+            }, 5000); 
             return () => clearInterval(interval);
           }
-        }, [dailyProgress.completionsCount, dailyProgress.nextRestorationTime]);
+        }, [dailyProgress?.completionsCount, dailyProgress?.nextRestorationTime]);
 
   // Optimized History calculation using useMemo to avoid O(N) calculation on every render
   const memoizedHistory = useMemo(() => {
@@ -1800,6 +1800,18 @@ export default function App() {
   const onShowManifesto = () => {
     setShowUpdatePopup(true);
   };
+
+  if (publicUserViewId) {
+    return (
+      <PublicRankView 
+        userId={publicUserViewId} 
+        onClose={() => {
+          setPublicUserViewId(null);
+          window.history.replaceState({}, '', window.location.pathname);
+        }} 
+      />
+    );
+  }
 
   if (loading) {
     return <SplashScreen />;

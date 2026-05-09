@@ -124,12 +124,14 @@ export function PublicRankView({ userId, onClose }: PublicRankViewProps) {
 
         <div className="mt-12 w-full text-center">
            <button 
-             onClick={onClose}
-             className="w-full py-5 bg-blue-600 text-white rounded-3xl font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
+             onClick={() => {
+               window.location.href = window.location.origin;
+             }}
+             className="w-full py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3"
            >
-             Start Your Journey
+             <Zap size={20} /> Join Nexora Now
            </button>
-           <p className="mt-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Created with Nexora AI Studio</p>
+           <p className="mt-4 text-[10px] font-black text-blue-900/40 uppercase tracking-[0.2em]">Created with Nexora AI Studio • Join 10k+ Legends</p>
         </div>
       </div>
 
