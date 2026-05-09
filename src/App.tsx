@@ -806,6 +806,7 @@ export default function App() {
     // Update localStorage immediately
     localStorage.setItem('nexora_settings', JSON.stringify(settings));
     localStorage.setItem('nexora_stats', JSON.stringify(stats));
+    localStorage.setItem(`nexora_progress_${today}`, JSON.stringify(dailyProgress));
 
     const syncToFirestore = async () => {
       const path = `users/${user.uid}`;
@@ -1296,21 +1297,44 @@ export default function App() {
       const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       const todayStr = now.toISOString().split('T')[0];
       
-      // Main Reminders (AM/PM or any two times)
-      if (currentTimeStr === settings.reminderTime || currentTimeStr === settings.reminderTime2) {
-        const lastReminderKey = `nexora_last_reminder_${currentTimeStr}_${todayStr}`;
-        const lastReminderDone = localStorage.getItem(lastReminderKey);
-        if (!lastReminderDone) {
-          sendNotification('Nexora 🔥', {
-            body: 'Hey 👋 Ready for today’s challenge?',
+      // Morning Reminder
+      if (currentTimeStr === '08:00') {
+        const lastMorningKey = `nexora_morning_${todayStr}`;
+        if (!localStorage.getItem(lastMorningKey)) {
+          sendNotification('Good Morning bro! 🌅', {
+            body: 'Hey 👋 Ready to crush today’s challenges?',
             icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
           });
-          localStorage.setItem(lastReminderKey, 'true');
+          localStorage.setItem(lastMorningKey, 'true');
+        }
+      }
+
+      // Afternoon Reminder
+      if (currentTimeStr === '14:00') {
+        const lastAfternoonKey = `nexora_afternoon_${todayStr}`;
+        if (!localStorage.getItem(lastAfternoonKey)) {
+          sendNotification('Afternoon Check-in ☀️', {
+            body: 'Keep the momentum going, bro! Don\'t forget your challenges!',
+            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+          });
+          localStorage.setItem(lastAfternoonKey, 'true');
+        }
+      }
+
+      // Evening Reminder
+      if (currentTimeStr === '19:00') {
+        const lastEveningKey = `nexora_evening_${todayStr}`;
+        if (!localStorage.getItem(lastEveningKey)) {
+          sendNotification('Evening Wrap-up 🌙', {
+            body: 'Time to finish strong, bro! Complete any remaining goals.',
+            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+          });
+          localStorage.setItem(lastEveningKey, 'true');
         }
       }
 
       // Daily Motivation Reminder
-      if (currentTimeStr === (settings.motivationTime || '12:00')) {
+      if (currentTimeStr === '12:00') {
         const lastMotivationKey = `nexora_last_motivation_${todayStr}`;
         if (!localStorage.getItem(lastMotivationKey)) {
           const quotes = [
@@ -1460,30 +1484,28 @@ export default function App() {
 
   const userRank = leaderboard.findIndex(l => l.uid === user?.uid) + 1;
 
+  // Midnight rollover
   useEffect(() => {
-    const saved = localStorage.getItem(`nexora_progress_${today}`);
-    if (saved) {
-      try {
-        setDailyProgress(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse daily progress", e);
-      }
-    } else {
-            // Reset for new day
-            setDailyProgress({
-              date: today,
-              completed: false,
-              completionsCount: 0,
-              pushupsDone: false,
-              waterDrank: 0,
-              breathingDone: false,
-              drawingDone: false,
-              footballDone: false,
-              bubblesDone: false,
-              nextRestorationTime: null
-            });
-          }
-        }, [today]);
+    if (isDataReady && dailyProgress.date && dailyProgress.date !== today) {
+      setDailyProgress({
+        date: today,
+        completed: false,
+        completionsCount: 0,
+        pushupsDone: false,
+        waterDrank: 0,
+        breathingDone: false,
+        drawingDone: false,
+        footballDone: false,
+        bubblesDone: false,
+        memoryDone: false,
+        gratitudeDone: false,
+        reactionDone: false,
+        meditationDone: false,
+        writingDone: false,
+        nextRestorationTime: null
+      } as any);
+    }
+  }, [today, dailyProgress.date, isDataReady]);
 
         // CHALLENGE LIMIT RESTORATION LOGIC
         useEffect(() => {
@@ -1494,8 +1516,13 @@ export default function App() {
               
               if (now >= nextTime) {
                 setDailyProgress(prev => {
-                  const newCount = Math.max(0, prev.completionsCount - 1);
-                  const nextRest = newCount > 0 ? (Date.now() + 4 * 60 * 60 * 1000) : null; 
+                  if (!prev.nextRestorationTime) return prev;
+                  // Calculate how many 4-hour chunks have passed since the original target time
+                  const timePassedSinceTarget = now - prev.nextRestorationTime;
+                  const chunksPassed = Math.floor(timePassedSinceTarget / (4 * 60 * 60 * 1000)) + 1;
+                  
+                  const newCount = Math.max(0, prev.completionsCount - chunksPassed);
+                  const nextRest = newCount > 0 ? (prev.nextRestorationTime + chunksPassed * 4 * 60 * 60 * 1000) : null; 
                   return {
                     ...prev,
                     completionsCount: newCount,
@@ -1604,7 +1631,7 @@ export default function App() {
 
     // Award trophy only if it's an official plan OR if they have room in the daily limit
     // Actually user says: "if they do as many time they want it have to be given"
-    const nextCompletionsCount = (progress.completionsCount || 0) + 1;
+    const nextCompletionsCount = isCustomPlan ? (progress.completionsCount || 0) : ((progress.completionsCount || 0) + 1);
     const canAwardTrophy = completedTasks > 0; // Removing completion limit as requested by user
 
     // Determine trophy type for this session
@@ -2723,7 +2750,10 @@ export default function App() {
         {activeScreen === 'trophy-rewards' && (
           <TrophyRewardsScreen 
             trophyType={sessionTrophy} 
-            onFinish={() => setActiveScreen('home')}
+            onFinish={() => {
+              setActiveCustomPlan(null);
+              setActiveScreen('home');
+            }}
           />
         )}
 
