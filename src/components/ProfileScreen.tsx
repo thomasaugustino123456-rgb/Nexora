@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Shield, Target, Award, Star, History, Camera, Crown, Globe, MessageSquare, Zap, Clock, MoreHorizontal, Video, Plus, Info } from 'lucide-react';
+import { User, Shield, Target, Award, Star, History, Camera, Crown, Globe, MessageSquare, Zap, Clock, MoreHorizontal, Video, Plus, Info, Users } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { UserSettings, UserStats, SocialCircle, Screen } from '../types';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';

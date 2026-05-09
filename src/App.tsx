@@ -2789,16 +2789,6 @@ export default function App() {
                 label="Notebook"
               />
               <NavButton 
-                active={activeScreen === 'social'} 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                  if (settings.soundEnabled) play('nav_switch');
-                  setActiveScreen('social');
-                }} 
-                icon={<Users size={24} />} 
-                label="Nexus"
-              />
-              <NavButton 
                 active={activeScreen === 'leaderboard'} 
                 onClick={() => {
                   vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
