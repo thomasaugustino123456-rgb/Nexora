@@ -15,6 +15,7 @@ import { getToken } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingScreen } from './components/OnboardingScreen';
+import { useAppIcon } from './hooks/useAppIcon';
 import { PlanBuilder } from './components/PlanBuilder';
 import { HomeScreen } from './components/HomeScreen';
 import { Mascot } from './components/Mascot';
@@ -152,6 +153,30 @@ export default function App() {
   const [challengeStep, setChallengeStep] = useState<ChallengeStep | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   
+  // Calculate Global Mascot Mood for the Dynamic Icon (Duolingo Style)
+  const globalMascotMood: MascotMood = useMemo(() => {
+    if (!isDataReady) return 'neutral';
+    
+    const now = new Date();
+    const hours = now.getHours();
+    
+    // 1. Boiling (Streak Power)
+    if (stats.streak >= 3) return 'boiling';
+    
+    // 2. Angry (Reminder Mode)
+    const isLate = hours >= 18;
+    const tasksDone = (dailyProgress as any).completionsCount > 0;
+    if (isLate && !tasksDone) return 'angry';
+    
+    // 3. Happy (Default progress)
+    if (tasksDone) return 'happy';
+    
+    return 'neutral';
+  }, [stats.streak, (dailyProgress as any).completionsCount, isDataReady]);
+
+  // Apply Dynamic Icon & Badging (Duolingo-style)
+  useAppIcon(globalMascotMood, stats, dailyProgress);
+
   const isPro = settings?.isPro || false;
 
   const currentAppVersion = "2.5.1"; // Auto-bumping version
