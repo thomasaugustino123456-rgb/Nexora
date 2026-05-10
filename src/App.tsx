@@ -1956,7 +1956,15 @@ export default function App() {
   if (needsOnboarding) {
     return (
       <Suspense fallback={<div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">PREPARING ONBOARDING...</div>}>
-        <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} settings={settings} setSettings={onUpdateSettings} setupFCM={setupFCM} />
+        <OnboardingScreen 
+          onComplete={() => {
+            setNeedsOnboarding(false);
+            localStorage.setItem('nexora_onboarding_completed', 'true');
+          }} 
+          settings={settings} 
+          setSettings={onUpdateSettings} 
+          setupFCM={setupFCM} 
+        />
       </Suspense>
     );
   }

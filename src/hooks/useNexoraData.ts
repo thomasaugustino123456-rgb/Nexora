@@ -17,6 +17,7 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
   const cachedSettings = localStorage.getItem('nexora_settings') ? JSON.parse(localStorage.getItem('nexora_settings')!) : DEFAULT_SETTINGS;
   const cachedStats = localStorage.getItem('nexora_stats') ? JSON.parse(localStorage.getItem('nexora_stats')!) : DEFAULT_STATS;
   const cachedProgress = localStorage.getItem('nexora_progress') ? JSON.parse(localStorage.getItem('nexora_progress')!) : null;
+  const cachedOnboarding = localStorage.getItem('nexora_onboarding_completed') === 'true';
 
   const [settings, setSettings] = useState<UserSettings>(cachedSettings);
   const [stats, setStats] = useState<UserStats>(cachedStats);
@@ -32,7 +33,7 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     completionsCount: 0
   });
 
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(!cachedOnboarding && !!cachedUserId);
   const dataLoadedFromFirestore = useRef(false);
 
   useEffect(() => {
@@ -46,9 +47,6 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     initAuth();
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      // Loading screen goes away immediately if cached, but we still ensure we disable loading for new users
-      setLoading(false); 
-      
       if (currentUser) {
         // Cache user to instant-load next time
         localStorage.setItem('nexora_cached_user', currentUser.uid);
@@ -84,6 +82,7 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
             setSettings(DEFAULT_SETTINGS);
             setStats(DEFAULT_STATS);
             setNeedsOnboarding(true);
+            localStorage.setItem('nexora_onboarding_completed', 'false');
             
             localStorage.setItem('nexora_settings', JSON.stringify(DEFAULT_SETTINGS));
             localStorage.setItem('nexora_stats', JSON.stringify(DEFAULT_STATS));
@@ -123,7 +122,9 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
             // Always update state and cache with fresh server data
             setSettings(firestoreSettings);
             setStats(firestoreStats);
-            setNeedsOnboarding(data.onboardingCompleted === false);
+            const isCompleted = data.onboardingCompleted === true;
+            setNeedsOnboarding(!isCompleted);
+            localStorage.setItem('nexora_onboarding_completed', isCompleted ? 'true' : 'false');
             
             localStorage.setItem('nexora_settings', JSON.stringify(firestoreSettings));
             localStorage.setItem('nexora_stats', JSON.stringify(firestoreStats));
@@ -134,14 +135,18 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
           console.error("Hooks: Load critical failure:", error);
           showToast("Offline mode synced.", 'info');
           setIsDataReady(true);
+        } finally {
+          setLoading(false);
         }
       } else {
         localStorage.removeItem('nexora_cached_user');
+        localStorage.removeItem('nexora_onboarding_completed');
         setUser(null);
         setIsDataReady(false);
         dataLoadedFromFirestore.current = false;
         setSettings(DEFAULT_SETTINGS);
         setStats(DEFAULT_STATS);
+        setLoading(false);
       }
     });
 
