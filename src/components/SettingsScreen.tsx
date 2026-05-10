@@ -16,6 +16,7 @@ interface SettingsScreenProps {
   isPro: boolean;
   onBack: () => void;
   onLogout: () => void;
+  onDeleteAccount: () => void;
   fcmToken: string | null;
   fcmError: string | null;
   onRetryFCM: () => void;
@@ -31,13 +32,14 @@ interface SettingsScreenProps {
 }
 
 export function SettingsScreen({ 
-  user, settings, setSettings, isPro, onBack, onLogout, 
+  user, settings, setSettings, isPro, onBack, onLogout, onDeleteAccount,
   fcmToken, fcmError, onRetryFCM, onSendTestNotification, 
   onSendMotivation, onSendTestEmail, onClearCache, onExportData,
   onSubmitFeedback, onShowManifesto, showToast, sendNotification 
 }: SettingsScreenProps) {
   const [showFeedbackModal, setShowFeedbackModal] = React.useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = React.useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [feedback, setFeedback] = React.useState({ rating: 5, message: '', category: 'General' });
   
   const COLORS = [
@@ -110,6 +112,51 @@ export function SettingsScreen({
               >
                 DISMISS PROTOCOL
               </button>
+            </motion.div>
+          </div>
+        )}
+
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[500] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-[32px] p-8 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-2 bg-red-500" />
+              <div className="flex items-center gap-4 text-red-600">
+                <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center shadow-sm border border-red-100">
+                  <Trash2 size={24} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black leading-tight">Terminal Action</h3>
+                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Account Deletion Protocol</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4 text-blue-900/70 text-sm font-medium leading-relaxed">
+                <p className="font-bold text-red-600">Warning: This action is irreversible, bro.</p>
+                <p>Deleting your account will permanently erase your Bio-ID, workout history, and all earned trophies from our secure servers.</p>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 bg-gray-100 text-gray-500 py-4 rounded-2xl font-black shadow-sm active:scale-95 transition-transform"
+                >
+                  CANCEL
+                </button>
+                <button 
+                  onClick={() => {
+                    onDeleteAccount();
+                    setShowDeleteConfirm(false);
+                  }}
+                  className="flex-1 bg-red-600 text-white py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-transform"
+                >
+                  DELETE DATA
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
@@ -511,15 +558,22 @@ export function SettingsScreen({
         </div>
 
         {/* Danger Zone */}
-        <div className="glass-card p-6 border-2 border-red-50">
+        <div className="glass-card p-6 border-2 border-red-50 space-y-4">
            <button 
              onClick={onLogout}
              className="w-full py-5 bg-red-50 text-red-600 rounded-2xl font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-red-600 hover:text-white transition-all shadow-sm active:scale-95"
            >
              <LogOut size={18} /> Execute Logout Sequence
            </button>
+
+           <button 
+             onClick={() => setShowDeleteConfirm(true)}
+             className="w-full py-4 bg-white border-2 border-red-100 text-red-500 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-red-50 transition-all active:scale-95"
+           >
+             <Trash2 size={16} /> Delete Account & Data
+           </button>
            
-           <p className="text-[9px] text-red-900/20 font-black text-center mt-6 uppercase tracking-widest">Warning: Session termination will pause background syncing</p>
+           <p className="text-[9px] text-red-900/20 font-black text-center mt-2 uppercase tracking-widest">Warning: Session termination will pause background syncing</p>
         </div>
 
         <div className="text-center space-y-3 pt-6">

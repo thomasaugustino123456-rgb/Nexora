@@ -1837,14 +1837,38 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    console.log("Logout button clicked");
+    vibrate(VIBRATION_PATTERNS.CLICK);
     try {
       await signOut(auth);
-      setStats(DEFAULT_STATS);
-      setSettings(DEFAULT_SETTINGS);
-      console.log("Sign out successful");
+      // Hook handles state cleanup via onAuthStateChanged
+      showToast("Logout successful.", 'success');
     } catch (error) {
       console.error("Error signing out:", error);
+      showToast("Logout error, bro.", 'error');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    vibrate(VIBRATION_PATTERNS.ERROR);
+    
+    try {
+      // 1. Delete user data from Firestore
+      const userRef = doc(db, 'users', user.uid);
+      await deleteDoc(userRef);
+      
+      // 2. Delete the auth account
+      await deleteUser(user);
+      
+      // Hook handles state cleanup via onAuthStateChanged
+      showToast("Account protocol terminated. Farewell, bro.", 'success');
+    } catch (error: any) {
+      console.error("Delete Error:", error);
+      if (error.code === 'auth/requires-recent-login') {
+        showToast("Security Protocol: Re-authentication required. Please logout and login again.", 'error');
+      } else {
+        showToast("Termination failed. System error.", 'error');
+      }
     }
   };
 
@@ -2339,6 +2363,7 @@ export default function App() {
                       setActiveScreen('home');
                     }} 
                     onLogout={handleLogout} 
+                    onDeleteAccount={handleDeleteAccount}
                     fcmToken={fcmToken} 
                     fcmError={fcmError}
                     onRetryFCM={setupFCM}

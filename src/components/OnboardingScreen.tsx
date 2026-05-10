@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Droplets, Flame, User, Globe, Sparkles, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { ChevronRight, Droplets, Flame, User, Globe, Sparkles, Loader2, CheckCircle2, ArrowLeft, Briefcase, Zap, Brain } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
@@ -19,18 +19,21 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   const [name, setName] = useState('');
   const [gender, setGender] = useState('');
   const [source, setSource] = useState('');
+  const [workType, setWorkType] = useState('');
+  const [energyPeak, setEnergyPeak] = useState('');
+  const [priorityFocus, setPriorityFocus] = useState('');
   const [water, setWater] = useState<number>(2);
   const [pushups, setPushups] = useState<number>(5);
   const [isHoveringContinue, setIsHoveringContinue] = useState(false);
   const [buttonPulse, setButtonPulse] = useState(false);
 
-  const totalSteps = 9;
+  const totalSteps = 12;
 
   useEffect(() => {
-    if (step === 8) {
+    if (step === 11) {
       // Simulate plan creation
       const timer = setTimeout(() => {
-        setStep(9);
+        setStep(12);
       }, 3000);
       return () => clearTimeout(timer);
     }
@@ -43,6 +46,9 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
     if (name.trim()) updates.displayName = name.trim();
     if (gender) updates.gender = gender;
     if (source) updates.source = source;
+    if (workType) updates.workType = workType;
+    if (energyPeak) updates.energyPeak = energyPeak;
+    if (priorityFocus) updates.priorityFocus = priorityFocus;
     updates.waterGoal = water;
     updates.pushupsGoal = pushups;
 
@@ -320,7 +326,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
               </div>
               <div className="space-y-2">
                 <h2 className="text-2xl font-black text-blue-900">Where did you hear about us?</h2>
-                <p className="text-blue-900/50 text-xs mt-2">We are constantly trying to grow our amazing community of habit-builders. Letting us know how you found Nexora helps us reach more people just like you!</p>
+                <p className="text-blue-900/50 text-xs mt-2">Letting us know how you found Nexora helps us reach more people just like you!</p>
               </div>
               
               <div className="w-full flex flex-col gap-3">
@@ -342,30 +348,170 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                 {source ? (
                   <button 
                     onClick={nextStep} 
-                    onMouseEnter={() => handleButtonHover(true)}
-                    onMouseLeave={() => handleButtonHover(false)}
-                    className={`bg-indigo-500 text-white py-4 px-6 rounded-xl font-black shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2 ${buttonPulse ? 'scale-105 shadow-indigo-500/50' : ''}`}
+                    className="btn-primary w-full flex justify-center items-center gap-2"
                   >
                     Continue <ChevronRight size={20} />
                   </button>
                 ) : (
-                  <button 
-                    onClick={nextStep} 
-                    onMouseEnter={() => handleButtonHover(true)}
-                    onMouseLeave={() => handleButtonHover(false)}
-                    className={`w-full py-4 text-blue-900/40 font-bold hover:text-blue-900/60 transition-colors ${buttonPulse ? 'scale-105' : ''}`}
-                  >
-                    Skip
-                  </button>
+                  <button onClick={nextStep} className="w-full py-4 text-blue-900/40 font-bold">Skip</button>
                 )}
               </div>
             </motion.div>
           )}
 
-          {/* STEP 5: Water Goal */}
+          {/* STEP 5: Work Type (NEW) */}
           {step === 5 && (
             <motion.div 
               key="step5"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="glass-card p-8 flex flex-col items-center text-center space-y-7"
+            >
+              <div className="w-16 h-16 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center mb-2">
+                <Briefcase size={32} />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-blue-900">What's your typical day?</h2>
+                <p className="text-blue-900/50 text-xs">This helps us time your reminders perfectly, bro.</p>
+              </div>
+              
+              <div className="w-full flex flex-col gap-3">
+                {[
+                  { id: 'desk', label: 'Desk Bound (Office/Home)', desc: 'High focus sessions' },
+                  { id: 'active', label: 'On the Move (Active)', desc: 'Field work or physical' },
+                  { id: 'student', label: 'Student Life (Hybrid)', desc: 'Mix of sitting and movement' },
+                  { id: 'night', label: 'Night Shift (Late)', desc: 'Reverse schedule' }
+                ].map((option) => (
+                  <button 
+                    key={option.id}
+                    onClick={() => {
+                      vibrate(10);
+                      setWorkType(option.id);
+                    }}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${workType === option.id ? 'border-slate-500 bg-slate-50' : 'border-blue-100 bg-white/50 hover:border-slate-300'}`}
+                  >
+                    <p className={`font-black uppercase text-[10px] tracking-widest ${workType === option.id ? 'text-slate-600' : 'text-blue-900/40'}`}>{option.label}</p>
+                    <p className="text-xs font-bold text-blue-900 mt-0.5">{option.desc}</p>
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-full mt-2">
+                <button 
+                  onClick={nextStep} 
+                  disabled={!workType}
+                  className="btn-primary w-full flex justify-center items-center gap-2 disabled:opacity-50"
+                >
+                  Analyze Schedule <ChevronRight size={20} />
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* STEP 6: Peak Energy (NEW) */}
+          {step === 6 && (
+            <motion.div 
+              key="step6"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="glass-card p-8 flex flex-col items-center text-center space-y-7"
+            >
+              <div className="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mb-2">
+                <Zap size={32} />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-blue-900">Peak Energy Pulse?</h2>
+                <p className="text-blue-900/50 text-xs">When do you feel most unstoppable?</p>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-3 w-full">
+                {[
+                  { id: 'morning', label: 'Morning Lark', icon: '🌅' },
+                  { id: 'midday', label: 'Mid-day Warrior', icon: '☀️' },
+                  { id: 'night', label: 'Night Owl', icon: '🌙' }
+                ].map((option) => (
+                  <button 
+                    key={option.id}
+                    onClick={() => {
+                      vibrate(10);
+                      setEnergyPeak(option.id);
+                    }}
+                    className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all ${energyPeak === option.id ? 'border-yellow-500 bg-yellow-50 shadow-lg shadow-yellow-100' : 'border-blue-100 bg-white/50'}`}
+                  >
+                    <span className="text-2xl">{option.icon}</span>
+                    <span className={`font-black uppercase tracking-widest text-sm ${energyPeak === option.id ? 'text-yellow-700' : 'text-blue-900/40'}`}>{option.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-full mt-4">
+                <button 
+                  onClick={nextStep} 
+                  disabled={!energyPeak}
+                  className="bg-yellow-500 text-white font-black py-4 px-8 rounded-2xl w-full flex justify-center items-center gap-2 hover:bg-yellow-600 transition-all disabled:opacity-50"
+                >
+                  Log Pulse <ChevronRight size={20} />
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* STEP 7: Priority Focus (NEW) */}
+          {step === 7 && (
+            <motion.div 
+              key="step7"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="glass-card p-8 flex flex-col items-center text-center space-y-7"
+            >
+              <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mb-2">
+                <Brain size={32} />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-blue-900">Core Objective?</h2>
+                <p className="text-blue-900/50 text-xs">Choose your primary nexus for this month.</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 w-full">
+                {[
+                  { id: 'physical', label: 'Body Power', color: 'bg-orange-500' },
+                  { id: 'mental', label: 'Mind Flow', color: 'bg-blue-500' },
+                  { id: 'stress', label: 'Stress Armor', color: 'bg-emerald-500' },
+                  { id: 'habit', label: 'Habit Pure', color: 'bg-indigo-500' }
+                ].map((option) => (
+                  <button 
+                    key={option.id}
+                    onClick={() => {
+                      vibrate(10);
+                      setPriorityFocus(option.id);
+                    }}
+                    className={`flex flex-col items-center justify-center p-6 rounded-[24px] border-4 transition-all aspect-square ${priorityFocus === option.id ? 'border-purple-500 bg-purple-50 scale-105 shadow-xl shadow-purple-100' : 'border-blue-50 bg-white/50 opacity-60'}`}
+                  >
+                    <div className={`w-3 h-3 rounded-full mb-3 ${option.color}`} />
+                    <span className="font-black uppercase tracking-tighter text-[11px] text-blue-900">{option.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-full mt-4">
+                <button 
+                  onClick={nextStep} 
+                  disabled={!priorityFocus}
+                  className="bg-purple-600 text-white font-black py-4 px-8 rounded-2xl w-full flex justify-center items-center gap-2 hover:bg-purple-700 transition-all shadow-lg shadow-purple-200 disabled:opacity-50"
+                >
+                  Finalize Target <ChevronRight size={20} />
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* STEP 8: Water Goal */}
+          {step === 8 && (
+            <motion.div 
+              key="step8"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -411,10 +557,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 6: Pushups Goal */}
-          {step === 6 && (
+          {/* STEP 9: Pushups Goal */}
+          {step === 9 && (
             <motion.div 
-              key="step6"
+              key="step9"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -454,10 +600,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 7: Notifications */}
-          {step === 7 && (
+          {/* STEP 10: Notifications */}
+          {step === 10 && (
             <motion.div 
-              key="step7"
+              key="step10"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -555,28 +701,53 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 8: Creating Plan */}
-          {step === 8 && (
+          {/* STEP 11: Creating Plan */}
+          {step === 11 && (
             <motion.div 
-              key="step8"
+              key="step11"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.1 }}
               className="glass-card p-12 flex flex-col items-center text-center space-y-6"
             >
               <Loader2 size={48} className="text-blue-500 animate-spin" />
-              <div className="space-y-2">
-                <h2 className="text-2xl font-black text-blue-900">Creating your plan...</h2>
-                <p className="text-blue-900/60 text-sm">Setting up your daily challenges based on your goals.</p>
-                <p className="text-blue-900/50 text-xs mt-4">We're preparing your personal dashboard, initializing your mascot, and organizing your daily tasks. Get ready to build some amazing habits!</p>
+              <div className="space-y-4">
+                <h2 className="text-2xl font-black text-blue-900">Synchronizing Nexus...</h2>
+                <div className="space-y-2">
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 1, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, times: [0, 0.5, 1] }}
+                    className="text-xs font-black text-blue-500 uppercase tracking-widest"
+                  >
+                    Analyzing {workType || 'Standard'} schedule...
+                  </motion.p>
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 1, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, delay: 0.5, times: [0, 0.5, 1] }}
+                    className="text-xs font-black text-blue-500 uppercase tracking-widest"
+                  >
+                    Optimizing for {energyPeak || 'Morning'} peaks...
+                  </motion.p>
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 1, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, delay: 1, times: [0, 0.5, 1] }}
+                    className="text-xs font-black text-blue-500 uppercase tracking-widest"
+                  >
+                    Building {priorityFocus || 'Focus'} priority flow...
+                  </motion.p>
+                </div>
+                <p className="text-blue-900/50 text-[10px] mt-4 uppercase font-bold tracking-tight">Initializing mascot intelligence & personalized dashboard</p>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 9: Thanks */}
-          {step === 9 && (
+          {/* STEP 12: Thanks */}
+          {step === 12 && (
             <motion.div 
-              key="step9"
+              key="step12"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className="glass-card p-12 flex flex-col items-center text-center space-y-8"
