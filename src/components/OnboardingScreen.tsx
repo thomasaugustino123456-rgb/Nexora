@@ -7,6 +7,8 @@ import { db, auth } from '../firebase';
 import { UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';
 
+import { AnimatedBell } from './AnimatedBell';
+
 interface OnboardingProps {
   onComplete: () => void;
   settings: UserSettings;
@@ -24,16 +26,17 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   const [priorityFocus, setPriorityFocus] = useState('');
   const [water, setWater] = useState<number>(2);
   const [pushups, setPushups] = useState<number>(5);
+  const [commitmentLevel, setCommitmentLevel] = useState<'casual' | 'consistent' | 'intense'>('consistent');
   const [isHoveringContinue, setIsHoveringContinue] = useState(false);
   const [buttonPulse, setButtonPulse] = useState(false);
 
-  const totalSteps = 12;
+  const totalSteps = 13;
 
   useEffect(() => {
-    if (step === 11) {
+    if (step === 12) {
       // Simulate plan creation
       const timer = setTimeout(() => {
-        setStep(12);
+        setStep(13);
       }, 3000);
       return () => clearTimeout(timer);
     }
@@ -49,6 +52,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
     if (workType) updates.workType = workType;
     if (energyPeak) updates.energyPeak = energyPeak;
     if (priorityFocus) updates.priorityFocus = priorityFocus;
+    if (commitmentLevel) updates.commitmentLevel = commitmentLevel;
     updates.waterGoal = water;
     updates.pushupsGoal = pushups;
 
@@ -90,7 +94,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
 
   const handleBack = async () => {
     vibrate(10);
-    if (step > 1 && step < 8) {
+    if (step > 1 && step < 12) {
       setStep(prev => prev - 1);
     } else if (step === 1) {
       try {
@@ -104,7 +108,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   return (
     <div className="min-h-screen bg-blue-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Back Button */}
-      {step < 7 && (
+      {step < 12 && (
         <button 
           onClick={handleBack}
           className="absolute top-6 left-6 p-3 rounded-full bg-white/50 text-blue-900/60 hover:bg-white/80 hover:text-blue-900 transition-all z-20 shadow-sm"
@@ -600,50 +604,78 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 10: Notifications */}
+          {/* STEP 10: Commitment Level (NEW) */}
           {step === 10 && (
             <motion.div 
               key="step10"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="glass-card p-8 flex flex-col items-center text-center space-y-7"
+            >
+              <div className="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mb-2">
+                <Flame size={32} />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-blue-900">Your Commitment?</h2>
+                <p className="text-blue-900/50 text-xs">How hard do you want your mascot to push you?</p>
+              </div>
+              
+              <div className="w-full flex flex-col gap-3">
+                {[
+                  { id: 'casual', label: 'Casual', desc: '1-2 challenges/day • Relaxed pace', color: 'bg-rose-400' },
+                  { id: 'consistent', label: 'Consistent', desc: '3-4 challenges/day • Solid progress', color: 'bg-rose-600' },
+                  { id: 'intense', label: 'Intense', desc: 'Expert flow • Maximum growth', color: 'bg-rose-800' }
+                ].map((option) => (
+                  <button 
+                    key={option.id}
+                    onClick={() => {
+                      vibrate(10);
+                      setCommitmentLevel(option.id as any);
+                    }}
+                    className={`p-5 rounded-2xl border-2 text-left transition-all ${commitmentLevel === option.id ? 'border-rose-500 bg-rose-50' : 'border-blue-100 bg-white/50 hover:border-rose-300'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${option.color}`} />
+                      <div>
+                        <p className={`font-black uppercase text-xs tracking-widest ${commitmentLevel === option.id ? 'text-rose-700' : 'text-blue-900/40'}`}>{option.label}</p>
+                        <p className="text-xs font-bold text-blue-900 mt-0.5">{option.desc}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-full mt-2">
+                 <p className="text-[10px] text-blue-900/40 font-bold mb-4 italic">
+                  * This data allows your mascot to calculate the perfect difficulty level for your daily journey.
+                </p>
+                <button 
+                  onClick={nextStep} 
+                  className="btn-primary w-full flex justify-center items-center gap-2"
+                >
+                  Set Commitment <ChevronRight size={20} />
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* STEP 11: Notifications */}
+          {step === 11 && (
+            <motion.div 
+              key="step11"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="flex flex-col items-center text-center space-y-6 p-4"
             >
-              {/* Back Button */}
-              <button 
-                onClick={handleBack}
-                className="absolute top-6 left-6 p-3 rounded-full bg-white/50 text-blue-900/60 hover:bg-white/80 hover:text-blue-900 transition-all z-20 shadow-sm"
-                aria-label="Go back"
-              >
-                <ArrowLeft size={24} />
-              </button>
-
-              <div className="relative w-64 h-64 md:w-80 md:h-80">
-                <motion.img 
-                  initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                  transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                  src="https://i.postimg.cc/Hk3hzChG/Nexora-app-notifications-on-display-removebg-preview.png"
-                  alt="Notifications 1"
-                  className="w-full h-full object-contain"
-                  loading="lazy"
-                />
-                <motion.img 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8, duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                  src="https://i.postimg.cc/Hk3hzChG/Nexora-app-notifications-on-display-removebg-preview.png"
-                  alt="Notifications 2"
-                  className="absolute top-1/2 left-0 w-full h-full object-contain"
-                  loading="lazy"
-                />
-              </div>
+              <AnimatedBell />
               
-              <div className="space-y-6 text-blue-900 mt-16">
+              <div className="space-y-6 text-blue-900 mt-8">
                 <motion.h2 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.2, duration: 0.8 }}
+                  transition={{ delay: 0.5, duration: 0.8 }}
                   className="text-3xl font-black leading-tight"
                 >
                   Stay Consistent with Smart Notifications
@@ -651,26 +683,24 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                 <motion.p 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.4, duration: 0.8 }}
+                  transition={{ delay: 0.7, duration: 0.8 }}
                   className="text-lg font-medium text-blue-900/80"
                 >
-                  Nexora is designed to keep you moving forward — even on days when motivation is low.
+                  Nexora uses AI to nudge you at the exact moment you're most likely to take action.
                 </motion.p>
                 
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 1.6, duration: 0.8 }}
+                  transition={{ delay: 0.9, duration: 0.8 }}
                   className="space-y-4 text-left text-blue-900/70"
                 >
-                  <p>Our smart notifications gently guide you, remind you, and keep your progress alive:</p>
-                  <ul className="space-y-3 text-sm">
-                    <li><strong>🔔 Daily Challenge Reminders:</strong> Get a simple nudge to complete your 4 daily challenges.</li>
-                    <li><strong>🏆 Streak & Trophy Alerts:</strong> Know when your streak is growing or about to break.</li>
-                    <li><strong>💪 Comeback Motivation:</strong> Get encouraging messages to help you restart without guilt.</li>
-                    <li><strong>⏰ Personalized Timing:</strong> Nexora adapts to your routine.</li>
-                    <li><strong>🚀 New Features & Updates:</strong> Stay updated with improvements.</li>
-                    <li><strong>🌱 Small Wins, Big Progress:</strong> Celebrate your daily progress.</li>
+                  <p>Your personalized notification system includes:</p>
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <li className="flex gap-2"><strong>🔔 Smart Reminders:</strong> timed to your energy peaks.</li>
+                    <li className="flex gap-2"><strong>🏆 Streak Shield:</strong> alerts when progress is at risk.</li>
+                    <li className="flex gap-2"><strong>💪 Mascot Nudges:</strong> personalized motivation messages.</li>
+                    <li className="flex gap-2"><strong>🚀 Adaptive Hub:</strong> notification frequency scales with your commitment.</li>
                   </ul>
                 </motion.div>
               </div>
@@ -679,32 +709,32 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                 <motion.button 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.8, duration: 0.8 }}
+                  transition={{ delay: 1.1, duration: 0.8 }}
                   onClick={async () => {
                     await setupFCM();
                     nextStep();
                   }}
                   className="btn-primary w-full py-4 text-lg font-bold"
                 >
-                  Enable Notifications
+                  Enable Smart Alerts
                 </motion.button>
                 <motion.button 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 2.0, duration: 0.8 }}
+                  transition={{ delay: 1.3, duration: 0.8 }}
                   onClick={nextStep}
                   className="w-full py-4 text-blue-900/50 font-bold hover:text-blue-900/70 transition-colors"
                 >
-                  Skip
+                  Skip for now
                 </motion.button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 11: Creating Plan */}
-          {step === 11 && (
+          {/* STEP 12: Creating Plan */}
+          {step === 12 && (
             <motion.div 
-              key="step11"
+              key="step12"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.1 }}
@@ -712,7 +742,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             >
               <Loader2 size={48} className="text-blue-500 animate-spin" />
               <div className="space-y-4">
-                <h2 className="text-2xl font-black text-blue-900">Synchronizing Nexus...</h2>
+                <h2 className="text-2xl font-black text-blue-900">Synchronizing Nexus Intelligence...</h2>
                 <div className="space-y-2">
                   <motion.p 
                     initial={{ opacity: 0 }}
@@ -720,7 +750,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                     transition={{ duration: 1.5, repeat: Infinity, times: [0, 0.5, 1] }}
                     className="text-xs font-black text-blue-500 uppercase tracking-widest"
                   >
-                    Analyzing {workType || 'Standard'} schedule...
+                    Calibrating {commitmentLevel || 'Consistent'} intensity...
                   </motion.p>
                   <motion.p 
                     initial={{ opacity: 0 }}
@@ -728,7 +758,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                     transition={{ duration: 1.5, repeat: Infinity, delay: 0.5, times: [0, 0.5, 1] }}
                     className="text-xs font-black text-blue-500 uppercase tracking-widest"
                   >
-                    Optimizing for {energyPeak || 'Morning'} peaks...
+                    Mapping {energyPeak || 'Midday'} energy peaks to {water}L goal...
                   </motion.p>
                   <motion.p 
                     initial={{ opacity: 0 }}
@@ -736,18 +766,18 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                     transition={{ duration: 1.5, repeat: Infinity, delay: 1, times: [0, 0.5, 1] }}
                     className="text-xs font-black text-blue-500 uppercase tracking-widest"
                   >
-                    Building {priorityFocus || 'Focus'} priority flow...
+                    Syncing {priorityFocus || 'Mind'} focus with mascot memory...
                   </motion.p>
                 </div>
-                <p className="text-blue-900/50 text-[10px] mt-4 uppercase font-bold tracking-tight">Initializing mascot intelligence & personalized dashboard</p>
+                <p className="text-blue-900/50 text-[10px] mt-4 uppercase font-bold tracking-tight">Your data makes Nexora 4x more effective at building lasting habits.</p>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 12: Thanks */}
-          {step === 12 && (
+          {/* STEP 13: Thanks */}
+          {step === 13 && (
             <motion.div 
-              key="step12"
+              key="step13"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className="glass-card p-12 flex flex-col items-center text-center space-y-8"

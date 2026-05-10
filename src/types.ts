@@ -90,6 +90,10 @@ export interface UserSettings {
   isReelsDisabled?: boolean; // New setting to lock/disable reels
   joinedCircleIds?: string[];
   notifEnabledCircleIds?: string[];
+  workType?: string;
+  energyPeak?: string;
+  priorityFocus?: string;
+  commitmentLevel?: 'casual' | 'consistent' | 'intense';
 }
 
 export interface ShopItem {
