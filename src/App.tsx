@@ -1938,7 +1938,7 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen flex flex-col items-center overflow-x-hidden"
+      className="min-h-screen flex flex-col items-center"
       style={{ '--accent-color': settings.themeColor } as React.CSSProperties}
     >
       {/* Performance optimized: Sparkles Background Effect removed to prevent heating

@@ -24,7 +24,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
   if (view === 'support') return <SupportPage onBack={() => setView('home')} />;
 
   return (
-    <div className="min-h-screen bg-[#f4f8ff] flex flex-col items-center overflow-x-hidden relative selection:bg-blue-100 selection:text-blue-900">
+    <div className="min-h-screen bg-[#f4f8ff] flex flex-col items-center relative selection:bg-blue-100 selection:text-blue-900">
       {/* Animated Background Mesh with Scroll Interaction */}
       <motion.div 
         style={{ opacity: bgOpacity, scale: bgScale }}

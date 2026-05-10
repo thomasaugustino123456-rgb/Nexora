@@ -11,6 +11,7 @@
   }
   body {
     @apply bg-[#E0F2FF] text-[#1A1C1E] antialiased;
+    overflow-x: hidden;
     background: linear-gradient(180deg, #E0F2FF 0%, #F0E6FF 100%);
     background-attachment: fixed;
   }
