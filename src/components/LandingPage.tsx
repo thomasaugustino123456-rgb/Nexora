@@ -13,11 +13,9 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
   const [view, setView] = useState<'home' | 'terms' | 'privacy' | 'support'>('home');
   const { scrollY } = useScroll();
   
-  // Create fading effects for background elements
-  const bgOpacity = useTransform(scrollY, [0, 1000], [1, 0.6]);
-  const bgScale = useTransform(scrollY, [0, 1000], [1, 1.2]);
-  const heroY = useTransform(scrollY, [0, 500], [0, 80]);
-  const heroRotate = useTransform(scrollY, [0, 500], [0, 5]);
+  // Optimize scroll transforms by reducing their range and impact
+  const bgOpacity = useTransform(scrollY, [0, 1000], [1, 0.8]);
+  const heroY = useTransform(scrollY, [0, 500], [0, 40]);
 
   if (view === 'terms') return <TermsPage onBack={() => setView('home')} />;
   if (view === 'privacy') return <PrivacyPage onBack={() => setView('home')} />;
@@ -25,55 +23,58 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
   return (
     <div className="min-h-screen bg-[#f4f8ff] flex flex-col items-center relative selection:bg-blue-100 selection:text-blue-900">
-      {/* Animated Background Mesh with Scroll Interaction */}
+      {/* Animated Background Mesh with Scroll Interaction - Optimized for Performance */}
       <motion.div 
-        style={{ opacity: bgOpacity, scale: bgScale }}
+        style={{ opacity: bgOpacity }}
         className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
       >
-        {/* Main "Warm Blue" Lighting Glows */}
+        {/* Main "Warm Blue" Lighting Glows - removed heavy blurs */}
         <motion.div 
           animate={{
             rotate: [0, 360],
-            scale: [1, 1.1, 1],
+            scale: [1, 1.05, 1],
           }}
           transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-[20%] -left-[20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_center,rgba(186,230,253,0.4)_0%,rgba(219,234,254,0.2)_30%,transparent_70%)] blur-[100px]" 
+          className="absolute -top-[20%] -left-[20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_center,rgba(186,230,253,0.4)_0%,rgba(219,234,254,0.2)_30%,transparent_50%)]" 
+          style={{ willChange: 'transform' }}
         />
         <motion.div 
           animate={{
             rotate: [360, 0],
-            scale: [1.2, 1, 1.2],
+            scale: [1.05, 1, 1.05],
           }}
           transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-[30%] -right-[30%] w-[150%] h-[150%] bg-[radial-gradient(circle_at_center,rgba(199,210,254,0.3)_0%,rgba(224,231,255,0.15)_40%,transparent_70%)] blur-[120px]" 
+          className="absolute -bottom-[30%] -right-[30%] w-[150%] h-[150%] bg-[radial-gradient(circle_at_center,rgba(199,210,254,0.3)_0%,rgba(224,231,255,0.15)_40%,transparent_50%)]" 
+          style={{ willChange: 'transform' }}
         />
         
         {/* Accent blobs for "warmth" */}
-        <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] bg-blue-100/20 rounded-full blur-[180px] mix-blend-multiply" />
-        <div className="absolute top-1/2 right-1/3 w-[500px] h-[500px] bg-indigo-50/30 rounded-full blur-[150px] mix-blend-overlay" />
+        <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] bg-blue-100/20 rounded-full blur-[100px]" />
+        <div className="absolute top-1/2 right-1/3 w-[500px] h-[500px] bg-indigo-50/30 rounded-full blur-[100px]" />
 
-        {/* Floating Particles that also react to scroll */}
-        {[...Array(12)].map((_, i) => (
+        {/* Floating Particles - Reduced count and simplified animation for performance */}
+        {[...Array(6)].map((_, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0 }}
             animate={{ 
-              opacity: [0, 0.5, 0],
-              y: [0, -200 - (i * 40)],
-              x: [0, i % 2 === 0 ? 100 : -100],
+              opacity: [0, 0.4, 0],
+              y: [0, -100 - (i * 20)],
+              x: [0, i % 2 === 0 ? 50 : -50],
             }}
             transition={{ 
-              duration: 10 + i, 
+              duration: 12 + i, 
               repeat: Infinity, 
-              delay: i * 1.2,
+              delay: i * 1.5,
               ease: "easeInOut"
             }}
-            className="absolute bg-blue-300/20 rounded-full blur-2xl"
+            className="absolute bg-blue-300/20 rounded-full blur-xl"
             style={{
               width: `${20 + (i * 15)}px`,
               height: `${20 + (i * 15)}px`,
-              left: `${5 + (i * 8)}%`,
-              bottom: '-10%'
+              left: `${15 + (i * 12)}%`,
+              bottom: '-10%',
+              willChange: 'transform, opacity'
             }}
           />
         ))}
@@ -219,7 +220,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
         {/* Hero Illustration with Parallax */}
         <motion.div 
-          style={{ y: heroY, rotate: heroRotate }}
+          style={{ y: heroY }}
           initial={{ opacity: 0, scale: 0.4, rotate: -25 }}
           animate={{ opacity: 1, scale: 1, rotate: 0 }}
           transition={{ 
@@ -234,22 +235,23 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           {/* Main Glowing Orb */}
           <motion.div 
             animate={{ 
-              scale: [1, 1.3, 1],
-              opacity: [0.2, 0.5, 0.2]
+              scale: [1, 1.2, 1],
+              opacity: [0.2, 0.4, 0.2]
             }}
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute inset-x-0 bottom-1/4 h-[80%] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.5)_0%,transparent_70%)] blur-[100px]" 
+            className="absolute inset-x-0 bottom-1/4 h-[80%] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.5)_0%,transparent_50%)]" 
+            style={{ willChange: 'transform, opacity' }}
           />
           
           <div className="relative z-10">
             <motion.div
               animate={{ 
-                y: [0, -30, 0],
-                rotateZ: [0, 3, 0],
-                scale: [1, 1.02, 1]
+                y: [0, -20, 0],
+                rotateZ: [0, 2, 0]
               }}
               transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-              className="drop-shadow-[0_50px_50px_rgba(30,58,138,0.3)] filter contrast-[1.1]"
+              className="drop-shadow-[0_30px_30px_rgba(30,58,138,0.2)]"
+              style={{ willChange: 'transform' }}
             >
               <Mascot className="w-full h-auto" />
             </motion.div>

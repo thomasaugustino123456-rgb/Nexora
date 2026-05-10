@@ -6,9 +6,6 @@
 }
 
 @layer base {
-  html {
-    scroll-behavior: smooth;
-  }
   body {
     @apply bg-[#E0F2FF] text-[#1A1C1E] antialiased;
     overflow-x: hidden;
