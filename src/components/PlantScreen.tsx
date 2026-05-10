@@ -58,7 +58,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   const onboardingSteps = [
     "Welcome to your Living Plant, bro! 🌿 This space is a reflection of your discipline. As you grow, your ecosystem grows too!",
     "To grow your ecosystem, you need to complete all your daily tasks. Each completion gives the plants growth energy! ✨",
-    "Once you reach Level 5 (Legendary) on an ecosystem, you unlock the next one! Can you cultivate all 7, bro?",
+    "THE UNLOCK SYSTEM: You unlock the next plant only once you reach Level 5 in your overall character progress! 🏆",
+    "Once you reach Level 5, the next ecosystem in the path will be revealed. Keep leveling up to unlock all 13 unique plants, bro!",
     "Be careful: If you don't 'water' it (by doing tasks) for 1.5 days, it starts to wilt. 💧 If you wait 2 days, it will die. 🥀",
     "Ready to build your ultimate garden? Let's grow together! 🔥🚀"
   ];

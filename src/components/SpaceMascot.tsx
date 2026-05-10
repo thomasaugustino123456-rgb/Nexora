@@ -70,7 +70,7 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
       if (onboardingStep === 0) {
         setTimeout(() => {
           setShowMascot(true);
-          setMessage("Welcome to your Nexora Space, bro! 🚀 I'm your guide and companion in this journey. This is your personal sanctuary where you can build your dream room, relax after a long day, and see your progress come to life in a fun way!");
+          setMessage("YO BRO! 🚀 Welcome to your ULTIMATE Nexora Space! I'm so stoked you unlocked this. This isn't just a room; it's a living monument to your discipline. Here, you can manifest your progress by designing the coolest habit headquarters ever seen!");
         }, 1000);
       } else {
         setShowMascot(true);
@@ -157,13 +157,13 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
     if (isNewUser) {
       if (onboardingStep === 0) {
         setOnboardingStep(1);
-        setMessage("Let's get started, bro! First, you'll need some cool items to fill this empty space. You can earn coins by completing your daily routines and challenges!");
+        setMessage("CHECK THE SHOP, BRO! 🛒 Use your hard-earned Coins and Streak points to buy legendary items. Some items are purely for drip, but others... well, they might just have special interactions! Once you buy something, it's stored in your Library forever.");
       } else if (onboardingStep === 1) {
         setOnboardingStep(2);
-        setMessage("What are you going to buy to fill your room? Check out the Shop to find some epic furniture and decorations! Once you buy them, they'll be in your Library.");
+        setMessage("DESIGN MODE: Drag items from your Library and drop them anywhere. Want me to chill on the sofa? Just drag me there and hold for 3 seconds to PIN me to the item! You can also resize me if I'm taking up too much space. This is YOUR world, bro!");
       } else if (onboardingStep === 2) {
         onCompleteOnboarding();
-        setMessage("You're all set, bro! 🚀 Remember, you can drag me around, and if you hold me for 3 seconds, you can even change my size! Have fun building your space!");
+        setMessage("YOU'RE THE BOSS NOW! 👑 Keep smashing those daily goals to earn more currency and unlock everything. I'll be here to celebrate every win with you. Now, let's turn this space into something legendary! 🔥🛸");
         const timer = setTimeout(() => setMessage(null), 5000);
         return () => clearTimeout(timer);
       }

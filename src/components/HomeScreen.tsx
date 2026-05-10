@@ -278,15 +278,31 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
               <h2 className="text-3xl font-bold text-blue-900/80">Hey 👋</h2>
               <div className="flex items-center justify-between">
                 <h3 className="text-2xl font-bold text-blue-900/70">Ready for today?</h3>
-                <button 
-                  onClick={() => {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    onOpenPlant();
-                  }}
-                  className="p-3 bg-emerald-500 text-white rounded-2xl shadow-lg shadow-emerald-200 active:scale-90 transition-all flex items-center justify-center group"
-                >
-                  <Sprout size={24} className="group-hover:rotate-12 transition-transform" />
-                </button>
+                <div className="relative">
+                  <button 
+                    onClick={() => {
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                      onOpenPlant();
+                    }}
+                    className={`p-3 bg-emerald-500 text-white rounded-2xl shadow-lg active:scale-90 transition-all flex items-center justify-center group relative ${
+                      localStorage.getItem('nexora_new_plant_unlocked') === 'true' ? 'shadow-[0_0_20px_rgba(252,211,77,0.8)] animate-pulse border-2 border-yellow-300' : 'shadow-emerald-200'
+                    }`}
+                  >
+                    <Sprout size={24} className="group-hover:rotate-12 transition-transform" />
+                    
+                    {/* Golden Glow for New Unlock */}
+                    {localStorage.getItem('nexora_new_plant_unlocked') === 'true' && (
+                      <div className="absolute -inset-1 rounded-2xl bg-yellow-400 blur opacity-40 animate-pulse pointer-events-none" />
+                    )}
+
+                    {/* Red Badge for Completed Challenges */}
+                    {(dailyProgress.pushupsDone && dailyProgress.waterDrank >= settings.waterGoal && dailyProgress.breathingDone && dailyProgress.drawingDone && dailyProgress.footballDone && dailyProgress.bubblesDone) && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-sm flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                      </div>
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 text-blue-900/50 font-medium">
@@ -354,20 +370,36 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
                 vibrate(VIBRATION_PATTERNS.CLICK);
                 onOpenPlant();
               }}
-              className="w-full flex items-center justify-between p-4 glass-card bg-emerald-50/30 border-2 border-emerald-100/50 hover:bg-emerald-50 transition-all group"
+              className={`w-full flex items-center justify-between p-4 glass-card bg-emerald-50/30 border-2 transition-all group relative overflow-hidden ${
+                localStorage.getItem('nexora_new_plant_unlocked') === 'true' ? 'border-yellow-400/50 bg-yellow-50/20' : 'border-emerald-100/50 hover:bg-emerald-50'
+              }`}
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-500 text-white flex items-center justify-center shadow-lg shadow-emerald-200 group-hover:scale-110 transition-transform">
+                <div className={`w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform ${
+                  localStorage.getItem('nexora_new_plant_unlocked') === 'true' ? 'bg-gradient-to-br from-yellow-400 to-amber-500 shadow-yellow-200 animate-glow' : 'bg-gradient-to-br from-emerald-400 to-green-500 shadow-emerald-200'
+                }`}>
                   <Sprout size={24} />
                 </div>
                 <div className="text-left">
-                  <h4 className="font-black text-blue-900 leading-none">Your Plant</h4>
+                  <h4 className="font-black text-blue-900 leading-none">
+                    {localStorage.getItem('nexora_new_plant_unlocked') === 'true' ? "NEW PLANT UNLOCKED! 🏆" : "Your Plant"}
+                  </h4>
                   <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest mt-1">
                     {settings.plantState?.isDead ? "🥀 Restoration Required" : settings.plantState?.isThirsty ? "💧 Needs Water" : `🌿 Stage ${settings.plantState?.stage || 0} Growth`}
                   </p>
                 </div>
               </div>
-              <ChevronRight size={20} className="text-emerald-500 group-hover:translate-x-1 transition-transform" />
+              
+              <div className="flex items-center gap-2">
+                {(dailyProgress.pushupsDone && dailyProgress.waterDrank >= settings.waterGoal && dailyProgress.breathingDone && dailyProgress.drawingDone && dailyProgress.footballDone && dailyProgress.bubblesDone) && (
+                  <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-sm" />
+                )}
+                <ChevronRight size={20} className="text-emerald-500 group-hover:translate-x-1 transition-transform" />
+              </div>
+
+              {localStorage.getItem('nexora_new_plant_unlocked') === 'true' && (
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/10 to-transparent skew-x-[-20deg] animate-shimmer pointer-events-none" />
+              )}
             </button>
 
             {dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3) ? (

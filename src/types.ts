@@ -82,6 +82,7 @@ export interface UserSettings {
   placedHouseItems?: PlacedHouseItem[];
   spaceOnboardingCompleted?: boolean;
   plantOnboardingCompleted?: boolean;
+  spaceHouseUnlocked?: boolean;
   plantState?: PlantState;
   plantsProgress?: Partial<Record<PlantType, PlantProgress>>;
   mascotSize?: number;
@@ -102,7 +103,7 @@ export interface ShopItem {
   description: string;
   price: number;
   coinPrice?: number;
-  effect: 'streak-protection' | 'double-points' | 'skin' | 'gift' | 'sound-pack' | 'music';
+  effect: 'streak-protection' | 'double-points' | 'skin' | 'gift' | 'sound-pack' | 'music' | 'power-up';
   icon: string;
 }
 

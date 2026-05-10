@@ -17,6 +17,13 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'skin-space', name: 'Space Helmet', description: 'To the moon with your habits!', price: 80, coinPrice: 1200, effect: 'skin', icon: '👨‍🚀' },
   { id: 'skin-ninja', name: 'Ninja Mask', description: 'Silent but consistent.', price: 40, coinPrice: 600, effect: 'skin', icon: '🥷' },
   { id: 'skin-detective', name: 'Detective Hat', description: 'Solving the mystery of productivity.', price: 30, coinPrice: 450, effect: 'skin', icon: '🕵️' },
+  
+  // New utility items
+  { id: 'plant-recovery', name: 'Nano Fertilizer', description: 'Instantly restores 25% plant health.', price: 15, coinPrice: 200, effect: 'power-up', icon: '🧪' },
+  { id: 'xp-boost', name: 'XP Overdrive', description: 'Triple XP for the next 3 challenges.', price: 45, coinPrice: 650, effect: 'double-points', icon: '🚀' },
+  { id: 'coin-magnet', name: 'Coin Magnet', description: 'Earn 30% more coins today.', price: 25, coinPrice: 400, effect: 'power-up', icon: '🧲' },
+  
+  // Sound packs
   { id: 'sound-dog', name: 'Dog Sound Pack', description: 'Make your mascot bark!', price: 10, coinPrice: 150, effect: 'sound-pack', icon: '🐶' },
   { id: 'music-fanfare', name: 'Medieval Fanfare', description: 'A royal announcement!', price: 5, coinPrice: 75, effect: 'music', icon: '🎺' },
   { id: 'music-funkee', name: 'Funkee Monkeee', description: 'Get groovy!', price: 5, coinPrice: 75, effect: 'music', icon: '🐒' },

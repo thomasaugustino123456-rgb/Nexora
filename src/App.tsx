@@ -22,6 +22,8 @@ import { Mascot } from './components/Mascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './components/Trophies';
 import { WhatIsNewModalWrapper, HappyMascot, LevelUpCelebration, CoinAnimation, MascotAIWrapper } from './components/SuspenseWrappers';
 
+import { CelebrationModal } from './components/CelebrationModal';
+
 const HouseScreen = lazy(() => import('./components/HouseScreen').then(m => ({ default: m.HouseScreen })));
 const LibraryScreen = lazy(() => import('./components/LibraryScreen').then(m => ({ default: m.LibraryScreen })));
 const ShopScreen = lazy(() => import('./components/ShopScreen').then(m => ({ default: m.ShopScreen })));
@@ -85,7 +87,7 @@ const DEFAULT_SETTINGS: UserSettings = {
     health: 100,
     isDead: false,
     isThirsty: false,
-    unlockedTypes: ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano']
+    unlockedTypes: ['sprout']
   }
 };
 
@@ -142,6 +144,7 @@ export default function App() {
   const [notifications, setNotifications] = useState<NexusNotification[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [showCompletionFlame, setShowCompletionFlame] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   const [sessionXP, setSessionXP] = useState(0);
   const [sessionStreak, setSessionStreak] = useState(0);
   const [sessionTrophy, setSessionTrophy] = useState<TrophyType>('golden');
@@ -500,13 +503,23 @@ export default function App() {
           vibrate(VIBRATION_PATTERNS.SUCCESS);
           showToast(`Your ${type.toUpperCase()} grew to Stage ${newStage}! 🌿✨`, 'success');
           
-          if (newStage === 5) {
+          // Plant unlock logic based on User Level (as requested: every 5 levels)
+          const userLevel = Math.floor((stats.totalPoints || 0) / 100) + 1;
+          if (userLevel >= 5 && userLevel % 5 === 0) {
             const currentIdx = ECOSYSTEM_PATH.indexOf(type);
             if (currentIdx !== -1 && currentIdx < ECOSYSTEM_PATH.length - 1) {
               const nextType = ECOSYSTEM_PATH[currentIdx + 1];
               if (!newUnlocked.includes(nextType)) {
                 newUnlocked.push(nextType);
-                showToast(`New Ecosystem Unlocked: ${nextType.toUpperCase()}! 🏆`, 'success');
+                showToast(`Level ${userLevel} Legend! New Ecosystem Unlocked: ${nextType.toUpperCase()}! 🏆`, 'success');
+                // Set flag for golden glow notification
+                localStorage.setItem('nexora_new_plant_unlocked', 'true');
+                
+                // SpaceHouse Unlock Flow
+                if (newUnlocked.length >= 4 && !settings.spaceHouseUnlocked) {
+                  setShowCelebration(true);
+                  if (settings.soundEnabled) play('fire_streak');
+                }
               }
             }
           }
@@ -1485,13 +1498,28 @@ export default function App() {
         limit(50)
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const data = snapshot.docs.map(doc => doc.data() as any);
+        let data = snapshot.docs.map(doc => doc.data() as any);
+        
+        // BOT SYSTEM: If leaderboard is too empty, add some competitive AI players
+        if (data.length < 5) {
+          const bots = [
+            { uid: 'bot-1', displayName: 'Apex_Habit', weeklyXP: 1200, weeklyPoints: 1200, level: 12, streak: 45, league: settings.league || 'Bronze' },
+            { uid: 'bot-2', displayName: 'Zen_Master', weeklyXP: 950, weeklyPoints: 950, level: 10, streak: 32, league: settings.league || 'Bronze' },
+            { uid: 'bot-3', displayName: 'HabitHero_99', weeklyXP: 750, weeklyPoints: 750, level: 8, streak: 15, league: settings.league || 'Bronze' },
+            { uid: 'bot-4', displayName: 'FlowState', weeklyXP: 500, weeklyPoints: 500, level: 6, streak: 8, league: settings.league || 'Bronze' },
+          ];
+          data = [...data, ...bots];
+        }
+
         if (user && !data.find(d => d.uid === user.uid)) {
           data.push({
             uid: user.uid,
             displayName: settings.displayName || 'Anonymous',
             photoURL: settings.profilePic || user.photoURL || '',
             weeklyXP: stats.weeklyXP || 0,
+            weeklyPoints: stats.weeklyPoints || 0,
+            level: Math.floor((stats.totalPoints || 0) / 100) + 1,
+            streak: stats.streak || 0,
             league: settings.league || 'Bronze'
           });
         }
@@ -2807,6 +2835,17 @@ export default function App() {
           />
         )}
 
+        {showCelebration && (
+          <CelebrationModal 
+            settings={settings}
+            onFinish={() => {
+              setShowCelebration(false);
+              onUpdateSettings({ spaceHouseUnlocked: true });
+              setActiveScreen('social');
+            }}
+          />
+        )}
+
         {showCompletionFlame && (
           <CompletionFlame 
             streak={sessionStreak}
@@ -2849,6 +2888,18 @@ export default function App() {
                 icon={<Home size={24} />} 
                 label="Home"
               />
+              {settings.spaceHouseUnlocked && (
+                <NavButton 
+                  active={activeScreen === 'social'} 
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                    if (settings.soundEnabled) play('nav_switch');
+                    setActiveScreen('social');
+                  }} 
+                  icon={<Zap size={24} />} 
+                  label="Nexora"
+                />
+              )}
               <NavButton 
                 active={activeScreen === 'progress'} 
                 onClick={() => {
