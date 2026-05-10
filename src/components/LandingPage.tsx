@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target, Crown } from 'lucide-react';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target, Crown, Sparkles } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
 import { vibrate } from '../lib/vibrate';
@@ -11,266 +11,340 @@ interface LandingPageProps {
 
 export function LandingPage({ onGetStarted }: LandingPageProps) {
   const [view, setView] = useState<'home' | 'terms' | 'privacy' | 'support'>('home');
+  const { scrollY } = useScroll();
+  
+  // Create fading effects for background elements
+  const bgOpacity = useTransform(scrollY, [0, 1000], [1, 0.6]);
+  const bgScale = useTransform(scrollY, [0, 1000], [1, 1.2]);
+  const heroY = useTransform(scrollY, [0, 500], [0, 80]);
+  const heroRotate = useTransform(scrollY, [0, 500], [0, 5]);
 
   if (view === 'terms') return <TermsPage onBack={() => setView('home')} />;
   if (view === 'privacy') return <PrivacyPage onBack={() => setView('home')} />;
   if (view === 'support') return <SupportPage onBack={() => setView('home')} />;
 
   return (
-    <div className="min-h-screen bg-[#f8faff] flex flex-col items-center overflow-x-hidden relative">
-      {/* Animated Background Mesh */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div className="min-h-screen bg-[#f4f8ff] flex flex-col items-center overflow-x-hidden relative selection:bg-blue-100 selection:text-blue-900">
+      {/* Animated Background Mesh with Scroll Interaction */}
+      <motion.div 
+        style={{ opacity: bgOpacity, scale: bgScale }}
+        className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      >
+        {/* Main "Warm Blue" Lighting Glows */}
         <motion.div 
           animate={{
-            scale: [1, 1.2, 1],
-            rotate: [0, 90, 0],
-            x: [0, 100, 0],
-            y: [0, 50, 0]
+            rotate: [0, 360],
+            scale: [1, 1.1, 1],
           }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-[20%] -left-[10%] w-[80%] h-[80%] bg-blue-200/30 rounded-full blur-[120px]" 
+          transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-[20%] -left-[20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_center,rgba(186,230,253,0.4)_0%,rgba(219,234,254,0.2)_30%,transparent_70%)] blur-[100px]" 
         />
         <motion.div 
           animate={{
-            scale: [1, 1.1, 1],
-            rotate: [0, -45, 0],
-            x: [0, -50, 0],
-            y: [0, 100, 0]
+            rotate: [360, 0],
+            scale: [1.2, 1, 1.2],
           }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-[10%] -right-[10%] w-[70%] h-[70%] bg-indigo-200/30 rounded-full blur-[120px]" 
+          transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
+          className="absolute -bottom-[30%] -right-[30%] w-[150%] h-[150%] bg-[radial-gradient(circle_at_center,rgba(199,210,254,0.3)_0%,rgba(224,231,255,0.15)_40%,transparent_70%)] blur-[120px]" 
         />
         
-        {/* Floating Particles */}
-        {[...Array(6)].map((_, i) => (
+        {/* Accent blobs for "warmth" */}
+        <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] bg-blue-100/20 rounded-full blur-[180px] mix-blend-multiply" />
+        <div className="absolute top-1/2 right-1/3 w-[500px] h-[500px] bg-indigo-50/30 rounded-full blur-[150px] mix-blend-overlay" />
+
+        {/* Floating Particles that also react to scroll */}
+        {[...Array(12)].map((_, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0 }}
             animate={{ 
-              opacity: [0, 0.4, 0],
-              y: [0, -100 - (i * 20)],
-              x: [0, i % 2 === 0 ? 50 : -50],
-              scale: [0, 1, 0]
+              opacity: [0, 0.5, 0],
+              y: [0, -200 - (i * 40)],
+              x: [0, i % 2 === 0 ? 100 : -100],
             }}
             transition={{ 
-              duration: 5 + i, 
+              duration: 10 + i, 
               repeat: Infinity, 
-              delay: i * 2,
+              delay: i * 1.2,
               ease: "easeInOut"
             }}
-            className="absolute bg-blue-400/20 rounded-full blur-xl"
+            className="absolute bg-blue-300/20 rounded-full blur-2xl"
             style={{
-              width: `${20 + (i * 10)}px`,
-              height: `${20 + (i * 10)}px`,
-              left: `${15 + (i * 15)}%`,
-              bottom: '10%'
+              width: `${20 + (i * 15)}px`,
+              height: `${20 + (i * 15)}px`,
+              left: `${5 + (i * 8)}%`,
+              bottom: '-10%'
             }}
           />
         ))}
-      </div>
+      </motion.div>
 
       {/* Header */}
-      <header className="w-full max-w-6xl mx-auto p-6 flex justify-between items-center z-10">
+      <header className="w-full max-w-7xl mx-auto p-6 md:p-10 flex justify-between items-center z-20 relative">
         <motion.div 
-          initial={{ opacity: 0, x: -20 }}
+          initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
           className="flex items-center gap-4 group cursor-pointer"
         >
           <div className="relative">
             <motion.div 
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              className="absolute -inset-2 bg-gradient-to-tr from-blue-400 to-indigo-400 rounded-full opacity-20 group-hover:opacity-40 transition-opacity blur-md"
+              animate={{ rotate: [0, 360], scale: [1, 1.05, 1] }}
+              transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+              className="absolute -inset-3 bg-gradient-to-tr from-blue-400 via-indigo-300 to-cyan-400 rounded-full opacity-30 group-hover:opacity-60 transition-opacity blur-xl"
             />
             <img 
               src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
               alt="Nexora Logo" 
-              className="w-20 h-20 md:w-24 md:h-24 object-contain relative z-10 group-hover:scale-110 transition-transform"
+              className="w-16 h-16 md:w-20 md:h-20 object-contain relative z-10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500"
               referrerPolicy="no-referrer"
               loading="lazy"
             />
           </div>
-          <span className="text-4xl font-black text-blue-900 tracking-tighter">Nexora</span>
+          <span className="text-3xl md:text-5xl font-black text-blue-950 tracking-tighter drop-shadow-sm">Nexora</span>
         </motion.div>
+        
         <motion.div 
-          initial={{ opacity: 0, x: 20 }}
+          initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-4"
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="flex items-center gap-4 md:gap-8"
         >
-          <button 
+          <motion.button 
+            whileHover={{ scale: 1.05, rotate: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => {
               vibrate(10);
               console.log('Pro features coming soon!');
             }}
-            className="flex items-center gap-1 text-red-500 font-black hover:scale-105 transition-transform px-4 py-2 bg-red-50 rounded-full border border-red-100"
+            className="hidden sm:flex items-center gap-2 text-red-500 font-black px-5 py-2.5 bg-white/60 backdrop-blur-md rounded-full border border-red-100 shadow-sm transition-all"
           >
-            <Crown size={18} fill="currentColor" />
-            <span className="text-xs uppercase tracking-widest">Upgrade</span>
-          </button>
+            <Crown size={16} fill="currentColor" />
+            <span className="text-[10px] uppercase tracking-[0.2em]">Upgrade</span>
+          </motion.button>
           <button 
             onClick={() => {
               vibrate(10);
               onGetStarted();
             }}
-            className="text-blue-600 font-bold hover:text-blue-800 transition-colors px-4 py-2 hover:translate-y-[-1px]"
+            className="text-blue-900/60 font-black hover:text-blue-600 transition-colors px-4 py-2 hover:translate-y-[-2px] duration-300 text-sm tracking-wide"
           >
-            Log In
+            LOG IN
           </button>
+          <motion.button
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onGetStarted}
+            className="bg-blue-950 text-white px-6 py-3 rounded-xl font-black text-xs tracking-widest uppercase shadow-xl shadow-blue-950/20 hover:shadow-blue-950/40 transition-all hidden md:block"
+          >
+            Get Started
+          </motion.button>
         </motion.div>
       </header>
 
       {/* Hero Section */}
-      <main className="flex-1 w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-center p-6 gap-12 z-10 relative">
-        <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left space-y-8">
+      <main className="flex-1 w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-center p-6 md:p-12 gap-16 lg:gap-24 z-10 relative">
+        <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left space-y-10">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-6 border border-blue-200">
-              <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-              Next Gen Motivation
-            </div>
-            <h1 className="text-6xl md:text-8xl font-black text-blue-950 tracking-tighter leading-[0.9]">
-              Crush Goals<br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 animate-gradient-x">
-                Like a Pro
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5 }}
+              className="inline-flex items-center gap-3 bg-white/60 backdrop-blur-md text-blue-600 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] mb-8 border border-white/80 shadow-sm"
+            >
+              <span className="flex h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse ring-4 ring-blue-100" />
+              Next Evolution of Wellness
+            </motion.div>
+            <h1 className="text-7xl md:text-9xl font-black text-blue-950 tracking-tighter leading-[0.85] mb-4">
+              Unlock Your<br/>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-indigo-600 to-cyan-500 bg-[length:200%_auto] animate-gradient-x drop-shadow-xl">
+                True Potential
               </span>
             </h1>
-            <p className="mt-8 text-xl text-blue-950/60 max-w-xl font-medium leading-relaxed">
-              Stop surviving, start thriving. Nexora is the ultimate companion to gamify your habits and unlock your peak performance.
+            <p className="mt-10 text-xl md:text-2xl text-blue-950/50 max-w-2xl font-medium leading-[1.6]">
+              Escape the mundane routine. Nexora gamifies your growth with an AI-powered ritual system and a mascot that reflects your success.
             </p>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto"
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="flex flex-col sm:flex-row gap-6 w-full sm:w-auto"
           >
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.02, y: -4 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 vibrate(20);
                 onGetStarted();
               }}
-              className="group relative bg-blue-600 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-2xl shadow-blue-600/30 hover:shadow-blue-600/50 transition-all flex items-center justify-center gap-3 overflow-hidden"
+              className="group relative bg-blue-600 text-white px-12 py-6 rounded-2xl font-black text-xl shadow-[0_20px_50px_rgba(37,99,235,0.3)] hover:shadow-[0_30px_60px_rgba(37,99,235,0.4)] transition-all flex items-center justify-center gap-4 overflow-hidden"
             >
-              <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
-              Join the Flow <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
-            </button>
+              <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
+              START FLOWING <ArrowRight size={28} className="group-hover:translate-x-2 transition-transform duration-500" />
+            </motion.button>
           </motion.div>
 
           {/* Features Grid - Quick Preview */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="grid grid-cols-2 gap-4 mt-8 w-full max-w-lg"
+            transition={{ delay: 0.7 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 w-full"
           >
             {[
-              { icon: <Droplets />, color: 'blue', text: 'Hydration' },
-              { icon: <Flame />, color: 'orange', text: 'Fitness' },
-              { icon: <Brain />, color: 'emerald', text: 'Focus' },
-              { icon: <Palette />, color: 'purple', text: 'Creativity' }
+              { icon: <Droplets />, color: 'blue', text: 'HYDRATION' },
+              { icon: <Flame />, color: 'orange', text: 'KINETIC' },
+              { icon: <Brain />, color: 'emerald', text: 'NEURAL' },
+              { icon: <Palette />, color: 'purple', text: 'CREATIVE' }
             ].map((f, i) => (
               <motion.div 
                 key={i}
-                whileHover={{ y: -5, scale: 1.02 }}
-                className="glass-card p-4 flex items-center gap-3 border border-white/40 shadow-sm"
+                whileHover={{ y: -8, scale: 1.05 }}
+                className="glass-card p-5 flex flex-col items-center gap-3 border border-white/60 bg-white/40 shadow-lg group"
               >
-                <div className={`w-10 h-10 rounded-xl bg-${f.color}-100 text-${f.color}-500 flex items-center justify-center shrink-0`}>
-                  {React.cloneElement(f.icon as React.ReactElement, { size: 20 })}
+                <div className={`w-12 h-12 rounded-2xl bg-${f.color}-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-${f.color}-500/20 group-hover:rotate-12 transition-transform`}>
+                  {React.cloneElement(f.icon as React.ReactElement<any>, { size: 24, strokeWidth: 2.5 })}
                 </div>
-                <div className="text-sm font-black text-blue-900/80">{f.text}</div>
+                <div className="text-[10px] font-black text-blue-950/70 tracking-[0.2em]">{f.text}</div>
               </motion.div>
             ))}
           </motion.div>
         </div>
 
-        {/* Hero Illustration */}
+        {/* Hero Illustration with Parallax */}
         <motion.div 
-          initial={{ opacity: 0, scale: 0.5, rotate: -15 }}
+          style={{ y: heroY, rotate: heroRotate }}
+          initial={{ opacity: 0, scale: 0.4, rotate: -25 }}
           animate={{ opacity: 1, scale: 1, rotate: 0 }}
           transition={{ 
-            duration: 1, 
+            duration: 1.2, 
             type: "spring", 
-            stiffness: 100, 
+            stiffness: 80, 
             damping: 15,
-            delay: 0.2
+            delay: 0.3
           }}
-          className="flex-1 w-full max-w-md relativePerspective"
+          className="flex-1 w-full max-w-lg relative perspective-1000"
         >
-          {/* Glowing Aura */}
+          {/* Main Glowing Orb */}
           <motion.div 
             animate={{ 
-              scale: [1, 1.2, 1],
-              opacity: [0.3, 0.6, 0.3]
+              scale: [1, 1.3, 1],
+              opacity: [0.2, 0.5, 0.2]
             }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute inset-0 bg-gradient-to-tr from-blue-400 to-indigo-300 rounded-full blur-[80px]" 
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute inset-x-0 bottom-1/4 h-[80%] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.5)_0%,transparent_70%)] blur-[100px]" 
           />
           
-          <div className="relative z-10 perspective-1000">
+          <div className="relative z-10">
             <motion.div
               animate={{ 
-                y: [0, -20, 0],
-                rotateZ: [0, 2, 0]
+                y: [0, -30, 0],
+                rotateZ: [0, 3, 0],
+                scale: [1, 1.02, 1]
               }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              className="drop-shadow-[0_35px_35px_rgba(30,58,138,0.25)]"
+              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+              className="drop-shadow-[0_50px_50px_rgba(30,58,138,0.3)] filter contrast-[1.1]"
             >
               <Mascot className="w-full h-auto" />
             </motion.div>
           </div>
 
-          {/* Floating Data Cards around Mascot */}
+          {/* Floating Data Indicators */}
           <motion.div 
-            animate={{ x: [0, 10, 0], y: [0, -10, 0] }}
-            transition={{ duration: 4, repeat: Infinity, delay: 0 }}
-            className="absolute top-10 -left-6 glass-card p-3 rounded-xl shadow-xl border border-white/60 z-20 hidden md:block"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 1, duration: 1 }}
+            className="absolute -top-10 -left-12 glass-card p-5 rounded-2xl shadow-2xl border border-white backdrop-blur-xl z-20 hidden lg:block"
           >
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full" />
-              <span className="text-[10px] font-black text-blue-900">FLOW ACTIVE</span>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping" />
+                <span className="text-xs font-black text-blue-950 tracking-widest">NEXO LINKED</span>
+              </div>
+              <div className="h-1.5 w-32 bg-blue-100 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: '85%' }}
+                  transition={{ duration: 2, delay: 1.5 }}
+                  className="h-full bg-blue-500 rounded-full"
+                />
+              </div>
             </div>
           </motion.div>
 
           <motion.div 
-            animate={{ x: [0, -10, 0], y: [0, 10, 0] }}
-            transition={{ duration: 5, repeat: Infinity, delay: 1 }}
-            className="absolute bottom-10 -right-6 glass-card p-3 rounded-xl shadow-xl border border-white/60 z-20 hidden md:block"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 1.2, duration: 1 }}
+            className="absolute -bottom-6 -right-12 glass-card p-5 rounded-2xl shadow-2xl border border-white backdrop-blur-xl z-20 hidden lg:block"
           >
-            <div className="flex items-center gap-2">
-              <Flame size={12} className="text-orange-500" />
-              <span className="text-[10px] font-black text-blue-900">12 DAY STREAK</span>
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1">CURRENT STREAK</span>
+                <span className="text-3xl font-black text-blue-950 leading-none">14 DAYS</span>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 text-orange-500 rounded-xl flex items-center justify-center">
+                <Flame size={24} strokeWidth={3} />
+              </div>
             </div>
           </motion.div>
         </motion.div>
       </main>
 
-      {/* Ticker / Social Proof */}
-      <div className="w-full bg-blue-950 py-4 overflow-hidden relative z-10 border-y border-white/10">
+      {/* Floating Section Dividers / Stats */}
+      <div className="w-full bg-blue-950 py-6 md:py-8 overflow-hidden relative z-20 shadow-[0_-10px_50px_rgba(30,58,138,0.4)]">
         <motion.div 
-          animate={{ x: [0, -1000] }}
-          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-          className="flex gap-12 whitespace-nowrap px-6"
+          animate={{ x: [0, -2000] }}
+          transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
+          className="flex gap-16 whitespace-nowrap px-10"
         >
-          {[...Array(10)].map((_, i) => (
-            <div key={i} className="flex items-center gap-4 text-blue-300 font-black text-xs uppercase tracking-widest italic opacity-50">
-              <Star size={14} className="text-blue-500" />
-              Unlock Your Potential
-              <span className="text-blue-700">•</span>
-              Master Your Habits
-              <span className="text-blue-700">•</span>
-              Build Consistency
+          {[...Array(20)].map((_, i) => (
+            <div key={i} className="flex items-center gap-6 text-blue-300 font-black text-sm uppercase tracking-[0.3em] italic">
+              <Sparkles size={16} className="text-blue-500 animate-pulse" />
+              EVOLVE YOUR HABITS
+              <span className="text-blue-800/50 w-2 h-2 rounded-full bg-current" />
+              BUILD MASSIVE FOCUS
+              <Sparkles size={16} className="text-indigo-500 animate-pulse" />
+              BECOME A LEGEND
             </div>
           ))}
         </motion.div>
       </div>
 
-      {/* Features Grid Sections... rest of the code remains but stylized */}
-
-      <section className="w-full bg-white py-24 relative z-10">
+      {/* Narrative Section */}
+      <section className="w-full bg-white py-32 relative z-10">
+        <div className="max-w-5xl mx-auto px-6">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center space-y-12"
+          >
+            <span className="text-blue-600 font-black text-xs tracking-[0.4em] uppercase">The Philosophy</span>
+            <h2 className="text-5xl md:text-7xl font-black text-blue-950 tracking-tighter max-w-4xl mx-auto leading-[0.95]">
+              Greatness is built one<br/>
+              <span className="text-blue-500 italic">small ritual</span> at a time.
+            </h2>
+            <p className="text-xl md:text-2xl text-blue-950/60 leading-relaxed font-semibold max-w-3xl mx-auto">
+              Nexora isn't another rigid productivity tool. It's a living ecosystem where your mental, physical, and creative energies are synchronized. When you thrive, Nexo thrives. When you slack, Nexo feels it. It's mutual growth, redefined.
+            </p>
+            <div className="pt-10 flex justify-center gap-4">
+              <div className="w-16 h-1 bg-blue-100 rounded-full" />
+              <div className="w-4 h-1 bg-blue-500 rounded-full" />
+              <div className="w-16 h-1 bg-blue-100 rounded-full" />
+            </div>
+          </motion.div>
+        </div>
+      </section>
+      {/* About Section */}
+      <section className="w-full bg-white py-32 relative z-10">
         <motion.div 
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -278,8 +352,8 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           transition={{ duration: 0.8 }}
           className="max-w-4xl mx-auto px-6 text-center space-y-8"
         >
-          <h2 className="text-4xl font-black text-blue-900">More than just a tracker.</h2>
-          <p className="text-xl text-blue-900/70 leading-relaxed font-medium">
+          <h2 className="text-4xl md:text-6xl font-black text-blue-950 tracking-tighter">More than just a tracker.</h2>
+          <p className="text-xl text-blue-900/60 leading-relaxed font-medium">
             Nexora is your interactive companion for a healthier, more balanced lifestyle. By combining physical activities like hydration and exercise with mental wellness practices like breathing and drawing, Nexora provides a holistic approach to your well-being. As you complete your daily goals, your personal mascot grows, thrives, and celebrates alongside you!
           </p>
         </motion.div>
