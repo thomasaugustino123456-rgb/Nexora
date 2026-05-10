@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Shield, Target, Award, Star, History, Camera, Crown, Globe, MessageSquare, Zap, Clock, MoreHorizontal, Video, Plus, Info, Users } from 'lucide-react';
+import { User, Shield, Target, Award, Star, History, Camera, Crown, Globe, MessageSquare, Zap, Clock, MoreHorizontal, Video, Plus, Info, Users, Layout } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { UserSettings, UserStats, SocialCircle, Screen } from '../types';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { ArchitectLab } from './ArchitectLab';
 
 export function ProfileScreen({ settings, setSettings, stats, user, setActiveScreen, circles, onUpdateProfile }: { settings: UserSettings, setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, stats: UserStats, user: FirebaseUser | null, setActiveScreen: (screen: Screen) => void, circles: SocialCircle[], onUpdateProfile: (name: string, photo: string) => void }) {
+  const [showArchitect, setShowArchitect] = useState(false);
   const currentXP = stats.xp || 0;
   const nextLevelXP = (stats.level || 1) * 1000;
   const progressPercent = (currentXP / nextLevelXP) * 100;
@@ -172,6 +174,47 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
         </div>
       </div>
       
+      {/* Nexora Architect Lab for Pro Users */}
+      {settings.isPro && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.4em]">Nexora Architect</h3>
+            <span className="bg-gradient-to-r from-amber-400 to-yellow-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">PRO FEATURE</span>
+          </div>
+
+          {!showArchitect ? (
+            <button 
+              onClick={() => setShowArchitect(true)}
+              className="w-full glass-card p-6 flex items-center justify-between bg-gradient-to-br from-blue-500 to-indigo-600 border-none text-white shadow-xl shadow-blue-500/20 group hover:scale-[1.02] transition-all"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md group-hover:rotate-12 transition-transform">
+                  <Layout size={24} />
+                </div>
+                <div className="text-left">
+                  <p className="font-black text-sm uppercase tracking-wider italic">Architect Lab</p>
+                  <p className="text-[10px] font-medium opacity-70">Customize your Interface & Navigation</p>
+                </div>
+              </div>
+              <Plus size={24} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+            </button>
+          ) : (
+            <div className="space-y-4">
+              <ArchitectLab 
+                settings={settings} 
+                onUpdateSettings={(updates) => setSettings(prev => ({ ...prev, ...updates }))} 
+              />
+              <button 
+                onClick={() => setShowArchitect(false)}
+                className="w-full py-3 bg-blue-50 text-blue-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-100 transition-colors"
+              >
+                Close Architect Lab
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="glass-card p-8">
          <h3 className="text-xs font-black text-blue-900/30 uppercase tracking-[0.25em] mb-6">Achievements Unlock</h3>
          <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">

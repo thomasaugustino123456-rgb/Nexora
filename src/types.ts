@@ -95,6 +95,9 @@ export interface UserSettings {
   energyPeak?: string;
   priorityFocus?: string;
   commitmentLevel?: 'casual' | 'consistent' | 'intense';
+  hiddenNavItems?: string[];
+  navOrder?: string[];
+  archivedOfficialChallenges?: string[];
 }
 
 export interface ShopItem {

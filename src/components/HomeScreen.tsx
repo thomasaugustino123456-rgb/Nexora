@@ -65,7 +65,7 @@ function NextRestorationCountdown({ targetTime }: { targetTime: number | null })
   return <span>{timeLeft}</span>;
 }
 
-export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, fcmToken, setupFCM, fcmError, showToast }: { 
+export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
@@ -84,7 +84,8 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
   fcmToken: string | null,
   setupFCM: () => void,
   fcmError: string | null,
-  showToast?: (m: string, t: any) => void
+  showToast?: (m: string, t: any) => void,
+  onArchiveChallenge?: (id: string) => void
 }) {
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
@@ -162,7 +163,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="flex flex-col items-center pt-4 gap-12 w-full max-w-4xl mx-auto"
+      className="flex flex-col items-center pt-4 gap-12 w-full max-w-5xl mx-auto"
     >
       <AnimatePresence>
         {emergencyActive && (
@@ -170,7 +171,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
             initial={{ height: 0, opacity: 0, scale: 0.9 }}
             animate={{ height: 'auto', opacity: 1, scale: 1 }}
             exit={{ height: 0, opacity: 0, scale: 0.9 }}
-            className="w-full max-w-md mx-auto overflow-hidden"
+            className="w-full max-w-2xl mx-auto overflow-hidden"
           >
             <div className="bg-red-500 text-white p-6 rounded-3xl flex items-center gap-4 shadow-2xl shadow-red-200 border-2 border-white/20 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 animate-shimmer" />
@@ -199,7 +200,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-6 border-2 border-yellow-400/30 bg-yellow-400/5 mb-8 w-full max-w-md mx-auto"
+          className="glass-card p-6 border-2 border-yellow-400/30 bg-yellow-400/5 mb-8 w-full max-w-2xl mx-auto"
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -218,7 +219,24 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
             )}
           </div>
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold text-blue-900/60">Complete the <span className="text-blue-900 uppercase">{dailyQuest}</span> challenge today!</p>
+            <div className="flex items-center gap-3">
+              <p className="text-sm font-bold text-blue-900/60">Complete the <span className="text-blue-900 uppercase">{dailyQuest}</span> challenge today!</p>
+              
+              {isPro && onArchiveChallenge && !dailyProgress.dailyQuestDone && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Archive the ${dailyQuest} challenge? It won't be recommended to you again.`)) {
+                      onArchiveChallenge(dailyQuest);
+                    }
+                  }}
+                  className="p-1.5 text-blue-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-all"
+                  title="Archive/Hide Challenge"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
             {!dailyProgress.dailyQuestDone && (
               <button 
                 onClick={onStartChallenge}
@@ -236,7 +254,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md mx-auto mb-8"
+          className="w-full max-w-2xl mx-auto mb-8"
         >
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-3xl flex items-center gap-4 shadow-xl shadow-blue-200 relative overflow-hidden">
             <div className="p-3 bg-white/20 rounded-2xl">
@@ -256,10 +274,10 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
         </motion.div>
       )}
 
-      <div className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-16 w-full">
-        <div className="relative w-80 h-80 lg:w-[480px] lg:h-[480px] flex items-center justify-center flex-shrink-0 mb-4 sm:mb-8">
+      <div className="flex flex-col xl:flex-row items-center xl:items-start justify-center gap-8 lg:gap-16 w-full">
+        <div className="relative w-80 h-80 sm:w-96 sm:h-96 xl:w-[480px] xl:h-[480px] flex items-center justify-center flex-shrink-0 mb-4 sm:mb-8">
           <div className="absolute inset-0 bg-blue-400/20 blur-[80px] rounded-full animate-pulse" />
-          <motion.div animate={mascotControls} className="w-72 h-72 lg:w-[420px] lg:h-[420px] relative z-10">
+          <motion.div animate={mascotControls} className="w-72 h-72 sm:w-80 sm:h-80 xl:w-[420px] xl:h-[420px] relative z-10">
             <Mascot 
               className="w-full h-full drop-shadow-[0_20px_50px_rgba(59,130,246,0.3)]" 
               mood={mascotMood}
@@ -272,7 +290,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
           </motion.div>
         </div>
 
-        <div className="flex flex-col gap-6 w-full max-w-md">
+        <div className="flex flex-col gap-6 w-full max-w-xl">
           <div className="glass-card w-full p-8 space-y-6">
             <div className="space-y-2">
               <h2 className="text-3xl font-bold text-blue-900/80">Hey 👋</h2>

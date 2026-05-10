@@ -7,20 +7,20 @@ export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, use
     { 
       id: 'weekly',
       name: 'Weekly', 
-      price: '$3.99', 
+      price: '$1.99', 
       period: 'per week',
-      description: 'Full access for 7 days. Perfect for a quick boost to your routine.', 
-      features: ['All Pro Features', '7-Day Access', 'Cancel Anytime'],
+      description: 'Quick boost to your discipline. Perfect for testing the power of Nexora.', 
+      features: ['UI Architect Lab', 'Challenge Archiving', '7-Day Access'],
       icon: <Zap className="text-blue-400" size={24} />,
       url: `https://nexora-daily.lemonsqueezy.com/checkout/buy/be209445-5c93-461e-9a2d-5db0e7af2d29?checkout[custom][user_id]=${userId}` 
     },
     { 
       id: 'monthly',
       name: 'Monthly', 
-      price: '$9.99', 
+      price: '$4.99', 
       period: 'per month',
-      description: 'The most popular choice for steady progress and lasting habits.', 
-      features: ['All Pro Features', 'Monthly Billing', 'Priority Support'],
+      description: 'The standard for consistency legends. Most popular for habit masters.', 
+      features: ['All Pro Features', 'UI Architect Lab', 'Priority Support'],
       icon: <Star className="text-amber-400" size={24} />,
       popular: true,
       url: `https://nexora-daily.lemonsqueezy.com/checkout/buy/ca3035cc-8722-4462-bba9-d25bd7d9ea09?checkout[custom][user_id]=${userId}` 
@@ -28,10 +28,10 @@ export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, use
     { 
       id: 'yearly',
       name: 'Yearly', 
-      price: '$29.90', 
+      price: '$39.99', 
       period: 'per year',
-      description: 'Ultimate value for long-term transformation and peak performance.', 
-      features: ['All Pro Features', 'Best Value (Save 75%)', 'Exclusive Content'],
+      description: 'Ultimate transformation. Commit to a year of peak human performance.', 
+      features: ['Best Value', 'Unlimited Everything', 'Exclusive content'],
       icon: <Crown className="text-orange-400" size={24} />,
       bestValue: true,
       url: `https://nexora-daily.lemonsqueezy.com/checkout/buy/202b9050-b67b-4857-9d58-fe68b7d12b44?checkout[custom][user_id]=${userId}` 
@@ -39,12 +39,15 @@ export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, use
   ];
 
   const features = [
-    { title: 'Unlimited Streaks', description: 'Never lose your progress, even if you miss a day.' },
-    { title: 'Exclusive Mascot Skins', description: 'Customize your companion with premium looks.' },
-    { title: 'Advanced Progress Analytics', description: 'Deep insights into your habits and growth.' },
-    { title: 'Ad-free Experience', description: 'Focus entirely on your journey without distractions.' },
-    { title: 'Custom Challenge Goals', description: 'Set your own pace with adjustable daily targets.' },
+    { title: 'UI Architect Lab', description: 'Redesign the app your way. Drag, hide, and reorder anything.' },
+    { title: 'Challenge Archive', description: 'Filter official app challenges. Only do what moves the needle for you.' },
+    { title: 'Exclusive Mascot Skins', description: 'Customize your companion with premium legendary looks.' },
+    { title: 'Advanced Analytics', description: 'Deep insights into your habits and growth over months.' },
+    { title: 'Unlimited Custom Plans', description: 'Create as many habit blueprints as you need.' },
+    { title: 'AI Consistency Coach', description: 'Get personalized feedback on your discipline score.' },
   ];
+
+  const [showManualPay, setShowManualPay] = React.useState(false);
 
   return (
     <motion.div
@@ -61,7 +64,7 @@ export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, use
             opacity: [0.3, 0.5, 0.3],
             rotate: [0, 90, 0]
           }}
-          transition={{ duration: 10, repeat: 0 /* performance */, ease: "linear" }}
+          transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
           className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-amber-500/20 blur-[100px]"
         />
         <motion.div 
@@ -70,21 +73,67 @@ export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, use
             opacity: [0.2, 0.4, 0.2],
             rotate: [0, -90, 0]
           }}
-          transition={{ duration: 15, repeat: 0 /* fixed */, ease: "linear" }}
+          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
           className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-blue-500/20 blur-[120px]"
         />
       </div>
 
       <div className="relative z-10 max-w-5xl mx-auto">
-        <div className="flex items-center gap-4 mb-12">
-          <button onClick={onBack} className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md group">
-            <ArrowLeft size={24} className="text-white group-hover:-translate-x-1 transition-transform" />
-          </button>
-          <div>
-            <h1 className="text-4xl font-black text-white tracking-tight">Nexora Pro</h1>
-            <p className="text-slate-400 font-medium">Choose the plan that fits your journey</p>
+        <div className="flex items-center justify-between mb-12">
+          <div className="flex items-center gap-4">
+            <button onClick={onBack} className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md group">
+              <ArrowLeft size={24} className="text-white group-hover:-translate-x-1 transition-transform" />
+            </button>
+            <div>
+              <h1 className="text-4xl font-black text-white tracking-tight">Nexora Pro</h1>
+              <p className="text-slate-400 font-medium text-sm">Elevate your growth journey</p>
+            </div>
           </div>
+          <button 
+            onClick={() => setShowManualPay(!showManualPay)}
+            className="text-[10px] font-black uppercase text-blue-400 tracking-widest border border-blue-500/30 px-4 py-2 rounded-xl hover:bg-blue-500/10 transition-colors"
+          >
+            Crypto / Local Pay
+          </button>
         </div>
+
+        {showManualPay && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            className="mb-8 p-6 bg-blue-500/10 border-2 border-dashed border-blue-500/30 rounded-3xl"
+          >
+            <h3 className="text-lg font-black mb-4 flex items-center gap-2">
+              <Zap className="text-blue-400" size={20} />
+              SOUTH SUDAN & CRYPTO OPTIONS
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+              <div className="space-y-4">
+                <p className="text-slate-300">If your country isn't supported by standard cards, you can pay via <b>Bitcoin</b>, <b>USDT</b>, or <b>m-Gurush</b> manually.</p>
+                <div className="space-y-2">
+                  <p className="font-bold text-blue-400">1. CHOOSE A PLAN</p>
+                  <p className="text-xs opacity-60">Weekly: $1.99 | Monthly: $4.99 | Yearly: $39.99</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="font-bold text-blue-400">2. SEND CRYPTO / TRANSFER</p>
+                  <p className="text-xs font-mono bg-black/40 p-2 rounded-lg break-all">BTC: [Insert_Your_Wallet_Address_Here]</p>
+                  <p className="text-xs font-mono bg-black/40 p-2 rounded-lg break-all">USDT (TRC20): [Insert_USDT_Address_Here]</p>
+                </div>
+              </div>
+              <div className="space-y-4 bg-white/5 p-4 rounded-2xl">
+                <p className="font-bold text-amber-400">3. SUBMIT PROOF</p>
+                <p className="text-xs text-slate-400 leading-relaxed">Once you transfer, send your <b>Nexora UID ({userId})</b> and a <b>Screenshot of payment</b> to our official WhatsApp or support email.</p>
+                <button 
+                  onClick={() => window.open('https://wa.me/YOUR_NUMBER', '_blank')}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-black text-xs transition-all shadow-lg shadow-emerald-500/20"
+                >
+                  SEND PROOF ON WHATSAPP
+                </button>
+                <p className="text-[10px] text-center text-slate-500 italic">Activation usually takes 2-4 hours.</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Pricing Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">

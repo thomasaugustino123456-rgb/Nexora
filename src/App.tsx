@@ -33,6 +33,7 @@ const LeaderboardScreen = lazy(() => import('./components/LeaderboardScreen').th
 const ProgressScreen = lazy(() => import('./components/ProgressScreen').then(m => ({ default: m.ProgressScreen })));
 const ProfileScreen = lazy(() => import('./components/ProfileScreen').then(m => ({ default: m.ProfileScreen })));
 const SettingsScreen = lazy(() => import('./components/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
+const SubscriptionScreen = lazy(() => import('./components/SubscriptionScreen').then(m => ({ default: m.SubscriptionScreen })));
 const GalleryScreen = lazy(() => import('./components/GalleryScreen').then(m => ({ default: m.GalleryScreen })));
 const NotebookScreen = lazy(() => import('./components/NotebookScreen').then(m => ({ default: m.NotebookScreen })));
 const ChallengeFlow = lazy(() => import('./components/ChallengeFlow').then(m => ({ default: m.ChallengeFlow })));
@@ -119,6 +120,16 @@ const DEFAULT_STATS: UserStats = {
 
 import { PublicRankView } from './components/PublicRankView';
 
+const NAV_ITEMS_MAP: Record<string, { label: string, icon: React.ReactNode, screen: Screen }> = {
+  'home': { label: 'Home', icon: <Home size={24} />, screen: 'home' },
+  'social': { label: 'Nexora', icon: <Zap size={24} />, screen: 'social' },
+  'progress': { label: 'Stats', icon: <BarChart2 size={24} />, screen: 'progress' },
+  'shop': { label: 'Shop', icon: <Star size={24} />, screen: 'shop' },
+  'library': { label: 'Library', icon: <TrophyIcon size={24} />, screen: 'library' },
+  'notebook': { label: 'Notebook', icon: <Book size={24} />, screen: 'notebook' },
+  'leaderboard': { label: 'Rank', icon: <TrophyIcon size={24} />, screen: 'leaderboard' },
+};
+
 export default function App() {
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ message, type });
@@ -147,6 +158,7 @@ export default function App() {
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [showCompletionFlame, setShowCompletionFlame] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showArchitectLab, setShowArchitectLab] = useState(false);
   const [sessionXP, setSessionXP] = useState(0);
   const [sessionStreak, setSessionStreak] = useState(0);
   const [sessionTrophy, setSessionTrophy] = useState<TrophyType>('golden');
@@ -451,12 +463,37 @@ export default function App() {
     }
   }, [activeScreen]);
 
+  const handleArchiveChallenge = (challengeId: string) => {
+    const updated = [...(settings.archivedOfficialChallenges || []), challengeId];
+    onUpdateSettings({ archivedOfficialChallenges: updated });
+    showToast(`The ${challengeId} challenge has been archived.`, 'info');
+    
+    // Immediately pick a new one if it was current
+    if (dailyQuest === challengeId) {
+      const allSteps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'reaction'];
+      const available = allSteps.filter(s => !updated.includes(s));
+      if (available.length > 0) {
+        setDailyQuest(available[Math.floor(Math.random() * available.length)]);
+      } else {
+        setDailyQuest(null);
+      }
+    }
+  };
+
   useEffect(() => {
     // Select a daily quest based on the date
-    const steps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'reaction'];
+    const allSteps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'reaction'];
+    const archived = settings.archivedOfficialChallenges || [];
+    const available = allSteps.filter(s => !archived.includes(s));
+    
+    if (available.length === 0) {
+      setDailyQuest(null);
+      return;
+    }
+
     const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
-    setDailyQuest(steps[dayOfYear % steps.length]);
-  }, []);
+    setDailyQuest(available[dayOfYear % available.length]);
+  }, [settings.archivedOfficialChallenges]);
 
   // Zen Mode Audio
   useEffect(() => {
@@ -2077,7 +2114,7 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen flex flex-col items-center"
+      className="min-h-screen w-full flex flex-col items-center overflow-x-hidden"
       style={{ '--accent-color': settings.themeColor } as React.CSSProperties}
     >
       {/* Performance optimized: Sparkles Background Effect removed to prevent heating
@@ -2251,10 +2288,11 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <div className="w-full max-w-5xl flex flex-col min-h-screen relative z-10 mx-auto">
+      {/* Main App Structure */}
+      <div className="w-full max-w-full flex flex-col min-h-screen relative z-10 px-0 sm:px-6">
         
         {activeScreen !== 'challenge' && (
-          <header className="px-6 pt-12 pb-4 flex items-center justify-between max-w-4xl mx-auto w-full">
+          <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-6xl">
             <div className="flex items-center gap-4">
               <img 
                 src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
@@ -2360,6 +2398,7 @@ export default function App() {
                   setupFCM={setupFCM}
                   fcmError={fcmError}
                   showToast={showToast}
+                  onArchiveChallenge={handleArchiveChallenge}
                 />
               </motion.div>
             )}
@@ -2531,11 +2570,19 @@ export default function App() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="w-full p-6 flex flex-col items-center justify-center min-h-screen text-center"
+                className="w-full"
               >
-                <h2 className="text-3xl font-black text-blue-900 mb-4">Coming Soon</h2>
-                <p className="text-blue-900/60">We're working hard to bring you Nexora Pro. Stay tuned!</p>
-                <button onClick={() => setActiveScreen('home')} className="mt-8 px-6 py-3 bg-blue-900 text-white rounded-full font-bold">Back Home</button>
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black italic">OPENING THE TREASURY...</div>}>
+                  <SubscriptionScreen 
+                    onBack={() => setActiveScreen('home')} 
+                    userId={user.uid}
+                    onActivatePro={() => {
+                      onUpdateSettings({ isPro: true });
+                      showToast("NEXORA PRO ACTIVATED! WELCOME TO THE LEGION! 🔥", 'success');
+                      vibrate(VIBRATION_PATTERNS.SUCCESS);
+                    }}
+                  />
+                </Suspense>
               </motion.div>
             )}
             {activeScreen === 'plan-builder' && (
@@ -2932,78 +2979,27 @@ export default function App() {
             className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 flex justify-center pointer-events-none z-[80]"
           >
             <nav className="glass-card px-4 py-3 sm:px-8 sm:py-4 flex items-center gap-4 sm:gap-12 pointer-events-auto overflow-x-auto max-w-[95vw] no-scrollbar">
-              <NavButton 
-                active={activeScreen === 'home'} 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                  if (settings.soundEnabled) play('nav_switch');
-                  setActiveScreen('home');
-                }} 
-                icon={<Home size={24} />} 
-                label="Home"
-              />
-              {settings.spaceHouseUnlocked && (
-                <NavButton 
-                  active={activeScreen === 'social'} 
-                  onClick={() => {
-                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                    if (settings.soundEnabled) play('nav_switch');
-                    setActiveScreen('social');
-                  }} 
-                  icon={<Zap size={24} />} 
-                  label="Nexora"
-                />
-              )}
-              <NavButton 
-                active={activeScreen === 'progress'} 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                  if (settings.soundEnabled) play('nav_switch');
-                  setActiveScreen('progress');
-                }} 
-                icon={<BarChart2 size={24} />} 
-                label="Progress"
-              />
-              <NavButton 
-                active={activeScreen === 'shop'} 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                  if (settings.soundEnabled) play('nav_switch');
-                  setActiveScreen('shop');
-                }} 
-                icon={<Star size={24} />} 
-                label="Shop"
-              />
-              <NavButton 
-                active={activeScreen === 'library'} 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                  if (settings.soundEnabled) play('nav_switch');
-                  setActiveScreen('library');
-                }} 
-                icon={<TrophyIcon size={24} />} 
-                label="Library"
-              />
-              <NavButton 
-                active={activeScreen === 'notebook'} 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                  if (settings.soundEnabled) play('nav_switch');
-                  setActiveScreen('notebook');
-                }} 
-                icon={<Book size={24} />} 
-                label="Notebook"
-              />
-              <NavButton 
-                active={activeScreen === 'leaderboard'} 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                  if (settings.soundEnabled) play('nav_switch');
-                  setActiveScreen('leaderboard');
-                }} 
-                icon={<TrophyIcon size={24} />} 
-                label="Rank"
-              />
+              {(settings.navOrder || Object.keys(NAV_ITEMS_MAP)).map((id) => {
+                const item = NAV_ITEMS_MAP[id];
+                if (!item) return null;
+                const isHidden = settings.hiddenNavItems?.includes(id);
+                if (isHidden) return null;
+                if (id === 'social' && !settings.spaceHouseUnlocked) return null;
+
+                return (
+                  <NavButton 
+                    key={id}
+                    active={activeScreen === item.screen} 
+                    onClick={() => {
+                      vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                      if (settings.soundEnabled) play('nav_switch');
+                      setActiveScreen(item.screen);
+                    }} 
+                    icon={item.icon} 
+                    label={item.label}
+                  />
+                );
+              })}
             </nav>
           </motion.div>
         )}
