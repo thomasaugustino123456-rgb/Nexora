@@ -9,11 +9,10 @@ const ASSETS_TO_CACHE = [
 ];
 
 // Import Firebase compat scripts (required for FCM in SW)
-importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
 // Initialize Firebase in SW
-// Note: We use the same config as the app
 firebase.initializeApp({
   apiKey: "AIzaSyDzMyKhCPNckxUKzlTzKsSrfzUF7blGJkk",
   authDomain: "gen-lang-client-0115801809.firebaseapp.com",

@@ -11,7 +11,7 @@ import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDay
 import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs, addDoc, increment } from 'firebase/firestore';
-import { getToken } from 'firebase/messaging';
+import { getToken, onMessage } from 'firebase/messaging';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingScreen } from './components/OnboardingScreen';
@@ -53,6 +53,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   waterGoal: 2,
   reminderTime: '09:00',
   reminderTime2: '21:00',
+  motivationTime: '12:00',
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   displayName: 'Nexora User',
   themeColor: '#3b82f6',
   soundEnabled: true,
@@ -705,18 +707,20 @@ export default function App() {
   const [fcmError, setFcmError] = useState<string | null>(null);
 
   const sendNotification = async (title: string, options: NotificationOptions) => {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    
     // 1. Local Browser Notification (Immediate feedback if app is open)
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready.then(registration => {
-        registration.showNotification(title, options);
-      });
-    } else {
-      new Notification(title, options);
+    if (('Notification' in window) && Notification.permission === 'granted') {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification(title, options);
+        });
+      } else {
+        new Notification(title, options);
+      }
     }
 
     // 2. Server-Side FCM Notification (For background/closed app support)
+    // We try this regardless of local permission if we have a token, 
+    // as it might reach other devices where permission IS granted.
     if (fcmToken) {
       try {
         await fetch('/api/send-notification', {
@@ -1140,8 +1144,17 @@ export default function App() {
     }
   };
 
+  // Auto-setup FCM when notifications are enabled
+  useEffect(() => {
+    if (settings.notificationsEnabled && !fcmToken && !fcmError) {
+      console.log('FCM: Notifications enabled but no token, triggering setup...');
+      setupFCM();
+    }
+  }, [settings.notificationsEnabled, fcmToken, fcmError]);
+
   const setupFCM = async () => {
-    console.log('FCM: Starting setup...');
+    const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BF2tHGVbbJHc3wxlE98atQFPU1TRqX3shN0bhSsaNf-UxdDxgoj25zLhpttoeDsrjQ8l24cnysfF-eyzH3P7baw';
+    console.log('FCM: Starting setup with VAPID key:', vapidKey.substring(0, 10) + '...');
     setFcmError(null);
     try {
       // Request permission if not granted
@@ -1167,13 +1180,14 @@ export default function App() {
         console.log('FCM: Service Worker ready:', registration.scope);
         
         const token = await getToken(m, {
-          vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BF2tHGVbbJHc3wxlE98atQFPU1TRqX3shN0bhSsaNf-UxdDxgoj25zLhpttoeDsrjQ8l24cnysfF-eyzH3P7baw',
+          vapidKey: vapidKey,
           serviceWorkerRegistration: registration
         });
         
         if (token) {
           console.log('FCM Device Token:', token);
           setFcmToken(token);
+          setSettings(prev => ({ ...prev, fcmToken: token, notificationsEnabled: true }));
         } else {
           console.log('FCM: No token received.');
           setFcmError('NO_TOKEN');
@@ -1206,6 +1220,46 @@ export default function App() {
       saveToken();
     }
   }, [user, fcmToken]);
+
+  // Foreground Notification Listener
+  useEffect(() => {
+    if (!fcmToken) return;
+    
+    let unsubscribe: () => void;
+    
+    const setupListener = async () => {
+      const m = await messaging();
+      if (!m) return;
+      
+      console.log('FCM: Setting up foreground message listener...');
+      unsubscribe = onMessage(m, (payload) => {
+        console.log('FCM: Foreground message received!', payload);
+        if (payload.notification) {
+          // Add notification to historical notifications list if applicable
+          setNotifications(prev => [{
+            id: Date.now().toString(),
+            userId: user.uid,
+            senderId: 'nexora-system',
+            senderName: 'Nexora 🔥',
+            message: `${payload.notification?.title}: ${payload.notification?.body}`,
+            isRead: false,
+            createdAt: new Date().toISOString(),
+            type: 'system'
+          }, ...prev]);
+          setUnreadNotifCount(prev => prev + 1);
+
+          showToast(`🔔 ${payload.notification.title}: ${payload.notification.body}`, 'info');
+          if (settings.soundEnabled) play('nav_switch');
+          vibrate(VIBRATION_PATTERNS.LIGHT);
+        }
+      });
+    };
+
+    setupListener();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [fcmToken, settings.soundEnabled]);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {

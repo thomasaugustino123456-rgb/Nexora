@@ -291,7 +291,7 @@ export interface NexusNotification {
   senderId: string;
   senderName: string;
   senderPhoto?: string;
-  type: 'reply' | 'like' | 'mention' | 'post';
+  type: 'reply' | 'like' | 'mention' | 'post' | 'system';
   postId?: string;
   targetId?: string;
   commentId?: string;
