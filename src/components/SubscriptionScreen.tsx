@@ -130,9 +130,9 @@ export function SubscriptionScreen({
                 </div>
                 <div className="space-y-2">
                   <p className="font-bold text-blue-400">2. SEND CRYPTO / TRANSFER</p>
-                  <p className="text-[10px] text-slate-500 mb-1 italic">Note: Use USDT (TRC20/Tron) to save on fees!</p>
-                  <p className="text-xs font-mono bg-black/40 p-2 rounded-lg break-all border border-white/5">BTC: [PASTE_YOUR_BITCOIN_ADDRESS_HERE]</p>
-                  <p className="text-xs font-mono bg-black/40 p-2 rounded-lg break-all border border-white/5">USDT (TRC20): [PASTE_YOUR_TRON_USDT_ADDRESS_HERE]</p>
+                  <p className="text-[10px] text-slate-500 mb-1 italic">Note: Ensure you use the correct network!</p>
+                  <p className="text-xs font-mono bg-black/40 p-2 rounded-lg break-all border border-white/5 font-bold text-amber-200">BTC: bc1q5qfv4fkvd9s5j90pc6mg9fjxjyelt992fu0xfh</p>
+                  <p className="text-xs font-mono bg-black/40 p-2 rounded-lg break-all border border-white/5 font-bold text-blue-200">USDT (ETH/ERC20): 0x0d10b62ca87c87bcfa91cee9a08d3041b10d104e</p>
                 </div>
               </div>
               <div className="space-y-4 bg-white/5 p-4 rounded-2xl border border-white/10">
