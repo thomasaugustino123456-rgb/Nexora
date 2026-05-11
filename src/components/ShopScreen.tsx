@@ -104,18 +104,18 @@ export function ShopScreen({
               <div className="flex gap-2">
                 <button 
                   onClick={() => onBuy(featuredItem, 'streak')}
-                  disabled={(!isPro && streak < featuredItem.price) || purchasedItems.includes(featuredItem.id)}
+                  disabled={(!(isPro && featuredItem.effect === 'music') && streak < featuredItem.price) || purchasedItems.includes(featuredItem.id)}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-black transition-all active:scale-95 shadow-lg shadow-blue-200 disabled:opacity-50 text-xs"
                 >
-                  {purchasedItems.includes(featuredItem.id) ? 'Purchased' : isPro ? 'Free' : `${featuredItem.price} Streak`}
+                  {purchasedItems.includes(featuredItem.id) ? 'Purchased' : (isPro && featuredItem.effect === 'music') ? 'Free' : `${featuredItem.price} Streak`}
                 </button>
                 {featuredItem.coinPrice && (
                   <button 
                     onClick={() => onBuy(featuredItem, 'coins')}
-                    disabled={(!isPro && coins < featuredItem.coinPrice) || purchasedItems.includes(featuredItem.id)}
+                    disabled={(!(isPro && featuredItem.effect === 'music') && coins < featuredItem.coinPrice) || purchasedItems.includes(featuredItem.id)}
                     className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-xl font-black transition-all active:scale-95 shadow-lg shadow-yellow-200 disabled:opacity-50 text-xs"
                   >
-                    {purchasedItems.includes(featuredItem.id) ? 'Purchased' : isPro ? 'Free' : `${featuredItem.coinPrice} Coins`}
+                    {purchasedItems.includes(featuredItem.id) ? 'Purchased' : (isPro && featuredItem.effect === 'music') ? 'Free' : `${featuredItem.coinPrice} Coins`}
                   </button>
                 )}
               </div>
@@ -167,6 +167,8 @@ export function ShopScreen({
 }
 
 function ShopItemCard({ item, streak, coins, isPro, purchasedItems, onBuy }: { item: ShopItem, streak: number, coins: number, isPro: boolean, purchasedItems: string[], onBuy: (item: ShopItem, currency: 'streak' | 'coins') => void }) {
+  const isFreeForPro = isPro && item.effect === 'music';
+
   return (
     <div key={item.id} className="glass-card p-5 flex items-center gap-4 hover:border-blue-300 transition-colors">
       <div className="text-4xl">{item.icon}</div>
@@ -174,23 +176,24 @@ function ShopItemCard({ item, streak, coins, isPro, purchasedItems, onBuy }: { i
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-bold text-blue-900 truncate">{item.name}</h3>
           {item.effect === 'gift' && <span className="px-2 py-0.5 bg-purple-100 text-purple-600 text-[8px] font-black uppercase rounded-full">Surprise</span>}
+          {isFreeForPro && <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-[8px] font-black uppercase rounded-full">Pro Free</span>}
         </div>
         <p className="text-[10px] text-blue-900/40 font-medium leading-tight mb-2 line-clamp-2">{item.description}</p>
         <div className="flex flex-col gap-2">
           <button 
             onClick={() => onBuy(item, 'streak')}
-            disabled={(!isPro && streak < item.price) || purchasedItems.includes(item.id)}
+            disabled={(!isFreeForPro && streak < item.price) || purchasedItems.includes(item.id)}
             className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
           >
-            {purchasedItems.includes(item.id) ? 'Purchased' : isPro ? 'Free' : `${item.price} Streak`}
+            {purchasedItems.includes(item.id) ? 'Purchased' : isFreeForPro ? 'Free' : `${item.price} Streak`}
           </button>
           {item.coinPrice && (
             <button 
               onClick={() => onBuy(item, 'coins')}
-              disabled={(!isPro && coins < item.coinPrice) || purchasedItems.includes(item.id)}
+              disabled={(!isFreeForPro && coins < item.coinPrice) || purchasedItems.includes(item.id)}
               className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
             >
-              {purchasedItems.includes(item.id) ? 'Purchased' : isPro ? 'Free' : `${item.coinPrice} Coins`}
+              {purchasedItems.includes(item.id) ? 'Purchased' : isFreeForPro ? 'Free' : `${item.coinPrice} Coins`}
             </button>
           )}
         </div>

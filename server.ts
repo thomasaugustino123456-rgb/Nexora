@@ -65,22 +65,26 @@ const startScheduler = () => {
 
     try {
       // Periodic connectivity check - if it fails, the catch block will handle it
-      // 1. Get all users with notifications enabled
+      // 1. Get all users with notifications enabled (Optimized query)
       let usersSnapshot;
       try {
-        usersSnapshot = await db.collection("users").get();
+        // Only fetch users who have notifications enabled to save Quota
+        usersSnapshot = await db.collection("users")
+          .where("notificationsEnabled", "==", true)
+          .limit(500) // Safety limit
+          .get();
       } catch (e: any) {
         console.error("Scheduler Error (Fetching Users):", e.message);
         if (e.message.includes("PERMISSION_DENIED") || e.message.includes("not found")) {
-           console.warn("Scheduler: Detected permission/connectivity error, attempting to re-verify DB identity...");
-           // This will be caught by the outer catch and the next tick might work if we fixed db in init
+           console.warn("Scheduler: Detected permission/connectivity error. This is common if the Service Account lacks specific Firestore roles or if databaseId is uniquely restricted.");
         }
-        throw e;
+        return; // Skip this tick
       }
       
       const usersToNotify = usersSnapshot.docs.filter((doc: any) => {
         const data = doc.data();
         const hasToken = data.fcmToken || (data.settings && data.settings.fcmToken);
+        // We already filtered by notificationsEnabled in the query, but let's double check local settings
         const hasEnabled = data.notificationsEnabled || (data.settings && data.settings.notificationsEnabled);
         return hasToken && hasEnabled;
       });

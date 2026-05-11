@@ -2,7 +2,8 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { 
   AlertCircle, Star, Bell, Flame, Trophy as TrophyIcon, 
-  Plus, Trash2, Clock, Target, ChevronRight, Sprout, LogOut, Save, CheckCircle2
+  Plus, Trash2, Clock, Target, ChevronRight, Sprout, LogOut, Save, CheckCircle2,
+  Infinity, Zap, Crown, Coins
 } from 'lucide-react';
 import { 
   UserStats, UserSettings, DailyProgress, MascotMood, ChallengeStep, CustomPlan 
@@ -11,6 +12,7 @@ import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { Mascot } from './Mascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
 import { MascotAIWrapper } from './SuspenseWrappers';
+import { formatDistanceToNow } from 'date-fns';
 
 function CountdownToMidnight() {
   const [timeLeft, setTimeLeft] = useState('');
@@ -89,6 +91,9 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
 }) {
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
+  const layoutConfig = settings.layoutConfig || {};
+  const sectionOrder = layoutConfig.sectionOrder || ['stats', 'protocol', 'quests', 'plans', 'trophies', 'mascot'];
+
   const quotes = [
     "The only way to do great work is to love what you do.",
     "Believe you can and you're halfway there.",
@@ -158,12 +163,286 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
     setMoveCount(0);
   };
 
+  const renderSection = (id: string) => {
+    switch (id) {
+      case 'stats':
+        if (layoutConfig.hideStats) return null;
+        return (
+          <div key="stats" className="glass-card p-4 flex flex-wrap items-center justify-between gap-4 border-white/50 shadow-blue-900/5 transition-all">
+            <div className="flex items-center gap-6 px-2">
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Discipline Streak</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500">
+                    <Flame size={20} />
+                  </div>
+                  <span className="text-2xl font-black text-blue-900 tracking-tight">{stats.streak}</span>
+                </div>
+              </div>
+              
+              <div className="h-10 w-px bg-blue-900/10" />
+
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Growth XP</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                    <Star size={20} />
+                  </div>
+                  <span className="text-2xl font-black text-blue-900 tracking-tight">{stats.xp || 0}</span>
+                </div>
+              </div>
+
+              <div className="h-10 w-px bg-blue-900/10" />
+
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Earned Coins</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                    <Coins size={20} />
+                  </div>
+                  <span className="text-2xl font-black text-blue-900 tracking-tight">{stats.coins || 0}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={onOpenPlant}
+                className={`p-3 rounded-2xl transition-all flex items-center justify-center group relative ${
+                  localStorage.getItem('nexora_new_plant_unlocked') === 'true' 
+                    ? 'bg-yellow-400 text-white shadow-xl shadow-yellow-200 animate-pulse' 
+                    : 'bg-emerald-500 text-white shadow-xl shadow-emerald-200'
+                }`}
+              >
+                <Sprout size={20} className="group-hover:rotate-12 transition-transform" />
+                {settings.plantState?.isThirsty && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white animate-bounce" />
+                )}
+              </button>
+            </div>
+          </div>
+        );
+
+      case 'protocol':
+        if (layoutConfig.hideFlow) return null;
+        return (
+          <div key="protocol" className="glass-card p-8 border-2 border-blue-600/5 bg-gradient-to-br from-white/80 to-blue-50/20 shadow-2xl shadow-blue-900/10 relative overflow-hidden transition-all">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <Target size={120} />
+            </div>
+
+            <div className="relative z-10 space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-black text-blue-900 leading-none mb-2">DAILY PROTOCOL</h3>
+                  <p className="text-blue-900/40 text-[10px] font-black uppercase tracking-[0.2em]">Resets in <CountdownToMidnight /></p>
+                </div>
+                <div className="text-right">
+                  <div className="text-blue-900 font-black text-lg">
+                    {isPro ? (
+                      <span className="flex items-center gap-1 text-emerald-600">
+                        <Infinity size={20} />
+                        UNLIMITED
+                      </span>
+                    ) : (
+                      `${dailyProgress.completionsCount} / 3`
+                    )}
+                  </div>
+                  <p className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest">
+                    {isPro ? 'Pro Status Active' : 'Daily Limit Status'}
+                  </p>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => {
+                  if (!isPro && dailyProgress.completionsCount >= 3) return;
+                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                  onStartChallenge();
+                }}
+                disabled={!isPro && dailyProgress.completionsCount >= 3}
+                className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-3 relative group overflow-hidden"
+              >
+                <Zap size={24} className="group-hover:scale-125 transition-transform" />
+                {!isPro && dailyProgress.completionsCount >= 3 
+                  ? 'PROTOCOL COMPLETE 🏆' 
+                  : dailyProgress.completionsCount > 0 
+                    ? `NEXT CHALLENGE (#${dailyProgress.completionsCount + 1})` 
+                    : 'START INITIAL CHALLENGE'}
+              </button>
+
+              {!isPro && dailyProgress.completionsCount >= 3 && (
+                <div className="flex items-center justify-center gap-4 p-4 bg-white/40 rounded-2xl border border-blue-100/50">
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-blue-400" />
+                    <span className="text-xs font-black text-blue-900/60 uppercase">Next Recovery:</span>
+                  </div>
+                  <div className="text-sm font-black text-blue-600">
+                    <NextRestorationCountdown targetTime={(dailyProgress as any).nextRestorationTime} />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-center gap-3 py-2">
+                {[
+                  { done: dailyProgress.pushupsDone, icon: "💪" },
+                  { done: dailyProgress.waterDrank >= settings.waterGoal, icon: "💧" },
+                  { done: dailyProgress.breathingDone, icon: "🧘" },
+                  { done: dailyProgress.drawingDone, icon: "🎨" },
+                  { done: dailyProgress.footballDone, icon: "⚽" },
+                  { done: dailyProgress.bubblesDone, icon: "🫧" },
+                  { done: dailyProgress.memoryDone, icon: "🧠" },
+                  { done: dailyProgress.gratitudeDone, icon: "🙏" }
+                ].map((task, i) => (
+                  <div 
+                    key={i} 
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all duration-500 scale-90 ${
+                      task.done ? 'bg-blue-600/10 grayscale-0 opacity-100 scale-100' : 'bg-slate-100 grayscale opacity-30 shadow-inner'
+                    }`}
+                  >
+                    {task.icon}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'quests':
+        if (layoutConfig.hideQuests || !dailyQuest) return null;
+        return (
+          <motion.div 
+            key="quests"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className={`p-4 rounded-3xl border-2 flex items-center justify-between gap-4 transition-all ${
+              dailyProgress.dailyQuestDone 
+                ? 'bg-emerald-50 border-emerald-100' 
+                : 'bg-yellow-400/5 border-yellow-400/20'
+            }`}
+          >
+            <div className="flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg ${
+                dailyProgress.dailyQuestDone ? 'bg-emerald-500 text-white' : 'bg-yellow-400 text-white'
+              }`}>
+                <Crown size={20} />
+              </div>
+              <div>
+                <h4 className="font-black text-blue-900 text-sm">{dailyProgress.dailyQuestDone ? "QUEST ACHIEVED" : "LEGENDARY QUEST"}</h4>
+                <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest italic">
+                  {dailyProgress.dailyQuestDone ? "You crushed the daily goal!" : `Complete "${dailyQuest}" for DOUBLE REWARDS`}
+                </p>
+              </div>
+            </div>
+            {!dailyProgress.dailyQuestDone && (
+              <button 
+                onClick={onStartChallenge}
+                className="bg-blue-900 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 active:scale-95 transition-all"
+              >
+                Target
+              </button>
+            )}
+          </motion.div>
+        );
+
+      case 'plans':
+        if (layoutConfig.hideCustomPlans) return null;
+        return (
+          <div key="plans" className="space-y-4 pt-4 transition-all">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[10px] font-black text-blue-900/40 uppercase tracking-[0.2em]">Custom Protocol Library</h3>
+              <button 
+                onClick={onOpenPlanBuilder}
+                className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+                title="Create New Plan"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              {customPlans.length === 0 ? (
+                <div className="p-12 rounded-3xl border-2 border-dashed border-slate-100 flex flex-col items-center gap-3 text-center">
+                  <Target size={32} className="text-slate-200" />
+                  <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">No Custom Protocols</p>
+                </div>
+              ) : (
+                customPlans.map((plan) => (
+                  <motion.div
+                    key={plan.id}
+                    className="glass-card p-4 flex items-center gap-4 group hover:border-blue-500/30 transition-all border-white/80"
+                  >
+                    <div className={`w-12 h-12 rounded-2xl ${plan.color} text-white flex items-center justify-center shadow-lg`}>
+                      <Target size={24} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-black text-blue-900">{plan?.name}</h4>
+                      <p className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest">{plan.challenges.length} Steps • {plan.days.length} Days</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => onDeleteCustomPlan(plan.id)} className="p-2 text-slate-200 hover:text-red-500 transition-colors">
+                        <Trash2 size={18} />
+                      </button>
+                      <button onClick={() => onStartCustomPlan(plan)} className="bg-blue-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] shadow-lg active:scale-95 transition-all">
+                        RUN
+                      </button>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </div>
+        );
+
+      case 'trophies':
+        if (layoutConfig.hideTrophies || !latestTrophy) return null;
+        return (
+          <div key="trophies" className="glass-card p-5 flex items-center gap-5 border-emerald-500/10 transition-all">
+            <div className="w-16 h-16 flex-shrink-0">
+              {latestTrophy.type === 'golden' && <GoldenTrophy />}
+              {latestTrophy.type === 'ice' && <IceTrophy />}
+              {latestTrophy.type === 'broken' && <BrokenTrophy />}
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Status Invariant</p>
+              <h4 className="font-black text-blue-900">
+                {latestTrophy.type === 'golden' ? 'GOLDEN DISCIPLINE' : latestTrophy.type === 'ice' ? 'FROZEN STATE' : 'SHATTERED SHIELD'}
+              </h4>
+              <p className="text-[10px] font-bold text-blue-900/40">Earned {formatDistanceToNow(new Date(latestTrophy.earnedDate))} ago</p>
+            </div>
+          </div>
+        );
+
+      case 'mascot':
+        if (layoutConfig.hideMascot) return null;
+        return (
+          <div key="mascot" className="relative w-full aspect-square sm:w-[500px] sm:h-[500px] lg:w-[600px] lg:h-[600px] flex items-center justify-center flex-shrink-0 transition-all mx-auto">
+            <div className="absolute inset-0 bg-blue-400/10 blur-[120px] rounded-full animate-pulse" />
+            <motion.div animate={mascotControls} className="w-[90%] h-[90%] relative z-10">
+              <Mascot 
+                className="w-full h-full drop-shadow-[0_20px_50px_rgba(59,130,246,0.2)]" 
+                mood={mascotMood}
+                hat={settings.activeSkin}
+                soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'}
+                onClick={handleMascotTap}
+                onPointerMove={handleMascotPointerMove}
+                onPointerLeave={handleMascotPointerLeave}
+              />
+            </motion.div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="flex flex-col items-center pt-4 gap-12 w-full max-w-7xl mx-auto"
+      className="flex flex-col items-center pt-4 gap-8 w-full max-w-7xl mx-auto px-4"
     >
       <AnimatePresence>
         {emergencyActive && (
@@ -176,7 +455,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
             <div className="bg-red-500 text-white p-6 rounded-3xl flex items-center gap-4 shadow-2xl shadow-red-200 border-2 border-white/20 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 animate-shimmer" />
               <div className="p-3 bg-white/20 rounded-2xl relative z-10">
-                <AlertCircle size={28} className="animate-bounce" />
+                <AlertCircle size={24} className="animate-bounce" />
               </div>
               <div className="flex-1 relative z-10">
                 <h4 className="font-black text-lg uppercase tracking-tight leading-none mb-1">Emergency! 🚨</h4>
@@ -195,368 +474,14 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
 
       <MascotAIWrapper stats={stats} settings={settings} showToast={showToast} />
       
-      {/* Daily Quest Card */}
-      {dailyQuest && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-6 border-2 border-yellow-400/30 bg-yellow-400/5 mb-8 w-full max-w-4xl mx-auto"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-white shadow-lg shadow-yellow-200">
-                <Star size={20} />
-              </div>
-              <div>
-                <h3 className="font-black text-blue-900 leading-tight">Daily Quest</h3>
-                <p className="text-[10px] text-blue-900/40 font-bold uppercase tracking-widest">Double Points! 🔥</p>
-              </div>
-            </div>
-            {dailyProgress.dailyQuestDone && (
-              <div className="bg-emerald-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                Completed
-              </div>
-            )}
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <p className="text-sm font-bold text-blue-900/60">Complete the <span className="text-blue-900 uppercase">{dailyQuest}</span> challenge today!</p>
-              
-              {isPro && onArchiveChallenge && !dailyProgress.dailyQuestDone && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(`Archive the ${dailyQuest} challenge? It won't be recommended to you again.`)) {
-                      onArchiveChallenge(dailyQuest);
-                    }
-                  }}
-                  className="p-1.5 text-blue-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-all"
-                  title="Archive/Hide Challenge"
-                >
-                  <Trash2 size={16} />
-                </button>
-              )}
-            </div>
-            {!dailyProgress.dailyQuestDone && (
-              <button 
-                onClick={onStartChallenge}
-                className="bg-yellow-400 text-white px-4 py-2 rounded-xl font-black text-xs shadow-lg shadow-yellow-200 active:scale-95 transition-transform"
-              >
-                GO!
-              </button>
-            )}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Push Notification Onboarding Card */}
-      {!fcmToken && !fcmError && Notification.permission === 'default' && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-4xl mx-auto mb-8"
-        >
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-3xl flex items-center gap-4 shadow-xl shadow-blue-200 relative overflow-hidden">
-            <div className="p-3 bg-white/20 rounded-2xl">
-              <Bell size={24} className="animate-pulse" />
-            </div>
-            <div className="flex-1">
-              <h4 className="font-black text-sm uppercase tracking-tight">Never miss a streak! 🔔</h4>
-              <p className="text-[10px] font-bold opacity-80 leading-tight">Enable notifications to get reminders and plant alerts even when the app is closed, bro!</p>
-            </div>
-            <button 
-              onClick={setupFCM}
-              className="px-4 py-2 bg-white text-blue-600 rounded-xl text-[10px] font-black uppercase hover:bg-blue-50 active:scale-95 transition-all"
-            >
-              Enable
-            </button>
-          </div>
-        </motion.div>
-      )}
-
-      <div className="flex flex-col xl:flex-row items-center xl:items-start justify-center gap-8 xl:gap-16 w-full px-4 sm:px-10">
-        <div className="relative w-full aspect-square sm:w-[550px] sm:h-[550px] lg:w-[650px] lg:h-[650px] xl:w-[750px] xl:h-[750px] flex items-center justify-center flex-shrink-0 mb-4 sm:mb-8">
-          <div className="absolute inset-0 bg-blue-400/20 blur-[150px] rounded-full animate-pulse" />
-          <motion.div animate={mascotControls} className="w-[95%] h-[95%] relative z-10">
-            <Mascot 
-              className="w-full h-full drop-shadow-[0_20px_50px_rgba(59,130,246,0.3)]" 
-              mood={mascotMood}
-              hat={settings.activeSkin}
-              soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'}
-              onClick={handleMascotTap}
-              onPointerMove={handleMascotPointerMove}
-              onPointerLeave={handleMascotPointerLeave}
-            />
-          </motion.div>
-        </div>
-
-        <div className="flex flex-col gap-8 w-full max-w-2xl xl:mt-24">
-          <div className="glass-card w-full p-8 space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-3xl font-bold text-blue-900/80">Hey 👋</h2>
-              <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-bold text-blue-900/70">Ready for today?</h3>
-                <div className="relative">
-                  <button 
-                    onClick={() => {
-                      vibrate(VIBRATION_PATTERNS.CLICK);
-                      onOpenPlant();
-                    }}
-                    className={`p-3 bg-emerald-500 text-white rounded-2xl shadow-lg active:scale-90 transition-all flex items-center justify-center group relative ${
-                      localStorage.getItem('nexora_new_plant_unlocked') === 'true' ? 'shadow-[0_0_20px_rgba(252,211,77,0.8)] animate-pulse border-2 border-yellow-300' : 'shadow-emerald-200'
-                    }`}
-                  >
-                    <Sprout size={24} className="group-hover:rotate-12 transition-transform" />
-                    
-                    {/* Golden Glow for New Unlock */}
-                    {localStorage.getItem('nexora_new_plant_unlocked') === 'true' && (
-                      <div className="absolute -inset-1 rounded-2xl bg-yellow-400 blur opacity-40 animate-pulse pointer-events-none" />
-                    )}
-
-                    {/* Red Badge for Completed Challenges */}
-                    {(dailyProgress.pushupsDone && dailyProgress.waterDrank >= settings.waterGoal && dailyProgress.breathingDone && dailyProgress.drawingDone && dailyProgress.footballDone && dailyProgress.bubblesDone) && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-sm flex items-center justify-center">
-                        <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
-                      </div>
-                    )}
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 text-blue-900/50 font-medium">
-                  <Flame size={18} className="text-orange-500" />
-                  <span>Streak: {stats.streak} (Best: {stats.bestStreak || stats.streak})</span>
-                </div>
-                <div className="flex items-center gap-2 text-blue-900/50 font-medium">
-                  <Star size={18} className="text-yellow-500" />
-                  <span>{stats.xp || 0} XP</span>
-                </div>
-                <div className="flex items-center gap-2 text-blue-900/50 font-medium">
-                  <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-[10px] font-black text-yellow-700 shadow-sm border border-yellow-600">
-                    $
-                  </div>
-                  <span>{stats.coins || 0} coins</span>
-                </div>
-                <div className="flex items-center gap-2 text-blue-900/50 font-medium">
-                  <TrophyIcon size={18} className="text-emerald-500" />
-                  <span>{dailyProgress.completionsCount}/{isPro ? (settings.challengeCountGoal || 999) : 3} Today</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="glass-card p-4 flex flex-col items-center gap-2 border-2 border-orange-100 bg-orange-50/30">
-                <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-200">
-                  <Flame size={20} />
-                </div>
-                <div className="text-center">
-                  <div className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Streak</div>
-                  <div className="text-xl font-black text-blue-900">{stats.streak}</div>
-                  <div className="text-[8px] font-bold text-blue-900/40">+5 XP per day</div>
-                </div>
-              </div>
-              <div className="glass-card p-4 flex flex-col items-center gap-2 border-2 border-yellow-100 bg-yellow-50/30">
-                <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-white shadow-lg shadow-yellow-200">
-                  <div className="font-black text-lg">$</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-[10px] font-black text-yellow-600 uppercase tracking-widest">Coins</div>
-                  <div className="text-xl font-black text-blue-900">{stats.coins || 0}</div>
-                  <div className="text-[8px] font-bold text-blue-900/40">Earned: {stats.xp || 0} XP</div>
-                </div>
-              </div>
-            </div>
-
-            <button 
-              onClick={() => {
-                if (dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3)) return;
-                vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                onStartChallenge();
-              }}
-              disabled={dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3)}
-              className={`btn-primary w-full flex items-center justify-center gap-2 ${dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3) ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
-            >
-              {dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3)
-                ? `Daily Limit Reached (${dailyProgress.completionsCount}/${isPro ? (settings.challengeCountGoal || 10) : 3}) 🏆` 
-                : dailyProgress.completionsCount > 0 
-                  ? `Start Challenge #${dailyProgress.completionsCount + 1} ✍️` 
-                  : 'Start Today\'s Challenge ✍️'}
-            </button>
-
-            <button 
-              onClick={() => {
-                vibrate(VIBRATION_PATTERNS.CLICK);
-                onOpenPlant();
-              }}
-              className={`w-full flex items-center justify-between p-4 glass-card bg-emerald-50/30 border-2 transition-all group relative overflow-hidden ${
-                localStorage.getItem('nexora_new_plant_unlocked') === 'true' ? 'border-yellow-400/50 bg-yellow-50/20' : 'border-emerald-100/50 hover:bg-emerald-50'
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform ${
-                  localStorage.getItem('nexora_new_plant_unlocked') === 'true' ? 'bg-gradient-to-br from-yellow-400 to-amber-500 shadow-yellow-200 animate-glow' : 'bg-gradient-to-br from-emerald-400 to-green-500 shadow-emerald-200'
-                }`}>
-                  <Sprout size={24} />
-                </div>
-                <div className="text-left">
-                  <h4 className="font-black text-blue-900 leading-none">
-                    {localStorage.getItem('nexora_new_plant_unlocked') === 'true' ? "NEW PLANT UNLOCKED! 🏆" : "Your Plant"}
-                  </h4>
-                  <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest mt-1">
-                    {settings.plantState?.isDead ? "🥀 Restoration Required" : settings.plantState?.isThirsty ? "💧 Needs Water" : `🌿 Stage ${settings.plantState?.stage || 0} Growth`}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {(dailyProgress.pushupsDone && dailyProgress.waterDrank >= settings.waterGoal && dailyProgress.breathingDone && dailyProgress.drawingDone && dailyProgress.footballDone && dailyProgress.bubblesDone) && (
-                  <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-sm" />
-                )}
-                <ChevronRight size={20} className="text-emerald-500 group-hover:translate-x-1 transition-transform" />
-              </div>
-
-              {localStorage.getItem('nexora_new_plant_unlocked') === 'true' && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/10 to-transparent skew-x-[-20deg] animate-shimmer pointer-events-none" />
-              )}
-            </button>
-
-            {dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 10) : 3) ? (
-              <div className="text-center space-y-2 p-4 bg-blue-50 rounded-2xl">
-                 <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest flex items-center justify-center gap-2">
-                   <Clock size={12} /> Next Restoration
-                 </p>
-                 <div className="text-lg font-black text-blue-600">
-                    <NextRestorationCountdown targetTime={(dailyProgress as any).nextRestorationTime} />
-                 </div>
-                 <p className="text-[8px] font-bold text-blue-900/40 uppercase">1 use restored every 4 hours</p>
-              </div>
-            ) : (
-              <div className="text-center space-y-1">
-                <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest">Resets in</p>
-                <div className="flex items-center justify-center gap-2 text-blue-900 font-black">
-                  <Clock size={14} className="text-blue-500" />
-                  <CountdownToMidnight />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Custom Plans Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black text-blue-900/40 uppercase tracking-widest">Your Custom Plans</h3>
-              <div className="flex items-center gap-2">
-                <div className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 text-[8px] font-black uppercase tracking-tighter">Unlimited</div>
-                <button 
-                  onClick={onOpenPlanBuilder}
-                  className="text-xs font-bold text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1"
-                >
-                  <Plus size={14} /> Create New
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {customPlans.length === 0 ? (
-                <div className="p-6 rounded-3xl border-2 border-dashed border-gray-100 flex flex-col items-center gap-3 text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-300">
-                    <Target size={24} />
-                  </div>
-                  <p className="text-xs font-bold text-blue-900/30">No custom plans yet, bro. Create one to level up your routine!</p>
-                </div>
-              ) : (
-                customPlans.map((plan) => (
-                  <motion.div
-                    key={plan.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="glass-card p-4 flex items-center gap-4 group hover:border-blue-500/30 transition-all"
-                  >
-                    <div className={`w-12 h-12 rounded-2xl ${plan.color} text-white flex items-center justify-center shadow-lg shadow-blue-100`}>
-                      <Target size={24} />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-black text-blue-900">{plan?.name || "Unnamed Plan"}</h4>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest">
-                          {plan.challenges.length} Challenges • {plan.days.length} Days
-                        </p>
-                        {plan.reminderTime && (
-                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
-                            <Clock size={8} />
-                            <span className="text-[8px] font-black">{plan.reminderTime}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => onDeleteCustomPlan(plan.id)}
-                        className="p-2 text-red-500/20 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                      <button 
-                        onClick={() => onStartCustomPlan(plan)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-xs shadow-lg shadow-blue-200 active:scale-95 transition-all"
-                      >
-                        START
-                      </button>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {latestTrophy && (
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="glass-card w-full p-6 flex items-center gap-6 border-2 border-emerald-100/50"
-            >
-              <div className="w-20 h-20 flex-shrink-0">
-                {latestTrophy.type === 'golden' && <GoldenTrophy />}
-                {latestTrophy.type === 'ice' && <IceTrophy />}
-                {latestTrophy.type === 'broken' && <BrokenTrophy />}
-              </div>
-              <div className="flex-1">
-                <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Latest Trophy</div>
-                <h4 className="font-bold text-blue-900 leading-tight">
-                  {latestTrophy.type === 'golden' ? 'Golden Glory!' : latestTrophy.type === 'ice' ? 'Frozen Solid' : 'Shattered Dreams'}
-                </h4>
-                <p className="text-[10px] text-blue-900/40 mt-1">
-                  {latestTrophy.type === 'golden' ? 'Keep it up to stay golden!' : 
-                   latestTrophy.type === 'ice' ? 'Freezing! Complete a flow to restore!' : 
-                   'Broken! Start a new flow to get a new one!'}
-                </p>
-              </div>
-            </motion.div>
-          )}
-
-          <div className="glass-card w-full p-6">
-            <h4 className="text-sm font-bold text-blue-900/40 uppercase tracking-widest mb-4">Today's Flow:</h4>
-            <div className="flex items-center justify-between px-2">
-              <div className={`text-3xl transition-all ${dailyProgress.pushupsDone ? 'grayscale-0' : 'grayscale opacity-40'}`}>💪</div>
-              <div className="text-blue-900/20 text-xl">•</div>
-              <div className={`text-3xl transition-all ${dailyProgress.waterDrank >= settings.waterGoal ? 'grayscale-0' : 'grayscale opacity-40'}`}>💧</div>
-              <div className="text-blue-900/20 text-xl">•</div>
-              <div className={`text-3xl transition-all ${dailyProgress.breathingDone ? 'grayscale-0' : 'grayscale opacity-40'}`}>🧘</div>
-              <div className="text-blue-900/20 text-xl">•</div>
-              <div className={`text-3xl transition-all ${dailyProgress.drawingDone ? 'grayscale-0' : 'grayscale opacity-40'}`}>🎨</div>
-              <div className="text-blue-900/20 text-xl">•</div>
-              <div className={`text-3xl transition-all ${dailyProgress.footballDone ? 'grayscale-0' : 'grayscale opacity-40'}`}>⚽</div>
-              <div className="text-blue-900/20 text-xl">•</div>
-              <div className={`text-3xl transition-all ${dailyProgress.bubblesDone ? 'grayscale-0' : 'grayscale opacity-40'}`}>🫧</div>
-            </div>
-          </div>
-        </div>
+      <div className="w-full max-w-4xl mx-auto space-y-6">
+        {sectionOrder.map(id => renderSection(id))}
       </div>
 
       {settings.showQuotes && (
-        <div className="w-full space-y-8">
-          <div className="text-center max-w-2xl mx-auto px-6">
-            <p className="text-lg font-serif italic text-blue-900/60">"{quote}"</p>
+        <div className="w-full py-12">
+          <div className="text-center max-w-xl mx-auto px-6">
+            <p className="text-sm font-serif italic text-blue-900/40 leading-relaxed">"{quote}"</p>
           </div>
         </div>
       )}

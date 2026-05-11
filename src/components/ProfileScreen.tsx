@@ -203,6 +203,7 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
               <ArchitectLab 
                 settings={settings} 
                 onUpdateSettings={(updates) => setSettings(prev => ({ ...prev, ...updates }))} 
+                onClose={() => setShowArchitect(false)}
               />
               <button 
                 onClick={() => setShowArchitect(false)}

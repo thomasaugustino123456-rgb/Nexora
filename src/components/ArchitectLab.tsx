@@ -13,13 +13,24 @@ import {
   Lock,
   Layout,
   Smartphone,
-  Trophy as TrophyIcon
+  Trophy as TrophyIcon,
+  Star,
+  Target,
+  MessageSquare,
+  BoxSelect,
+  Plus,
+  Save,
+  Sparkles,
+  Flame,
+  CheckCircle2,
+  X
 } from 'lucide-react';
 import { UserSettings } from '../types';
 
 interface ArchitectLabProps {
   settings: UserSettings;
   onUpdateSettings: (updates: Partial<UserSettings>) => void;
+  onClose: () => void;
 }
 
 const NAV_ITEMS = [
@@ -33,46 +44,80 @@ const NAV_ITEMS = [
   { id: 'profile', label: 'Profile', icon: Settings },
 ];
 
-export function ArchitectLab({ settings, onUpdateSettings }: ArchitectLabProps) {
+const HOME_SECTIONS = [
+  { id: 'stats', label: 'Statistics Bar', icon: BarChart2, configKey: 'hideStats' },
+  { id: 'protocol', label: 'Daily Protocol Card', icon: Zap, configKey: 'hideFlow' }, // 'hideFlow' maps to the protocol/checklist area
+  { id: 'quests', label: 'Daily Quests', icon: Star, configKey: 'hideQuests' },
+  { id: 'plans', label: 'Custom Protocols', icon: Layout, configKey: 'hideCustomPlans' },
+  { id: 'trophies', label: 'Trophy Display', icon: TrophyIcon, configKey: 'hideTrophies' },
+  { id: 'mascot', label: 'Nexora Mascot', icon: Smartphone, configKey: 'hideMascot' }, // Adding a hypothetical hideMascot
+];
+
+export function ArchitectLab({ settings, onUpdateSettings, onClose }: ArchitectLabProps) {
   const currentOrder = settings.navOrder || NAV_ITEMS.map(i => i.id);
   const hiddenItems = settings.hiddenNavItems || [];
+  
+  const sectionOrder = settings.layoutConfig?.sectionOrder || HOME_SECTIONS.map(s => s.id);
+  const layoutConfig = settings.layoutConfig || {};
 
   const handleReorder = (newOrder: string[]) => {
     onUpdateSettings({ navOrder: newOrder });
   };
 
+  const handleSectionReorder = (newOrder: string[]) => {
+    onUpdateSettings({ 
+      layoutConfig: { 
+        ...layoutConfig, 
+        sectionOrder: newOrder 
+      } 
+    });
+  };
+
   const toggleVisibility = (id: string) => {
-    if (id === 'home' || id === 'profile') return; // Cannot hide core pages
-    
+    if (id === 'home' || id === 'profile') return;
     const newHidden = hiddenItems.includes(id)
       ? hiddenItems.filter(i => i !== id)
       : [...hiddenItems, id];
-    
     onUpdateSettings({ hiddenNavItems: newHidden });
   };
 
+  const toggleSectionVisibility = (configKey: string) => {
+    onUpdateSettings({
+      layoutConfig: {
+        ...layoutConfig,
+        [configKey]: !((layoutConfig as any)[configKey])
+      }
+    });
+  };
+
   return (
-    <div className="flex flex-col space-y-6">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
-          <Layout size={20} />
+    <div className="flex flex-col space-y-8 pb-32">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200">
+            <Layout size={24} />
+          </div>
+          <div>
+            <h3 className="font-black text-2xl text-blue-900 tracking-tight">ARCHITECT LAB</h3>
+            <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-[0.2em]">Personalize your Neuro-Interface</p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-black text-blue-900 leading-tight">UI Architect Lab</h3>
-          <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest">Personalize your Command Center</p>
-        </div>
+        <button 
+          onClick={onClose}
+          className="p-3 bg-white/50 hover:bg-white rounded-2xl text-blue-600 transition-colors shadow-lg shadow-blue-100"
+        >
+          <X size={24} />
+        </button>
       </div>
 
-      <div className="glass-card p-6 space-y-6">
-        <div className="flex items-center justify-between pb-4 border-bottom-dashed border-blue-100">
-          <div className="flex items-center gap-2">
-            <Smartphone size={16} className="text-blue-500" />
-            <span className="text-xs font-black text-blue-900">NAVIGATION BAR</span>
-          </div>
-          <span className="text-[10px] font-bold text-blue-900/30">DRAG TO REORDER</span>
+      {/* Navigation Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-black text-blue-900/40 uppercase tracking-[0.2em]">Navigation Interface</h4>
+          <span className="text-[10px] font-bold text-blue-400">DRAG TO ARRANGE</span>
         </div>
-
-        <Reorder.Group axis="y" values={currentOrder} onReorder={handleReorder} className="space-y-3">
+        
+        <Reorder.Group axis="y" values={currentOrder} onReorder={handleReorder} className="space-y-2">
           {currentOrder.map((id) => {
             const item = NAV_ITEMS.find(n => n.id === id);
             if (!item) return null;
@@ -83,69 +128,84 @@ export function ArchitectLab({ settings, onUpdateSettings }: ArchitectLabProps) 
               <Reorder.Item 
                 key={id} 
                 value={id}
-                className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all group ${
-                  isHidden ? 'bg-blue-50/50 opacity-60 border-blue-100' : 'bg-white border-blue-50 hover:border-blue-200'
+                className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-grab active:cursor-grabbing ${
+                  isHidden ? 'bg-slate-50 border-slate-100 opacity-50' : 'bg-white border-white shadow-sm'
                 }`}
               >
                 <div className="flex items-center gap-4">
-                  <div className="cursor-grab active:cursor-grabbing text-blue-200 group-hover:text-blue-400 transition-colors">
-                    <GripVertical size={16} />
-                  </div>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${
-                    isHidden ? 'bg-blue-100 text-blue-300' : 'bg-blue-500 text-white shadow-blue-200'
-                  }`}>
+                  <GripVertical size={16} className="text-slate-300" />
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isHidden ? 'bg-slate-200 text-slate-400' : 'bg-blue-600 text-white'}`}>
                     <item.icon size={18} />
                   </div>
                   <div>
-                    <p className="text-sm font-black text-blue-900">{item.label}</p>
-                    <p className="text-[10px] font-bold text-blue-900/40 uppercase">
-                      {isHidden ? 'Hidden from Bar' : 'Active Navigation'}
-                    </p>
+                    <span className="font-black text-blue-900">{item.label}</span>
+                    <p className="text-[9px] font-bold text-blue-900/30 uppercase">{id === 'social' ? 'Hidden by System' : isHidden ? 'Hidden from Bar' : 'Active Channel'}</p>
                   </div>
                 </div>
-
-                {canHide ? (
-                  <button
-                    onClick={() => toggleVisibility(id)}
-                    className={`p-2 rounded-lg transition-all ${
-                      isHidden ? 'text-blue-400 hover:bg-blue-100' : 'text-blue-200 hover:text-blue-500 hover:bg-blue-50'
-                    }`}
-                  >
-                    {isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+                {canHide && id !== 'social' && (
+                  <button onClick={() => toggleVisibility(id)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                    {isHidden ? <EyeOff size={18} className="text-slate-400" /> : <Eye size={18} className="text-blue-500" />}
                   </button>
-                ) : (
-                  <div className="p-2 text-blue-100">
-                    <Lock size={16} />
-                  </div>
                 )}
               </Reorder.Item>
             );
           })}
         </Reorder.Group>
+      </div>
 
-        <div className="p-4 bg-amber-50 rounded-2xl border-2 border-amber-100/50">
-          <div className="flex gap-3">
-            <MousePointer2 className="text-amber-500 flex-shrink-0" size={16} />
-            <p className="text-[10px] font-bold text-amber-700 leading-none">
-              <span className="block mb-1 text-xs">ARCHITECT TIP:</span>
-              Clean layouts foster focus. Hide sections you don't use daily to reduce your cognitive load.
+      {/* Home Screen Layout Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-black text-blue-900/40 uppercase tracking-[0.2em]">Home Grid Composition</h4>
+          <span className="text-[10px] font-bold text-blue-400">DRAG TO ARRANGE</span>
+        </div>
+
+        <Reorder.Group axis="y" values={sectionOrder} onReorder={handleSectionReorder} className="space-y-2">
+          {sectionOrder.map((id) => {
+            const section = HOME_SECTIONS.find(s => s.id === id);
+            if (!section) return null;
+            const isHidden = (layoutConfig as any)[section.configKey];
+
+            return (
+              <Reorder.Item 
+                key={id} 
+                value={id}
+                className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-grab active:cursor-grabbing ${
+                  isHidden ? 'bg-slate-50 border-slate-100 opacity-50' : 'bg-white border-white shadow-sm'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <GripVertical size={16} className="text-slate-300" />
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isHidden ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white'}`}>
+                    <section.icon size={18} />
+                  </div>
+                  <div>
+                    <span className="font-black text-blue-900">{section.label}</span>
+                    <p className="text-[9px] font-bold text-blue-900/30 uppercase">{isHidden ? 'Deactivated' : 'Active Module'}</p>
+                  </div>
+                </div>
+                <button onClick={() => toggleSectionVisibility(section.configKey)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                  {isHidden ? <EyeOff size={18} className="text-slate-400" /> : <Eye size={18} className="text-emerald-500" />}
+                </button>
+              </Reorder.Item>
+            );
+          })}
+        </Reorder.Group>
+      </div>
+
+      <div className="p-6 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl text-white shadow-xl shadow-blue-200 relative overflow-hidden group">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
+        <div className="relative z-10 flex gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <MousePointer2 size={24} />
+          </div>
+          <div>
+            <h4 className="font-black text-sm uppercase tracking-tight mb-1">Architectural Integrity</h4>
+            <p className="text-[10px] font-bold opacity-80 leading-relaxed uppercase tracking-widest">
+              Design is not just what it looks like. Design is how it works. Your custom layout is automatically synced and persistent across all sessions.
             </p>
           </div>
         </div>
-      </div>
-
-      <div className="glass-card p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Zap size={16} className="text-blue-500" />
-          <span className="text-xs font-black text-blue-900">CHALLENGE ARCHIVE</span>
-        </div>
-        <p className="text-[10px] font-bold text-blue-900/50 uppercase leading-relaxed mb-4">
-          Pro users can filter official apps challenges. Archived challenges won't show up in your daily flow.
-        </p>
-        
-        <button className="btn-primary w-full py-3 text-xs opacity-50 cursor-not-allowed">
-          Manage Archived Challenges (Manual Skip Enabled)
-        </button>
       </div>
     </div>
   );

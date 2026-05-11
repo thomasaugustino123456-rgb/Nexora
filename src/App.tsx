@@ -37,6 +37,7 @@ const SubscriptionScreen = lazy(() => import('./components/SubscriptionScreen').
 const GalleryScreen = lazy(() => import('./components/GalleryScreen').then(m => ({ default: m.GalleryScreen })));
 const NotebookScreen = lazy(() => import('./components/NotebookScreen').then(m => ({ default: m.NotebookScreen })));
 const ChallengeFlow = lazy(() => import('./components/ChallengeFlow').then(m => ({ default: m.ChallengeFlow })));
+const ArchitectLab = lazy(() => import('./components/ArchitectLab').then(m => ({ default: m.ArchitectLab })));
 import { CompletionFlame } from './components/CompletionFlame';
 import { TrophyRewardsScreen } from './components/TrophyRewardsScreen';
 
@@ -159,6 +160,26 @@ export default function App() {
   const [showCompletionFlame, setShowCompletionFlame] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showArchitectLab, setShowArchitectLab] = useState(false);
+  const [proTestMessage, setProTestMessage] = useState<string | null>(null);
+
+  // Pro Test Expiration Timer
+  useEffect(() => {
+    if (!settings.proTestExpiresAt || settings.isPro) return;
+    
+    const interval = setInterval(() => {
+      const now = new Date();
+      const expiry = new Date(settings.proTestExpiresAt!);
+      
+      if (now >= expiry) {
+        onUpdateSettings({ proTestExpiresAt: null, proTestStartedAt: null });
+        setProTestMessage("Your pro features test time is out. If u want it u can pay, bro! 👑");
+        vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+        clearInterval(interval);
+      }
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [settings.proTestExpiresAt, settings.isPro]);
   const [sessionXP, setSessionXP] = useState(0);
   const [sessionStreak, setSessionStreak] = useState(0);
   const [sessionTrophy, setSessionTrophy] = useState<TrophyType>('golden');
@@ -194,7 +215,7 @@ export default function App() {
   // Apply Dynamic Icon & Badging (Duolingo-style)
   useAppIcon(globalMascotMood, stats, dailyProgress);
 
-  const isPro = settings?.isPro || false;
+  const isPro = settings?.isPro || (settings?.proTestExpiresAt ? new Date(settings.proTestExpiresAt) > new Date() : false);
 
   const currentAppVersion = "2.5.1"; // Auto-bumping version
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>('nexora_active_screen', 'home');
@@ -878,91 +899,13 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, [emergencyActive, showUpdatePopup, dailyProgress.completed, dailyProgress.dailyQuestDone, settings.badgeSettings, lastUpdateTime]);
 
-  // Firestore Sync Logic
+  // Local Storage immediate backup
   useEffect(() => {
-    if (!user || !isDataReady || !dataLoadedFromFirestore.current) return; 
-
-    // Update localStorage immediately
+    if (!user || !isDataReady) return; 
     localStorage.setItem('nexora_settings', JSON.stringify(settings));
     localStorage.setItem('nexora_stats', JSON.stringify(stats));
     localStorage.setItem(`nexora_progress_${today}`, JSON.stringify(dailyProgress));
-
-    const syncToFirestore = async () => {
-      const path = `users/${user.uid}`;
-      try {
-        const userRef = doc(db, 'users', user.uid);
-        
-        // ULTIMATE Safety Check: Never sync if settings/stats appear empty but user is NOT new
-        const isDefaultState = settings.displayName === 'Nexora User' && (stats.totalPoints === 0 || !stats.totalPoints);
-        if (isDefaultState && !needsOnboarding && dataLoadedFromFirestore.current) {
-          console.warn("Firestore Sync Blocked: State appears to be default while user is already existing. Preventing overwrite.");
-          return;
-        }
-
-        // Sync main user document
-        await setDoc(userRef, {
-          ...settings,
-          uid: user.uid,
-          email: user.email || '',
-          onboardingCompleted: !needsOnboarding,
-          isTodayCompleted: dailyProgress.completed,
-          stats: stats, // Summary for queries
-          fcmToken: fcmToken,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          updatedAt: serverTimestamp()
-        }, { merge: true });
-
-        // Sync detailed stats to subcollection
-        const statsRef = doc(db, 'users', user.uid, 'stats', 'main');
-        await setDoc(statsRef, stats, { merge: true });
-
-        // Sync daily progress to subcollection
-        const progressRef = doc(db, 'users', user.uid, 'progress', today);
-        await setDoc(progressRef, {
-          ...dailyProgress,
-          date: today
-        }, { merge: true });
-
-        // Sync to leaderboard collection
-        const leaderboardRef = doc(db, 'leaderboard', user.uid);
-        await setDoc(leaderboardRef, {
-          uid: user.uid,
-          displayName: settings.displayName || 'Anonymous',
-          photoURL: user.photoURL || '',
-          streak: stats.streak || 0,
-          totalPoints: stats.totalPoints,
-          xp: stats.xp || 0,
-          weeklyPoints: stats.weeklyPoints,
-          weeklyXP: stats.weeklyXP || 0,
-          level: Math.floor((stats.totalPoints || 0) / 100) + 1,
-          league: settings.league || 'Bronze'
-        }, { merge: true });
-
-        // Sync music specifically to the new path as requested
-        const musicItems = (settings.inventory || []).filter(item => item.type === 'music');
-        if (musicItems.length > 0) {
-          const musicRef = doc(db, 'users', user.uid, 'music', 'purchased');
-          await setDoc(musicRef, { items: musicItems });
-        }
-
-        // Sync space onboarding specifically to the new path as requested
-        const spaceSettingsRef = doc(db, 'users', user.uid, 'settings', 'space');
-        await setDoc(spaceSettingsRef, { 
-          completed: !!settings.spaceOnboardingCompleted,
-          updatedAt: serverTimestamp()
-        }, { merge: true });
-      } catch (error) {
-        try {
-          handleFirestoreError(error, OperationType.UPDATE, path);
-        } catch (e) {
-          console.error("Firestore sync error handled:", e);
-        }
-      }
-    };
-
-    const timeoutId = setTimeout(syncToFirestore, 3000); // Increased debounce for safety
-    return () => clearTimeout(timeoutId);
-  }, [settings, stats, dailyProgress, user, fcmToken, today, isDataReady]);
+  }, [settings, stats, dailyProgress, user, today, isDataReady]);
 
   useEffect(() => {
     const checkVersion = async () => {
@@ -1651,38 +1594,44 @@ export default function App() {
     }
   }, [today, dailyProgress.date, isDataReady]);
 
-        // CHALLENGE LIMIT RESTORATION LOGIC
-        useEffect(() => {
-          if (dailyProgress && dailyProgress.completionsCount > 0) {
-            const interval = setInterval(() => {
-              const now = Date.now();
-              const nextTime = dailyProgress.nextRestorationTime || (now + 4 * 60 * 60 * 1000);
-              
-              if (now >= nextTime) {
-                setDailyProgress(prev => {
-                  if (!prev.nextRestorationTime) return prev;
-                  // Calculate how many 4-hour chunks have passed since the original target time
-                  const timePassedSinceTarget = now - prev.nextRestorationTime;
-                  const chunksPassed = Math.floor(timePassedSinceTarget / (4 * 60 * 60 * 1000)) + 1;
-                  
-                  const newCount = Math.max(0, prev.completionsCount - chunksPassed);
-                  const nextRest = newCount > 0 ? (prev.nextRestorationTime + chunksPassed * 4 * 60 * 60 * 1000) : null; 
-                  return {
-                    ...prev,
-                    completionsCount: newCount,
-                    nextRestorationTime: nextRest
-                  };
-                });
-              } else if (!dailyProgress.nextRestorationTime) {
-                setDailyProgress(prev => ({
-                  ...prev,
-                  nextRestorationTime: nextTime
-                }));
-              }
-            }, 5000); 
-            return () => clearInterval(interval);
-          }
-        }, [dailyProgress?.completionsCount, dailyProgress?.nextRestorationTime]);
+  // CHALLENGE LIMIT RESTORATION LOGIC
+  useEffect(() => {
+    if (isDataReady && dailyProgress && dailyProgress.completionsCount > 0 && !isPro) {
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const nextTime = dailyProgress.nextRestorationTime || (now + 4 * 60 * 60 * 1000);
+        
+        if (now >= nextTime) {
+          setDailyProgress(prev => {
+            if (!prev.nextRestorationTime) return prev;
+            // Calculate how many 4-hour chunks have passed since the original target time
+            const timePassedSinceTarget = now - prev.nextRestorationTime;
+            const chunksPassed = Math.floor(timePassedSinceTarget / (4 * 60 * 60 * 1000)) + 1;
+            
+            const newCount = Math.max(0, prev.completionsCount - chunksPassed);
+            const nextRest = newCount > 0 ? (prev.nextRestorationTime + chunksPassed * 4 * 60 * 60 * 1000) : null; 
+            return {
+              ...prev,
+              completionsCount: newCount,
+              nextRestorationTime: nextRest
+            };
+          });
+        } else if (!dailyProgress.nextRestorationTime) {
+          setDailyProgress(prev => ({
+            ...prev,
+            nextRestorationTime: nextTime
+          }));
+        }
+      }, 5000); 
+      return () => clearInterval(interval);
+    } else if (isPro && dailyProgress.nextRestorationTime) {
+      // Clear timer for Pro users
+      setDailyProgress(prev => ({
+        ...prev,
+        nextRestorationTime: null
+      }));
+    }
+  }, [dailyProgress?.completionsCount, dailyProgress?.nextRestorationTime, isPro, isDataReady]);
 
   // Optimized History calculation using useMemo to avoid O(N) calculation on every render
   const memoizedHistory = useMemo(() => {
@@ -2288,9 +2237,41 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Global Notifications for Pro Test */}
+      <AnimatePresence>
+        {proTestMessage && (
+          <motion.div 
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-24 left-4 right-4 z-[100] glass-card p-6 border-2 border-blue-500 bg-white shadow-2xl flex flex-col items-center text-center gap-4"
+          >
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+              <Crown size={32} />
+            </div>
+            <p className="font-black text-blue-900">{proTestMessage}</p>
+            <button 
+              onClick={() => {
+                setProTestMessage(null);
+                setActiveScreen('subscription');
+              }}
+              className="btn-primary w-full py-3 text-white"
+            >
+              UPGRADE TO PRO
+            </button>
+            <button 
+              onClick={() => setProTestMessage(null)}
+              className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest"
+            >
+              Continue Free
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="w-full flex flex-col min-h-screen relative z-10 px-0 sm:px-6">
         
-        {activeScreen !== 'challenge' && (
+        {activeScreen !== 'challenge' && activeScreen !== 'subscription' && !showArchitectLab && (
           <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl">
             <div className="flex items-center gap-4">
               <img 
@@ -2341,7 +2322,7 @@ export default function App() {
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('subscription');
                 }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all ${activeScreen === 'subscription' ? 'bg-amber-500 text-white shadow-xl shadow-amber-200 scale-110' : 'bg-amber-500/10 text-amber-600 border border-amber-200 backdrop-blur-sm hover:bg-amber-500/20'}`}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all ${(activeScreen as string) === 'subscription' ? 'bg-amber-500 text-white shadow-xl shadow-amber-200 scale-110' : 'bg-amber-500/10 text-amber-600 border border-amber-200 backdrop-blur-sm hover:bg-amber-500/20'}`}
               >
                 <Crown size={20} />
                 <span className="font-black text-xs uppercase tracking-tight">Pro</span>
@@ -2350,9 +2331,25 @@ export default function App() {
           </header>
         )}
 
-        <main className="flex-1 flex flex-col px-4 sm:px-6 pb-32 w-full max-w-7xl mx-auto">
+        <main className={`flex-1 flex flex-col w-full max-w-7xl mx-auto ${activeScreen === 'subscription' || showArchitectLab ? 'px-0 sm:px-0 pb-0 pt-0 max-w-none' : 'px-4 sm:px-6 pb-32'}`}>
           <AnimatePresence mode="wait">
-            {activeScreen === 'home' && (
+            {showArchitectLab ? (
+              <motion.div
+                key="architect"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
+                className="w-full h-full min-h-screen bg-white z-[200] overflow-y-auto"
+              >
+                <Suspense fallback={<SplashScreen />}>
+                  <ArchitectLab 
+                    settings={settings}
+                    onUpdateSettings={onUpdateSettings}
+                    onClose={() => setShowArchitectLab(false)}
+                  />
+                </Suspense>
+              </motion.div>
+            ) : activeScreen === 'home' && (
               <motion.div
                 key="home"
                 initial={{ opacity: 0, x: 20 }}
@@ -2494,6 +2491,7 @@ export default function App() {
                     onExportData={onExportData}
                     onSubmitFeedback={onSubmitFeedback}
                     onShowManifesto={onShowManifesto}
+                    onOpenArchitectLab={() => setShowArchitectLab(true)}
                     showToast={showToast}
                     sendNotification={(title, body) => sendNotification(title, { body })}
                   />
@@ -2562,7 +2560,7 @@ export default function App() {
                 </Suspense>
               </motion.div>
             )}
-            {activeScreen === 'subscription' && (
+            {activeScreen === 'subscription' && user && (
               <motion.div
                 key="subscription"
                 initial={{ opacity: 0, x: 20 }}
@@ -2580,7 +2578,17 @@ export default function App() {
                       showToast("NEXORA PRO ACTIVATED! WELCOME TO THE LEGION! 🔥", 'success');
                       vibrate(VIBRATION_PATTERNS.SUCCESS);
                     }}
-                    onSendTestNotification={(title, body) => sendNotification(title, { body })}
+                    onStartProTest={() => {
+                      const now = new Date();
+                      const expiry = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes
+                      onUpdateSettings({
+                        proTestStartedAt: now.toISOString(),
+                        proTestExpiresAt: expiry.toISOString()
+                      });
+                      showToast("PRO FEATURES UNLOCKED! 10 MINUTES ON THE CLOCK! ⏳", 'info');
+                      vibrate(VIBRATION_PATTERNS.SUCCESS);
+                      setActiveScreen('home');
+                    }}
                   />
                 </Suspense>
               </motion.div>
@@ -2968,7 +2976,7 @@ export default function App() {
           />
         )}
 
-        {activeScreen !== 'challenge' && (
+        {activeScreen !== 'challenge' && activeScreen !== 'subscription' && !showArchitectLab && (
           <motion.div 
             initial={false}
             animate={{ 
@@ -2984,12 +2992,12 @@ export default function App() {
                 if (!item) return null;
                 const isHidden = settings.hiddenNavItems?.includes(id);
                 if (isHidden) return null;
-                if (id === 'social' && !settings.spaceHouseUnlocked) return null;
+                if (id === 'social') return null; // FORCE HIDE SOCIAL AS REQUESTED
 
                 return (
                   <NavButton 
                     key={id}
-                    active={activeScreen === item.screen} 
+                    active={(activeScreen as string) === item.screen} 
                     onClick={() => {
                       vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                       if (settings.soundEnabled) play('nav_switch');

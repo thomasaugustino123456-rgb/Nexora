@@ -98,6 +98,18 @@ export interface UserSettings {
   hiddenNavItems?: string[];
   navOrder?: string[];
   archivedOfficialChallenges?: string[];
+  proTestStartedAt?: string | null;
+  proTestExpiresAt?: string | null;
+  layoutConfig?: {
+    hideStats?: boolean;
+    hidePlants?: boolean;
+    hideQuests?: boolean;
+    hideCustomPlans?: boolean;
+    hideTrophies?: boolean;
+    hideFlow?: boolean;
+    hideMascot?: boolean;
+    sectionOrder?: string[];
+  };
 }
 
 export interface ShopItem {

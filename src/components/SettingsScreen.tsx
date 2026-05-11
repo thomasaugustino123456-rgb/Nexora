@@ -4,10 +4,12 @@ import {
   Settings, LogOut, Bell, Shield, User, Globe, Mail, MessageSquare, 
   Trash2, ChevronLeft, RefreshCw, Smartphone, Zap, Flame, 
   Droplets, Target, Clock, Volume2, Palette, Sparkles, 
-  ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle, Video
+  ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle, Video,
+  Layout, BoxSelect
 } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { UserSettings } from '../types';
+import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 
 interface SettingsScreenProps {
   user: FirebaseUser | null;
@@ -29,13 +31,15 @@ interface SettingsScreenProps {
   onShowManifesto: () => void;
   showToast: (m: string, t?: 'success' | 'info' | 'error') => void;
   sendNotification: (title: string, body: string) => void;
+  onOpenArchitectLab: () => void;
 }
 
 export function SettingsScreen({ 
   user, settings, setSettings, isPro, onBack, onLogout, onDeleteAccount,
   fcmToken, fcmError, onRetryFCM, onSendTestNotification, 
   onSendMotivation, onSendTestEmail, onClearCache, onExportData,
-  onSubmitFeedback, onShowManifesto, showToast, sendNotification 
+  onSubmitFeedback, onShowManifesto, showToast, sendNotification,
+  onOpenArchitectLab
 }: SettingsScreenProps) {
   const [showFeedbackModal, setShowFeedbackModal] = React.useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = React.useState(false);
@@ -247,6 +251,38 @@ export function SettingsScreen({
       </AnimatePresence>
 
       <div className="grid grid-cols-1 gap-6">
+        {/* Architect Lab Section (Pro Only) */}
+        {isPro && (
+          <div className="glass-card p-6 space-y-4 relative overflow-hidden group border-2 border-indigo-400/30">
+            <div className="absolute top-0 right-0 p-8 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-indigo-500/20 transition-colors" />
+            
+            <div className="flex items-center gap-3 mb-2 relative z-10">
+              <div className="p-2 bg-indigo-500 text-white rounded-xl shadow-lg">
+                <Layout size={20} />
+              </div>
+              <div>
+                <h3 className="font-black text-indigo-900 uppercase text-sm tracking-tight">Architect Lab</h3>
+                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">Master UI Reconfiguration</p>
+              </div>
+            </div>
+
+            <p className="text-xs font-bold text-blue-900/60 leading-relaxed relative z-10">
+              Customize Nexora to your precision. Reorder navigation, hide sections, and craft your perfect flow. 🏗️
+            </p>
+
+            <button 
+              onClick={() => {
+                vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                onOpenArchitectLab();
+              }}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-indigo-200 transition-all active:scale-95 relative z-10"
+            >
+              <BoxSelect size={18} />
+              ENTER ARCHITECT MODE
+            </button>
+          </div>
+        )}
+
         {/* Account Section */}
         <div className="glass-card p-6 space-y-4">
           <div className="flex items-center gap-3 mb-2">
