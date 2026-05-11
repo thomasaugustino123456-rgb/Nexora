@@ -2288,11 +2288,10 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Main App Structure */}
-      <div className="w-full max-w-full flex flex-col min-h-screen relative z-10 px-0 sm:px-6">
+      <div className="w-full flex flex-col min-h-screen relative z-10 px-0 sm:px-6">
         
         {activeScreen !== 'challenge' && (
-          <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-6xl">
+          <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl">
             <div className="flex items-center gap-4">
               <img 
                 src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
@@ -2351,7 +2350,7 @@ export default function App() {
           </header>
         )}
 
-        <main className="flex-1 flex flex-col px-4 sm:px-6 pb-32">
+        <main className="flex-1 flex flex-col px-4 sm:px-6 pb-32 w-full max-w-7xl mx-auto">
           <AnimatePresence mode="wait">
             {activeScreen === 'home' && (
               <motion.div
@@ -2581,6 +2580,7 @@ export default function App() {
                       showToast("NEXORA PRO ACTIVATED! WELCOME TO THE LEGION! 🔥", 'success');
                       vibrate(VIBRATION_PATTERNS.SUCCESS);
                     }}
+                    onSendTestNotification={(title, body) => sendNotification(title, { body })}
                   />
                 </Suspense>
               </motion.div>

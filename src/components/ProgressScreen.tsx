@@ -47,7 +47,7 @@ export function ProgressScreen({
       variants={container}
       initial="hidden"
       animate="show"
-      className="space-y-6 pb-40"
+      className="space-y-6 pb-40 w-full max-w-6xl mx-auto"
     >
       {/* Header with Level Card */}
       <motion.div variants={item} className="flex flex-col gap-6">

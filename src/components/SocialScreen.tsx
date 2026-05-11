@@ -532,7 +532,7 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="max-w-4xl mx-auto w-full space-y-6 pb-24 scroll-smooth"
+      className="max-w-6xl mx-auto w-full space-y-6 pb-24 scroll-smooth"
     >
       <div className="flex items-center justify-between sticky top-0 bg-blue-50/90 backdrop-blur-xl z-[100] py-4">
           <div className="flex items-center gap-4">

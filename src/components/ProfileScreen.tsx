@@ -39,7 +39,7 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="max-w-2xl mx-auto w-full space-y-8 pb-32"
+      className="max-w-5xl mx-auto w-full space-y-8 pb-32"
     >
       <div className="flex flex-col items-center gap-6 pt-10">
         <div className="relative group">

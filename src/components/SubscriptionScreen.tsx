@@ -1,8 +1,18 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Check, Crown, Zap, Star } from 'lucide-react';
+import { ArrowLeft, Check, Crown, Zap, Star, MessageSquare } from 'lucide-react';
 
-export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, userId: string }) {
+export function SubscriptionScreen({ 
+  onBack, 
+  userId, 
+  onActivatePro,
+  onSendTestNotification
+}: { 
+  onBack: () => void, 
+  userId: string,
+  onActivatePro?: () => void,
+  onSendTestNotification?: (title: string, body: string) => void
+}) {
   const plans = [
     { 
       id: 'weekly',
@@ -79,7 +89,7 @@ export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, use
       </div>
 
       <div className="relative z-10 max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-12">
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-12 gap-6">
           <div className="flex items-center gap-4">
             <button onClick={onBack} className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md group">
               <ArrowLeft size={24} className="text-white group-hover:-translate-x-1 transition-transform" />
@@ -89,13 +99,17 @@ export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, use
               <p className="text-slate-400 font-medium text-sm">Elevate your growth journey</p>
             </div>
           </div>
-          <button 
-            onClick={() => setShowManualPay(!showManualPay)}
-            className="text-[10px] font-black uppercase text-blue-400 tracking-widest border border-blue-500/30 px-4 py-2 rounded-xl hover:bg-blue-500/10 transition-colors"
-          >
-            Crypto / Local Pay
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button 
+              onClick={() => setShowManualPay(!showManualPay)}
+              className="text-[10px] font-black uppercase text-blue-400 tracking-widest border border-blue-500/30 px-4 py-2 rounded-xl hover:bg-blue-500/10 transition-colors"
+            >
+              Crypto / Local Pay
+            </button>
+          </div>
         </div>
+
+
 
         {showManualPay && (
           <motion.div 
@@ -116,19 +130,37 @@ export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, use
                 </div>
                 <div className="space-y-2">
                   <p className="font-bold text-blue-400">2. SEND CRYPTO / TRANSFER</p>
-                  <p className="text-xs font-mono bg-black/40 p-2 rounded-lg break-all">BTC: [Insert_Your_Wallet_Address_Here]</p>
-                  <p className="text-xs font-mono bg-black/40 p-2 rounded-lg break-all">USDT (TRC20): [Insert_USDT_Address_Here]</p>
+                  <p className="text-[10px] text-slate-500 mb-1 italic">Note: Use USDT (TRC20/Tron) to save on fees!</p>
+                  <p className="text-xs font-mono bg-black/40 p-2 rounded-lg break-all border border-white/5">BTC: [PASTE_YOUR_BITCOIN_ADDRESS_HERE]</p>
+                  <p className="text-xs font-mono bg-black/40 p-2 rounded-lg break-all border border-white/5">USDT (TRC20): [PASTE_YOUR_TRON_USDT_ADDRESS_HERE]</p>
                 </div>
               </div>
-              <div className="space-y-4 bg-white/5 p-4 rounded-2xl">
+              <div className="space-y-4 bg-white/5 p-4 rounded-2xl border border-white/10">
                 <p className="font-bold text-amber-400">3. SUBMIT PROOF</p>
-                <p className="text-xs text-slate-400 leading-relaxed">Once you transfer, send your <b>Nexora UID ({userId})</b> and a <b>Screenshot of payment</b> to our official WhatsApp or support email.</p>
+                <p className="text-xs text-slate-400 leading-relaxed">Once you transfer, send your <b>Nexora UID ({userId})</b> and a <b>Screenshot of payment</b> to our official WhatsApp.</p>
                 <button 
-                  onClick={() => window.open('https://wa.me/YOUR_NUMBER', '_blank')}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-black text-xs transition-all shadow-lg shadow-emerald-500/20"
+                  onClick={() => window.open(`https://api.whatsapp.com/send?phone=211929635502&text=Hi%20Nexora,%20I'd%20like%20to%20activate%20Pro%20manually.%20My%20UID%20is:%20${userId}`, '_blank')}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-black text-xs transition-all shadow-lg shadow-emerald-500/20 mb-3 flex items-center justify-center gap-2"
                 >
-                  SEND PROOF ON WHATSAPP
+                  <MessageSquare size={16} />
+                  CHAT ON WHATSAPP
                 </button>
+                
+                {onActivatePro && (
+                  <button 
+                    onClick={() => {
+                      if (confirm("Developer Mode: Activate Pro instantly for testing?")) {
+                        onActivatePro();
+                        if (onSendTestNotification) {
+                          onSendTestNotification("Welcome to Pro, Bro! 👑", "Your manual payment has been verified. The Nexus is now yours to rebuild.");
+                        }
+                      }
+                    }}
+                    className="w-full bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 py-2 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all border border-blue-500/30"
+                  >
+                    [ADMIN] Auto-Verify My Payment
+                  </button>
+                )}
                 <p className="text-[10px] text-center text-slate-500 italic">Activation usually takes 2-4 hours.</p>
               </div>
             </div>
@@ -248,8 +280,8 @@ export function SubscriptionScreen({ onBack, userId }: { onBack: () => void, use
 
         {/* Trust/Security Footer */}
         <div className="mt-12 text-center">
-          <p className="text-slate-500 text-xs font-medium flex items-center justify-center gap-2">
-            <Zap size={12} className="text-amber-500" /> Secure checkout powered by Lemon Squeezy
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] flex items-center justify-center gap-2">
+            <Zap size={12} className="text-amber-500" /> Optimized for Peak human growth
           </p>
         </div>
       </div>
