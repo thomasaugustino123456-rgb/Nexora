@@ -14,7 +14,7 @@ const Typewriter = ({ text, onComplete }: { text: string, onComplete?: () => voi
       const timeout = setTimeout(() => {
         setDisplayedText(prev => prev + text[index]);
         setIndex(prev => prev + 1);
-      }, 15 + Math.random() * 25); // Varying speed for "human" feel
+      }, 5 + Math.random() * 15); // Faster typewriter
       return () => clearTimeout(timeout);
     } else if (onComplete) {
       onComplete();
@@ -43,15 +43,23 @@ export function NexusVision({ stats, history, onBack }: { stats: UserStats, hist
     setResult(null);
     setScanStep(0);
 
-    // Simulate steps for UI polish
+    // Start AI request immediately in background
+    const aiPromise = analyzeHabits(stats, history);
+
+    // Simulate steps for UI polish but faster
     for (let i = 0; i < steps.length; i++) {
       setScanStep(i);
-      await new Promise(r => setTimeout(r, 800));
+      await new Promise(r => setTimeout(r, 500)); // 0.5s per step
     }
 
-    const aiRes = await analyzeHabits(stats, history);
-    setResult(aiRes);
-    setIsScanning(false);
+    try {
+      const aiRes = await aiPromise;
+      setResult(aiRes);
+    } catch (error) {
+      setResult("NEXUS PROTOCOL ERROR: CONNECTION INTERRUPTED.");
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   return (
@@ -136,16 +144,15 @@ export function NexusVision({ stats, history, onBack }: { stats: UserStats, hist
                     <Fingerprint size={200} className="text-blue-400" />
                  </div>
                  
-                 {/* Fast Scrolling Data Stream */}
-                 <div className="absolute inset-0 flex flex-col gap-1 p-4 opacity-10 select-none overflow-hidden font-mono text-[8px] text-blue-300">
-                    {Array.from({ length: 20 }).map((_, i) => (
+                 {/* Fast Scrolling Data Stream - Fewer elements for performance */}
+                 <div className="absolute inset-0 flex flex-col gap-1 p-4 opacity-5 select-none overflow-hidden font-mono text-[6px] text-blue-300">
+                    {Array.from({ length: 12 }).map((_, i) => (
                       <motion.div 
                         key={i}
-                        initial={{ x: -100 }}
-                        animate={{ x: [null, 400] }}
-                        transition={{ duration: 2, repeat: Infinity, delay: i * 0.1, ease: "linear" }}
+                        animate={{ x: [-100, 300] }}
+                        transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.15, ease: "linear" }}
                       >
-                        {Math.random().toString(16).substring(2, 20)} NEURAL_PATH_0x{i.toString(16)} [ACTIVE]
+                        {Math.random().toString(16).substring(2, 10)} NEURAL_LINK [OK]
                       </motion.div>
                     ))}
                  </div>

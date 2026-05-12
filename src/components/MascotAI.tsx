@@ -17,7 +17,7 @@ const Typewriter = ({ text }: { text: string }) => {
       const timeout = setTimeout(() => {
         setDisplayedText(prev => prev + text[index]);
         setIndex(prev => prev + 1);
-      }, 10 + Math.random() * 15);
+      }, 5 + Math.random() * 10);
       return () => clearTimeout(timeout);
     }
   }, [index, text]);

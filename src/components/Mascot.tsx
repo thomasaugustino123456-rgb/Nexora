@@ -71,9 +71,9 @@ export const Mascot: React.FC<MascotProps> = ({
     await controls.start({
       scaleY: [1, 0.7, 1.2, 1],
       scaleX: [1, 1.3, 0.8, 1],
-      y: [0, 20, -50, 0],
-      rotate: [0, -10, 10, 0],
-      transition: { duration: 0.8, ease: "circOut" }
+      y: [0, 15, -40, 0],
+      rotate: [0, -8, 8, 0],
+      transition: { duration: 0.5, ease: "circOut" }
     });
     
     if (onClick) onClick();
@@ -148,8 +148,10 @@ export const Mascot: React.FC<MascotProps> = ({
         className="w-full h-full drop-shadow-2xl"
       >
         <defs>
-          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="6" result="blur" />
+          {/* Simple glow using radial gradient instead of expensive filter if possible, 
+              but for now let's just optimize the existing one by reducing its region */}
+          <filter id="glow" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
           
@@ -172,13 +174,13 @@ export const Mascot: React.FC<MascotProps> = ({
           </clipPath>
         </defs>
 
-        {/* Aura */}
+        {/* Aura - Using simple opacity instead of scale+opacity for performance */}
         <motion.ellipse 
           cx="250" cy="330" rx="220" ry="220" 
           fill={colors.aura} 
-          filter="blur(40px)"
-          animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 3, repeat: Infinity }}
+          filter="blur(30px)"
+          animate={{ opacity: [0.2, 0.4, 0.2] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
 
         {/* Shadow */}
@@ -186,51 +188,48 @@ export const Mascot: React.FC<MascotProps> = ({
           cx="250" cy="520" rx={150} ry={15} 
           fill="#000" fillOpacity="0.08"
           animate={{ 
-            rx: [150, 155, 150], 
-            opacity: [0.08, 0.12, 0.08]
+            rx: [145, 155, 145], 
+            opacity: [0.06, 0.1, 0.06]
           }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
 
-        {/* Body Group with Squash/Stretch */}
+        {/* Body Group with Squash/Stretch - Optimized durations */}
         <motion.g
           animate={{ 
-            y: isSitting ? 20 : [0, -6, 0],
-            scaleY: isSitting ? 0.85 : [1, 1.03, 1] 
+            y: isSitting ? 20 : [0, -4, 0],
+            scaleY: isSitting ? 0.85 : [1, 1.02, 1] 
           }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
         >
           {/* LIQUID LAYER */}
           <g clipPath="url(#bottle-mask)">
-            <rect x="0" y="0" width="500" height="600" fill={theme === 'obsidian' ? '#0f172a' : '#F0FAFF'} fillOpacity="0.3" />
+            <rect x="0" y="0" width="500" height="600" fill={theme === 'obsidian' ? '#0f172a' : '#F0FAFF'} fillOpacity="0.2" />
             <motion.g 
               animate={{ 
-                y: isBoiling ? [220, 215, 220] : 220,
-                rotate: sloshAmount ? [0, -(sloshAmount * 1.5), (sloshAmount * 1.2), 0] : 0,
-                skewX: sloshAmount ? [0, 8, -8, 0] : 0,
-                x: sloshAmount ? [0, -10, 10, 0] : 0
+                y: isBoiling ? [220, 218, 220] : 220,
+                rotate: sloshAmount ? [0, -(sloshAmount), (sloshAmount * 0.8), 0] : 0,
               }}
               transition={{ 
-                rotate: { duration: 0.8, ease: "circOut" },
-                skewX: { duration: 0.8, ease: "circOut" },
-                y: { duration: 0.5, repeat: isBoiling ? Infinity : 0 }
+                rotate: { duration: 0.6, ease: "easeOut" },
+                y: { duration: 0.3, repeat: isBoiling ? Infinity : 0, ease: "linear" }
               }}
               style={{ originX: "250px", originY: "330px" }}
             >
               {/* Back wave */}
               <motion.path 
-                d="M -500,0 Q -375,-25 -250,0 T 0,0 T 250,0 T 500,0 T 750,0 T 1000,0 L 1000,400 L -500,400 Z" 
+                d="M -500,0 Q -375,-20 -250,0 T 0,0 T 250,0 T 500,0 T 750,0 T 1000,0 L 1000,400 L -500,400 Z" 
                 fill={theme === 'neural_bio' ? '#10b981' : isBoiling ? "#FF8888" : "#66CCFF"} 
-                fillOpacity="0.4" 
+                fillOpacity="0.3" 
                 animate={{ x: [-250, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
               />
               {/* Front wave */}
               <motion.path 
-                d="M -500,10 Q -375,35 -250,10 T 0,10 T 250,10 T 500,10 T 750,10 T 1000,10 L 1000,400 L -500,400 Z" 
+                d="M -500,10 Q -375,30 -250,10 T 0,10 T 250,10 T 500,10 T 750,10 T 1000,10 L 1000,400 L -500,400 Z" 
                 fill="url(#water-grad)" 
                 animate={{ x: [0, -250] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
               />
             </motion.g>
           </g>

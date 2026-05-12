@@ -130,7 +130,6 @@ const NAV_ITEMS_MAP: Record<string, { label: string, icon: React.ReactNode, scre
   'library': { label: 'Library', icon: <TrophyIcon size={24} />, screen: 'library' },
   'notebook': { label: 'Notebook', icon: <Book size={24} />, screen: 'notebook' },
   'leaderboard': { label: 'Rank', icon: <TrophyIcon size={24} />, screen: 'leaderboard' },
-  'nexus-vision': { label: 'Vision', icon: <Brain size={24} />, screen: 'nexus-vision' },
 };
 
 export default function App() {
