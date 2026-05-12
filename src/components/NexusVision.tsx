@@ -46,8 +46,8 @@ export function NexusVision({ stats, history, onBack }: { stats: UserStats, hist
     // Start AI request in parallel
     const aiPromise = analyzeHabits(stats, history).catch(() => "NEXUS PROTOCOL ERROR: NEURAL LINK FAILED.");
 
-    // Faster step simulation
-    const stepInterval = 400; // 0.4s per step
+    // Fast step simulation
+    const stepInterval = 600; // slightly slower for better perception
     for (let i = 0; i < steps.length; i++) {
       setScanStep(i);
       await new Promise(r => setTimeout(r, stepInterval));
@@ -59,7 +59,8 @@ export function NexusVision({ stats, history, onBack }: { stats: UserStats, hist
     } catch (error) {
       setResult("NEXUS PROTOCOL ERROR: CONNECTION INTERRUPTED.");
     } finally {
-      setIsScanning(false);
+      // Small delay before closing scan UI for smoothness
+      setTimeout(() => setIsScanning(false), 500);
     }
   };
 

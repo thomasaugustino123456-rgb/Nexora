@@ -162,8 +162,48 @@ export default function App() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showArchitectLab, setShowArchitectLab] = useState(false);
   const [proTestMessage, setProTestMessage] = useState<string | null>(null);
+  const [originalStatsBeforeProTest, setOriginalStatsBeforeProTest] = useState<UserStats | null>(null);
+  const [isCurrentlyBoosting, setIsCurrentlyBoosting] = useState(false);
 
-  // Pro Test Expiration Timer
+  // Pro Test Expiration & Boost Manager
+  useEffect(() => {
+    if (!isDataReady) return;
+
+    const testExpiresAt = settings.proTestExpiresAt;
+    const now = new Date();
+    const isTestActive = testExpiresAt && new Date(testExpiresAt) > now;
+
+    if (isTestActive) {
+      if (!isCurrentlyBoosting) {
+        setIsCurrentlyBoosting(true);
+        // Deep copy of current stats to revert later
+        setOriginalStatsBeforeProTest(JSON.parse(JSON.stringify(stats)));
+        
+        // Apply temporary boost
+        setStats(prev => ({
+          ...prev,
+          streak: Math.max(prev.streak, 999),
+          coins: Math.max(prev.coins, 50000),
+          xp: Math.max(prev.xp, 15000),
+          level: Math.max(prev.level, 15)
+        }));
+        showToast("PRO PROTOCOL: BOOSTED STATS ACTIVATED!", "success");
+      }
+    } else if (isCurrentlyBoosting) {
+      // Transition from active to expired
+      setIsCurrentlyBoosting(false);
+      if (originalStatsBeforeProTest) {
+        setStats(originalStatsBeforeProTest);
+        setOriginalStatsBeforeProTest(null);
+        showToast("PRO TEST PROTOCOL EXPIRED. STATS REVERTED.", "info");
+      }
+      onUpdateSettings({ proTestActive: false, proTestExpiresAt: null, proTestStartedAt: null });
+      setProTestMessage("Your pro features test time is out. If u want it u can pay, bro! 👑");
+      vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    }
+  }, [settings.proTestExpiresAt, isDataReady]);
+
+  // Expiry Check Interval
   useEffect(() => {
     if (!settings.proTestExpiresAt || settings.isPro) return;
     
@@ -172,12 +212,11 @@ export default function App() {
       const expiry = new Date(settings.proTestExpiresAt!);
       
       if (now >= expiry) {
-        onUpdateSettings({ proTestExpiresAt: null, proTestStartedAt: null });
-        setProTestMessage("Your pro features test time is out. If u want it u can pay, bro! 👑");
-        vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+        // This will trigger the boost manager useEffect
+        onUpdateSettings({ proTestExpiresAt: null, proTestStartedAt: null, proTestActive: false });
         clearInterval(interval);
       }
-    }, 1000);
+    }, 2000);
     
     return () => clearInterval(interval);
   }, [settings.proTestExpiresAt, settings.isPro]);
@@ -1897,11 +1936,11 @@ export default function App() {
     
     // Set data for the Flame Screen and trigger it
     setSessionXP(xpToAdd);
-    // Use the functional calc result
     setSessionStreak(finalStreakAfterUpdate || stats.streak || 0);
+
+    // Streamline transition: CompletionFlame -> TrophyRewardsScreen -> Home
     setShowCompletionFlame(true);
-    
-    setChallengeStep('completion');
+    setChallengeStep('home'); // Reset step so ChallengeFlow exits cleanly
     setShowCoinAnimation(true);
   };
 
@@ -2593,9 +2632,10 @@ export default function App() {
                       const expiry = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes
                       onUpdateSettings({
                         proTestStartedAt: now.toISOString(),
-                        proTestExpiresAt: expiry.toISOString()
+                        proTestExpiresAt: expiry.toISOString(),
+                        proTestActive: true // Explicit flag
                       });
-                      showToast("PRO FEATURES UNLOCKED! 10 MINUTES ON THE CLOCK! ⏳", 'info');
+                      showToast("PRO PROTOCOL ACTIVATED! 10 MINUTES OF UNLIMITED POWER! ⏳", 'info');
                       vibrate(VIBRATION_PATTERNS.SUCCESS);
                       setActiveScreen('home');
                     }}

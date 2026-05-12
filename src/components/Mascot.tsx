@@ -150,8 +150,8 @@ export const Mascot: React.FC<MascotProps> = ({
         <defs>
           {/* Simple glow using radial gradient instead of expensive filter if possible, 
               but for now let's just optimize the existing one by reducing its region */}
-          <filter id="glow" x="-10%" y="-10%" width="120%" height="120%">
-            <feGaussianBlur stdDeviation="4" result="blur" />
+          <filter id="glow" x="-5%" y="-5%" width="110%" height="110%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
           

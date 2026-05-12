@@ -16,13 +16,13 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
       <svg viewBox="0 0 500 600" xmlns="http://www.w3.org/2000/svg" className="w-full h-full transition-transform duration-300 ease-in-out hover:scale-105">
         <defs>
           {/* Filters */}
-          <filter id="glow-water" x="-10%" y="-10%" width="120%" height="120%">
-            <feGaussianBlur stdDeviation="4" result="blur" />
+          <filter id="glow-water" x="-5%" y="-5%" width="110%" height="110%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
           
-          <filter id="soft-glow-water" x="-10%" y="-10%" width="120%" height="120%">
-            <feGaussianBlur stdDeviation="2" result="blur" />
+          <filter id="soft-glow-water" x="-5%" y="-5%" width="110%" height="110%">
+            <feGaussianBlur stdDeviation="1" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
 
@@ -82,12 +82,12 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
               
               {/* Back Wave (Lighter, slower, moves left) */}
               <path d="M 0,0 Q 125,-15 250,0 T 500,0 T 750,0 T 1000,0 L 1000,400 L 0,400 Z" fill="#66CCFF" fillOpacity="0.5">
-                <animateTransform attributeName="transform" type="translate" from="0 0" to="-500 0" dur="6s" repeatCount="indefinite" />
+                <animateTransform attributeName="transform" type="translate" from="0 0" to="-500 0" dur="3s" repeatCount="indefinite" />
               </path>
 
               {/* Front Wave (Main color, faster, moves right) */}
               <path d="M -500,10 Q -375,25 -250,10 T 0,10 T 250,10 T 500,10 L 500,400 L -500,400 Z" fill="url(#water-grad-fill)">
-                <animateTransform attributeName="transform" type="translate" from="0 0" to="500 0" dur="4s" repeatCount="indefinite" />
+                <animateTransform attributeName="transform" type="translate" from="0 0" to="500 0" dur="2s" repeatCount="indefinite" />
               </path>
 
               {/* Rising Bubbles - Reduced count for mobile performance */}

@@ -98,6 +98,7 @@ export interface UserSettings {
   hiddenNavItems?: string[];
   navOrder?: string[];
   archivedOfficialChallenges?: string[];
+  proTestActive?: boolean;
   proTestStartedAt?: string | null;
   proTestExpiresAt?: string | null;
   layoutConfig?: {
@@ -258,7 +259,7 @@ export interface NexusVideo {
   savedBy?: string[];
   repostCount?: number;
 }
-export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion';
+export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion' | 'home';
 export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';
 
 export interface SocialCircle {
