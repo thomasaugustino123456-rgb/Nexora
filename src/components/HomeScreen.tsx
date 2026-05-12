@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { 
   AlertCircle, Star, Bell, Flame, Trophy as TrophyIcon, 
   Plus, Trash2, Clock, Target, ChevronRight, Sprout, LogOut, Save, CheckCircle2,
-  Infinity, Zap, Crown, Coins
+  Infinity, Zap, Crown, Coins, Brain
 } from 'lucide-react';
 import { 
   UserStats, UserSettings, DailyProgress, MascotMood, ChallengeStep, CustomPlan 

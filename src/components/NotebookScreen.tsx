@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Book, Plus, X, Tag, Calendar, History, Trash2, Save, ArrowLeft, Pencil, BookOpen, PenTool, Brain, Sparkles, ChevronLeft, Zap, Shield, Wand2, Loader2 } from 'lucide-react';
 import { UserStats } from '../types';

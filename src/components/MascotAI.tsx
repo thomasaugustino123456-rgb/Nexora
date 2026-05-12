@@ -3,6 +3,28 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, MessageSquare } from 'lucide-react';
 import { UserStats, UserSettings } from '../types';
 
+const Typewriter = ({ text }: { text: string }) => {
+  const [displayedText, setDisplayedText] = useState("");
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    setDisplayedText("");
+    setIndex(0);
+  }, [text]);
+
+  useEffect(() => {
+    if (index < text.length) {
+      const timeout = setTimeout(() => {
+        setDisplayedText(prev => prev + text[index]);
+        setIndex(prev => prev + 1);
+      }, 10 + Math.random() * 15);
+      return () => clearTimeout(timeout);
+    }
+  }, [index, text]);
+
+  return <span>{displayedText}</span>;
+};
+
 export function MascotAI({ stats, settings, showToast }: { stats: UserStats, settings: UserSettings, showToast?: (m: string, t: any) => void }) {
   const [response, setResponse] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -66,7 +88,7 @@ export function MascotAI({ stats, settings, showToast }: { stats: UserStats, set
                 <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]" />
               </div>
             ) : (
-              <p className="text-sm font-medium text-blue-900 leading-relaxed italic">"{response}"</p>
+              <p className="text-sm font-medium text-blue-900 leading-relaxed italic">"<Typewriter text={response} />"</p>
             )}
 
             <button 
