@@ -67,7 +67,7 @@ function NextRestorationCountdown({ targetTime }: { targetTime: number | null })
   return <span>{timeLeft}</span>;
 }
 
-export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge }: { 
+export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenNexusVision, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
@@ -83,6 +83,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
   onDeleteCustomPlan: (id: string) => void,
   onOpenPlanBuilder: () => void,
   onOpenPlant: () => void,
+  onOpenNexusVision: () => void,
   fcmToken: string | null,
   setupFCM: () => void,
   fcmError: string | null,
@@ -206,6 +207,17 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
             </div>
 
             <div className="flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                  onOpenNexusVision();
+                }}
+                className="p-3 bg-blue-900 text-white rounded-2xl shadow-xl shadow-blue-900/20 hover:scale-105 transition-all group relative overflow-hidden"
+              >
+                <Brain size={20} className="group-hover:rotate-12 transition-transform" />
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/30 to-blue-400/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              </button>
+
               <button 
                 onClick={onOpenPlant}
                 className={`p-3 rounded-2xl transition-all flex items-center justify-center group relative ${
@@ -422,7 +434,8 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
               <Mascot 
                 className="w-full h-full drop-shadow-[0_20px_50px_rgba(59,130,246,0.2)]" 
                 mood={mascotMood}
-                hat={settings.activeSkin}
+                hat={settings.activeHat || 'none'}
+                theme={settings.activeSkin || 'standard'}
                 soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'}
                 onClick={handleMascotTap}
                 onPointerMove={handleMascotPointerMove}

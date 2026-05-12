@@ -38,6 +38,7 @@ const GalleryScreen = lazy(() => import('./components/GalleryScreen').then(m => 
 const NotebookScreen = lazy(() => import('./components/NotebookScreen').then(m => ({ default: m.NotebookScreen })));
 const ChallengeFlow = lazy(() => import('./components/ChallengeFlow').then(m => ({ default: m.ChallengeFlow })));
 const ArchitectLab = lazy(() => import('./components/ArchitectLab').then(m => ({ default: m.ArchitectLab })));
+const NexusVision = lazy(() => import('./components/NexusVision').then(m => ({ default: m.NexusVision })));
 import { CompletionFlame } from './components/CompletionFlame';
 import { TrophyRewardsScreen } from './components/TrophyRewardsScreen';
 
@@ -129,6 +130,7 @@ const NAV_ITEMS_MAP: Record<string, { label: string, icon: React.ReactNode, scre
   'library': { label: 'Library', icon: <TrophyIcon size={24} />, screen: 'library' },
   'notebook': { label: 'Notebook', icon: <Book size={24} />, screen: 'notebook' },
   'leaderboard': { label: 'Rank', icon: <TrophyIcon size={24} />, screen: 'leaderboard' },
+  'nexus-vision': { label: 'Vision', icon: <Brain size={24} />, screen: 'nexus-vision' },
 };
 
 export default function App() {
@@ -2209,7 +2211,12 @@ export default function App() {
               className="bg-white rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl text-center"
             >
               <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto">
-                <Mascot className="w-12 h-12" hat={settings.activeSkin} soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'} />
+                <Mascot 
+                  className="w-12 h-12" 
+                  hat={settings.activeHat || 'none'} 
+                  theme={settings.activeSkin || 'standard'}
+                  soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'} 
+                />
               </div>
               <div className="space-y-2">
                 <h3 className="text-2xl font-black text-blue-900">Hey 👋</h3>
@@ -2389,6 +2396,10 @@ export default function App() {
                   onOpenPlant={() => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
                     setActiveScreen('plant');
+                  }}
+                  onOpenNexusVision={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    setActiveScreen('nexus-vision');
                   }}
                   fcmToken={fcmToken}
                   setupFCM={setupFCM}
@@ -2802,6 +2813,28 @@ export default function App() {
                       setActiveScreen('home');
                     }} 
                     showToast={showToast}
+                  />
+                </Suspense>
+              </motion.div>
+            )}
+
+            {activeScreen === 'nexus-vision' && (
+              <motion.div
+                key="nexus-vision"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full"
+              >
+                <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-400 font-black">SYNCING NEURAL LINK...</div>}>
+                  <NexusVision 
+                    stats={stats} 
+                    history={history}
+                    onBack={() => {
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                      setActiveScreen('home');
+                    }} 
                   />
                 </Suspense>
               </motion.div>

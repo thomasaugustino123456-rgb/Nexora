@@ -1,7 +1,26 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Book, Plus, X, Tag, Calendar, History, Trash2, Save, ArrowLeft, Pencil, BookOpen, PenTool, Brain, Sparkles, ChevronLeft } from 'lucide-react';
+import { Book, Plus, X, Tag, Calendar, History, Trash2, Save, ArrowLeft, Pencil, BookOpen, PenTool, Brain, Sparkles, ChevronLeft, Zap, Shield, Wand2, Loader2 } from 'lucide-react';
 import { UserStats } from '../types';
+import { analyzeNoteMood } from '../services/aiService';
+import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
+
+const Typewriter = ({ text }: { text: string }) => {
+  const [displayedText, setDisplayedText] = useState("");
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (index < text.length) {
+      const timeout = setTimeout(() => {
+        setDisplayedText(prev => prev + text[index]);
+        setIndex(prev => prev + 1);
+      }, 10 + Math.random() * 20);
+      return () => clearTimeout(timeout);
+    }
+  }, [index, text]);
+
+  return <p>{displayedText}</p>;
+};
 
 export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: UserStats, setStats: (s: UserStats | ((prev: UserStats) => UserStats)) => void, onBack: () => void, showToast: (msg: string, type?: 'success' | 'info' | 'error') => void }) {
   const [activeNote, setActiveNote] = useState<any>(null);
@@ -9,6 +28,8 @@ export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('Growth');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [neuralInsight, setNeuralInsight] = useState<any>(null);
   
   const entries = stats.gratitudeEntries || [];
 
@@ -17,7 +38,9 @@ export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: 
     const newEntry = {
       id: activeNote?.id || Date.now().toString(),
       text: `${title}: ${content}`,
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
+      category: category,
+      neuralInsight: neuralInsight
     };
     
     let newEntries;
@@ -31,6 +54,18 @@ export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: 
     setActiveNote(newEntry);
     setIsCreating(false);
     showToast('Manifest Saved! 📓', 'success');
+  };
+
+  const handleNeuralAnalysis = async () => {
+    if (!content.trim()) return;
+    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    setIsAnalyzing(true);
+    const result = await analyzeNoteMood(title, content);
+    setNeuralInsight(result);
+    setIsAnalyzing(false);
+    if (result) {
+      showToast('Neural Insight Generated!', 'success');
+    }
   };
 
   return (
@@ -130,18 +165,55 @@ export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: 
                className="w-full flex-1 bg-transparent text-lg font-medium text-blue-900/60 focus:outline-none resize-none placeholder:opacity-10 leading-relaxed italic"
              />
 
+             <AnimatePresence>
+               {neuralInsight && (
+                 <motion.div 
+                   initial={{ opacity: 0, height: 0 }}
+                   animate={{ opacity: 1, height: 'auto' }}
+                   className="mb-6 p-6 bg-blue-900/5 rounded-3xl border border-blue-900/10 space-y-3"
+                 >
+                   <div className="flex items-center gap-2 text-blue-600">
+                     <Sparkles size={16} />
+                     <span className="text-[10px] font-black uppercase tracking-widest">Neural Insight Protocol</span>
+                   </div>
+                   <div>
+                     <p className="text-xs font-bold text-blue-900/40 uppercase mb-1">Detected Mood: {neuralInsight.mood}</p>
+                     <div className="text-sm font-medium text-blue-900">
+                       <Typewriter text={neuralInsight.neural_insight} />
+                     </div>
+                   </div>
+                   <div className="flex items-center gap-2 pt-2 border-t border-blue-900/5">
+                     <Zap size={14} className="text-amber-500" />
+                     <p className="text-[10px] font-black text-blue-900/60 uppercase">Action: {neuralInsight.biological_recommendation}</p>
+                   </div>
+                 </motion.div>
+               )}
+             </AnimatePresence>
+
              <div className="pt-8 flex items-center justify-between">
-                <button 
-                  onClick={() => {
-                    const newEntries = entries.filter((e: any) => e.id !== activeNote?.id);
-                    setStats({ ...stats, gratitudeEntries: newEntries });
-                    setIsCreating(false);
-                    showToast('Note Deleted', 'info');
-                  }}
-                  className="p-5 text-red-400 hover:text-red-600 active:scale-90 transition-all"
-                >
-                  <Trash2 size={24} />
-                </button>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => {
+                      const newEntries = entries.filter((e: any) => e.id !== activeNote?.id);
+                      setStats({ ...stats, gratitudeEntries: newEntries });
+                      setIsCreating(false);
+                      showToast('Note Deleted', 'info');
+                    }}
+                    className="p-5 text-red-400 hover:text-red-600 active:scale-90 transition-all bg-red-500/5 rounded-2xl"
+                  >
+                    <Trash2 size={24} />
+                  </button>
+                  <button 
+                    onClick={handleNeuralAnalysis}
+                    disabled={isAnalyzing || !content.trim()}
+                    className={`flex items-center gap-3 px-6 py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${
+                      isAnalyzing ? 'bg-blue-100 text-blue-400' : 'bg-blue-900 text-white shadow-xl shadow-blue-900/20 hover:scale-105'
+                    }`}
+                  >
+                    {isAnalyzing ? <Loader2 className="animate-spin" size={18} /> : <Wand2 size={18} />}
+                    {isAnalyzing ? 'Analyzing Node...' : 'Neural Mode'}
+                  </button>
+                </div>
                 <button 
                   onClick={handleSave}
                   className="px-10 py-5 bg-emerald-600 text-white rounded-3xl font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all flex items-center gap-3"

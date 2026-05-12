@@ -196,7 +196,7 @@ const startScheduler = () => {
 
       // 3. Custom Plan Reminders (Global check)
       try {
-        const plansSnapshot = await db.collection("customPlans").get();
+        const plansSnapshot = await db.collection("customPlans").limit(100).get();
         for (const planDoc of plansSnapshot.docs) {
           const plan = planDoc.data();
           // Find user for this plan
@@ -231,7 +231,7 @@ const startScheduler = () => {
     } catch (error) {
       console.error("Scheduler Error:", error);
     }
-  }, 60000);
+  }, 300000); // Check every 5 minutes to save Quota
 };
 
 // Version Watcher (Automatic Update Notifications)
@@ -247,7 +247,11 @@ const startVersionWatcher = () => {
 
         if (lastKnownVersion && lastKnownVersion !== newVersion) {
           console.log(`Version Watcher: New version detected! ${newVersion}. Broadcasting...`);
-          const usersSnapshot = await db.collection("users").get();
+          // Only fetch 200 users to alert about updates to avoid total quota drain on broadcast
+          const usersSnapshot = await db.collection("users")
+            .where("notificationsEnabled", "==", true)
+            .limit(200)
+            .get();
           const tokens = usersSnapshot.docs
             .map(d => d.data())
             .filter(data => data.fcmToken && data.notificationsEnabled)
@@ -268,7 +272,7 @@ const startVersionWatcher = () => {
     } catch (error) {
       console.error("Version Watcher Error:", error);
     }
-  }, 60000); // Check every minute
+  }, 600000); // Check every 10 minutes
 };
 
 const sendPush = async (token: string, title: string, body: string) => {

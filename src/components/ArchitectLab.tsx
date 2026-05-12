@@ -53,12 +53,21 @@ const HOME_SECTIONS = [
   { id: 'mascot', label: 'Nexora Mascot', icon: Smartphone, configKey: 'hideMascot' }, // Adding a hypothetical hideMascot
 ];
 
+const PREMIUM_THEMES = [
+  { id: 'standard', label: 'Classic Nexora', color: 'bg-blue-600', textColor: 'text-white' },
+  { id: 'neural_bio', label: 'Neural Bio-Link', color: 'bg-emerald-600', textColor: 'text-white' },
+  { id: 'obsidian', label: 'Obsidian Void', color: 'bg-slate-950', textColor: 'text-blue-400' },
+  { id: 'sunset', label: 'Cyber Sunset', color: 'bg-orange-500', textColor: 'text-white' },
+];
+
 export function ArchitectLab({ settings, onUpdateSettings, onClose }: ArchitectLabProps) {
   const currentOrder = settings.navOrder || NAV_ITEMS.map(i => i.id);
   const hiddenItems = settings.hiddenNavItems || [];
   
   const sectionOrder = settings.layoutConfig?.sectionOrder || HOME_SECTIONS.map(s => s.id);
   const layoutConfig = settings.layoutConfig || {};
+
+  const activeTheme = settings.activeSkin || 'standard';
 
   const handleReorder = (newOrder: string[]) => {
     onUpdateSettings({ navOrder: newOrder });
@@ -108,6 +117,42 @@ export function ArchitectLab({ settings, onUpdateSettings, onClose }: ArchitectL
         >
           <X size={24} />
         </button>
+      </div>
+
+      {/* Theme Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-black text-blue-900/40 uppercase tracking-[0.2em]">Neural Interface Skins</h4>
+          <span className="text-[10px] font-bold text-blue-400">PRO FEATURE</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {PREMIUM_THEMES.map((theme) => (
+            <button
+              key={theme.id}
+              onClick={() => onUpdateSettings({ activeSkin: theme.id })}
+              className={`p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden group ${
+                activeTheme === theme.id 
+                  ? 'border-blue-500 bg-white ring-4 ring-blue-500/10' 
+                  : 'border-white bg-white hover:border-blue-200'
+              }`}
+            >
+              <div className="flex items-center gap-3 relative z-10">
+                <div className={`w-8 h-8 rounded-lg ${theme.color} shadow-lg`} />
+                <div>
+                  <span className="font-black text-blue-900 text-xs block">{theme.label}</span>
+                  <span className={`text-[8px] font-bold uppercase tracking-widest ${activeTheme === theme.id ? 'text-blue-500' : 'text-slate-400'}`}>
+                    {activeTheme === theme.id ? 'Active Skin' : 'Neural Core'}
+                  </span>
+                </div>
+              </div>
+              {activeTheme === theme.id && (
+                <div className="absolute top-0 right-0 p-2">
+                  <CheckCircle2 size={14} className="text-blue-500" />
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Navigation Section */}

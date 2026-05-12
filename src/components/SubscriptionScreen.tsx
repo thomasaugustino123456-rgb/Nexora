@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Check, Crown, Zap, Star, MessageSquare } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ArrowLeft, Check, Crown, Zap, Star, MessageSquare, Heart } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 
 export function SubscriptionScreen({ 
@@ -153,32 +153,67 @@ export function SubscriptionScreen({
           <h2 className="text-center text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mb-8">SECURE PAYMENT PROTOCOLS</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-8 rounded-[2rem] bg-white/5 border border-white/10 flex flex-col items-center text-center space-y-4">
-              <div className="text-4xl">💎</div>
+            <div className="p-8 rounded-[2rem] bg-white/5 border border-white/10 flex flex-col items-center text-center space-y-4 hover:border-white/20 transition-all cursor-pointer hover:bg-white/10 group">
+              <div className="text-4xl group-hover:rotate-12 transition-transform">💎</div>
               <div>
                 <h3 className="font-black text-xl">YEARLY</h3>
-                <p className="text-amber-500 font-bold">$39.99 / year</p>
-                <p className="text-[10px] text-slate-500 mt-2">Best for masters</p>
+                <p className="text-amber-500 font-bold">$64.00 / year</p>
+                <p className="text-[10px] text-slate-500 mt-2">Elite Master Access</p>
               </div>
             </div>
-            <div className="p-8 rounded-[2rem] bg-gradient-to-b from-amber-500/20 to-amber-950/40 border-2 border-amber-500/50 flex flex-col items-center text-center space-y-4 relative">
-              <div className="absolute -top-3 left-1/2 -track-x-1/2 bg-amber-500 text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full">POPULAR</div>
-              <div className="text-4xl text-amber-400">🔥</div>
+            <div className="p-8 rounded-[2rem] bg-gradient-to-b from-amber-500/20 to-amber-950/40 border-2 border-amber-500/50 flex flex-col items-center text-center space-y-4 relative hover:scale-105 transition-all cursor-pointer group">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full text-white">LEGEND CHOICE</div>
+              <div className="text-4xl text-amber-400 group-hover:scale-125 transition-transform">🔥</div>
               <div>
                 <h3 className="font-black text-xl">MONTHLY</h3>
-                <p className="text-amber-400 font-bold">$4.99 / mo</p>
-                <p className="text-[10px] text-amber-500/60 mt-2">Elite Consistency</p>
+                <p className="text-amber-400 font-bold">$14.99 / mo</p>
+                <p className="text-[10px] text-amber-500/60 mt-2">Maximum Protocol</p>
               </div>
             </div>
-            <div className="p-8 rounded-[2rem] bg-white/5 border border-white/10 flex flex-col items-center text-center space-y-4">
-              <div className="text-4xl">⚡</div>
+            <div className="p-8 rounded-[2rem] bg-white/5 border border-white/10 flex flex-col items-center text-center space-y-4 hover:border-white/20 transition-all cursor-pointer hover:bg-white/10 group">
+              <div className="text-4xl text-blue-400 group-hover:-rotate-12 transition-transform">⚡</div>
               <div>
                 <h3 className="font-black text-xl">WEEKLY</h3>
-                <p className="text-blue-400 font-bold">$1.99 / wk</p>
+                <p className="text-blue-400 font-bold">$4.99 / wk</p>
                 <p className="text-[10px] text-slate-500 mt-2">Quick Protocol</p>
               </div>
             </div>
           </div>
+
+          {/* Pay What You Want / Support Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            className="p-10 rounded-[3rem] bg-gradient-to-br from-indigo-600/10 via-slate-900 to-indigo-600/5 border-2 border-indigo-500/30 text-center space-y-8 overflow-hidden relative"
+          >
+            <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-indigo-500/10 blur-[100px]" />
+            <div className="absolute -top-20 -right-20 w-64 h-64 bg-blue-500/10 blur-[100px]" />
+            
+            <div className="relative z-10 space-y-3">
+              <div className="w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/30">
+                <Heart className="text-indigo-400" size={28} />
+              </div>
+              <h3 className="text-3xl font-black tracking-tighter italic">WILLINGLY SUPPORT</h3>
+              <p className="text-base text-slate-400 max-w-lg mx-auto leading-relaxed">
+                Nexora is built for the community. If you find value in our mission, you can choose to willingly support the lab with whatever amount you feel is right. Legends invest in the future.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 md:flex md:flex-wrap justify-center gap-3 relative z-10">
+              {['$5', '$10', '$25', '$50', '$100', 'Custom'].map((val) => (
+                <button
+                  key={val}
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.SUCCESS);
+                    window.open(`https://api.whatsapp.com/send?phone=211929635502&text=Hi%20Nexora,%20I'd%20like%20to%20willingly%20support%20the%20mission%20with%20${val}.%20My%20UID:%20${userId}`, '_blank');
+                  }}
+                  className="px-6 py-4 bg-white/5 hover:bg-white text-slate-300 hover:text-slate-950 border border-white/10 rounded-2xl font-black text-xs transition-all active:scale-95 shadow-xl shadow-black/20"
+                >
+                  {val}
+                </button>
+              ))}
+            </div>
+          </motion.div>
 
           <div className="mt-8 p-8 rounded-[2.5rem] bg-slate-900/80 border border-white/10 backdrop-blur-xl">
             <div className="flex flex-col md:flex-row gap-8">

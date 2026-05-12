@@ -218,7 +218,7 @@ export interface CustomPlan {
   createdAt: string;
 }
 
-export type Screen = 'home' | 'progress' | 'profile' | 'social' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant' | 'nexus-video' | 'trophy-rewards';
+export type Screen = 'home' | 'progress' | 'profile' | 'social' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant' | 'nexus-video' | 'trophy-rewards' | 'nexus-vision';
 
 export interface UserReport {
   id: string;

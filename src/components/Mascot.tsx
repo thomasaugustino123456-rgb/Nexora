@@ -8,6 +8,7 @@ interface MascotProps {
   className?: string;
   mood?: MascotMood;
   hat?: string;
+  theme?: string;
   soundPack?: 'cat' | 'dog';
   onClick?: () => void;
   onPointerMove?: (e: React.PointerEvent<HTMLDivElement>) => void;
@@ -19,6 +20,7 @@ export const Mascot: React.FC<MascotProps> = ({
   className, 
   mood = 'happy', 
   hat = 'none', 
+  theme = 'standard',
   soundPack = 'cat', 
   onClick,
   onPointerMove,
@@ -86,6 +88,42 @@ export const Mascot: React.FC<MascotProps> = ({
   const eyeX = mousePos.x * 20;
   const eyeY = mousePos.y * 10;
 
+  // Theme Colors
+  const getThemeColors = () => {
+    switch (theme) {
+      case 'neural_bio':
+        return {
+          water: ["#50FA7B", "#50FA7B", "#10b981"],
+          edge: "#10b981",
+          aura: "rgba(16, 185, 129, 0.2)",
+          nColor: "#fff"
+        };
+      case 'obsidian':
+        return {
+          water: ["#2d3436", "#000000", "#1e293b"],
+          edge: "#3b82f6",
+          aura: "rgba(59, 130, 246, 0.3)",
+          nColor: "#3b82f6"
+        };
+      case 'sunset':
+        return {
+          water: ["#f97316", "#ef4444", "#991b1b"],
+          edge: "#ef4444",
+          aura: "rgba(239, 68, 68, 0.2)",
+          nColor: "#fff"
+        };
+      default:
+        return {
+          water: [isBoiling ? "#FF5C5C" : "#5CD6FF", isBoiling ? "#FF2A2A" : "#0095FF", isBoiling ? "#D60000" : "#0047FF"],
+          edge: "#88D4FF",
+          aura: "rgba(59, 130, 246, 0.2)",
+          nColor: "#fff"
+        };
+    }
+  };
+
+  const colors = getThemeColors();
+
   return (
     <motion.div 
       ref={containerRef}
@@ -116,14 +154,14 @@ export const Mascot: React.FC<MascotProps> = ({
           </filter>
           
           <linearGradient id="water-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={isBoiling ? "#FF5C5C" : "#5CD6FF"} />
-            <stop offset="30%" stopColor={isBoiling ? "#FF2A2A" : "#0095FF"} />
-            <stop offset="100%" stopColor={isBoiling ? "#D60000" : "#0047FF"} />
+            <stop offset="0%" stopColor={colors.water[0]} />
+            <stop offset="30%" stopColor={colors.water[1]} />
+            <stop offset="100%" stopColor={colors.water[2]} />
           </linearGradient>
 
           <linearGradient id="glass-edge" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.8" />
-            <stop offset="50%" stopColor="#C2EFFF" stopOpacity="0.2" />
+            <stop offset="50%" stopColor={theme === 'obsidian' ? '#1e293b' : '#C2EFFF'} stopOpacity="0.2" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0.6" />
           </linearGradient>
 
@@ -133,6 +171,15 @@ export const Mascot: React.FC<MascotProps> = ({
             <path d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" />
           </clipPath>
         </defs>
+
+        {/* Aura */}
+        <motion.ellipse 
+          cx="250" cy="330" rx="220" ry="220" 
+          fill={colors.aura} 
+          filter="blur(40px)"
+          animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 3, repeat: Infinity }}
+        />
 
         {/* Shadow */}
         <motion.ellipse 
@@ -155,7 +202,7 @@ export const Mascot: React.FC<MascotProps> = ({
         >
           {/* LIQUID LAYER */}
           <g clipPath="url(#bottle-mask)">
-            <rect x="0" y="0" width="500" height="600" fill="#F0FAFF" fillOpacity="0.3" />
+            <rect x="0" y="0" width="500" height="600" fill={theme === 'obsidian' ? '#0f172a' : '#F0FAFF'} fillOpacity="0.3" />
             <motion.g 
               animate={{ 
                 y: isBoiling ? [220, 215, 220] : 220,
@@ -173,8 +220,8 @@ export const Mascot: React.FC<MascotProps> = ({
               {/* Back wave */}
               <motion.path 
                 d="M -500,0 Q -375,-25 -250,0 T 0,0 T 250,0 T 500,0 T 750,0 T 1000,0 L 1000,400 L -500,400 Z" 
-                fill={isBoiling ? "#FF8888" : "#66CCFF"} 
-                fillOpacity="0.6" 
+                fill={theme === 'neural_bio' ? '#10b981' : isBoiling ? "#FF8888" : "#66CCFF"} 
+                fillOpacity="0.4" 
                 animate={{ x: [-250, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
               />
@@ -190,7 +237,7 @@ export const Mascot: React.FC<MascotProps> = ({
 
 
           {/* GLASS BOTTLE HIGHLIGHTS & OUTLINES */}
-          <g stroke="#88D4FF" strokeWidth="4" fill="none">
+          <g stroke={colors.edge} strokeWidth="4" fill="none">
             <ellipse cx="250" cy="330" rx="190" ry="160" strokeOpacity="0.4" />
             
             {/* Ears with Follow-through wobble */}
@@ -212,15 +259,15 @@ export const Mascot: React.FC<MascotProps> = ({
 
           {/* Reflections */}
           <path d="M 90,300 A 160,130 0 0,1 200,190 A 150,120 0 0,0 110,310 Z" fill="#ffffff" fillOpacity="0.4" />
-          <path d="M 425,300 A 170,140 0 0,1 350,460" fill="none" stroke="#ffffff" strokeWidth="12" strokeLinecap="round" opacity="0.3" />
+          <path d="M 425,300 A 170,140 0 0,1 350,460" fill="none" stroke="#ffffff" strokeWidth="12" strokeLinecap="round" opacity={theme === 'obsidian' ? 0.1 : 0.3} />
 
           {/* ARMS */}
           <motion.ellipse 
-            cx="60" cy="310" rx="15" ry="30" fill="#B3E5FC" stroke="#88D4FF" strokeWidth="2"
+            cx="60" cy="310" rx="15" ry="30" fill={theme === 'obsidian' ? '#1e293b' : '#B3E5FC'} stroke={colors.edge} strokeWidth="2"
             animate={{ rotate: isAngry ? -60 : -30, x: isAngry ? -5 : 0 }} 
           />
           <motion.ellipse 
-            cx="440" cy="310" rx="15" ry="30" fill="#B3E5FC" stroke="#88D4FF" strokeWidth="2"
+            cx="440" cy="310" rx="15" ry="30" fill={theme === 'obsidian' ? '#1e293b' : '#B3E5FC'} stroke={colors.edge} strokeWidth="2"
             animate={{ rotate: isAngry ? 60 : 30, x: isAngry ? 5 : 0 }} 
           />
 
@@ -230,8 +277,8 @@ export const Mascot: React.FC<MascotProps> = ({
             {!isAngry ? (
               <>
                 <motion.g animate={{ scaleY: isBlinking ? 0.1 : 1 }} transition={{ duration: 0.1 }}>
-                  <circle cx="180" cy="260" r="16" fill="#001845" />
-                  <circle cx="320" cy="260" r="16" fill="#001845" />
+                  <circle cx="180" cy="260" r="16" fill={theme === 'obsidian' ? '#60a5fa' : '#001845'} />
+                  <circle cx="320" cy="260" r="16" fill={theme === 'obsidian' ? '#60a5fa' : '#001845'} />
                   {/* High Quality Pupils */}
                   <circle cx="185" cy="254" r="6" fill="#fff" />
                   <circle cx="325" cy="254" r="6" fill="#fff" />
@@ -239,8 +286,8 @@ export const Mascot: React.FC<MascotProps> = ({
               </>
             ) : (
               <>
-                <path d="M 155,240 L 205,270" stroke="#001845" strokeWidth="12" strokeLinecap="round" />
-                <path d="M 295,270 L 345,240" stroke="#001845" strokeWidth="12" strokeLinecap="round" />
+                <path d="M 155,240 L 205,270" stroke={theme === 'obsidian' ? '#60a5fa' : '#001845'} strokeWidth="12" strokeLinecap="round" />
+                <path d="M 295,270 L 345,240" stroke={theme === 'obsidian' ? '#60a5fa' : '#001845'} strokeWidth="12" strokeLinecap="round" />
               </>
             )}
 
@@ -250,17 +297,17 @@ export const Mascot: React.FC<MascotProps> = ({
                 <motion.path 
                   key="angry-mouth"
                   d="M 220 320 Q 250 290 280 320" 
-                  fill="none" stroke="#001845" strokeWidth="10" strokeLinecap="round"
+                  fill="none" stroke={theme === 'obsidian' ? '#60a5fa' : '#001845'} strokeWidth="10" strokeLinecap="round"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 />
               ) : (
                 <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} key="happy-face">
                   <path 
                     d="M 210 295 Q 250 345 290 295" 
-                    fill="#FF4D6D" stroke="#001845" strokeWidth="4"
+                    fill={isNeutral && theme === 'obsidian' ? '#1e293b' : "#FF4D6D"} stroke={theme === 'obsidian' ? '#60a5fa' : '#001845'} strokeWidth="4"
                   />
-                  <ellipse cx="145" cy="290" rx="18" ry="10" fill="#FF4D6D" fillOpacity="0.2" />
-                  <ellipse cx="355" cy="290" rx="18" ry="10" fill="#FF4D6D" fillOpacity="0.2" />
+                  <ellipse cx="145" cy="290" rx="18" ry="10" fill="#FF4D6D" fillOpacity={theme === 'obsidian' ? 0.05 : 0.2} />
+                  <ellipse cx="355" cy="290" rx="18" ry="10" fill="#FF4D6D" fillOpacity={theme === 'obsidian' ? 0.05 : 0.2} />
                 </motion.g>
               )}
             </AnimatePresence>
@@ -272,7 +319,7 @@ export const Mascot: React.FC<MascotProps> = ({
             animate={{ opacity: [0.6, 1, 0.6] }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill="#fff" />
+            <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill={colors.nColor} />
           </motion.g>
         </motion.g>
 
