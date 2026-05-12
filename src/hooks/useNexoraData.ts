@@ -14,9 +14,20 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
   const [isDataReady, setIsDataReady] = useState(false);
 
   // Load cached settings/stats immediately if available
-  const cachedSettings = localStorage.getItem('nexora_settings') ? JSON.parse(localStorage.getItem('nexora_settings')!) : DEFAULT_SETTINGS;
-  const cachedStats = localStorage.getItem('nexora_stats') ? JSON.parse(localStorage.getItem('nexora_stats')!) : DEFAULT_STATS;
-  const cachedProgress = localStorage.getItem('nexora_progress') ? JSON.parse(localStorage.getItem('nexora_progress')!) : null;
+  const getCachedJson = (key: string, defaultValue: any) => {
+    try {
+      const val = localStorage.getItem(key);
+      if (!val || val === 'undefined') return defaultValue;
+      return JSON.parse(val);
+    } catch (e) {
+      console.warn(`Failed to parse cache for ${key}:`, e);
+      return defaultValue;
+    }
+  };
+
+  const cachedSettings = getCachedJson('nexora_settings', DEFAULT_SETTINGS);
+  const cachedStats = getCachedJson('nexora_stats', DEFAULT_STATS);
+  const cachedProgress = getCachedJson('nexora_progress', null);
   const cachedOnboarding = localStorage.getItem('nexora_onboarding_completed') === 'true';
 
   const [settings, setSettings] = useState<UserSettings>(cachedSettings);

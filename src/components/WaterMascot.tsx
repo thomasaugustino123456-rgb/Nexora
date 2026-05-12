@@ -16,18 +16,18 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
       <svg viewBox="0 0 500 600" xmlns="http://www.w3.org/2000/svg" className="w-full h-full transition-transform duration-300 ease-in-out hover:scale-105">
         <defs>
           {/* Filters */}
-          <filter id="glow-water" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="6" result="blur" />
+          <filter id="glow-water" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
           
-          <filter id="soft-glow-water" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
+          <filter id="soft-glow-water" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation="2" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
 
           <filter id="shadow-blur-water">
-            <feGaussianBlur stdDeviation="10" />
+            <feGaussianBlur stdDeviation="6" />
           </filter>
 
           {/* Gradients */}
@@ -81,35 +81,25 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
             <g transform={`translate(0, ${fillY})`} style={{ transition: 'transform 0.5s ease-out' }}>
               
               {/* Back Wave (Lighter, slower, moves left) */}
-              <path d="M 0,0 Q 125,-25 250,0 T 500,0 T 750,0 T 1000,0 T 1250,0 T 1500,0 L 1500,400 L 0,400 Z" fill="#66CCFF" fillOpacity="0.6">
-                <animateTransform attributeName="transform" type="translate" from="0 0" to="-1000 0" dur="5s" repeatCount="indefinite" />
+              <path d="M 0,0 Q 125,-15 250,0 T 500,0 T 750,0 T 1000,0 L 1000,400 L 0,400 Z" fill="#66CCFF" fillOpacity="0.5">
+                <animateTransform attributeName="transform" type="translate" from="0 0" to="-500 0" dur="6s" repeatCount="indefinite" />
               </path>
 
               {/* Front Wave (Main color, faster, moves right) */}
-              <path d="M -1000,10 Q -875,35 -750,10 T -500,10 T -250,10 T 0,10 T 250,10 T 500,10 L 500,400 L -1000,400 Z" fill="url(#water-grad-fill)">
-                <animateTransform attributeName="transform" type="translate" from="0 0" to="1000 0" dur="4s" repeatCount="indefinite" />
+              <path d="M -500,10 Q -375,25 -250,10 T 0,10 T 250,10 T 500,10 L 500,400 L -500,400 Z" fill="url(#water-grad-fill)">
+                <animateTransform attributeName="transform" type="translate" from="0 0" to="500 0" dur="4s" repeatCount="indefinite" />
               </path>
 
-              {/* Rising Bubbles */}
-              <g fill="#ffffff" fillOpacity="0.5">
-                <circle cx="150" cy="200" r="6">
+              {/* Rising Bubbles - Reduced count for mobile performance */}
+              <g fill="#ffffff" fillOpacity="0.4">
+                <circle cx="150" cy="200" r="4">
                   <animate attributeName="cy" from="250" to="-20" dur="2.5s" repeatCount="indefinite" />
-                  <animate attributeName="cx" values="150; 140; 160; 150" dur="2s" repeatCount="indefinite" />
                 </circle>
-                <circle cx="200" cy="100" r="10">
-                  <animate attributeName="cy" from="250" to="-20" dur="3s" repeatCount="indefinite" begin="1s"/>
-                  <animate attributeName="cx" values="200; 215; 185; 200" dur="2.5s" repeatCount="indefinite" />
+                <circle cx="200" cy="100" r="7">
+                  <animate attributeName="cy" from="250" to="-20" dur="3.5s" repeatCount="indefinite" begin="1s"/>
                 </circle>
-                <circle cx="350" cy="150" r="5">
+                <circle cx="350" cy="150" r="3">
                   <animate attributeName="cy" from="250" to="-20" dur="2s" repeatCount="indefinite" begin="0.5s"/>
-                  <animate attributeName="cx" values="350; 340; 360; 350" dur="1.5s" repeatCount="indefinite" />
-                </circle>
-                <circle cx="300" cy="220" r="12">
-                  <animate attributeName="cy" from="250" to="-20" dur="3.5s" repeatCount="indefinite" begin="1.5s"/>
-                  <animate attributeName="cx" values="300; 320; 280; 300" dur="3s" repeatCount="indefinite" />
-                </circle>
-                <circle cx="250" cy="250" r="8">
-                  <animate attributeName="cy" from="250" to="-20" dur="2.2s" repeatCount="indefinite" begin="0.2s"/>
                 </circle>
               </g>
             </g>

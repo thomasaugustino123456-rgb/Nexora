@@ -218,18 +218,19 @@ export const Mascot: React.FC<MascotProps> = ({
             >
               {/* Back wave */}
               <motion.path 
-                d="M -500,0 Q -375,-20 -250,0 T 0,0 T 250,0 T 500,0 T 750,0 T 1000,0 L 1000,400 L -500,400 Z" 
+                d="M -500,0 Q -375,-15 -250,0 T 0,0 T 250,0 T 500,0 L 500,400 L -500,400 Z" 
                 fill={theme === 'neural_bio' ? '#10b981' : isBoiling ? "#FF8888" : "#66CCFF"} 
-                fillOpacity="0.3" 
+                fillOpacity="0.2" 
                 animate={{ x: [-250, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
               />
               {/* Front wave */}
               <motion.path 
-                d="M -500,10 Q -375,30 -250,10 T 0,10 T 250,10 T 500,10 T 750,10 T 1000,10 L 1000,400 L -500,400 Z" 
+                d="M -500,10 Q -375,25 -250,10 T 0,10 T 250,10 T 500,10 L 500,400 L -500,400 Z" 
                 fill="url(#water-grad)" 
+                fillOpacity="0.8"
                 animate={{ x: [0, -250] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
               />
             </motion.g>
           </g>
@@ -312,11 +313,10 @@ export const Mascot: React.FC<MascotProps> = ({
             </AnimatePresence>
           </g>
 
-          {/* Glowing N */}
+          {/* Glowing N - Simplified for mobile */}
           <motion.g 
-            filter="url(#glow)"
-            animate={{ opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 2, repeat: Infinity }}
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 3, repeat: Infinity }}
           >
             <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill={colors.nColor} />
           </motion.g>

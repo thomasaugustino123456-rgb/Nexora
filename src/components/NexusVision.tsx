@@ -43,13 +43,14 @@ export function NexusVision({ stats, history, onBack }: { stats: UserStats, hist
     setResult(null);
     setScanStep(0);
 
-    // Start AI request immediately in background
-    const aiPromise = analyzeHabits(stats, history);
+    // Start AI request in parallel
+    const aiPromise = analyzeHabits(stats, history).catch(() => "NEXUS PROTOCOL ERROR: NEURAL LINK FAILED.");
 
-    // Simulate steps for UI polish but faster
+    // Faster step simulation
+    const stepInterval = 400; // 0.4s per step
     for (let i = 0; i < steps.length; i++) {
       setScanStep(i);
-      await new Promise(r => setTimeout(r, 500)); // 0.5s per step
+      await new Promise(r => setTimeout(r, stepInterval));
     }
 
     try {

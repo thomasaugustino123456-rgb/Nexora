@@ -5,7 +5,30 @@ let aiInstance: any = null;
 
 const getAI = () => {
   if (!aiInstance) {
-    aiInstance = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    let apiKey = process.env.GEMINI_API_KEY;
+    
+    // Fallback logic for different environments
+    if (!apiKey) {
+      // In some environments, it might be in import.meta.env
+      apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+    }
+
+    if (!apiKey) {
+      console.warn("AI Service: GEMINI_API_KEY missing. Using limited simulation mode.");
+      // We return a mock-capable object or just proceed to let the catch handle it later
+      try {
+        aiInstance = new GoogleGenAI({ apiKey: "MOCK_KEY" });
+      } catch (e) {
+        throw new Error("AURORA_CORE_INIT_FAILURE");
+      }
+    } else {
+      try {
+        aiInstance = new GoogleGenAI({ apiKey: apiKey as string });
+      } catch (err) {
+        console.error("Failed to initialize GoogleGenAI:", err);
+        throw new Error("AURORA_CORE_INIT_FAILURE");
+      }
+    }
   }
   return aiInstance;
 };
@@ -42,14 +65,37 @@ export async function analyzeHabits(stats: UserStats, history: DailyProgress[]) 
   `;
 
   try {
+    const ai = getAI();
+    // Check if we are in mock mode
+    if (ai.apiKey === "MOCK_KEY") {
+      await new Promise(r => setTimeout(r, 1500));
+      return `NEXUS VISION PROTOCOL: SIMULATED ANALYSIS.
+      
+      BIOLOGICAL STATUS: ASCENDING.
+      
+      PATTERN INSIGHT: YOUR MOMENTUM INDICATES HIGH NEURAL PLASTICITY. STREAK OF ${stats.streak} IS OPTIMAL.
+      
+      OVERRIDE PROTOCOL: INCREASE HYDRATION FREQUENCY TO MAINTAIN COGNITIVE FLOW.
+      
+      [UPGRADE TO PRO TO ACTIVATE FULL NEURAL LINK]`;
+    }
+
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
     });
+    
+    if (!response || !response.text) {
+      throw new Error("EMPTY_AI_RESPONSE");
+    }
+    
     return response.text;
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Analysis failed:", error);
-    return "NEXUS VISION ERROR: NEURAL LINK INTERRUPTED. RESUME PROTOCOL MANUALLY.";
+    if (error.message?.includes("API_KEY_INVALID") || error.message?.includes("403")) {
+      return "NEXUS ERROR: AUTHENTICATION FAILED. PLEASE CHECK GENAI API CONFIGURATION IN SETTINGS.";
+    }
+    return "NEXUS VISION ERROR: NEURAL LINK INTERRUPTED. PERSISTENCE REQUIRED.";
   }
 }
 
