@@ -218,56 +218,37 @@ export const Mascot: React.FC<MascotProps> = ({
             {/* Liquid Group with Ambient Slosh */}
             <motion.g 
               animate={{ 
-                x: isBoiling ? [0, 5, 0] : 0,
-                y: isBoiling ? -2 : 220,
-                rotate: isBoiling ? [0, 1, -1, 0] : [0, 0.5, -0.5, 0]
+                y: isBoiling ? -5 : 230,
+                rotate: isBoiling ? [0, 0.5, -0.5, 0] : [0, 0.3, -0.3, 0]
               }}
               transition={{ 
-                rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                rotate: { duration: 5, repeat: Infinity, ease: "easeInOut" },
                 y: { duration: 0.5 }
               }}
               style={{ originX: "250px", originY: "400px" }}
             >
-              {/* Back Triple Wave (Layer 1 - Deepest) */}
+              {/* Seamless River Water Animation */}
+              {/* We use a single path that is 3x as wide to allow a seamless looping scroll */}
               <motion.path 
-                d="M -500,0 Q -375,-25 -250,0 T 0,0 T 250,0 T 500,0 L 500,600 L -500,600 Z" 
-                fill={theme === 'neural_bio' ? '#10b981' : isBoiling ? "#FF8888" : "#0055FF"} 
-                fillOpacity="0.1"
-                animate={{ x: [0, 250] }}
-                transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
-              />
-
-              {/* Middle Triple Wave (Layer 2) */}
-              <motion.path 
-                d="M -500,5 Q -375,-15 -250,5 T 0,5 T 250,5 T 500,5 L 500,600 L -500,600 Z" 
-                fill={theme === 'neural_bio' ? '#10b981' : isBoiling ? "#FF6666" : "#3377FF"} 
-                fillOpacity="0.3"
-                animate={{ x: [0, 250] }}
-                transition={{ duration: 4.5, repeat: Infinity, ease: "linear" }}
-              />
-
-              {/* Front Main Wave (Layer 3 - Most Visible) */}
-              <motion.path 
-                d="M -500,10 Q -375,30 -250,10 T 0,10 T 250,10 T 500,10 L 500,600 L -500,600 Z" 
+                d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 T 1000,20 L 1000,600 L 0,600 Z" 
                 fill="url(#water-grad)" 
-                fillOpacity="0.9"
+                fillOpacity="0.95"
                 animate={{ 
-                  x: [0, -250],
-                  // Subtle vertical bobbing to simulate river surface
-                  y: [0, 3, 0]
+                  x: [-500, 0],
+                  y: [0, 5, 0]
                 }}
                 transition={{ 
-                  x: { duration: 3.5, repeat: Infinity, ease: "linear" },
+                  x: { duration: 3, repeat: Infinity, ease: "linear" },
                   y: { duration: 2, repeat: Infinity, ease: "easeInOut" }
                 }}
               />
               
-              {/* Highlight Wave (Layer 4 - Surface Gloss) */}
+              {/* Secondary Reflective Wave for Depth */}
               <motion.path 
-                d="M -500,12 Q -375,18 -250,12 T 0,12 T 250,12 T 500,12 L 500,22 L -500,22 Z" 
+                d="M 0,25 Q 50,15 100,25 T 200,25 T 300,25 T 400,25 T 500,25 T 600,25 T 700,25 T 800,25 T 900,25 T 1000,25 L 1000,40 L 0,40 Z" 
                 fill="#ffffff" 
                 fillOpacity="0.15"
-                animate={{ x: [-250, 0] }}
+                animate={{ x: [0, -500] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
               />
               

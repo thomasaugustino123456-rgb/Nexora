@@ -358,8 +358,8 @@ export function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none', setting
   );
 }
 
-export function WaterStep({ goal, progress: initialProgress, onUpdate, onContinue, activeSkin = 'none', settings, play }: { goal: number, progress?: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
-  const [localProgress, setLocalProgress] = useState(0);
+export function WaterStep({ goal, progress: initialProgress = 0, onUpdate, onContinue, activeSkin = 'none', settings, play }: { goal: number, progress?: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+  const [localProgress, setLocalProgress] = useState(initialProgress);
   const isFinished = localProgress >= goal;
 
   return (

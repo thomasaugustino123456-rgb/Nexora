@@ -67,17 +67,31 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
           <g id="water-system">
             <g transform={`translate(0, ${fillY})`} style={{ transition: 'transform 0.5s ease-out' }}>
               
-              {/* Back Wave (Lighter, slower, moves left) */}
-              <path d="M 0,0 Q 125,-15 250,0 T 500,0 T 750,0 T 1000,0 L 1000,400 L 0,400 Z" fill="#66CCFF" fillOpacity="0.5">
-                <animateTransform attributeName="transform" type="translate" from="0 0" to="-500 0" dur="3s" repeatCount="indefinite" />
-              </path>
+              {/* Efficient Seamless Wave Animation */}
+              <g>
+                <animateTransform 
+                  attributeName="transform" 
+                  type="translate" 
+                  from="0 0" 
+                  to="-400 0" 
+                  dur="4s" 
+                  repeatCount="indefinite" 
+                />
+                <path 
+                  d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 L 900,600 L 0,600 Z" 
+                  fill="url(#water-grad-fill)" 
+                  fillOpacity="0.9"
+                />
+                
+                {/* Surface Highlight Wave */}
+                <path 
+                  d="M 0,25 Q 50,15 100,25 T 200,25 T 300,25 T 400,25 T 500,25 T 600,25 T 700,25 T 800,25 T 900,25 L 900,35 L 0,35 Z" 
+                  fill="#ffffff" 
+                  fillOpacity="0.15"
+                />
+              </g>
 
-              {/* Front Wave (Main color, faster, moves right) */}
-              <path d="M -500,10 Q -375,25 -250,10 T 0,10 T 250,10 T 500,10 L 500,400 L -500,400 Z" fill="url(#water-grad-fill)">
-                <animateTransform attributeName="transform" type="translate" from="0 0" to="500 0" dur="2s" repeatCount="indefinite" />
-              </path>
-
-              {/* Rising Bubbles - Reduced count for mobile performance */}
+              {/* Rising Bubbles - Static positions, simple opacity anim for performance */}
               <g fill="#ffffff" fillOpacity="0.4">
                 <circle cx="150" cy="200" r="4">
                   <animate attributeName="cy" from="250" to="-20" dur="2.5s" repeatCount="indefinite" />
