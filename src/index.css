@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -7,10 +8,11 @@
 
 @layer base {
   body {
-    @apply bg-[#E0F2FF] text-[#1A1C1E] antialiased;
+    @apply bg-[#E0F2FF] text-[#1A1C1E] antialiased font-sans;
     overflow-x: hidden;
     background: linear-gradient(180deg, #E0F2FF 0%, #F0E6FF 100%);
     background-attachment: fixed;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -44,6 +46,7 @@
 }
 
 .sparkle-mascot {
+  animation: twinkle 3s infinite ease-in-out;
   transform-origin: center;
 }
 
@@ -52,6 +55,7 @@
   50% { transform: rotate(22deg); }
 }
 .main-body-pivot {
+  animation: bodyPush 2s infinite ease-in-out;
   transform-origin: 160px 480px;
 }
 
@@ -60,6 +64,7 @@
   50% { d: path("M 440,380 L 510,400 L 460,480"); }
 }
 .arm-muscle {
+  animation: elbowBend 2s infinite ease-in-out;
 }
 
 @keyframes drip {
@@ -68,6 +73,7 @@
   100% { transform: translate(-30px, 80px); opacity: 0; }
 }
 .sweat {
+  animation: drip 1.5s infinite linear;
 }
 
 @keyframes shimmer {
@@ -75,6 +81,7 @@
   100% { transform: translateX(100%); }
 }
 .animate-shimmer {
+  animation: shimmer 2s infinite linear;
 }
 
 @keyframes spin-slow {
@@ -82,4 +89,5 @@
   to { transform: rotate(360deg); }
 }
 .animate-spin-slow {
+  animation: spin-slow 8s infinite linear;
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged, User as FirebaseUser, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { UserSettings, UserStats, DailyProgress } from '../types';
 
@@ -63,36 +63,26 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
       if (currentUser) {
         localStorage.setItem('nexora_cached_user', currentUser.uid);
         setUser(currentUser);
-        dataLoadedFromFirestore.current = false;
         
-        try {
-          const userDocRef = doc(db, 'users', currentUser.uid);
-          const statsDocRef = doc(db, 'users', currentUser.uid, 'stats', 'main');
-          const progressDocRef = doc(db, 'users', currentUser.uid, 'progress', today);
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const statsDocRef = doc(db, 'users', currentUser.uid, 'stats', 'main');
+        const progressDocRef = doc(db, 'users', currentUser.uid, 'progress', today);
 
-          const [userDoc, statsDoc, progressDoc] = await Promise.all([
-            getDoc(userDocRef),
-            getDoc(statsDocRef),
-            getDoc(progressDocRef)
-          ]);
-          
-          if (!userDoc.exists()) {
-            console.log("Hooks: Initializing new user on server...");
-            const newUser = {
-              uid: currentUser.uid,
-              displayName: currentUser.displayName || 'Nexora User',
-              email: currentUser.email || '',
-              role: 'user',
-              onboardingCompleted: false,
-              ...DEFAULT_SETTINGS,
-              stats: DEFAULT_STATS,
-              createdAt: serverTimestamp()
-            };
-            await setDoc(doc(db, 'users', currentUser.uid), newUser);
-          } else {
-            console.log("Hooks: Loading data from Firestore...");
-            const data = userDoc.data();
-            
+        // Safety timeout for slow connections: force loading to false if it takes too long
+        // This allows the app to show "Offline" state rather than infinite spinning
+        const loadingTimeout = setTimeout(() => {
+          if (loading) {
+            console.warn("Hooks: Loading timeout reached, forcing ready state for offline use.");
+            setIsDataReady(true);
+            setLoading(false);
+          }
+        }, 10000); // 10 seconds safety window
+
+        // Single onSnapshot for the main user document to handle real-time/offline updates
+        const unsubUser = onSnapshot(userDocRef, (docSnap) => {
+          clearTimeout(loadingTimeout);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
             const firestoreSettings = { 
               ...DEFAULT_SETTINGS, 
               ...data,
@@ -106,32 +96,54 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
               trophies: data.stats?.trophies || []
             };
 
-            if (statsDoc.exists()) {
-              Object.assign(firestoreStats, statsDoc.data());
-            }
-
-            if (progressDoc.exists()) {
-               const pData = progressDoc.data();
-               setDailyProgress(prev => ({ ...prev, ...pData }));
-            }
-
             setSettings(firestoreSettings);
             setStats(firestoreStats);
             setNeedsOnboarding(data.onboardingCompleted !== true);
             
             localStorage.setItem('nexora_settings', JSON.stringify(firestoreSettings));
             localStorage.setItem('nexora_stats', JSON.stringify(firestoreStats));
+
+            // Mark as loaded from firestore at least once (even if from cache)
+            dataLoadedFromFirestore.current = true;
+            setIsDataReady(true);
+            setLoading(false);
+          } else {
+            // Initializing new user if doesn't exist
+            console.log("Hooks: Initializing new user...");
+            const newUser = {
+              uid: currentUser.uid,
+              displayName: currentUser.displayName || 'Nexora User',
+              email: currentUser.email || '',
+              role: 'user',
+              onboardingCompleted: false,
+              ...DEFAULT_SETTINGS,
+              stats: DEFAULT_STATS,
+              createdAt: serverTimestamp()
+            };
+            setDoc(userDocRef, newUser, { merge: true }).then(() => {
+              dataLoadedFromFirestore.current = true;
+              setIsDataReady(true);
+              setLoading(false);
+            });
           }
-          dataLoadedFromFirestore.current = true;
+        }, (error) => {
+          console.error("Hooks: User snapshot error:", error);
           setIsDataReady(true);
-        } catch (error) {
-          console.error("Hooks: Load critical failure:", error);
-          showToast("Sync issue: using offline mode.", 'info');
-          setIsDataReady(true);
-        } finally {
           setLoading(false);
-        }
-      } else {
+        });
+
+        // Separate snapshot for daily progress
+        const unsubProgress = onSnapshot(progressDocRef, (progressSnap) => {
+          if (progressSnap.exists()) {
+            const pData = progressSnap.data();
+            setDailyProgress(prev => ({ ...prev, ...pData }));
+          }
+        });
+
+        return () => {
+          unsubUser();
+          unsubProgress();
+        };
         localStorage.removeItem('nexora_cached_user');
         setUser(null);
         setIsDataReady(false);
@@ -192,9 +204,9 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
       }
     };
     
-    // 2-minute debounce for background sync
+    // 10-second debounce for background sync (Firestore handles offline queueing automatically)
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    syncTimeoutRef.current = setTimeout(syncData, 120000); 
+    syncTimeoutRef.current = setTimeout(syncData, 10000); 
 
     return () => {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);

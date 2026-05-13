@@ -1,11 +1,14 @@
-const CACHE_NAME = 'nexora-v1.3'; // Bumping version for fresh install with background check
+const CACHE_NAME = 'nexora-v1.4'; // Bumping version for fresh install with background check
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/index.css',
+  '/main.tsx',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap',
   'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png',
-  'https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js'
+  'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js'
 ];
 
 // Import Firebase compat scripts (required for FCM in SW)

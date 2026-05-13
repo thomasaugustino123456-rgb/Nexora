@@ -898,30 +898,30 @@ export function FootballStep({ onFinish, activeSkin = 'none', settings, play }: 
           targetX >= goalXMin && targetX <= goalXMax &&
           (targetX < obsXMin || targetX > obsXMax);
 
-        if (isGoal) {
-          vibrate([20, 50, 20]);
-          setScore(s => {
-            const nextScore = s + 1;
-            if (nextScore >= 5) {
-               vibrate(VIBRATION_PATTERNS.SUCCESS);
-               setTimeout(onFinish, 800);
+          if (isGoal) {
+            vibrate([20, 50, 20]);
+            setScore(s => {
+              const nextScore = s + 1;
+              if (nextScore >= 5) {
+                 vibrate(VIBRATION_PATTERNS.SUCCESS);
+                 setTimeout(onFinish, 400);
+              }
+              return nextScore;
+            });
+            setScoredBalls(prev => [...prev, { x: targetX, y: targetY }]);
+          } else {
+            vibrate(15);
+            if ((ballsLeft > 1 || score >= 4) && settings.soundEnabled) {
+               play('losing');
             }
-            return nextScore;
-          });
-          setScoredBalls(prev => [...prev, { x: targetX, y: targetY }]);
-        } else {
-          vibrate(15);
-          if ((ballsLeft > 1 || score >= 4) && settings.soundEnabled) {
-             play('losing');
           }
-        }
 
-        setBallsLeft(b => b - 1);
-        setTimeout(reset, 1200);
-      }
+          setBallsLeft(b => b - 1);
+          setTimeout(reset, 600);
+        }
+      };
+      requestAnimationFrame(animate);
     };
-    requestAnimationFrame(animate);
-  };
 
   useEffect(() => {
     if (ballsLeft === 0 && !isFlying && score < 5 && settings.soundEnabled) {

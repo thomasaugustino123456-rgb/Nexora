@@ -32,6 +32,7 @@ const SOUNDS = {
 
 // Module-level cache for audio objects
 const audioCache: { [key: string]: HTMLAudioElement } = {};
+let globalActiveMusic: string | null = null;
 
 // Initialize audio objects once
 if (typeof window !== 'undefined') {
@@ -43,16 +44,14 @@ if (typeof window !== 'undefined') {
 }
 
 export function useSound() {
-  const [currentMusic, setCurrentMusic] = useState<string | null>(null);
+  const [localActiveMusic, setLocalActiveMusic] = useState<string | null>(globalActiveMusic);
 
   const play = useCallback((soundKey: keyof typeof SOUNDS, loop: boolean = false) => {
-    console.log(`Playing sound: ${soundKey} (loop: ${loop})`);
     const audio = audioCache[soundKey];
     if (audio) {
       audio.loop = loop;
       audio.currentTime = 0;
       audio.play().catch(e => {
-        // Only log if it's not a common interaction-required error
         if (e.name !== 'NotAllowedError') {
           console.error(`Error playing sound ${soundKey}:`, e);
         }
@@ -69,10 +68,10 @@ export function useSound() {
   }, []);
 
   const playMusic = useCallback((musicKey: string | null) => {
-    // Stop current music if any
-    if (currentMusic && audioCache[currentMusic]) {
-      audioCache[currentMusic].pause();
-      audioCache[currentMusic].currentTime = 0;
+    // Stop ANY current music
+    if (globalActiveMusic && audioCache[globalActiveMusic]) {
+      audioCache[globalActiveMusic].pause();
+      audioCache[globalActiveMusic].currentTime = 0;
     }
 
     if (musicKey && audioCache[musicKey]) {
@@ -83,11 +82,13 @@ export function useSound() {
           console.error(`Error playing music ${musicKey}:`, e);
         }
       });
-      setCurrentMusic(musicKey);
+      globalActiveMusic = musicKey;
+      setLocalActiveMusic(musicKey);
     } else {
-      setCurrentMusic(null);
+      globalActiveMusic = null;
+      setLocalActiveMusic(null);
     }
-  }, [currentMusic]);
+  }, []);
 
   const stopAllMusic = useCallback(() => {
     Object.keys(SOUNDS).forEach(key => {
@@ -99,9 +100,10 @@ export function useSound() {
         }
       }
     });
-    setCurrentMusic(null);
+    globalActiveMusic = null;
+    setLocalActiveMusic(null);
   }, []);
 
-  return { play, stop, playMusic, stopAllMusic, currentMusic };
+  return { play, stop, playMusic, stopAllMusic, currentMusic: localActiveMusic };
 }
 

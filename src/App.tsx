@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 console.log("App.tsx is loading...");
-import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, BellOff, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout, MoreHorizontal, Flag, Bookmark, EyeOff, Share2, Search, Youtube, Video, Lock } from 'lucide-react';
+import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette, Flame, Star, ChevronRight, ChevronLeft, ArrowLeft, Settings, X, Pen, Pencil, Eraser, Trophy as TrophyIcon, Zap, Brain, Heart, Target, Camera, Upload, Bell, BellOff, Volume2, Download, Trash2, Save, PaintBucket, MessageSquare, Music, Image as ImageIcon, Sparkles, BrainCircuit, Smile, LogOut, Send, Book, RefreshCw, AlertCircle, Award, Users, Crown, Info, Map as MapIcon, Check, Plus, Clock, History, BookOpen, Sprout, MoreHorizontal, Flag, Bookmark, EyeOff, Share2, Search, Youtube, Video, Lock, WifiOff } from 'lucide-react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
@@ -182,10 +182,10 @@ export default function App() {
         // Apply temporary boost
         setStats(prev => ({
           ...prev,
-          streak: Math.max(prev.streak, 999),
-          coins: Math.max(prev.coins, 50000),
-          xp: Math.max(prev.xp, 15000),
-          level: Math.max(prev.level, 15)
+          streak: Math.max(prev.streak, 9999),
+          coins: Math.max(prev.coins, 900000),
+          xp: Math.max(prev.xp, 150000),
+          level: Math.max(prev.level, 99)
         }));
         showToast("PRO PROTOCOL: BOOSTED STATS ACTIVATED!", "success");
       }
@@ -309,6 +309,42 @@ export default function App() {
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
   const [showCoinAnimation, setShowCoinAnimation] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      showToast("SYSTEM RECONNECTED: NEXUS SYNC RESTORED", "success");
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      showToast("SYSTEM OFFLINE: SHIELD ACTIVATED (LOCAL CACHE ENABLED)", "info");
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial check for slow network
+    const conn = (navigator as any).connection;
+    if (conn) {
+      const handleConnChange = () => {
+        if (conn.saveData || conn.effectiveType === '2g' || conn.effectiveType === 'slow-2g') {
+          showToast("SLOW NETWORK DETECTED: NEXORA OPTIMIZED MODE ACTIVE", "info");
+        }
+      };
+      conn.addEventListener('change', handleConnChange);
+      handleConnChange();
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+        conn.removeEventListener('change', handleConnChange);
+      };
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const [activeCustomPlan, setActiveCustomPlan] = useState<CustomPlan | null>(null);
   const [viewingTrophy, setViewingTrophy] = useState<Trophy | null>(null);
   const [publicUserViewId, setPublicUserViewId] = useState<string | null>(null);
@@ -2104,6 +2140,29 @@ export default function App() {
       className="min-h-screen w-full flex flex-col items-center overflow-x-hidden"
       style={{ '--accent-color': settings.themeColor } as React.CSSProperties}
     >
+      {/* Connection Status Banner (Nexora Shield) */}
+      <AnimatePresence>
+        {!isOnline && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="w-full bg-blue-600 text-white overflow-hidden z-[1000] sticky top-0 shadow-lg"
+          >
+            <div className="flex items-center justify-center gap-3 py-2 px-4 text-[10px] font-black uppercase tracking-[0.2em] italic">
+              <div className="relative">
+                 <WifiOff size={14} className="animate-pulse" />
+                 <motion.div 
+                   animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
+                   transition={{ duration: 2, repeat: Infinity }}
+                   className="absolute inset-0 bg-white rounded-full blur-sm" 
+                 />
+              </div>
+              <span>Protocol: Nexora Shield Active - System Offline (Local Data Safeguarded)</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Performance optimized: Sparkles Background Effect removed to prevent heating
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {Array.from({ length: 20 }).map((_, i) => (
@@ -2398,7 +2457,7 @@ export default function App() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                transition={{ type: "spring", stiffness: 500, damping: 40 }}
                 className="w-full"
               >
                 <HomeScreen 
@@ -2451,7 +2510,7 @@ export default function App() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                transition={{ type: "spring", stiffness: 500, damping: 40 }}
                 className="w-full"
               >
                 <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">SYNCHRONIZING GROWTH...</div>}>
@@ -2465,7 +2524,7 @@ export default function App() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                transition={{ type: "spring", stiffness: 500, damping: 40 }}
                 className="w-full"
               >
                 <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">FETCHING IDENTITY...</div>}>
@@ -2487,7 +2546,7 @@ export default function App() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                transition={{ type: "spring", stiffness: 500, damping: 40 }}
                 className="w-full"
               >
                 <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">ENTERING THE NEXUS...</div>}>
@@ -2513,7 +2572,7 @@ export default function App() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                transition={{ type: "spring", stiffness: 500, damping: 40 }}
                 className="w-full"
               >
                 <Suspense fallback={<div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">ACCESSING CONTROL...</div>}>

@@ -428,7 +428,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
       case 'mascot':
         if (layoutConfig.hideMascot) return null;
         return (
-          <div key="mascot" className="relative w-full aspect-square sm:w-[500px] sm:h-[500px] lg:w-[600px] lg:h-[600px] flex items-center justify-center flex-shrink-0 mx-auto transform-gpu will-change-transform">
+          <div key="mascot" className="relative w-full aspect-square sm:w-[500px] sm:h-[500px] lg:w-[600px] lg:h-[600px] flex items-center justify-center flex-shrink-0 mx-auto">
             <div className="absolute inset-0 bg-blue-400/5 blur-[40px] rounded-full" />
             <motion.div animate={mascotControls} className="w-[90%] h-[90%] relative z-10">
               <Mascot 

@@ -214,39 +214,84 @@ export const Mascot: React.FC<MascotProps> = ({
           {/* LIQUID LAYER */}
           <g clipPath="url(#bottle-mask)">
             <rect x="0" y="0" width="500" height="600" fill={theme === 'obsidian' ? '#0f172a' : '#F0FAFF'} fillOpacity="0.2" />
-            <g style={{ transform: isBoiling ? 'translateY(-2px)' : 'translateY(220px)' }}>
-              {/* Back wave */}
-              <path 
-                d="M -500,0 Q -375,-15 -250,0 T 0,0 T 250,0 T 500,0 L 500,400 L -500,400 Z" 
-                fill={theme === 'neural_bio' ? '#10b981' : isBoiling ? "#FF8888" : "#66CCFF"} 
-                fillOpacity="0.2"
-              >
-                <animateTransform attributeName="transform" type="translate" from="0 0" to="250 0" dur="5s" repeatCount="indefinite" />
-              </path>
-              {/* Front wave */}
-              <path 
-                d="M -500,10 Q -375,25 -250,10 T 0,10 T 250,10 T 500,10 L 500,400 L -500,400 Z" 
+            
+            {/* Liquid Group with Ambient Slosh */}
+            <motion.g 
+              animate={{ 
+                x: isBoiling ? [0, 5, 0] : 0,
+                y: isBoiling ? -2 : 220,
+                rotate: isBoiling ? [0, 1, -1, 0] : [0, 0.5, -0.5, 0]
+              }}
+              transition={{ 
+                rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                y: { duration: 0.5 }
+              }}
+              style={{ originX: "250px", originY: "400px" }}
+            >
+              {/* Back Triple Wave (Layer 1 - Deepest) */}
+              <motion.path 
+                d="M -500,0 Q -375,-25 -250,0 T 0,0 T 250,0 T 500,0 L 500,600 L -500,600 Z" 
+                fill={theme === 'neural_bio' ? '#10b981' : isBoiling ? "#FF8888" : "#0055FF"} 
+                fillOpacity="0.1"
+                animate={{ x: [0, 250] }}
+                transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
+              />
+
+              {/* Middle Triple Wave (Layer 2) */}
+              <motion.path 
+                d="M -500,5 Q -375,-15 -250,5 T 0,5 T 250,5 T 500,5 L 500,600 L -500,600 Z" 
+                fill={theme === 'neural_bio' ? '#10b981' : isBoiling ? "#FF6666" : "#3377FF"} 
+                fillOpacity="0.3"
+                animate={{ x: [0, 250] }}
+                transition={{ duration: 4.5, repeat: Infinity, ease: "linear" }}
+              />
+
+              {/* Front Main Wave (Layer 3 - Most Visible) */}
+              <motion.path 
+                d="M -500,10 Q -375,30 -250,10 T 0,10 T 250,10 T 500,10 L 500,600 L -500,600 Z" 
                 fill="url(#water-grad)" 
-                fillOpacity="0.8"
-              >
-                <animateTransform attributeName="transform" type="translate" from="0 0" to="-250 0" dur="4s" repeatCount="indefinite" />
-              </path>
+                fillOpacity="0.9"
+                animate={{ 
+                  x: [0, -250],
+                  // Subtle vertical bobbing to simulate river surface
+                  y: [0, 3, 0]
+                }}
+                transition={{ 
+                  x: { duration: 3.5, repeat: Infinity, ease: "linear" },
+                  y: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                }}
+              />
+              
+              {/* Highlight Wave (Layer 4 - Surface Gloss) */}
+              <motion.path 
+                d="M -500,12 Q -375,18 -250,12 T 0,12 T 250,12 T 500,12 L 500,22 L -500,22 Z" 
+                fill="#ffffff" 
+                fillOpacity="0.15"
+                animate={{ x: [-250, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+              />
               
               {/* Boiling Bubbles - Reduced to 3 for performance */}
               {isBoiling && [1, 2, 3].map((i) => (
-                <circle
+                <motion.circle
                   key={`bubble-${i}`}
                   cx={200 + (i * 30)}
-                  cy={250 + (i * 20)}
+                  cy={350}
                   r={3}
                   fill="#fff"
                   fillOpacity="0.4"
-                >
-                  <animate attributeName="cy" from="350" to="200" dur={`${1 + i * 0.2}s`} repeatCount="indefinite" />
-                  <animate attributeName="opacity" values="0;0.5;0" dur={`${1 + i * 0.2}s`} repeatCount="indefinite" />
-                </circle>
+                  animate={{ 
+                    cy: [350, 200],
+                    opacity: [0, 0.5, 0]
+                  }}
+                  transition={{ 
+                    duration: 1 + i * 0.2, 
+                    repeat: Infinity, 
+                    ease: "easeOut" 
+                  }}
+                />
               ))}
-            </g>
+            </motion.g>
           </g>
 
           {/* GLASS BOTTLE HIGHLIGHTS & OUTLINES */}

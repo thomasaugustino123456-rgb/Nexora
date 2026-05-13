@@ -52,7 +52,7 @@ export function StatsCharts({ history }: { history: DailyProgress[] }) {
                 dataKey="name" 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fontSize: 10, fontWeight: 800, fill: '#1e3a8a', opacity: 0.3 }}
+                tick={{ fontSize: 12, fontWeight: 900, fill: '#1e3a8a', opacity: 0.8 }}
               />
               <YAxis hide />
               <Tooltip 
@@ -83,7 +83,7 @@ export function StatsCharts({ history }: { history: DailyProgress[] }) {
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: 800, fill: '#1e3a8a', opacity: 0.3 }}
+                  tick={{ fontSize: 12, fontWeight: 900, fill: '#1e3a8a', opacity: 0.8 }}
                 />
                 <Tooltip 
                   cursor={{ fill: 'rgba(59, 130, 246, 0.05)' }}

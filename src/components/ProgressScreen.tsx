@@ -56,8 +56,8 @@ export function ProgressScreen({
             <TrendingUp size={28} />
           </div>
           <div>
-            <h2 className="text-3xl font-black text-blue-900 tracking-tight">Nexora Analytics</h2>
-            <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">Growth Synchronizer</p>
+            <h2 className="text-4xl font-black text-blue-900 tracking-tighter italic uppercase">Nexora Analytics</h2>
+            <p className="text-[11px] font-black text-blue-600/60 uppercase tracking-[0.4em]">Growth Synchronizer Protocol</p>
           </div>
         </div>
 
@@ -68,33 +68,33 @@ export function ProgressScreen({
           <div className="relative z-10 flex flex-col gap-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">Nexus Rank</p>
+                <p className="text-[11px] font-black uppercase tracking-[0.3em] opacity-80">Current Status</p>
                 <h3 className="text-4xl font-black flex items-center gap-3">
                   Level {stats.level || 1} 
-                  <span className="text-[10px] bg-white/20 px-3 py-1 rounded-full uppercase tracking-widest font-black">
+                  <span className="text-[11px] bg-white/20 px-3 py-1 rounded-full uppercase tracking-widest font-black">
                     {stats.level && stats.level > 10 ? 'Elite' : 'Rookie'}
                   </span>
                 </h3>
               </div>
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30">
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center border border-white/30">
                 <Crown size={32} />
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div className="flex justify-between items-end">
-                <p className="text-[10px] font-black uppercase tracking-widest">Experience Points</p>
-                <p className="text-xs font-black">{stats.xp} / {(stats.level || 1) * 1000}</p>
+                <p className="text-[11px] font-black uppercase tracking-widest opacity-80">Experience Points</p>
+                <p className="text-sm font-black tracking-tight">{stats.xp} / {(stats.level || 1) * 1000}</p>
               </div>
-              <div className="h-4 bg-black/20 rounded-full overflow-hidden border border-white/10 p-0.5">
+              <div className="h-5 bg-black/20 rounded-full overflow-hidden border border-white/20 p-0.5">
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${progressPercent}%` }}
                   transition={{ duration: 1, ease: "circOut" }}
-                  className="h-full bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)]"
+                  className="h-full bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.7)]"
                 />
               </div>
-              <p className="text-[9px] font-bold opacity-60 text-right uppercase tracking-widest italic">{xpToNextLevel} XP to Next Evolution</p>
+              <p className="text-[10px] font-black text-right uppercase tracking-[0.2em] italic text-blue-100">{xpToNextLevel} XP to Next Evolution</p>
             </div>
           </div>
         </div>
@@ -103,18 +103,18 @@ export function ProgressScreen({
       {/* Stats Grid */}
       <motion.div variants={item} className="grid grid-cols-2 gap-4">
         {[
-          { label: 'Hyper Streak', value: stats.streak || 0, sub: 'Daily Frequency', icon: <Flame className="text-orange-500" />, bg: 'bg-orange-50' },
-          { label: 'Neural Score', value: stats.totalPoints || 0, sub: 'Lifetime Volts', icon: <Zap className="text-yellow-500" />, bg: 'bg-yellow-50' },
-          { label: 'Nexus Rank', value: `#${userRank || '--'}`, sub: 'Global Standing', icon: <Star className="text-purple-500" />, bg: 'bg-purple-50' },
-          { label: 'Wallet', value: `${stats.coins || 0}N`, sub: 'Nexora Currency', icon: <Coins className="text-blue-500" />, bg: 'bg-blue-50' }
+          { label: 'Hyper Streak', value: stats.streak || 0, sub: 'Daily Frequency', icon: <Flame className="text-orange-600" />, bg: 'bg-orange-100/50' },
+          { label: 'Neural Score', value: stats.totalPoints || 0, sub: 'Lifetime Volts', icon: <Zap className="text-yellow-600" />, bg: 'bg-yellow-100/50' },
+          { label: 'Nexus Rank', value: `#${userRank || '--'}`, sub: 'Global Standing', icon: <Star className="text-purple-600" />, bg: 'bg-purple-100/50' },
+          { label: 'Wallet', value: `${stats.coins || 0}N`, sub: 'Nexora Currency', icon: <Coins className="text-blue-600" />, bg: 'bg-blue-100/50' }
         ].map((stat, i) => (
-          <div key={i} className="glass-card p-6 flex flex-col items-center text-center group hover:scale-[1.02] transition-transform">
-            <div className={`w-14 h-14 ${stat.bg} rounded-2xl flex items-center justify-center mb-4 shadow-sm group-hover:rotate-12 transition-transform`}>
+          <div key={i} className="glass-card p-6 flex flex-col items-center text-center group hover:scale-[1.02] transition-transform border-white/80">
+            <div className={`w-16 h-16 ${stat.bg} rounded-3xl flex items-center justify-center mb-4 shadow-sm group-hover:rotate-12 transition-transform`}>
               {stat.icon}
             </div>
-            <p className="text-[10px] font-black text-blue-900/30 uppercase tracking-widest mb-1">{stat.label}</p>
-            <p className="text-2xl font-black text-blue-900 leading-none">{stat.value}</p>
-            <p className="text-[8px] text-blue-400 font-bold uppercase mt-2 opacity-0 group-hover:opacity-100 transition-opacity">{stat.sub}</p>
+            <p className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-1">{stat.label}</p>
+            <p className="text-3xl font-black text-blue-900 leading-none">{stat.value}</p>
+            <p className="text-[10px] text-blue-500 font-bold uppercase mt-2 opacity-0 group-hover:opacity-100 transition-opacity">{stat.sub}</p>
           </div>
         ))}
       </motion.div>
@@ -122,7 +122,7 @@ export function ProgressScreen({
       {/* Category Breakdown */}
       <motion.div variants={item} className="glass-card p-8 space-y-6">
         <div className="flex items-center justify-between">
-           <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Skill Architecture</h3>
+           <h3 className="text-lg font-black text-blue-900 uppercase tracking-tight italic">Skill Architecture</h3>
            <BarChart2 size={18} className="text-blue-400" />
         </div>
 
@@ -158,7 +158,7 @@ export function ProgressScreen({
       </motion.div>
       
       {/* Trophies & Badges */}
-      <motion.div variants={item} className="glass-card p-8 bg-neutral-900 text-white border-none shadow-[20px_40px_80px_rgba(0,0,0,0.15)]">
+      <motion.div variants={item} className="glass-card p-8 bg-neutral-900 text-white border-none shadow-xl">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h3 className="text-sm font-black uppercase tracking-widest text-white/40">Achievement Vault</h3>

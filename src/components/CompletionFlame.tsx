@@ -10,26 +10,26 @@ interface CompletionFlameProps {
   settings?: any;
 }
 
-export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlameProps) {
+export function CompletionFlame({ streak, xpEarned, onContinue, settings }: CompletionFlameProps) {
   const { play } = useSound();
   const [showContent, setShowContent] = useState(false);
   const [isBouncing, setIsBouncing] = useState(false);
 
   useEffect(() => {
-    // Initial sequence - faster transition
+    // Initial sequence - ultra fast
     const timer = setTimeout(() => {
       setShowContent(true);
       if (settings?.soundEnabled !== false) {
         play('flame_complete'); 
       }
       setIsBouncing(true);
-      setTimeout(() => setIsBouncing(false), 1000);
+      setTimeout(() => setIsBouncing(false), 600);
       
       const fireLoop = setInterval(() => {
         if (showContent && settings?.soundEnabled !== false) play('fire_ambient');
       }, 3000);
       return () => clearInterval(fireLoop);
-    }, 100); 
+    }, 50); 
 
     return () => clearTimeout(timer);
   }, [play, showContent]);
@@ -43,7 +43,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
             <motion.div 
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 0.4, scale: 1.5 }}
-              transition={{ duration: 2, repeat: Infinity, repeatType: "mirror" }}
+              transition={{ duration: 1.5, repeat: Infinity, repeatType: "mirror" }}
               className="absolute w-64 h-64 bg-orange-600 rounded-full blur-[120px] pointer-events-none"
             />
 
@@ -51,10 +51,10 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
             <motion.div
               initial={{ scale: 0, y: 100 }}
               animate={{ 
-                scale: isBouncing ? [0, 1.2, 1] : 1,
+                scale: isBouncing ? [0, 1.1, 1] : 1,
                 y: 0
               }}
-              transition={{ type: "spring", damping: 15, stiffness: 150 }}
+              transition={{ type: "spring", damping: 12, stiffness: 180 }}
               className="relative w-64 h-64 mb-6 flex items-center justify-center"
             >
               <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-[0_0_30px_rgba(255,100,0,0.6)]">
@@ -78,7 +78,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
                       "M100,180 C140,180 170,140 170,100 C170,40 100,10 100,10 C100,10 30,40 30,100 C30,140 60,180 100,180 Z"
                     ]
                   }}
-                  transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
+                  transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut" }}
                 />
 
                 {/* Central Inner Drop (Yellow) */}
@@ -89,7 +89,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
                     scale: [1, 0.95, 1],
                     y: [0, 5, 0]
                   }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                  transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
                 />
               </svg>
 
@@ -97,7 +97,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
               <motion.div 
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.6 }}
+                transition={{ delay: 0.4 }}
                 className="absolute inset-0 flex items-center justify-center pt-8"
               >
                 <div className="text-7xl font-black text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]">
@@ -111,7 +111,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1 }}
+              transition={{ delay: 0.6 }}
               className="space-y-2 mb-12"
             >
               <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">
@@ -132,7 +132,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
                   key={i}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 1.2 + i * 0.1 }}
+                  transition={{ delay: 0.8 + i * 0.1 }}
                   className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl flex items-center gap-3 border border-white/10"
                 >
                   {item.icon}
@@ -147,7 +147,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
               animate={{ opacity: 1, scale: 1 }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              transition={{ delay: 1.5 }}
+              transition={{ delay: 1.0 }}
               onClick={() => {
                 play('nav_switch');
                 onContinue();
