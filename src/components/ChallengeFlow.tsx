@@ -108,6 +108,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
           <AnimatePresence mode="wait">
             {step === 'pushups' && (
               <PushupsStep 
+                key="pushups-step"
                 goal={settings.pushupsGoal} 
                 onDone={nextStep} 
                 onSkip={() => nextStep(null, true)}
@@ -118,6 +119,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
             )}
             {step === 'water' && (
               <WaterStep 
+                key="water-step"
                 goal={settings.waterGoal || 8} 
                 progress={sessionWaterCount}
                 onUpdate={(val) => {
@@ -134,6 +136,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
             )}
             {step === 'breathing' && (
               <BreathingStep 
+                key="breathing-step"
                 onDone={nextStep} 
                 activeSkin={settings.activeSkin}
                 settings={settings}
@@ -142,6 +145,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
             )}
             {step === 'drawing' && (
               <DrawingStep 
+                key="drawing-step"
                 onFinish={nextStep} 
                 onSave={(data) => {
                   setStats(prev => ({
@@ -157,16 +161,18 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
             )}
             {step === 'football' && (
               <FootballStep 
+                key="football-step"
                 onFinish={nextStep} 
                 activeSkin={settings.activeSkin}
                 play={play}
                 settings={settings}
               />
             )}
-            {step === 'bubbles' && <BubbleStep onFinish={nextStep} settings={settings} activeSkin={settings.activeSkin} play={play} />}
-            {step === 'memory' && <MemoryStep onComplete={nextStep} settings={settings} activeSkin={settings.activeSkin} play={play} />}
+            {step === 'bubbles' && <BubbleStep key="bubbles-step" onFinish={nextStep} settings={settings} activeSkin={settings.activeSkin} play={play} />}
+            {step === 'memory' && <MemoryStep key="memory-step" onComplete={nextStep} settings={settings} activeSkin={settings.activeSkin} play={play} />}
             {step === 'gratitude' && (
               <GratitudeStep 
+                key="gratitude-step"
                 onComplete={nextStep} 
                 onSave={(text) => {
                   setStats(prev => ({
@@ -183,9 +189,10 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 play={play}
               />
             )}
-            {step === 'reaction' && <ReactionStep onComplete={nextStep} settings={settings} activeSkin={settings.activeSkin} play={play} />}
+            {step === 'reaction' && <ReactionStep key="reaction-step" onComplete={nextStep} settings={settings} activeSkin={settings.activeSkin} play={play} />}
             {step === 'meditation' && (
               <MeditationStep 
+                key="meditation-step"
                 onDone={nextStep} 
                 activeSkin={settings.activeSkin}
                 settings={settings}
@@ -194,6 +201,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
             )}
             {step === 'writing' && (
               <WritingStep 
+                key="writing-step"
                 onDone={nextStep} 
                 activeSkin={settings.activeSkin}
                 settings={settings}
@@ -202,6 +210,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
             )}
             {step === 'completion' && (
               <CompletionStep 
+                key="completion-step"
                 onFinish={onExit} 
                 streak={stats.streak || 0} 
                 points={10} 
@@ -1600,7 +1609,7 @@ export function WritingStep({ onDone, activeSkin = 'none', settings, play }: { o
 
         {isFinished ? (
           <div className="space-y-4 w-full">
-            <LazyHappyMascot size={40} hat={activeSkin} settings={settings} />
+            <HappyMascot size={40} hat={activeSkin} settings={settings} />
           </div>
         ) : (
           <button 

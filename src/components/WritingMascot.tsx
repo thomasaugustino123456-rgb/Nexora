@@ -26,17 +26,17 @@ export function WritingMascot({
       
       <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" className={`w-full h-auto transition-all duration-500 ${isHappy ? 'mascot-happy-bounce' : ''} ${isWaiting ? 'mascot-waiting-tilt' : ''}`}>
         <defs>
-          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter id="glow-writing" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="5" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
 
-          <linearGradient id="water-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id="water-grad-writing" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#7DD3FC" />
             <stop offset="100%" stopColor="#0284C7" />
           </linearGradient>
 
-          <clipPath id="bottle-mask">
+          <clipPath id="bottle-mask-writing">
             <ellipse cx="250" cy="350" rx="150" ry="130" />
             <path d="M 150,250 C 130,190 140,160 150,150 C 170,150 190,190 210,220 Z" />
             <path d="M 350,250 C 370,190 360,160 350,150 C 330,150 310,190 290,220 Z" />
@@ -57,10 +57,10 @@ export function WritingMascot({
           }}
         >
           {/* LIQUID LAYER */}
-          <g clipPath="url(#bottle-mask)">
+          <g clipPath="url(#bottle-mask-writing)">
             <rect x="100" y="200" width="300" height="300" fill="#f0f9ff" opacity="0.4" />
             <g transform="translate(0, 240)">
-              <path d="M 0,0 Q 125,-15 250,0 T 500,0 L 500,500 L 0,500 Z" fill="url(#water-grad)">
+              <path d="M 0,0 Q 125,-15 250,0 T 500,0 L 500,500 L 0,500 Z" fill="url(#water-grad-writing)">
                 <animateTransform attributeName="transform" type="translate" from="-50 0" to="50 0" dur="3s" repeatCount="indefinite" />
               </path>
             </g>

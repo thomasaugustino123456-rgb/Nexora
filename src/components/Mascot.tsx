@@ -150,19 +150,19 @@ export const Mascot: React.FC<MascotProps> = ({
       >
         <defs>
           {/* Use a simpler shadow or none for performance */}
-          <clipPath id="bottle-mask">
+          <clipPath id="bottle-mask-main">
             <ellipse cx="250" cy="330" rx="190" ry="160" />
             <path d="M 120,210 C 100,150 110,120 120,110 C 140,110 160,150 180,180 Z" />
             <path d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" />
           </clipPath>
 
-          <linearGradient id="water-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id="water-grad-main" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor={colors.water[0]} />
             <stop offset="30%" stopColor={colors.water[1]} />
             <stop offset="100%" stopColor={colors.water[2]} />
           </linearGradient>
 
-          <linearGradient id="glass-edge" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id="glass-edge-main" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.8" />
             <stop offset="50%" stopColor={theme === 'obsidian' ? '#1e293b' : '#C2EFFF'} stopOpacity="0.2" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0.6" />
@@ -199,30 +199,28 @@ export const Mascot: React.FC<MascotProps> = ({
         />
 
         {/* Body Group with Squash/Stretch - CSS classes for steady animation */}
-        <motion.g
-          animate={isSitting ? { y: 20, scaleY: 0.85 } : {}}
-          className={!isSitting ? "animate-mascot-breathe" : ""}
-        >
-          {/* LIQUID LAYER */}
-          <g clipPath="url(#bottle-mask)">
-            <rect x="0" y="0" width="500" height="600" fill={theme === 'obsidian' ? '#0f172a' : '#F0FAFF'} fillOpacity="0.2" />
-            
-            {/* Liquid Group with Ambient Slosh */}
-            <g transform={`translate(0, ${isBoiling ? -5 : 230})`}>
-              {/* Seamless River Water Animation (CPU Optimized) */}
-              <g className="animate-wave-mascot">
-                <path 
-                  d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 T 1000,20 L 1000,600 L 0,600 Z" 
-                  fill="url(#water-grad)" 
-                  fillOpacity="0.95"
-                />
-                {/* Highlight layer */}
-                <path 
-                  d="M 0,25 Q 50,15 100,25 T 200,25 T 300,25 T 400,25 T 500,25 T 600,25 T 700,25 T 800,25 T 900,25 T 1000,25 L 1000,40 L 0,40 Z" 
-                  fill="#ffffff" 
-                  fillOpacity="0.1"
-                />
-              </g>
+        <motion.g animate={isSitting ? { y: 20, scaleY: 0.85 } : { y: 0, scaleY: 1 }}>
+          <g className={!isSitting ? "animate-mascot-breathe" : ""}>
+            {/* LIQUID LAYER */}
+            <g clipPath="url(#bottle-mask-main)">
+              <rect x="0" y="0" width="500" height="600" fill={theme === 'obsidian' ? '#0f172a' : '#F0FAFF'} fillOpacity="0.2" />
+              
+              {/* Liquid Group with Ambient Slosh */}
+              <g transform={`translate(0, ${isBoiling ? -5 : 230})`}>
+                {/* Seamless River Water Animation (CPU Optimized) */}
+                <g className="animate-wave-mascot">
+                  <path 
+                    d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 T 1000,20 L 1000,600 L 0,600 Z" 
+                    fill="url(#water-grad-main)" 
+                    fillOpacity="0.95"
+                  />
+                  {/* Highlight layer */}
+                  <path 
+                    d="M 0,25 Q 50,15 100,25 T 200,25 T 300,25 T 400,25 T 500,25 T 600,25 T 700,25 T 800,25 T 900,25 T 1000,25 L 1000,40 L 0,40 Z" 
+                    fill="#ffffff" 
+                    fillOpacity="0.1"
+                  />
+                </g>
               
               {/* Boiling Bubbles - Optimized with pure SVG animations */}
               {isBoiling && (
@@ -256,13 +254,13 @@ export const Mascot: React.FC<MascotProps> = ({
             {/* Ears with Follow-through wobble */}
             <path 
               d="M 120,210 C 100,150 110,120 120,110 C 140,110 160,150 180,180 Z" 
-              fill="url(#glass-edge)" 
+              fill="url(#glass-edge-main)" 
               fillOpacity="0.8"
               className={isAngry ? "" : "animate-mascot-ear-left"}
             />
             <path 
               d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" 
-              fill="url(#glass-edge)" 
+              fill="url(#glass-edge-main)" 
               fillOpacity="0.8"
               className={isAngry ? "" : "animate-mascot-ear-right"}
             />
@@ -344,7 +342,8 @@ export const Mascot: React.FC<MascotProps> = ({
             {/* Using a second N with low opacity to simulate glow instead of filter */}
             <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill={colors.nColor} opacity="0.3" transform="scale(1.1)" style={{ transformOrigin: 'center' }} />
           </g>
-        </motion.g>
+        </g>
+      </motion.g>
 
         {/* HATS - Weighted to follow body movement */}
         <motion.g 

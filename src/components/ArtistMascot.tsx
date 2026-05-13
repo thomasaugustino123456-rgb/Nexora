@@ -5,17 +5,17 @@ export function ArtistMascot({ className = "" }: { className?: string }) {
     <div className={`w-full ${className}`}>
       <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
         <defs>
-          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter id="glow-artist" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="5" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
 
-          <linearGradient id="water-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id="water-grad-artist" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#7DD3FC" />
             <stop offset="100%" stopColor="#0284C7" />
           </linearGradient>
 
-          <clipPath id="bottle-mask">
+          <clipPath id="bottle-mask-artist">
             <ellipse cx="250" cy="350" rx="150" ry="130" />
             <path d="M 150,250 C 130,190 140,160 150,150 C 170,150 190,190 210,220 Z" />
             <path d="M 350,250 C 370,190 360,160 350,150 C 330,150 310,190 290,220 Z" />
@@ -51,10 +51,10 @@ export function ArtistMascot({ className = "" }: { className?: string }) {
         {/* MASCOT BODY GROUP */}
         <g className="mascot-body" style={{ animation: 'artistSway 4s infinite ease-in-out', transformOrigin: 'center bottom' }}>
           {/* LIQUID LAYER */}
-          <g clipPath="url(#bottle-mask)">
+          <g clipPath="url(#bottle-mask-artist)">
             <rect x="100" y="200" width="300" height="300" fill="#f0f9ff" opacity="0.4" />
             <g transform="translate(0, 240)">
-              <path d="M 0,0 Q 125,-15 250,0 T 500,0 L 500,500 L 0,500 Z" fill="url(#water-grad)">
+              <path d="M 0,0 Q 125,-15 250,0 T 500,0 L 500,500 L 0,500 Z" fill="url(#water-grad-artist)">
                 <animateTransform attributeName="transform" type="translate" from="-50 0" to="50 0" dur="3s" repeatCount="indefinite" />
               </path>
             </g>
@@ -101,9 +101,9 @@ export function ArtistMascot({ className = "" }: { className?: string }) {
 
           {/* Logo and Halo */}
           <g transform="translate(235, 395) scale(0.6)">
-            <path d="M 0 0 L 10 0 L 30 40 L 30 0 L 45 0 L 45 60 L 30 60 L 10 20 L 10 60 L 0 60 Z" fill="white" filter="url(#glow)" />
+            <path d="M 0 0 L 10 0 L 30 40 L 30 0 L 45 0 L 45 60 L 30 60 L 10 20 L 10 60 L 0 60 Z" fill="white" filter="url(#glow-artist)" />
           </g>
-          <ellipse cx="250" cy="80" rx="60" ry="10" fill="none" stroke="#60a5fa" strokeWidth="4" filter="url(#glow)" opacity="0.6" />
+          <ellipse cx="250" cy="80" rx="60" ry="10" fill="none" stroke="#60a5fa" strokeWidth="4" filter="url(#glow-artist)" opacity="0.6" />
         </g>
 
         <style>{`
