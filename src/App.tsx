@@ -3084,30 +3084,38 @@ export default function App() {
               </motion.div>
             )}
             {activeScreen === 'challenge' && (
-              <Suspense fallback={<div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">INITIALIZING CHALLENGE...</div>}>
-                <ChallengeFlow 
-                  step={challengeStep} 
-                  setStep={setChallengeStep} 
-                  customSteps={activeCustomPlan?.challenges}
-                  settings={settings}
-                  setSettings={onUpdateSettings}
-                  dailyProgress={dailyProgress}
-                  setDailyProgress={onUpdateDailyProgress}
-                  stats={stats}
-                  setStats={onUpdateStats}
-                  onFinish={handleCompleteChallenge}
-                  onExit={() => {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    setActiveCustomPlan(null);
-                    setActiveScreen('home');
-                  }}
-                  earnedTrophyToday={earnedTrophyToday}
-                  showToast={showToast}
-                  play={play}
-                  dailyQuest={dailyQuest}
-                  isCustomPlan={activeCustomPlan !== null}
-                />
-              </Suspense>
+              <motion.div
+                key="challenge"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="w-full"
+              >
+                <Suspense fallback={<div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">INITIALIZING CHALLENGE...</div>}>
+                  <ChallengeFlow 
+                    step={challengeStep} 
+                    setStep={setChallengeStep} 
+                    customSteps={activeCustomPlan?.challenges}
+                    settings={settings}
+                    setSettings={onUpdateSettings}
+                    dailyProgress={dailyProgress}
+                    setDailyProgress={onUpdateDailyProgress}
+                    stats={stats}
+                    setStats={onUpdateStats}
+                    onFinish={handleCompleteChallenge}
+                    onExit={() => {
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                      setActiveCustomPlan(null);
+                      setActiveScreen('home');
+                    }}
+                    earnedTrophyToday={earnedTrophyToday}
+                    showToast={showToast}
+                    play={play}
+                    dailyQuest={dailyQuest}
+                    isCustomPlan={activeCustomPlan !== null}
+                  />
+                </Suspense>
+              </motion.div>
             )}
           </AnimatePresence>
         </main>

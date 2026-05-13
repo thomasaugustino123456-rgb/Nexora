@@ -135,7 +135,6 @@ export const Mascot: React.FC<MascotProps> = ({
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       animate={controls}
-      whileHover={{ y: -5, scale: 1.02 }}
       style={{ 
         perspective: 1000,
         width: '100%',

@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 interface WaterMascotProps {
   className?: string;
@@ -13,7 +14,7 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
 
   return (
     <div className={`bottle-container ${className || ''}`}>
-      <svg viewBox="0 0 500 600" xmlns="http://www.w3.org/2000/svg" className="w-full h-full transition-transform duration-300 ease-in-out hover:scale-105">
+      <svg viewBox="0 0 500 600" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
         <defs>
           {/* Filters - removed for performance */}
 
@@ -65,7 +66,11 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
 
           {/* The Water System */}
           <g id="water-system">
-            <g transform={`translate(0, ${fillY})`} style={{ transition: 'transform 0.5s ease-out' }}>
+             {/* Using standard Framer Motion for the filling animation for better stability than CSS on re-renders */}
+            <motion.g 
+              animate={{ y: fillY }}
+              transition={{ type: "spring", stiffness: 100, damping: 20 }}
+            >
               
               {/* Efficient Seamless Wave Animation */}
               <g>
@@ -103,7 +108,7 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
                   <animate attributeName="cy" from="250" to="-20" dur="2s" repeatCount="indefinite" begin="0.5s"/>
                 </circle>
               </g>
-            </g>
+            </motion.g>
           </g>
         </g>
 

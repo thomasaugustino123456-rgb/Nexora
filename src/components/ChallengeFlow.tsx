@@ -12,17 +12,7 @@ import { WaterMascot } from './WaterMascot';
 import { BreathingMascot } from './BreathingMascot';
 import { ArtistMascot } from './ArtistMascot';
 import { WritingMascot } from './WritingMascot';
-
-// Lazy load some UI feedback components
-const HappyMascot = lazy(() => import('./FeedbackUI').then(m => ({ default: m.HappyMascot })));
-
-function LazyHappyMascot(props: any) {
-  return (
-    <Suspense fallback={<div className="w-32 h-32" />}>
-      <HappyMascot {...props} />
-    </Suspense>
-  );
-}
+import { HappyMascot } from './FeedbackUI';
 
 export function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest, isCustomPlan }: { 
   step: ChallengeStep, 
@@ -331,7 +321,7 @@ export function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none', setting
         </div>
 
         <div className="space-y-4 flex flex-col items-center">
-          {isReady && <LazyHappyMascot size={32} hat={activeSkin} settings={settings} />}
+          {isReady && <HappyMascot size={32} hat={activeSkin} settings={settings} />}
           {!isReady ? (
             <button 
               onClick={() => {
@@ -379,7 +369,6 @@ export function WaterStep({ goal, progress: initialProgress = 0, onUpdate, onCon
           
           <div className="h-3 bg-blue-100 rounded-full overflow-hidden">
             <motion.div 
-              initial={{ width: 0 }}
               animate={{ width: `${Math.min((localProgress / goal) * 100, 100)}%` }}
               className="h-full bg-blue-400 rounded-full"
             />
@@ -483,7 +472,7 @@ export function BreathingStep({ onDone, activeSkin = 'none', settings, play }: {
         </div>
 
         <div className="flex flex-col items-center gap-4">
-          {isFinished && <LazyHappyMascot size={40} hat={activeSkin} settings={settings} />}
+          {isFinished && <HappyMascot size={40} hat={activeSkin} settings={settings} />}
           {!isFinished ? (
             <div className="relative w-32 h-32 flex items-center justify-center">
               <svg className="absolute inset-0 w-full h-full -rotate-90">
@@ -1087,7 +1076,7 @@ export function FootballStep({ onFinish, activeSkin = 'none', settings, play }: 
 
         {score >= 5 && (
           <div className="flex flex-col items-center w-full">
-            <LazyHappyMascot size={40} hat={activeSkin} settings={settings} />
+            <HappyMascot size={40} hat={activeSkin} settings={settings} />
             <button
               onClick={() => {
                 vibrate(VIBRATION_PATTERNS.SUCCESS);
@@ -1378,8 +1367,8 @@ export function GratitudeStep({ onComplete, onSave, showToast, settings, activeS
               </div>
             </div>
           ) : (
-            <div className="text-center space-y-4 animate-in fade-in zoom-in duration-500">
-               <LazyHappyMascot size={40} hat={activeSkin} settings={settings} />
+            <div className="text-center space-y-4">
+               <HappyMascot size={40} hat={activeSkin} settings={settings} />
                <div className="space-y-1">
                  <p className="text-blue-900 font-black uppercase tracking-widest text-sm">Grateful!</p>
                  <button onClick={onComplete} className="text-blue-500 font-bold flex items-center gap-1 mx-auto group">
@@ -1441,7 +1430,7 @@ export function ReactionStep({ onComplete, activeSkin = 'none', settings, play }
 
       {state === 'finished' ? (
         <div className="glass-card w-full p-10 flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300">
-           <LazyHappyMascot size={48} hat={activeSkin} settings={settings} />
+           <HappyMascot size={48} hat={activeSkin} settings={settings} />
            <div className="text-center space-y-1">
              <p className="text-3xl font-black text-blue-600">{reactionTime}ms</p>
              <p className="text-blue-900/60 font-bold uppercase tracking-widest text-[10px]">Elite Reflexes!</p>
@@ -1547,7 +1536,7 @@ export function MeditationStep({ onDone, activeSkin = 'none', settings, play }: 
 
           {isFinished ? (
             <div className="space-y-4 w-full">
-              <LazyHappyMascot size={40} hat={activeSkin} settings={settings} />
+              <HappyMascot size={40} hat={activeSkin} settings={settings} />
             </div>
           ) : (
             <button 
