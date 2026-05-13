@@ -441,12 +441,35 @@ export function SettingsScreen({
 
             {settings.notificationsEnabled && (
               <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="grid grid-cols-1 gap-2 pt-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-4 pt-2"
               >
-                {[
-                  { id: 'trophy', label: 'Trophy Alerts', state: settings.badgeSettings?.trophyAlerts, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, trophyAlerts: v } })) },
+                {/* Manual Time Setup as requested */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-white p-3 rounded-xl border border-blue-100">
+                    <label className="text-[8px] font-black uppercase text-blue-400 block mb-1">Morning Trigger</label>
+                    <input 
+                      type="time" 
+                      value={settings.reminderTime || '08:00'} 
+                      onChange={(e) => setSettings({ reminderTime: e.target.value })}
+                      className="w-full bg-transparent font-black text-blue-900 outline-none uppercase text-xs"
+                    />
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-blue-100">
+                    <label className="text-[8px] font-black uppercase text-blue-400 block mb-1">Motivation Sync</label>
+                    <input 
+                      type="time" 
+                      value={settings.motivationTime || '12:00'} 
+                      onChange={(e) => setSettings({ motivationTime: e.target.value })}
+                      className="w-full bg-transparent font-black text-blue-900 outline-none uppercase text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    { id: 'trophy', label: 'Trophy Alerts', state: settings.badgeSettings?.trophyAlerts, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, trophyAlerts: v } })) },
                   { id: 'challenge', label: 'Daily Challenge Reminders', state: settings.badgeSettings?.dailyChallenge, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, dailyChallenge: v } })) },
                   { id: 'quest', label: 'New Quest Alerts', state: settings.badgeSettings?.dailyQuest, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, dailyQuest: v } })) },
                   { id: 'urgency', label: 'Dynamic Urgency (Pester Mode)', state: settings.badgeSettings?.dynamicUrgency, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, dynamicUrgency: v } })) },
@@ -461,6 +484,7 @@ export function SettingsScreen({
                     </button>
                   </div>
                 ))}
+                </div>
               </motion.div>
             )}
 

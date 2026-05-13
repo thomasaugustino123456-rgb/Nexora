@@ -7,29 +7,21 @@ import { VIBRATION_PATTERNS, vibrate } from '../lib/vibrate';
 
 export function HappyMascot({ size = 32, hat = 'none', settings }: { size?: number, hat?: string, settings: UserSettings }) {
   return (
-    <motion.div
-      initial={{ scale: 0, y: 20 }}
-      animate={{ 
-        scale: 1, 
-        y: [0, -20, 0],
-      }}
-      transition={{ 
-        scale: { type: "spring", damping: 12 },
-        y: { repeat: 0 /* performance */, duration: 0.8, ease: "easeInOut" }
-      }}
-      className="flex flex-col items-center gap-2 mb-4"
-    >
-      <div className={`w-${size} h-${size} relative`}>
+    <div className="flex flex-col items-center gap-2 mb-4 will-change-transform">
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", damping: 12 }}
+        className={`w-${size} h-${size} relative`}
+      >
         <Mascot className="w-full h-full drop-shadow-lg" hat={hat} soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'} />
-      </div>
-      <motion.div 
-        animate={{ scale: [1, 1.1, 1] }}
-        transition={{ repeat: 0 /* fixed */, duration: 1.5 }}
-        className="bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-black shadow-lg"
+      </motion.div>
+      <div 
+        className="bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-black shadow-lg animate-bounce"
       >
         AWESOME! 🌟
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 

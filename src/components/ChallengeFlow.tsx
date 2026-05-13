@@ -46,6 +46,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   const defaultSteps: ChallengeStep[] = [...baseSteps, ...(settings.isPro ? ['writing' as ChallengeStep] : []), 'meditation' as ChallengeStep];
   const steps = customSteps || defaultSteps;
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [sessionWaterCount, setSessionWaterCount] = useState(0);
   
   const currentIdx = steps.indexOf(step as any);
   const progressLabel = step === 'completion' ? 'Done!' : `Challenge ${currentIdx + 1}/${steps.length}`;
@@ -127,11 +128,12 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
             )}
             {step === 'water' && (
               <WaterStep 
-                goal={settings.waterGoal} 
-                progress={isCustomPlan ? 0 : dailyProgress.waterDrank}
+                goal={settings.waterGoal || 8} 
+                progress={sessionWaterCount}
                 onUpdate={(val) => {
+                  setSessionWaterCount(val);
                   if (!isCustomPlan) {
-                    setDailyProgress(prev => ({ ...prev, waterDrank: val }))
+                    setDailyProgress(prev => ({ ...prev, waterDrank: (prev.waterDrank || 0) + 1 }));
                   }
                 }}
                 onContinue={nextStep} 
@@ -398,15 +400,22 @@ export function WaterStep({ goal, progress: initialProgress = 0, onUpdate, onCon
                 }
                 if (newProgress >= goal) {
                    vibrate(VIBRATION_PATTERNS.SUCCESS);
-                   onUpdate(goal); 
-                   onContinue();
+                   // We delay the auto-continue slightly for visual satisfaction
+                   setTimeout(() => onContinue(), 800);
                 }
               }} 
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
               Drink +1 💧
             </button>
-          ) : null}
+          ) : (
+            <button 
+              onClick={onContinue}
+              className="btn-primary w-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center gap-2 animate-in zoom-in duration-300"
+            >
+              Next Step <ChevronRight size={18} />
+            </button>
+          )}
         </div>
       </div>
     </div>

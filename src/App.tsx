@@ -1878,19 +1878,12 @@ export default function App() {
       let streakBonusPoints = 0;
 
       // Streak Logic: Now more aggressive like requested (increments per session if substantial)
-      if (prevStats.lastCompletedDate !== today || completedTasks >= 5 || isCustomPlan) {
-        let baseStreak = (prevStats.streak || 0);
-        // Reset base if they missed a day
-        if (prevStats.lastCompletedDate !== today && prevStats.lastCompletedDate !== getYesterday()) {
-          baseStreak = 0;
-        }
-        
-        // If they already did one today, only increment if they did many tasks
-        if (prevStats.lastCompletedDate === today) {
-          finalStreak = baseStreak + 1;
-        } else {
-          finalStreak = baseStreak + streakIncrease;
-        }
+      // Simplified Streak Logic
+      let baseStreak = (prevStats.streak || 0);
+      if (prevStats.lastCompletedDate !== today && prevStats.lastCompletedDate !== getYesterday()) {
+        baseStreak = 0;
+      }
+      finalStreak = baseStreak + 1;
 
         newBestStreak = Math.max(prevStats.bestStreak || 0, finalStreak);
         if (prevStats.lastCompletedDate !== today) {
@@ -1899,7 +1892,6 @@ export default function App() {
         newLastCompletedDate = today;
         const hasDoublePoints = settings.purchasedItems?.includes('double-points');
         streakBonusPoints = hasDoublePoints ? 10 : 5;
-      }
 
       finalStreakAfterUpdate = finalStreak; // Pass to closure for Flame screen
 
@@ -1972,8 +1964,8 @@ export default function App() {
 
     setDailyProgress(prev => ({ 
       ...prev, 
-      completed: true,
-      completionsCount: (prev.completionsCount || 0) + 1,
+      completed: isCustomPlan ? prev.completed : true,
+      completionsCount: isCustomPlan ? prev.completionsCount : (prev.completionsCount || 0) + 1,
       // Reset logic flags for replayability
       pushupsDone: false,
       waterChallengeCount: 0,
@@ -2488,8 +2480,24 @@ export default function App() {
                     setActiveCustomPlan(null);
                     setChallengeStep('pushups');
                     setActiveScreen('challenge');
+                    // Reset session flags for replayability
+                    setDailyProgress(prev => ({ 
+                      ...prev, 
+                      waterDrank: 0, 
+                      pushupsDone: false,
+                      dailyQuestDone: false,
+                      breathingDone: false,
+                      drawingDone: false,
+                      footballDone: false,
+                      bubblesDone: false,
+                      memoryDone: false,
+                      gratitudeDone: false,
+                      reactionDone: false,
+                      meditationDone: false,
+                      writingDone: false
+                    }));
                   }}
-                  isCompletedToday={dailyProgress.completionsCount >= (isPro ? (settings.challengeCountGoal || 999) : 3)}
+                  isCompletedToday={false} // Allow infinite replays as requested
                   dailyProgress={dailyProgress}
                   settings={settings}
                   history={history}
@@ -2506,6 +2514,22 @@ export default function App() {
                     setActiveCustomPlan(plan);
                     setChallengeStep(plan.challenges[0]);
                     setActiveScreen('challenge');
+                    // Ensure session flags are reset for custom plans too
+                    setDailyProgress(prev => ({ 
+                      ...prev, 
+                      waterDrank: 0, 
+                      pushupsDone: false,
+                      dailyQuestDone: false,
+                      breathingDone: false,
+                      drawingDone: false,
+                      footballDone: false,
+                      bubblesDone: false,
+                      memoryDone: false,
+                      gratitudeDone: false,
+                      reactionDone: false,
+                      meditationDone: false,
+                      writingDone: false
+                    }));
                   }}
                   onDeleteCustomPlan={handleDeleteCustomPlan}
                   onOpenPlanBuilder={() => setActiveScreen('plan-builder')}

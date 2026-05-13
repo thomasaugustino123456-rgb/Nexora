@@ -108,13 +108,13 @@ export function ProgressScreen({
           { label: 'Nexus Rank', value: `#${userRank || '--'}`, sub: 'Global Standing', icon: <Star className="text-purple-600" />, bg: 'bg-purple-100/50' },
           { label: 'Wallet', value: `${stats.coins || 0}N`, sub: 'Nexora Currency', icon: <Coins className="text-blue-600" />, bg: 'bg-blue-100/50' }
         ].map((stat, i) => (
-          <div key={i} className="safe-glass gpu p-6 flex flex-col items-center text-center group hover:scale-[1.02] transition-transform">
-            <div className={`w-16 h-16 ${stat.bg} rounded-3xl flex items-center justify-center mb-4 shadow-sm group-hover:rotate-12 transition-transform`}>
+          <div key={i} className="safe-glass gpu p-6 flex flex-col items-center text-center group transition-all duration-300">
+            <div className={`w-16 h-16 ${stat.bg} rounded-3xl flex items-center justify-center mb-4 shadow-sm transition-transform`}>
               {stat.icon}
             </div>
-            <p className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-1">{stat.label}</p>
+            <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1">{stat.label}</p>
             <p className="text-3xl font-black text-blue-900 leading-none">{stat.value}</p>
-            <p className="text-[10px] text-blue-500 font-bold uppercase mt-2 opacity-0 group-hover:opacity-100 transition-opacity">{stat.sub}</p>
+            <p className="text-[9px] text-blue-500 font-bold uppercase mt-2 opacity-60">{stat.sub}</p>
           </div>
         ))}
       </motion.div>
