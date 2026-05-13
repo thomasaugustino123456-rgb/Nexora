@@ -1763,17 +1763,14 @@ export default function App() {
     const completedTasks = completedTasksList.length;
 
     if (isCustomPlan && user && activeCustomPlan) {
-      try {
-        const customPlanRef = doc(collection(db, 'users', user.uid, 'custom_progress'));
-        await setDoc(customPlanRef, {
-          planId: activeCustomPlan.id,
-          planName: activeCustomPlan.name,
-          completedAt: serverTimestamp(),
-          date: today
-        });
-      } catch (e) {
-        console.error("Failed to save custom plan progress", e);
-      }
+      const customPlanRef = doc(collection(db, 'users', user.uid, 'custom_progress'));
+      // Don't await the network call to keep the UI snappy
+      setDoc(customPlanRef, {
+        planId: activeCustomPlan.id,
+        planName: activeCustomPlan.name,
+        completedAt: serverTimestamp(),
+        date: today
+      }).catch(e => console.error("Failed to save custom plan progress", e));
     }
 
     const nextCompletionsCount = isCustomPlan ? (dailyProgress.completionsCount || 0) : ((dailyProgress.completionsCount || 0) + 1);
@@ -1793,7 +1790,7 @@ export default function App() {
           else if (nextCompletionsCount === 2) play('trophy2');
           else if (nextCompletionsCount === 3) play('trophy3');
           else play('trophy1');
-        }, 800);
+        }, 150);
       }
       setEarnedTrophyToday(true);
     } else {
@@ -3034,6 +3031,7 @@ export default function App() {
           <CompletionFlame 
             streak={sessionStreak}
             xpEarned={sessionXP}
+            settings={settings}
             onContinue={() => {
               setShowCompletionFlame(false);
               setActiveScreen('trophy-rewards'); 
@@ -3044,6 +3042,7 @@ export default function App() {
         {activeScreen === 'trophy-rewards' && (
           <TrophyRewardsScreen 
             trophyType={sessionTrophy} 
+            settings={settings}
             onFinish={() => {
               setActiveCustomPlan(null);
               setActiveScreen('home');

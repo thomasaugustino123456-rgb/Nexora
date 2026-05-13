@@ -10,34 +10,37 @@ import { vibrate } from '../lib/vibrate';
 interface TrophyRewardsScreenProps {
   trophyType: TrophyType;
   onFinish: () => void;
+  settings?: any;
 }
 
-export function TrophyRewardsScreen({ trophyType, onFinish }: TrophyRewardsScreenProps) {
-  const { play, stop } = useSound();
+export function TrophyRewardsScreen({ trophyType, onFinish, settings }: TrophyRewardsScreenProps) {
+  const { play, stop, playMusic, stopAllMusic } = useSound();
   const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    // Play the reward song immediately with a slight retry logic as browsers sometimes block it
-    const song = trophyType === 'golden' ? 'trophy1' : (trophyType === 'ice' ? 'losing' : 'losing');
-    
-    const playSong = () => {
-      try {
-        play(song as any);
-      } catch (e) {
-        console.error("Music blocked, retrying on first interaction");
-      }
-    };
+    if (settings?.soundEnabled === false) {
+      const timer = setTimeout(() => setShowButton(true), 500);
+      return () => clearTimeout(timer);
+    }
 
-    playSong();
+    // Play a triumphant song using background music system
+    const musicKey = trophyType === 'golden' ? 'music-fanfare' : 'music-triplets';
+    
+    try {
+      playMusic(musicKey);
+    } catch (e) {
+      console.error("Music blocked");
+    }
 
     const timer = setTimeout(() => {
       setShowButton(true);
-    }, 2500);
+    }, 500);
 
     return () => {
-      // Optional: stop() song on unmount if requested
+      clearTimeout(timer);
+      stopAllMusic();
     };
-  }, [play, trophyType]);
+  }, [playMusic, stopAllMusic, trophyType, settings?.soundEnabled]);
 
   return (
     <div className="fixed inset-0 z-[1000] bg-white flex flex-col items-center justify-center p-6 text-center overflow-hidden">

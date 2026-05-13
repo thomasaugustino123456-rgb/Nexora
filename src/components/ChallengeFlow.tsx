@@ -333,25 +333,15 @@ export function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none', setting
           {!isReady ? (
             <button 
               onClick={() => {
-                vibrate(VIBRATION_PATTERNS.CLICK);
+                vibrate(VIBRATION_PATTERNS.SUCCESS);
                 if (settings.soundEnabled) play('challenge_unlock');
-                setIsReady(true);
+                onDone();
               }} 
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
               I'm Done! 💪
             </button>
-          ) : (
-            <button 
-              onClick={() => {
-                vibrate(VIBRATION_PATTERNS.SUCCESS);
-                onDone();
-              }} 
-              className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600"
-            >
-              Continue <ChevronRight size={20} />
-            </button>
-          )}
+          ) : null}
           <button 
             onClick={() => { 
               vibrate(VIBRATION_PATTERNS.CLICK); 
@@ -398,7 +388,6 @@ export function WaterStep({ goal, progress: initialProgress, onUpdate, onContinu
         </div>
 
         <div className="space-y-4">
-          {isFinished && <LazyHappyMascot size={40} hat={activeSkin} settings={settings} />}
           {!isFinished ? (
             <button 
               onClick={() => {
@@ -409,23 +398,17 @@ export function WaterStep({ goal, progress: initialProgress, onUpdate, onContinu
                    if (newProgress >= goal) play('challenge_unlock');
                    else play('water');
                 }
+                if (newProgress >= goal) {
+                   vibrate(VIBRATION_PATTERNS.SUCCESS);
+                   onUpdate(goal); 
+                   onContinue();
+                }
               }} 
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
               Drink +1 💧
             </button>
-          ) : (
-            <button 
-              onClick={() => {
-                vibrate(VIBRATION_PATTERNS.SUCCESS);
-                onUpdate(goal); // Only update global progress when completing the step
-                onContinue();
-              }} 
-              className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600"
-            >
-              Continue <ChevronRight size={20} />
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
     </motion.div>
@@ -675,20 +658,7 @@ export function DrawingStep({ onFinish, onSave, settings, activeSkin = 'none', p
           <canvas ref={canvasRef} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} className="w-full h-full cursor-crosshair" />
         </div>
         <div className="flex flex-col items-center gap-4">
-          {isFinished ? (
-            <div className="flex flex-col items-center gap-4 w-full">
-              <LazyHappyMascot size={48} hat={activeSkin} settings={settings} />
-              <button 
-                onClick={() => { 
-                  vibrate(VIBRATION_PATTERNS.SUCCESS); 
-                  onFinish(saveDrawing()); 
-                }} 
-                className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 shadow-xl"
-              >
-                Continue <ChevronRight size={20} />
-              </button>
-            </div>
-          ) : (
+          {!isFinished ? (
             <div className="flex gap-2 w-full">
               <button 
                 onClick={() => { 
@@ -705,7 +675,7 @@ export function DrawingStep({ onFinish, onSave, settings, activeSkin = 'none', p
                 onClick={() => { 
                   vibrate(VIBRATION_PATTERNS.SUCCESS); 
                   if (settings.soundEnabled) play('challenge_unlock');
-                  setIsFinished(true); 
+                  onFinish(saveDrawing());
                 }} 
                 disabled={!hasDrawn} 
                 className={`flex-[2] btn-primary flex items-center justify-center gap-2 ${!hasDrawn ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -713,7 +683,7 @@ export function DrawingStep({ onFinish, onSave, settings, activeSkin = 'none', p
                 Finish <CheckCircle2 size={20} />
               </button>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </motion.div>
@@ -930,7 +900,14 @@ export function FootballStep({ onFinish, activeSkin = 'none', settings, play }: 
 
         if (isGoal) {
           vibrate([20, 50, 20]);
-          setScore(s => s + 1);
+          setScore(s => {
+            const nextScore = s + 1;
+            if (nextScore >= 5) {
+               vibrate(VIBRATION_PATTERNS.SUCCESS);
+               setTimeout(onFinish, 800);
+            }
+            return nextScore;
+          });
           setScoredBalls(prev => [...prev, { x: targetX, y: targetY }]);
         } else {
           vibrate(15);
@@ -981,7 +958,8 @@ export function FootballStep({ onFinish, activeSkin = 'none', settings, play }: 
           </div>
         </div>
 
-        <div className="relative w-full aspect-[3/2] bg-[#2f855a] rounded-xl sm:rounded-2xl border-4 sm:border-8 border-[#22543d] overflow-hidden shadow-2xl touch-none">
+        {score >= 5 ? null : (
+          <div className="relative w-full aspect-[3/2] bg-[#2f855a] rounded-xl sm:rounded-2xl border-4 sm:border-8 border-[#22543d] overflow-hidden shadow-2xl touch-none">
           <svg
             ref={svgRef}
             viewBox="0 0 800 600"
@@ -1098,6 +1076,7 @@ export function FootballStep({ onFinish, activeSkin = 'none', settings, play }: 
             </div>
           )}
         </div>
+      )}
 
         {score >= 5 && (
           <div className="flex flex-col items-center w-full">
@@ -1301,7 +1280,7 @@ export function MemoryStep({ onComplete, activeSkin = 'none', settings, play }: 
         setFlipped([]);
         if (newCards.every(c => c.matched)) {
           vibrate(VIBRATION_PATTERNS.SUCCESS);
-          setTimeout(onComplete, 1000);
+          setTimeout(onComplete, 300);
         }
       } else {
         setTimeout(() => {
@@ -1348,7 +1327,7 @@ export function GratitudeStep({ onComplete, onSave, showToast, settings, activeS
     if (text.trim().length < 3) return;
     vibrate(VIBRATION_PATTERNS.SUCCESS);
     setSubmitted(true);
-    setTimeout(onComplete, 2000);
+    setTimeout(onComplete, 100);
   };
 
   const handleSave = () => {
@@ -1450,7 +1429,7 @@ export function ReactionStep({ onComplete, activeSkin = 'none', settings, play }
       setTimeout(() => {
         if (settings.soundEnabled) play('challenge_unlock');
         setState('finished');
-      }, 1000);
+      }, 50);
     }
   };
 
@@ -1535,6 +1514,7 @@ export function MeditationStep({ onDone, activeSkin = 'none', settings, play }: 
     } else if (timer === 0) {
       vibrate(VIBRATION_PATTERNS.SUCCESS);
       setIsActive(false);
+      setTimeout(onDone, 500); // Auto-finish
     }
     return () => clearInterval(interval);
   }, [isActive, timer]);
@@ -1569,12 +1549,6 @@ export function MeditationStep({ onDone, activeSkin = 'none', settings, play }: 
           {isFinished ? (
             <div className="space-y-4 w-full">
               <LazyHappyMascot size={40} hat={activeSkin} settings={settings} />
-              <button 
-                onClick={onDone} 
-                className="btn-primary w-full bg-purple-500 hover:bg-purple-600 border-none"
-              >
-                Continue <ChevronRight size={20} />
-              </button>
             </div>
           ) : (
             <button 
@@ -1639,19 +1613,13 @@ export function WritingStep({ onDone, activeSkin = 'none', settings, play }: { o
         {isFinished ? (
           <div className="space-y-4 w-full">
             <LazyHappyMascot size={40} hat={activeSkin} settings={settings} />
-            <button 
-              onClick={onDone} 
-              className="btn-primary w-full bg-blue-500 hover:bg-blue-600 border-none shadow-xl"
-            >
-              Continue <ChevronRight size={20} />
-            </button>
           </div>
         ) : (
           <button 
             onClick={() => {
               vibrate(VIBRATION_PATTERNS.SUCCESS);
               if (settings.soundEnabled) play('challenge_unlock');
-              setIsFinished(true);
+              onDone();
             }} 
             disabled={text.trim().length < 10}
             className="btn-primary w-full bg-blue-500 hover:bg-blue-600 border-none disabled:opacity-50 shadow-lg"

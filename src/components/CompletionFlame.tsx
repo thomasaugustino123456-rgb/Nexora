@@ -7,6 +7,7 @@ interface CompletionFlameProps {
   streak: number;
   xpEarned: number;
   onContinue: () => void;
+  settings?: any;
 }
 
 export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlameProps) {
@@ -15,19 +16,20 @@ export function CompletionFlame({ streak, xpEarned, onContinue }: CompletionFlam
   const [isBouncing, setIsBouncing] = useState(false);
 
   useEffect(() => {
-    // Initial sequence
+    // Initial sequence - faster transition
     const timer = setTimeout(() => {
       setShowContent(true);
-      play('flame_complete'); // New unique sound for flame completion
+      if (settings?.soundEnabled !== false) {
+        play('flame_complete'); 
+      }
       setIsBouncing(true);
       setTimeout(() => setIsBouncing(false), 1000);
       
-      // Add fire crackling ambient
       const fireLoop = setInterval(() => {
-        if (showContent) play('fire_ambient');
+        if (showContent && settings?.soundEnabled !== false) play('fire_ambient');
       }, 3000);
       return () => clearInterval(fireLoop);
-    }, 500);
+    }, 100); 
 
     return () => clearTimeout(timer);
   }, [play, showContent]);
