@@ -12,7 +12,8 @@ export function HappyMascot({ size = 32, hat = 'none', settings }: { size?: numb
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", damping: 12 }}
-        className={`w-${size} h-${size} relative`}
+        className="relative"
+        style={{ width: size * 4, height: size * 4 }}
       >
         <Mascot className="w-full h-full drop-shadow-lg" hat={hat} soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'} />
       </motion.div>

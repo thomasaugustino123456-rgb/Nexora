@@ -169,17 +169,16 @@ export const Mascot: React.FC<MascotProps> = ({
           </linearGradient>
         </defs>
 
-        {/* Aura - Using simple opacity instead of scale+opacity for performance */}
-        <motion.ellipse 
+        {/* Aura - Using CSS class instead of Framer to prevent re-render jumps */}
+        <ellipse 
           cx="250" cy="330" rx="220" ry="220" 
           fill={colors.aura} 
-          animate={{ opacity: [0.1, 0.2, 0.1] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="animate-mascot-aura"
         />
 
         {/* Neural Link Connection Effect for neural_bio theme */}
         {theme === 'neural_bio' && (
-          <motion.g opacity={0.4}>
+          <g opacity={0.4}>
             {[1, 2, 3].map((i) => (
               <motion.ellipse
                 key={`neural-ring-${i}`}
@@ -189,27 +188,20 @@ export const Mascot: React.FC<MascotProps> = ({
                 transition={{ duration: 2 + i, repeat: Infinity, ease: "easeInOut" }}
               />
             ))}
-          </motion.g>
+          </g>
         )}
 
         {/* Shadow */}
-        <motion.ellipse 
+        <ellipse 
           cx="250" cy="520" rx={150} ry={15} 
-          fill="#000" fillOpacity="0.08"
-          animate={{ 
-            rx: [145, 155, 145], 
-            opacity: [0.06, 0.1, 0.06]
-          }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          fill="#000" 
+          className="animate-mascot-shadow"
         />
 
-        {/* Body Group with Squash/Stretch - Optimized durations */}
+        {/* Body Group with Squash/Stretch - CSS classes for steady animation */}
         <motion.g
-          animate={{ 
-            y: isSitting ? 20 : [0, -4, 0],
-            scaleY: isSitting ? 0.85 : [1, 1.02, 1] 
-          }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          animate={isSitting ? { y: 20, scaleY: 0.85 } : {}}
+          className={!isSitting ? "animate-mascot-breathe" : ""}
         >
           {/* LIQUID LAYER */}
           <g clipPath="url(#bottle-mask)">
@@ -218,10 +210,7 @@ export const Mascot: React.FC<MascotProps> = ({
             {/* Liquid Group with Ambient Slosh */}
             <g transform={`translate(0, ${isBoiling ? -5 : 230})`}>
               {/* Seamless River Water Animation (CPU Optimized) */}
-              <motion.g
-                animate={{ x: [0, -500] }}
-                transition={{ ease: "linear", duration: 4, repeat: Infinity }}
-              >
+              <g className="animate-wave-mascot">
                 <path 
                   d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 T 1000,20 L 1000,600 L 0,600 Z" 
                   fill="url(#water-grad)" 
@@ -233,26 +222,16 @@ export const Mascot: React.FC<MascotProps> = ({
                   fill="#ffffff" 
                   fillOpacity="0.1"
                 />
-              </motion.g>
+              </g>
               
               {/* Boiling Bubbles - Optimized with pure SVG animations */}
-              {isBoiling && [1, 2, 3].map((i) => (
-                <motion.circle
-                  key={`bubble-${i}`}
-                  cx={200 + (i * 30)}
-                  r={3}
-                  fill="#fff"
-                  animate={{ 
-                    cy: [350, 200], 
-                    opacity: [0, 0.5, 0] 
-                  }}
-                  transition={{ 
-                    duration: 1 + i * 0.2, 
-                    repeat: Infinity, 
-                    ease: "linear" 
-                  }}
-                />
-              ))}
+              {isBoiling && (
+                <g fill="#fff" fillOpacity="0">
+                  <circle cx="230" cy="350" r="3" className="animate-bubble-angry-1" />
+                  <circle cx="260" cy="350" r="3" className="animate-bubble-angry-2" />
+                  <circle cx="290" cy="350" r="3" className="animate-bubble-angry-3" />
+                </g>
+              )}
             </g>
           </g>
 
@@ -275,19 +254,17 @@ export const Mascot: React.FC<MascotProps> = ({
             />
             
             {/* Ears with Follow-through wobble */}
-            <motion.path 
+            <path 
               d="M 120,210 C 100,150 110,120 120,110 C 140,110 160,150 180,180 Z" 
               fill="url(#glass-edge)" 
               fillOpacity="0.8"
-              animate={{ rotate: isAngry ? [-5, 5, -5] : [0, 3, 0] }}
-              transition={{ duration: isAngry ? 0.3 : 3.5, repeat: Infinity }}
+              className={isAngry ? "" : "animate-mascot-ear-left"}
             />
-            <motion.path 
+            <path 
               d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" 
               fill="url(#glass-edge)" 
               fillOpacity="0.8"
-              animate={{ rotate: isAngry ? [5, -5, 5] : [0, -3, 0] }}
-              transition={{ duration: isAngry ? 0.3 : 3.5, repeat: Infinity }}
+              className={isAngry ? "" : "animate-mascot-ear-right"}
             />
           </g>
 
@@ -362,14 +339,11 @@ export const Mascot: React.FC<MascotProps> = ({
           </g>
 
           {/* Glowing N - Simplified for mobile */}
-          <motion.g 
-            animate={{ opacity: [0.7, 1, 0.7] }}
-            transition={{ duration: 3, repeat: Infinity }}
-          >
+          <g className="animate-pulse">
             <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill={colors.nColor} />
             {/* Using a second N with low opacity to simulate glow instead of filter */}
             <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill={colors.nColor} opacity="0.3" transform="scale(1.1)" style={{ transformOrigin: 'center' }} />
-          </motion.g>
+          </g>
         </motion.g>
 
         {/* HATS - Weighted to follow body movement */}

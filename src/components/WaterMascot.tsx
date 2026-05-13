@@ -72,11 +72,8 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
               transition={{ type: "spring", stiffness: 100, damping: 20 }}
             >
               
-              {/* Efficient Seamless Wave Animation using Framer Motion */}
-              <motion.g
-                animate={{ x: [0, -400] }}
-                transition={{ ease: "linear", duration: 4, repeat: Infinity }}
-              >
+              {/* Efficient Seamless Wave Animation using CSS */}
+              <g className="animate-wave">
                 <path 
                   d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 L 900,600 L 0,600 Z" 
                   fill="url(#water-grad-fill)" 
@@ -89,24 +86,13 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
                   fill="#ffffff" 
                   fillOpacity="0.15"
                 />
-              </motion.g>
+              </g>
 
               {/* Rising Bubbles */}
-              <g fill="#ffffff" fillOpacity="0.4">
-                <motion.circle cx="150" r="4"
-                  animate={{ cy: [250, -20] }}
-                  transition={{ ease: "linear", duration: 2.5, repeat: Infinity }}
-                />
-                <motion.circle cx="200" r="7"
-                  initial={{ cy: 250 }}
-                  animate={{ cy: [250, -20] }}
-                  transition={{ ease: "linear", duration: 3.5, repeat: Infinity, delay: 1 }}
-                />
-                <motion.circle cx="350" r="3"
-                  initial={{ cy: 250 }}
-                  animate={{ cy: [250, -20] }}
-                  transition={{ ease: "linear", duration: 2, repeat: Infinity, delay: 0.5 }}
-                />
+              <g fill="#ffffff" fillOpacity="0">
+                <circle cx="150" cy="250" r="4" className="animate-bubble-1" />
+                <circle cx="200" cy="250" r="7" className="animate-bubble-2" />
+                <circle cx="350" cy="250" r="3" className="animate-bubble-3" />
               </g>
             </motion.g>
           </g>
@@ -115,17 +101,15 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
         {/* WATER DROPS (Falling from the opening to create the "filling" effect) */}
         {progress < 1 && (
           <g fill="#5CD6FF">
-            <motion.path 
+            <path 
               d="M 250 140 C 250 140 245 155 245 160 A 5 5 0 0 0 255 160 C 255 155 250 140 250 140 Z"
-              animate={{ y: [0, 80], opacity: [0, 1, 1, 0] }}
-              transition={{ duration: 0.8, repeat: Infinity, ease: "linear", times: [0, 0.2, 0.8, 1] }}
+              className="animate-water-drop opacity-0"
             />
             {/* Splash ripples on the surface */}
-            <motion.ellipse 
-              cx="250" cy={fillY} rx="15" ry="4" 
+            <ellipse 
+              cx="250" cy={fillY} rx="5" ry="5" 
               fill="none" stroke="#FFFFFF" strokeWidth="2"
-              animate={{ rx: [5, 35], opacity: [0, 0.8, 0] }}
-              transition={{ duration: 0.8, repeat: Infinity, ease: "linear", times: [0, 0.1, 1] }}
+              className="animate-water-ripple opacity-0"
             />
           </g>
         )}
@@ -189,14 +173,10 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
         </g>
 
         {/* HALO - Simplified */}
-        <motion.g 
-          id="halo"
-          animate={{ y: [0, -8, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        >
+        <g id="halo" className="animate-mascot-breathe">
           <ellipse cx="250" cy="60" rx="90" ry="15" fill="none" stroke="#52D1FF" strokeWidth="6" opacity="0.6" />
           <ellipse cx="250" cy="60" rx="90" ry="15" fill="none" stroke="#ffffff" strokeWidth="2" />
-        </motion.g>
+        </g>
 
         {/* SPARKLES / STARS - Removed filter */}
         <defs>
@@ -208,15 +188,13 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
         <use href="#star-water" x="120" y="450" className="sparkle sparkle-3" transform="scale(0.6)" />
         <use href="#star-water" x="380" y="420" className="sparkle sparkle-4" transform="scale(0.9)" />
         
-        <motion.polygon 
+        <polygon 
           points="100,100 105,105 110,100 105,95" fill="#5CD6FF"
-          animate={{ opacity: [0.2, 0.8, 0.2] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="animate-pulse"
         />
-        <motion.polygon 
+        <polygon 
           points="400,120 403,123 406,120 403,117" fill="#5CD6FF"
-          animate={{ opacity: [0.1, 0.9, 0.1] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          className="animate-pulse" style={{ animationDuration: '3s' }}
         />
 
       </svg>
