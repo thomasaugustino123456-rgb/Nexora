@@ -62,13 +62,13 @@ export function SettingsScreen({
       className="max-w-2xl mx-auto w-full space-y-8 pb-40"
     >
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm text-blue-900 active:scale-95 transition-all">
+      <div className="flex items-center gap-4 sticky top-0 bg-transparent z-10 py-2">
+        <button onClick={onBack} className="p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm text-blue-900 active:scale-95 transition-all">
            <ChevronLeft size={24} />
         </button>
         <div>
-           <h2 className="text-3xl font-black text-blue-900 tracking-tight">System Settings</h2>
-           <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">Global Control Center</p>
+           <h2 className="text-3xl font-black text-blue-900 tracking-tight italic uppercase">System Settings</h2>
+           <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] opacity-60">Global Control Center</p>
         </div>
       </div>
 
@@ -489,7 +489,7 @@ export function SettingsScreen({
               <div className="p-4 bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-between mt-4">
                  <div className="flex items-center gap-3">
                     <div className="bg-red-500 p-2 rounded-xl text-white">
-                       <AlertCircleStatus size={16} />
+                       <AlertCircle size={16} />
                     </div>
                     <div>
                       <p className="text-[10px] text-red-600 font-black uppercase mb-1">Frequency Sync Error</p>
@@ -633,9 +633,5 @@ export function SettingsScreen({
 // Sub-components used in badges
 function Crown({ size, className }: { size: number, className?: string }) {
   return <Sparkles size={size} className={className} />;
-}
-
-function AlertCircleStatus({ size, className }: { size: number, className?: string }) {
-  return <Shield size={size} className={className} />;
 }
 

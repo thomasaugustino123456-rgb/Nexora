@@ -216,63 +216,45 @@ export const Mascot: React.FC<MascotProps> = ({
             <rect x="0" y="0" width="500" height="600" fill={theme === 'obsidian' ? '#0f172a' : '#F0FAFF'} fillOpacity="0.2" />
             
             {/* Liquid Group with Ambient Slosh */}
-            <motion.g 
-              animate={{ 
-                y: isBoiling ? -5 : 230,
-                rotate: isBoiling ? [0, 0.5, -0.5, 0] : [0, 0.3, -0.3, 0]
-              }}
-              transition={{ 
-                rotate: { duration: 5, repeat: Infinity, ease: "easeInOut" },
-                y: { duration: 0.5 }
-              }}
-              style={{ originX: "250px", originY: "400px" }}
-            >
-              {/* Seamless River Water Animation */}
-              {/* We use a single path that is 3x as wide to allow a seamless looping scroll */}
-              <motion.path 
-                d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 T 1000,20 L 1000,600 L 0,600 Z" 
-                fill="url(#water-grad)" 
-                fillOpacity="0.95"
-                animate={{ 
-                  x: [-500, 0],
-                  y: [0, 5, 0]
-                }}
-                transition={{ 
-                  x: { duration: 3, repeat: Infinity, ease: "linear" },
-                  y: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                }}
-              />
+            <g transform={`translate(0, ${isBoiling ? -5 : 230})`}>
+              {/* Seamless River Water Animation (CPU Optimized) */}
+              <g>
+                <animateTransform 
+                  attributeName="transform" 
+                  type="translate" 
+                  from="0 0" 
+                  to="-500 0" 
+                  dur="4s" 
+                  repeatCount="indefinite" 
+                />
+                <path 
+                  d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 T 1000,20 L 1000,600 L 0,600 Z" 
+                  fill="url(#water-grad)" 
+                  fillOpacity="0.95"
+                />
+                {/* Highlight layer */}
+                <path 
+                  d="M 0,25 Q 50,15 100,25 T 200,25 T 300,25 T 400,25 T 500,25 T 600,25 T 700,25 T 800,25 T 900,25 T 1000,25 L 1000,40 L 0,40 Z" 
+                  fill="#ffffff" 
+                  fillOpacity="0.1"
+                />
+              </g>
               
-              {/* Secondary Reflective Wave for Depth */}
-              <motion.path 
-                d="M 0,25 Q 50,15 100,25 T 200,25 T 300,25 T 400,25 T 500,25 T 600,25 T 700,25 T 800,25 T 900,25 T 1000,25 L 1000,40 L 0,40 Z" 
-                fill="#ffffff" 
-                fillOpacity="0.15"
-                animate={{ x: [0, -500] }}
-                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-              />
-              
-              {/* Boiling Bubbles - Reduced to 3 for performance */}
+              {/* Boiling Bubbles - Optimized with pure SVG animations */}
               {isBoiling && [1, 2, 3].map((i) => (
-                <motion.circle
+                <circle
                   key={`bubble-${i}`}
                   cx={200 + (i * 30)}
                   cy={350}
                   r={3}
                   fill="#fff"
                   fillOpacity="0.4"
-                  animate={{ 
-                    cy: [350, 200],
-                    opacity: [0, 0.5, 0]
-                  }}
-                  transition={{ 
-                    duration: 1 + i * 0.2, 
-                    repeat: Infinity, 
-                    ease: "easeOut" 
-                  }}
-                />
+                >
+                  <animate attributeName="cy" from="350" to="200" dur={`${1 + i * 0.2}s`} repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0; 0.5; 0" dur={`${1 + i * 0.2}s`} repeatCount="indefinite" />
+                </circle>
               ))}
-            </motion.g>
+            </g>
           </g>
 
           {/* GLASS BOTTLE HIGHLIGHTS & OUTLINES */}

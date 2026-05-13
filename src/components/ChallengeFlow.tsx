@@ -394,6 +394,7 @@ export function WaterStep({ goal, progress: initialProgress = 0, onUpdate, onCon
                 vibrate(VIBRATION_PATTERNS.CLICK);
                 const newProgress = localProgress + 1;
                 setLocalProgress(newProgress);
+                onUpdate(newProgress);
                 if (settings.soundEnabled) {
                    if (newProgress >= goal) play('challenge_unlock');
                    else play('water');
