@@ -218,15 +218,10 @@ export const Mascot: React.FC<MascotProps> = ({
             {/* Liquid Group with Ambient Slosh */}
             <g transform={`translate(0, ${isBoiling ? -5 : 230})`}>
               {/* Seamless River Water Animation (CPU Optimized) */}
-              <g>
-                <animateTransform 
-                  attributeName="transform" 
-                  type="translate" 
-                  from="0 0" 
-                  to="-500 0" 
-                  dur="4s" 
-                  repeatCount="indefinite" 
-                />
+              <motion.g
+                animate={{ x: [0, -500] }}
+                transition={{ ease: "linear", duration: 4, repeat: Infinity }}
+              >
                 <path 
                   d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 T 1000,20 L 1000,600 L 0,600 Z" 
                   fill="url(#water-grad)" 
@@ -238,21 +233,25 @@ export const Mascot: React.FC<MascotProps> = ({
                   fill="#ffffff" 
                   fillOpacity="0.1"
                 />
-              </g>
+              </motion.g>
               
               {/* Boiling Bubbles - Optimized with pure SVG animations */}
               {isBoiling && [1, 2, 3].map((i) => (
-                <circle
+                <motion.circle
                   key={`bubble-${i}`}
                   cx={200 + (i * 30)}
-                  cy={350}
                   r={3}
                   fill="#fff"
-                  fillOpacity="0.4"
-                >
-                  <animate attributeName="cy" from="350" to="200" dur={`${1 + i * 0.2}s`} repeatCount="indefinite" />
-                  <animate attributeName="opacity" values="0; 0.5; 0" dur={`${1 + i * 0.2}s`} repeatCount="indefinite" />
-                </circle>
+                  animate={{ 
+                    cy: [350, 200], 
+                    opacity: [0, 0.5, 0] 
+                  }}
+                  transition={{ 
+                    duration: 1 + i * 0.2, 
+                    repeat: Infinity, 
+                    ease: "linear" 
+                  }}
+                />
               ))}
             </g>
           </g>
