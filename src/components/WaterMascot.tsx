@@ -15,20 +15,7 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
     <div className={`bottle-container ${className || ''}`}>
       <svg viewBox="0 0 500 600" xmlns="http://www.w3.org/2000/svg" className="w-full h-full transition-transform duration-300 ease-in-out hover:scale-105">
         <defs>
-          {/* Filters */}
-          <filter id="glow-water" x="-5%" y="-5%" width="110%" height="110%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-          
-          <filter id="soft-glow-water" x="-5%" y="-5%" width="110%" height="110%">
-            <feGaussianBlur stdDeviation="1" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-
-          <filter id="shadow-blur-water">
-            <feGaussianBlur stdDeviation="6" />
-          </filter>
+          {/* Filters - removed for performance */}
 
           {/* Gradients */}
           <linearGradient id="water-grad-fill" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -59,8 +46,8 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
           </clipPath>
         </defs>
 
-        {/* Background Drop Shadow */}
-        <ellipse cx="250" cy="500" rx="150" ry="15" fill="#0066FF" fillOpacity="0.15" filter="url(#shadow-blur-water)" />
+        {/* Background Drop Shadow - Simplified */}
+        <ellipse cx="250" cy="500" rx="150" ry="15" fill="#0066FF" fillOpacity="0.05" />
 
         {/* BOTTLE BACK GLASS */}
         <g id="bottle-back" stroke="#99DFFF" strokeWidth="4" fill="none">
@@ -174,21 +161,21 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
           </g>
         </g>
 
-        {/* The Glowing "N" on the belly */}
-        <g filter="url(#glow-water)">
-          <path d="M 220 360 L 235 360 L 260 400 L 260 360 L 275 360 L 275 420 L 260 420 L 235 380 L 235 420 L 220 420 Z" fill="#ffffff" stroke="#ffffff" strokeWidth="2" strokeLinejoin="round" />
+        {/* The Glowing "N" on the belly - Simplified */}
+        <g>
+          <path d="M 220 360 L 235 360 L 260 400 L 260 360 L 275 360 L 275 420 L 260 420 L 235 380 L 235 420 L 220 420 Z" fill="#ffffff" stroke="#ffffff" strokeWidth="1" strokeLinejoin="round" />
         </g>
 
-        {/* HALO */}
+        {/* HALO - Simplified */}
         <g id="halo">
           <animateTransform attributeName="transform" type="translate" values="0,0; 0,-8; 0,0" dur="4s" repeatCount="indefinite" />
-          <ellipse cx="250" cy="60" rx="90" ry="15" fill="none" stroke="#52D1FF" strokeWidth="10" filter="url(#glow-water)" opacity="0.8" />
-          <ellipse cx="250" cy="60" rx="90" ry="15" fill="none" stroke="#ffffff" strokeWidth="4" />
+          <ellipse cx="250" cy="60" rx="90" ry="15" fill="none" stroke="#52D1FF" strokeWidth="6" opacity="0.6" />
+          <ellipse cx="250" cy="60" rx="90" ry="15" fill="none" stroke="#ffffff" strokeWidth="2" />
         </g>
 
-        {/* SPARKLES / STARS */}
+        {/* SPARKLES / STARS - Removed filter */}
         <defs>
-          <path id="star-water" d="M 0,-15 Q 0,0 15,0 Q 0,0 0,15 Q 0,0 -15,0 Q 0,0 0,-15 Z" fill="#ffffff" filter="url(#soft-glow-water)" />
+          <path id="star-water" d="M 0,-15 Q 0,0 15,0 Q 0,0 0,15 Q 0,0 -15,0 Q 0,0 0,-15 Z" fill="#ffffff" />
         </defs>
 
         <use href="#star-water" x="80" y="150" className="sparkle sparkle-1" />

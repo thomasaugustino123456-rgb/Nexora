@@ -16,17 +16,17 @@
 
 @layer components {
   .glass-card {
-    @apply bg-white/[0.85] border border-white/60 rounded-[32px] shadow-xl shadow-blue-900/5 transition-all duration-500;
+    @apply bg-white/[0.85] border border-white/60 rounded-[32px] shadow-xl shadow-blue-900/5 transition-[background-color,border-color,box-shadow,transform] duration-500;
   }
   
   .btn-primary {
     background: var(--accent-color, #3B82F6);
-    @apply text-white font-bold py-4 px-8 rounded-full shadow-lg active:scale-95 transition-all duration-300;
+    @apply text-white font-bold py-4 px-8 rounded-full shadow-lg active:scale-95 transition-[background-color,box-shadow,transform] duration-300;
     box-shadow: 0 10px 20px -5px var(--accent-color, #3B82F6);
   }
 
   .btn-secondary {
-    @apply bg-white/[0.8] font-bold py-4 px-8 rounded-full border border-white/60 active:scale-95 transition-all duration-300;
+    @apply bg-white/[0.8] font-bold py-4 px-8 rounded-full border border-white/60 active:scale-95 transition-[background-color,border-color,transform] duration-300;
     color: var(--accent-color, #3B82F6);
   }
 }

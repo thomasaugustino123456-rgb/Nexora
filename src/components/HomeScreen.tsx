@@ -169,7 +169,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
       case 'stats':
         if (layoutConfig.hideStats) return null;
         return (
-          <div key="stats" className="glass-card p-4 flex flex-wrap items-center justify-between gap-4 border-white/50 shadow-blue-900/5 transition-all">
+          <div key="stats" className="glass-card p-4 flex flex-wrap items-center justify-between gap-4 border-white/50 shadow-blue-900/5 transition-colors">
             <div className="flex items-center gap-6 px-2">
               <div className="flex flex-col">
                 <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Discipline Streak</span>
@@ -238,7 +238,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
       case 'protocol':
         if (layoutConfig.hideFlow) return null;
         return (
-          <div key="protocol" className="glass-card p-8 border-2 border-blue-600/5 bg-gradient-to-br from-white/80 to-blue-50/20 shadow-2xl shadow-blue-900/10 relative overflow-hidden transition-all">
+          <div key="protocol" className="glass-card p-8 border-2 border-blue-600/5 bg-gradient-to-br from-white/80 to-blue-50/20 shadow-2xl shadow-blue-900/10 relative overflow-hidden transition-colors">
             <div className="absolute top-0 right-0 p-8 opacity-5">
               <Target size={120} />
             </div>
@@ -327,7 +327,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
             key="quests"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`p-4 rounded-3xl border-2 flex items-center justify-between gap-4 transition-all ${
+            className={`p-4 rounded-3xl border-2 flex items-center justify-between gap-4 transition-colors ${
               dailyProgress.dailyQuestDone 
                 ? 'bg-emerald-50 border-emerald-100' 
                 : 'bg-yellow-400/5 border-yellow-400/20'
@@ -360,7 +360,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
       case 'plans':
         if (layoutConfig.hideCustomPlans) return null;
         return (
-          <div key="plans" className="space-y-4 pt-4 transition-all">
+          <div key="plans" className="space-y-4 pt-4 transition-colors">
             <div className="flex items-center justify-between">
               <h3 className="text-[10px] font-black text-blue-900/40 uppercase tracking-[0.2em]">Custom Protocol Library</h3>
               <button 
@@ -409,7 +409,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
       case 'trophies':
         if (layoutConfig.hideTrophies || !latestTrophy) return null;
         return (
-          <div key="trophies" className="glass-card p-5 flex items-center gap-5 border-emerald-500/10 transition-all">
+          <div key="trophies" className="glass-card p-5 flex items-center gap-5 border-emerald-500/10 transition-colors">
             <div className="w-16 h-16 flex-shrink-0">
               {latestTrophy.type === 'golden' && <GoldenTrophy />}
               {latestTrophy.type === 'ice' && <IceTrophy />}
@@ -428,11 +428,11 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
       case 'mascot':
         if (layoutConfig.hideMascot) return null;
         return (
-          <div key="mascot" className="relative w-full aspect-square sm:w-[500px] sm:h-[500px] lg:w-[600px] lg:h-[600px] flex items-center justify-center flex-shrink-0 transition-all mx-auto">
-            <div className="absolute inset-0 bg-blue-400/10 blur-[120px] rounded-full animate-pulse" />
+          <div key="mascot" className="relative w-full aspect-square sm:w-[500px] sm:h-[500px] lg:w-[600px] lg:h-[600px] flex items-center justify-center flex-shrink-0 mx-auto transform-gpu will-change-transform">
+            <div className="absolute inset-0 bg-blue-400/5 blur-[40px] rounded-full" />
             <motion.div animate={mascotControls} className="w-[90%] h-[90%] relative z-10">
               <Mascot 
-                className="w-full h-full drop-shadow-[0_20px_50px_rgba(59,130,246,0.2)]" 
+                className="w-full h-full" 
                 mood={mascotMood}
                 hat={settings.activeHat || 'none'}
                 theme={settings.activeSkin || 'standard'}

@@ -146,16 +146,16 @@ export const Mascot: React.FC<MascotProps> = ({
       <svg 
         viewBox="0 0 500 600" 
         xmlns="http://www.w3.org/2000/svg" 
-        className="w-full h-full drop-shadow-2xl"
+        className="w-full h-full"
       >
         <defs>
-          {/* Simple glow using radial gradient instead of expensive filter if possible, 
-              but for now let's just optimize the existing one by reducing its region */}
-          <filter id="glow" x="-5%" y="-5%" width="110%" height="110%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-          
+          {/* Use a simpler shadow or none for performance */}
+          <clipPath id="bottle-mask">
+            <ellipse cx="250" cy="330" rx="190" ry="160" />
+            <path d="M 120,210 C 100,150 110,120 120,110 C 140,110 160,150 180,180 Z" />
+            <path d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" />
+          </clipPath>
+
           <linearGradient id="water-grad" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor={colors.water[0]} />
             <stop offset="30%" stopColor={colors.water[1]} />
@@ -167,20 +167,13 @@ export const Mascot: React.FC<MascotProps> = ({
             <stop offset="50%" stopColor={theme === 'obsidian' ? '#1e293b' : '#C2EFFF'} stopOpacity="0.2" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0.6" />
           </linearGradient>
-
-          <clipPath id="bottle-mask">
-            <ellipse cx="250" cy="330" rx="190" ry="160" />
-            <path d="M 120,210 C 100,150 110,120 120,110 C 140,110 160,150 180,180 Z" />
-            <path d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" />
-          </clipPath>
         </defs>
 
         {/* Aura - Using simple opacity instead of scale+opacity for performance */}
         <motion.ellipse 
           cx="250" cy="330" rx="220" ry="220" 
           fill={colors.aura} 
-          filter="blur(30px)"
-          animate={{ opacity: [0.2, 0.4, 0.2] }}
+          animate={{ opacity: [0.1, 0.2, 0.1] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
 
@@ -221,58 +214,39 @@ export const Mascot: React.FC<MascotProps> = ({
           {/* LIQUID LAYER */}
           <g clipPath="url(#bottle-mask)">
             <rect x="0" y="0" width="500" height="600" fill={theme === 'obsidian' ? '#0f172a' : '#F0FAFF'} fillOpacity="0.2" />
-            <motion.g 
-              animate={{ 
-                y: isBoiling ? [220, 218, 220] : 220,
-                rotate: sloshAmount ? [0, -(sloshAmount), (sloshAmount * 0.8), 0] : 0,
-              }}
-              transition={{ 
-                rotate: { duration: 0.6, ease: "easeOut" },
-                y: { duration: 0.3, repeat: isBoiling ? Infinity : 0, ease: "linear" }
-              }}
-              style={{ originX: "250px", originY: "330px" }}
-            >
+            <g style={{ transform: isBoiling ? 'translateY(-2px)' : 'translateY(220px)' }}>
               {/* Back wave */}
-              <motion.path 
+              <path 
                 d="M -500,0 Q -375,-15 -250,0 T 0,0 T 250,0 T 500,0 L 500,400 L -500,400 Z" 
                 fill={theme === 'neural_bio' ? '#10b981' : isBoiling ? "#FF8888" : "#66CCFF"} 
-                fillOpacity="0.2" 
-                animate={{ x: [-250, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-              />
+                fillOpacity="0.2"
+              >
+                <animateTransform attributeName="transform" type="translate" from="0 0" to="250 0" dur="5s" repeatCount="indefinite" />
+              </path>
               {/* Front wave */}
-              <motion.path 
+              <path 
                 d="M -500,10 Q -375,25 -250,10 T 0,10 T 250,10 T 500,10 L 500,400 L -500,400 Z" 
                 fill="url(#water-grad)" 
                 fillOpacity="0.8"
-                animate={{ x: [0, -250] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-              />
+              >
+                <animateTransform attributeName="transform" type="translate" from="0 0" to="-250 0" dur="4s" repeatCount="indefinite" />
+              </path>
               
-              {/* Boiling Bubbles */}
-              {isBoiling && [1, 2, 3, 4, 5].map((i) => (
-                <motion.circle
+              {/* Boiling Bubbles - Reduced to 3 for performance */}
+              {isBoiling && [1, 2, 3].map((i) => (
+                <circle
                   key={`bubble-${i}`}
-                  cx={200 + Math.random() * 100}
-                  cy={250 + Math.random() * 100}
-                  r={2 + Math.random() * 4}
+                  cx={200 + (i * 30)}
+                  cy={250 + (i * 20)}
+                  r={3}
                   fill="#fff"
                   fillOpacity="0.4"
-                  animate={{ 
-                    y: [-20, -100], 
-                    x: [0, (Math.random() - 0.5) * 30],
-                    opacity: [0, 0.8, 0],
-                    scale: [0.5, 1.2, 0.8]
-                  }}
-                  transition={{ 
-                    duration: 1 + Math.random(), 
-                    repeat: Infinity, 
-                    delay: i * 0.2, 
-                    ease: "easeOut" 
-                  }}
-                />
+                >
+                  <animate attributeName="cy" from="350" to="200" dur={`${1 + i * 0.2}s`} repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0;0.5;0" dur={`${1 + i * 0.2}s`} repeatCount="indefinite" />
+                </circle>
               ))}
-            </motion.g>
+            </g>
           </g>
 
           {/* GLASS BOTTLE HIGHLIGHTS & OUTLINES */}
@@ -386,6 +360,8 @@ export const Mascot: React.FC<MascotProps> = ({
             transition={{ duration: 3, repeat: Infinity }}
           >
             <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill={colors.nColor} />
+            {/* Using a second N with low opacity to simulate glow instead of filter */}
+            <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill={colors.nColor} opacity="0.3" transform="scale(1.1)" style={{ transformOrigin: 'center' }} />
           </motion.g>
         </motion.g>
 
