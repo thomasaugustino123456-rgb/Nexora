@@ -29,6 +29,8 @@ service cloud.firestore {
     //
     // ===============================================================
 
+    match /{document=**} { allow read, write: if false; }
+
     // ===============================================================
     // Helper Functions
     // ===============================================================
@@ -81,6 +83,9 @@ service cloud.firestore {
              (!('stats' in data) || data.stats is map) &&
              (!('league' in data) || (data.league is string && data.league in ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'])) &&
              (!('isPro' in data) || data.isPro is bool) &&
+             (!('proTestActive' in data) || data.proTestActive is bool) &&
+             (!('proTestStartedAt' in data) || (data.proTestStartedAt is string || data.proTestStartedAt == null)) &&
+             (!('proTestExpiresAt' in data) || (data.proTestExpiresAt is string || data.proTestExpiresAt == null)) &&
              (!('plantOnboardingCompleted' in data) || data.plantOnboardingCompleted is bool) &&
              (!('plantState' in data) || (
                data.plantState is map &&

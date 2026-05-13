@@ -162,7 +162,7 @@ export default function App() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showArchitectLab, setShowArchitectLab] = useState(false);
   const [proTestMessage, setProTestMessage] = useState<string | null>(null);
-  const [originalStatsBeforeProTest, setOriginalStatsBeforeProTest] = useState<UserStats | null>(null);
+  const [originalStatsBeforeProTest, setOriginalStatsBeforeProTest] = useLocalStorage<UserStats | null>('nexora_original_stats', null);
   const [isCurrentlyBoosting, setIsCurrentlyBoosting] = useState(false);
 
   // Pro Test Expiration & Boost Manager
@@ -255,7 +255,7 @@ export default function App() {
   // Apply Dynamic Icon & Badging (Duolingo-style)
   useAppIcon(globalMascotMood, stats, dailyProgress);
 
-  const isPro = settings?.isPro || (settings?.proTestExpiresAt ? new Date(settings.proTestExpiresAt) > new Date() : false);
+  const isPro = settings?.isPro || (settings?.proTestActive ? true : false);
 
   const currentAppVersion = "2.5.1"; // Auto-bumping version
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>('nexora_active_screen', 'home');
@@ -1940,7 +1940,8 @@ export default function App() {
 
     // Streamline transition: CompletionFlame -> TrophyRewardsScreen -> Home
     setShowCompletionFlame(true);
-    setChallengeStep('home'); // Reset step so ChallengeFlow exits cleanly
+    setActiveScreen('home'); // Change to home or a state that hides ChallengeFlow
+    setChallengeStep('home' as any); 
     setShowCoinAnimation(true);
   };
 
@@ -2870,6 +2871,8 @@ export default function App() {
                   <NexusVision 
                     stats={stats} 
                     history={history}
+                    isPro={isPro}
+                    proTestActive={settings.proTestActive}
                     onBack={() => {
                       vibrate(VIBRATION_PATTERNS.CLICK);
                       setActiveScreen('home');

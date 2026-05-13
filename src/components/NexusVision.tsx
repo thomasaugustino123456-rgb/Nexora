@@ -4,6 +4,7 @@ import { Brain, Zap, Shield, Search, ArrowLeft, Loader2, Sparkles, Activity, Fin
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { UserStats, DailyProgress } from '../types';
 import { analyzeHabits } from '../services/aiService';
+import { Mascot } from './Mascot';
 
 const Typewriter = ({ text, onComplete }: { text: string, onComplete?: () => void }) => {
   const [displayedText, setDisplayedText] = useState("");
@@ -24,7 +25,7 @@ const Typewriter = ({ text, onComplete }: { text: string, onComplete?: () => voi
   return <p>{displayedText}</p>;
 };
 
-export function NexusVision({ stats, history, onBack }: { stats: UserStats, history: DailyProgress[], onBack: () => void }) {
+export function NexusVision({ stats, history, onBack, isPro = false, proTestActive = false }: { stats: UserStats, history: DailyProgress[], onBack: () => void, isPro?: boolean, proTestActive?: boolean }) {
   const [isScanning, setIsScanning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [scanStep, setScanStep] = useState(0);
@@ -43,11 +44,11 @@ export function NexusVision({ stats, history, onBack }: { stats: UserStats, hist
     setResult(null);
     setScanStep(0);
 
-    // Start AI request in parallel
+    // If pro/test, use more advanced prompts (simulated by faster/higher quality feeling)
     const aiPromise = analyzeHabits(stats, history).catch(() => "NEXUS PROTOCOL ERROR: NEURAL LINK FAILED.");
 
     // Fast step simulation
-    const stepInterval = 600; // slightly slower for better perception
+    const stepInterval = isPro ? 400 : 700; // Pro users get faster "neural" processing
     for (let i = 0; i < steps.length; i++) {
       setScanStep(i);
       await new Promise(r => setTimeout(r, stepInterval));
@@ -87,7 +88,11 @@ export function NexusVision({ stats, history, onBack }: { stats: UserStats, hist
         </button>
         <div className="text-right">
           <h2 className="text-2xl font-black text-white italic tracking-tighter">NEXUS VISION</h2>
-          <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em]">Advanced Neural Lab</p>
+          <div className="flex items-center gap-1 justify-end">
+            {proTestActive && <span className="bg-amber-500 text-[8px] px-1.5 py-0.5 rounded-full text-black font-black">TEST MODE</span>}
+            {isPro && !proTestActive && <span className="bg-blue-500 text-[8px] px-1.5 py-0.5 rounded-full text-white font-black">PRO</span>}
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em]">Advanced Neural Lab</p>
+          </div>
         </div>
       </div>
 
@@ -142,8 +147,14 @@ export function NexusVision({ stats, history, onBack }: { stats: UserStats, hist
                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                     className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent shadow-[0_0_20px_rgba(59,130,246,0.8)] z-20"
                  />
-                 <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                    <Fingerprint size={200} className="text-blue-400" />
+                 <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-64 h-64 opacity-80">
+                      <Mascot 
+                        mood="surprised" 
+                        theme="neural_bio" 
+                        className="w-full h-full"
+                      />
+                    </div>
                  </div>
                  
                  {/* Fast Scrolling Data Stream - Fewer elements for performance */}

@@ -83,6 +83,7 @@ export const Mascot: React.FC<MascotProps> = ({
   const isAngry = actualMood === 'angry' || actualMood === 'boiling';
   const isBoiling = actualMood === 'boiling';
   const isNeutral = actualMood === 'neutral';
+  const isSurprised = actualMood === 'surprised';
 
   // Eye movement calculation
   const eyeX = mousePos.x * 20;
@@ -183,6 +184,21 @@ export const Mascot: React.FC<MascotProps> = ({
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
 
+        {/* Neural Link Connection Effect for neural_bio theme */}
+        {theme === 'neural_bio' && (
+          <motion.g opacity={0.4}>
+            {[1, 2, 3].map((i) => (
+              <motion.ellipse
+                key={`neural-ring-${i}`}
+                cx="250" cy="330" rx={190 + i * 20} ry={160 + i * 20}
+                fill="none" stroke="#50FA7B" strokeWidth="1"
+                animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.1, 0.3] }}
+                transition={{ duration: 2 + i, repeat: Infinity, ease: "easeInOut" }}
+              />
+            ))}
+          </motion.g>
+        )}
+
         {/* Shadow */}
         <motion.ellipse 
           cx="250" cy="520" rx={150} ry={15} 
@@ -232,13 +248,50 @@ export const Mascot: React.FC<MascotProps> = ({
                 animate={{ x: [0, -250] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
               />
+              
+              {/* Boiling Bubbles */}
+              {isBoiling && [1, 2, 3, 4, 5].map((i) => (
+                <motion.circle
+                  key={`bubble-${i}`}
+                  cx={200 + Math.random() * 100}
+                  cy={250 + Math.random() * 100}
+                  r={2 + Math.random() * 4}
+                  fill="#fff"
+                  fillOpacity="0.4"
+                  animate={{ 
+                    y: [-20, -100], 
+                    x: [0, (Math.random() - 0.5) * 30],
+                    opacity: [0, 0.8, 0],
+                    scale: [0.5, 1.2, 0.8]
+                  }}
+                  transition={{ 
+                    duration: 1 + Math.random(), 
+                    repeat: Infinity, 
+                    delay: i * 0.2, 
+                    ease: "easeOut" 
+                  }}
+                />
+              ))}
             </motion.g>
           </g>
-
 
           {/* GLASS BOTTLE HIGHLIGHTS & OUTLINES */}
           <g stroke={colors.edge} strokeWidth="4" fill="none">
             <ellipse cx="250" cy="330" rx="190" ry="160" strokeOpacity="0.4" />
+            
+            {/* Glossy Sheen - Dynamic based on mouse */}
+            <motion.path 
+              d="M 150,220 Q 250,180 350,220" 
+              fill="none" 
+              stroke="#fff" 
+              strokeWidth="15" 
+              strokeLinecap="round" 
+              strokeOpacity="0.1"
+              animate={{ 
+                x: mousePos.x * 20,
+                y: mousePos.y * 10
+              }}
+            />
             
             {/* Ears with Follow-through wobble */}
             <motion.path 
@@ -274,7 +327,7 @@ export const Mascot: React.FC<MascotProps> = ({
           {/* FACIAL FEATURES */}
           <g transform={`translate(${eyeX}, ${eyeY})`}>
             {/* EYES */}
-            {!isAngry ? (
+            {!isAngry && !isSurprised ? (
               <>
                 <motion.g animate={{ scaleY: isBlinking ? 0.1 : 1 }} transition={{ duration: 0.1 }}>
                   <circle cx="180" cy="260" r="16" fill={theme === 'obsidian' ? '#60a5fa' : '#001845'} />
@@ -283,6 +336,13 @@ export const Mascot: React.FC<MascotProps> = ({
                   <circle cx="185" cy="254" r="6" fill="#fff" />
                   <circle cx="325" cy="254" r="6" fill="#fff" />
                 </motion.g>
+              </>
+            ) : isSurprised ? (
+              <>
+                <circle cx="180" cy="255" r="20" fill={theme === 'obsidian' ? '#60a5fa' : '#001845'} />
+                <circle cx="320" cy="255" r="20" fill={theme === 'obsidian' ? '#60a5fa' : '#001845'} />
+                <circle cx="180" cy="255" r="8" fill="#fff" />
+                <circle cx="320" cy="255" r="8" fill="#fff" />
               </>
             ) : (
               <>
@@ -299,6 +359,13 @@ export const Mascot: React.FC<MascotProps> = ({
                   d="M 220 320 Q 250 290 280 320" 
                   fill="none" stroke={theme === 'obsidian' ? '#60a5fa' : '#001845'} strokeWidth="10" strokeLinecap="round"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                />
+              ) : isSurprised ? (
+                <motion.ellipse 
+                  key="surprised-mouth"
+                  cx="250" cy="320" rx="15" ry="20" 
+                  fill={theme === 'obsidian' ? '#60a5fa' : '#001845'}
+                  initial={{ scale: 0 }} animate={{ scale: 1 }}
                 />
               ) : (
                 <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} key="happy-face">
