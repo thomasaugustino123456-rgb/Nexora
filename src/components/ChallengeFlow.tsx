@@ -363,11 +363,8 @@ export function WaterStep({ goal, progress: initialProgress = 0, onUpdate, onCon
   const isFinished = localProgress >= goal;
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 1.1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full"
+    <div 
+      className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full animate-in fade-in zoom-in duration-500"
     >
       <div className="w-full max-w-[300px] lg:max-w-[400px]">
         <WaterMascot progress={Math.min(localProgress / goal, 1)} className="drop-shadow-2xl" />
@@ -412,7 +409,7 @@ export function WaterStep({ goal, progress: initialProgress = 0, onUpdate, onCon
           ) : null}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -1327,8 +1324,8 @@ export function GratitudeStep({ onComplete, onSave, showToast, settings, activeS
   const handleSubmit = () => {
     if (text.trim().length < 3) return;
     vibrate(VIBRATION_PATTERNS.SUCCESS);
+    if (settings.soundEnabled) play('challenge_unlock');
     setSubmitted(true);
-    setTimeout(onComplete, 100);
   };
 
   const handleSave = () => {
@@ -1347,7 +1344,7 @@ export function GratitudeStep({ onComplete, onSave, showToast, settings, activeS
       <div className="relative w-full aspect-square bg-blue-50 rounded-3xl border-4 border-blue-200 flex items-center justify-center p-6 overflow-hidden">
         <AnimatePresence>
           {!submitted ? (
-            <motion.div exit={{ y: -100, opacity: 0 }} className="w-full">
+            <div className="w-full">
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
@@ -1363,24 +1360,16 @@ export function GratitudeStep({ onComplete, onSave, showToast, settings, activeS
                   <Save size={24} />
                 </button>
                 <button
-                  onClick={() => {
-                    vibrate(VIBRATION_PATTERNS.SUCCESS);
-                    if (settings.soundEnabled) play('challenge_unlock');
-                    setSubmitted(true);
-                  }}
+                  onClick={handleSubmit}
                   disabled={text.trim().length < 3}
                   className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
                 >
                   Drop in Jar ✨
                 </button>
               </div>
-            </motion.div>
+            </div>
           ) : (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-center space-y-4"
-            >
+            <div className="text-center space-y-4 animate-in fade-in zoom-in duration-500">
                <LazyHappyMascot size={40} hat={activeSkin} settings={settings} />
                <div className="space-y-1">
                  <p className="text-blue-900 font-black uppercase tracking-widest text-sm">Grateful!</p>
@@ -1388,7 +1377,7 @@ export function GratitudeStep({ onComplete, onSave, showToast, settings, activeS
                    Continue <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                  </button>
                </div>
-            </motion.div>
+            </div>
           )}
         </AnimatePresence>
       </div>

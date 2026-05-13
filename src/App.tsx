@@ -1877,12 +1877,21 @@ export default function App() {
       let newLastCompletedDate = prevStats.lastCompletedDate;
       let streakBonusPoints = 0;
 
-      if (prevStats.lastCompletedDate !== today || streakIncrease > 1) {
+      // Streak Logic: Now more aggressive like requested (increments per session if substantial)
+      if (prevStats.lastCompletedDate !== today || completedTasks >= 5 || isCustomPlan) {
         let baseStreak = (prevStats.streak || 0);
+        // Reset base if they missed a day
         if (prevStats.lastCompletedDate !== today && prevStats.lastCompletedDate !== getYesterday()) {
           baseStreak = 0;
         }
-        finalStreak = baseStreak + streakIncrease;
+        
+        // If they already did one today, only increment if they did many tasks
+        if (prevStats.lastCompletedDate === today) {
+          finalStreak = baseStreak + 1;
+        } else {
+          finalStreak = baseStreak + streakIncrease;
+        }
+
         newBestStreak = Math.max(prevStats.bestStreak || 0, finalStreak);
         if (prevStats.lastCompletedDate !== today) {
           newTotalCompletedDays = (prevStats.totalCompletedDays || 0) + 1;
@@ -1964,7 +1973,19 @@ export default function App() {
     setDailyProgress(prev => ({ 
       ...prev, 
       completed: true,
-      completionsCount: nextCompletionsCount,
+      completionsCount: (prev.completionsCount || 0) + 1,
+      // Reset logic flags for replayability
+      pushupsDone: false,
+      waterChallengeCount: 0,
+      breathingDone: false,
+      drawingDone: false,
+      footballDone: false,
+      bubblesDone: false,
+      memoryDone: false,
+      gratitudeDone: false,
+      reactionDone: false,
+      meditationDone: false,
+      writingDone: false,
     }));
     
     // Set data for the Flame Screen and trigger it

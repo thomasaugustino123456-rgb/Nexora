@@ -62,8 +62,8 @@ export function SettingsScreen({
       className="max-w-2xl mx-auto w-full space-y-8 pb-40"
     >
       {/* Header */}
-      <div className="flex items-center gap-4 sticky top-0 bg-transparent z-10 py-2">
-        <button onClick={onBack} className="p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm text-blue-900 active:scale-95 transition-all">
+      <div className="flex items-center gap-4 sticky top-0 bg-[#E0F2FF]/95 z-40 py-4 px-2 -mx-2">
+        <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm text-blue-900 active:scale-95 transition-all">
            <ChevronLeft size={24} />
         </button>
         <div>
@@ -283,14 +283,13 @@ export function SettingsScreen({
           </div>
         )}
 
-        {/* Account Section */}
-        <div className="glass-card p-6 space-y-4">
+        <div className="safe-glass gpu p-6 space-y-4">
           <div className="flex items-center gap-3 mb-2">
             <User size={18} className="text-blue-500" />
             <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Account & Identity</h3>
           </div>
           
-          <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+          <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl">
               <div className="flex items-center gap-3">
                  <div className="w-14 h-14 rounded-full bg-white overflow-hidden shadow-inner border-2 border-white">
                     {user?.photoURL ? <img src={user.photoURL} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <div className="w-full h-full flex items-center justify-center text-blue-400 font-bold">U</div>}
@@ -312,8 +311,7 @@ export function SettingsScreen({
           </div>
         </div>
 
-        {/* Goals Section */}
-        <div className="glass-card p-6 space-y-6">
+        <div className="safe-glass gpu p-6 space-y-6">
           <div className="flex items-center gap-3 mb-2">
             <Target size={18} className="text-blue-500" />
             <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Performance Goals</h3>
@@ -324,7 +322,7 @@ export function SettingsScreen({
               <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest px-2 flex items-center gap-2">
                 <Flame size={12} className="text-orange-500" /> Pushups Target
               </label>
-              <div className="flex items-center gap-3 bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50">
+              <div className="flex items-center gap-3 bg-blue-50/50 p-3 rounded-2xl">
                  <button onClick={() => setSettings({ pushupsGoal: Math.max(1, (settings.pushupsGoal || 0) - 1) })} className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm text-blue-600 font-black">-</button>
                  <span className="flex-1 text-center font-black text-blue-900">{settings.pushupsGoal}</span>
                  <button onClick={() => setSettings({ pushupsGoal: (settings.pushupsGoal || 0) + 1 })} className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm text-blue-600 font-black">+</button>
@@ -373,8 +371,7 @@ export function SettingsScreen({
           </div>
         </div>
 
-        {/* Experience Section */}
-        <div className="glass-card p-6 space-y-6">
+        <div className="safe-glass gpu p-6 space-y-6">
           <div className="flex items-center gap-3 mb-2">
             <Palette size={18} className="text-blue-500" />
             <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">User Experience</h3>
@@ -405,7 +402,7 @@ export function SettingsScreen({
                 { id: 'sounds', label: 'Audio Feedback (SFX)', icon: <Volume2 size={14} />, state: settings.soundEnabled, setter: (v: boolean) => setSettings({ soundEnabled: v }) },
                 { id: 'dog-pack', label: 'Mascot Audio: Dog Mode', icon: <Droplets size={14} />, state: settings.isDogSoundPackActive, setter: (v: boolean) => setSettings({ isDogSoundPackActive: v }) },
               ].map(item => (
-                <div key={item.id} className="flex items-center justify-between p-4 bg-blue-50/30 rounded-2xl border border-blue-100/20">
+                <div key={item.id} className="flex items-center justify-between p-4 bg-blue-50/30 rounded-2xl">
                   <div className="flex items-center gap-3">
                     <div className="text-blue-500">{item.icon}</div>
                     <span className="text-[11px] font-black text-blue-900 uppercase tracking-tight">{item.label}</span>
@@ -422,15 +419,14 @@ export function SettingsScreen({
           </div>
         </div>
 
-        {/* Notifications Advanced */}
-        <div className="glass-card p-6 space-y-6">
+        <div className="safe-glass gpu p-6 space-y-6">
           <div className="flex items-center gap-3 mb-2">
             <Bell size={18} className="text-blue-500" />
             <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Precision Notifications</h3>
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-4 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-100 border-2 border-blue-400">
+            <div className="flex items-center justify-between p-4 bg-blue-600 text-white rounded-2xl shadow-lg border-2 border-blue-400">
                <div>
                  <p className="font-black text-sm uppercase">Global Push State</p>
                  <p className="text-[9px] opacity-70 font-bold uppercase tracking-widest">Master Switch</p>
@@ -468,9 +464,9 @@ export function SettingsScreen({
               </motion.div>
             )}
 
-            <div className="flex items-center justify-between p-4 bg-orange-600 text-white rounded-2xl shadow-xl shadow-orange-100 border-2 border-orange-400 mt-3 hover:translate-y-[-2px] transition-all cursor-pointer" onClick={() => setSettings({ isReelsDisabled: !settings.isReelsDisabled })}>
+            <div className="flex items-center justify-between p-4 bg-orange-600 text-white rounded-2xl shadow-lg border-2 border-orange-400 mt-3 hover:translate-y-[-2px] transition-all cursor-pointer" onClick={() => setSettings({ isReelsDisabled: !settings.isReelsDisabled })}>
                <div className="flex items-center gap-4">
-                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md">
+                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                     <Video size={18} />
                  </div>
                  <div>

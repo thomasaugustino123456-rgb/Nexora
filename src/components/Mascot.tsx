@@ -139,8 +139,9 @@ export const Mascot: React.FC<MascotProps> = ({
       style={{ 
         perspective: 1000,
         width: '100%',
-        maxWidth: '512px', // User requested large size
-        aspectRatio: '1/1.2'
+        maxWidth: '512px', 
+        aspectRatio: '1/1.2',
+        willChange: 'transform'
       }}
     >
       <svg 

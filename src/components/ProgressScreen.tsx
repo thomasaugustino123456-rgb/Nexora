@@ -61,7 +61,7 @@ export function ProgressScreen({
           </div>
         </div>
 
-        <div className="glass-card p-8 bg-gradient-to-br from-blue-600 to-indigo-700 text-white relative overflow-hidden shadow-2xl shadow-blue-200 border-none">
+        <div className="glass-card gpu p-8 bg-gradient-to-br from-blue-600 to-indigo-700 text-white relative overflow-hidden shadow-2xl shadow-blue-200 border-none">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-400/20 rounded-full -ml-12 -mb-12 blur-xl" />
           
@@ -108,7 +108,7 @@ export function ProgressScreen({
           { label: 'Nexus Rank', value: `#${userRank || '--'}`, sub: 'Global Standing', icon: <Star className="text-purple-600" />, bg: 'bg-purple-100/50' },
           { label: 'Wallet', value: `${stats.coins || 0}N`, sub: 'Nexora Currency', icon: <Coins className="text-blue-600" />, bg: 'bg-blue-100/50' }
         ].map((stat, i) => (
-          <div key={i} className="glass-card p-6 flex flex-col items-center text-center group hover:scale-[1.02] transition-transform border-white/80">
+          <div key={i} className="safe-glass gpu p-6 flex flex-col items-center text-center group hover:scale-[1.02] transition-transform">
             <div className={`w-16 h-16 ${stat.bg} rounded-3xl flex items-center justify-center mb-4 shadow-sm group-hover:rotate-12 transition-transform`}>
               {stat.icon}
             </div>
@@ -120,7 +120,7 @@ export function ProgressScreen({
       </motion.div>
 
       {/* Category Breakdown */}
-      <motion.div variants={item} className="glass-card p-8 space-y-6">
+      <motion.div variants={item} className="safe-glass gpu p-8 space-y-6">
         <div className="flex items-center justify-between">
            <h3 className="text-lg font-black text-blue-900 uppercase tracking-tight italic">Skill Architecture</h3>
            <BarChart2 size={18} className="text-blue-400" />

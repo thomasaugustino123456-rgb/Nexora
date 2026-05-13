@@ -18,7 +18,17 @@
 
 @layer components {
   .glass-card {
-    @apply bg-white/[0.85] border border-white/60 rounded-[32px] shadow-xl shadow-blue-900/5 transition-[background-color,border-color,box-shadow,transform] duration-500;
+    @apply bg-white/90 border border-white/60 rounded-[32px] shadow-lg shadow-blue-900/5 transition-[background-color,border-color,box-shadow,transform] duration-500;
+  }
+
+  .safe-glass {
+    @apply bg-white border border-blue-50 rounded-[32px] shadow-md;
+  }
+
+  .gpu {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
   }
   
   .btn-primary {
