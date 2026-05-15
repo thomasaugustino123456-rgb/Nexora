@@ -45,7 +45,7 @@ import { TrophyRewardsScreen } from './components/TrophyRewardsScreen';
 const SOCIAL_LOCKED = false;
 
 import { vibrate, VIBRATION_PATTERNS } from './lib/vibrate';
-import { requestNotificationPermission, setupOnMessageListener } from './lib/notifications';
+import { requestNotificationPermission, setupOnMessageListener, VAPID_KEY } from './lib/notifications';
 
 import { NavButton } from './components/NavButton';
 import { SplashScreen } from './components/SplashScreen';
@@ -1220,7 +1220,7 @@ export default function App() {
   }, [settings.notificationsEnabled, fcmToken, fcmError]);
 
   const setupFCM = async () => {
-    const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BF2tHGVbbJHc3wxlE98atQFPU1TRqX3shN0bhSsaNf-UxdDxgoj25zLhpttoeDsrjQ8l24cnysfF-eyzH3P7baw';
+    const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || VAPID_KEY;
     console.log('FCM: Starting setup with VAPID key:', vapidKey.substring(0, 10) + '...');
     setFcmError(null);
     try {
@@ -1273,13 +1273,16 @@ export default function App() {
       const saveToken = async () => {
         try {
           const userRef = doc(db, 'users', user.uid);
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
           await updateDoc(userRef, {
             fcmToken: fcmToken,
             notificationsEnabled: true,
+            timezone: tz,
             'settings.fcmToken': fcmToken,
-            'settings.notificationsEnabled': true
+            'settings.notificationsEnabled': true,
+            'settings.timezone': tz
           });
-          console.log('FCM: Token saved to Firestore dashboard and settings.');
+          console.log('FCM: Token and Timezone saved to Firestore.');
         } catch (e) {
           console.error('FCM: Failed to save token:', e);
         }

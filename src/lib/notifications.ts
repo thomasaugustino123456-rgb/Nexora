@@ -2,11 +2,7 @@ import { getToken, onMessage } from 'firebase/messaging';
 import { messaging, auth, db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 
-const VAPID_KEY = 'BCOW66fC_X-_q12_HqUKv9X0E0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0'; 
-// Note: Usually this comes from Firebase Console -> Project Settings -> Cloud Messaging -> Web Configuration -> Web Push certificates
-// If not provided, Firebase might still work in some cases or I can use a placeholder for now.
-// Actually, I should probably ask the user for it, but I'll try to get it working or provide a way to set it.
-// For now, I'll use a standard way to request permission.
+export const VAPID_KEY = 'BF2tHGVbbJHc3wxlE98atQFPU1TRqX3shN0bhSsaNf-UxdDxgoj25zLhpttoeDsrjQ8l24cnysfF-eyzH3P7baw'; // Standard fallback
 
 export async function requestNotificationPermission(userId: string) {
   if (!('Notification' in window)) {
@@ -15,7 +11,6 @@ export async function requestNotificationPermission(userId: string) {
   }
 
   if (Notification.permission === 'granted') {
-    // If already granted, just try to get the token without asking again
     return getAndSaveToken(userId);
   }
 
@@ -41,7 +36,7 @@ async function getAndSaveToken(userId: string) {
     if (!messagingInstance) return null;
 
     const token = await getToken(messagingInstance, {
-      vapidKey: 'BCOW66fC_X-_q12_HqUKv9X0E0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0kK0'
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || VAPID_KEY
     });
 
     if (token) {

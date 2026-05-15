@@ -457,6 +457,15 @@ export function SettingsScreen({
                     />
                   </div>
                   <div className="bg-white p-3 rounded-xl border border-blue-100">
+                    <label className="text-[8px] font-black uppercase text-blue-400 block mb-1">Evening Trigger</label>
+                    <input 
+                      type="time" 
+                      value={settings.reminderTime2 || '21:00'} 
+                      onChange={(e) => setSettings({ reminderTime2: e.target.value })}
+                      className="w-full bg-transparent font-black text-blue-900 outline-none uppercase text-xs"
+                    />
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-blue-100 col-span-2">
                     <label className="text-[8px] font-black uppercase text-blue-400 block mb-1">Motivation Sync</label>
                     <input 
                       type="time" 

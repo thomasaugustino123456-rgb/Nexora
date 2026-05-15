@@ -117,7 +117,11 @@ const startScheduler = () => {
         const currentHour = parseInt(userTimeStr.split(':')[0]);
         const currentMin = parseInt(userTimeStr.split(':')[1]);
 
-        if (userTimeStr === userData.reminderTime || userTimeStr === userData.reminderTime2) {
+        const reminder1 = userData.reminderTime || (userData.settings && userData.settings.reminderTime);
+        const reminder2 = userData.reminderTime2 || (userData.settings && userData.settings.reminderTime2);
+
+        if ((reminder1 && userTimeStr === reminder1) || (reminder2 && userTimeStr === reminder2)) {
+          console.log(`Scheduler: Triggering reminder for user ${userDoc.id} at ${userTimeStr}`);
           if (!userData.isTodayCompleted) {
             await sendPush(fcmToken, 'Nexora 🔥', 'Hey 👋 Ready for today’s challenge? Don\'t let that streak die!');
           }
@@ -231,7 +235,7 @@ const startScheduler = () => {
     } catch (error) {
       console.error("Scheduler Error:", error);
     }
-  }, 300000); // Check every 5 minutes to save Quota
+  }, 60000); // Check every 1 minute to ensure prompts match exact minutes
 };
 
 // Version Watcher (Automatic Update Notifications)

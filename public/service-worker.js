@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexora-v1.4'; // Bumping version for fresh install with background check
+const CACHE_NAME = 'nexora-v1.5'; // Bumping version for Notification fixes
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
