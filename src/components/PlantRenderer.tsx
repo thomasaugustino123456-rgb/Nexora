@@ -1366,17 +1366,37 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
   };
 
   return (
-    <motion.svg 
-      viewBox="0 0 200 200" 
-      className="w-72 h-72 drop-shadow-[0_25px_25px_rgba(0,0,0,0.15)]"
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: 'spring', stiffness: 150, damping: 20 }}
-    >
-      {/* Ground/Shadow */}
-      <ellipse cx="100" cy="190" rx="50" ry="10" fill="rgba(0,0,0,0.05)" />
+    <div className="relative flex flex-col items-center">
+      <motion.svg 
+        viewBox="0 0 200 200" 
+        className={`w-72 h-72 overflow-visible drop-shadow-[0_25px_25px_rgba(0,0,0,0.15)] ${className}`}
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ 
+          scale: 1, 
+          opacity: 1,
+          ...(isShaking ? { x: [-2, 2, -2, 2, 0] } : (isDead ? { y: 2, scale: 0.98 } : {}))
+        }}
+        transition={{ type: 'spring', stiffness: 150, damping: 20 }}
+        onClick={handlePlantClick}
+        style={{
+          filter: activeColor ? `drop-shadow(0 0 15px ${plantColors[activeColor]}88)` : 'none'
+        }}
+      >
+        <defs>
+          <radialGradient id="soilGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#5D4037" />
+            <stop offset="100%" stopColor="#3E2723" />
+          </radialGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
 
-      {getEcosystemRenderer()}
+        {/* Ground/Shadow */}
+        <ellipse cx="100" cy="190" rx="50" ry="10" fill="rgba(0,0,0,0.05)" />
+
+        {getEcosystemRenderer()}
 
       {stage === 0 && !isDead && type !== 'sprout' && (
         <motion.ellipse 
@@ -1405,51 +1425,56 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
         <SunRenderer />
       )}
 
-      {/* AUTO-MIST REALISTIC DROPS */}
+      {/* AUTO-MIST REALISTIC DROPS (12 Principles: Weighted fall, Tear shape) */}
       {activeEcosystemItemIds.includes('eco_sprinkler_01') && !isDead && (
         <motion.g className="pointer-events-none">
-          {[...Array(8)].map((_, i) => (
-            <motion.circle
+          {[...Array(10)].map((_, i) => (
+            <motion.path
               key={i}
-              r="3"
-              fill="#38bdf8"
+              d="M 0,0 Q 3,-5 6,0 Q 3,10 0,0"
+              fill="#7dd3fc"
               filter="url(#glow)"
-              initial={{ cx: 40 + Math.random() * 120, cy: -20, opacity: 0 }}
+              initial={{ x: 50 + Math.random() * 100, y: -20, opacity: 0, scale: 0 }}
               animate={{
-                cy: [0, 100 + Math.random() * 50],
-                opacity: [0, 0.9, 0],
-                scale: [1, 1.3, 0.7],
-                x: [0, Math.random() * 10 - 5, 0]
+                y: [0, 160 + Math.random() * 20],
+                opacity: [0, 1, 0.8, 0],
+                scale: [0.6, 1.2, 0.9],
+                rotate: [0, 10, -10, 0]
               }}
               transition={{
-                duration: 1.2 + Math.random(),
+                duration: 0.7 + Math.random() * 0.3,
                 repeat: Infinity,
-                delay: i * 0.4,
-                ease: "easeIn"
+                delay: i * 0.5,
+                ease: "circIn"
               }}
             />
           ))}
         </motion.g>
       )}
 
-      {/* ECOSYSTEM COMPANIONS */}
-      <AnimatePresence>
-        {activeEcosystemItemIds.includes('eco_nanobees_01') && !isDead && (
-          <NanoBees key="bees" />
-        )}
-        {activeEcosystemItemIds.includes('eco_butterfly_01') && !isDead && (
-          <SpiritButterfly key="butterfly" />
-        )}
-      </AnimatePresence>
+      </motion.svg>
 
-      {/* DRAGGABLE GARDENER DRONE */}
-      {activeEcosystemItemIds.includes('eco_drone_01') && !isDead && (
-        <GardenerDrone 
-          mood={isThirsty ? 'working' : 'idle'} 
-          targetPos={droneTargetPos}
-          onPositionChange={onDronePositionChange}
-        />
-      )}
-    </motion.svg>
+      {/* ECOSYSTEM COMPANIONS - RENDERED OUTSIDE SVG IN RELATIVE DIV */}
+      <div className="absolute inset-0 pointer-events-none overflow-visible">
+        <AnimatePresence>
+          {activeEcosystemItemIds.includes('eco_nanobees_01') && !isDead && (
+            <NanoBees key="bees" />
+          )}
+          {activeEcosystemItemIds.includes('eco_butterfly_01') && !isDead && (
+            <SpiritButterfly key="butterfly" />
+          )}
+        </AnimatePresence>
+
+        {/* DRAGGABLE GARDENER DRONE */}
+        {activeEcosystemItemIds.includes('eco_drone_01') && !isDead && (
+          <GardenerDrone 
+            mood={isThirsty ? 'working' : 'idle'} 
+            targetPos={droneTargetPos}
+            onPositionChange={onDronePositionChange}
+            className="pointer-events-auto"
+          />
+        )}
+      </div>
+    </div>
   );
 };

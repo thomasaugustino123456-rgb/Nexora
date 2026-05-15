@@ -205,12 +205,12 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
       }
     };
     
-    // 60-second debounce for background sync (Firestore handles offline queueing automatically)
-    // Increased to 60s for V2 to save battery and quota
+    // 5-minute debounce for background sync (Firestore handles offline queueing automatically)
+    // Significantly increased for V2 to protect free tier quota
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     if (document.hidden) return; // Don't sync if tab is backgrounded
     
-    syncTimeoutRef.current = setTimeout(syncData, 60000); 
+    syncTimeoutRef.current = setTimeout(syncData, 300000); 
 
     return () => {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);

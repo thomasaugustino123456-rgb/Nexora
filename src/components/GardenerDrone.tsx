@@ -22,7 +22,8 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
   const y = useMotionValue(0);
   
   // Spring damping for smooth "organic" following/flying
-  const springConfig = { damping: 20, stiffness: 100 };
+  // Extremely high stiffness to ensure antenna/light stay "stacked" and connected during rapid hand movement
+  const springConfig = { damping: 25, stiffness: 300 };
   const sx = useSpring(x, springConfig);
   const sy = useSpring(y, springConfig);
 
@@ -114,25 +115,43 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
             <rect x="70" y="44" width="20" height="2" fill="#475569" rx="1" />
           </motion.g>
 
-          {/* ANTENNA (FIXED ATTACHMENT) */}
+          {/* ANTENNA (SIGNAL WARE - FIXED ATTACHMENT) */}
           <motion.g 
-            animate={{ rotate: [-8, 8, -8] }} 
-            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            style={{ originX: '50px', originY: '28px' }}
+            animate={{ 
+              rotate: [-5, 5, -5],
+              scaleY: [1, 1.05, 1]
+            }} 
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            style={{ originX: '50px', originY: '25px' }}
           >
-            <path d="M 50,28 L 50,10" stroke="#334155" strokeWidth="2.5" strokeLinecap="round" />
+            {/* The Antenna Stem */}
+            <path d="M 50,25 L 50,2" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
+            <path d="M 45,18 L 55,18 M 47,12 L 53,12" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" />
             
-            {/* Red Signal Light (Flickering) */}
-            <motion.circle 
-              cx="50" cy="10" r="3" 
-              fill="#ef4444" 
-              filter="url(#glow)"
-              animate={{ 
-                opacity: [1, 0.2, 1],
-                scale: [1, 1.4, 1]
-              }} 
-              transition={{ duration: 0.8, repeat: Infinity }} 
-            />
+            {/* Red Signal Light (Flickering with 12 principles - Anticipation/Intensity) */}
+            <motion.g cx="50" cy="2">
+              <motion.circle 
+                cx="50" cy="2" r="4" 
+                fill="#ef4444" 
+                filter="url(#glow)"
+                animate={{ 
+                  opacity: [1, 0.4, 1, 0.8, 1],
+                  scale: [1, 1.5, 1, 1.2, 1]
+                }} 
+                transition={{ 
+                  duration: 1.2, 
+                  repeat: Infinity,
+                  times: [0, 0.2, 0.4, 0.6, 1]
+                }} 
+              />
+              <motion.circle 
+                cx="50" cy="2" r="10" 
+                fill="none" stroke="#ef4444" 
+                strokeWidth="1"
+                animate={{ scale: [1, 3], opacity: [0.5, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+            </motion.g>
           </motion.g>
 
           {/* Main Sphere Body (Squash and Stretch) */}

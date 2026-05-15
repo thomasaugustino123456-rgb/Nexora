@@ -336,6 +336,13 @@ service cloud.firestore {
         allow update: if isOwner(userId);
         allow delete: if isOwner(userId) || isAdmin();
       }
+
+      match /notifications/{notifId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) || isAdmin();
+        allow update: if isOwner(userId) && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']));
+        allow delete: if isOwner(userId) || isAdmin();
+      }
     }
 
     match /customPlans/{planId} {
