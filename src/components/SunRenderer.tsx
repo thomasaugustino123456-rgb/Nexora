@@ -51,11 +51,11 @@ export const SunRenderer: React.FC = () => {
               strokeLinecap="round"
               transform={`rotate(${i * 30} 50 50)`}
               animate={{ 
-                scaleY: [1, 1.3, 1],
-                opacity: [0.7, 1, 0.7]
+                scaleY: [1, 1.4, 1],
+                opacity: [0.8, 1, 0.8]
               }}
               transition={{
-                duration: 2,
+                duration: 1.5,
                 repeat: Infinity,
                 delay: i * 0.1,
                 ease: "easeInOut"
@@ -63,6 +63,15 @@ export const SunRenderer: React.FC = () => {
               style={{ originY: '15px' }}
             />
           ))}
+
+          {/* LIGHT REFLECTION BEAMS (Directing light to plant) */}
+          <motion.g
+            animate={{ opacity: [0.1, 0.4, 0.1] }}
+            transition={{ duration: 4, repeat: Infinity }}
+          >
+            <path d="M 50,50 L -200,300" stroke="#fde047" strokeWidth="2" strokeDasharray="10 20" opacity="0.3" />
+            <path d="M 55,55 L -150,280" stroke="#fde047" strokeWidth="1" strokeDasharray="5 15" opacity="0.2" />
+          </motion.g>
 
           {/* Core Sun Body */}
           <circle cx="50" cy="50" r="22" fill="url(#sunInner)" stroke="#854d0e" strokeWidth="2" filter="url(#sunGlow)" />

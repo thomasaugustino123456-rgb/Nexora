@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
+import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { 
   ChevronRight, Save, LogOut, Pencil, Pen, Palette, PaintBucket, 
   CheckCircle2, X, Star, Flame, Award, Heart, Brain, Zap, Crown

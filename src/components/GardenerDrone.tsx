@@ -22,14 +22,26 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
   const y = useMotionValue(0);
   
   // Spring damping for smooth "organic" following/flying
-  // Extremely high stiffness to ensure antenna/light stay "stacked" and connected during rapid hand movement
-  const springConfig = { damping: 25, stiffness: 300 };
+  const springConfig = { damping: 20, stiffness: 200 };
   const sx = useSpring(x, springConfig);
   const sy = useSpring(y, springConfig);
 
+  // Inertia/Tilt effect for "12 Principles" (Overlapping Action)
+  const [tilt, setTilt] = useState(0);
+  const [antennaTilt, setAntennaTilt] = useState(0);
+
+  useEffect(() => {
+    const unsubX = sx.on("change", (latest) => {
+      const velocity = sx.getVelocity();
+      setTilt(velocity * 0.05); // Tilt body based on velocity
+      setAntennaTilt(velocity * 0.1); // Antenna bends more (overlapping action)
+    });
+    return () => unsubX();
+  }, [sx]);
+
   useEffect(() => {
     if (targetPos) {
-      // Offset to center the drone on the target
+      // Smoothly move to targetPos instead of jump
       x.set(targetPos.x - 50); 
       y.set(targetPos.y - 50);
     }
@@ -39,8 +51,8 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
     <motion.div 
       ref={droneRef}
       drag
-      dragElastic={0.1}
-      dragMomentum={true}
+      dragElastic={0.2}
+      dragMomentum={false}
       onDragStart={() => setIsDragging(true)}
       onDragEnd={(_, info) => {
         setIsDragging(false);
@@ -49,13 +61,12 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
         }
       }}
       className={`absolute cursor-grab active:cursor-grabbing z-[100] ${className}`}
-      style={{ x: sx, y: sy }}
+      style={{ x: sx, y: sy, rotateZ: tilt }}
       animate={mood === 'working' ? {
         scale: [1, 1.05, 1],
         rotate: [0, 2, -2, 0]
       } : {
-        scale: 1,
-        rotate: 0
+        scale: 1
       }}
       transition={{
         duration: 0.5,
@@ -67,8 +78,7 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
       <motion.div
         animate={{
           y: isDragging ? 0 : [0, -10, 0],
-          rotateX: isDragging ? 0 : [0, 5, 0],
-          rotateZ: isDragging ? 0 : [0, 2, -2, 0]
+          rotateX: isDragging ? 0 : [0, 5, 0]
         }}
         transition={{
           duration: 4,
@@ -96,7 +106,11 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
           <motion.ellipse 
              cx="50" cy="95" rx="20" ry="5" 
              fill="url(#shadowGrad)"
-             animate={{ scale: isDragging ? 0.8 : [1, 1.2, 1], opacity: isDragging ? 0.2 : [0.3, 0.1, 0.3] }}
+             animate={{ 
+               scale: isDragging ? 0.8 : [1, 1.2, 1], 
+               opacity: isDragging ? 0.2 : [0.3, 0.1, 0.3],
+               x: tilt * -0.5 // Shadow stays below
+             }}
              transition={{ duration: 4, repeat: Infinity }}
           />
 
@@ -106,29 +120,24 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
           </motion.g>
 
           {/* Hover Blades (Spinning) */}
-          <motion.g animate={{ rotate: 360 }} transition={{ duration: 0.3, repeat: Infinity, ease: "linear" }} style={{ originX: '20px', originY: '45px' }}>
+          <motion.g animate={{ rotate: 360 }} transition={{ duration: 0.2, repeat: Infinity, ease: "linear" }} style={{ originX: '20px', originY: '45px' }}>
             <circle cx="20" cy="45" r="12" fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 4" opacity="0.3" />
             <rect x="10" y="44" width="20" height="2" fill="#475569" rx="1" />
           </motion.g>
-          <motion.g animate={{ rotate: -360 }} transition={{ duration: 0.3, repeat: Infinity, ease: "linear" }} style={{ originX: '80px', originY: '45px' }}>
+          <motion.g animate={{ rotate: -360 }} transition={{ duration: 0.2, repeat: Infinity, ease: "linear" }} style={{ originX: '80px', originY: '45px' }}>
             <circle cx="80" cy="45" r="12" fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 4" opacity="0.3" />
             <rect x="70" y="44" width="20" height="2" fill="#475569" rx="1" />
           </motion.g>
 
-          {/* ANTENNA (SIGNAL WARE - FIXED ATTACHMENT) */}
+          {/* ANTENNA (SIGNAL WARE - STACKED & REACTIVE) */}
           <motion.g 
-            animate={{ 
-              rotate: [-5, 5, -5],
-              scaleY: [1, 1.05, 1]
-            }} 
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            style={{ originX: '50px', originY: '25px' }}
+            style={{ originX: '50px', originY: '25px', rotateZ: antennaTilt * -1 }}
           >
             {/* The Antenna Stem */}
             <path d="M 50,25 L 50,2" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
             <path d="M 45,18 L 55,18 M 47,12 L 53,12" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" />
             
-            {/* Red Signal Light (Flickering with 12 principles - Anticipation/Intensity) */}
+            {/* Red Signal Light (Stacked & Flickering) */}
             <motion.g cx="50" cy="2">
               <motion.circle 
                 cx="50" cy="2" r="4" 
@@ -136,20 +145,20 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
                 filter="url(#glow)"
                 animate={{ 
                   opacity: [1, 0.4, 1, 0.8, 1],
-                  scale: [1, 1.5, 1, 1.2, 1]
+                  scale: [1, 1.4, 1, 1.1, 1]
                 }} 
                 transition={{ 
-                  duration: 1.2, 
+                  duration: 0.8, 
                   repeat: Infinity,
                   times: [0, 0.2, 0.4, 0.6, 1]
                 }} 
               />
               <motion.circle 
-                cx="50" cy="2" r="10" 
+                cx="50" cy="2" r="8" 
                 fill="none" stroke="#ef4444" 
                 strokeWidth="1"
-                animate={{ scale: [1, 3], opacity: [0.5, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
+                animate={{ scale: [1, 2.5], opacity: [0.5, 0] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
               />
             </motion.g>
           </motion.g>

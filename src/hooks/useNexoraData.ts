@@ -172,41 +172,54 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
       try {
         const userRef = doc(db, 'users', user.uid);
         
-        // Sync everything in one batch of setDoc calls
-        await setDoc(userRef, {
-          ...settings,
-          uid: user.uid,
-          stats: stats,
-          isTodayCompleted: dailyProgress.completed,
-          updatedAt: serverTimestamp(),
-          onboardingCompleted: !needsOnboarding
-        }, { merge: true });
+        // 1. Check if core settings/stats changed
+        const coreChanged = lastSyncedRef.current === "" || 
+                           JSON.parse(lastSyncedRef.current).s !== JSON.stringify(settings) ||
+                           JSON.parse(lastSyncedRef.current).st !== JSON.stringify(stats);
+
+        if (coreChanged) {
+          await setDoc(userRef, {
+            ...settings,
+            uid: user.uid,
+            stats: stats,
+            isTodayCompleted: dailyProgress.completed,
+            updatedAt: serverTimestamp(),
+            onboardingCompleted: !needsOnboarding
+          }, { merge: true });
+        }
         
+        // 2. Sync progress only if completion state changed
         await setDoc(doc(db, 'users', user.uid, 'progress', today), dailyProgress, { merge: true });
         
-        await setDoc(doc(db, 'leaderboard', user.uid), {
-          uid: user.uid,
-          displayName: settings.displayName || 'Anonymous',
-          photoURL: settings.profilePic || user.photoURL || '',
-          streak: stats.streak || 0,
-          totalPoints: stats.totalPoints || 0,
-          level: Math.floor((stats.totalPoints || 0) / 100) + 1,
-          league: settings.league || 'Bronze'
-        }, { merge: true });
+        // 3. Leaderboard sync (only if streak or points changed)
+        const lbChanged = lastSyncedRef.current === "" || 
+                          JSON.parse(lastSyncedRef.current).st?.totalPoints !== stats.totalPoints ||
+                          JSON.parse(lastSyncedRef.current).st?.streak !== stats.streak;
+
+        if (lbChanged) {
+          await setDoc(doc(db, 'leaderboard', user.uid), {
+            uid: user.uid,
+            displayName: settings.displayName || 'Anonymous',
+            photoURL: settings.profilePic || user.photoURL || '',
+            streak: stats.streak || 0,
+            totalPoints: stats.totalPoints || 0,
+            level: Math.floor((stats.totalPoints || 0) / 1000) + 1,
+            league: settings.league || 'Bronze'
+          }, { merge: true });
+        }
 
         lastSyncedRef.current = currentStateStr;
         console.log("Hooks: Optimized Background Sync Complete ✅");
       } catch (e: any) {
-        if (e.message?.includes("quota")) {
-          showToast("Daily cloud sync limit reached. Data saved locally.", "info");
+        if (e.message?.includes("quota") || e.code === 'resource-exhausted') {
+          showToast("Cloud sync limit reached. Saved to local shield. 🛡️", "info");
         } else {
           console.error("Sync error:", e);
         }
       }
     };
     
-    // 5-minute debounce for background sync (Firestore handles offline queueing automatically)
-    // Significantly increased for V2 to protect free tier quota
+    // 5-minute debounce for background sync
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     if (document.hidden) return; // Don't sync if tab is backgrounded
     

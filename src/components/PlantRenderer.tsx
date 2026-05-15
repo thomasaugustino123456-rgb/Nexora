@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 import { PlantType } from '../types';
 import { useSound } from '../hooks/useSound';
@@ -15,6 +15,7 @@ interface PlantRendererProps {
   activeEcosystemItemIds?: string[];
   droneTargetPos?: { x: number; y: number } | null;
   onDronePositionChange?: (pos: { x: number, y: number }) => void;
+  className?: string;
 }
 
 export const PlantRenderer: React.FC<PlantRendererProps> = ({ 
@@ -24,7 +25,8 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
   isDead, 
   activeEcosystemItemIds = [],
   droneTargetPos = null,
-  onDronePositionChange
+  onDronePositionChange,
+  className = ""
 }) => {
   const { play } = useSound();
   const [clickCount, setClickCount] = useState(0);

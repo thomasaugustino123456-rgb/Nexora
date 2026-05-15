@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
+import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { 
   AlertCircle, Star, Bell, Flame, Trophy as TrophyIcon, 
   Plus, Trash2, Clock, Target, ChevronRight, Sprout, LogOut, Save, CheckCircle2,
@@ -12,6 +12,7 @@ import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { Mascot } from './Mascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
 import { MascotAIWrapper } from './SuspenseWrappers';
+import { DashboardWidgets } from './DashboardWidgets';
 import { formatDistanceToNow } from 'date-fns';
 
 function CountdownToMidnight() {
@@ -491,6 +492,8 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
           </motion.div>
         )}
       </AnimatePresence>
+
+      <DashboardWidgets stats={stats} dailyProgress={dailyProgress} settings={settings} />
 
       <MascotAIWrapper stats={stats} settings={settings} showToast={showToast} />
       
