@@ -53,35 +53,18 @@ try {
 
 // Background Scheduler for Reminders
 const startScheduler = () => {
-  console.log("Notification Scheduler: Starting... (Checking every minute)");
+  console.log("[V2 Scheduler] Starting... (Checking every 10 minutes)");
   setInterval(async () => {
-    if (!db) {
-      console.warn("Scheduler: Firestore DB not initialized, skipping tick.");
-      return;
-    }
+    if (!db) return;
     
     const now = new Date();
-    const tickTime = now.toISOString();
-    console.log(`[V2 Scheduler] Universal Tick: ${tickTime}`);
-
     try {
-      // 1. Get all users with notifications enabled (Optimized query)
-      let usersSnapshot;
-      try {
-        usersSnapshot = await db.collection("users")
-          .where("notificationsEnabled", "==", true)
-          .orderBy("updatedAt", "desc") // Prioritize active users
-          .limit(1000) 
-          .get();
-      } catch (e: any) {
-        console.error("[V2 Scheduler] Fetch error:", e.message);
-        return;
-      }
+      const usersSnapshot = await db.collection("users")
+        .where("notificationsEnabled", "==", true)
+        .limit(100) 
+        .get();
       
-      const usersToNotify = usersSnapshot.docs;
-      console.log(`[V2 Scheduler] Processing ${usersToNotify.length} potential users.`);
-      
-      for (const userDoc of usersToNotify) {
+      for (const userDoc of usersSnapshot.docs) {
         const userData = userDoc.data();
         const fcmToken = userData.fcmToken || (userData.settings && userData.settings.fcmToken);
         const tz = userData.timezone || 'UTC';
@@ -93,137 +76,39 @@ const startScheduler = () => {
           const userHour = localDate.getHours().toString().padStart(2, '0');
           const userMin = localDate.getMinutes().toString().padStart(2, '0');
           userTimeStr = `${userHour}:${userMin}`;
-          console.log(`Scheduler Debug: User ${userDoc.id} local time is ${userTimeStr} (${tz})`);
         } catch (e) {
-          // Fallback to UTC
           const userHour = now.getUTCHours().toString().padStart(2, '0');
           const userMin = now.getUTCMinutes().toString().padStart(2, '0');
           userTimeStr = `${userHour}:${userMin}`;
         }
 
-        // 1. Task Reminders (Main & Streak Protection)
-        const currentHour = parseInt(userTimeStr.split(':')[0]);
-        const currentMin = parseInt(userTimeStr.split(':')[1]);
-
         const reminder1 = userData.reminderTime || (userData.settings && userData.settings.reminderTime);
         const reminder2 = userData.reminderTime2 || (userData.settings && userData.settings.reminderTime2);
 
         if ((reminder1 && userTimeStr === reminder1) || (reminder2 && userTimeStr === reminder2)) {
-          console.log(`Scheduler: Triggering reminder for user ${userDoc.id} at ${userTimeStr}`);
           if (!userData.isTodayCompleted) {
             await sendPush(fcmToken, 'Nexora 🔥', 'Hey 👋 Ready for today’s challenge? Don\'t let that streak die!');
           }
         }
 
-        // Streak Protection Check at 10:00 PM (22:00)
         if (userTimeStr === '22:00' && !userData.isTodayCompleted) {
           await sendPush(fcmToken, 'Streak at Risk! ⚠️', 'Bro, your streak is about to die! 💀 Spend 2 minutes now to save it!');
         }
 
-        // 2. Plant Status Alerts (Dynamic)
+        // Additional status checks
         const plantState = userData.plantState;
-        if (plantState && !plantState.isDead) {
-          // Thirsty Alert
-          if (plantState.isThirsty && (userTimeStr === '09:00' || userTimeStr === '18:00' || userTimeStr === '21:00')) {
-            await sendPush(fcmToken, 'Water Needed! 💧', `Your ${plantState.type} is drying out, bro! Save your ecosystem!`);
-          }
-          // Growth Alert
-          if (userTimeStr === '10:00') {
-            if (plantState.stage === 5) {
-              await sendPush(fcmToken, 'Legendary Status! 🏆', `Your ${plantState.type} ecosystem is fully evolved! Go admire your work!`);
-            } else if (plantState.growthPoints > 50) {
-              await sendPush(fcmToken, 'Plant Progress! 🌱', `Your plant is growing strong! Keep crushing habits to see it level up!`);
-            }
-          }
-        }
-
-        // 3. Trophy & Achievement Alert
-        if (userTimeStr === '19:00') {
-          const stats = userData.stats;
-          if (stats) {
-            if (stats.trophies && stats.trophies.some((t: any) => t.type === 'broken')) {
-              await sendPush(fcmToken, 'Broken Trophy! 🧊', 'A trophy is frozen/broken! Fix it before it shatters completely!');
-            }
-            if (stats.totalPoints > 0 && stats.totalPoints % 1000 < 50) {
-              await sendPush(fcmToken, 'Points Milestone! ✨', `You're crushing it! Over ${Math.floor(stats.totalPoints / 1000) * 1000} points reached!`);
-            }
-          }
-        }
-
-        // 4. Motivation & Habit Reminders (Strict Times)
-        // Motivation: 7:30 AM and 6:30 PM
-        if (userTimeStr === '07:30' || userTimeStr === '18:30') {
-          await sendPush(fcmToken, 'Nexora Motivation 🔥', 'Your only limit is you, bro! Get those habits done! 🚀');
-        }
-
-        // Morning Reminder: 10:00 AM
-        if (userTimeStr === '10:00') {
-          await sendPush(fcmToken, 'Morning Flow ☀️', 'Bro, start your day strong! Complete your first challenge now!');
-        }
-
-        // Afternoon Boost: 2:30 PM
-        if (userTimeStr === '14:30') {
-          await sendPush(fcmToken, 'Afternoon Energy ⚡', 'Mid-day boost! Keep that momentum going, bro!');
-        }
-
-        // Evening Reflection: 8:30 PM
-        if (userTimeStr === '20:30') {
-          if (!userData.isTodayCompleted) {
-            await sendPush(fcmToken, 'Evening Reflection 🌙', 'Reflect on your wins today. Finish your streak before bed!');
-          } else {
-            await sendPush(fcmToken, 'Evening Win! 🌟', 'You crushed it today! Rest up for a bigger win tomorrow!');
-          }
-        }
-
-        // 5. Inactivity "We Miss You" (Check every Sunday at 3 PM)
-        const localDate = new Date(now.toLocaleString("en-US", {timeZone: tz}));
-        if (localDate.getDay() === 0 && userTimeStr === '15:00') {
-          const lastActive = userData.updatedAt?.toDate() || new Date(0);
-          const daysInactive = (now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24);
-          if (daysInactive > 3) {
-            await sendPush(fcmToken, 'Nexora Misses You! 👋', "It's been a few days, bro. Your plants and trophies are waiting for you!");
-          }
+        if (plantState && !plantState.isDead && plantState.isThirsty && (userTimeStr === '18:00' || userTimeStr === '21:00')) {
+          await sendPush(fcmToken, 'Water Needed! 💧', `Your ${plantState.type} is drying out, bro!`);
         }
       }
-
-      // 3. Custom Plan Reminders (Global check)
-      try {
-        const plansSnapshot = await db.collection("customPlans").limit(100).get();
-        for (const planDoc of plansSnapshot.docs) {
-          const plan = planDoc.data();
-          // Find user for this plan
-          const userToNotify = usersToNotify.find((u: any) => u.id === plan.userId);
-          if (!userToNotify) continue;
-
-          const userData = userToNotify.data();
-          const tz = userData.timezone || 'UTC';
-          const formatter = new Intl.DateTimeFormat('en-GB', {
-            hour: '2-digit', minute: '2-digit',
-            hour12: false, timeZone: tz
-          });
-          
-          // Use a simpler day check
-          const localDate = new Date(now.toLocaleString("en-US", {timeZone: tz}));
-          const localDay = localDate.getDay();
-          const userTimeStr = formatter.format(now);
-
-          if (plan.days.includes(localDay)) {
-            if (userTimeStr === plan.reminderTime || userTimeStr === plan.reminderTime2) {
-              const currentToken = userData.fcmToken || (userData.settings && userData.settings.fcmToken);
-              if (currentToken) {
-                await sendPush(currentToken, `${plan.name} 🚀`, `Time for your custom plan: ${plan.name}! Let's go!`);
-              }
-            }
-          }
-        }
-      } catch (e: any) {
-        console.error("Scheduler Error (Custom Plans):", e.message);
+    } catch (error: any) {
+      if (error.message.includes("PERMISSION_DENIED")) {
+        console.warn("[V2 Scheduler] Permission Denied. Skipping scheduler ticks.");
+      } else {
+        console.error("Scheduler Error:", error);
       }
-
-    } catch (error) {
-      console.error("Scheduler Error:", error);
     }
-  }, 60000); // Check every 1 minute to ensure prompts match exact minutes
+  }, 600000); 
 };
 
 // Version Watcher (Automatic Update Notifications)

@@ -20,7 +20,8 @@ import { PlanBuilder } from './components/PlanBuilder';
 import { HomeScreen } from './components/HomeScreen';
 import { Mascot } from './components/Mascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './components/Trophies';
-import { WhatIsNewModalWrapper, HappyMascot, LevelUpCelebration, CoinAnimation, MascotAIWrapper } from './components/SuspenseWrappers';
+import WhatIsNewModal from './components/WhatIsNewModal';
+import { HappyMascot, LevelUpCelebration, CoinAnimation, MascotAIWrapper } from './components/SuspenseWrappers';
 
 import { CelebrationModal } from './components/CelebrationModal';
 
@@ -2368,7 +2369,7 @@ export default function App() {
 
       <AnimatePresence>
         {showUpdatePopup && (
-          <WhatIsNewModalWrapper onClose={() => {
+          <WhatIsNewModal onClose={() => {
             if (updateInfo) {
               localStorage.setItem('nexora_dismissed_version', updateInfo.version);
             }

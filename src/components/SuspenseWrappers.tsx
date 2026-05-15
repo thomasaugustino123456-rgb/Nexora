@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 
-const WhatIsNewModal = lazy(() => import('./WhatIsNewModal').then(m => ({ default: m.WhatIsNewModal })));
+const WhatIsNewModal = lazy(() => import('./WhatIsNewModal'));
 const HappyMascot_Lazy = lazy(() => import('./FeedbackUI').then(m => ({ default: m.HappyMascot })));
 const LevelUpCelebration_Lazy = lazy(() => import('./FeedbackUI').then(m => ({ default: m.LevelUpCelebration })));
 const CoinAnimation_Lazy = lazy(() => import('./FeedbackUI').then(m => ({ default: m.CoinAnimation })));
