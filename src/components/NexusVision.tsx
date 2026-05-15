@@ -70,19 +70,19 @@ export function NexusVision({ stats, history, onBack, isPro = false, proTestActi
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-slate-950 flex flex-col p-6 overflow-hidden select-none"
+      className="fixed inset-0 z-50 bg-slate-950 flex flex-col p-6 overflow-y-auto select-none"
     >
       {/* Background Grid */}
-      <div className="absolute inset-0 opacity-10">
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px]" />
       </div>
 
       {/* Aurora Effects */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-500/20 blur-[120px] rounded-full animate-pulse" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-500/20 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-500/20 blur-[120px] rounded-full animate-pulse pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-500/20 blur-[120px] rounded-full animate-pulse pointer-events-none" />
 
       {/* Header */}
-      <div className="relative z-10 flex items-center justify-between mb-12">
+      <div className="relative z-10 flex items-center justify-between mb-8 shrink-0">
         <button onClick={onBack} className="p-3 bg-white/5 border border-white/10 rounded-2xl text-slate-400 hover:text-white transition-all">
           <ArrowLeft size={24} />
         </button>
@@ -96,7 +96,7 @@ export function NexusVision({ stats, history, onBack, isPro = false, proTestActi
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center relative">
+      <div className="flex-1 flex flex-col items-center relative py-4">
         <AnimatePresence mode="wait">
           {!isScanning && !result ? (
             <motion.div 
@@ -104,9 +104,9 @@ export function NexusVision({ stats, history, onBack, isPro = false, proTestActi
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="text-center space-y-12"
+              className="text-center space-y-12 my-auto"
             >
-              <div className="relative">
+              <div className="relative flex flex-col items-center">
                 <motion.div 
                   animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
                   transition={{ duration: 4, repeat: Infinity }}
@@ -138,7 +138,7 @@ export function NexusVision({ stats, history, onBack, isPro = false, proTestActi
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full max-w-md space-y-12"
+              className="w-full max-w-md space-y-12 my-auto"
             >
               {/* Laser Animation */}
               <div className="relative w-full aspect-square border-2 border-white/5 rounded-[3rem] overflow-hidden bg-white/5">
@@ -190,7 +190,7 @@ export function NexusVision({ stats, history, onBack, isPro = false, proTestActi
               key="result"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-2xl space-y-8"
+              className="w-full max-w-2xl space-y-8 my-auto"
             >
                <div className="flex items-center gap-4 text-emerald-400 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-emerald-400/10 flex items-center justify-center">
@@ -246,7 +246,7 @@ export function NexusVision({ stats, history, onBack, isPro = false, proTestActi
       </div>
 
       {/* Footer Info */}
-      <div className="relative z-10 pt-8 border-t border-white/5 flex items-center justify-between">
+      <div className="relative z-10 pt-8 border-t border-white/5 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Neural Cores Active</span>
