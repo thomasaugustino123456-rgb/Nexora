@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pin, PinOff } from 'lucide-react';
+import { Pin, PinOff, Sparkles } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { vibrate } from '../lib/vibrate';
 
@@ -70,7 +70,7 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
       if (onboardingStep === 0) {
         setTimeout(() => {
           setShowMascot(true);
-          setMessage("YO BRO! 🚀 Welcome to your ULTIMATE Nexora Space! I'm so stoked you unlocked this. This isn't just a room; it's a living monument to your discipline. Here, you can manifest your progress by designing the coolest habit headquarters ever seen!");
+          setMessage("BOOM! YOU DID IT, BRO! 🚀🏆 Welcome to your legendary SPACE HOUSE! Since you reached Level 5 with at least three of your plants, you've unlocked the ultimate command center. I'm so proud of your consistency, legend! This place is now YOURS to manifest your greatness!");
         }, 1000);
       } else {
         setShowMascot(true);
@@ -261,9 +261,14 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
                     exit={{ scale: 0, opacity: 0, y: 20 }}
                     className="absolute bottom-full left-1/2 -translate-x-1/2 mb-6 w-80 p-6 bg-white rounded-[2.5rem] shadow-2xl border-4 border-indigo-500 text-base font-bold text-indigo-900 z-[200] pointer-events-auto"
                   >
-                    <div className="leading-relaxed">
-                      {message}
-                    </div>
+                      <div className="leading-relaxed">
+                        {onboardingStep === 0 && isNewUser && (
+                          <div className="flex justify-center mb-4 scale-150 animate-bounce">
+                            <Sparkles size={32} className="text-amber-500" />
+                          </div>
+                        )}
+                        {message}
+                      </div>
                     {countdown !== null && (
                       <div className={`mt-3 text-3xl font-black text-center ${countdown <= 2 ? 'text-red-500 animate-pulse' : 'text-orange-500'}`}>
                         {countdown}s

@@ -230,6 +230,17 @@ export default function App() {
   const [emergencyActive, setEmergencyActive] = useState(false);
   const [challengeStep, setChallengeStep] = useState<ChallengeStep | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Space House Unlock Logic
+  const isSpaceHouseUnlocked = useMemo(() => {
+    const progress = settings.plantsProgress || {};
+    const plantsArray = Object.values(progress);
+    if (plantsArray.length < 3) return false;
+    
+    // Check if at least 3 plants have reached Stage 5
+    const stage5Plants = plantsArray.filter(p => p.stage >= 5);
+    return stage5Plants.length >= 3;
+  }, [settings.plantsProgress]);
   
   // Calculate Global Mascot Mood for the Dynamic Icon (Duolingo Style)
   const globalMascotMood: MascotMood = useMemo(() => {
@@ -2386,7 +2397,7 @@ export default function App() {
 
       <div className="w-full flex flex-col min-h-screen relative z-10 px-0 sm:px-6">
         
-        {activeScreen !== 'challenge' && activeScreen !== 'subscription' && !showArchitectLab && (
+        {activeScreen !== 'challenge' && activeScreen !== 'subscription' && activeScreen !== 'nexus-vision' && !showArchitectLab && (
           <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl">
             <div className="flex items-center gap-4">
               <img 
@@ -2398,15 +2409,28 @@ export default function App() {
               <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">Nexora</h1>
             </div>
             <div className="flex items-center justify-end w-full gap-3 sm:gap-8 ml-auto">
-              <button 
-                onClick={() => {
-                  if (settings.soundEnabled) play('header_switch');
-                  setActiveScreen('house');
-                }}
-                className={`p-3 rounded-2xl transition-all ${activeScreen === 'house' ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-110' : 'text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm'}`}
-              >
-                <Home size={24} />
-              </button>
+              {isSpaceHouseUnlocked && (
+                <button 
+                  onClick={() => {
+                    if (settings.soundEnabled) play('header_switch');
+                    setActiveScreen('house');
+                  }}
+                  className={`p-3 rounded-2xl transition-all relative ${
+                    activeScreen === 'house' 
+                      ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-110' 
+                      : !settings.spaceOnboardingCompleted
+                        ? 'bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-pulse border-2 border-white/50'
+                        : 'text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm'
+                  }`}
+                >
+                  <Home size={24} />
+                  {!settings.spaceOnboardingCompleted && (
+                    <div className="absolute -top-1 -right-1">
+                      <Sparkles size={14} className="text-amber-200 animate-spin" />
+                    </div>
+                  )}
+                </button>
+              )}
 
               <button 
                 onClick={() => {
@@ -3162,7 +3186,7 @@ export default function App() {
           />
         )}
 
-        {activeScreen !== 'challenge' && activeScreen !== 'subscription' && !showArchitectLab && (
+        {activeScreen !== 'challenge' && activeScreen !== 'subscription' && activeScreen !== 'nexus-vision' && !showArchitectLab && (
           <motion.div 
             initial={false}
             animate={{ 

@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { 
   AlertCircle, Star, Bell, Flame, Trophy as TrophyIcon, 
   Plus, Trash2, Clock, Target, ChevronRight, Sprout, LogOut, Save, CheckCircle2,
-  Infinity, Zap, Crown, Coins, Brain
+  Infinity, Zap, Crown, Coins, Brain, Sparkles
 } from 'lucide-react';
 import { 
   UserStats, UserSettings, DailyProgress, MascotMood, ChallengeStep, CustomPlan 
@@ -221,13 +221,20 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
               <button 
                 onClick={onOpenPlant}
                 className={`p-3 rounded-2xl transition-all flex items-center justify-center group relative ${
-                  localStorage.getItem('nexora_new_plant_unlocked') === 'true' 
-                    ? 'bg-yellow-400 text-white shadow-xl shadow-yellow-200 animate-pulse' 
-                    : 'bg-emerald-500 text-white shadow-xl shadow-emerald-200'
+                  !settings.plantOnboardingCompleted
+                    ? 'bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-pulse border-2 border-white/50'
+                    : settings.plantState?.isThirsty || localStorage.getItem('nexora_new_plant_unlocked') === 'true'
+                      ? 'bg-yellow-400 text-white shadow-xl shadow-yellow-200 animate-pulse' 
+                      : 'bg-emerald-500 text-white shadow-xl shadow-emerald-200'
                 }`}
               >
                 <Sprout size={20} className="group-hover:rotate-12 transition-transform" />
-                {settings.plantState?.isThirsty && (
+                {!settings.plantOnboardingCompleted && (
+                  <div className="absolute -top-1 -right-1">
+                    <Sparkles size={14} className="text-amber-200 animate-spin" />
+                  </div>
+                )}
+                {settings.plantState?.isThirsty && settings.plantOnboardingCompleted && (
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white animate-bounce" />
                 )}
               </button>
