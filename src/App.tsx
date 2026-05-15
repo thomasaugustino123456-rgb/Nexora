@@ -527,6 +527,32 @@ export default function App() {
     showToast(`Purchased ${item.name}! 🏠`, "success");
   };
 
+  const buyEcosystemItem = (item: any) => {
+    if (stats.coins < item.price) {
+      showToast("Not enough coins, bro! 🪙", "error");
+      return;
+    }
+    
+    setStats(prev => ({ ...prev, coins: prev.coins - item.price }));
+    setSettings(prev => ({
+      ...prev,
+      purchasedEcosystemItemIds: [...(prev.purchasedEcosystemItemIds || []), item.id]
+    }));
+    showToast(`Ecosystem upgraded: ${item.name}! 🌿`, "success");
+  };
+
+  const toggleEcosystemItem = (itemId: string) => {
+    setSettings(prev => {
+      const current = prev.activeEcosystemItemIds || [];
+      const isActive = current.includes(itemId);
+      const updated = isActive 
+        ? current.filter(id => id !== itemId)
+        : [...current, itemId];
+      
+      return { ...prev, activeEcosystemItemIds: updated };
+    });
+  };
+
   const placeHouseItem = (id: string, x: number, y: number, room: number) => {
     const newItem: PlacedHouseItem = { 
       id: `${id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -651,7 +677,15 @@ export default function App() {
       
       if (current.isDead) return prev;
 
-      let newPoints = current.growthPoints + 15;
+      const activeItems = prev.activeEcosystemItemIds || [];
+      const hasUV = activeItems.includes('eco_uv_lamp_01');
+      const hasDrone = activeItems.includes('eco_drone_01');
+      
+      let growthAmount = 15;
+      if (hasUV) growthAmount *= 2;
+      if (hasDrone) growthAmount += 2; // Passive bonus
+
+      let newPoints = current.growthPoints + growthAmount;
       let newStage = current.stage;
       let newUnlocked = [...(prev.plantState?.unlockedTypes || ['sprout'])];
       
@@ -747,7 +781,12 @@ export default function App() {
       const diffMs = now.getTime() - lastCheck.getTime();
       const diffHours = diffMs / (1000 * 60 * 60);
       
-      if (diffHours >= 48 && !settings.plantState!.isDead) { // 2 days
+      const activeItems = settings.activeEcosystemItemIds || [];
+      const hasSprinkler = activeItems.includes('eco_sprinkler_01');
+      const deathThreshold = 48;
+      const thirstThreshold = hasSprinkler ? 48 : 36; // Sprinkler buys time
+      
+      if (diffHours >= deathThreshold && !settings.plantState!.isDead) { // 2 days
         const type = settings.plantState!.type;
         const currentProgress = settings.plantsProgress?.[type] || {
           stage: settings.plantState!.stage,
@@ -774,7 +813,7 @@ export default function App() {
           }
         });
         sendNotification("Your Nexora Ecosystem has died... 🥀", { body: "Bro, your plants need discipline! Restore the room and try again." });
-      } else if (diffHours >= 36 && !settings.plantState!.isThirsty && !settings.plantState!.isDead) { // 1.5 days
+      } else if (diffHours >= thirstThreshold && !settings.plantState!.isThirsty && !settings.plantState!.isDead) { // 1.5 days or 2 days with tech
         const type = settings.plantState!.type;
         const currentProgress = settings.plantsProgress?.[type] || {
            stage: settings.plantState!.stage,
@@ -3116,6 +3155,8 @@ export default function App() {
                       });
                       showToast("Ecosystem restored! 🌿", "info");
                     }}
+                    onPurchaseEcosystemItem={buyEcosystemItem}
+                    onToggleEcosystemItem={toggleEcosystemItem}
                     settings={settings}
                     stats={stats}
                   />

@@ -3,15 +3,17 @@ import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { PlantType } from '../types';
 import { useSound } from '../hooks/useSound';
+import { GardenerDrone } from './GardenerDrone';
 
 interface PlantRendererProps {
   type: PlantType;
   stage: number;
   isThirsty: boolean;
   isDead: boolean;
+  activeEcosystemItemIds?: string[];
 }
 
-export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThirsty, isDead }) => {
+export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThirsty, isDead, activeEcosystemItemIds = [] }) => {
   const { play } = useSound();
   const [clickCount, setClickCount] = useState(0);
   const [isShaking, setIsShaking] = useState(false);
@@ -1337,9 +1339,38 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
 
       {/* Thirsty Effect */}
       {isThirsty && !isDead && (
-        <motion.g animate={{ y: [0, 5, 0] }} transition={{ repeat: 0 /* fixed */, duration: 2.5, ease: "easeInOut" }}>
+        <motion.g animate={{ y: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}>
            <text x="100" y="50" textAnchor="middle" fontSize="14" fill="#607D8B" className="font-black opacity-30 tracking-[0.2em]">THIRSTY</text>
         </motion.g>
+      )}
+
+      {/* UV Halo Effect */}
+      {activeEcosystemItemIds.includes('eco_uv_lamp_01') && !isDead && (
+        <motion.circle 
+          cx="100" cy="50" r="80" 
+          fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4 8"
+          animate={{ rotate: 360, opacity: [0.2, 0.5, 0.2] }}
+          transition={{ rotate: { duration: 20, repeat: Infinity, ease: "linear" }, opacity: { duration: 3, repeat: Infinity } }}
+        />
+      )}
+
+      {/* Auto-Mist Effect */}
+      {activeEcosystemItemIds.includes('eco_sprinkler_01') && !isDead && (
+        <motion.g
+          animate={{ opacity: [0, 0.3, 0] }}
+          transition={{ duration: 4, repeat: Infinity }}
+        >
+          <circle cx="50" cy="50" r="2" fill="#22d3ee" />
+          <circle cx="150" cy="80" r="1.5" fill="#22d3ee" />
+          <circle cx="80" cy="120" r="1" fill="#22d3ee" />
+        </motion.g>
+      )}
+
+      {/* Eco-Companions */}
+      {activeEcosystemItemIds.includes('eco_drone_01') && !isDead && (
+        <foreignObject x="130" y="30" width="60" height="60">
+          <GardenerDrone mood={isThirsty ? 'working' : 'idle'} className="w-full h-full" />
+        </foreignObject>
       )}
     </motion.svg>
   );

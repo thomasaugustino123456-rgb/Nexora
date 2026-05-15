@@ -6,6 +6,7 @@ import { PlantState, UserSettings, UserStats, PlantType } from '../types';
 import { vibrate } from '../lib/vibrate';
 import { PlantRenderer } from './PlantRenderer';
 import { PlantCompletionCard } from './PlantCompletionCard';
+import { PlantShop, EcosystemItem } from './PlantShop';
 import { VIDEO_URLS } from '../constants/videos';
 
 const VideoPlayer = lazy(() => import('./VideoPlayer').then(m => ({ default: m.VideoPlayer })));
@@ -18,6 +19,8 @@ interface PlantScreenProps {
   onRecover: () => void;
   onSwitchType: (type: PlantType) => void;
   onSaveToLibrary: (imageData: string) => void;
+  onPurchaseEcosystemItem: (item: EcosystemItem) => void;
+  onToggleEcosystemItem: (itemId: string) => void;
   settings: UserSettings;
   stats: UserStats;
 }
@@ -30,6 +33,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   onRecover,
   onSwitchType,
   onSaveToLibrary,
+  onPurchaseEcosystemItem,
+  onToggleEcosystemItem,
   settings,
   stats
 }) => {
@@ -38,6 +43,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   const [showGarden, setShowGarden] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showShop, setShowShop] = useState(false);
 
   const ecosystemInfo: Record<PlantType, { name: string, description: string }> = {
     sprout: { name: "Classic Sprout", description: "The heart of Nexora. A symbol of your new beginning and pure consistency." },
@@ -111,6 +117,12 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
         >
           <Trophy size={24} />
         </button>
+        <button 
+          onClick={() => { vibrate(5); setShowShop(true); }}
+          className={`p-2 transition-colors ${showShop ? 'text-blue-600' : 'text-blue-900/40'}`}
+        >
+          <ShoppingBag size={24} />
+        </button>
       </header>
 
       <div className="flex-1 w-full overflow-y-auto custom-scrollbar">
@@ -171,7 +183,13 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
                       }`}
                     >
                       <div className={`mb-2 scale-50 -mt-12 -mb-12 transition-all ${!isUnlocked ? 'grayscale brightness-50 opacity-20' : ''}`}>
-                        <PlantRenderer type={type} stage={isUnlocked ? (plantData.stage || (isActive ? plantState.stage : 0)) : 1} isThirsty={false} isDead={false} />
+                        <PlantRenderer 
+                          type={type} 
+                          stage={isUnlocked ? (plantData.stage || (isActive ? plantState.stage : 0)) : 1} 
+                          isThirsty={false} 
+                          isDead={false} 
+                          activeEcosystemItemIds={isActive ? settings.activeEcosystemItemIds : []}
+                        />
                       </div>
                       <span className={`text-[10px] font-black uppercase tracking-widest ${isUnlocked ? (isActive ? 'text-white' : 'text-blue-900/40') : 'text-blue-900/20'}`}>
                         {ecosystemInfo[type]?.name || "Ecosystem"}
@@ -212,6 +230,16 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
               onClose={() => setShowCompletion(false)}
             />
           )}
+
+          {showShop && (
+            <PlantShop 
+              onClose={() => setShowShop(false)}
+              stats={stats}
+              settings={settings}
+              onPurchase={onPurchaseEcosystemItem}
+              onToggleActive={onToggleEcosystemItem}
+            />
+          )}
         </AnimatePresence>
 
         <AnimatePresence>
@@ -241,7 +269,13 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
         </AnimatePresence>
 
         <div className="mb-12 flex flex-col items-center">
-          <PlantRenderer type={plantState.type} stage={plantState.stage} isThirsty={plantState.isThirsty} isDead={plantState.isDead} />
+          <PlantRenderer 
+            type={plantState.type} 
+            stage={plantState.stage} 
+            isThirsty={plantState.isThirsty} 
+            isDead={plantState.isDead} 
+            activeEcosystemItemIds={settings.activeEcosystemItemIds}
+          />
           <motion.div 
             className="mt-8 px-8 py-3 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border-2 border-green-100 flex items-center gap-3"
             initial={{ y: 20, opacity: 0 }}

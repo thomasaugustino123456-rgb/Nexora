@@ -85,6 +85,8 @@ export interface UserSettings {
   spaceHouseUnlocked?: boolean;
   plantState?: PlantState;
   plantsProgress?: Partial<Record<PlantType, PlantProgress>>;
+  purchasedEcosystemItemIds?: string[];
+  activeEcosystemItemIds?: string[];
   mascotSize?: number;
   mascotPos?: { x: number, y: number };
   mascotPinnedItemId?: string | null;
