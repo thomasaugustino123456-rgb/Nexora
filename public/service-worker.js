@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexora-v1.5'; // Bumping version for Notification fixes
+const CACHE_NAME = 'nexora-v2.0'; // V2.0 Upgrade
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

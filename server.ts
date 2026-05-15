@@ -61,37 +61,25 @@ const startScheduler = () => {
     }
     
     const now = new Date();
-    console.log(`Notification Scheduler: Universal Tick at ${now.toISOString()}`);
+    const tickTime = now.toISOString();
+    console.log(`[V2 Scheduler] Universal Tick: ${tickTime}`);
 
     try {
-      // Periodic connectivity check - if it fails, the catch block will handle it
       // 1. Get all users with notifications enabled (Optimized query)
       let usersSnapshot;
       try {
-        // Only fetch users who have notifications enabled to save Quota
         usersSnapshot = await db.collection("users")
           .where("notificationsEnabled", "==", true)
-          .limit(500) // Safety limit
+          .orderBy("updatedAt", "desc") // Prioritize active users
+          .limit(1000) 
           .get();
       } catch (e: any) {
-        console.error("Scheduler Error (Fetching Users):", e.message);
-        if (e.message.includes("PERMISSION_DENIED") || e.message.includes("not found")) {
-           console.warn("Scheduler: Detected permission/connectivity error. This is common if the Service Account lacks specific Firestore roles or if databaseId is uniquely restricted.");
-        }
-        return; // Skip this tick
+        console.error("[V2 Scheduler] Fetch error:", e.message);
+        return;
       }
       
-      const usersToNotify = usersSnapshot.docs.filter((doc: any) => {
-        const data = doc.data();
-        const hasToken = data.fcmToken || (data.settings && data.settings.fcmToken);
-        // We already filtered by notificationsEnabled in the query, but let's double check local settings
-        const hasEnabled = data.notificationsEnabled || (data.settings && data.settings.notificationsEnabled);
-        return hasToken && hasEnabled;
-      });
-
-      if (usersToNotify.length > 0) {
-        console.log(`Notification Scheduler: Found ${usersToNotify.length} users with tokens.`);
-      }
+      const usersToNotify = usersSnapshot.docs;
+      console.log(`[V2 Scheduler] Processing ${usersToNotify.length} potential users.`);
       
       for (const userDoc of usersToNotify) {
         const userData = userDoc.data();

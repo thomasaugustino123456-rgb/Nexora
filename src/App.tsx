@@ -268,8 +268,19 @@ export default function App() {
 
   const isPro = settings?.isPro || (settings?.proTestActive ? true : false);
 
-  const currentAppVersion = "2.5.1"; // Auto-bumping version
+  const currentAppVersion = "2.0.0"; // V2.0.0 Upgrade
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>('nexora_active_screen', 'home');
+
+  // Handle URL parameters for PWA Shortcuts
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const screenParam = params.get('screen') as Screen | null;
+    if (screenParam && ['home', 'challenge', 'nexus-vision', 'social', 'progress'].includes(screenParam)) {
+      setActiveScreen(screenParam);
+      // Clean up URL without refreshing
+      window.history.replaceState({}, '', '/');
+    }
+  }, []);
 
   // Persistence and Version Sync
   useEffect(() => {

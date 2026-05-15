@@ -144,6 +144,7 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
           unsubUser();
           unsubProgress();
         };
+      } else {
         localStorage.removeItem('nexora_cached_user');
         setUser(null);
         setIsDataReady(false);
@@ -204,9 +205,10 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
       }
     };
     
-    // 10-second debounce for background sync (Firestore handles offline queueing automatically)
+    // 15-second debounce for background sync (Firestore handles offline queueing automatically)
+    // Increased to 15s for V2 to save battery and quota
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    syncTimeoutRef.current = setTimeout(syncData, 10000); 
+    syncTimeoutRef.current = setTimeout(syncData, 15000); 
 
     return () => {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);

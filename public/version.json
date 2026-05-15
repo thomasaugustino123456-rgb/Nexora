@@ -1,10 +1,11 @@
 {
-  "version": "1.5.2",
+  "version": "2.0.0",
   "releaseNotes": [
-    "Furniture Stability Fix: Your house layouts are now perfectly preserved across all three room styles! 🏠",
-    "Bring to Front Logic: Moved items now automatically jump to the top layer for easier design 🔝",
-    "Performance Patch: Faster loading and smoother transitions between your Nexora spaces.",
-    "Data Sync+: Extra layer of safety for your coins and xp storage."
+    "Nexora V2: The Ultimate Command Center upgrade! 🚀",
+    "Deep Optimization: Faster loading, smoother 60fps animations, and zero-latency data sync.",
+    "Notification Revamp: Enhanced background reminder engine with timezone awareness.",
+    "Stable Bio-Scans: Improved scrolling and readability for all your habit insights.",
+    "Space House Ready: The legendary level 5 expansion is now fully stabilized!"
   ],
   "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
   "forceUpdate": false
