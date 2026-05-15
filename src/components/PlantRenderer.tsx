@@ -4,6 +4,8 @@ import { Sparkles } from 'lucide-react';
 import { PlantType } from '../types';
 import { useSound } from '../hooks/useSound';
 import { GardenerDrone } from './GardenerDrone';
+import { NanoBees, SpiritButterfly } from './EcosystemCompanions';
+import { SunRenderer } from './SunRenderer';
 
 interface PlantRendererProps {
   type: PlantType;
@@ -11,13 +13,55 @@ interface PlantRendererProps {
   isThirsty: boolean;
   isDead: boolean;
   activeEcosystemItemIds?: string[];
+  droneTargetPos?: { x: number; y: number } | null;
+  onDronePositionChange?: (pos: { x: number, y: number }) => void;
 }
 
-export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThirsty, isDead, activeEcosystemItemIds = [] }) => {
+export const PlantRenderer: React.FC<PlantRendererProps> = ({ 
+  type, 
+  stage, 
+  isThirsty, 
+  isDead, 
+  activeEcosystemItemIds = [],
+  droneTargetPos = null,
+  onDronePositionChange
+}) => {
   const { play } = useSound();
   const [clickCount, setClickCount] = useState(0);
   const [isShaking, setIsShaking] = useState(false);
   const [isLunging, setIsLunging] = useState(false);
+
+  const activePot = activeEcosystemItemIds.find(id => id.startsWith('pot_'));
+  const activeColor = activeEcosystemItemIds.find(id => id.startsWith('color_bio_'));
+
+  const plantColors: Record<string, string> = {
+    'color_bio_01': '#2dd4bf', // Biolume Teal
+    'color_bio_02': '#f472b6', // Biolume Pink
+  };
+
+  const potStyles: Record<string, { body: string; shadow: string; accent: string }> = {
+    'pot_cyber_01': { body: '#1e293b', shadow: '#0f172a', accent: '#f472b6' },
+    'pot_zen_01': { body: '#d1d5db', shadow: '#9ca3af', accent: '#4b5563' },
+  };
+
+  const getPotStyle = () => potStyles[activePot || ''] || { body: '#F39E7D', shadow: '#E0E0E0', accent: '#BDBDBD' };
+
+  const renderPotWrapper = (defaultPot: React.ReactNode) => {
+    if (activePot) {
+      const style = getPotStyle();
+      return (
+        <g>
+          <path d="M 55,140 L 145,140 L 130,195 L 70,195 Z" fill={style.body} stroke="#1e293b" strokeWidth="4" />
+          <path d="M 55,140 L 145,140 L 140,150 L 60,150 Z" fill={style.shadow} />
+          {activePot === 'pot_cyber_01' && (
+             <motion.rect x="75" y="165" width="50" height="4" fill={style.accent} rx="2" animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} />
+          )}
+          <ellipse cx="100" cy="140" rx="42" ry="7" fill="#5D4037" stroke="#1e293b" strokeWidth="2" />
+        </g>
+      );
+    }
+    return defaultPot;
+  };
 
   const handlePlantClick = () => {
     if (isDead) return;
@@ -39,6 +83,12 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
 
   const getPlantColors = () => {
     if (isDead) return { primary: '#8B4513', secondary: '#5D4037', accent: '#3E2723' };
+    
+    if (activeColor && !isDead) {
+      const color = plantColors[activeColor];
+      return { primary: color, secondary: color, accent: '#FFFFFF' };
+    }
+
     if (isThirsty) return { primary: '#C5E1A5', secondary: '#9CCC65', accent: '#7CB342' };
     
     switch (type) {
@@ -62,36 +112,38 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
       transition={{ type: "spring", stiffness: 400, damping: 10 }}
     >
       {/* Terracotta Pot */}
-      <g id="pot">
-        {/* Main Body */}
-        <path 
-          d="M 60,140 Q 60,185 75,195 L 125,195 Q 140,185 140,140 Z" 
-          fill="#F39E7D" 
-          stroke="black" 
-          strokeWidth="6" 
-          strokeLinejoin="round" 
-        />
-        {/* Pot Rim */}
-        <path 
-          d="M 50,130 Q 50,115 100,115 Q 150,115 150,130 L 150,145 Q 150,155 100,155 Q 50,155 50,145 Z" 
-          fill="#F39E7D" 
-          stroke="black" 
-          strokeWidth="6" 
-          strokeLinejoin="round" 
-        />
-        {/* Soil */}
-        <path 
-          d="M 60,135 Q 60,125 100,125 Q 140,125 140,135 Q 140,145 100,145 Q 60,145 60,135" 
-          fill="#7C5547" 
-          stroke="black" 
-          strokeWidth="3" 
-        />
-        {/* Highlights and Texture */}
-        <path d="M 65,130 Q 75,125 90,125" stroke="white" strokeWidth="4" strokeLinecap="round" opacity="0.4" />
-        <circle cx="80" cy="170" r="2" fill="black" opacity="0.6" />
-        <circle cx="110" cy="180" r="2" fill="black" opacity="0.6" />
-        <circle cx="95" cy="165" r="1.5" fill="black" opacity="0.6" />
-      </g>
+      {renderPotWrapper(
+        <g id="pot">
+          {/* Main Body */}
+          <path 
+            d="M 60,140 Q 60,185 75,195 L 125,195 Q 140,185 140,140 Z" 
+            fill="#F39E7D" 
+            stroke="black" 
+            strokeWidth="6" 
+            strokeLinejoin="round" 
+          />
+          {/* Pot Rim */}
+          <path 
+            d="M 50,130 Q 50,115 100,115 Q 150,115 150,130 L 150,145 Q 150,155 100,155 Q 50,155 50,145 Z" 
+            fill="#F39E7D" 
+            stroke="black" 
+            strokeWidth="6" 
+            strokeLinejoin="round" 
+          />
+          {/* Soil */}
+          <path 
+            d="M 60,135 Q 60,125 100,125 Q 140,125 140,135 Q 140,145 100,145 Q 60,145 60,135" 
+            fill="#7C5547" 
+            stroke="black" 
+            strokeWidth="3" 
+          />
+          {/* Highlights and Texture */}
+          <path d="M 65,130 Q 75,125 90,125" stroke="white" strokeWidth="4" strokeLinecap="round" opacity="0.4" />
+          <circle cx="80" cy="170" r="2" fill="black" opacity="0.6" />
+          <circle cx="110" cy="180" r="2" fill="black" opacity="0.6" />
+          <circle cx="95" cy="165" r="1.5" fill="black" opacity="0.6" />
+        </g>
+      )}
 
       {!isDead && (
         <g id="plant-growth">
@@ -168,8 +220,12 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
   const renderZen = () => (
     <g>
       {/* Pot - Zen Stone Basin */}
-      <rect x="50" y="160" width="100" height="30" rx="15" fill="#90A4AE" />
-      <rect x="45" y="155" width="110" height="5" rx="2" fill="#78909C" />
+      {renderPotWrapper(
+        <g>
+          <rect x="50" y="160" width="100" height="30" rx="15" fill="#90A4AE" />
+          <rect x="45" y="155" width="110" height="5" rx="2" fill="#78909C" />
+        </g>
+      )}
       
       {!isDead && (
         <g>
@@ -1344,33 +1400,55 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({ type, stage, isThi
         </motion.g>
       )}
 
-      {/* UV Halo Effect */}
+      {/* 2D CARTOON SUN (UV Halo Upgrade) */}
       {activeEcosystemItemIds.includes('eco_uv_lamp_01') && !isDead && (
-        <motion.circle 
-          cx="100" cy="50" r="80" 
-          fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4 8"
-          animate={{ rotate: 360, opacity: [0.2, 0.5, 0.2] }}
-          transition={{ rotate: { duration: 20, repeat: Infinity, ease: "linear" }, opacity: { duration: 3, repeat: Infinity } }}
-        />
+        <SunRenderer />
       )}
 
-      {/* Auto-Mist Effect */}
+      {/* AUTO-MIST REALISTIC DROPS */}
       {activeEcosystemItemIds.includes('eco_sprinkler_01') && !isDead && (
-        <motion.g
-          animate={{ opacity: [0, 0.3, 0] }}
-          transition={{ duration: 4, repeat: Infinity }}
-        >
-          <circle cx="50" cy="50" r="2" fill="#22d3ee" />
-          <circle cx="150" cy="80" r="1.5" fill="#22d3ee" />
-          <circle cx="80" cy="120" r="1" fill="#22d3ee" />
+        <motion.g className="pointer-events-none">
+          {[...Array(8)].map((_, i) => (
+            <motion.circle
+              key={i}
+              r="3"
+              fill="#38bdf8"
+              filter="url(#glow)"
+              initial={{ cx: 40 + Math.random() * 120, cy: -20, opacity: 0 }}
+              animate={{
+                cy: [0, 100 + Math.random() * 50],
+                opacity: [0, 0.9, 0],
+                scale: [1, 1.3, 0.7],
+                x: [0, Math.random() * 10 - 5, 0]
+              }}
+              transition={{
+                duration: 1.2 + Math.random(),
+                repeat: Infinity,
+                delay: i * 0.4,
+                ease: "easeIn"
+              }}
+            />
+          ))}
         </motion.g>
       )}
 
-      {/* Eco-Companions */}
+      {/* ECOSYSTEM COMPANIONS */}
+      <AnimatePresence>
+        {activeEcosystemItemIds.includes('eco_nanobees_01') && !isDead && (
+          <NanoBees key="bees" />
+        )}
+        {activeEcosystemItemIds.includes('eco_butterfly_01') && !isDead && (
+          <SpiritButterfly key="butterfly" />
+        )}
+      </AnimatePresence>
+
+      {/* DRAGGABLE GARDENER DRONE */}
       {activeEcosystemItemIds.includes('eco_drone_01') && !isDead && (
-        <foreignObject x="130" y="30" width="60" height="60">
-          <GardenerDrone mood={isThirsty ? 'working' : 'idle'} className="w-full h-full" />
-        </foreignObject>
+        <GardenerDrone 
+          mood={isThirsty ? 'working' : 'idle'} 
+          targetPos={droneTargetPos}
+          onPositionChange={onDronePositionChange}
+        />
       )}
     </motion.svg>
   );

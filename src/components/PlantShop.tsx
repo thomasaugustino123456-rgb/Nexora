@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, X, Zap, Sparkles, Heart, Bot, Droplets, Sun, Wind } from 'lucide-react';
+import { ShoppingBag, X, Zap, Sparkles, Heart, Bot, Droplets, Sun, Wind, Palette, Box, Bug, Ghost } from 'lucide-react';
 import { UserStats, UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';
 import { GardenerDrone } from './GardenerDrone';
@@ -18,25 +18,44 @@ export interface EcosystemItem {
   name: string;
   description: string;
   price: number;
-  type: 'companion' | 'growth-tech' | 'visual';
+  type: 'companion' | 'growth-tech' | 'visual' | 'pot' | 'color';
   icon: React.ReactNode;
   effect?: string;
+  metadata?: any;
 }
 
-const SHOP_ITEMS: EcosystemItem[] = [
+export const SHOP_ITEMS: EcosystemItem[] = [
   {
     id: 'eco_drone_01',
-    name: 'Gardener Drone V1',
-    description: 'A helpful bot that stays near your plant. Boosts growth by 10% automatically.',
+    name: 'Gardener Drone V2',
+    description: 'Draggable smart bot. Triple-tap to call it to a spot. Boosts growth by 12%.',
     price: 1500,
     type: 'companion',
     icon: <Bot className="text-blue-400" />,
-    effect: '+10% Passive Growth'
+    effect: '+12% Growth / Interactive'
+  },
+  {
+    id: 'eco_nanobees_01',
+    name: 'Nano-Bees Swarm',
+    description: 'A micro-swarm of robotic pollinators that dance around your plant.',
+    price: 3000,
+    type: 'companion',
+    icon: <Bug className="text-yellow-400" />,
+    effect: '+20% Passive Growth'
+  },
+  {
+    id: 'eco_butterfly_01',
+    name: 'Spirit Butterfly',
+    description: 'A bioluminescent butterfly that brings peace and focus.',
+    price: 5000,
+    type: 'companion',
+    icon: <Ghost className="text-purple-400" />,
+    effect: 'Legendary Multiplier (x1.5)'
   },
   {
     id: 'eco_sprinkler_01',
     name: 'Auto-Mist System',
-    description: 'Keeps the air humid. Extends "Thirsty" timer by 12 hours.',
+    description: 'Realistic mist drops. Extends "Thirsty" timer to 48 hours.',
     price: 800,
     type: 'growth-tech',
     icon: <Droplets className="text-cyan-400" />,
@@ -44,35 +63,55 @@ const SHOP_ITEMS: EcosystemItem[] = [
   },
   {
     id: 'eco_uv_lamp_01',
-    name: 'Neon UV Halo',
-    description: 'Artificial sunlight for faster photosynthesis. Double growth points from habits.',
+    name: 'Cartoon Sun Halo',
+    description: 'A cheerful sun that reflects light to your plant. Double growth from habits.',
     price: 2500,
     type: 'growth-tech',
     icon: <Sun className="text-amber-400" />,
     effect: '2x Growth Rate'
   },
+  // POTS
   {
-    id: 'eco_wind_chime_01',
-    name: 'Zen Wind Chimes',
-    description: 'Calming sounds reduce stress. Prevents plants from wilting for 6 hours after a missed day.',
+    id: 'pot_cyber_01',
+    name: 'Cyberpunk Planter',
+    description: 'Neon-infused base for a futuristic look.',
     price: 1200,
-    type: 'visual',
-    icon: <Wind className="text-indigo-400" />,
-    effect: '6h Wilt Shield'
+    type: 'pot',
+    icon: <Box className="text-fuchsia-400" />,
+    effect: 'Visual Style'
   },
   {
-    id: 'eco_nano_shield_01',
-    name: 'Nano-Bio Shield',
-    description: 'Protects against all wilting for 24 hours. Single use.',
-    price: 500,
-    type: 'growth-tech',
-    icon: <Zap className="text-red-400" />,
-    effect: 'Immunity (24h)'
+    id: 'pot_zen_01',
+    name: 'Stone Zen Basin',
+    description: 'Natural carved stone for ultimate calm.',
+    price: 1200,
+    type: 'pot',
+    icon: <Box className="text-gray-400" />,
+    effect: 'Visual Style'
+  },
+  // COLORS
+  {
+    id: 'color_bio_01',
+    name: 'Biolume Teal',
+    description: 'Give your plant a glowing teal bioluminescent tint.',
+    price: 2000,
+    type: 'color',
+    icon: <Palette className="text-teal-400" />,
+    effect: 'Glow Effect'
+  },
+  {
+    id: 'color_bio_02',
+    name: 'Biolume Pink',
+    description: 'Give your plant a glowing pink bioluminescent tint.',
+    price: 2000,
+    type: 'color',
+    icon: <Palette className="text-pink-400" />,
+    effect: 'Glow Effect'
   }
 ];
 
 export const PlantShop: React.FC<PlantShopProps> = ({ onClose, stats, settings, onPurchase, onToggleActive }) => {
-  const [activeTab, setActiveTab] = useState<'all' | 'companion' | 'growth-tech'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'companion' | 'growth-tech' | 'pot' | 'color'>('all');
   const purchased = settings.purchasedEcosystemItemIds || [];
   const activeItems = settings.activeEcosystemItemIds || [];
 
@@ -115,19 +154,16 @@ export const PlantShop: React.FC<PlantShopProps> = ({ onClose, stats, settings, 
               <Sparkles className="text-amber-400" size={16} />
               <span className="font-black text-blue-900 text-sm tracking-tighter">{stats.coins} <span className="text-[8px] opacity-40">COINS</span></span>
             </div>
-            <div className="px-4 py-2 bg-white rounded-full border border-blue-100 text-[10px] font-black text-blue-900/40 uppercase tracking-widest">
-              V2 Shop
-            </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex px-8 py-4 gap-2 bg-white sticky top-0 z-10">
-          {(['all', 'companion', 'growth-tech'] as const).map(tab => (
+        <div className="flex px-8 py-4 gap-2 bg-white sticky top-0 z-10 overflow-x-auto no-scrollbar">
+          {(['all', 'companion', 'growth-tech', 'pot', 'color'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => { vibrate(5); setActiveTab(tab); }}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                 activeTab === tab ? 'bg-blue-900 text-white shadow-lg shadow-blue-900/20' : 'bg-gray-100 text-blue-900/40 hover:bg-gray-200'
               }`}
             >

@@ -44,6 +44,25 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   const [showCompletion, setShowCompletion] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showShop, setShowShop] = useState(false);
+  const [droneTargetPos, setDroneTargetPos] = useState<{ x: number, y: number } | null>(null);
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const clickCountRef = useRef(0);
+
+  const handleAreaClick = (e: React.MouseEvent) => {
+    // Triple tap logic
+    clickCountRef.current += 1;
+    if (clickCountRef.current === 3) {
+      vibrate(20);
+      setDroneTargetPos({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
+      clickCountRef.current = 0;
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    } else {
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = setTimeout(() => {
+        clickCountRef.current = 0;
+      }, 500);
+    }
+  };
 
   const ecosystemInfo: Record<PlantType, { name: string, description: string }> = {
     sprout: { name: "Classic Sprout", description: "The heart of Nexora. A symbol of your new beginning and pure consistency." },
@@ -268,13 +287,15 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
           )}
         </AnimatePresence>
 
-        <div className="mb-12 flex flex-col items-center">
+        <div className="mb-12 flex flex-col items-center relative" onClick={handleAreaClick}>
           <PlantRenderer 
             type={plantState.type} 
             stage={plantState.stage} 
             isThirsty={plantState.isThirsty} 
             isDead={plantState.isDead} 
             activeEcosystemItemIds={settings.activeEcosystemItemIds}
+            droneTargetPos={droneTargetPos}
+            onDronePositionChange={(pos) => setDroneTargetPos(pos)}
           />
           <motion.div 
             className="mt-8 px-8 py-3 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border-2 border-green-100 flex items-center gap-3"
