@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Library, X, Sparkles, Share2, Check } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { PlantRenderer } from './PlantRenderer';

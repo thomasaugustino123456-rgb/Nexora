@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, X, Zap, Sparkles, Heart, Bot, Droplets, Sun, Wind, Palette, Box, Bug, Ghost } from 'lucide-react';
 import { UserStats, UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';

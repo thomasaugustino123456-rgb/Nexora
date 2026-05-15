@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { Activity, Sprout, Trophy, Zap, Heart, Shield, Crown } from 'lucide-react';
 import { UserStats, DailyProgress, UserSettings } from '../types';
 

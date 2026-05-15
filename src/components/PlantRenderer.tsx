@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { PlantType } from '../types';
 import { useSound } from '../hooks/useSound';
@@ -1422,14 +1422,9 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
         </motion.g>
       )}
 
-      {/* 2D CARTOON SUN (UV Halo Upgrade) */}
-      {activeEcosystemItemIds.includes('eco_uv_lamp_01') && !isDead && (
-        <SunRenderer />
-      )}
-
-      {/* AUTO-MIST REALISTIC DROPS (12 Principles: Weighted fall, Tear shape) */}
+      {/* AUTO-MIST REALISTIC DROPS */}
       {activeEcosystemItemIds.includes('eco_sprinkler_01') && !isDead && (
-        <motion.g className="pointer-events-none">
+        <g className="pointer-events-none">
           {[...Array(10)].map((_, i) => (
             <motion.path
               key={i}
@@ -1451,31 +1446,38 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
               }}
             />
           ))}
-        </motion.g>
+        </g>
       )}
 
       </motion.svg>
 
-      {/* ECOSYSTEM COMPANIONS - RENDERED OUTSIDE SVG IN RELATIVE DIV */}
-      <div className="absolute inset-0 pointer-events-none overflow-visible">
-        <AnimatePresence>
-          {activeEcosystemItemIds.includes('eco_nanobees_01') && !isDead && (
-            <NanoBees key="bees" />
-          )}
-          {activeEcosystemItemIds.includes('eco_butterfly_01') && !isDead && (
-            <SpiritButterfly key="butterfly" />
-          )}
-        </AnimatePresence>
+      {/* 2D CARTOON SUN (UV Halo Upgrade) */}
+      {activeEcosystemItemIds.includes('eco_uv_lamp_01') && !isDead && (
+        <SunRenderer />
+      )}
 
-        {/* DRAGGABLE GARDENER DRONE */}
-        {activeEcosystemItemIds.includes('eco_drone_01') && !isDead && (
-          <GardenerDrone 
-            mood={isThirsty ? 'working' : 'idle'} 
-            targetPos={droneTargetPos}
-            onPositionChange={onDronePositionChange}
-            className="pointer-events-auto"
-          />
-        )}
+      {/* ECOSYSTEM COMPANIONS - RENDERED OUTSIDE SVG IN RELATIVE DIV */}
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+        <div className="relative w-72 h-72 overflow-visible">
+          <AnimatePresence>
+            {activeEcosystemItemIds.includes('eco_nanobees_01') && !isDead && (
+              <NanoBees key="bees" />
+            )}
+            {activeEcosystemItemIds.includes('eco_butterfly_01') && !isDead && (
+              <SpiritButterfly key="butterfly" />
+            )}
+          </AnimatePresence>
+
+          {/* DRAGGABLE GARDENER DRONE */}
+          {activeEcosystemItemIds.includes('eco_drone_01') && !isDead && (
+            <GardenerDrone 
+              mood={isThirsty ? 'working' : 'idle'} 
+              targetPos={droneTargetPos}
+              onPositionChange={onDronePositionChange}
+              className="pointer-events-auto"
+            />
+          )}
+        </div>
       </div>
     </div>
   );

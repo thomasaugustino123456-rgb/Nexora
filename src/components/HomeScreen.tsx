@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
+import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { 
   AlertCircle, Star, Bell, Flame, Trophy as TrophyIcon, 
   Plus, Trash2, Clock, Target, ChevronRight, Sprout, LogOut, Save, CheckCircle2,

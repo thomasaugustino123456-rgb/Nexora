@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Zap, Shield, Search, ArrowLeft, Loader2, Sparkles, Activity, Fingerprint } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { UserStats, DailyProgress } from '../types';

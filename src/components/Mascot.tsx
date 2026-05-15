@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, useAnimation, AnimatePresence } from 'motion/react';
+import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { useSound } from '../hooks/useSound';
 
 export type MascotMood = 'happy' | 'angry' | 'boiling' | 'neutral' | 'surprised';

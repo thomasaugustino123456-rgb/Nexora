@@ -46,6 +46,7 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
 
   const [needsOnboarding, setNeedsOnboarding] = useState(!cachedOnboarding && !!cachedUserId);
   const dataLoadedFromFirestore = useRef(false);
+  const quotaExceededRef = useRef(false);
   const lastSyncedRef = useRef<string>("");
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -169,6 +170,7 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     if (currentStateStr === lastSyncedRef.current) return;
 
     const syncData = async () => {
+      if (quotaExceededRef.current) return;
       try {
         const userRef = doc(db, 'users', user.uid);
         
@@ -212,7 +214,8 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
         console.log("Hooks: Optimized Background Sync Complete ✅");
       } catch (e: any) {
         if (e.message?.includes("quota") || e.code === 'resource-exhausted') {
-          showToast("Cloud sync limit reached. Saved to local shield. 🛡️", "info");
+          quotaExceededRef.current = true;
+          showToast("Nexus Quota Reached. Local cache active. 🛡️", "info");
         } else {
           console.error("Sync error:", e);
         }
