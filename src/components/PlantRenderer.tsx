@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 import { PlantType } from '../types';
 import { useSound } from '../hooks/useSound';

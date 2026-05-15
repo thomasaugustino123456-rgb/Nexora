@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout, Target, Trophy, Play, X, Lock } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout, Target, Trophy, Play, X, Lock, ShoppingBag } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { PlantState, UserSettings, UserStats, PlantType } from '../types';
 import { vibrate } from '../lib/vibrate';
