@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexora-v2.0'; // V2.0 Upgrade
+const CACHE_NAME = 'nexora-v2.0.1'; // V2.0.1 Cache Busting
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

@@ -357,7 +357,7 @@ export default function App() {
 
   const isPro = settings?.isPro || (settings?.proTestActive ? true : false);
 
-  const currentAppVersion = "2.0.0"; // V2.0.0 Upgrade
+  const currentAppVersion = "2.0.1"; // V2.0.1 Upgrade: Force Cache Reset
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>('nexora_active_screen', 'home');
 
   // SMART FEEDBACK TRIGGER
@@ -1227,7 +1227,45 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, [emergencyActive, showUpdatePopup, dailyProgress.completed, dailyProgress.dailyQuestDone, settings.badgeSettings, lastUpdateTime]);
 
-  // Local Storage immediate backup
+  const handleUpdate = async () => {
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
+    if (updateInfo) {
+      const now = new Date().toISOString();
+      localStorage.setItem('nexora_dismissed_version', updateInfo.version);
+      localStorage.setItem('nexora_last_update_time', now);
+      localStorage.setItem('nexora_version', updateInfo.version);
+      setLastUpdateTime(now);
+    }
+    
+    // Nuclear Update: Unregister SW and clear all caches to ensure a fresh fetch
+    try {
+      showToast("REBOOTING SYSTEM... STAND BY", "info");
+      
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      
+      console.log('PWA: Caches cleared and Service Worker unregistered. Reloading...');
+    } catch (err) {
+      console.error('PWA: Error during nuclear update:', err);
+    }
+
+    // Clear session storage just in case
+    sessionStorage.clear();
+
+    // Forced fresh reload
+    window.location.href = '/?v=' + (updateInfo?.version || Date.now()); 
+  };
+
+  // Tracking screen views
   useEffect(() => {
     if (!user || !isDataReady) return; 
     localStorage.setItem('nexora_settings', JSON.stringify(settings));
@@ -1250,7 +1288,13 @@ export default function App() {
             if (dismissedVersion !== data.version) {
               console.log('PWA: New version or unseen update detected:', data.version);
               setUpdateInfo(data);
-              setShowUpdatePopup(true);
+              
+              if (data.forceUpdate) {
+                console.log('PWA: Force update active. Triggering sequence.');
+                handleUpdate();
+              } else {
+                setShowUpdatePopup(true);
+              }
               
               // If it's a new version, we should also ensure the badge is set immediately
               if ('setAppBadge' in navigator) {
@@ -1294,35 +1338,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleUpdate = async () => {
-    vibrate(VIBRATION_PATTERNS.SUCCESS);
-    if (updateInfo) {
-      const now = new Date().toISOString();
-      localStorage.setItem('nexora_dismissed_version', updateInfo.version);
-      localStorage.setItem('nexora_last_update_time', now);
-      setLastUpdateTime(now);
-    }
-    
-    // Nuclear Update: Unregister SW and clear all caches to ensure a fresh fetch
-    try {
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const registration of registrations) {
-          await registration.unregister();
-        }
-      }
-      
-      const cacheNames = await caches.keys();
-      await Promise.all(cacheNames.map(name => caches.delete(name)));
-      
-      console.log('PWA: Caches cleared and Service Worker unregistered. Reloading...');
-    } catch (err) {
-      console.error('PWA: Error during nuclear update:', err);
-    }
-
-    window.location.href = '/?update=' + Date.now(); // Force full reload with cache-busting query
-  };
-  
   const sendTestNotification = async () => {
     // Diagnose health first if needed
     try {
@@ -3555,10 +3570,10 @@ export default function App() {
                     
                     <button 
                       onClick={handleUpdate}
-                      className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                      className="w-full bg-blue-500 hover:bg-blue-600 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-xl shadow-blue-500/30 transition-all active:scale-95 group"
                     >
-                      <RefreshCw size={18} className="animate-spin-slow" />
-                      UPDATE NOW
+                      <RefreshCw size={18} className="group-active:rotate-180 transition-transform duration-500" />
+                      UPGRADE SYSTEM PROTOCOL
                     </button>
                   </div>
                 </div>
