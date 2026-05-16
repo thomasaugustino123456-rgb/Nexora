@@ -235,51 +235,60 @@ export default function App() {
   const [showWalkthrough, setShowWalkthrough] = useState(false);
   const [walkthroughStep, setWalkthroughStep] = useState(0);
 
-  const WALKTHROUGH_STEPS: { screen: Screen; title: string; message: string }[] = [
+  const WALKTHROUGH_STEPS: { screen: Screen; title: string; message: string; mood: MascotMood }[] = [
     { 
       screen: 'home', 
-      title: 'COMMAND CENTER', 
-      message: 'Yo bro! Welcome to Nexora. This is your Dashboard. Check your Daily Protocol and active Quests here.' 
+      title: 'HOME SECTION', 
+      message: 'Yo bro! This is your Dashboard. Track your Daily Protocol and active Quests here. Consistency is your weapon.',
+      mood: 'happy'
     },
     { 
       screen: 'progress', 
-      title: 'THE LAB', 
-      message: 'Track your gains! See your streaks, level up, and check out your Trophy collection. Level up to unlock more power.' 
+      title: 'PROGRESS SECTION', 
+      message: 'Analyze your gains! Check your streaks, level up, and view your Trophy collection. Real power is documented here.',
+      mood: 'surprised'
     },
     { 
       screen: 'leaderboard', 
-      title: 'THE HIERARCHY', 
-      message: 'See where you stand in the global rankings. The top spots are reserved for the most consistent warriors. Rise to the top!' 
+      title: 'RANK SECTION', 
+      message: 'See where you stand among other legends. Rise through the ranks by staying consistent every single day.',
+      mood: 'boiling'
     },
     { 
       screen: 'profile', 
-      title: 'THE DOSSIER', 
-      message: 'Your personal stats, level, and identity. This is your legacy in the Nexora system. Customize your avatar here!' 
+      title: 'PROFILE SECTION', 
+      message: 'Your identity in the Nexora system. Customize your avatar and check your permanent record here.',
+      mood: 'happy'
     },
     { 
       screen: 'library', 
-      title: 'THE VAULT', 
-      message: 'Your collection of power-ups, gear, and artifacts. Equip yourself for the mission from your stored arsenal.' 
+      title: 'LIBRARY SECTION', 
+      message: 'Your arsenal of power-ups and unlocked gear. Equip yourself for the mission from your stored assets.',
+      mood: 'happy'
     },
     { 
       screen: 'notebook', 
-      title: 'THE ARCHIVES', 
-      message: 'Log your daily thoughts and gratitude. Real strength comes from deep reflection. Keep your mind sharp!' 
+      title: 'NOTEBOOK SECTION', 
+      message: 'Log your mental updates. Discipline requires a sharp mind. Use this for reflection and focus.',
+      mood: 'neutral'
     },
     { 
       screen: 'nexus-vision', 
-      title: 'THE CORE', 
-      message: 'Build your mental garden. Growing your plant keeps your discipline alive. If you slip, the plant wilts. Stay sharp!' 
+      title: 'PLANT SECTION', 
+      message: 'Your mental ecosystem. Growing your plant correlates with your real-world discipline. Keep it alive!',
+      mood: 'happy'
     },
     { 
       screen: 'subscription', 
-      title: 'PREMIUM COMMAND', 
-      message: 'Unlock the heavy artillery. Pro status gives you unlimited power, exclusive gear, and advanced protocols.' 
+      title: 'SUBSCRIPTION SECTION', 
+      message: 'Unlock elite protocols. Pro status grants you advanced artillery and exclusive system access.',
+      mood: 'surprised'
     },
     { 
       screen: 'settings', 
-      title: 'PROTOCOL CONFIG', 
-      message: 'Adjust notifications, sync feedback, and manage your status. You are in control of the protocol now.' 
+      title: 'SETTINGS SECTION', 
+      message: 'Finalize your setup. Adjust notifications and sync your feedback directly to HQ. You are ready.',
+      mood: 'happy'
     }
   ];
 
@@ -3634,61 +3643,76 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[120] bg-blue-950/80 backdrop-blur-md flex items-end justify-center p-6"
+              className="fixed inset-0 z-[120] flex items-end justify-center p-6 overflow-hidden"
             >
+              {/* Overlay with focus effect */}
+              <div className="absolute inset-0 bg-blue-950/40 backdrop-blur-[2px]" />
+              
               <motion.div
                 key={walkthroughStep}
-                initial={{ y: 50, scale: 0.9, opacity: 0 }}
-                animate={{ y: 0, scale: 1, opacity: 1 }}
-                className="bg-white rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl border-4 border-blue-400 relative overflow-hidden"
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                className="bg-white rounded-[3rem] p-8 w-full max-w-sm shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] border-4 border-blue-400 relative z-10"
               >
+                {/* Connector Line (Pointing to content) */}
+                <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                  <div className="w-1 h-16 bg-gradient-to-t from-blue-400 to-transparent" />
+                  <div className="w-3 h-3 rounded-full bg-blue-400 animate-ping absolute top-0" />
+                </div>
+
                 {/* Protocol Progress Bar */}
-                <div className="absolute top-0 left-0 w-full h-1.5 flex gap-0.5">
+                <div className="absolute top-0 left-0 w-full h-2 flex gap-1 px-8 pt-4">
                   {WALKTHROUGH_STEPS.map((_, idx) => (
                     <div 
                       key={idx}
-                      className={`h-full flex-1 transition-all duration-500 ${idx <= walkthroughStep ? 'bg-blue-500' : 'bg-gray-100'}`}
+                      className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${idx <= walkthroughStep ? 'bg-blue-500' : 'bg-blue-100'}`}
                     />
                   ))}
                 </div>
 
                 <div className="flex flex-col items-center text-center gap-6 mt-4">
-                  {/* Mascot Avatar */}
-                  <div className="relative">
-                    <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center p-4 border-2 border-blue-100 shadow-inner">
-                      <img 
-                        src={`https://api.dicebear.com/7.x/bottts/svg?seed=Nexora&backgroundColor=b6e3f4`}
-                        alt="Mascot"
-                        className="w-full h-full object-contain"
+                  {/* Real App Mascot */}
+                  <div className="relative group">
+                    <div className="w-32 h-32 bg-blue-50/50 rounded-full flex items-center justify-center p-4 border-2 border-blue-100 relative shadow-[inset_0_2px_10px_rgba(59,130,246,0.1)]">
+                      <Mascot 
+                        mood={WALKTHROUGH_STEPS[walkthroughStep].mood}
+                        theme={settings.activeSkin === 'none' ? 'standard' : settings.activeSkin}
+                        hat={settings.activeHat}
+                        className="w-full h-full scale-110"
                       />
+                      {/* Aura pulse */}
+                      <div className="absolute inset-0 rounded-full border-2 border-blue-400/20 animate-ping" />
                     </div>
-                    <div className="absolute -bottom-2 -right-2 bg-blue-500 text-white text-[10px] font-black px-2 py-1 rounded-full border-2 border-white uppercase shadow-lg">
-                      Guide
+                    <div className="absolute -bottom-2 -right-4 bg-blue-600 text-white text-[11px] font-black px-3 py-1.5 rounded-2xl border-2 border-white uppercase shadow-lg shadow-blue-500/30">
+                      NEXORA AI
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-black text-blue-900 leading-tight uppercase tracking-tight italic">
+                  <div className="space-y-3">
+                    <h2 className="text-2xl font-black text-blue-900 leading-tight uppercase tracking-tighter italic">
                       {WALKTHROUGH_STEPS[walkthroughStep].title}
                     </h2>
-                    <p className="text-blue-900/70 font-bold text-sm leading-relaxed">
-                      {WALKTHROUGH_STEPS[walkthroughStep].message}
+                    <p className="text-blue-900/70 font-bold text-base leading-snug">
+                      "{WALKTHROUGH_STEPS[walkthroughStep].message}"
                     </p>
                   </div>
 
                   <button
                     onClick={onNextWalkthroughStep}
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-500/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-5 rounded-[2rem] font-black text-lg shadow-[0_15px_30px_-5px_rgba(59,130,246,0.4)] transition-all active:scale-95 flex items-center justify-center gap-3 active:shadow-none"
                   >
                     {walkthroughStep === WALKTHROUGH_STEPS.length - 1 ? (
-                      <>FINISH PROTOCOL <Check className="w-6 h-6 stroke-[3]" /></>
+                      <>FINISH MISSION <Check className="w-6 h-6 stroke-[4]" /></>
                     ) : (
-                      <>CONTINUE <ChevronRight className="w-6 h-6 stroke-[3]" /></>
+                      <>ENCRYPT & NEXT <ChevronRight className="w-6 h-6 stroke-[4]" /></>
                     )}
                   </button>
 
-                  <div className="text-[10px] font-black text-blue-300 uppercase tracking-widest">
-                    Step {walkthroughStep + 1} of {WALKTHROUGH_STEPS.length}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">
+                      PHASE {walkthroughStep + 1} // 09
+                    </span>
                   </div>
                 </div>
               </motion.div>
