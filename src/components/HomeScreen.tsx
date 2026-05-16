@@ -12,7 +12,6 @@ import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { Mascot } from './Mascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
 import { MascotAIWrapper } from './SuspenseWrappers';
-import { DashboardWidgets } from './DashboardWidgets';
 import { formatDistanceToNow } from 'date-fns';
 
 function CountdownToMidnight() {
@@ -94,7 +93,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
   const layoutConfig = settings.layoutConfig || {};
-  const sectionOrder = layoutConfig.sectionOrder || ['stats', 'protocol', 'quests', 'plans', 'trophies', 'mascot'];
+  const sectionOrder = layoutConfig.sectionOrder || ['stats', 'protocol', 'quests', 'plans', 'mascot'];
 
   const quotes = [
     "The only way to do great work is to love what you do.",
@@ -415,23 +414,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
         );
 
       case 'trophies':
-        if (layoutConfig.hideTrophies || !latestTrophy) return null;
-        return (
-          <div key="trophies" className="glass-card p-5 flex items-center gap-5 border-emerald-500/10 transition-colors">
-            <div className="w-16 h-16 flex-shrink-0">
-              {latestTrophy.type === 'golden' && <GoldenTrophy />}
-              {latestTrophy.type === 'ice' && <IceTrophy />}
-              {latestTrophy.type === 'broken' && <BrokenTrophy />}
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Status Invariant</p>
-              <h4 className="font-black text-blue-900">
-                {latestTrophy.type === 'golden' ? 'GOLDEN DISCIPLINE' : latestTrophy.type === 'ice' ? 'FROZEN STATE' : 'SHATTERED SHIELD'}
-              </h4>
-              <p className="text-[10px] font-bold text-blue-900/40">Earned {formatDistanceToNow(new Date(latestTrophy.earnedDate))} ago</p>
-            </div>
-          </div>
-        );
+        return null; // Removed from home as per user request (visible in progress)
 
       case 'mascot':
         if (layoutConfig.hideMascot) return null;
@@ -493,7 +476,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
         )}
       </AnimatePresence>
 
-      <DashboardWidgets stats={stats} dailyProgress={dailyProgress} settings={settings} />
+      {/* DashboardWidgets removed for cleaner home screen */}
 
       <MascotAIWrapper stats={stats} settings={settings} showToast={showToast} />
       
