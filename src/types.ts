@@ -265,7 +265,7 @@ export interface NexusVideo {
   repostCount?: number;
 }
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion' | 'home';
-export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling';
+export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling' | 'surprised';
 
 export interface SocialCircle {
   id: string;
