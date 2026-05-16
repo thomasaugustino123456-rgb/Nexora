@@ -338,6 +338,21 @@
       "schema": { "type": "object", "properties": { "purchasedAt": { "type": "string" } } },
       "description": "User purchased ecosystem items for the plant section"
     },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "message": { "type": "string" },
+          "type": { "type": "string", "enum": ["system", "reward", "alert", "mascot"] },
+          "read": { "type": "boolean" },
+          "createdAt": { "type": "string" },
+          "expiresAt": { "type": "string" }
+        }
+      },
+      "description": "System or automated notifications for the user"
+    },
     "/customPlans/{planId}": {
       "schema": { "$ref": "CustomPlan" },
       "description": "User created custom workout plans stored at root level"

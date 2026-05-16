@@ -330,3 +330,13 @@ export interface SocialComment {
   likes?: number;
   likedBy?: string[];
 }
+
+export interface SystemNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'system' | 'reward' | 'alert' | 'mascot';
+  read: boolean;
+  createdAt: string;
+  expiresAt?: string;
+}

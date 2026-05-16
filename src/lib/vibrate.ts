@@ -6,6 +6,7 @@ export const VIBRATION_PATTERNS = {
   ERROR: [50, 100, 50],
   HEAVY_LIGHT: [30, 50, 10],
   TROPHY: [40, 60, 40, 60, 40],
+  NOTIFY: [30, 80, 30],
 };
 
 /**

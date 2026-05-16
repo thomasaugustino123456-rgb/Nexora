@@ -157,7 +157,7 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
               fill="#ff0000" 
               animate={{ 
                 opacity: [0.6, 1, 0.6],
-                scale: [1, 1.3, 1]
+                scale: [1, 1.4, 1]
               }} 
               transition={{ 
                 duration: 1.5, 
@@ -169,8 +169,8 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
             <motion.circle 
               cx="50" cy="15" r="8" 
               fill="none" stroke="#ff0000" 
-              strokeWidth="1.5"
-              animate={{ scale: [1, 2.5], opacity: [0.5, 0] }}
+              strokeWidth="2"
+              animate={{ scale: [1, 3], opacity: [0.5, 0] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
           </motion.g>
@@ -181,12 +181,13 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
             fill="url(#droneBodyMain)" 
             stroke="#0f172a" 
             strokeWidth="3"
+            animate={{ 
+              scaleY: [1, 1.05, 0.95, 1],
+              scaleX: [1, 0.95, 1.05, 1]
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           />
           
-          {/* Decorative Panel Lines */}
-          <path d="M 20,65 Q 50,60 80,65" fill="none" stroke="#0f172a" strokeWidth="1.5" opacity="0.3" />
-          <path d="M 20,85 Q 50,90 80,85" fill="none" stroke="#0f172a" strokeWidth="1.5" opacity="0.3" />
-
           {/* Face Visor (Glossy) */}
           <rect x="25" y="65" width="50" height="20" rx="10" fill="#020617" />
           <rect x="30" y="67" width="40" height="5" rx="2" fill="white" opacity="0.1" />

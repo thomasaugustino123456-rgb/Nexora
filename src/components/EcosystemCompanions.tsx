@@ -93,37 +93,48 @@ export const SpiritButterfly: React.FC<{ isForestActive?: boolean }> = ({ isFore
 
         {/* GUIDING PRINCIPLE: Wings attached at body center (X=50) */}
         <motion.g
-          animate={{ rotateY: [0, 75, 0] }}
-          transition={{ duration: 0.25, repeat: Infinity, ease: "easeInOut" }}
+          animate={{ rotateY: [0, 80, 0] }}
+          transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
           style={{ originX: '50px' }}
         >
-          {/* Left Wings */}
-          <path d="M 50,50 Q 10,10 5,50 Q 10,90 50,60" fill="url(#wingGradMain)" opacity="0.9" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-          <path d="M 50,55 Q 20,70 20,95 Q 40,100 50,65" fill="url(#wingGradMain)" opacity="0.75" />
+          {/* Left Wings - 2D Detailed Style */}
+          <path d="M 50,50 Q 15,15 10,50 Q 15,85 50,60" fill="url(#wingGradMain)" stroke="#4c1d95" strokeWidth="1.5" />
+          <path d="M 50,55 Q 25,75 25,90 Q 40,95 50,65" fill="#a855f7" opacity="0.8" stroke="#4c1d95" strokeWidth="1" />
+          {/* Wing Detail Circles */}
+          <circle cx="25" cy="40" r="4" fill="white" opacity="0.3" />
         </motion.g>
 
         <motion.g
-          animate={{ rotateY: [0, -75, 0] }}
-          transition={{ duration: 0.25, repeat: Infinity, ease: "easeInOut" }}
+          animate={{ rotateY: [0, -80, 0] }}
+          transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
           style={{ originX: '50px' }}
         >
-          {/* Right Wings */}
-          <path d="M 50,50 Q 90,10 95,50 Q 90,90 50,60" fill="url(#wingGradMain)" opacity="0.9" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-          <path d="M 50,55 Q 80,70 80,95 Q 60,100 50,65" fill="url(#wingGradMain)" opacity="0.75" />
+          {/* Right Wings - 2D Detailed Style */}
+          <path d="M 50,50 Q 85,15 90,50 Q 85,85 50,60" fill="url(#wingGradMain)" stroke="#4c1d95" strokeWidth="1.5" />
+          <path d="M 50,55 Q 75,75 75,90 Q 60,95 50,65" fill="#a855f7" opacity="0.8" stroke="#4c1d95" strokeWidth="1" />
+          {/* Wing Detail Circles */}
+          <circle cx="75" cy="40" r="4" fill="white" opacity="0.3" />
         </motion.g>
 
-        {/* Body (Overlapping Action - slightly offset in Y) */}
+        {/* Body Segments (Squash & Stretch - 12 principles) */}
         <motion.g
-          animate={{ y: [0, 2, 0], scaleY: [1, 1.1, 1] }}
-          transition={{ duration: 0.25, repeat: Infinity }}
+          animate={{ 
+            scaleY: [1, 1.15, 0.9, 1],
+            y: [0, -2, 2, 0]
+          }}
+          transition={{ duration: 0.4, repeat: Infinity }}
         >
-          {/* Head & Antennae */}
-          <circle cx="50" cy="42" r="3" fill="white" />
-          <path d="M 48,40 L 42,32 M 52,40 L 58,32" stroke="white" strokeWidth="1" strokeLinecap="round" opacity="0.8" />
+          {/* Head & Antennae (Strongly attached) */}
+          <circle cx="50" cy="42" r="3.5" fill="#1e1b4b" stroke="#4c1d95" strokeWidth="0.5" />
+          <path d="M 48,40 L 40,30 M 52,40 L 60,30" stroke="#1e1b4b" strokeWidth="1.5" strokeLinecap="round" />
+          <circle cx="40" cy="30" r="1" fill="#1e1b4b" />
+          <circle cx="60" cy="30" r="1" fill="#1e1b4b" />
           
-          {/* Body Segments */}
-          <ellipse cx="50" cy="55" rx="3" ry="12" fill="white" />
-          <ellipse cx="50" cy="68" rx="2" ry="5" fill="white" opacity="0.6" />
+          {/* Main Thorax & Abdomen */}
+          <ellipse cx="50" cy="55" rx="3.5" ry="10" fill="#1e1b4b" />
+          <ellipse cx="50" cy="68" rx="2.5" ry="6" fill="#312e81" />
+          {/* 2D highlight on body */}
+          <rect x="49" y="48" width="1.5" height="15" rx="0.75" fill="white" opacity="0.2" />
         </motion.g>
       </svg>
     </motion.div>

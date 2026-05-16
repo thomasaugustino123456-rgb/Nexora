@@ -4,7 +4,7 @@ import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
-import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType, SocialCircle, Post, SocialComment, NexusNotification, NexusVideo, UserReport } from './types';
+import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType, SocialCircle, Post, SocialComment, NexusNotification, NexusVideo, UserReport, SystemNotification } from './types';
 import { HOUSE_ITEMS } from './constants/houseItems';
 import { NexoraStudio } from './components/NexoraStudio';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
@@ -342,12 +342,41 @@ export default function App() {
     checkSchedule();
     return () => clearInterval(interval);
   }, [settings.notificationsEnabled, isDataReady, today, NOTIFICATION_SLOTS]);
+
+  // SYSTEM NOTIFICATION LISTENER
+  useEffect(() => {
+    if (!user || !isDataReady) return;
+
+    const notifRef = collection(db, 'users', user.uid, 'notifications');
+    const q = query(notifRef, where('read', '==', false), orderBy('createdAt', 'desc'), limit(1));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const notifData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as SystemNotification;
+        setActiveSystemNotification(notifData);
+        vibrate(VIBRATION_PATTERNS.NOTIFY);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user, isDataReady]);
+
+  const markSystemNotificationRead = async (id: string) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'notifications', id), { read: true });
+      setActiveSystemNotification(null);
+    } catch (e) {
+      console.error("Failed to mark notification as read:", e);
+    }
+  };
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null);
   const [lastScrollY, setLastScrollY] = useState(0);
   const { play, stop, playMusic, stopAllMusic } = useSound();
   const [history, setHistory] = useState<DailyProgress[]>([]);
   const [earnedTrophyToday, setEarnedTrophyToday] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
+  const [activeSystemNotification, setActiveSystemNotification] = useState<SystemNotification | null>(null);
   const [showCoinAnimation, setShowCoinAnimation] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -3410,6 +3439,51 @@ export default function App() {
                       UPDATE NOW
                     </button>
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* System Notification Mascot Message Overlay */}
+        <AnimatePresence>
+          {activeSystemNotification && (
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, y: 100 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 100 }}
+              className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm"
+              onClick={() => markSystemNotificationRead(activeSystemNotification.id)}
+            >
+              <div 
+                className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl relative border-4 border-blue-500 overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="absolute top-0 left-0 w-full h-2 bg-blue-500" />
+                <div className="flex flex-col items-center text-center gap-6">
+                  <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center p-4 border-2 border-blue-100">
+                    <img 
+                      src={`https://api.dicebear.com/7.x/bottts/svg?seed=Nexora&backgroundColor=b6e3f4`}
+                      alt="Mascot"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-black text-blue-900 tracking-tight leading-tight">
+                      {activeSystemNotification.title || "SYSTEM INCOMING"}
+                    </h2>
+                    <p className="text-blue-900/70 font-bold leading-relaxed">
+                      {activeSystemNotification.message}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => markSystemNotificationRead(activeSystemNotification.id)}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-500/30 transition-all active:scale-95"
+                  >
+                    LOUD AND CLEAR! 🚀
+                  </button>
                 </div>
               </div>
             </motion.div>
