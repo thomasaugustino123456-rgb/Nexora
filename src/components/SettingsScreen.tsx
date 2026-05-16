@@ -558,6 +558,37 @@ export function SettingsScreen({
           </div>
         </div>
 
+        {/* Sync & Feedback Support */}
+        <div className="glass-card p-6 space-y-4 border-2 border-emerald-400/20 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 bg-emerald-500/5 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-emerald-500/10 transition-colors" />
+          
+          <div className="flex items-center gap-3 mb-2 relative z-10">
+            <div className="p-2 bg-emerald-500 text-white rounded-xl shadow-lg">
+              <MessageSquare size={16} />
+            </div>
+            <div>
+              <h3 className="font-black text-emerald-900 uppercase text-sm tracking-tight">HQ Communication</h3>
+              <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Protocol Optimization Link</p>
+            </div>
+          </div>
+          
+          <div className="bg-white/40 p-4 rounded-2xl border border-emerald-100/30 relative z-10">
+             <p className="text-[11px] font-bold text-blue-900/60 leading-snug mb-4">
+               Transmitting your field reports helps HQ (The Nexora Team) optimize the system for all warriors. Every insight counts, bro! 📡
+             </p>
+             <button 
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.NOTIFY);
+                  setShowFeedbackModal(true);
+                }}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-2xl font-black text-[11px] tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl shadow-emerald-200 transition-all active:scale-95"
+             >
+                <RefreshCw size={18} className="animate-spin-slow" />
+                SYNC SYSTEM FEEDBACK
+             </button>
+          </div>
+        </div>
+
         {/* Support & Dev Section */}
         <div className="glass-card p-6 space-y-4">
           <div className="flex items-center gap-3 mb-2">
@@ -596,16 +627,6 @@ export function SettingsScreen({
                <div className="flex items-center gap-3">
                   <ShieldCheck size={16} className="text-blue-400" />
                   <span className="text-xs font-black uppercase tracking-tight">Privacy Protocol</span>
-               </div>
-               <ChevronLeft size={16} className="rotate-180 opacity-20 group-hover:opacity-100 transition-opacity" />
-            </button>
-            <button 
-              onClick={() => setShowFeedbackModal(true)}
-              className="flex items-center justify-between p-4 bg-white rounded-2xl border border-blue-50 text-blue-900 hover:bg-blue-50 transition-all group active:scale-95"
-            >
-               <div className="flex items-center gap-3">
-                  <BookOpen size={16} className="text-blue-400" />
-                  <span className="text-xs font-black uppercase tracking-tight">Terms of Engagement & Feedback</span>
                </div>
                <ChevronLeft size={16} className="rotate-180 opacity-20 group-hover:opacity-100 transition-opacity" />
             </button>
