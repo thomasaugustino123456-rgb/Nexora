@@ -231,6 +231,94 @@ export default function App() {
   const [emergencyActive, setEmergencyActive] = useState(false);
   const [challengeStep, setChallengeStep] = useState<ChallengeStep | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [showFeedbackPrompt, setShowFeedbackPrompt] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [walkthroughStep, setWalkthroughStep] = useState(0);
+
+  const WALKTHROUGH_STEPS: { screen: Screen; title: string; message: string }[] = [
+    { 
+      screen: 'home', 
+      title: 'COMMAND CENTER', 
+      message: 'Yo bro! Welcome to Nexora. This is your Dashboard. Check your Daily Protocol and active Quests here.' 
+    },
+    { 
+      screen: 'progress', 
+      title: 'THE LAB', 
+      message: 'Track your gains! See your streaks, level up, and check out your Trophy collection. Level up to unlock more power.' 
+    },
+    { 
+      screen: 'leaderboard', 
+      title: 'THE HIERARCHY', 
+      message: 'See where you stand in the global rankings. The top spots are reserved for the most consistent warriors. Rise to the top!' 
+    },
+    { 
+      screen: 'profile', 
+      title: 'THE DOSSIER', 
+      message: 'Your personal stats, level, and identity. This is your legacy in the Nexora system. Customize your avatar here!' 
+    },
+    { 
+      screen: 'library', 
+      title: 'THE VAULT', 
+      message: 'Your collection of power-ups, gear, and artifacts. Equip yourself for the mission from your stored arsenal.' 
+    },
+    { 
+      screen: 'notebook', 
+      title: 'THE ARCHIVES', 
+      message: 'Log your daily thoughts and gratitude. Real strength comes from deep reflection. Keep your mind sharp!' 
+    },
+    { 
+      screen: 'nexus-vision', 
+      title: 'THE CORE', 
+      message: 'Build your mental garden. Growing your plant keeps your discipline alive. If you slip, the plant wilts. Stay sharp!' 
+    },
+    { 
+      screen: 'subscription', 
+      title: 'PREMIUM COMMAND', 
+      message: 'Unlock the heavy artillery. Pro status gives you unlimited power, exclusive gear, and advanced protocols.' 
+    },
+    { 
+      screen: 'settings', 
+      title: 'PROTOCOL CONFIG', 
+      message: 'Adjust notifications, sync feedback, and manage your status. You are in control of the protocol now.' 
+    }
+  ];
+
+  // WALKTHROUGH TRIGGER
+  useEffect(() => {
+    if (!isDataReady || !user || settings.isWalkthroughCompleted) return;
+    
+    const timer = setTimeout(() => {
+      setShowWalkthrough(true);
+      setWalkthroughStep(0);
+      setActiveScreen('home');
+      vibrate(VIBRATION_PATTERNS.NOTIFY);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [isDataReady, user, settings.isWalkthroughCompleted]);
+
+  const onNextWalkthroughStep = () => {
+    if (walkthroughStep < WALKTHROUGH_STEPS.length - 1) {
+      const nextStep = walkthroughStep + 1;
+      setWalkthroughStep(nextStep);
+      setActiveScreen(WALKTHROUGH_STEPS[nextStep].screen);
+      vibrate(VIBRATION_PATTERNS.CLICK);
+    } else {
+      onFinishWalkthrough();
+    }
+  };
+
+  const onFinishWalkthrough = async () => {
+    setShowWalkthrough(false);
+    onUpdateSettings({ isWalkthroughCompleted: true });
+    // Bonus for finishing
+    await updateDoc(doc(db, 'users', user!.uid), { 
+      coins: increment(50),
+      totalPoints: increment(10)
+    });
+    showToast("WELCOME CACHE RECEIVED: +50 COINS! 🚀", "success");
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
+  };
 
   // Space House Unlock Logic
   const isSpaceHouseUnlocked = useMemo(() => {
@@ -271,6 +359,39 @@ export default function App() {
 
   const currentAppVersion = "2.0.0"; // V2.0.0 Upgrade
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>('nexora_active_screen', 'home');
+
+  // SMART FEEDBACK TRIGGER
+  useEffect(() => {
+    if (!isDataReady || !user || activeScreen !== 'home' || settings.feedbackSubmitted) return;
+
+    const lastPrompt = settings.lastFeedbackPromptDate ? new Date(settings.lastFeedbackPromptDate) : null;
+    const now = new Date();
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+    const timeToPrompt = !lastPrompt || (now.getTime() - lastPrompt.getTime()) > SEVEN_DAYS_MS;
+    const reachedMilestone = stats.totalPoints > 300 || (stats.level || 0) > 1;
+
+    if (timeToPrompt && reachedMilestone) {
+      const timer = setTimeout(() => {
+        setShowFeedbackPrompt(true);
+        vibrate(VIBRATION_PATTERNS.NOTIFY);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isDataReady, user, activeScreen, settings.feedbackSubmitted, settings.lastFeedbackPromptDate, stats.totalPoints, stats.level]);
+
+  const onDismissFeedback = () => {
+    onUpdateSettings({ lastFeedbackPromptDate: new Date().toISOString() });
+    setShowFeedbackPrompt(false);
+  };
+
+  const onAcceptFeedback = () => {
+    setShowFeedbackPrompt(false);
+    setActiveScreen('settings');
+    setTimeout(() => {
+      showToast("TAP 'SYNC FEEDBACK' TO SHARE YOUR LOGS!", "info");
+    }, 500);
+  };
 
   // Tracking screen views
   useEffect(() => {
@@ -2225,6 +2346,7 @@ export default function App() {
       });
       showToast('Feedback transmitted! HQ is on it, bro! 🏮', 'success');
       vibrate(VIBRATION_PATTERNS.SUCCESS);
+      onUpdateSettings({ feedbackSubmitted: true });
     } catch (err) {
       console.error('Feedback Error:', err);
       showToast('Transmission failed. Connectivity issue?', 'error');
@@ -3484,6 +3606,117 @@ export default function App() {
                   >
                     LOUD AND CLEAR! 🚀
                   </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Nexora Navigation Protocol (Walkthrough) */}
+        <AnimatePresence>
+          {showWalkthrough && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[120] bg-blue-950/80 backdrop-blur-md flex items-end justify-center p-6"
+            >
+              <motion.div
+                key={walkthroughStep}
+                initial={{ y: 50, scale: 0.9, opacity: 0 }}
+                animate={{ y: 0, scale: 1, opacity: 1 }}
+                className="bg-white rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl border-4 border-blue-400 relative overflow-hidden"
+              >
+                {/* Protocol Progress Bar */}
+                <div className="absolute top-0 left-0 w-full h-1.5 flex gap-0.5">
+                  {WALKTHROUGH_STEPS.map((_, idx) => (
+                    <div 
+                      key={idx}
+                      className={`h-full flex-1 transition-all duration-500 ${idx <= walkthroughStep ? 'bg-blue-500' : 'bg-gray-100'}`}
+                    />
+                  ))}
+                </div>
+
+                <div className="flex flex-col items-center text-center gap-6 mt-4">
+                  {/* Mascot Avatar */}
+                  <div className="relative">
+                    <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center p-4 border-2 border-blue-100 shadow-inner">
+                      <img 
+                        src={`https://api.dicebear.com/7.x/bottts/svg?seed=Nexora&backgroundColor=b6e3f4`}
+                        alt="Mascot"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="absolute -bottom-2 -right-2 bg-blue-500 text-white text-[10px] font-black px-2 py-1 rounded-full border-2 border-white uppercase shadow-lg">
+                      Guide
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-black text-blue-900 leading-tight uppercase tracking-tight italic">
+                      {WALKTHROUGH_STEPS[walkthroughStep].title}
+                    </h2>
+                    <p className="text-blue-900/70 font-bold text-sm leading-relaxed">
+                      {WALKTHROUGH_STEPS[walkthroughStep].message}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={onNextWalkthroughStep}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-500/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    {walkthroughStep === WALKTHROUGH_STEPS.length - 1 ? (
+                      <>FINISH PROTOCOL <Check className="w-6 h-6 stroke-[3]" /></>
+                    ) : (
+                      <>CONTINUE <ChevronRight className="w-6 h-6 stroke-[3]" /></>
+                    )}
+                  </button>
+
+                  <div className="text-[10px] font-black text-blue-300 uppercase tracking-widest">
+                    Step {walkthroughStep + 1} of {WALKTHROUGH_STEPS.length}
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Smart Feedback Mascot Bubble */}
+        <AnimatePresence>
+          {showFeedbackPrompt && (
+            <motion.div
+              initial={{ opacity: 0, y: 100, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 100, scale: 0.8 }}
+              className="fixed bottom-28 left-6 right-6 z-[95] flex items-end justify-center pointer-events-none md:justify-end md:right-10 md:left-auto"
+            >
+              <div className="bg-white rounded-[2.5rem] p-6 shadow-2xl border-4 border-blue-500 max-w-sm w-full pointer-events-auto relative">
+                <div className="absolute -top-12 -left-2 w-20 h-20">
+                   <img 
+                      src={`https://api.dicebear.com/7.x/bottts/svg?seed=Nexora&backgroundColor=b6e3f4`}
+                      alt="Mascot"
+                      className="w-full h-full object-contain drop-shadow-lg"
+                    />
+                </div>
+                <div className="ml-16 space-y-3">
+                  <div>
+                    <h4 className="text-xl font-black text-blue-900 leading-none uppercase italic">Mission Report</h4>
+                    <p className="text-sm font-bold text-blue-600/80 mt-1">Yo bro, enjoying the protocol? HQ needs your feedback to optimize the Nexora system!</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={onDismissFeedback}
+                      className="flex-1 py-3 px-4 bg-gray-100 text-gray-500 rounded-2xl font-black text-[10px] uppercase tracking-tighter active:scale-95 transition-all"
+                    >
+                      Not now
+                    </button>
+                    <button 
+                      onClick={onAcceptFeedback}
+                      className="flex-[2] py-3 px-4 bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
+                    >
+                      SYNC FEEDBACK 🚀
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>

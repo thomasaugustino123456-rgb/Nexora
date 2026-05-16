@@ -113,6 +113,9 @@ export interface UserSettings {
     hideMascot?: boolean;
     sectionOrder?: string[];
   };
+  lastFeedbackPromptDate?: string;
+  feedbackSubmitted?: boolean;
+  isWalkthroughCompleted?: boolean;
 }
 
 export interface ShopItem {
