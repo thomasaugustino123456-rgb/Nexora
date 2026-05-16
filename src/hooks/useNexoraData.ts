@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged, User as FirebaseUser, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { UserSettings, UserStats, DailyProgress } from '../types';
 
@@ -143,9 +143,22 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
       }
     });
 
+    // NEW: Load Ecosystem Shop Items
+    const ecoShopRef = collection(db, 'users', user.uid, 'eco_shop');
+    const unsubEcoShop = onSnapshot(ecoShopRef, (snap) => {
+      const ecoIds = snap.docs.map(doc => doc.id);
+      if (ecoIds.length > 0) {
+        setSettings(prev => ({
+          ...prev,
+          purchasedEcosystemItemIds: [...new Set([...(prev.purchasedEcosystemItemIds || []), ...ecoIds])]
+        }));
+      }
+    });
+
     return () => {
       unsubUser();
       unsubProgress();
+      unsubEcoShop();
     };
   }, [user]);
 
@@ -214,11 +227,11 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
       }
     };
     
-    // 5-minute debounce for background sync
+    // 5-second debounce for faster background sync
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     if (document.hidden) return; // Don't sync if tab is backgrounded
     
-    syncTimeoutRef.current = setTimeout(syncData, 300000); 
+    syncTimeoutRef.current = setTimeout(syncData, 5000); 
 
     return () => {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
@@ -249,29 +262,6 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     });
   };
 
-  const syncEcosystemPurchase = async (itemId: string, purchased: boolean) => {
-    if (!user) return;
-    try {
-      const itemRef = doc(db, 'users', user.uid, 'plant_eco_items', itemId);
-      await setDoc(itemRef, {
-        id: itemId,
-        purchasedAt: new Date().toISOString(),
-        active: true
-      }, { merge: true });
-      
-      // Also trigger a general sync for settings
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        purchasedEcosystemItemIds: purchased ? [...(settings.purchasedEcosystemItemIds || []), itemId] : settings.purchasedEcosystemItemIds,
-        activeEcosystemItemIds: [...(settings.activeEcosystemItemIds || []), itemId],
-        updatedAt: serverTimestamp()
-      });
-      lastSyncedRef.current = ""; // Force next background sync to re-evaluate
-    } catch (e) {
-      console.error("Shop sync error:", e);
-    }
-  };
-
   return {
     user,
     loading,
@@ -284,7 +274,6 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     setDailyProgress: onUpdateDailyProgress,
     needsOnboarding,
     setNeedsOnboarding,
-    dataLoadedFromFirestore,
-    syncEcosystemPurchase
+    dataLoadedFromFirestore
   };
 }

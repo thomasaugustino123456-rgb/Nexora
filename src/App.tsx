@@ -151,8 +151,7 @@ export default function App() {
     setDailyProgress,
     needsOnboarding,
     setNeedsOnboarding,
-    dataLoadedFromFirestore,
-    syncEcosystemPurchase
+    dataLoadedFromFirestore
   } = useNexoraData(DEFAULT_SETTINGS, DEFAULT_STATS, showToast);
 
   const today = new Date().toISOString().split('T')[0];
@@ -528,7 +527,7 @@ export default function App() {
     showToast(`Purchased ${item.name}! 🏠`, "success");
   };
 
-  const buyEcosystemItem = (item: any) => {
+  const buyEcosystemItem = async (item: any) => {
     if (stats.coins < item.price) {
       showToast("Not enough coins, bro! 🪙", "error");
       return;
@@ -537,14 +536,23 @@ export default function App() {
     setStats(prev => ({ ...prev, coins: prev.coins - item.price }));
     setSettings(prev => ({
       ...prev,
-      purchasedEcosystemItemIds: [...(prev.purchasedEcosystemItemIds || []), item.id],
-      activeEcosystemItemIds: [...(prev.activeEcosystemItemIds || []), item.id]
+      purchasedEcosystemItemIds: [...(prev.purchasedEcosystemItemIds || []), item.id]
     }));
-    
-    // Immediate backend registration for persistence
-    syncEcosystemPurchase(item.id, true);
-    
+
+    // PERMANENT BACKEND REGISTRATION (New Path)
+    if (user) {
+      try {
+        const itemRef = doc(db, 'users', user.uid, 'eco_shop', item.id);
+        await setDoc(itemRef, {
+          purchasedAt: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error("Ecosystem item sync failed:", e);
+      }
+    }
+
     showToast(`Ecosystem upgraded: ${item.name}! 🌿`, "success");
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
   };
 
   const toggleEcosystemItem = (itemId: string) => {
@@ -554,15 +562,6 @@ export default function App() {
       const updated = isActive 
         ? current.filter(id => id !== itemId)
         : [...current, itemId];
-      
-      // Sync activation state to backend
-      if (!isActive) {
-        syncEcosystemPurchase(itemId, false); 
-      } else {
-        // Handle deactivation in firestore if needed, 
-        // but syncEcosystemPurchase currently marks as active:true.
-        // Let's just rely on the general sync for deactivation for now or update the helper.
-      }
       
       return { ...prev, activeEcosystemItemIds: updated };
     });

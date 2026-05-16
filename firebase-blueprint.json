@@ -28,8 +28,6 @@
         "zenModeEnabled": { "type": "boolean" },
         "challengeCountGoal": { "type": "number" },
         "purchasedItems": { "type": "array", "items": { "type": "string" } },
-        "purchasedEcosystemItemIds": { "type": "array", "items": { "type": "string" } },
-        "activeEcosystemItemIds": { "type": "array", "items": { "type": "string" } },
         "savedChallengeIds": { "type": "array", "items": { "type": "string" } },
         "savedTrophyIds": { "type": "array", "items": { "type": "string" } },
         "inventory": {
@@ -332,13 +330,13 @@
       "schema": { "$ref": "LibraryTrophies" },
       "description": "User earned trophies"
     },
-    "/users/{userId}/plant_eco_items/{itemId}": {
-      "schema": { "type": "object", "properties": { "id": { "type": "string" }, "purhcasedAt": { "type": "string" }, "active": { "type": "boolean" } } },
-      "description": "Items purchased in the plant ecosystem shop"
-    },
     "/users/{userId}/music/purchased": {
       "schema": { "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "UserProfile/properties/inventory/items" } } } },
       "description": "User purchased music and sound packs"
+    },
+    "/users/{userId}/eco_shop/{itemId}": {
+      "schema": { "type": "object", "properties": { "purchasedAt": { "type": "string" } } },
+      "description": "User purchased ecosystem items for the plant section"
     },
     "/customPlans/{planId}": {
       "schema": { "$ref": "CustomPlan" },

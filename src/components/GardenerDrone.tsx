@@ -75,7 +75,8 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
         y: sy, 
         rotateZ: tilt,
         scaleX: stretch, 
-        scaleY: squash 
+        scaleY: squash,
+        willChange: 'transform' // Force GPU rendering for smoother flight
       }}
       animate={mood === 'working' ? {
         scale: [1, 1.08, 0.95, 1],
@@ -125,48 +126,56 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
              transition={{ duration: 3, repeat: Infinity }}
           />
 
-          {/* Hover Blades (Spinning & Tilting) */}
-          <motion.g animate={{ rotate: 360 }} transition={{ duration: 0.1, repeat: Infinity, ease: "linear" }} style={{ originX: '20px', originY: '65px' }}>
-            <rect x="5" y="64" width="30" height="2" fill="#334155" rx="1" opacity="0.6" />
-          </motion.g>
-          <motion.g animate={{ rotate: -360 }} transition={{ duration: 0.1, repeat: Infinity, ease: "linear" }} style={{ originX: '80px', originY: '65px' }}>
-            <rect x="65" y="64" width="30" height="2" fill="#334155" rx="1" opacity="0.6" />
+          {/* Support Legs (Squash/Stretch) */}
+          <motion.g animate={{ scaleY: [1, 0.8, 1.2, 1] }} transition={{ duration: 3, repeat: Infinity }}>
+            <path d="M 30,95 L 20,108 M 70,95 L 80,108" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
           </motion.g>
 
-          {/* ANTENNA (SIGNAL WARE - Correctly attached to body top) */}
+          {/* Hover Blades (Spinning & Tilting) */}
+          <motion.g animate={{ rotate: 360 }} transition={{ duration: 0.15, repeat: Infinity, ease: "linear" }} style={{ originX: '20px', originY: '65px' }}>
+            <circle cx="20" cy="65" r="15" fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 4" opacity="0.3" />
+            <rect x="5" y="64" width="30" height="2" fill="#334155" rx="1" />
+          </motion.g>
+          <motion.g animate={{ rotate: -360 }} transition={{ duration: 0.15, repeat: Infinity, ease: "linear" }} style={{ originX: '80px', originY: '65px' }}>
+            <circle cx="80" cy="65" r="15" fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 4" opacity="0.3" />
+            <rect x="65" y="64" width="30" height="2" fill="#334155" rx="1" />
+          </motion.g>
+
+          {/* ANTENNA (SIGNAL WARE - LOCKED TO HEAD) */}
           <motion.g 
             style={{ originX: '50px', originY: '45px', rotate: antennaTilt }}
           >
-            {/* The Antenna Stem anchored firmly */}
+            {/* The Antenna Stem */}
             <path d="M 50,45 L 50,15" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
             
-            {/* Red Signal Light (Prominent & Pulsing) */}
-            <motion.g transform="translate(50, 15)">
-              <circle r="6" fill="#ef4444" />
-              <motion.circle 
-                r="6" 
-                fill="#ff0000" 
-                animate={{ 
-                  opacity: [0.4, 1, 0.4],
-                  scale: [1, 1.5, 1]
-                }} 
-                transition={{ 
-                  duration: 1.2, 
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }} 
-              />
-              <motion.circle 
-                r="10" 
-                fill="none" stroke="#ff0000" 
-                strokeWidth="1.5"
-                animate={{ scale: [1, 2.5], opacity: [0.4, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              />
-            </motion.g>
+            {/* Signal Light Disk/Ware */}
+            <circle cx="50" cy="15" r="8" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+            
+            {/* Red Signal Light (Locked & Pulsing) */}
+            <motion.circle 
+              cx="50" cy="15" r="5" 
+              fill="#ff0000" 
+              animate={{ 
+                opacity: [0.6, 1, 0.6],
+                scale: [1, 1.3, 1]
+              }} 
+              transition={{ 
+                duration: 1.5, 
+                repeat: Infinity,
+                ease: "easeInOut"
+              }} 
+            />
+            {/* Radar Wave (Principles: Secondary Action) */}
+            <motion.circle 
+              cx="50" cy="15" r="8" 
+              fill="none" stroke="#ff0000" 
+              strokeWidth="1.5"
+              animate={{ scale: [1, 2.5], opacity: [0.5, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
           </motion.g>
 
-          {/* Main Sphere Body */}
+          {/* Main Sphere Body (Squash and Stretch) */}
           <motion.circle 
             cx="50" cy="75" r="35" 
             fill="url(#droneBodyMain)" 
@@ -174,9 +183,13 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
             strokeWidth="3"
           />
           
-          {/* Face Visor */}
+          {/* Decorative Panel Lines */}
+          <path d="M 20,65 Q 50,60 80,65" fill="none" stroke="#0f172a" strokeWidth="1.5" opacity="0.3" />
+          <path d="M 20,85 Q 50,90 80,85" fill="none" stroke="#0f172a" strokeWidth="1.5" opacity="0.3" />
+
+          {/* Face Visor (Glossy) */}
           <rect x="25" y="65" width="50" height="20" rx="10" fill="#020617" />
-          <rect x="30" y="67" width="40" height="4" rx="2" fill="white" opacity="0.1" />
+          <rect x="30" y="67" width="40" height="5" rx="2" fill="white" opacity="0.1" />
 
           {/* Eyes (Mood aware) */}
           <motion.g>
