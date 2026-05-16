@@ -9,6 +9,8 @@ import {
 import { ProVideoEditor } from './ProVideoEditor';
 import { showToast } from '../lib/toast';
 
+import { trackEvent } from '../firebase';
+
 interface NexoraStudioProps {
   onBack: () => void;
   onPost?: (videoData: any) => void;
@@ -999,6 +1001,12 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                           
                           // Show a final processing toast
                           showToast('Finalizing Media Sequence... 🏮', 'info');
+
+                          trackEvent('video_published', {
+                            media_count: capturedMedia.length,
+                            has_audio: !!audioFile,
+                            quality: quality
+                          });
 
                           onPost({ 
                             userId: user?.uid,

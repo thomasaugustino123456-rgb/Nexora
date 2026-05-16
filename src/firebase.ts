@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getMessaging, isSupported } from 'firebase/messaging';
+import { getAnalytics, logEvent, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 import firebaseConfigData from './firebase-applet-config.json';
 
 const firebaseConfig = {
@@ -11,6 +12,7 @@ const firebaseConfig = {
   storageBucket: firebaseConfigData.storageBucket,
   messagingSenderId: firebaseConfigData.messagingSenderId,
   appId: firebaseConfigData.appId,
+  measurementId: firebaseConfigData.measurementId || "G-HCHSRFZY2E", // User provided measurementId
 };
 
 console.log("Firebase Initialization: Using project", firebaseConfigData.projectId);
@@ -18,6 +20,28 @@ const databaseId = firebaseConfigData.firestoreDatabaseId || "(default)";
 console.log("Firestore Initialization: Using database", databaseId);
 
 const app = initializeApp(firebaseConfig);
+
+// Initialize Analytics lazily
+export const analytics = async () => {
+  if (typeof window !== 'undefined') {
+    const supported = await isAnalyticsSupported();
+    return supported ? getAnalytics(app) : null;
+  }
+  return null;
+};
+
+// Helper for easy event logging
+export const trackEvent = async (eventName: string, params?: any) => {
+  try {
+    const instance = await analytics();
+    if (instance) {
+      logEvent(instance, eventName, params);
+      console.log(`[Analytics] Event tracked: ${eventName}`, params);
+    }
+  } catch (err) {
+    console.error(`[Analytics] Failed to track ${eventName}:`, err);
+  }
+};
 
 export const db = initializeFirestore(app, {
   // Use standard settings for better performance on most networks

@@ -4,7 +4,7 @@ import { ArrowLeft, Plus, Video, MoreHorizontal, Trash2, Bookmark, Flag, EyeOff,
 import { format, parseISO } from 'date-fns';
 import { User as FirebaseUser } from 'firebase/auth';
 import { doc, collection, query, orderBy, onSnapshot, setDoc, updateDoc, increment, addDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, trackEvent } from '../firebase';
 import { Post, SocialCircle, SocialComment, NexusNotification, Screen, UserSettings, UserStats } from '../types';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
@@ -313,6 +313,12 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
           flames: newLikedBy.length 
         });
         showToast(isLiked ? 'Flame Extinguished' : 'Signal Amplified! 🔥', 'info');
+        
+        trackEvent('post_interaction', {
+          type: 'flame',
+          post_id: postId,
+          action: isLiked ? 'unlike' : 'like'
+        });
       } else {
         const newShieldedBy = isShielded ? shieldedBy.filter(id => id !== userId) : [...shieldedBy, userId];
         await updateDoc(postRef, { 
@@ -320,6 +326,12 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
           shields: newShieldedBy.length 
         });
         showToast(isShielded ? 'Protection Recalled' : 'Shield Deployed! 🛡️', 'info');
+
+        trackEvent('post_interaction', {
+          type: 'shield',
+          post_id: postId,
+          action: isShielded ? 'unshield' : 'shield'
+        });
       }
     } catch (err) { 
       showToast('Transmission Failed: Update Node Manually', 'error');
@@ -515,6 +527,11 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       setNewComment('');
       setReplyingTo(null);
       showToast('Frequency Joined.', 'success');
+      
+      trackEvent('post_comment', {
+        post_id: selectedPost.id,
+        is_reply: !!replyingTo
+      });
     } catch (err) { 
       showToast('Comment Sync Failed. Check Link Interface', 'error'); 
       console.error(err);

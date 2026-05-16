@@ -8,7 +8,7 @@ import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Scr
 import { HOUSE_ITEMS } from './constants/houseItems';
 import { NexoraStudio } from './components/NexoraStudio';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
-import { auth, db, messaging, handleFirestoreError, OperationType } from './firebase';
+import { auth, db, messaging, handleFirestoreError, OperationType, trackEvent } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, getDocFromServer, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs, addDoc, increment } from 'firebase/firestore';
 import { getToken, onMessage } from 'firebase/messaging';
@@ -271,6 +271,24 @@ export default function App() {
 
   const currentAppVersion = "2.0.0"; // V2.0.0 Upgrade
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>('nexora_active_screen', 'home');
+
+  // Tracking screen views
+  useEffect(() => {
+    if (user && isDataReady) {
+      trackEvent('screen_view', { screen_name: activeScreen });
+    }
+  }, [activeScreen, user, isDataReady]);
+
+  // Tracking app open
+  useEffect(() => {
+    if (user && isDataReady) {
+      trackEvent('app_opened', { 
+        streak: stats.streak,
+        coins: stats.coins,
+        isPro: settings.isPro 
+      });
+    }
+  }, [user, isDataReady]);
 
   // Handle URL parameters for PWA Shortcuts
   useEffect(() => {
@@ -553,6 +571,14 @@ export default function App() {
 
     showToast(`Ecosystem upgraded: ${item.name}! 🌿`, "success");
     vibrate(VIBRATION_PATTERNS.SUCCESS);
+    
+    // Analytics tracking for purchase
+    trackEvent('item_purchased', {
+      item_id: item.id,
+      item_name: item.name,
+      price: item.price,
+      currency: 'coins'
+    });
   };
 
   const toggleEcosystemItem = (itemId: string) => {
