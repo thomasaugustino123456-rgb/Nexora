@@ -84,6 +84,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   mascotPinnedItemId: null,
   spaceOnboardingCompleted: false,
   plantOnboardingCompleted: false,
+  isWalkthroughCompleted: false,
   plantState: {
     type: 'sprout',
     stage: 0,
@@ -325,7 +326,7 @@ export default function App() {
       await updateDoc(doc(db, 'users', user.uid), { 
         coins: increment(50),
         totalPoints: increment(10),
-        'settings.isWalkthroughCompleted': true
+        isWalkthroughCompleted: true
       });
     }
     showToast("WELCOME CACHE RECEIVED: +50 COINS! 🚀", "success");
