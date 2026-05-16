@@ -1,6 +1,6 @@
 {
   "name": "Nexora V2",
-  "description": "The ultimate daily challenge app. Level up your body, mind, and creativity. Features a living ecosystem, space house, and a custom widget dashboard for total visibility.",
+  "description": "The ultimate daily challenge app. Features a growing ecosystem with persistent shop items, 12 principles of animation, and high-performance gardening. Level up your body, mind, and creativity.",
   "requestFramePermissions": ["camera", "microphone", "notifications"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

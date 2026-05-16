@@ -249,6 +249,29 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     });
   };
 
+  const syncEcosystemPurchase = async (itemId: string, purchased: boolean) => {
+    if (!user) return;
+    try {
+      const itemRef = doc(db, 'users', user.uid, 'plant_eco_items', itemId);
+      await setDoc(itemRef, {
+        id: itemId,
+        purchasedAt: new Date().toISOString(),
+        active: true
+      }, { merge: true });
+      
+      // Also trigger a general sync for settings
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        purchasedEcosystemItemIds: purchased ? [...(settings.purchasedEcosystemItemIds || []), itemId] : settings.purchasedEcosystemItemIds,
+        activeEcosystemItemIds: [...(settings.activeEcosystemItemIds || []), itemId],
+        updatedAt: serverTimestamp()
+      });
+      lastSyncedRef.current = ""; // Force next background sync to re-evaluate
+    } catch (e) {
+      console.error("Shop sync error:", e);
+    }
+  };
+
   return {
     user,
     loading,
@@ -261,6 +284,7 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     setDailyProgress: onUpdateDailyProgress,
     needsOnboarding,
     setNeedsOnboarding,
-    dataLoadedFromFirestore
+    dataLoadedFromFirestore,
+    syncEcosystemPurchase
   };
 }

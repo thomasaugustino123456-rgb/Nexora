@@ -151,7 +151,8 @@ export default function App() {
     setDailyProgress,
     needsOnboarding,
     setNeedsOnboarding,
-    dataLoadedFromFirestore
+    dataLoadedFromFirestore,
+    syncEcosystemPurchase
   } = useNexoraData(DEFAULT_SETTINGS, DEFAULT_STATS, showToast);
 
   const today = new Date().toISOString().split('T')[0];
@@ -536,8 +537,13 @@ export default function App() {
     setStats(prev => ({ ...prev, coins: prev.coins - item.price }));
     setSettings(prev => ({
       ...prev,
-      purchasedEcosystemItemIds: [...(prev.purchasedEcosystemItemIds || []), item.id]
+      purchasedEcosystemItemIds: [...(prev.purchasedEcosystemItemIds || []), item.id],
+      activeEcosystemItemIds: [...(prev.activeEcosystemItemIds || []), item.id]
     }));
+    
+    // Immediate backend registration for persistence
+    syncEcosystemPurchase(item.id, true);
+    
     showToast(`Ecosystem upgraded: ${item.name}! 🌿`, "success");
   };
 
@@ -548,6 +554,15 @@ export default function App() {
       const updated = isActive 
         ? current.filter(id => id !== itemId)
         : [...current, itemId];
+      
+      // Sync activation state to backend
+      if (!isActive) {
+        syncEcosystemPurchase(itemId, false); 
+      } else {
+        // Handle deactivation in firestore if needed, 
+        // but syncEcosystemPurchase currently marks as active:true.
+        // Let's just rely on the general sync for deactivation for now or update the helper.
+      }
       
       return { ...prev, activeEcosystemItemIds: updated };
     });

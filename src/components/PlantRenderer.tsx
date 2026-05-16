@@ -1391,7 +1391,6 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
           </radialGradient>
           <filter id="glow">
             <feGaussianBlur stdDeviation="3" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
         </defs>
 
@@ -1430,16 +1429,14 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
               key={i}
               d="M 0,0 Q 3,-5 6,0 Q 3,10 0,0"
               fill="#7dd3fc"
-              filter="url(#glow)"
               initial={{ x: 50 + Math.random() * 100, y: -20, opacity: 0, scale: 0 }}
               animate={{
                 y: [0, 160 + Math.random() * 20],
                 opacity: [0, 1, 0.8, 0],
-                scale: [0.6, 1.2, 0.9],
-                rotate: [0, 10, -10, 0]
+                scale: [0.6, 1.2, 0.9]
               }}
               transition={{
-                duration: 0.7 + Math.random() * 0.3,
+                duration: 0.8 + Math.random() * 0.4,
                 repeat: Infinity,
                 delay: i * 0.5,
                 ease: "circIn"
@@ -1461,10 +1458,10 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
         <div className="relative w-72 h-72 overflow-visible">
           <AnimatePresence>
             {activeEcosystemItemIds.includes('eco_nanobees_01') && !isDead && (
-              <NanoBees key="bees" />
+              <NanoBees key="bees" isPlantGrown={stage >= 3} />
             )}
             {activeEcosystemItemIds.includes('eco_butterfly_01') && !isDead && (
-              <SpiritButterfly key="butterfly" />
+              <SpiritButterfly key="butterfly" isPlantGrown={stage >= 3} />
             )}
           </AnimatePresence>
 

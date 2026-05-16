@@ -1,7 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export const NanoBees: React.FC = () => {
+interface CompanionProps {
+  isPlantGrown?: boolean;
+}
+
+export const NanoBees: React.FC<CompanionProps> = ({ isPlantGrown }) => {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-visible">
       {[...Array(3)].map((_, i) => (
@@ -9,49 +13,47 @@ export const NanoBees: React.FC = () => {
           key={i}
           className="absolute z-30"
           animate={{
-            x: [50, 150, 100, 50],
-            y: [30, 80, 40, 30],
-            // Individual bee offset (organic swarm behavior)
-            translateX: [i * 15, -i * 10, i * 12],
-            translateY: [-i * 5, i * 15, -i * 10]
+            x: isPlantGrown ? [80, 120, 100 + (i * 10)] : [50, 250, 100, 50],
+            y: isPlantGrown ? [180, 200, 190 + (i * 5)] : [100, 200, 150, 100],
+            rotateZ: [0, 5, -5, 0],
+            scale: isPlantGrown ? 0.7 : 0.9
           }}
           transition={{
-            duration: 6 + i,
+            duration: 10 + i,
             repeat: Infinity,
-            ease: "easeInOut",
-            delay: i * 0.2
+            ease: "linear", 
+            delay: i * 0.5
           }}
         >
-          <svg viewBox="0 0 20 20" className="w-5 h-5 overflow-visible drop-shadow-md">
-            {/* WINGS (High speed flicker - 12 principles) */}
-            <motion.path 
-              d="M 10,10 Q 5,5 2,10 Q 5,15 10,12" 
-              fill="#94a3b8" opacity="0.6"
-              animate={{ rotateZ: [0, 45, 0] }}
-              transition={{ duration: 0.05, repeat: Infinity }}
-              style={{ originX: '10px', originY: '10px' }}
-            />
-            <motion.path 
-              d="M 10,10 Q 15,5 18,10 Q 15,15 10,12" 
-              fill="#94a3b8" opacity="0.6"
-              animate={{ rotateZ: [0, -45, 0] }}
-              transition={{ duration: 0.05, repeat: Infinity }}
-              style={{ originX: '10px', originY: '10px' }}
-            />
-            
-            {/* Body (Squash & Stretch) */}
-            <motion.ellipse 
-              cx="10" cy="11" rx="4" ry="3" 
-              fill="#facc15" 
-              animate={{ scale: [1, 1.1, 0.9, 1] }} 
-              transition={{ duration: 0.2, repeat: Infinity }}
-            />
-            <rect x="7" y="9" width="6" height="1" fill="#422006" />
-            <rect x="7" y="12" width="6" height="1" fill="#422006" />
-            
-            {/* Eyes */}
-            <circle cx="8" cy="10" r="0.5" fill="black" />
-            <circle cx="12" cy="10" r="0.5" fill="black" />
+          {/* Detailed 2D Bee */}
+          <svg viewBox="0 0 40 40" className="w-8 h-8 overflow-visible">
+             {/* Wings - Simplified (No Filters) */}
+             <motion.g style={{ originX: '20px', originY: '20px' }}>
+                <motion.path 
+                  d="M 20,20 Q 10,5 5,20 Q 10,35 20,20" 
+                  fill="rgba(255,255,255,0.6)" 
+                  stroke="#94a3b8" 
+                  strokeWidth="0.5"
+                  animate={{ rotateY: [0, 80, 0] }}
+                  transition={{ duration: 0.15, repeat: Infinity }}
+                />
+                <motion.path 
+                  d="M 20,20 Q 30,5 35,20 Q 30,35 20,20" 
+                  fill="rgba(255,255,255,0.6)" 
+                  stroke="#94a3b8" 
+                  strokeWidth="0.5"
+                  animate={{ rotateY: [0, -80, 0] }}
+                  transition={{ duration: 0.15, repeat: Infinity }}
+                />
+             </motion.g>
+
+             {/* Bee Body */}
+             <g>
+                <ellipse cx="20" cy="22" rx="7" ry="5" fill="#facc15" stroke="#422006" strokeWidth="1" />
+                <path d="M 17,18 L 17,26 M 20,17 L 20,27 M 23,18 L 23,26" stroke="#422006" strokeWidth="1.5" opacity="0.6" />
+                <circle cx="28" cy="22" r="4" fill="#facc15" stroke="#422006" strokeWidth="1" />
+                <circle cx="29" cy="21" r="1" fill="#000" />
+             </g>
           </svg>
         </motion.div>
       ))}
@@ -59,75 +61,55 @@ export const NanoBees: React.FC = () => {
   );
 };
 
-export const SpiritButterfly: React.FC = () => {
+export const SpiritButterfly: React.FC<CompanionProps> = ({ isPlantGrown }) => {
   return (
     <motion.div
       className="absolute pointer-events-none z-40"
       animate={{
-        x: [0, 120, 80, -40, 0],
-        y: [0, -80, 40, 120, 0],
-        rotateX: [0, 15, 0, -15, 0],
-        rotateY: [0, 45, 0, -45, 0],
-        rotateZ: [0, 10, -10, 0]
+        x: isPlantGrown ? 110 : [0, 140, -40, 0],
+        y: isPlantGrown ? 160 : [0, -80, 80, 0],
       }}
       transition={{
-        duration: 12,
+        duration: isPlantGrown ? 12 : 20,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "linear"
       }}
     >
-      {/* GLOW TRAIL PARTICLE (Anticipation) */}
-      <motion.div 
-        className="absolute -inset-4 bg-purple-500/20 blur-xl rounded-full"
-        animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.6, 0.3] }}
-        transition={{ duration: 2, repeat: Infinity }}
-      />
-
-      <svg viewBox="0 0 60 60" className="w-12 h-12 overflow-visible">
+      <svg viewBox="0 0 80 80" className="w-16 h-16 overflow-visible">
         <defs>
-          <linearGradient id="wingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#a855f7" stopOpacity="0.9" />
-            <stop offset="50%" stopColor="#22d3ee" stopOpacity="0.7" />
-            <stop offset="100%" stopColor="#818cf8" stopOpacity="0.5" />
+          <linearGradient id="buttyWing" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#d946ef" />
+            <stop offset="100%" stopColor="#6366f1" />
           </linearGradient>
-          <filter id="butterflyGlow">
-            <feGaussianBlur stdDeviation="1.5" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
         </defs>
         
-        {/* Antennae */}
-        <motion.g animate={{ rotate: [-10, 10, -10] }} transition={{ duration: 0.5, repeat: Infinity }}>
-          <path d="M 30,30 L 25,15 M 30,30 L 35,15" stroke="white" strokeWidth="0.5" opacity="0.6" />
+        {/* Left Wings */}
+        <motion.g style={{ originX: '40px', originY: '42px' }}>
+          <motion.path 
+            d="M 40,42 Q 10,10 5,42 Q 10,75 40,45" 
+            fill="url(#buttyWing)"
+            stroke="white"
+            strokeWidth="0.5"
+            animate={{ rotateY: [0, 70, 0] }}
+            transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
+          />
         </motion.g>
-
-        {/* Left Wing (Squash & Stretch) */}
-        <motion.path 
-          d="M 30,30 Q 5,5 2,30 Q 5,55 30,35" 
-          fill="url(#wingGrad)"
-          filter="url(#butterflyGlow)"
-          animate={{ rotateY: [0, 80, 0] }}
-          transition={{ duration: 0.3, repeat: Infinity, ease: "easeInOut" }}
-          style={{ originX: '30px' }}
-        />
         
-        {/* Right Wing */}
-        <motion.path 
-          d="M 30,30 Q 55,5 58,30 Q 55,55 30,35" 
-          fill="url(#wingGrad)"
-          filter="url(#butterflyGlow)"
-          animate={{ rotateY: [0, -80, 0] }}
-          transition={{ duration: 0.3, repeat: Infinity, ease: "easeInOut" }}
-          style={{ originX: '30px' }}
-        />
+        {/* Right Wings */}
+        <motion.g style={{ originX: '40px', originY: '42px' }}>
+          <motion.path 
+            d="M 40,42 Q 70,10 75,42 Q 70,75 40,45" 
+            fill="url(#buttyWing)"
+            stroke="white"
+            strokeWidth="0.5"
+            animate={{ rotateY: [0, -70, 0] }}
+            transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </motion.g>
         
-        {/* Core Body */}
-        <motion.ellipse 
-          cx="30" cy="32" rx="1.5" ry="6" 
-          fill="white" 
-          animate={{ scaleY: [1, 1.2, 1] }} 
-          transition={{ duration: 0.3, repeat: Infinity }}
-        />
+        {/* Body */}
+        <ellipse cx="40" cy="42" rx="2" ry="8" fill="#1e293b" />
+        <circle cx="40" cy="33" r="2.5" fill="#1e293b" />
       </svg>
     </motion.div>
   );
