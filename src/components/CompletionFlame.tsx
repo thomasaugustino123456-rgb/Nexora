@@ -35,7 +35,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue, settings }: Comp
   }, [play, showContent]);
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-blue-900/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+    <div className="fixed inset-0 z-[1000] bg-blue-900/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center overflow-hidden">
       <AnimatePresence>
         {showContent && (
           <>

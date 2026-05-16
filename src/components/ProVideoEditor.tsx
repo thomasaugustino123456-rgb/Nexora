@@ -290,7 +290,7 @@ export function ProVideoEditor({ media, initialAudio, onBack, onComplete }: ProV
                       initial={{ opacity: 0, scale: 0.5 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.5 }}
-                      className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center text-white transition-all border border-white/20"
+                      className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all border border-white/20"
                     >
                       <Play size={40} className="ml-2" />
                     </motion.button>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 interface BreathingMascotProps {
   className?: string;
@@ -8,7 +9,7 @@ interface BreathingMascotProps {
 export const BreathingMascot: React.FC<BreathingMascotProps> = ({ className, phase }) => {
   return (
     <div className={`bottle-container ${className || ''}`}>
-      <svg viewBox="0 0 500 650" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <svg viewBox="0 0 500 650" xmlns="http://www.w3.org/2000/svg" className="w-full h-full overflow-visible">
         <defs>
           <filter id="glow-breath" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="8" result="blur" />
@@ -28,17 +29,26 @@ export const BreathingMascot: React.FC<BreathingMascotProps> = ({ className, pha
         </defs>
 
         {/* Pulsing Aura Background */}
-        <circle 
-          className={`aura transition-all duration-[5000ms] ease-in-out ${phase === 'In' ? 'scale-110 opacity-40' : 'scale-100 opacity-20'}`} 
-          cx="250" cy="350" r="220" fill="url(#water-grad-breath)" 
+        <motion.circle 
+          cx="250" cy="350" r="220" 
+          fill="url(#water-grad-breath)"
+          animate={{
+            scale: phase === 'In' ? 1.1 : 1,
+            opacity: phase === 'In' ? 0.4 : 0.2
+          }}
+          transition={{ duration: 5, ease: "easeInOut" }}
           style={{ transformOrigin: 'center' }}
         />
 
         {/* Soft Floor Shadow */}
         <ellipse cx="250" cy="560" rx="120" ry="10" fill="#0066FF" fillOpacity="0.1" />
 
-        <g 
-          className={`zen-group transition-all duration-[5000ms] ease-in-out ${phase === 'In' ? 'scale-[1.08] translate-y-[-10px]' : 'scale-100 translate-y-0'}`}
+        <motion.g 
+          animate={{
+            scale: phase === 'In' ? 1.08 : 1,
+            y: phase === 'In' ? -10 : 0
+          }}
+          transition={{ duration: 5, ease: "easeInOut" }}
           style={{ transformOrigin: 'center' }}
         >
           {/* LIQUID LAYER */}
@@ -46,11 +56,19 @@ export const BreathingMascot: React.FC<BreathingMascotProps> = ({ className, pha
             <rect x="0" y="0" width="500" height="700" fill="#F0F9FF" fillOpacity="0.4" />
             
             {/* Water Surface that rises/falls with breath */}
-            <g transform={`translate(0, ${phase === 'In' ? 200 : 250})`} style={{ transition: 'transform 5s ease-in-out' }}>
-              <path d="M -500,0 Q -250,-20 0,0 T 500,0 T 1000,0 L 1000,500 L -500,500 Z" fill="url(#water-grad-breath)">
-                <animateTransform attributeName="transform" type="translate" from="0 0" to="-500 0" dur="10s" repeatCount="indefinite" />
-              </path>
-            </g>
+            <motion.g 
+              animate={{
+                y: phase === 'In' ? 180 : 250
+              }}
+              transition={{ duration: 5, ease: "easeInOut" }}
+            >
+              <motion.path 
+                d="M -500,0 Q -250,-20 0,0 T 500,0 T 1000,0 L 1000,500 L -500,500 Z" 
+                fill="url(#water-grad-breath)"
+                animate={{ x: [0, -500] }}
+                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+              />
+            </motion.g>
           </g>
 
           {/* BOTTLE BODY */}
@@ -68,37 +86,67 @@ export const BreathingMascot: React.FC<BreathingMascotProps> = ({ className, pha
             <path d="M 290,300 Q 310,315 330,300" fill="none" stroke="#0C4A6E" strokeWidth="6" strokeLinecap="round" />
             
             {/* Gentle Exhale Mouth */}
-            <circle cx="250" cy="340" r={phase === 'In' ? 8 : 14} fill="none" stroke="#0C4A6E" strokeWidth="3" style={{ transition: 'r 5s ease-in-out' }}>
-              <animate attributeName="opacity" values="0.3; 1; 0.3" dur="6s" repeatCount="indefinite" />
-            </circle>
+            <motion.circle 
+              cx="250" cy="340" 
+              animate={{ 
+                r: phase === 'In' ? 8 : 14,
+                opacity: [0.3, 1, 0.3]
+              }} 
+              fill="none" stroke="#0C4A6E" strokeWidth="3"
+              transition={{ 
+                r: { duration: 5, ease: "easeInOut" },
+                opacity: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+              }}
+            />
           </g>
 
           {/* Resting Arms */}
           <ellipse cx="65" cy="360" rx="12" ry="25" fill="rgba(255,255,255,0.4)" stroke="#7DD3FC" strokeWidth="3" transform="rotate(10, 65, 360)" />
           <ellipse cx="435" cy="360" rx="12" ry="25" fill="rgba(255,255,255,0.4)" stroke="#7DD3FC" strokeWidth="3" transform="rotate(-10, 435, 360)" />
 
-          {/* Glowing Heart/Logo */}
+          {/* Glowing Heart/Logo - Removed filter for performance */}
           <g transform="translate(235, 385) scale(0.6)">
-            <path d="M 0 0 L 10 0 L 30 40 L 30 0 L 45 0 L 45 60 L 30 60 L 10 20 L 10 60 L 0 60 Z" fill="white" filter="url(#glow-breath)">
-              <animate attributeName="opacity" values="0.4; 1; 0.4" dur="6s" repeatCount="indefinite" />
-            </path>
+            <motion.path 
+              d="M 0 0 L 10 0 L 30 40 L 30 0 L 45 0 L 45 60 L 30 60 L 10 20 L 10 60 L 0 60 Z" 
+              fill="white" 
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            />
           </g>
 
-          {/* Calm Halo */}
-          <ellipse cx="250" cy="80" rx="70" ry="12" fill="none" stroke="white" strokeWidth="5" filter="url(#glow-breath)" opacity="0.6">
-            <animateTransform attributeName="transform" type="translate" values="0,0; 0,10; 0,0" dur="4s" repeatCount="indefinite" />
-          </ellipse>
-        </g>
+          {/* Calm Halo - Removed filter for performance */}
+          <motion.ellipse 
+            cx="250" cy="80" rx="70" ry="12" 
+            fill="none" stroke="white" strokeWidth="5" 
+            opacity="0.6"
+            animate={{ y: [0, 10, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </motion.g>
 
         {/* Floating Particles */}
-        <circle r="4" fill="white" fillOpacity="0.6">
-          <animate attributeName="cx" values="100; 120; 100" dur="5s" repeatCount="indefinite" />
-          <animate attributeName="cy" values="500; 100" dur="8s" repeatCount="indefinite" />
-        </circle>
-        <circle r="3" fill="white" fillOpacity="0.4">
-          <animate attributeName="cx" values="400; 380; 400" dur="4s" repeatCount="indefinite" />
-          <animate attributeName="cy" values="550; 150" dur="10s" repeatCount="indefinite" />
-        </circle>
+        <motion.circle 
+          r="4" fill="white" fillOpacity="0.6"
+          animate={{
+            x: [100, 120, 100],
+            y: [500, 100]
+          }}
+          transition={{
+            x: { duration: 5, repeat: Infinity, ease: "easeInOut" },
+            y: { duration: 8, repeat: Infinity, ease: "linear" }
+          }}
+        />
+        <motion.circle 
+          r="3" fill="white" fillOpacity="0.4"
+          animate={{
+            x: [400, 380, 400],
+            y: [550, 150]
+          }}
+          transition={{
+            x: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+            y: { duration: 10, repeat: Infinity, ease: "linear" }
+          }}
+        />
       </svg>
     </div>
   );

@@ -12,7 +12,7 @@ interface DashboardWidgetsProps {
 export const DashboardWidgets: React.FC<DashboardWidgetsProps> = ({ stats, dailyProgress, settings }) => {
   const isPlantAlive = settings.plantState && !settings.plantState.isDead;
   const level = Math.floor((stats.xp || 0) / 1000) + 1;
-  const progressPercent = Math.min(100, ((dailyProgress as any).completionsCount || 0) / (settings.challengeCountGoal || 3) * 100);
+  const progressPercent = Math.min(100, Math.max(0, ((dailyProgress as any).completionsCount || 0) / Math.max(1, settings.challengeCountGoal || 3) * 100));
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full mb-6">

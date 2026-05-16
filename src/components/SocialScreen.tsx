@@ -201,7 +201,7 @@ const PostCard = React.memo(({ post, user, settings, circles, savedPosts, toggle
       {/* Report Modal */}
       <AnimatePresence>
         {isReporting && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-blue-900/60 backdrop-blur-xl p-4" onClick={() => setIsReporting(false)}>
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-blue-900/60 backdrop-blur-md p-4" onClick={() => setIsReporting(false)}>
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -534,7 +534,7 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       exit={{ opacity: 0, x: -20 }}
       className="max-w-6xl mx-auto w-full space-y-6 pb-24 scroll-smooth"
     >
-      <div className="flex items-center justify-between sticky top-0 bg-blue-50/90 backdrop-blur-xl z-[100] py-4">
+      <div className="flex items-center justify-between sticky top-0 bg-blue-50/90 backdrop-blur-md z-[100] py-4">
           <div className="flex items-center gap-4">
             <button onClick={onBack} className="p-3 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-900 hover:scale-105 active:scale-95 transition-all">
               <ArrowLeft size={22} />
@@ -841,7 +841,7 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       {/* Modals and Overlays */}
       <AnimatePresence>
         {selectedPost && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-blue-900/60 backdrop-blur-xl p-4 sm:p-8" onClick={() => setSelectedPost(null)}>
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-blue-900/60 backdrop-blur-md p-4 sm:p-8" onClick={() => setSelectedPost(null)}>
              <motion.div 
                initial={{ scale: 0.95, opacity: 0, y: 20 }}
                animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -973,7 +973,7 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
         )}
 
         {viewingCircle && (
-          <div className="fixed inset-0 z-[1000] flex flex-col bg-slate-50/95 backdrop-blur-xl overflow-y-auto" onClick={() => setViewingCircle(null)}>
+          <div className="fixed inset-0 z-[1000] flex flex-col bg-slate-50/95 backdrop-blur-md overflow-y-auto" onClick={() => setViewingCircle(null)}>
              <div className="w-full max-w-4xl mx-auto min-h-screen bg-white shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
                <div className={`h-48 relative ${viewingCircle.color || 'bg-blue-600'} transition-all`}>
                   <button onClick={() => setViewingCircle(null)} className="absolute top-6 left-6 p-2.5 bg-white/20 hover:bg-white/40 text-white rounded-2xl transition-all backdrop-blur-md">

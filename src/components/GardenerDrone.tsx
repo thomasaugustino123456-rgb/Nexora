@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { motion, useMotionValue, useSpring } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 
 interface GardenerDroneProps {
   mood?: 'idle' | 'working' | 'happy';
@@ -22,22 +22,31 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
   const y = useMotionValue(0);
   
   // Spring damping for smooth "organic" following/flying
-  const springConfig = { damping: 20, stiffness: 200 };
+  const springConfig = { damping: 25, stiffness: 180 };
   const sx = useSpring(x, springConfig);
   const sy = useSpring(y, springConfig);
 
-  // Inertia/Tilt effect for "12 Principles" (Overlapping Action)
-  const [tilt, setTilt] = useState(0);
-  const [antennaTilt, setAntennaTilt] = useState(0);
+  // Inertia/Tilt effect for "12 Principles" (Overlapping Action) using Motion Values for zero lag
+  const tilt = useTransform(sx, (latest) => {
+    const velocity = sx.getVelocity();
+    return velocity * 0.08; // Increased tilt for more impact
+  });
 
-  useEffect(() => {
-    const unsubX = sx.on("change", (latest) => {
-      const velocity = sx.getVelocity();
-      setTilt(velocity * 0.05); // Tilt body based on velocity
-      setAntennaTilt(velocity * 0.1); // Antenna bends more (overlapping action)
-    });
-    return () => unsubX();
-  }, [sx]);
+  const antennaTilt = useTransform(sx, (latest) => {
+    const velocity = sx.getVelocity();
+    return velocity * 0.15; // Antenna bends more (overlapping action)
+  });
+
+  // Squash based on Y velocity (Principles: Squash and Stretch)
+  const squash = useTransform(sy, (latest) => {
+    const velocity = Math.abs(sy.getVelocity());
+    return 1 + (velocity * 0.0005);
+  });
+  
+  const stretch = useTransform(sy, (latest) => {
+    const velocity = Math.abs(sy.getVelocity());
+    return 1 / (1 + (velocity * 0.0005));
+  });
 
   useEffect(() => {
     if (targetPos) {
@@ -51,7 +60,7 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
     <motion.div 
       ref={droneRef}
       drag
-      dragElastic={0.2}
+      dragElastic={0.3}
       dragMomentum={false}
       onDragStart={() => setIsDragging(true)}
       onDragEnd={(_, info) => {
@@ -61,15 +70,22 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
         }
       }}
       className={`absolute cursor-grab active:cursor-grabbing z-[100] ${className}`}
-      style={{ x: sx, y: sy, rotateZ: tilt }}
+      style={{ 
+        x: sx, 
+        y: sy, 
+        rotateZ: tilt,
+        scaleX: stretch, 
+        scaleY: squash 
+      }}
       animate={mood === 'working' ? {
-        scale: [1, 1.05, 1],
-        rotate: [0, 2, -2, 0]
+        scale: [1, 1.08, 0.95, 1],
+        rotate: [0, 5, -5, 0]
       } : {
-        scale: 1
+        scale: 1,
+        rotate: 0
       }}
       transition={{
-        duration: 0.5,
+        duration: 0.6,
         repeat: mood === 'working' ? Infinity : 0,
         ease: "easeInOut"
       }}
@@ -77,166 +93,159 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
       {/* Floating Hover Effect (Secondary Animation) */}
       <motion.div
         animate={{
-          y: isDragging ? 0 : [0, -10, 0],
-          rotateX: isDragging ? 0 : [0, 5, 0]
+          y: isDragging ? 0 : [0, -12, 0],
+          rotateX: isDragging ? 0 : [0, 8, 0]
         }}
         transition={{
-          duration: 4,
+          duration: 3,
           repeat: Infinity,
           ease: "easeInOut"
         }}
       >
-        <svg viewBox="0 0 100 100" className="w-24 h-24 drop-shadow-2xl overflow-visible">
+        <svg viewBox="0 0 100 120" className="w-24 h-28 drop-shadow-2xl overflow-visible">
           <defs>
             <linearGradient id="droneBodyMain" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#cbd5e1" />
-              <stop offset="100%" stopColor="#64748b" />
+              <stop offset="100%" stopColor="#475569" />
             </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="2" result="blur" />
+            <filter id="glow-drone">
+              <feGaussianBlur stdDeviation="3" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
             <radialGradient id="shadowGrad">
-              <stop offset="0%" stopColor="rgba(0,0,0,0.2)" />
+              <stop offset="0%" stopColor="rgba(0,0,0,0.3)" />
               <stop offset="100%" stopColor="rgba(0,0,0,0)" />
             </radialGradient>
           </defs>
 
           {/* Shadow on the ground (Visual cue for height) */}
           <motion.ellipse 
-             cx="50" cy="95" rx="20" ry="5" 
+             cx="50" cy="115" rx="20" ry="5" 
              fill="url(#shadowGrad)"
              animate={{ 
-               scale: isDragging ? 0.8 : [1, 1.2, 1], 
-               opacity: isDragging ? 0.2 : [0.3, 0.1, 0.3],
-               x: tilt * -0.5 // Shadow stays below
+                scale: isDragging ? 0.7 : [1, 1.3, 1], 
+                opacity: isDragging ? 0.1 : [0.4, 0.1, 0.4]
              }}
-             transition={{ duration: 4, repeat: Infinity }}
+             transition={{ duration: 3, repeat: Infinity }}
           />
 
           {/* Support Legs (Squash/Stretch) */}
-          <motion.g animate={{ scaleY: [1, 0.9, 1.1, 1] }} transition={{ duration: 3, repeat: Infinity }}>
-            <path d="M 30,75 L 20,88 M 70,75 L 80,88" stroke="#475569" strokeWidth="4" strokeLinecap="round" />
+          <motion.g animate={{ scaleY: [1, 0.8, 1.2, 1] }} transition={{ duration: 3, repeat: Infinity }}>
+            <path d="M 30,95 L 20,108 M 70,95 L 80,108" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
           </motion.g>
 
-          {/* Hover Blades (Spinning) */}
-          <motion.g animate={{ rotate: 360 }} transition={{ duration: 0.2, repeat: Infinity, ease: "linear" }} style={{ originX: '20px', originY: '45px' }}>
-            <circle cx="20" cy="45" r="12" fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 4" opacity="0.3" />
-            <rect x="10" y="44" width="20" height="2" fill="#475569" rx="1" />
+          {/* Hover Blades (Spinning & Tilting) */}
+          <motion.g animate={{ rotate: 360 }} transition={{ duration: 0.15, repeat: Infinity, ease: "linear" }} style={{ originX: '20px', originY: '65px' }}>
+            <circle cx="20" cy="65" r="15" fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 4" opacity="0.3" />
+            <rect x="5" y="64" width="30" height="2" fill="#334155" rx="1" />
           </motion.g>
-          <motion.g animate={{ rotate: -360 }} transition={{ duration: 0.2, repeat: Infinity, ease: "linear" }} style={{ originX: '80px', originY: '45px' }}>
-            <circle cx="80" cy="45" r="12" fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 4" opacity="0.3" />
-            <rect x="70" y="44" width="20" height="2" fill="#475569" rx="1" />
+          <motion.g animate={{ rotate: -360 }} transition={{ duration: 0.15, repeat: Infinity, ease: "linear" }} style={{ originX: '80px', originY: '65px' }}>
+            <circle cx="80" cy="65" r="15" fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 4" opacity="0.3" />
+            <rect x="65" y="64" width="30" height="2" fill="#334155" rx="1" />
           </motion.g>
 
           {/* ANTENNA (SIGNAL WARE - STACKED & REACTIVE) */}
           <motion.g 
-            style={{ originX: '50px', originY: '25px', rotateZ: antennaTilt * -1 }}
+            style={{ originX: '50px', originY: '45px', rotate: antennaTilt }}
           >
             {/* The Antenna Stem */}
-            <path d="M 50,25 L 50,2" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
-            <path d="M 45,18 L 55,18 M 47,12 L 53,12" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M 50,45 L 50,10" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
+            <path d="M 45,35 L 55,35 M 47,25 L 53,25" stroke="#64748b" strokeWidth="2" strokeLinecap="round" />
             
-            {/* Red Signal Light (Stacked & Flickering) */}
-            <motion.g cx="50" cy="2">
+            {/* Signal Light Disk/Ware */}
+            <circle cx="50" cy="10" r="8" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+            
+            {/* Red Signal Light (Prominent & Pulsing) */}
+            <motion.g>
+              <circle cx="50" cy="10" r="5" fill="#ef4444" filter="url(#glow-drone)" />
               <motion.circle 
-                cx="50" cy="2" r="4" 
-                fill="#ef4444" 
-                filter="url(#glow)"
+                cx="50" cy="10" r="5" 
+                fill="#ff0000" 
                 animate={{ 
-                  opacity: [1, 0.4, 1, 0.8, 1],
-                  scale: [1, 1.4, 1, 1.1, 1]
+                  opacity: [0.4, 1, 0.4],
+                  scale: [1, 1.8, 1]
                 }} 
                 transition={{ 
-                  duration: 0.8, 
+                  duration: 1.2, 
                   repeat: Infinity,
-                  times: [0, 0.2, 0.4, 0.6, 1]
+                  ease: "easeInOut"
                 }} 
               />
               <motion.circle 
-                cx="50" cy="2" r="8" 
-                fill="none" stroke="#ef4444" 
-                strokeWidth="1"
-                animate={{ scale: [1, 2.5], opacity: [0.5, 0] }}
-                transition={{ duration: 1.2, repeat: Infinity }}
+                cx="50" cy="10" r="10" 
+                fill="none" stroke="#ff0000" 
+                strokeWidth="2"
+                animate={{ scale: [1, 3], opacity: [0.6, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
               />
             </motion.g>
           </motion.g>
 
           {/* Main Sphere Body (Squash and Stretch) */}
           <motion.circle 
-            cx="50" cy="55" r="32" 
+            cx="50" cy="75" r="35" 
             fill="url(#droneBodyMain)" 
-            stroke="#1e293b" 
+            stroke="#0f172a" 
             strokeWidth="3"
-            animate={{ scaleY: [1, 1.05, 0.95, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
+            animate={{ scaleY: [1, 1.05, 0.95, 1], scaleX: [1, 0.98, 1.02, 1] }}
+            transition={{ duration: 2.5, repeat: Infinity }}
           />
           
           {/* Decorative Panel Lines */}
-          <path d="M 25,45 Q 50,40 75,45" fill="none" stroke="#1e293b" strokeWidth="1" opacity="0.4" />
-          <path d="M 25,65 Q 50,70 75,65" fill="none" stroke="#1e293b" strokeWidth="1" opacity="0.4" />
+          <path d="M 20,65 Q 50,60 80,65" fill="none" stroke="#0f172a" strokeWidth="1.5" opacity="0.3" />
+          <path d="M 20,85 Q 50,90 80,85" fill="none" stroke="#0f172a" strokeWidth="1.5" opacity="0.3" />
 
-          {/* Face Visor */}
-          <rect x="28" y="44" width="44" height="20" rx="10" fill="#0f172a" />
+          {/* Face Visor (Glossy) */}
+          <rect x="25" y="65" width="50" height="20" rx="10" fill="#020617" />
+          <rect x="30" y="67" width="40" height="5" rx="2" fill="white" opacity="0.1" />
 
           {/* Eyes (Mood aware) */}
           <motion.g>
             {mood === 'idle' && (
                <>
                  <motion.circle 
-                   cx="40" cy="54" r="4" fill="#38bdf8" 
+                   cx="40" cy="74" r="4" fill="#38bdf8" 
                    animate={{ scaleY: [1, 0.1, 1] }}
-                   transition={{ duration: 4, repeat: Infinity, repeatDelay: 1 }}
+                   transition={{ duration: 5, repeat: Infinity, repeatDelay: 2 }}
                  />
                  <motion.circle 
-                   cx="60" cy="54" r="4" fill="#38bdf8" 
+                   cx="60" cy="74" r="4" fill="#38bdf8" 
                    animate={{ scaleY: [1, 0.1, 1] }}
-                   transition={{ duration: 4, repeat: Infinity, repeatDelay: 1 }}
+                   transition={{ duration: 5, repeat: Infinity, repeatDelay: 2 }}
                  />
                </>
             )}
             {mood === 'working' && (
               <>
                 <motion.path 
-                  d="M 35,54 L 45,54" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" 
+                  d="M 35,74 L 45,74" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" 
                   animate={{ y: [-1, 1, -1] }} transition={{ duration: 0.3, repeat: Infinity }}
                 />
                 <motion.path 
-                  d="M 55,54 L 65,54" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" 
+                  d="M 55,74 L 65,74" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" 
                   animate={{ y: [1, -1, 1] }} transition={{ duration: 0.3, repeat: Infinity }}
                 />
               </>
             )}
             {mood === 'happy' && (
-              <g transform="translate(50, 54)">
-                 <path d="M -14,-2 Q -10,-8 -6,-2" fill="none" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" />
-                 <path d="M 6,-2 Q 10,-8 14,-2" fill="none" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" />
+              <g transform="translate(50, 74)">
+                 <path d="M -14,-2 Q -10,-8 -6,-2" fill="none" stroke="#4ade80" strokeWidth="4" strokeLinecap="round" />
+                 <path d="M 6,-2 Q 10,-8 14,-2" fill="none" stroke="#4ade80" strokeWidth="4" strokeLinecap="round" />
               </g>
             )}
           </motion.g>
 
-          {/* Working Beam (Only shown when working) */}
-          {mood === 'working' && (
-            <motion.path 
-              d="M 50,75 L 20,110 L 80,110 Z" 
-              fill="rgba(56, 189, 248, 0.2)"
-              animate={{ opacity: [0.2, 0.5, 0.2], scaleX: [1, 1.2, 1] }}
-              transition={{ duration: 0.8, repeat: Infinity }}
-            />
-          )}
-
           {/* Robotic Claws (Anticipation motion) */}
           <motion.g
-            animate={mood === 'working' ? { rotate: [0, 15, -15, 0] } : {}}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            style={{ originX: '50px', originY: '80px' }}
+            animate={mood === 'working' ? { rotate: [0, 20, -20, 0] } : {}}
+            transition={{ duration: 1, repeat: Infinity }}
+            style={{ originX: '50px', originY: '95px' }}
           >
-            <path d="M 45,85 L 40,95 M 55,85 L 60,95" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
+            <path d="M 45,100 L 40,110 M 55,100 L 60,110" stroke="#1e293b" strokeWidth="5" strokeLinecap="round" />
             <motion.circle 
-              cx="50" cy="85" r="4" 
-              fill="#1e293b" 
-              animate={mood === 'working' ? { fill: ["#1e293b", "#38bdf8", "#1e293b"] } : {}}
+              cx="50" cy="100" r="5" 
+              fill="#0f172a" 
+              animate={mood === 'working' ? { fill: ["#0f172a", "#38bdf8", "#0f172a"] } : {}}
               transition={{ duration: 0.5, repeat: Infinity }}
             />
           </motion.g>

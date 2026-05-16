@@ -36,7 +36,7 @@ export function CelebrationModal({ settings, onFinish }: CelebrationModalProps) 
   const currentPage = pages[page - 1];
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-blue-900/40 backdrop-blur-xl">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-blue-900/40 backdrop-blur-md">
       <motion.div 
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}

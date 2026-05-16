@@ -235,7 +235,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center"
+            className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center"
           >
             <div className="relative w-48 h-48 mb-8">
               <svg className="w-full h-full transform -rotate-90">
@@ -514,7 +514,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                         exit={{ opacity: 0, scale: 0.5 }}
                         className="absolute inset-0 flex items-center justify-center bg-black/20 z-[60]"
                       >
-                         <div className="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/30 shadow-2xl">
+                         <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 shadow-2xl">
                             <Play size={40} className="text-white ml-2" />
                          </div>
                       </motion.div>

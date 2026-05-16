@@ -861,7 +861,7 @@ export function HouseScreen({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[400] bg-blue-900/90 backdrop-blur-xl flex items-center justify-center p-4"
+            className="fixed inset-0 z-[400] bg-blue-900/90 backdrop-blur-md flex items-center justify-center p-4"
           >
             <div className="w-full max-w-md bg-white rounded-[40px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
               <div className="p-6 border-b border-blue-50 flex items-center justify-between bg-blue-50/50">
@@ -953,7 +953,7 @@ export function HouseScreen({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6"
+            className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}

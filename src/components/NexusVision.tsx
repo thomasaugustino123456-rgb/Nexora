@@ -199,7 +199,7 @@ export function NexusVision({ stats, history, onBack, isPro = false, proTestActi
                   <h3 className="font-black italic tracking-tight text-xl uppercase">Analysis Verified</h3>
                </div>
 
-               <div className="p-8 rounded-[3rem] bg-white/5 border border-white/10 backdrop-blur-xl relative overflow-hidden group">
+               <div className="p-8 rounded-[3rem] bg-white/5 border border-white/10 backdrop-blur-md relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-4">
                     <Sparkles className="text-amber-400/40" size={24} />
                   </div>

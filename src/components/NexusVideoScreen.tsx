@@ -73,7 +73,7 @@ const VideoCard = React.memo(({ video, user, handleLike, handleShareVideo, setSe
             </p>
 
             <div className="flex items-center gap-2">
-              <div className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10 flex items-center gap-2">
+              <div className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full border border-white/10 flex items-center gap-2">
                 <Zap size={12} className="text-orange-400" />
                 <span className="text-[9px] font-black text-white/80 uppercase tracking-widest">{video.platform || 'Nexora'} Original</span>
               </div>
@@ -85,7 +85,7 @@ const VideoCard = React.memo(({ video, user, handleLike, handleShareVideo, setSe
             <div className="flex flex-col items-center gap-1">
               <button 
                 onClick={(e) => { e.stopPropagation(); handleLike(video.id, video.likedBy || []); }}
-                className={`p-4 rounded-full backdrop-blur-xl border border-white/20 transition-all active:scale-75 shadow-2xl ${isLiked ? 'bg-orange-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                className={`p-4 rounded-full backdrop-blur-md border border-white/20 transition-all active:scale-75 shadow-2xl ${isLiked ? 'bg-orange-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
               >
                 <Heart size={28} className={isLiked ? "fill-white" : ""} />
               </button>
@@ -95,7 +95,7 @@ const VideoCard = React.memo(({ video, user, handleLike, handleShareVideo, setSe
             <div className="flex flex-col items-center gap-1">
               <button 
                 onClick={() => setSelectedVideo(video)}
-                className="p-4 rounded-full backdrop-blur-xl border border-white/20 bg-white/10 text-white transition-all active:scale-75 hover:bg-white/20 shadow-2xl"
+                className="p-4 rounded-full backdrop-blur-md border border-white/20 bg-white/10 text-white transition-all active:scale-75 hover:bg-white/20 shadow-2xl"
               >
                 <MessageSquare size={28} />
               </button>
@@ -105,7 +105,7 @@ const VideoCard = React.memo(({ video, user, handleLike, handleShareVideo, setSe
             <div className="flex flex-col items-center gap-1">
               <button 
                 onClick={() => handleShareVideo(video.id)}
-                className="p-4 rounded-full backdrop-blur-xl border border-white/20 bg-white/10 text-white transition-all active:scale-75 hover:bg-white/20 shadow-2xl"
+                className="p-4 rounded-full backdrop-blur-md border border-white/20 bg-white/10 text-white transition-all active:scale-75 hover:bg-white/20 shadow-2xl"
               >
                 <Share2 size={28} />
               </button>
@@ -257,7 +257,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-12 text-center"
+            className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-12 text-center"
           >
             <div className="relative w-48 h-48 mb-8">
               <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 200 200">
@@ -311,7 +311,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
           {/* Top Controls Overlay */}
       <div className="absolute top-0 inset-x-0 z-[100] p-6 flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-4 pointer-events-auto">
-          <button onClick={onBack} className="p-3 bg-black/20 backdrop-blur-2xl border border-white/10 rounded-2xl text-white shadow-2xl active:scale-90 transition-all hover:bg-black/40">
+          <button onClick={onBack} className="p-3 bg-black/20 backdrop-blur-md border border-white/10 rounded-2xl text-white shadow-2xl active:scale-90 transition-all hover:bg-black/40">
              <ArrowLeft size={24} />
           </button>
           <div className="drop-shadow-2xl">
@@ -327,7 +327,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
            <button onClick={() => setIsStudioOpen(true)} className="p-4 bg-orange-500 text-white rounded-2xl shadow-2xl border border-orange-400 active:scale-95 transition-all hover:bg-orange-600">
               <Camera size={22} />
            </button>
-           <button onClick={() => setIsCreating(true)} className="p-4 bg-white/10 backdrop-blur-2xl border border-white/10 text-white rounded-2xl shadow-2xl active:scale-95 transition-all hover:bg-white/20">
+           <button onClick={() => setIsCreating(true)} className="p-4 bg-white/10 backdrop-blur-md border border-white/10 text-white rounded-2xl shadow-2xl active:scale-95 transition-all hover:bg-white/20">
               <Plus size={22} />
            </button>
         </div>
@@ -493,12 +493,12 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
         )}
 
         {isCreating && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl" onClick={() => setIsCreating(false)}>
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md" onClick={() => setIsCreating(false)}>
              <motion.div 
                initial={{ scale: 0.9, y: 20, opacity: 0 }} 
                animate={{ scale: 1, y: 0, opacity: 1 }}
                exit={{ scale: 0.9, y: 20, opacity: 0 }}
-               className="bg-white/95 backdrop-blur-2xl w-full max-w-md p-8 rounded-[3rem] relative shadow-[0_0_80px_rgba(0,0,0,0.5)] border border-white/20"
+               className="bg-white/95 backdrop-blur-md w-full max-w-md p-8 rounded-[3rem] relative shadow-[0_0_80px_rgba(0,0,0,0.5)] border border-white/20"
                onClick={e => e.stopPropagation()}
              >
                 <div className="flex items-center justify-between mb-8">
@@ -546,7 +546,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                animate={{ y: 0 }} 
                exit={{ y: "100%" }}
                transition={{ type: "spring", damping: 25, stiffness: 200 }}
-               className="bg-white/95 backdrop-blur-2xl w-full max-w-[500px] rounded-t-[3rem] h-[65vh] relative z-[1001] pointer-events-auto flex flex-col shadow-2xl"
+               className="bg-white/95 backdrop-blur-md w-full max-w-[500px] rounded-t-[3rem] h-[65vh] relative z-[1001] pointer-events-auto flex flex-col shadow-2xl"
                onClick={e => e.stopPropagation()}
              >
                 <div className="p-8 pb-4 flex items-center justify-between">

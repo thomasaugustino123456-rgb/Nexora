@@ -69,7 +69,7 @@ export function SubscriptionScreen({
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             onClick={onBack} 
-            className="absolute top-8 left-6 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/10 backdrop-blur-xl group"
+            className="absolute top-8 left-6 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md group"
           >
             <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
           </motion.button>
@@ -94,7 +94,7 @@ export function SubscriptionScreen({
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mb-12 p-8 rounded-[2.5rem] bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border-2 border-blue-500/30 backdrop-blur-xl relative overflow-hidden group"
+                        className="mb-12 p-8 rounded-[2.5rem] bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border-2 border-blue-500/30 backdrop-blur-md relative overflow-hidden group"
           >
             <div className="absolute top-0 right-0 p-12 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-blue-500/20 transition-colors" />
             
@@ -215,7 +215,7 @@ export function SubscriptionScreen({
             </div>
           </motion.div>
 
-          <div className="mt-8 p-8 rounded-[2.5rem] bg-slate-900/80 border border-white/10 backdrop-blur-xl">
+                    <div className="mt-8 p-8 rounded-[2.5rem] bg-slate-900/80 border border-white/10 backdrop-blur-md">
             <div className="flex flex-col md:flex-row gap-8">
               <div className="flex-1 space-y-4">
                 <h3 className="text-lg font-black text-blue-400 flex items-center gap-2">

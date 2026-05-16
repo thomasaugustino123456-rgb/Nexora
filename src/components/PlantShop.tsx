@@ -122,7 +122,7 @@ export const PlantShop: React.FC<PlantShopProps> = ({ onClose, stats, settings, 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[300] bg-blue-900/40 backdrop-blur-xl flex items-end sm:items-center justify-center p-0 sm:p-6"
+      className="fixed inset-0 z-[300] bg-blue-900/40 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-6"
     >
       <motion.div 
         initial={{ y: '100%' }}

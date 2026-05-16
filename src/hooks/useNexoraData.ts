@@ -60,91 +60,10 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
     }
     initAuth();
 
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         localStorage.setItem('nexora_cached_user', currentUser.uid);
         setUser(currentUser);
-        
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const statsDocRef = doc(db, 'users', currentUser.uid, 'stats', 'main');
-        const progressDocRef = doc(db, 'users', currentUser.uid, 'progress', today);
-
-        // Safety timeout for slow connections: force loading to false if it takes too long
-        // This allows the app to show "Offline" state rather than infinite spinning
-        const loadingTimeout = setTimeout(() => {
-          if (loading) {
-            console.warn("Hooks: Loading timeout reached, forcing ready state for offline use.");
-            setIsDataReady(true);
-            setLoading(false);
-          }
-        }, 10000); // 10 seconds safety window
-
-        // Single onSnapshot for the main user document to handle real-time/offline updates
-        const unsubUser = onSnapshot(userDocRef, (docSnap) => {
-          clearTimeout(loadingTimeout);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            const firestoreSettings = { 
-              ...DEFAULT_SETTINGS, 
-              ...data,
-              plantState: { ...DEFAULT_SETTINGS.plantState, ...(data.plantState || {}) }
-            };
-            
-            const firestoreStats = { 
-              ...DEFAULT_STATS, 
-              ...(data.stats || {}),
-              pointsByCategory: { ...DEFAULT_STATS.pointsByCategory, ...(data.stats?.pointsByCategory || {}) },
-              trophies: data.stats?.trophies || []
-            };
-
-            setSettings(firestoreSettings);
-            setStats(firestoreStats);
-            setNeedsOnboarding(data.onboardingCompleted !== true);
-            
-            localStorage.setItem('nexora_settings', JSON.stringify(firestoreSettings));
-            localStorage.setItem('nexora_stats', JSON.stringify(firestoreStats));
-
-            // Mark as loaded from firestore at least once (even if from cache)
-            dataLoadedFromFirestore.current = true;
-            setIsDataReady(true);
-            setLoading(false);
-          } else {
-            // Initializing new user if doesn't exist
-            console.log("Hooks: Initializing new user...");
-            const newUser = {
-              uid: currentUser.uid,
-              displayName: currentUser.displayName || 'Nexora User',
-              email: currentUser.email || '',
-              role: 'user',
-              onboardingCompleted: false,
-              ...DEFAULT_SETTINGS,
-              stats: DEFAULT_STATS,
-              createdAt: serverTimestamp()
-            };
-            setDoc(userDocRef, newUser, { merge: true }).then(() => {
-              dataLoadedFromFirestore.current = true;
-              setIsDataReady(true);
-              setLoading(false);
-            });
-          }
-        }, (error) => {
-          console.error("Hooks: User snapshot error:", error);
-          setIsDataReady(true);
-          setLoading(false);
-        });
-
-        // Separate snapshot for daily progress
-        const unsubProgress = onSnapshot(progressDocRef, (progressSnap) => {
-          if (progressSnap.exists()) {
-            const pData = progressSnap.data();
-            setDailyProgress(prev => ({ ...prev, ...pData }));
-          }
-        });
-
-        return () => {
-          unsubUser();
-          unsubProgress();
-        };
       } else {
         localStorage.removeItem('nexora_cached_user');
         setUser(null);
@@ -154,10 +73,83 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
       }
     });
 
-    return unsubscribe;
+    return unsubscribeAuth;
   }, []);
 
-  // Background Sync Effect with Aggressive Throttling (2 minutes)
+  // Separate effect for standardizing firestore listeners to prevent leaks
+  useEffect(() => {
+    if (!user) return;
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const progressDocRef = doc(db, 'users', user.uid, 'progress', today);
+
+    // Safety timeout for slow connections
+    const loadingTimeout = setTimeout(() => {
+      if (!isDataReady) {
+        console.warn("Hooks: Loading timeout reached, forcing ready state for offline use.");
+        setIsDataReady(true);
+        setLoading(false);
+      }
+    }, 15000); // 15s window for slow first loads
+
+    const unsubUser = onSnapshot(userDocRef, (docSnap) => {
+      clearTimeout(loadingTimeout);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const firestoreSettings = { 
+          ...DEFAULT_SETTINGS, 
+          ...data,
+          plantState: { ...DEFAULT_SETTINGS.plantState, ...(data.plantState || {}) }
+        };
+        
+        const firestoreStats = { 
+          ...DEFAULT_STATS, 
+          ...(data.stats || {}),
+          pointsByCategory: { ...DEFAULT_STATS.pointsByCategory, ...(data.stats?.pointsByCategory || {}) },
+          trophies: data.stats?.trophies || []
+        };
+
+        setSettings(firestoreSettings);
+        setStats(firestoreStats);
+        setNeedsOnboarding(data.onboardingCompleted !== true);
+        
+        localStorage.setItem('nexora_settings', JSON.stringify(firestoreSettings));
+        localStorage.setItem('nexora_stats', JSON.stringify(firestoreStats));
+
+        dataLoadedFromFirestore.current = true;
+        setIsDataReady(true);
+        setLoading(false);
+      } else {
+        console.log("Hooks: User doc not found, marked as ready (new user).");
+        setIsDataReady(true);
+        setLoading(false);
+      }
+    }, (error) => {
+      console.error("Hooks: User snapshot error:", error);
+      setIsDataReady(true);
+      setLoading(false);
+    });
+
+    const unsubProgress = onSnapshot(progressDocRef, (progressSnap) => {
+      if (progressSnap.exists()) {
+        const pData = progressSnap.data();
+        setDailyProgress(prev => {
+          // Only update if dates match and it's actually different
+          if (pData.date === today) {
+             return { ...prev, ...pData };
+          }
+          return prev;
+        });
+      }
+    });
+
+    return () => {
+      unsubUser();
+      unsubProgress();
+    };
+  }, [user]);
+
+  // Background Sync Effect with Aggressive Throttling (Optimized)
   useEffect(() => {
     if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
 

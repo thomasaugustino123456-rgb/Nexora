@@ -262,7 +262,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 1, duration: 1 }}
-            className="absolute -top-10 -left-12 glass-card p-5 rounded-2xl shadow-2xl border border-white backdrop-blur-xl z-20 hidden lg:block"
+            className="absolute -top-10 -left-12 glass-card p-5 rounded-2xl shadow-2xl border border-white backdrop-blur-md z-20 hidden lg:block"
           >
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
@@ -284,7 +284,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 1.2, duration: 1 }}
-            className="absolute -bottom-6 -right-12 glass-card p-5 rounded-2xl shadow-2xl border border-white backdrop-blur-xl z-20 hidden lg:block"
+            className="absolute -bottom-6 -right-12 glass-card p-5 rounded-2xl shadow-2xl border border-white backdrop-blur-md z-20 hidden lg:block"
           >
             <div className="flex items-center gap-4">
               <div className="flex flex-col">

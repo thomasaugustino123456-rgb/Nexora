@@ -53,7 +53,12 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     clickCountRef.current += 1;
     if (clickCountRef.current === 3) {
       vibrate(20);
-      setDroneTargetPos({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
+      
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      setDroneTargetPos({ x, y });
       clickCountRef.current = 0;
       if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     } else {
@@ -122,7 +127,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
 
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-[#F0F9FF] to-[#E0F2FE] z-[120] flex flex-col items-center">
-      <header className="w-full p-6 flex items-center justify-between z-[140] bg-[#F0F9FF]/80 backdrop-blur-md sticky top-0">
+      <header className="w-full p-6 flex items-center justify-between z-[140] bg-[#F0F9FF]/80 backdrop-blur-sm sticky top-0">
         <button onClick={onExit} className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors">
           <ChevronLeft size={28} />
         </button>
@@ -267,7 +272,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
+              className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6"
             >
               <div className="w-full max-w-lg space-y-4">
                 <div className="flex justify-between items-center text-white">

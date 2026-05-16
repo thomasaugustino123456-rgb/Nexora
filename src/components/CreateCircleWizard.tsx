@@ -48,7 +48,7 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
   };
 
   return (
-    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-blue-900/60 backdrop-blur-xl p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-blue-900/60 backdrop-blur-md p-4" onClick={onClose}>
       <motion.div 
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
