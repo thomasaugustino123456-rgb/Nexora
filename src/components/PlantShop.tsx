@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, X, Zap, Sparkles, Heart, Bot, Droplets, Sun, Wind, Palette, Box, Bug, Ghost } from 'lucide-react';
+import { ShoppingBag, X, Zap, Sparkles, Heart, Bot, Droplets, Sun, Wind, Palette, Box, Bug, Ghost, Map as MapIcon } from 'lucide-react';
 import { UserStats, UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';
 import { GardenerDrone } from './GardenerDrone';
@@ -90,6 +90,15 @@ export const SHOP_ITEMS: EcosystemItem[] = [
     effect: 'Visual Style'
   },
   // COLORS
+  {
+    id: 'eco_forest_01',
+    name: 'Ancient Sacred Forest',
+    description: 'Transform your plant space into a lush forest with ambient nature sounds and swaying trees.',
+    price: 3500,
+    type: 'visual',
+    icon: <MapIcon className="text-green-500" />,
+    effect: 'Deep Forest Backdrop / Sounds'
+  },
   {
     id: 'color_bio_01',
     name: 'Biolume Teal',

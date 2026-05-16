@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export const NanoBees: React.FC<{ plantPos?: { x: number, y: number } }> = ({ plantPos }) => {
+export const NanoBees: React.FC<{ isForestActive?: boolean }> = ({ isForestActive }) => {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-visible">
       {[...Array(3)].map((_, i) => (
@@ -9,16 +9,22 @@ export const NanoBees: React.FC<{ plantPos?: { x: number, y: number } }> = ({ pl
           key={i}
           className="absolute z-30"
           animate={{
-            x: [50, 150, 100, 50],
-            y: [30, 80, 40, 30],
-            translateX: [i * 15, -i * 10, i * 12],
-            translateY: [-i * 5, i * 15, -i * 10]
+            x: isForestActive 
+              ? [i * 40 - 100, 30, i * 40 + 100, i * 40 - 50, i * 40 - 100] // Added a point (30) near center
+              : [50, 100, 150, 100, 50], // 100 is center-ish
+            y: isForestActive 
+              ? [i * 20 - 50, 40, i * 20 + 50, i * 20 - 20, i * 20 - 50] // Added a point (40) near center
+              : [30, 60, 80, 40, 30],
+            translateX: [i * 15, 0, -i * 10, i * 12], // 0 for center phase
+            translateY: [-i * 5, 0, i * 15, -i * 10], // 0 for center phase
+            scale: [1, 1.2, 1, 0.8, 1], // Squash and stretch
           }}
           transition={{
-            duration: 6 + i,
+            duration: isForestActive ? 8 + i : 5 + i,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: i * 0.2
+            delay: i * 0.5,
+            times: [0, 0.4, 0.7, 0.9, 1] // Explicit timing to stay near center longer (0.4)
           }}
         >
           {/* 2D detailed Bee */}
@@ -55,17 +61,17 @@ export const NanoBees: React.FC<{ plantPos?: { x: number, y: number } }> = ({ pl
   );
 };
 
-export const SpiritButterfly: React.FC = () => {
+export const SpiritButterfly: React.FC<{ isForestActive?: boolean }> = ({ isForestActive }) => {
   return (
     <motion.div
       className="absolute pointer-events-none z-40"
       animate={{
-        x: [0, 140, 60, -60, 0],
-        y: [0, -100, 60, 140, 0],
+        x: isForestActive ? [-200, 200, 100, -100, -200] : [0, 140, 60, -60, 0],
+        y: isForestActive ? [-150, 150, 50, 200, -150] : [0, -100, 60, 140, 0],
         rotate: [0, 5, -5, 0]
       }}
       transition={{
-        duration: 15,
+        duration: isForestActive ? 20 : 15,
         repeat: Infinity,
         ease: "easeInOut"
       }}

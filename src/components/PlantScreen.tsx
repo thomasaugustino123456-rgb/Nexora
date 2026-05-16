@@ -8,6 +8,7 @@ import { PlantRenderer } from './PlantRenderer';
 import { PlantCompletionCard } from './PlantCompletionCard';
 import { PlantShop, EcosystemItem } from './PlantShop';
 import { VIDEO_URLS } from '../constants/videos';
+import { ForestBackdrop } from './ForestBackdrop';
 
 const VideoPlayer = lazy(() => import('./VideoPlayer').then(m => ({ default: m.VideoPlayer })));
 
@@ -124,9 +125,11 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
 
   const ECOSYSTEM_PATH: PlantType[] = ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano', 'boredFlower', 'mourningSprout', 'breezeTulip', 'happyTulip', 'distressedRose'];
   const unlocked = plantState.unlockedTypes || ['sprout'];
+  const isForestActive = settings.activeEcosystemItemIds?.includes('eco_forest_01');
 
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-[#F0F9FF] to-[#E0F2FE] z-[120] flex flex-col items-center">
+      {isForestActive && <ForestBackdrop />}
       <header className="w-full p-6 flex items-center justify-between z-[140] bg-[#F0F9FF]/80 backdrop-blur-sm sticky top-0">
         <button onClick={onExit} className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors">
           <ChevronLeft size={28} />
@@ -299,6 +302,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
             isThirsty={plantState.isThirsty} 
             isDead={plantState.isDead} 
             activeEcosystemItemIds={settings.activeEcosystemItemIds}
+            isForestActive={isForestActive}
             droneTargetPos={droneTargetPos}
             onDronePositionChange={(pos) => setDroneTargetPos(pos)}
           />

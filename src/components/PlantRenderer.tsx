@@ -13,6 +13,7 @@ interface PlantRendererProps {
   isThirsty: boolean;
   isDead: boolean;
   activeEcosystemItemIds?: string[];
+  isForestActive?: boolean;
   droneTargetPos?: { x: number; y: number } | null;
   onDronePositionChange?: (pos: { x: number, y: number }) => void;
   className?: string;
@@ -24,6 +25,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
   isThirsty, 
   isDead, 
   activeEcosystemItemIds = [],
+  isForestActive = false,
   droneTargetPos = null,
   onDronePositionChange,
   className = ""
@@ -1461,10 +1463,10 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
         <div className="relative w-72 h-72 overflow-visible">
           <AnimatePresence>
             {activeEcosystemItemIds.includes('eco_nanobees_01') && !isDead && (
-              <NanoBees key="bees" />
+              <NanoBees key="bees" isForestActive={isForestActive} />
             )}
             {activeEcosystemItemIds.includes('eco_butterfly_01') && !isDead && (
-              <SpiritButterfly key="butterfly" />
+              <SpiritButterfly key="butterfly" isForestActive={isForestActive} />
             )}
           </AnimatePresence>
 
