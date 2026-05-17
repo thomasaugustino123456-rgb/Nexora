@@ -103,6 +103,7 @@ export interface UserSettings {
   proTestActive?: boolean;
   proTestStartedAt?: string | null;
   proTestExpiresAt?: string | null;
+  proTestLastUsedAt?: string | null;
   layoutConfig?: {
     hideStats?: boolean;
     hidePlants?: boolean;

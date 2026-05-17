@@ -9,7 +9,7 @@ interface DashboardWidgetsProps {
   settings: UserSettings;
 }
 
-export const DashboardWidgets: React.FC<DashboardWidgetsProps> = ({ stats, dailyProgress, settings }) => {
+export const DashboardWidgets = React.memo(({ stats, dailyProgress, settings }: DashboardWidgetsProps) => {
   const isPlantAlive = settings.plantState && !settings.plantState.isDead;
   const level = Math.floor((stats.xp || 0) / 1000) + 1;
   const progressPercent = Math.min(100, Math.max(0, ((dailyProgress as any).completionsCount || 0) / Math.max(1, settings.challengeCountGoal || 3) * 100));
@@ -99,4 +99,4 @@ export const DashboardWidgets: React.FC<DashboardWidgetsProps> = ({ stats, daily
       </motion.div>
     </div>
   );
-};
+});

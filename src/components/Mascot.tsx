@@ -16,7 +16,7 @@ interface MascotProps {
   isSitting?: boolean;
 }
 
-export const Mascot: React.FC<MascotProps> = ({ 
+export const Mascot = React.memo(({ 
   className, 
   mood = 'happy', 
   hat = 'none', 
@@ -26,12 +26,13 @@ export const Mascot: React.FC<MascotProps> = ({
   onPointerMove,
   onPointerLeave,
   isSitting = false
-}) => {
+}: MascotProps) => {
   const [clickCount, setClickCount] = useState(0);
   const [isBlinking, setIsBlinking] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [sloshAmount, setSloshAmount] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastStateUpdateRef = useRef(0);
   const { play } = useSound();
   const controls = useAnimation();
 
@@ -48,6 +49,10 @@ export const Mascot: React.FC<MascotProps> = ({
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current) return;
+    const now = Date.now();
+    if (now - lastStateUpdateRef.current < 32) return; // ~30fps throttle for smoothness + performance
+    
+    lastStateUpdateRef.current = now;
     const rect = containerRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
@@ -364,5 +369,5 @@ export const Mascot: React.FC<MascotProps> = ({
       </svg>
     </motion.div>
   );
-};
+});
 

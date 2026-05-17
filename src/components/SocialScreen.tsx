@@ -236,7 +236,7 @@ const PostCard = React.memo(({ post, user, settings, circles, savedPosts, toggle
 
 });
 
-export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdateSettings, posts, circles, notifications, setActiveScreen, play }: SocialScreenProps) {
+export const SocialScreen = React.memo(({ onBack, user, settings, stats, showToast, onUpdateSettings, posts, circles, notifications, setActiveScreen, play }: SocialScreenProps) => {
   const [activeTab, setActiveTab] = useState<'feed' | 'circles' | 'inbox' | 'library'>('library');
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
@@ -1155,5 +1155,5 @@ export function SocialScreen({ onBack, user, settings, stats, showToast, onUpdat
       </AnimatePresence>
     </motion.div>
   );
-}
+});
 

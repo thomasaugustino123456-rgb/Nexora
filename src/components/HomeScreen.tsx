@@ -67,7 +67,7 @@ function NextRestorationCountdown({ targetTime }: { targetTime: number | null })
   return <span>{timeLeft}</span>;
 }
 
-export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenNexusVision, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge }: { 
+export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenNexusVision, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
@@ -89,7 +89,7 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
   fcmError: string | null,
   showToast?: (m: string, t: any) => void,
   onArchiveChallenge?: (id: string) => void
-}) {
+}) => {
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
   const layoutConfig = settings.layoutConfig || {};
@@ -493,4 +493,4 @@ export function HomeScreen({ stats, onStartChallenge, isCompletedToday, dailyPro
       )}
     </motion.div>
   );
-}
+});

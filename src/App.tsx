@@ -191,17 +191,21 @@ export default function App() {
         }));
         showToast("PRO PROTOCOL: BOOSTED STATS ACTIVATED!", "success");
       }
-    } else if (isCurrentlyBoosting) {
-      // Transition from active to expired
+    } else if (isCurrentlyBoosting || (testExpiresAt && new Date(testExpiresAt) <= now)) {
+      // Transition from active to expired, OR detected as already expired on load
       setIsCurrentlyBoosting(false);
-      if (originalStatsBeforeProTest) {
-        setStats(originalStatsBeforeProTest);
-        setOriginalStatsBeforeProTest(null);
+      
+      // If we were previously boosting or detected it was active but expired
+      if (originalStatsBeforeProTest || isCurrentlyBoosting) {
+        if (originalStatsBeforeProTest) {
+          setStats(originalStatsBeforeProTest);
+          setOriginalStatsBeforeProTest(null);
+        }
         showToast("PRO TEST PROTOCOL EXPIRED. STATS REVERTED.", "info");
+        onUpdateSettings({ proTestActive: false, proTestExpiresAt: null, proTestStartedAt: null });
+        setProTestMessage("Your pro features test time is out. If u want it u can pay, bro! 👑");
+        vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
       }
-      onUpdateSettings({ proTestActive: false, proTestExpiresAt: null, proTestStartedAt: null });
-      setProTestMessage("Your pro features test time is out. If u want it u can pay, bro! 👑");
-      vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
     }
   }, [settings.proTestExpiresAt, isDataReady]);
 
@@ -1278,15 +1282,9 @@ export default function App() {
     window.location.href = '/?v=' + (updateInfo?.version || Date.now()); 
   };
 
-  // Tracking screen views
+  // Version check interval - Optimized for performance
   useEffect(() => {
-    if (!user || !isDataReady) return; 
-    localStorage.setItem('nexora_settings', JSON.stringify(settings));
-    localStorage.setItem('nexora_stats', JSON.stringify(stats));
-    localStorage.setItem(`nexora_progress_${today}`, JSON.stringify(dailyProgress));
-  }, [settings, stats, dailyProgress, user, today, isDataReady]);
-
-  useEffect(() => {
+    if (!isDataReady) return;
     const checkVersion = async () => {
       try {
         // Use cache: 'no-store' to ensure we get the latest file from the server
@@ -2013,7 +2011,10 @@ export default function App() {
   const checkTrophies = useCallback(() => {
     setStats((prevStats) => {
       const now = Date.now();
+      let justTurnedIce = false;
+      let justBroken = false;
       let changed = false;
+      
       const trophies = prevStats.trophies || [];
       const updatedTrophies = trophies.map(t => {
         const earnedTime = new Date(t.earnedDate).getTime();
@@ -2021,26 +2022,25 @@ export default function App() {
         
         if (t.type === 'golden' && daysSince >= 2) {
           changed = true;
+          justTurnedIce = true;
           return { ...t, type: 'ice' as const, lastUpdated: new Date().toISOString() };
         }
         if (t.type === 'ice' && daysSince >= 3) {
           changed = true;
+          justBroken = true;
           return { ...t, type: 'broken' as const, lastUpdated: new Date().toISOString() };
         }
         return t;
       });
       
       if (changed) {
-        const hasIce = updatedTrophies.some(t => t.type === 'ice');
-        const hasBroken = updatedTrophies.some(t => t.type === 'broken');
-
         if (settings.notificationsEnabled) {
-          if (hasIce) {
+          if (justTurnedIce) {
             sendNotification('Trophy Alert! 🧊', {
               body: 'One of your trophies just turned to ICE! Complete a challenge now to save it!',
               icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
             });
-          } else if (hasBroken) {
+          } else if (justBroken) {
             sendNotification('Trophy Alert! 💔', {
               body: 'Oh no! A trophy has BROKEN! Don\'t let more break, bro!',
               icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
@@ -2049,10 +2049,9 @@ export default function App() {
         }
 
         if (settings.soundEnabled) {
-          // Use a timeout to ensure side effects happen outside of the render/update phase
           setTimeout(() => {
-            if (hasIce) playTrophySound('ice');
-            else if (hasBroken) playTrophySound('broken');
+            if (justTurnedIce) playTrophySound('ice');
+            else if (justBroken) playTrophySound('broken');
             setEmergencyActive(true);
           }, 100);
         }
@@ -3028,10 +3027,24 @@ export default function App() {
                     }}
                     onStartProTest={() => {
                       const now = new Date();
+                      
+                      // 7-day cooldown check
+                      if (settings.proTestLastUsedAt) {
+                        const lastUsed = new Date(settings.proTestLastUsedAt);
+                        const daysSince = (now.getTime() - lastUsed.getTime()) / (1000 * 60 * 60 * 24);
+                        if (daysSince < 7) {
+                          const remainingDays = Math.ceil(7 - daysSince);
+                          showToast(`NEXORA RESTRICTION: BRO, WAIT ${remainingDays} MORE DAYS TO TEST AGAIN! ⏳`, 'error');
+                          vibrate(VIBRATION_PATTERNS.ERROR);
+                          return;
+                        }
+                      }
+
                       const expiry = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes
                       onUpdateSettings({
                         proTestStartedAt: now.toISOString(),
                         proTestExpiresAt: expiry.toISOString(),
+                        proTestLastUsedAt: now.toISOString(),
                         proTestActive: true // Explicit flag
                       });
                       showToast("PRO PROTOCOL ACTIVATED! 10 MINUTES OF UNLIMITED POWER! ⏳", 'info');
