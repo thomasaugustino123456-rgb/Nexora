@@ -173,41 +173,43 @@ export default function App() {
 
     const testExpiresAt = settings.proTestExpiresAt;
     const now = new Date();
-    const isTestActive = testExpiresAt && new Date(testExpiresAt) > now;
+    // Use a small buffer to avoid weird edge cases on load
+    const isTestActive = testExpiresAt && (new Date(testExpiresAt).getTime() > now.getTime() + 100);
 
     if (isTestActive) {
       if (!isCurrentlyBoosting) {
         setIsCurrentlyBoosting(true);
-        // Deep copy of current stats to revert later
-        setOriginalStatsBeforeProTest(JSON.parse(JSON.stringify(stats)));
         
-        // Apply temporary boost
-        setStats(prev => ({
-          ...prev,
-          streak: Math.max(prev.streak, 9999),
-          coins: Math.max(prev.coins, 900000),
-          xp: Math.max(prev.xp, 150000),
-          level: Math.max(prev.level, 99)
-        }));
-        showToast("PRO PROTOCOL: BOOSTED STATS ACTIVATED!", "success");
+        // Only save original if we haven't already (prevents recursive overwrite on refresh)
+        if (!originalStatsBeforeProTest) {
+          setOriginalStatsBeforeProTest(JSON.parse(JSON.stringify(stats)));
+          
+          // Apply temporary boost ONLY ONCE
+          setStats(prev => ({
+            ...prev,
+            streak: Math.max(prev.streak, 9999),
+            coins: Math.max(prev.coins, 900000),
+            xp: Math.max(prev.xp, 150000),
+            level: Math.max(prev.level, 99)
+          }));
+          showToast("PRO PROTOCOL: BOOSTED STATS ACTIVATED!", "success");
+        }
       }
-    } else if (isCurrentlyBoosting || (testExpiresAt && new Date(testExpiresAt) <= now)) {
+    } else if (isCurrentlyBoosting || (testExpiresAt && new Date(testExpiresAt).getTime() <= now.getTime())) {
       // Transition from active to expired, OR detected as already expired on load
       setIsCurrentlyBoosting(false);
       
       // If we were previously boosting or detected it was active but expired
-      if (originalStatsBeforeProTest || isCurrentlyBoosting) {
-        if (originalStatsBeforeProTest) {
-          setStats(originalStatsBeforeProTest);
-          setOriginalStatsBeforeProTest(null);
-        }
+      if (originalStatsBeforeProTest) {
+        setStats(originalStatsBeforeProTest);
+        setOriginalStatsBeforeProTest(null);
         showToast("PRO TEST PROTOCOL EXPIRED. STATS REVERTED.", "info");
         onUpdateSettings({ proTestActive: false, proTestExpiresAt: null, proTestStartedAt: null });
         setProTestMessage("Your pro features test time is out. If u want it u can pay, bro! 👑");
         vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
       }
     }
-  }, [settings.proTestExpiresAt, isDataReady]);
+  }, [settings.proTestExpiresAt, isDataReady, isCurrentlyBoosting]);
 
   // Expiry Check Interval
   useEffect(() => {
@@ -2010,6 +2012,8 @@ export default function App() {
 
   const checkTrophies = useCallback(() => {
     setStats((prevStats) => {
+      if (!prevStats.trophies || prevStats.trophies.length === 0) return prevStats;
+      
       const now = Date.now();
       let justTurnedIce = false;
       let justBroken = false;
@@ -2020,6 +2024,7 @@ export default function App() {
         const earnedTime = new Date(t.earnedDate).getTime();
         const daysSince = (now - earnedTime) / (1000 * 60 * 60 * 24);
         
+        // Only degrade if not already in that state
         if (t.type === 'golden' && daysSince >= 2) {
           changed = true;
           justTurnedIce = true;
@@ -2034,7 +2039,8 @@ export default function App() {
       });
       
       if (changed) {
-        if (settings.notificationsEnabled) {
+        // Notification only for the transition
+        if (settings.badgeSettings?.trophyAlerts) {
           if (justTurnedIce) {
             sendNotification('Trophy Alert! 🧊', {
               body: 'One of your trophies just turned to ICE! Complete a challenge now to save it!',
@@ -2059,7 +2065,7 @@ export default function App() {
       }
       return prevStats;
     });
-  }, [settings.notificationsEnabled, settings.soundEnabled]);
+  }, [settings.badgeSettings, settings.soundEnabled]);
 
   // Trophy degradation logic
   useEffect(() => {
@@ -3028,10 +3034,11 @@ export default function App() {
                     onStartProTest={() => {
                       const now = new Date();
                       
-                      // 7-day cooldown check
+                      // 7-day cooldown check - Hardened with precise timestamp
                       if (settings.proTestLastUsedAt) {
                         const lastUsed = new Date(settings.proTestLastUsedAt);
-                        const daysSince = (now.getTime() - lastUsed.getTime()) / (1000 * 60 * 60 * 24);
+                        const msSince = now.getTime() - lastUsed.getTime();
+                        const daysSince = msSince / (1000 * 60 * 60 * 24);
                         if (daysSince < 7) {
                           const remainingDays = Math.ceil(7 - daysSince);
                           showToast(`NEXORA RESTRICTION: BRO, WAIT ${remainingDays} MORE DAYS TO TEST AGAIN! ⏳`, 'error');
@@ -3040,14 +3047,23 @@ export default function App() {
                         }
                       }
 
-                      const expiry = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes
-                      onUpdateSettings({
+                      // Adjusted duration: 15 minutes for a balanced test experience
+                      const expiry = new Date(now.getTime() + 15 * 60 * 1000); 
+                      const settingsUpdate = {
                         proTestStartedAt: now.toISOString(),
                         proTestExpiresAt: expiry.toISOString(),
                         proTestLastUsedAt: now.toISOString(),
-                        proTestActive: true // Explicit flag
-                      });
-                      showToast("PRO PROTOCOL ACTIVATED! 10 MINUTES OF UNLIMITED POWER! ⏳", 'info');
+                        proTestActive: true 
+                      };
+                      onUpdateSettings(settingsUpdate);
+                      
+                      // CRITICAL: Force immediate sync to Firestore so refresh/exit doesn't lose the test state
+                      if (user) {
+                        setDoc(doc(db, 'users', user.uid), settingsUpdate, { merge: true })
+                          .catch(e => console.error("Pro Test immediate sync failed:", e));
+                      }
+
+                      showToast("PRO PROTOCOL ACTIVATED! 15 MINUTES OF UNLIMITED POWER! ⏳", 'info');
                       vibrate(VIBRATION_PATTERNS.SUCCESS);
                       setActiveScreen('home');
                     }}

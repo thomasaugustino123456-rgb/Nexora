@@ -166,23 +166,25 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
   useEffect(() => {
     if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
 
-    const currentStateStr = JSON.stringify({
-      s: settings,
-      st: stats,
-      p: { c: dailyProgress.completed, cc: dailyProgress.completionsCount, d: dailyProgress.date }
-    });
-
-    if (currentStateStr === lastSyncedRef.current) return;
-
     const syncData = async () => {
       if (quotaExceededRef.current) return;
+      
+      const currentStateStr = JSON.stringify({
+        s: settings,
+        st: stats,
+        p: { c: dailyProgress.completed, cc: dailyProgress.completionsCount, d: dailyProgress.date }
+      });
+
+      if (currentStateStr === lastSyncedRef.current) return;
+
       try {
         const userRef = doc(db, 'users', user.uid);
         
         // 1. Check if core settings/stats changed
-        const coreChanged = lastSyncedRef.current === "" || 
-                           JSON.parse(lastSyncedRef.current).s !== JSON.stringify(settings) ||
-                           JSON.parse(lastSyncedRef.current).st !== JSON.stringify(stats);
+        const lastSyncedData = lastSyncedRef.current ? JSON.parse(lastSyncedRef.current) : null;
+        const coreChanged = !lastSyncedData || 
+                           JSON.stringify(lastSyncedData.s) !== JSON.stringify(settings) ||
+                           JSON.stringify(lastSyncedData.st) !== JSON.stringify(stats);
 
         if (coreChanged) {
           await setDoc(userRef, {
@@ -195,13 +197,13 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
           }, { merge: true });
         }
         
-        // 2. Sync progress only if completion state changed
+        // 2. Sync progress always attempts, or can be throttled too
         await setDoc(doc(db, 'users', user.uid, 'progress', today), dailyProgress, { merge: true });
         
         // 3. Leaderboard sync (only if streak or points changed)
-        const lbChanged = lastSyncedRef.current === "" || 
-                          JSON.parse(lastSyncedRef.current).st?.totalPoints !== stats.totalPoints ||
-                          JSON.parse(lastSyncedRef.current).st?.streak !== stats.streak;
+        const lbChanged = !lastSyncedData || 
+                          lastSyncedData.st?.totalPoints !== stats.totalPoints ||
+                          lastSyncedData.st?.streak !== stats.streak;
 
         if (lbChanged) {
           await setDoc(doc(db, 'leaderboard', user.uid), {
