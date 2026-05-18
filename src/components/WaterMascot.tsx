@@ -6,7 +6,7 @@ interface WaterMascotProps {
   progress: number; // 0 to 1 (0% to 100%)
 }
 
-export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress }) => {
+export const WaterMascot = React.memo(({ className, progress }: WaterMascotProps) => {
   // Map progress (0-1) to Y translation (490 to 150)
   // 0% -> 490 (bottom)
   // 100% -> 150 (top)
@@ -200,4 +200,4 @@ export const WaterMascot: React.FC<WaterMascotProps> = ({ className, progress })
       </svg>
     </div>
   );
-};
+});

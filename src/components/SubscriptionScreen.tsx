@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Check, Crown, Zap, Star, MessageSquare, Heart } from 'lucide-react';
+import { ArrowLeft, Check, Crown, Zap, Star, MessageSquare, Heart, ShieldCheck, Users, X } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 
 export function SubscriptionScreen({ 
@@ -8,13 +8,15 @@ export function SubscriptionScreen({
   userId, 
   onActivatePro,
   onUpdateSettings,
-  onStartProTest
+  onStartProTest,
+  settings
 }: { 
   onBack: () => void, 
   userId: string,
   onActivatePro?: () => void,
   onUpdateSettings?: (settings: any) => void,
-  onStartProTest?: () => void
+  onStartProTest?: () => void,
+  settings?: any
 }) {
   const [scrollY, setScrollY] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -84,9 +86,47 @@ export function SubscriptionScreen({
           
           <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white">NEXORA PRO</h1>
           <p className="text-slate-400 max-w-md text-lg font-medium leading-relaxed">
-            The ultimate protocol for discipline legends. Access the Architect Lab and unlock your full potential.
+            The ultimate protocol for discipline legends. Access the Architect Lab and support the mission.
           </p>
         </div>
+
+        {/* Mission Transparency Section - NEW */}
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          className="mb-16 p-8 rounded-[3rem] bg-amber-500/5 border border-amber-500/20 relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 p-12 bg-amber-500/10 rounded-full blur-3xl -mr-16 -mt-16" />
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+            <div className="flex-1 space-y-4 text-center md:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 text-amber-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-500/30">
+                <Heart size={12} fill="currentColor" /> THE MISSION
+              </div>
+              <h2 className="text-3xl font-black italic tracking-tight">WHERE DOES YOUR MONEY GO?</h2>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Nexora isn't a heartless corporation. We are a small team of warriors building the future of discipline. Your subscription directly funds:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                {[
+                  { icon: <Zap size={14}/>, text: 'Ultra-Fast AI Servers' },
+                  { icon: <ShieldCheck size={14}/>, text: 'Secure Field Reports' },
+                  { icon: <Crown size={14}/>, text: 'Exclusive Asset Design' },
+                  { icon: <Users size={14}/>, text: 'Community Infrastructure' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-2 text-[11px] font-bold text-amber-200/80">
+                    <div className="p-1 bg-amber-500/20 rounded-md text-amber-500">{item.icon}</div>
+                    {item.text}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="w-32 h-32 md:w-48 md:h-48 flex items-center justify-center bg-white/5 rounded-full border border-white/10 shadow-2xl relative">
+              <div className="absolute inset-4 rounded-full border border-amber-500/20 animate-pulse" />
+              <Crown size={64} className="text-amber-500 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
+            </div>
+          </div>
+        </motion.div>
 
         {/* Pro Test Mode Card (Unified) */}
         {onStartProTest && (
@@ -94,7 +134,7 @@ export function SubscriptionScreen({
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-                        className="mb-12 p-8 rounded-[2.5rem] bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border-2 border-blue-500/30 backdrop-blur-md relative overflow-hidden group"
+            className="mb-12 p-8 rounded-[2.5rem] bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border-2 border-blue-500/30 backdrop-blur-md relative overflow-hidden group"
           >
             <div className="absolute top-0 right-0 p-12 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-blue-500/20 transition-colors" />
             
@@ -111,17 +151,41 @@ export function SubscriptionScreen({
                 <p className="text-blue-100/70 text-sm font-medium leading-relaxed max-w-lg">
                   Curious about the power of Nexora Pro? Unlock every feature, custom plan, and exclusive item for 10 minutes. Experience the peak of consistency.
                 </p>
+                {settings?.proTestStartedAt && (
+                   <p className="text-[10px] font-bold text-blue-400/60 uppercase tracking-widest">
+                      Last tested: {new Date(settings.proTestStartedAt).toLocaleDateString()}
+                   </p>
+                )}
               </div>
 
-              <button 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.SUCCESS);
-                  onStartProTest();
-                }}
-                className="w-full md:w-auto px-10 py-5 bg-white text-blue-600 rounded-2xl font-black text-sm shadow-xl shadow-white/10 hover:scale-105 active:scale-95 transition-all"
-              >
-                START 10-MIN TEST
-              </button>
+              {(() => {
+                const now = new Date();
+                const lastTest = settings?.proTestStartedAt ? new Date(settings.proTestStartedAt) : null;
+                const cooldownDays = 7;
+                const canRetry = !lastTest || (now.getTime() - lastTest.getTime() > cooldownDays * 24 * 60 * 60 * 1000);
+                
+                if (canRetry) {
+                  return (
+                    <button 
+                      onClick={() => {
+                        vibrate(VIBRATION_PATTERNS.SUCCESS);
+                        onStartProTest();
+                      }}
+                      className="w-full md:w-auto px-10 py-5 bg-white text-blue-600 rounded-2xl font-black text-sm shadow-xl shadow-white/10 hover:scale-105 active:scale-95 transition-all"
+                    >
+                      START 10-MIN TEST
+                    </button>
+                  );
+                } else {
+                  const daysRemaining = Math.ceil((cooldownDays * 24 * 60 * 60 * 1000 - (now.getTime() - lastTest!.getTime())) / (24 * 60 * 60 * 1000));
+                  return (
+                    <div className="w-full md:w-auto px-8 py-5 bg-white/10 rounded-2xl border border-white/20 text-center opacity-70">
+                       <p className="text-[10px] font-black uppercase text-white/40 tracking-widest leading-none mb-1">Cooldown Active</p>
+                       <p className="text-sm font-black text-white">{daysRemaining} DAYS WAIT</p>
+                    </div>
+                  );
+                }
+              })()}
             </div>
           </motion.div>
         )}
@@ -146,6 +210,46 @@ export function SubscriptionScreen({
               <p className="text-slate-400 text-sm leading-relaxed">{f.description}</p>
             </motion.div>
           ))}
+        </div>
+
+        {/* Comparison Table - NEW */}
+        <div className="mb-24 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/5 backdrop-blur-xl">
+          <div className="p-8 border-b border-white/10 bg-white/5">
+            <h3 className="font-black text-xl tracking-tight uppercase">Protocol Comparison</h3>
+            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-1">Free Tier vs Architect Pro</p>
+          </div>
+          <div className="p-0 overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="p-6 text-[10px] font-black uppercase text-slate-400">Capability</th>
+                  <th className="p-6 text-[10px] font-black uppercase text-slate-400 text-center bg-white/5">Free</th>
+                  <th className="p-6 text-[10px] font-black uppercase text-amber-500 text-center bg-amber-500/5">Pro</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {[
+                  { name: 'Core Challenges', free: true, pro: true },
+                  { name: 'Community Access', free: true, pro: true },
+                  { name: 'UI Customization', free: 'Limited', pro: 'Full (Architect Lab)' },
+                  { name: 'Goal Limits', free: '3-5 Stages', pro: 'Unlimited (Up to 20)' },
+                  { name: 'Soundtracks', free: 'Standard', pro: 'High-Fidelity Packs' },
+                  { name: 'Mascot Skins', free: 'Basic', pro: 'Experimental/Elite' },
+                  { name: 'Support', free: 'Community', pro: 'Priority Protocol' },
+                ].map((row, i) => (
+                  <tr key={i} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors text-[11px]">
+                    <td className="p-6 font-bold text-slate-300 uppercase tracking-tight">{row.name}</td>
+                    <td className="p-6 text-center text-slate-500 bg-white/5 font-black">
+                      {typeof row.free === 'boolean' ? (row.free ? <Check size={14} className="mx-auto text-emerald-500" /> : <X size={14} className="mx-auto text-gray-700" />) : row.free}
+                    </td>
+                    <td className="p-6 text-center bg-amber-500/5 font-black text-amber-400">
+                      {typeof row.pro === 'boolean' ? (row.pro ? <Crown size={14} className="mx-auto text-amber-500" /> : <X size={14} className="mx-auto text-rose-500" />) : row.pro}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Payment Options */}

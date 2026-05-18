@@ -63,7 +63,8 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
         ...settings,
         displayName: name.trim() || settings.displayName,
         waterGoal: water,
-        pushupsGoal: pushups
+        pushupsGoal: pushups,
+        onboardingCompleted: true
       });
       
       onComplete();

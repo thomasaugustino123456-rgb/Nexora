@@ -10,7 +10,7 @@ interface WritingMascotProps {
   showGlow?: boolean;
 }
 
-export function WritingMascot({ 
+export const WritingMascot = React.memo(({ 
   className = "", 
   isLookingAtButton = false,
   isHappy = false,
@@ -18,7 +18,7 @@ export function WritingMascot({
   isWaiting = false,
   isJumping = false,
   showGlow = false
-}: WritingMascotProps) {
+}: WritingMascotProps) => {
   return (
     <div className={`w-full ${className} mascot-float ${isJumping ? 'mascot-jump' : ''}`}>
       {/* Soft Glow Background */}
@@ -229,4 +229,4 @@ export function WritingMascot({
       </svg>
     </div>
   );
-}
+});

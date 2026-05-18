@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function ArtistMascot({ className = "" }: { className?: string }) {
+export const ArtistMascot = React.memo(({ className = "" }: { className?: string }) => {
   return (
     <div className={`w-full ${className}`}>
       <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
@@ -125,4 +125,4 @@ export function ArtistMascot({ className = "" }: { className?: string }) {
       </svg>
     </div>
   );
-}
+});

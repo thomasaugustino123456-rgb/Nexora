@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const PushupMascot: React.FC<{ className?: string }> = ({ className }) => {
+export const PushupMascot = React.memo(({ className }: { className?: string }) => {
   return (
     <div className={`gym-container ${className || ''}`}>
       <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
@@ -109,4 +109,4 @@ export const PushupMascot: React.FC<{ className?: string }> = ({ className }) =>
       </svg>
     </div>
   );
-};
+});

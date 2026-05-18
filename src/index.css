@@ -165,6 +165,7 @@
 .animate-mascot-breathe {
   animation: mascotBreathe 3s infinite ease-in-out;
   transform-origin: bottom center;
+  will-change: transform;
 }
 
 @keyframes mascotAura {

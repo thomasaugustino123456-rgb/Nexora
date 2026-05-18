@@ -33,7 +33,7 @@ const VIBRATION_PATTERNS = {
   ERROR: [50, 100, 50],
 };
 
-export const SpaceMascot: React.FC<SpaceMascotProps> = ({
+export const SpaceMascot = React.memo(({
   onboardingStep,
   setOnboardingStep,
   isNewUser,
@@ -54,7 +54,7 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
   isPinned,
   onTogglePin,
   isNearItem
-}) => {
+}: SpaceMascotProps) => {
   const [message, setMessage] = useState<string | null>(null);
   const [showMascot, setShowMascot] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -352,4 +352,4 @@ export const SpaceMascot: React.FC<SpaceMascotProps> = ({
       </AnimatePresence>
     </div>
   );
-};
+});

@@ -162,7 +162,7 @@ export function ProgressScreen({
         <div className="flex items-center justify-between mb-8">
           <div>
             <h3 className="text-sm font-black uppercase tracking-widest text-white/40">Achievement Vault</h3>
-            <p className="text-[9px] font-bold text-orange-500 uppercase tracking-[0.3em]">Locked Frequency Artifacts</p>
+            <p className="text-[9px] font-bold text-orange-500 uppercase tracking-[0.3em]">Historical Frequency Artifacts</p>
           </div>
           <Trophy size={24} className="text-orange-500" />
         </div>
@@ -182,11 +182,24 @@ export function ProgressScreen({
         {stats.trophies && stats.trophies.length > 0 && (
           <div className="mt-8 pt-8 border-t border-white/5">
              <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-4">Highest Artifacts</p>
-             <div className="flex flex-wrap gap-2">
-                {stats.trophies.slice(0, 3).map(t => (
-                  <div key={t.id} className="px-4 py-2 bg-white/5 rounded-xl border border-white/10 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-orange-500" />
-                    <span className="text-[9px] font-black uppercase tracking-widest">{t.id.split('_').join(' ')}</span>
+             <div className="flex flex-wrap gap-3">
+                {stats.trophies.slice(0, 8).map(t => (
+                  <div key={t.id} className="px-4 py-3 bg-white/5 rounded-2xl border border-white/10 flex items-center gap-3 min-w-[140px]">
+                    <div className={`w-3 h-3 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] ${
+                      t.type === 'golden' ? 'bg-orange-500' : 
+                      t.type === 'ice' ? 'bg-blue-300' : 'bg-gray-600'
+                    }`} />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">
+                        {t.id.split('_')[0]}
+                      </span>
+                      <span className={`text-[8px] font-bold uppercase tracking-tighter opacity-60 ${
+                        t.type === 'golden' ? 'text-orange-500' : 
+                        t.type === 'ice' ? 'text-blue-400' : 'text-gray-400'
+                      }`}>
+                        {t.type} Status
+                      </span>
+                    </div>
                   </div>
                 ))}
              </div>

@@ -204,7 +204,7 @@ export default function App() {
         setStats(originalStatsBeforeProTest);
         setOriginalStatsBeforeProTest(null);
         showToast("PRO TEST PROTOCOL EXPIRED. STATS REVERTED.", "info");
-        onUpdateSettings({ proTestActive: false, proTestExpiresAt: null, proTestStartedAt: null });
+        onUpdateSettings({ proTestActive: false, proTestExpiresAt: null }); // Keep proTestStartedAt for cooldown
         setProTestMessage("Your pro features test time is out. If u want it u can pay, bro! 👑");
         vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
       }
@@ -221,7 +221,7 @@ export default function App() {
       
       if (now >= expiry) {
         // This will trigger the boost manager useEffect
-        onUpdateSettings({ proTestExpiresAt: null, proTestStartedAt: null, proTestActive: false });
+        onUpdateSettings({ proTestExpiresAt: null, proTestActive: false });
         clearInterval(interval);
       }
     }, 2000);
@@ -2010,13 +2010,49 @@ export default function App() {
     setHistory(memoizedHistory);
   }, [memoizedHistory]);
 
+  // Trophy Alert Logic (Side-effect separated from state update for reliability)
+  const [lastTrophyAlert, setLastTrophyAlert] = useState<{ id: string, type: string }[]>([]);
+  
+  useEffect(() => {
+    if (!isDataReady || !settings.badgeSettings?.trophyAlerts) return;
+    
+    const currentTrophyStates = stats.trophies.map(t => ({ id: t.id, type: t.type }));
+    
+    // Compare with last known states to find transitions
+    if (lastTrophyAlert.length === 0) {
+      setLastTrophyAlert(currentTrophyStates);
+      return;
+    }
+
+    currentTrophyStates.forEach(curr => {
+      const prev = lastTrophyAlert.find(p => p.id === curr.id);
+      if (prev && prev.type !== curr.type) {
+        if (curr.type === 'ice') {
+          sendNotification('Trophy Alert! 🧊', {
+            body: 'One of your trophies just turned to ICE! Complete a challenge now to save it!',
+            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+          });
+          if (settings.soundEnabled) playTrophySound('ice');
+          showToast("TROPHY ALERT: ICE DETECTED! 🧊", "info");
+        } else if (curr.type === 'broken') {
+          sendNotification('Trophy Alert! 💔', {
+            body: 'Oh no! A trophy has BROKEN! Don\'t let more break, bro!',
+            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
+          });
+          if (settings.soundEnabled) playTrophySound('broken');
+          showToast("TROPHY ALERT: SHATTERED! 💔", "error");
+        }
+      }
+    });
+
+    setLastTrophyAlert(currentTrophyStates);
+  }, [stats.trophies, isDataReady, settings.badgeSettings?.trophyAlerts, settings.soundEnabled]);
+
   const checkTrophies = useCallback(() => {
-    setStats((prevStats) => {
+    onUpdateStats((prevStats) => {
       if (!prevStats.trophies || prevStats.trophies.length === 0) return prevStats;
       
       const now = Date.now();
-      let justTurnedIce = false;
-      let justBroken = false;
       let changed = false;
       
       const trophies = prevStats.trophies || [];
@@ -2024,60 +2060,50 @@ export default function App() {
         const earnedTime = new Date(t.earnedDate).getTime();
         const daysSince = (now - earnedTime) / (1000 * 60 * 60 * 24);
         
-        // Only degrade if not already in that state
-        if (t.type === 'golden' && daysSince >= 2) {
+        // Revised thresholds: Golden->Ice (3 days), Ice->Broken (5 days)
+        if (t.type === 'golden' && daysSince >= 3) {
           changed = true;
-          justTurnedIce = true;
           return { ...t, type: 'ice' as const, lastUpdated: new Date().toISOString() };
         }
-        if (t.type === 'ice' && daysSince >= 3) {
+        if (t.type === 'ice' && daysSince >= 5) {
           changed = true;
-          justBroken = true;
           return { ...t, type: 'broken' as const, lastUpdated: new Date().toISOString() };
         }
         return t;
       });
       
       if (changed) {
-        // Notification only for the transition
-        if (settings.badgeSettings?.trophyAlerts) {
-          if (justTurnedIce) {
-            sendNotification('Trophy Alert! 🧊', {
-              body: 'One of your trophies just turned to ICE! Complete a challenge now to save it!',
-              icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
-            });
-          } else if (justBroken) {
-            sendNotification('Trophy Alert! 💔', {
-              body: 'Oh no! A trophy has BROKEN! Don\'t let more break, bro!',
-              icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png'
-            });
-          }
-        }
-
-        if (settings.soundEnabled) {
-          setTimeout(() => {
-            if (justTurnedIce) playTrophySound('ice');
-            else if (justBroken) playTrophySound('broken');
-            setEmergencyActive(true);
-          }, 100);
-        }
         return { ...prevStats, trophies: updatedTrophies };
       }
       return prevStats;
     });
-  }, [settings.badgeSettings, settings.soundEnabled]);
+  }, [onUpdateStats]);
 
   // Trophy degradation logic
   useEffect(() => {
+    if (!isDataReady) return;
     const timer = setTimeout(checkTrophies, 2000); // Check shortly after load
     return () => clearTimeout(timer);
-  }, [checkTrophies]);
+  }, [checkTrophies, isDataReady]);
 
   const handleCompleteChallenge = async (finalProgress?: DailyProgress, isCustomPlanFlag?: boolean) => {
     setEmergencyActive(false);
     const progress = finalProgress || dailyProgress;
     const isCustomPlan = isCustomPlanFlag ?? activeCustomPlan !== null;
-    const trophyLimit = settings.isPro ? 10 : 3;
+
+    // Restoring ice trophies logic
+    onUpdateStats(prev => {
+      const hasIce = prev.trophies.some(t => t.type === 'ice');
+      if (hasIce) {
+        const updated = prev.trophies.map(t => {
+          if (t.type === 'ice') return { ...t, type: 'golden' as const, lastUpdated: new Date().toISOString() };
+          return t;
+        });
+        showToast("TROPHY RESTORED TO GOLD! 🔥", "success");
+        return { ...prev, trophies: updated };
+      }
+      return prev;
+    });
 
     // Calculate how many tasks were actually completed in this session
     const completedTasksList = Object.entries(progress).filter(([key, value]) => 
@@ -2098,12 +2124,10 @@ export default function App() {
     }
 
     const nextCompletionsCount = isCustomPlan ? (dailyProgress.completionsCount || 0) : ((dailyProgress.completionsCount || 0) + 1);
-    const canAwardTrophy = completedTasks > 0 || isCustomPlan; // Custom plans always get a trophy
+    const canAwardTrophy = completedTasks > 0 || isCustomPlan; 
 
-    // Determine trophy type for this session
-    const hasIce = (progress.waterChallengeCount || 0) > 10; // Example condition
-    const currentTrophyType: TrophyType = (earnedTrophyToday || completedTasks >= (settings.pushupsGoal || 5)) ? 'golden' : 'golden';
-    setSessionTrophy(currentTrophyType);
+    // New trophies are always golden
+    setSessionTrophy('golden');
 
     if (canAwardTrophy) {
       if (settings.soundEnabled) {
@@ -3026,6 +3050,7 @@ export default function App() {
                   <SubscriptionScreen 
                     onBack={() => setActiveScreen('home')} 
                     userId={user.uid}
+                    settings={settings}
                     onActivatePro={() => {
                       onUpdateSettings({ isPro: true });
                       showToast("NEXORA PRO ACTIVATED! WELCOME TO THE LEGION! 🔥", 'success');

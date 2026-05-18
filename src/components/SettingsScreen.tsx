@@ -559,32 +559,35 @@ export function SettingsScreen({
         </div>
 
         {/* Sync & Feedback Support */}
-        <div className="glass-card p-6 space-y-4 border-2 border-emerald-400/20 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 bg-emerald-500/5 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-emerald-500/10 transition-colors" />
+        <div className="glass-card p-6 space-y-4 border-2 border-emerald-400 relative overflow-hidden group shadow-xl">
+          <div className="absolute top-0 right-0 p-12 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-500/20 transition-colors" />
           
           <div className="flex items-center gap-3 mb-2 relative z-10">
-            <div className="p-2 bg-emerald-500 text-white rounded-xl shadow-lg">
-              <MessageSquare size={16} />
+            <div className="p-3 bg-emerald-500 text-white rounded-2xl shadow-lg rotate-3 group-hover:rotate-0 transition-transform">
+              <MessageSquare size={24} />
             </div>
             <div>
-              <h3 className="font-black text-emerald-900 uppercase text-sm tracking-tight">HQ Communication</h3>
-              <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Protocol Optimization Link</p>
+              <h3 className="font-black text-emerald-900 uppercase text-lg tracking-tight">FEEDBACK CENTER</h3>
+              <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Transmit Field Reports to HQ</p>
             </div>
           </div>
           
-          <div className="bg-white/40 p-4 rounded-2xl border border-emerald-100/30 relative z-10">
-             <p className="text-[11px] font-bold text-blue-900/60 leading-snug mb-4">
-               Transmitting your field reports helps HQ (The Nexora Team) optimize the system for all warriors. Every insight counts, bro! 📡
+          <div className="bg-white/60 backdrop-blur-sm p-5 rounded-2xl border border-emerald-100/50 relative z-10">
+             <p className="text-xs font-bold text-blue-900/70 leading-relaxed mb-4">
+               Transmitting your feedback helps the Nexora Team optimize the protocol for all warriors. Found a glitch? Want a new feature? Tell us directly, bro! 📡
              </p>
              <button 
                 onClick={() => {
                   vibrate(VIBRATION_PATTERNS.NOTIFY);
                   setShowFeedbackModal(true);
                 }}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-2xl font-black text-[11px] tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl shadow-emerald-200 transition-all active:scale-95"
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-5 rounded-2xl font-black text-sm tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-emerald-200 transition-all active:scale-95 group/btn"
              >
-                <RefreshCw size={18} className="animate-spin-slow" />
-                SYNC SYSTEM FEEDBACK
+                <div className="relative">
+                  <RefreshCw size={20} className="group-hover/btn:rotate-180 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-white rounded-full blur-md opacity-20" />
+                </div>
+                SEND SYSTEM FEEDBACK
              </button>
           </div>
         </div>

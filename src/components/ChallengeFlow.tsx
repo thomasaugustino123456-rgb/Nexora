@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { 
   ChevronRight, Save, LogOut, Pencil, Pen, Palette, PaintBucket, 
@@ -41,15 +41,15 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   const currentIdx = steps.indexOf(step as any);
   const progressLabel = step === 'completion' ? 'Done!' : `Challenge ${currentIdx + 1}/${steps.length}`;
 
-  const saveChallenge = () => {
+  const saveChallenge = useCallback(() => {
     setSettings(prev => ({
       ...prev,
       savedChallengeIds: [...(prev.savedChallengeIds || []), step]
     }));
     showToast('Challenge saved to library!');
-  };
+  }, [setSettings, step, showToast]);
 
-  const nextStep = (data?: any, skipped: boolean = false) => {
+  const nextStep = useCallback((data?: any, skipped: boolean = false) => {
     if (!skipped && settings.soundEnabled) {
       play('continue');
     }
@@ -80,7 +80,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
     } else {
       onFinish(isCustomPlan ? undefined : finalProgress, isCustomPlan);
     }
-  };
+  }, [step, settings.soundEnabled, play, showToast, dailyQuest, dailyProgress, isCustomPlan, setDailyProgress, currentIdx, steps, setStep, onFinish]);
 
   const handleBackClick = () => {
     if (step === 'completion') {
@@ -276,7 +276,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
 
 // --- Steps Components ---
 
-export function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none', settings, play }: { goal: number, onDone: () => void, onSkip: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+export const PushupsStep = React.memo(({ goal, onDone, onSkip, activeSkin = 'none', settings, play }: { goal: number, onDone: () => void, onSkip: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
   const [isReady, setIsReady] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -357,9 +357,9 @@ export function PushupsStep({ goal, onDone, onSkip, activeSkin = 'none', setting
       </div>
     </motion.div>
   );
-}
+});
 
-export function WaterStep({ goal, progress: initialProgress = 0, onUpdate, onContinue, activeSkin = 'none', settings, play }: { goal: number, progress?: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUpdate, onContinue, activeSkin = 'none', settings, play }: { goal: number, progress?: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
   const [localProgress, setLocalProgress] = useState(initialProgress);
   const isFinished = localProgress >= goal;
 
@@ -418,9 +418,9 @@ export function WaterStep({ goal, progress: initialProgress = 0, onUpdate, onCon
       </div>
     </div>
   );
-}
+});
 
-export function BreathingStep({ onDone, activeSkin = 'none', settings, play }: { onDone: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+export const BreathingStep = React.memo(({ onDone, activeSkin = 'none', settings, play }: { onDone: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
   const [phase, setPhase] = useState<'In' | 'Out'>('In');
   const [timer, setTimer] = useState(5);
   const [cycles, setCycles] = useState(0);
@@ -510,9 +510,9 @@ export function BreathingStep({ onDone, activeSkin = 'none', settings, play }: {
       </div>
     </motion.div>
   );
-}
+});
 
-export function DrawingStep({ onFinish, onSave, settings, activeSkin = 'none', play }: { onFinish: (data: string) => void, onSave: (data: string) => void, settings: UserSettings, activeSkin?: string, play: (s: string) => void }) {
+export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin = 'none', play }: { onFinish: (data: string) => void, onSave: (data: string) => void, settings: UserSettings, activeSkin?: string, play: (s: string) => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#3B82F6');
@@ -693,9 +693,9 @@ export function DrawingStep({ onFinish, onSave, settings, activeSkin = 'none', p
       </div>
     </motion.div>
   );
-}
+});
 
-export function CompletionStep({ onFinish, streak, points, xp, coins, showTrophy, settings, play }: { onFinish: () => void, streak: number, points: number, xp: number, coins: number, showTrophy: boolean, settings: UserSettings, play: (s: string) => void }) {
+export const CompletionStep = React.memo(({ onFinish, streak, points, xp, coins, showTrophy, settings, play }: { onFinish: () => void, streak: number, points: number, xp: number, coins: number, showTrophy: boolean, settings: UserSettings, play: (s: string) => void }) => {
   const mascotControls = useAnimationControls();
 
   useEffect(() => {
@@ -801,13 +801,13 @@ export function CompletionStep({ onFinish, streak, points, xp, coins, showTrophy
       </button>
     </motion.div>
   );
-}
+});
 
 // Memory, Football, Bubble, etc. steps omitted for brevity in this single file or can be included if needed.
 // Given the volume, I'll group them but keep code clean.
 // Actually, I'll include the ones already edited in App.tsx.
 
-export function FootballStep({ onFinish, activeSkin = 'none', settings, play }: { onFinish: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+export const FootballStep = React.memo(({ onFinish, activeSkin = 'none', settings, play }: { onFinish: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [score, setScore] = useState(0);
   const [ballsLeft, setBallsLeft] = useState(5);
@@ -1111,9 +1111,9 @@ export function FootballStep({ onFinish, activeSkin = 'none', settings, play }: 
       `}</style>
     </motion.div>
   );
-}
+});
 
-export function BubbleStep({ onFinish, activeSkin = 'none', settings, play }: { onFinish: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings, play }: { onFinish: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
   const [bubbles, setBubbles] = useState<{ id: number; x: number; y: number; size: number; color: string }[]>([]);
   const [poppedCount, setPoppedCount] = useState(0);
   const [hasPlayedFinishSound, setHasPlayedFinishSound] = useState(false);
@@ -1246,9 +1246,9 @@ export function BubbleStep({ onFinish, activeSkin = 'none', settings, play }: { 
       )}
     </motion.div>
   );
-}
+});
 
-export function MemoryStep({ onComplete, activeSkin = 'none', settings, play }: { onComplete: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+export const MemoryStep = React.memo(({ onComplete, activeSkin = 'none', settings, play }: { onComplete: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
   const [cards, setCards] = useState<{ id: number, emoji: string, flipped: boolean, matched: boolean }[]>([]);
   const [flipped, setFlipped] = useState<number[]>([]);
   const [hasPlayedFinishSound, setHasPlayedFinishSound] = useState(false);
@@ -1322,9 +1322,9 @@ export function MemoryStep({ onComplete, activeSkin = 'none', settings, play }: 
       </div>
     </div>
   );
-}
+});
 
-export function GratitudeStep({ onComplete, onSave, showToast, settings, activeSkin = 'none', play }: { onComplete: () => void, onSave: (text: string) => void, showToast: (msg: string, type?: 'success' | 'info' | 'error') => void, settings: UserSettings, activeSkin?: string, play: (s: string) => void }) {
+export const GratitudeStep = React.memo(({ onComplete, onSave, showToast, settings, activeSkin = 'none', play }: { onComplete: () => void, onSave: (text: string) => void, showToast: (msg: string, type?: 'success' | 'info' | 'error') => void, settings: UserSettings, activeSkin?: string, play: (s: string) => void }) => {
   const [text, setText] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -1390,9 +1390,9 @@ export function GratitudeStep({ onComplete, onSave, showToast, settings, activeS
       </div>
     </div>
   );
-}
+});
 
-export function ReactionStep({ onComplete, activeSkin = 'none', settings, play }: { onComplete: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+export const ReactionStep = React.memo(({ onComplete, activeSkin = 'none', settings, play }: { onComplete: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
   const [state, setState] = useState<'waiting' | 'ready' | 'clicked' | 'too-soon' | 'finished'>('waiting');
   const [startTime, setStartTime] = useState(0);
   const [reactionTime, setReactionTime] = useState(0);
@@ -1486,9 +1486,9 @@ export function ReactionStep({ onComplete, activeSkin = 'none', settings, play }
       )}
     </div>
   );
-}
+});
 
-export function MeditationStep({ onDone, activeSkin = 'none', settings, play }: { onDone: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+export const MeditationStep = React.memo(({ onDone, activeSkin = 'none', settings, play }: { onDone: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
   const duration = settings.isPro ? 60 : 30;
   const [timer, setTimer] = useState(duration);
   const [isActive, setIsActive] = useState(false);
@@ -1514,7 +1514,7 @@ export function MeditationStep({ onDone, activeSkin = 'none', settings, play }: 
       setTimeout(onDone, 500); // Auto-finish
     }
     return () => clearInterval(interval);
-  }, [isActive, timer]);
+  }, [isActive, timer, onDone]);
 
   return (
     <motion.div 
@@ -1562,9 +1562,9 @@ export function MeditationStep({ onDone, activeSkin = 'none', settings, play }: 
       </div>
     </motion.div>
   );
-}
+});
 
-export function WritingStep({ onDone, activeSkin = 'none', settings, play }: { onDone: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) {
+export const WritingStep = React.memo(({ onDone, activeSkin = 'none', settings, play }: { onDone: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
   const [text, setText] = useState('');
   const [prompt, setPrompt] = useState('');
   const [isFinished, setIsFinished] = useState(false);
@@ -1627,4 +1627,4 @@ export function WritingStep({ onDone, activeSkin = 'none', settings, play }: { o
       </div>
     </motion.div>
   );
-}
+});

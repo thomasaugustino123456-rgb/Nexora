@@ -6,9 +6,9 @@ interface BreathingMascotProps {
   phase: 'In' | 'Out';
 }
 
-export const BreathingMascot: React.FC<BreathingMascotProps> = ({ className, phase }) => {
+export const BreathingMascot = React.memo(({ className, phase }: BreathingMascotProps) => {
   return (
-    <div className={`bottle-container ${className || ''}`}>
+    <div className={`bottle-container ${className || ''}`} style={{ willChange: 'transform' }}>
       <svg viewBox="0 0 500 650" xmlns="http://www.w3.org/2000/svg" className="w-full h-full overflow-visible">
         <defs>
           <filter id="glow-breath" x="-20%" y="-20%" width="140%" height="140%">
@@ -150,4 +150,4 @@ export const BreathingMascot: React.FC<BreathingMascotProps> = ({ className, pha
       </svg>
     </div>
   );
-};
+});
