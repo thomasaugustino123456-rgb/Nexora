@@ -74,22 +74,38 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
     vibrate(20);
     setIsCreating(true);
     
+    // Safety fallback: if creation takes more than 10 seconds, force cleanup
+    const safetyTimeout = setTimeout(() => {
+      if (isCreating) {
+        setIsCreating(false);
+        onBack();
+      }
+    }, 10000);
+
     // Simulate mascot "creating" the plan
     setTimeout(async () => {
-      const newPlan: CustomPlan = {
-        id: Math.random().toString(36).substr(2, 9),
-        userId: '', // Will be set by App.tsx
-        name,
-        icon: 'Target', // Default for now
-        color: 'bg-blue-500',
-        challenges: selectedChallenges,
-        days: selectedDays,
-        reminderTime: time,
-        reminderTime2: time2,
-        createdAt: new Date().toISOString()
-      };
-      await onSave(newPlan);
-      setIsCreating(false);
+      try {
+        const newPlan: CustomPlan = {
+          id: Math.random().toString(36).substr(2, 9),
+          userId: '', // Will be set by App.tsx
+          name,
+          icon: 'Target', // Default for now
+          color: 'bg-blue-500',
+          challenges: selectedChallenges,
+          days: selectedDays,
+          reminderTime: time,
+          reminderTime2: time2,
+          createdAt: new Date().toISOString()
+        };
+        await onSave(newPlan);
+        clearTimeout(safetyTimeout);
+        setIsCreating(false);
+      } catch (err) {
+        console.error("Plan creation failed:", err);
+        clearTimeout(safetyTimeout);
+        setIsCreating(false);
+        onBack();
+      }
     }, 3000);
   };
 
@@ -137,6 +153,16 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
                 <span className="text-blue-900/60 font-bold text-sm">Almost ready, bro...</span>
               </div>
             </div>
+
+            <button 
+              onClick={() => {
+                setIsCreating(false);
+                onBack();
+              }}
+              className="px-6 py-2 text-[10px] font-black text-blue-900/30 uppercase tracking-[0.2em] hover:text-blue-900/60 transition-colors"
+            >
+              Cancel if stuck, bro
+            </button>
           </div>
         </motion.div>
       </div>

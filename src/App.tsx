@@ -40,6 +40,7 @@ const NotebookScreen = lazy(() => import('./components/NotebookScreen').then(m =
 const ChallengeFlow = lazy(() => import('./components/ChallengeFlow').then(m => ({ default: m.ChallengeFlow })));
 const ArchitectLab = lazy(() => import('./components/ArchitectLab').then(m => ({ default: m.ArchitectLab })));
 const NexusVision = lazy(() => import('./components/NexusVision').then(m => ({ default: m.NexusVision })));
+import { DeepChecklist } from './components/DeepChecklist';
 import { CompletionFlame } from './components/CompletionFlame';
 import { TrophyRewardsScreen } from './components/TrophyRewardsScreen';
 
@@ -1836,12 +1837,17 @@ export default function App() {
       await setDoc(planRef, planWithUser);
       showToast('Plan created successfully!', 'success');
       setActiveScreen('home');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
     } catch (error) {
+      console.error("Plan save error:", error);
+      showToast('Could not save plan bro. Check connection.', 'error');
       try {
         handleFirestoreError(error, OperationType.WRITE, 'customPlans');
       } catch (e) {
         console.error("Firestore error handled:", e);
       }
+      // Force exit builder if it hangs on network
+      setActiveScreen('home');
     }
   };
 
@@ -2087,6 +2093,9 @@ export default function App() {
   }, [checkTrophies, isDataReady]);
 
   const handleCompleteChallenge = async (finalProgress?: DailyProgress, isCustomPlanFlag?: boolean) => {
+    if (settings.soundEnabled) {
+      play('challenge_unlock'); 
+    }
     setEmergencyActive(false);
     const progress = finalProgress || dailyProgress;
     const isCustomPlan = isCustomPlanFlag ?? activeCustomPlan !== null;
@@ -2131,18 +2140,15 @@ export default function App() {
 
     if (canAwardTrophy) {
       if (settings.soundEnabled) {
-        play('challenge_unlock'); 
-        
         setTimeout(() => {
           if (nextCompletionsCount === 1) play('trophy1');
           else if (nextCompletionsCount === 2) play('trophy2');
           else if (nextCompletionsCount === 3) play('trophy3');
           else play('trophy1');
-        }, 150);
+        }, 50);
       }
       setEarnedTrophyToday(true);
     } else {
-      if (settings.soundEnabled) play('continue');
       setEarnedTrophyToday(false);
     }
 
@@ -2179,7 +2185,16 @@ export default function App() {
       }
     }
 
-    let finalStreakAfterUpdate = stats.streak || 0;
+    // Pre-calculate final streak for sync display
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    let baseStreakVal = (stats.streak || 0);
+    if (stats.lastCompletedDate !== today && stats.lastCompletedDate !== yesterdayStr) {
+      baseStreakVal = 0;
+    }
+    const finalStreakValue = baseStreakVal + 1;
 
     setStats((prevStats) => {
       const oldLevel = prevStats.level || 1;
@@ -2189,23 +2204,20 @@ export default function App() {
       let newLastCompletedDate = prevStats.lastCompletedDate;
       let streakBonusPoints = 0;
 
-      // Streak Logic: Now more aggressive like requested (increments per session if substantial)
-      // Simplified Streak Logic
-      let baseStreak = (prevStats.streak || 0);
-      if (prevStats.lastCompletedDate !== today && prevStats.lastCompletedDate !== getYesterday()) {
-        baseStreak = 0;
+      // Streak Logic
+      let currentBaseStreak = (prevStats.streak || 0);
+      if (prevStats.lastCompletedDate !== today && prevStats.lastCompletedDate !== yesterdayStr) {
+        currentBaseStreak = 0;
       }
-      finalStreak = baseStreak + 1;
+      finalStreak = currentBaseStreak + 1;
 
-        newBestStreak = Math.max(prevStats.bestStreak || 0, finalStreak);
-        if (prevStats.lastCompletedDate !== today) {
-          newTotalCompletedDays = (prevStats.totalCompletedDays || 0) + 1;
-        }
-        newLastCompletedDate = today;
-        const hasDoublePoints = settings.purchasedItems?.includes('double-points');
-        streakBonusPoints = hasDoublePoints ? 10 : 5;
-
-      finalStreakAfterUpdate = finalStreak; // Pass to closure for Flame screen
+      newBestStreak = Math.max(prevStats.bestStreak || 0, finalStreak);
+      if (prevStats.lastCompletedDate !== today) {
+        newTotalCompletedDays = (prevStats.totalCompletedDays || 0) + 1;
+      }
+      newLastCompletedDate = today;
+      const hasDoublePoints = settings.purchasedItems?.includes('double-points');
+      streakBonusPoints = hasDoublePoints ? 10 : 5;
 
       const newPoints = (prevStats.totalPoints || 0) + pointsToAdd + streakBonusPoints;
       const newXP = (prevStats.xp || 0) + xpToAdd;
@@ -2294,11 +2306,11 @@ export default function App() {
     
     // Set data for the Flame Screen and trigger it
     setSessionXP(xpToAdd);
-    setSessionStreak(finalStreakAfterUpdate || stats.streak || 0);
+    setSessionStreak(finalStreakValue);
 
     // Streamline transition: CompletionFlame -> TrophyRewardsScreen -> Home
     setShowCompletionFlame(true);
-    setActiveScreen('home'); // Change to home or a state that hides ChallengeFlow
+    setActiveScreen('home'); 
     setChallengeStep('home' as any); 
     setShowCoinAnimation(true);
   };
@@ -2866,6 +2878,12 @@ export default function App() {
                   onOpenNexusVision={() => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
                     setActiveScreen('nexus-vision');
+                  }}
+                  onSelectTask={(taskId) => {
+                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                    setActiveCustomPlan(null);
+                    setChallengeStep(taskId as any);
+                    setActiveScreen('challenge');
                   }}
                   fcmToken={fcmToken}
                   setupFCM={setupFCM}

@@ -35,9 +35,21 @@ export const Mascot = React.memo(({
   const lastStateUpdateRef = useRef(0);
   const { play } = useSound();
   const controls = useAnimation();
+  const [isVisible, setIsVisible] = useState(true);
 
-  // Natural Blinking Logic
+  // Intersection Observer to stop animations when not visible
   useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsVisible(entry.isIntersecting);
+    }, { threshold: 0.1 });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Natural Blinking Logic - Throttled when not visible
+  useEffect(() => {
+    if (!isVisible) return;
     const blinkInterval = setInterval(() => {
       if (Math.random() > 0.3) {
         setIsBlinking(true);
@@ -45,10 +57,10 @@ export const Mascot = React.memo(({
       }
     }, 4000);
     return () => clearInterval(blinkInterval);
-  }, []);
+  }, [isVisible]);
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !isVisible) return;
     const now = Date.now();
     if (now - lastStateUpdateRef.current < 32) return; // ~30fps throttle for smoothness + performance
     
@@ -178,11 +190,11 @@ export const Mascot = React.memo(({
         <ellipse 
           cx="250" cy="330" rx="220" ry="220" 
           fill={colors.aura} 
-          className="animate-mascot-aura"
+          className={isVisible ? "animate-mascot-aura" : ""}
         />
 
         {/* Neural Link Connection Effect for neural_bio theme */}
-        {theme === 'neural_bio' && (
+        {theme === 'neural_bio' && isVisible && (
           <g opacity={0.4}>
             {[1, 2, 3].map((i) => (
               <motion.ellipse
@@ -200,12 +212,12 @@ export const Mascot = React.memo(({
         <ellipse 
           cx="250" cy="520" rx={150} ry={15} 
           fill="#000" 
-          className="animate-mascot-shadow"
+          className={isVisible ? "animate-mascot-shadow" : ""}
         />
 
         {/* Body Group with Squash/Stretch - CSS classes for steady animation */}
         <motion.g animate={isSitting ? { y: 20, scaleY: 0.85 } : { y: 0, scaleY: 1 }}>
-          <g className={!isSitting ? "animate-mascot-breathe" : ""}>
+          <g className={(!isSitting && isVisible) ? "animate-mascot-breathe" : ""}>
             {/* LIQUID LAYER */}
             <g clipPath="url(#bottle-mask-main)">
               <rect x="0" y="0" width="500" height="600" fill={theme === 'obsidian' ? '#0f172a' : '#F0FAFF'} fillOpacity="0.2" />
@@ -213,7 +225,7 @@ export const Mascot = React.memo(({
               {/* Liquid Group with Ambient Slosh */}
               <g transform={`translate(0, ${isBoiling ? -5 : 230})`}>
                 {/* Seamless River Water Animation (CPU Optimized) */}
-                <g className="animate-wave-mascot">
+                <g className={isVisible ? "animate-wave-mascot" : ""}>
                   <path 
                     d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 T 1000,20 L 1000,600 L 0,600 Z" 
                     fill="url(#water-grad-main)" 
@@ -261,13 +273,13 @@ export const Mascot = React.memo(({
               d="M 120,210 C 100,150 110,120 120,110 C 140,110 160,150 180,180 Z" 
               fill="url(#glass-edge-main)" 
               fillOpacity="0.8"
-              className={isAngry ? "" : "animate-mascot-ear-left"}
+              className={(isAngry || !isVisible) ? "" : "animate-mascot-ear-left"}
             />
             <path 
               d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" 
               fill="url(#glass-edge-main)" 
               fillOpacity="0.8"
-              className={isAngry ? "" : "animate-mascot-ear-right"}
+              className={(isAngry || !isVisible) ? "" : "animate-mascot-ear-right"}
             />
           </g>
 
@@ -278,11 +290,11 @@ export const Mascot = React.memo(({
           {/* ARMS */}
           <motion.ellipse 
             cx="60" cy="310" rx="15" ry="30" fill={theme === 'obsidian' ? '#1e293b' : '#B3E5FC'} stroke={colors.edge} strokeWidth="2"
-            animate={{ rotate: isAngry ? -60 : -30, x: isAngry ? -5 : 0 }} 
+            animate={isVisible ? { rotate: isAngry ? -60 : -30, x: isAngry ? -5 : 0 } : {}} 
           />
           <motion.ellipse 
             cx="440" cy="310" rx="15" ry="30" fill={theme === 'obsidian' ? '#1e293b' : '#B3E5FC'} stroke={colors.edge} strokeWidth="2"
-            animate={{ rotate: isAngry ? 60 : 30, x: isAngry ? 5 : 0 }} 
+            animate={isVisible ? { rotate: isAngry ? 60 : 30, x: isAngry ? 5 : 0 } : {}} 
           />
 
           {/* FACIAL FEATURES */}

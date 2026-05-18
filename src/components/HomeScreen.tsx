@@ -14,6 +14,8 @@ import { GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
 import { MascotAIWrapper } from './SuspenseWrappers';
 import { formatDistanceToNow } from 'date-fns';
 
+import { DeepChecklist } from './DeepChecklist';
+
 function CountdownToMidnight() {
   const [timeLeft, setTimeLeft] = useState('');
 
@@ -88,7 +90,8 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
   setupFCM: () => void,
   fcmError: string | null,
   showToast?: (m: string, t: any) => void,
-  onArchiveChallenge?: (id: string) => void
+  onArchiveChallenge?: (id: string) => void,
+  onSelectTask: (taskId: string) => void
 }) => {
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
@@ -368,7 +371,14 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
         if (layoutConfig.hideCustomPlans) return null;
         return (
           <div key="plans" className="space-y-4 pt-4 transition-colors">
-            <div className="flex items-center justify-between">
+            <DeepChecklist 
+              progress={dailyProgress}
+              stats={stats}
+              settings={settings}
+              onSelectTask={onSelectTask}
+            />
+            
+            <div className="flex items-center justify-between mt-8">
               <h3 className="text-[10px] font-black text-blue-900/40 uppercase tracking-[0.2em]">Custom Protocol Library</h3>
               <button 
                 onClick={onOpenPlanBuilder}
