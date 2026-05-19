@@ -87,13 +87,56 @@ export function useNexoraData(
 
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
+        const prevUserId = localStorage.getItem("nexora_cached_user");
+        if (prevUserId !== currentUser.uid) {
+          Object.keys(localStorage).forEach((key) => {
+            if (key.startsWith("nexora_") && key !== "nexora_cached_user") {
+              localStorage.removeItem(key);
+            }
+          });
+          setSettings(DEFAULT_SETTINGS);
+          setStats(DEFAULT_STATS);
+          setDailyProgress({
+            date: today,
+            completed: false,
+            pushupsDone: false,
+            waterDrank: 0,
+            breathingDone: false,
+            drawingDone: false,
+            footballDone: false,
+            bubblesDone: false,
+            completionsCount: 0,
+          });
+          setNeedsOnboarding(true);
+          dataLoadedFromFirestore.current = false;
+          setIsDataReady(false);
+          setLoading(true);
+        }
         localStorage.setItem("nexora_cached_user", currentUser.uid);
         setUser(currentUser);
       } else {
-        localStorage.removeItem("nexora_cached_user");
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith("nexora_")) {
+            localStorage.removeItem(key);
+          }
+        });
+        setSettings(DEFAULT_SETTINGS);
+        setStats(DEFAULT_STATS);
+        setDailyProgress({
+          date: today,
+          completed: false,
+          pushupsDone: false,
+          waterDrank: 0,
+          breathingDone: false,
+          drawingDone: false,
+          footballDone: false,
+          bubblesDone: false,
+          completionsCount: 0,
+        });
         setUser(null);
         setIsDataReady(false);
         dataLoadedFromFirestore.current = false;
+        setNeedsOnboarding(false);
         setLoading(false);
       }
     });

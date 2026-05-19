@@ -3210,27 +3210,58 @@ export default function App() {
     if (!user) return;
     vibrate(VIBRATION_PATTERNS.ERROR);
 
-    try {
-      // 1. Delete user data from Firestore
-      const userRef = doc(db, "users", user.uid);
-      await deleteDoc(userRef);
+    const performDeletion = async () => {
+      try {
+        const userId = user.uid;
 
-      // 2. Delete the auth account
-      await deleteUser(user);
+        // Best effort delete known subcollections & root data
+        try {
+          const todayStr = new Date().toISOString().split("T")[0];
+          await deleteDoc(doc(db, "users", userId, "progress", todayStr));
+          await deleteDoc(doc(db, "leaderboard", userId));
+        } catch (e) {
+          console.warn("Failed to delete some associated documents", e);
+        }
 
-      // Hook handles state cleanup via onAuthStateChanged
-      showToast("Account protocol terminated. Farewell, bro.", "success");
-    } catch (error: any) {
-      console.error("Delete Error:", error);
-      if (error.code === "auth/requires-recent-login") {
+        // 1. Delete user data from Firestore
+        await deleteDoc(doc(db, "users", userId));
+
+        // 2. Delete the auth account
+        await deleteUser(user);
+
+        showToast("Account protocol terminated. Farewell, bro.", "success");
+      } catch (error: any) {
+        console.error("Delete Error:", error);
+        if (error.code === "auth/requires-recent-login") {
+          showToast(
+            "Security Protocol: Re-authentication needed. Logging out...",
+            "error",
+          );
+          setTimeout(() => signOut(auth), 2000);
+        } else {
+          showToast("Termination failed. System error.", "error");
+        }
+      }
+    };
+
+    // Attempt Google re-authentication if they use Google provider.
+    const isGoogle = user.providerData.some(
+      (p) => p.providerId === "google.com",
+    );
+    if (isGoogle) {
+      try {
+        await reauthenticateWithPopup(user, new GoogleAuthProvider());
+      } catch (reauthError) {
+        console.warn("Re-auth failed or cancelled", reauthError);
         showToast(
-          "Security Protocol: Re-authentication required. Please logout and login again.",
+          "Action cancelled. Please sign in again to delete your account.",
           "error",
         );
-      } else {
-        showToast("Termination failed. System error.", "error");
+        return;
       }
     }
+
+    await performDeletion();
   };
 
   const getYesterday = () => {
