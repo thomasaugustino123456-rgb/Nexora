@@ -3010,28 +3010,31 @@ export default function App() {
     const wasAlreadyCompletedToday = stats.lastCompletedDate === today;
     let finalStreakShow = currentActualStreak;
 
-    // Logic: If last completed was yesterday, increment. If today, stay. If before yesterday, reset to 1.
-    if (!wasAlreadyCompletedToday) {
-      if (stats.lastCompletedDate === yesterdayStr) {
-        finalStreakShow = currentActualStreak + 1;
-      } else {
-        finalStreakShow = 1;
-      }
+    // Logic requested by user: unconditionally increase streak EVERY time a challenge is finished,
+    // but still reset to 1 if a full day was missed.
+    if (
+      stats.lastCompletedDate === today ||
+      stats.lastCompletedDate === yesterdayStr
+    ) {
+      finalStreakShow = currentActualStreak + 1;
+    } else {
+      finalStreakShow = 1;
     }
 
     setSessionStreak(finalStreakShow);
-    setIsNewStreak(!wasAlreadyCompletedToday);
+    setIsNewStreak(true); // Always treat it as a new streak bump for the animation since it always increases now
 
     setStats((prevStats) => {
       const oldLevel = prevStats.level || 1;
       let streakToSave = prevStats.streak || 0;
 
-      if (prevStats.lastCompletedDate !== today) {
-        if (prevStats.lastCompletedDate === yesterdayStr) {
-          streakToSave = (prevStats.streak || 0) + 1;
-        } else {
-          streakToSave = 1;
-        }
+      if (
+        prevStats.lastCompletedDate === today ||
+        prevStats.lastCompletedDate === yesterdayStr
+      ) {
+        streakToSave = (prevStats.streak || 0) + 1;
+      } else {
+        streakToSave = 1;
       }
 
       const newBestStreak = Math.max(prevStats.bestStreak || 0, streakToSave);

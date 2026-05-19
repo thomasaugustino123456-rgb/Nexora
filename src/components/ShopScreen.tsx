@@ -1,67 +1,288 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Star } from 'lucide-react';
-import { ShopItem } from '../types';
+import React from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft, Star } from "lucide-react";
+import { ShopItem } from "../types";
 
 export const SHOP_ITEMS: ShopItem[] = [
   // Power-ups
-  { id: 'streak-protection', name: 'Streak Shield', description: 'Protects your streak for 24 hours.', price: 10, coinPrice: 150, effect: 'streak-protection', icon: '🛡️' },
-  { id: 'double-points', name: 'Double XP', description: 'Earn 2x points for all challenges today.', price: 20, coinPrice: 300, effect: 'double-points', icon: '⚡' },
-  
+  {
+    id: "streak-protection",
+    name: "Streak Shield",
+    description: "Protects your streak for 24 hours.",
+    price: 3,
+    coinPrice: 150,
+    effect: "streak-protection",
+    icon: "🛡️",
+  },
+  {
+    id: "double-points",
+    name: "Double XP",
+    description: "Earn 2x points for all challenges today.",
+    price: 5,
+    coinPrice: 300,
+    effect: "double-points",
+    icon: "⚡",
+  },
+
   // Mascot Skins (Hats/Accessories)
-  { id: 'skin-crown', name: 'Royal Crown', description: 'A majestic crown for your mascot.', price: 50, coinPrice: 750, effect: 'skin', icon: '👑' },
-  { id: 'skin-cool', name: 'Cool Shades', description: 'Some stylish sunglasses.', price: 25, coinPrice: 375, effect: 'skin', icon: '🕶️' },
-  { id: 'skin-wizard', name: 'Wizard Hat', description: 'A magical hat for a magical bottle.', price: 60, coinPrice: 900, effect: 'skin', icon: '🧙' },
-  { id: 'skin-artist', name: 'Artist Beret', description: 'For the creative souls.', price: 35, coinPrice: 525, effect: 'skin', icon: '🎨' },
-  { id: 'skin-viking', name: 'Viking Helm', description: 'For the warriors of consistency.', price: 45, coinPrice: 675, effect: 'skin', icon: '🪖' },
-  { id: 'skin-space', name: 'Space Helmet', description: 'To the moon with your habits!', price: 80, coinPrice: 1200, effect: 'skin', icon: '👨‍🚀' },
-  { id: 'skin-ninja', name: 'Ninja Mask', description: 'Silent but consistent.', price: 40, coinPrice: 600, effect: 'skin', icon: '🥷' },
-  { id: 'skin-detective', name: 'Detective Hat', description: 'Solving the mystery of productivity.', price: 30, coinPrice: 450, effect: 'skin', icon: '🕵️' },
-  
+  {
+    id: "skin-crown",
+    name: "Royal Crown",
+    description: "A majestic crown for your mascot.",
+    price: 15,
+    coinPrice: 750,
+    effect: "skin",
+    icon: "👑",
+  },
+  {
+    id: "skin-cool",
+    name: "Cool Shades",
+    description: "Some stylish sunglasses.",
+    price: 7,
+    coinPrice: 375,
+    effect: "skin",
+    icon: "🕶️",
+  },
+  {
+    id: "skin-wizard",
+    name: "Wizard Hat",
+    description: "A magical hat for a magical bottle.",
+    price: 18,
+    coinPrice: 900,
+    effect: "skin",
+    icon: "🧙",
+  },
+  {
+    id: "skin-artist",
+    name: "Artist Beret",
+    description: "For the creative souls.",
+    price: 10,
+    coinPrice: 525,
+    effect: "skin",
+    icon: "🎨",
+  },
+  {
+    id: "skin-viking",
+    name: "Viking Helm",
+    description: "For the warriors of consistency.",
+    price: 14,
+    coinPrice: 675,
+    effect: "skin",
+    icon: "🪖",
+  },
+  {
+    id: "skin-space",
+    name: "Space Helmet",
+    description: "To the moon with your habits!",
+    price: 24,
+    coinPrice: 1200,
+    effect: "skin",
+    icon: "👨‍🚀",
+  },
+  {
+    id: "skin-ninja",
+    name: "Ninja Mask",
+    description: "Silent but consistent.",
+    price: 12,
+    coinPrice: 600,
+    effect: "skin",
+    icon: "🥷",
+  },
+  {
+    id: "skin-detective",
+    name: "Detective Hat",
+    description: "Solving the mystery of productivity.",
+    price: 9,
+    coinPrice: 450,
+    effect: "skin",
+    icon: "🕵️",
+  },
+
   // New utility items
-  { id: 'plant-recovery', name: 'Nano Fertilizer', description: 'Instantly restores 25% plant health.', price: 15, coinPrice: 200, effect: 'power-up', icon: '🧪' },
-  { id: 'xp-boost', name: 'XP Overdrive', description: 'Triple XP for the next 3 challenges.', price: 45, coinPrice: 650, effect: 'double-points', icon: '🚀' },
-  { id: 'coin-magnet', name: 'Coin Magnet', description: 'Earn 30% more coins today.', price: 25, coinPrice: 400, effect: 'power-up', icon: '🧲' },
-  
+  {
+    id: "plant-recovery",
+    name: "Nano Fertilizer",
+    description: "Instantly restores 25% plant health.",
+    price: 4,
+    coinPrice: 200,
+    effect: "power-up",
+    icon: "🧪",
+  },
+  {
+    id: "xp-boost",
+    name: "XP Overdrive",
+    description: "Triple XP for the next 3 challenges.",
+    price: 13,
+    coinPrice: 650,
+    effect: "double-points",
+    icon: "🚀",
+  },
+  {
+    id: "coin-magnet",
+    name: "Coin Magnet",
+    description: "Earn 30% more coins today.",
+    price: 7,
+    coinPrice: 400,
+    effect: "power-up",
+    icon: "🧲",
+  },
+
   // Sound packs
-  { id: 'sound-dog', name: 'Dog Sound Pack', description: 'Make your mascot bark!', price: 10, coinPrice: 150, effect: 'sound-pack', icon: '🐶' },
-  { id: 'music-fanfare', name: 'Medieval Fanfare', description: 'A royal announcement!', price: 5, coinPrice: 75, effect: 'music', icon: '🎺' },
-  { id: 'music-funkee', name: 'Funkee Monkeee', description: 'Get groovy!', price: 5, coinPrice: 75, effect: 'music', icon: '🐒' },
-  { id: 'music-triplets', name: 'Funky Triplets', description: 'A rhythmic delight.', price: 5, coinPrice: 75, effect: 'music', icon: '🥁' },
-  { id: 'music-forest', name: 'Forest Treasure', description: 'A magical forest journey.', price: 5, coinPrice: 75, effect: 'music', icon: '🌲' },
-  { id: 'music-cbpd', name: 'CBPD Beat', description: 'A cool urban beat.', price: 5, coinPrice: 75, effect: 'music', icon: '🎧' },
-  { id: 'music-nba', name: 'NBA Type Beat', description: 'Ready for the game!', price: 5, coinPrice: 75, effect: 'music', icon: '🏀' },
-  { id: 'music-complicated', name: 'Complicated', description: 'A complex melody.', price: 5, coinPrice: 75, effect: 'music', icon: '🧩' },
+  {
+    id: "sound-dog",
+    name: "Dog Sound Pack",
+    description: "Make your mascot bark!",
+    price: 3,
+    coinPrice: 150,
+    effect: "sound-pack",
+    icon: "🐶",
+  },
+  {
+    id: "music-fanfare",
+    name: "Medieval Fanfare",
+    description: "A royal announcement!",
+    price: 2,
+    coinPrice: 75,
+    effect: "music",
+    icon: "🎺",
+  },
+  {
+    id: "music-funkee",
+    name: "Funkee Monkeee",
+    description: "Get groovy!",
+    price: 2,
+    coinPrice: 75,
+    effect: "music",
+    icon: "🐒",
+  },
+  {
+    id: "music-triplets",
+    name: "Funky Triplets",
+    description: "A rhythmic delight.",
+    price: 2,
+    coinPrice: 75,
+    effect: "music",
+    icon: "🥁",
+  },
+  {
+    id: "music-forest",
+    name: "Forest Treasure",
+    description: "A magical forest journey.",
+    price: 2,
+    coinPrice: 75,
+    effect: "music",
+    icon: "🌲",
+  },
+  {
+    id: "music-cbpd",
+    name: "CBPD Beat",
+    description: "A cool urban beat.",
+    price: 2,
+    coinPrice: 75,
+    effect: "music",
+    icon: "🎧",
+  },
+  {
+    id: "music-nba",
+    name: "NBA Type Beat",
+    description: "Ready for the game!",
+    price: 2,
+    coinPrice: 75,
+    effect: "music",
+    icon: "🏀",
+  },
+  {
+    id: "music-complicated",
+    name: "Complicated",
+    description: "A complex melody.",
+    price: 2,
+    coinPrice: 75,
+    effect: "music",
+    icon: "🧩",
+  },
 
   // Gifts
-  { id: 'gift-mystery', name: 'Mystery Gift', description: 'A surprise gift box! (Buy one, get one free!)', price: 15, coinPrice: 225, effect: 'gift', icon: '🎁' },
-  { id: 'gift-premium', name: 'Premium Gift', description: 'A high-value surprise for your library.', price: 30, coinPrice: 450, effect: 'gift', icon: '💝' },
-  { id: 'gift-gold', name: 'Golden Chest', description: 'Contains legendary items and rare skins.', price: 50, coinPrice: 750, effect: 'gift', icon: '💰' },
-  { id: 'gift-lucky', name: 'Lucky Clover', description: 'A small gift with a big surprise potential.', price: 10, coinPrice: 150, effect: 'gift', icon: '🍀' },
-  { id: 'gift-party', name: 'Party Popper', description: 'Celebrate your progress with a surprise!', price: 12, coinPrice: 180, effect: 'gift', icon: '🎉' },
-  { id: 'gift-diamond', name: 'Diamond Box', description: 'The ultimate gift for the most dedicated users.', price: 100, coinPrice: 1500, effect: 'gift', icon: '💎' },
+  {
+    id: "gift-mystery",
+    name: "Mystery Gift",
+    description: "A surprise gift box! (Buy one, get one free!)",
+    price: 5,
+    coinPrice: 225,
+    effect: "gift",
+    icon: "🎁",
+  },
+  {
+    id: "gift-premium",
+    name: "Premium Gift",
+    description: "A high-value surprise for your library.",
+    price: 9,
+    coinPrice: 450,
+    effect: "gift",
+    icon: "💝",
+  },
+  {
+    id: "gift-gold",
+    name: "Golden Chest",
+    description: "Contains legendary items and rare skins.",
+    price: 15,
+    coinPrice: 750,
+    effect: "gift",
+    icon: "💰",
+  },
+  {
+    id: "gift-lucky",
+    name: "Lucky Clover",
+    description: "A small gift with a big surprise potential.",
+    price: 3,
+    coinPrice: 150,
+    effect: "gift",
+    icon: "🍀",
+  },
+  {
+    id: "gift-party",
+    name: "Party Popper",
+    description: "Celebrate your progress with a surprise!",
+    price: 4,
+    coinPrice: 180,
+    effect: "gift",
+    icon: "🎉",
+  },
+  {
+    id: "gift-diamond",
+    name: "Diamond Box",
+    description: "The ultimate gift for the most dedicated users.",
+    price: 30,
+    coinPrice: 1500,
+    effect: "gift",
+    icon: "💎",
+  },
 ];
 
-export function ShopScreen({ 
-  streak, 
+export function ShopScreen({
+  streak,
   coins,
-  purchasedItems, 
+  purchasedItems,
   isPro,
-  onBuy, 
-  onBack 
-}: { 
-  streak: number; 
+  onBuy,
+  onBack,
+}: {
+  streak: number;
   coins: number;
-  purchasedItems: string[]; 
+  purchasedItems: string[];
   isPro: boolean;
-  onBuy: (item: ShopItem, currency: 'streak' | 'coins') => void; 
-  onBack: () => void; 
+  onBuy: (item: ShopItem, currency: "streak" | "coins") => void;
+  onBack: () => void;
 }) {
   const featuredItem = SHOP_ITEMS[0];
-  const powerUps = SHOP_ITEMS.filter(item => item.effect === 'streak-protection' || item.effect === 'double-points');
-  const musicSounds = SHOP_ITEMS.filter(item => item.effect === 'music' || item.effect === 'sound-pack');
-  const skins = SHOP_ITEMS.filter(item => item.effect === 'skin');
-  const gifts = SHOP_ITEMS.filter(item => item.effect === 'gift');
+  const powerUps = SHOP_ITEMS.filter(
+    (item) =>
+      item.effect === "streak-protection" || item.effect === "double-points",
+  );
+  const musicSounds = SHOP_ITEMS.filter(
+    (item) => item.effect === "music" || item.effect === "sound-pack",
+  );
+  const skins = SHOP_ITEMS.filter((item) => item.effect === "skin");
+  const gifts = SHOP_ITEMS.filter((item) => item.effect === "gift");
 
   return (
     <motion.div
@@ -71,7 +292,10 @@ export function ShopScreen({
       className="p-6 pb-24 max-w-2xl mx-auto"
     >
       <div className="flex items-center flex-wrap gap-4 mb-8">
-        <button onClick={onBack} className="p-2 rounded-full hover:bg-blue-100 transition-colors">
+        <button
+          onClick={onBack}
+          className="p-2 rounded-full hover:bg-blue-100 transition-colors"
+        >
           <ArrowLeft size={24} className="text-blue-900" />
         </button>
         <h1 className="text-3xl font-black text-blue-900">Nexora Shop</h1>
@@ -91,7 +315,9 @@ export function ShopScreen({
 
       {/* Featured Item */}
       <div className="mb-10">
-        <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Featured Deal</h2>
+        <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">
+          Featured Deal
+        </h2>
         <div className="relative overflow-hidden glass-card p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-2 border-blue-200">
           <div className="absolute top-0 right-0 p-2 bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest rounded-bl-xl">
             Hot!
@@ -99,23 +325,43 @@ export function ShopScreen({
           <div className="flex items-center gap-6">
             <div className="text-6xl drop-shadow-lg">{featuredItem.icon}</div>
             <div className="flex-1">
-              <h3 className="text-xl font-black text-blue-900">{featuredItem.name}</h3>
-              <p className="text-sm text-blue-900/60 mb-4">{featuredItem.description}</p>
+              <h3 className="text-xl font-black text-blue-900">
+                {featuredItem.name}
+              </h3>
+              <p className="text-sm text-blue-900/60 mb-4">
+                {featuredItem.description}
+              </p>
               <div className="flex gap-2">
-                <button 
-                  onClick={() => onBuy(featuredItem, 'streak')}
-                  disabled={(!(isPro && featuredItem.effect === 'music') && streak < featuredItem.price) || purchasedItems.includes(featuredItem.id)}
+                <button
+                  onClick={() => onBuy(featuredItem, "streak")}
+                  disabled={
+                    (!(isPro && featuredItem.effect === "music") &&
+                      streak < featuredItem.price) ||
+                    purchasedItems.includes(featuredItem.id)
+                  }
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-black transition-all active:scale-95 shadow-lg shadow-blue-200 disabled:opacity-50 text-xs"
                 >
-                  {purchasedItems.includes(featuredItem.id) ? 'Purchased' : (isPro && featuredItem.effect === 'music') ? 'Free' : `${featuredItem.price} Streak`}
+                  {purchasedItems.includes(featuredItem.id)
+                    ? "Purchased"
+                    : isPro && featuredItem.effect === "music"
+                      ? "Free"
+                      : `${featuredItem.price} Streak`}
                 </button>
                 {featuredItem.coinPrice && (
-                  <button 
-                    onClick={() => onBuy(featuredItem, 'coins')}
-                    disabled={(!(isPro && featuredItem.effect === 'music') && coins < featuredItem.coinPrice) || purchasedItems.includes(featuredItem.id)}
+                  <button
+                    onClick={() => onBuy(featuredItem, "coins")}
+                    disabled={
+                      (!(isPro && featuredItem.effect === "music") &&
+                        coins < featuredItem.coinPrice) ||
+                      purchasedItems.includes(featuredItem.id)
+                    }
                     className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-xl font-black transition-all active:scale-95 shadow-lg shadow-yellow-200 disabled:opacity-50 text-xs"
                   >
-                    {purchasedItems.includes(featuredItem.id) ? 'Purchased' : (isPro && featuredItem.effect === 'music') ? 'Free' : `${featuredItem.coinPrice} Coins`}
+                    {purchasedItems.includes(featuredItem.id)
+                      ? "Purchased"
+                      : isPro && featuredItem.effect === "music"
+                        ? "Free"
+                        : `${featuredItem.coinPrice} Coins`}
                   </button>
                 )}
               </div>
@@ -127,37 +373,77 @@ export function ShopScreen({
       {/* Categories */}
       <div className="space-y-12">
         <section>
-          <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Power-Ups</h2>
+          <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">
+            Power-Ups
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {powerUps.map((item) => (
-              <ShopItemCard key={item.id} item={item} streak={streak} coins={coins} isPro={isPro} purchasedItems={purchasedItems} onBuy={onBuy} />
+              <ShopItemCard
+                key={item.id}
+                item={item}
+                streak={streak}
+                coins={coins}
+                isPro={isPro}
+                purchasedItems={purchasedItems}
+                onBuy={onBuy}
+              />
             ))}
           </div>
         </section>
 
         <section>
-          <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Music & Sound Packs</h2>
+          <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">
+            Music & Sound Packs
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {musicSounds.map((item) => (
-              <ShopItemCard key={item.id} item={item} streak={streak} coins={coins} isPro={isPro} purchasedItems={purchasedItems} onBuy={onBuy} />
+              <ShopItemCard
+                key={item.id}
+                item={item}
+                streak={streak}
+                coins={coins}
+                isPro={isPro}
+                purchasedItems={purchasedItems}
+                onBuy={onBuy}
+              />
             ))}
           </div>
         </section>
 
         <section>
-          <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Mascot Styles</h2>
+          <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">
+            Mascot Styles
+          </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {skins.map((item) => (
-              <ShopItemCard key={item.id} item={item} streak={streak} coins={coins} isPro={isPro} purchasedItems={purchasedItems} onBuy={onBuy} />
+              <ShopItemCard
+                key={item.id}
+                item={item}
+                streak={streak}
+                coins={coins}
+                isPro={isPro}
+                purchasedItems={purchasedItems}
+                onBuy={onBuy}
+              />
             ))}
           </div>
         </section>
 
         <section>
-          <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Mystery Gifts</h2>
+          <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">
+            Mystery Gifts
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {gifts.map((item) => (
-              <ShopItemCard key={item.id} item={item} streak={streak} coins={coins} isPro={isPro} purchasedItems={purchasedItems} onBuy={onBuy} />
+              <ShopItemCard
+                key={item.id}
+                item={item}
+                streak={streak}
+                coins={coins}
+                isPro={isPro}
+                purchasedItems={purchasedItems}
+                onBuy={onBuy}
+              />
             ))}
           </div>
         </section>
@@ -166,34 +452,75 @@ export function ShopScreen({
   );
 }
 
-function ShopItemCard({ item, streak, coins, isPro, purchasedItems, onBuy }: { item: ShopItem, streak: number, coins: number, isPro: boolean, purchasedItems: string[], onBuy: (item: ShopItem, currency: 'streak' | 'coins') => void }) {
-  const isFreeForPro = isPro && item.effect === 'music';
+function ShopItemCard({
+  item,
+  streak,
+  coins,
+  isPro,
+  purchasedItems,
+  onBuy,
+}: {
+  item: ShopItem;
+  streak: number;
+  coins: number;
+  isPro: boolean;
+  purchasedItems: string[];
+  onBuy: (item: ShopItem, currency: "streak" | "coins") => void;
+}) {
+  const isFreeForPro = isPro && item.effect === "music";
 
   return (
-    <div key={item.id} className="glass-card p-5 flex items-center gap-4 hover:border-blue-300 transition-colors">
+    <div
+      key={item.id}
+      className="glass-card p-5 flex items-center gap-4 hover:border-blue-300 transition-colors"
+    >
       <div className="text-4xl">{item.icon}</div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-bold text-blue-900 truncate">{item.name}</h3>
-          {item.effect === 'gift' && <span className="px-2 py-0.5 bg-purple-100 text-purple-600 text-[8px] font-black uppercase rounded-full">Surprise</span>}
-          {isFreeForPro && <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-[8px] font-black uppercase rounded-full">Pro Free</span>}
+          {item.effect === "gift" && (
+            <span className="px-2 py-0.5 bg-purple-100 text-purple-600 text-[8px] font-black uppercase rounded-full">
+              Surprise
+            </span>
+          )}
+          {isFreeForPro && (
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-[8px] font-black uppercase rounded-full">
+              Pro Free
+            </span>
+          )}
         </div>
-        <p className="text-[10px] text-blue-900/40 font-medium leading-tight mb-2 line-clamp-2">{item.description}</p>
+        <p className="text-[10px] text-blue-900/40 font-medium leading-tight mb-2 line-clamp-2">
+          {item.description}
+        </p>
         <div className="flex flex-col gap-2">
-          <button 
-            onClick={() => onBuy(item, 'streak')}
-            disabled={(!isFreeForPro && streak < item.price) || purchasedItems.includes(item.id)}
+          <button
+            onClick={() => onBuy(item, "streak")}
+            disabled={
+              (!isFreeForPro && streak < item.price) ||
+              purchasedItems.includes(item.id)
+            }
             className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
           >
-            {purchasedItems.includes(item.id) ? 'Purchased' : isFreeForPro ? 'Free' : `${item.price} Streak`}
+            {purchasedItems.includes(item.id)
+              ? "Purchased"
+              : isFreeForPro
+                ? "Free"
+                : `${item.price} Streak`}
           </button>
           {item.coinPrice && (
-            <button 
-              onClick={() => onBuy(item, 'coins')}
-              disabled={(!isFreeForPro && coins < item.coinPrice) || purchasedItems.includes(item.id)}
+            <button
+              onClick={() => onBuy(item, "coins")}
+              disabled={
+                (!isFreeForPro && coins < item.coinPrice) ||
+                purchasedItems.includes(item.id)
+              }
               className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
             >
-              {purchasedItems.includes(item.id) ? 'Purchased' : isFreeForPro ? 'Free' : `${item.coinPrice} Coins`}
+              {purchasedItems.includes(item.id)
+                ? "Purchased"
+                : isFreeForPro
+                  ? "Free"
+                  : `${item.coinPrice} Coins`}
             </button>
           )}
         </div>
