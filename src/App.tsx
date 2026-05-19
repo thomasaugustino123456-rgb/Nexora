@@ -19,6 +19,7 @@ import { useAppIcon } from './hooks/useAppIcon';
 import { PlanBuilder } from './components/PlanBuilder';
 import { HomeScreen } from './components/HomeScreen';
 import { Mascot } from './components/Mascot';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { GoldenTrophy, IceTrophy, BrokenTrophy, playTrophySound } from './components/Trophies';
 import WhatIsNewModal from './components/WhatIsNewModal';
 import { HappyMascot, LevelUpCelebration, CoinAnimation, MascotAIWrapper } from './components/SuspenseWrappers';
@@ -86,6 +87,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   spaceOnboardingCompleted: false,
   plantOnboardingCompleted: false,
   isWalkthroughCompleted: false,
+  performanceMode: false,
+  lowPowerMode: false,
   plantState: {
     type: 'sprout',
     stage: 0,
@@ -155,6 +158,37 @@ export default function App() {
     setNeedsOnboarding,
     dataLoadedFromFirestore
   } = useNexoraData(DEFAULT_SETTINGS, DEFAULT_STATS, showToast);
+
+  const onUpdateSettings = useCallback((newSettings: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => {
+    try {
+      setSettings(prev => {
+        const updated = typeof newSettings === 'function' ? newSettings(prev) : { ...prev, ...newSettings };
+        if (updated.plantState && !updated.plantState.type) updated.plantState.type = 'sprout';
+        return updated;
+      });
+    } catch (e) {
+      console.error("NEXORA: Settings Update Failed", e);
+      showToast("Critical: Settings Sync Error", "error");
+    }
+  }, [setSettings]);
+
+  const onUpdateStats = useCallback((newStats: Partial<UserStats> | ((prev: UserStats) => UserStats)) => {
+    try {
+      setStats(prev => {
+        if (typeof newStats === 'function') return newStats(prev);
+        // Deep merge protection for stats including trophies and categories
+        return { 
+          ...prev, 
+          ...newStats,
+          pointsByCategory: { ...prev.pointsByCategory, ...(newStats.pointsByCategory || {}) },
+          trophies: newStats.trophies || prev.trophies || []
+        };
+      });
+    } catch (e) {
+      console.error("NEXORA: Stats Update Failed", e);
+      showToast("Critical: Stats Sync Error", "error");
+    }
+  }, [setStats]);
 
   const today = new Date().toISOString().split('T')[0];
   const [circles, setCircles] = useState<SocialCircle[]>([]);
@@ -567,18 +601,6 @@ export default function App() {
       setPublicUserViewId(sharedUserId);
     }
   }, []);
-
-  const onUpdateSettings = (newSettings: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => {
-    setSettings(prev => {
-      const updated = typeof newSettings === 'function' ? newSettings(prev) : { ...prev, ...newSettings };
-      if (updated.plantState && !updated.plantState.type) updated.plantState.type = 'zen';
-      return updated;
-    });
-  };
-
-  const onUpdateStats = (newStats: Partial<UserStats> | ((prev: UserStats) => UserStats)) => {
-    setStats(prev => typeof newStats === 'function' ? newStats(prev) : { ...prev, ...newStats });
-  };
 
   const onUpdateDailyProgress = (update: Partial<DailyProgress> | ((prev: DailyProgress) => DailyProgress)) => {
     setDailyProgress(prev => typeof update === 'function' ? update(prev) : { ...prev, ...update });
@@ -2444,8 +2466,7 @@ export default function App() {
       <Suspense fallback={<div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">PREPARING ONBOARDING...</div>}>
         <OnboardingScreen 
           onComplete={() => {
-            setNeedsOnboarding(false);
-            localStorage.setItem('nexora_onboarding_completed', 'true');
+            onUpdateSettings({ onboardingCompleted: true });
           }} 
           settings={settings} 
           setSettings={onUpdateSettings} 
@@ -2456,10 +2477,11 @@ export default function App() {
   }
 
   return (
-    <div 
-      className="min-h-screen w-full flex flex-col items-center overflow-x-hidden"
-      style={{ '--accent-color': settings.themeColor } as React.CSSProperties}
-    >
+    <ErrorBoundary>
+      <div 
+        className="min-h-screen w-full flex flex-col items-center overflow-x-hidden"
+        style={{ '--accent-color': settings.themeColor } as React.CSSProperties}
+      >
       {/* Connection Status Banner (Nexora Shield) */}
       <AnimatePresence>
         {!isOnline && (
@@ -2630,6 +2652,7 @@ export default function App() {
                   className="w-12 h-12" 
                   hat={settings.activeHat || 'none'} 
                   theme={settings.activeSkin || 'standard'}
+                  performanceMode={settings.performanceMode}
                   soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'} 
                 />
               </div>
@@ -3737,6 +3760,7 @@ export default function App() {
                         mood={WALKTHROUGH_STEPS[walkthroughStep].mood}
                         theme={settings.activeSkin === 'none' ? 'standard' : settings.activeSkin}
                         hat={settings.activeHat}
+                        performanceMode={settings.performanceMode}
                         className="w-full h-full scale-110"
                       />
                       {/* Aura pulse */}
@@ -3846,5 +3870,6 @@ export default function App() {
         </AnimatePresence>
       </div>
     </div>
+  </ErrorBoundary>
   );
 }

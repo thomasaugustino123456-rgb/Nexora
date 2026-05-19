@@ -71,6 +71,9 @@ export interface UserSettings {
   activeSkin?: string;
   zenModeEnabled?: boolean;
   isPro?: boolean;
+  performanceMode?: boolean;
+  lowPowerMode?: boolean;
+  onboardingCompleted?: boolean;
   challengeCountGoal?: number;
   inventory?: LibraryItem[];
   isDogSoundPackActive?: boolean;

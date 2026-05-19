@@ -373,6 +373,41 @@ export function SettingsScreen({
 
         <div className="safe-glass gpu p-6 space-y-6">
           <div className="flex items-center gap-3 mb-2">
+            <ShieldCheck size={18} className="text-blue-500" />
+            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Protocol Integrity</h3>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+             <div className="flex items-center justify-between p-4 bg-blue-50/30 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="text-blue-500"><Zap size={14} /></div>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-black text-blue-900 uppercase tracking-tight">Performance Mode</span>
+                    <span className="text-[8px] font-bold text-blue-400 uppercase">Save battery & cool down phone</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSettings({ performanceMode: !settings.performanceMode })}
+                  className={`w-11 h-6 rounded-full transition-all relative ${settings.performanceMode ? 'bg-orange-500' : 'bg-gray-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-all ${settings.performanceMode ? 'left-6' : 'left-1'}`} />
+                </button>
+             </div>
+
+             <div className="p-4 bg-green-50/50 rounded-2xl border border-green-100">
+                <div className="flex items-center gap-2 mb-2">
+                   <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                   <span className="text-[9px] font-black text-green-700 uppercase tracking-widest">System Health: Optimal</span>
+                </div>
+                <p className="text-[10px] font-bold text-green-900/60 leading-tight">
+                  All local data is validated against the Nexus HQ cloud every 5 seconds. Protocol stability is at 99.9%.
+                </p>
+             </div>
+          </div>
+        </div>
+
+        <div className="safe-glass gpu p-6 space-y-6">
+          <div className="flex items-center gap-3 mb-2">
             <Palette size={18} className="text-blue-500" />
             <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">User Experience</h3>
           </div>

@@ -29,6 +29,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue, settings }: Comp
   const { play } = useSound();
   const [showContent, setShowContent] = useState(false);
   const [isBouncing, setIsBouncing] = useState(false);
+  const perfMode = settings?.performanceMode;
 
   useEffect(() => {
     // Initial sequence - ultra fast
@@ -55,12 +56,14 @@ export function CompletionFlame({ streak, xpEarned, onContinue, settings }: Comp
         {showContent && (
           <>
             {/* Background Glow */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 0.4, scale: 1.5 }}
-              transition={{ duration: 1.5, repeat: Infinity, repeatType: "mirror" }}
-              className="absolute w-64 h-64 bg-orange-600 rounded-full blur-[120px] pointer-events-none"
-            />
+            {!perfMode && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 0.4, scale: 1.5 }}
+                transition={{ duration: 1.5, repeat: Infinity, repeatType: "mirror" }}
+                className="absolute w-64 h-64 bg-orange-600 rounded-full blur-[120px] pointer-events-none"
+              />
+            )}
 
             {/* The Flame Animation (Duolingo Style) */}
             <motion.div
@@ -85,14 +88,14 @@ export function CompletionFlame({ streak, xpEarned, onContinue, settings }: Comp
                 <motion.path
                   d="M100,180 C140,180 170,140 170,100 C170,40 100,10 100,10 C100,10 30,40 30,100 C30,140 60,180 100,180 Z"
                   fill="#FF5722"
-                  animate={{ 
+                  animate={!perfMode ? { 
                     scaleY: [1, 1.05, 1],
                     d: [
                       "M100,180 C140,180 170,140 170,100 C170,40 100,10 100,10 C100,10 30,40 30,100 C30,140 60,180 100,180 Z",
                       "M100,185 C145,185 175,145 175,105 C175,45 100,5 100,5 C100,5 25,45 25,105 C25,145 55,185 100,185 Z",
                       "M100,180 C140,180 170,140 170,100 C170,40 100,10 100,10 C100,10 30,40 30,100 C30,140 60,180 100,180 Z"
                     ]
-                  }}
+                  } : {}}
                   transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut" }}
                 />
 
@@ -100,10 +103,10 @@ export function CompletionFlame({ streak, xpEarned, onContinue, settings }: Comp
                 <motion.path
                   d="M100,165 C125,165 145,140 145,110 C145,80 100,50 100,50 C100,50 55,80 55,110 C55,140 75,165 100,165 Z"
                   fill="#FFC107"
-                  animate={{ 
+                  animate={!perfMode ? { 
                     scale: [1, 0.95, 1],
                     y: [0, 5, 0]
-                  }}
+                  } : {}}
                   transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
                 />
               </svg>

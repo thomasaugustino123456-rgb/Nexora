@@ -14,6 +14,7 @@ interface MascotProps {
   onPointerMove?: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerLeave?: () => void;
   isSitting?: boolean;
+  performanceMode?: boolean;
 }
 
 export const Mascot = React.memo(({ 
@@ -25,7 +26,8 @@ export const Mascot = React.memo(({
   onClick,
   onPointerMove,
   onPointerLeave,
-  isSitting = false
+  isSitting = false,
+  performanceMode = false
 }: MascotProps) => {
   const [clickCount, setClickCount] = useState(0);
   const [isBlinking, setIsBlinking] = useState(false);
@@ -49,7 +51,7 @@ export const Mascot = React.memo(({
 
   // Natural Blinking Logic - Throttled when not visible
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible || performanceMode) return;
     const blinkInterval = setInterval(() => {
       if (Math.random() > 0.3) {
         setIsBlinking(true);
@@ -190,11 +192,11 @@ export const Mascot = React.memo(({
         <ellipse 
           cx="250" cy="330" rx="220" ry="220" 
           fill={colors.aura} 
-          className={isVisible ? "animate-mascot-aura" : ""}
+          className={(isVisible && !performanceMode) ? "animate-mascot-aura" : ""}
         />
 
         {/* Neural Link Connection Effect for neural_bio theme */}
-        {theme === 'neural_bio' && isVisible && (
+        {theme === 'neural_bio' && isVisible && !performanceMode && (
           <g opacity={0.4}>
             {[1, 2, 3].map((i) => (
               <motion.ellipse
@@ -217,7 +219,7 @@ export const Mascot = React.memo(({
 
         {/* Body Group with Squash/Stretch - CSS classes for steady animation */}
         <motion.g animate={isSitting ? { y: 20, scaleY: 0.85 } : { y: 0, scaleY: 1 }}>
-          <g className={(!isSitting && isVisible) ? "animate-mascot-breathe" : ""}>
+          <g className={(!isSitting && isVisible && !performanceMode) ? "animate-mascot-breathe" : ""}>
             {/* LIQUID LAYER */}
             <g clipPath="url(#bottle-mask-main)">
               <rect x="0" y="0" width="500" height="600" fill={theme === 'obsidian' ? '#0f172a' : '#F0FAFF'} fillOpacity="0.2" />
@@ -225,7 +227,7 @@ export const Mascot = React.memo(({
               {/* Liquid Group with Ambient Slosh */}
               <g transform={`translate(0, ${isBoiling ? -5 : 230})`}>
                 {/* Seamless River Water Animation (CPU Optimized) */}
-                <g className={isVisible ? "animate-wave-mascot" : ""}>
+                <g className={(isVisible && !performanceMode) ? "animate-wave-mascot" : ""}>
                   <path 
                     d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 T 1000,20 L 1000,600 L 0,600 Z" 
                     fill="url(#water-grad-main)" 

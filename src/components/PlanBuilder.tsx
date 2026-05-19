@@ -74,39 +74,27 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
     vibrate(20);
     setIsCreating(true);
     
-    // Safety fallback: if creation takes more than 10 seconds, force cleanup
-    const safetyTimeout = setTimeout(() => {
-      if (isCreating) {
-        setIsCreating(false);
-        onBack();
-      }
-    }, 10000);
-
-    // Simulate mascot "creating" the plan
-    setTimeout(async () => {
-      try {
-        const newPlan: CustomPlan = {
-          id: Math.random().toString(36).substr(2, 9),
-          userId: '', // Will be set by App.tsx
-          name,
-          icon: 'Target', // Default for now
-          color: 'bg-blue-500',
-          challenges: selectedChallenges,
-          days: selectedDays,
-          reminderTime: time,
-          reminderTime2: time2,
-          createdAt: new Date().toISOString()
-        };
-        await onSave(newPlan);
-        clearTimeout(safetyTimeout);
-        setIsCreating(false);
-      } catch (err) {
-        console.error("Plan creation failed:", err);
-        clearTimeout(safetyTimeout);
-        setIsCreating(false);
-        onBack();
-      }
-    }, 3000);
+    try {
+      const newPlan: CustomPlan = {
+        id: Math.random().toString(36).substr(2, 9),
+        userId: '', // Will be set by App.tsx
+        name,
+        icon: 'Target', // Default for now
+        color: 'bg-blue-500',
+        challenges: selectedChallenges,
+        days: selectedDays,
+        reminderTime: time,
+        reminderTime2: time2,
+        createdAt: new Date().toISOString()
+      };
+      await onSave(newPlan);
+      // App.tsx usually navigates away here, but we cleanup just in case
+      setIsCreating(false);
+    } catch (err) {
+      console.error("Plan creation failed:", err);
+      setIsCreating(false);
+      onBack();
+    }
   };
 
   if (isCreating) {
@@ -120,7 +108,11 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
         >
           <div className="relative">
             <div className="absolute inset-0 bg-blue-400/20 blur-3xl rounded-full" />
-            <Mascot className="w-64 h-64 mx-auto drop-shadow-2xl relative z-10" mood="happy" />
+            <Mascot 
+              className="w-64 h-64 mx-auto drop-shadow-2xl relative z-10" 
+              mood="happy" 
+              performanceMode={settings.performanceMode}
+            />
             
             <motion.div 
               initial={{ opacity: 0, y: 20, scale: 0.8 }}
