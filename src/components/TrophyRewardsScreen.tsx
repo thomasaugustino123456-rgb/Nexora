@@ -36,21 +36,11 @@ export function TrophyRewardsScreen({
       return () => clearTimeout(timer);
     }
 
-    // 2. Play trophy sound immediately
-    const trophySound =
-      trophyType === "golden"
-        ? "trophy1"
-        : trophyType === "ice"
-          ? "trophy2"
-          : "trophy3";
-    play(trophySound);
-    vibrate(20);
-
-    // 3. Play a triumphant song using play() to ensure it plays EXACTLY once and to the end!
+    // Play a triumphant song using a BufferSource so it plays EXACTLY once and to the end!
+    // No overlapping trophy sounds, just the main theme.
     const musicKey =
-      trophyType === "golden" ? "music-fanfare" : "music-triplets";
+      trophyType === "golden" ? "trophy_fanfare" : "trophy_triplets";
 
-    // Tiny delay to let the sound effect start first
     const musicTimer = setTimeout(() => {
       try {
         play(musicKey as any);
@@ -58,6 +48,7 @@ export function TrophyRewardsScreen({
         console.error("Music blocked");
       }
     }, 100);
+    vibrate(20);
 
     const timer = setTimeout(() => {
       setShowButton(true);
@@ -72,12 +63,12 @@ export function TrophyRewardsScreen({
 
   return (
     <div
-      className="fixed inset-0 z-[1000] bg-white overflow-y-auto overflow-x-hidden no-scrollbar"
-      style={{ WebkitOverflowScrolling: "touch" }}
+      className="fixed inset-0 z-[1000] bg-white overflow-y-auto w-full h-full no-scrollbar"
+      style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: 'contain' }}
     >
-      <div className="min-h-[100dvh] flex flex-col items-center justify-start py-12 px-6 text-center relative w-full">
+      <div className="min-h-[120vh] sm:min-h-screen flex flex-col items-center justify-start py-12 px-6 text-center relative w-full pb-32">
         {/* Background Decor */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden h-full w-full">
+        <div className="fixed inset-0 pointer-events-none w-full h-full">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
@@ -256,7 +247,7 @@ export function TrophyRewardsScreen({
         </div>
 
         {/* Floating Sparkles */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden h-full w-full z-0">
+        <div className="fixed inset-0 pointer-events-none w-full h-full z-0">
           {[...Array(20)].map((_, i) => (
             <motion.div
               key={i}

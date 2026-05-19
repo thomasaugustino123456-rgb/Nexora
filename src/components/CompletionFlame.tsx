@@ -69,7 +69,7 @@ export function CompletionFlame({
     }, 50);
 
     // Delay before they can click continue to ensure they hear/see the glory
-    const btnTimer = setTimeout(() => setShowContinue(true), 4000);
+    const btnTimer = setTimeout(() => setShowContinue(true), 4800);
 
     // Ambient fire loop - separated to avoid restarts
     let fireLoop: NodeJS.Timeout;
