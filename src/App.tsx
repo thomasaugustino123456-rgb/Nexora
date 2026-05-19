@@ -3210,58 +3210,69 @@ export default function App() {
     if (!user) return;
     vibrate(VIBRATION_PATTERNS.ERROR);
 
-    const performDeletion = async () => {
-      try {
-        const userId = user.uid;
+    try {
+      const isGoogle = user.providerData.some(
+        (p) => p.providerId === "google.com",
+      );
+      let activeUser = auth.currentUser;
 
-        // Best effort delete known subcollections & root data
-        try {
-          const todayStr = new Date().toISOString().split("T")[0];
-          await deleteDoc(doc(db, "users", userId, "progress", todayStr));
-          await deleteDoc(doc(db, "leaderboard", userId));
-        } catch (e) {
-          console.warn("Failed to delete some associated documents", e);
-        }
-
-        // 1. Delete user data from Firestore
-        await deleteDoc(doc(db, "users", userId));
-
-        // 2. Delete the auth account
-        await deleteUser(user);
-
-        showToast("Account protocol terminated. Farewell, bro.", "success");
-      } catch (error: any) {
-        console.error("Delete Error:", error);
-        if (error.code === "auth/requires-recent-login") {
-          showToast(
-            "Security Protocol: Re-authentication needed. Logging out...",
-            "error",
-          );
-          setTimeout(() => signOut(auth), 2000);
-        } else {
-          showToast("Termination failed. System error.", "error");
-        }
-      }
-    };
-
-    // Attempt Google re-authentication if they use Google provider.
-    const isGoogle = user.providerData.some(
-      (p) => p.providerId === "google.com",
-    );
-    if (isGoogle) {
-      try {
-        await reauthenticateWithPopup(user, new GoogleAuthProvider());
-      } catch (reauthError) {
-        console.warn("Re-auth failed or cancelled", reauthError);
-        showToast(
-          "Action cancelled. Please sign in again to delete your account.",
-          "error",
-        );
+      if (!activeUser) {
+        showToast("Error: Session expired.", "error");
         return;
       }
-    }
 
-    await performDeletion();
+      if (isGoogle) {
+        try {
+          const credential = await reauthenticateWithPopup(
+            activeUser,
+            new GoogleAuthProvider(),
+          );
+          activeUser = credential.user;
+        } catch (reauthError: any) {
+          console.warn("Re-auth failed or cancelled", reauthError);
+          showToast(
+            "Action cancelled. Please sign in again to delete your account.",
+            "error",
+          );
+          return;
+        }
+      }
+
+      const userId = activeUser.uid;
+
+      // Best effort delete known subcollections & root data
+      try {
+        const todayStr = new Date().toISOString().split("T")[0];
+        await deleteDoc(doc(db, "users", userId, "progress", todayStr));
+        await deleteDoc(doc(db, "leaderboard", userId));
+      } catch (e) {
+        console.warn("Failed to delete some associated documents", e);
+      }
+
+      // 1. Delete user data from Firestore (Best effort)
+      try {
+        await deleteDoc(doc(db, "users", userId));
+      } catch (e) {
+        console.warn("Failed to delete user root document", e);
+        // We continue anyway, so the auth account is deleted
+      }
+
+      // 2. Delete the auth account
+      await deleteUser(activeUser);
+
+      showToast("Account protocol terminated. Farewell, bro.", "success");
+    } catch (error: any) {
+      console.error("Delete Error:", error);
+      if (error.code === "auth/requires-recent-login") {
+        showToast(
+          "Security Protocol: Re-authentication needed. Logging out...",
+          "error",
+        );
+        setTimeout(() => signOut(auth), 2000);
+      } else {
+        showToast("Termination failed. System error.", "error");
+      }
+    }
   };
 
   const getYesterday = () => {

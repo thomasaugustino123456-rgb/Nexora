@@ -106,6 +106,7 @@ export function useNexoraData(
             footballDone: false,
             bubblesDone: false,
             completionsCount: 0,
+            nextRestorationTime: null,
           });
           setNeedsOnboarding(true);
           dataLoadedFromFirestore.current = false;
@@ -132,6 +133,7 @@ export function useNexoraData(
           footballDone: false,
           bubblesDone: false,
           completionsCount: 0,
+          nextRestorationTime: null,
         });
         setUser(null);
         setIsDataReady(false);
