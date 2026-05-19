@@ -69,7 +69,7 @@ function NextRestorationCountdown({ targetTime }: { targetTime: number | null })
   return <span>{timeLeft}</span>;
 }
 
-export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenNexusVision, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge }: { 
+export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenNexusVision, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,

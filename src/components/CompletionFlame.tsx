@@ -1,7 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useSpring, useTransform, animate } from 'framer-motion';
 import { ChevronRight, Flame, Sparkles } from 'lucide-react';
 import { useSound } from '../hooks/useSound';
+
+const AnimatedNumber = ({ value }: { value: number }) => {
+  const [displayValue, setDisplayValue] = useState(value > 0 ? value - 1 : 0);
+
+  useEffect(() => {
+    const controls = animate(displayValue, value, {
+      duration: 1.5,
+      ease: "easeOut",
+      onUpdate: (latest) => setDisplayValue(Math.floor(latest))
+    });
+    return () => controls.stop();
+  }, [value]);
+
+  return <>{displayValue}</>;
+};
 
 interface CompletionFlameProps {
   streak: number;
@@ -93,7 +108,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue, settings }: Comp
                 />
               </svg>
 
-              {/* Day Number in the center of the flame drop */}
+              {/* Day Number with Count-Up Animation */}
               <motion.div 
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -101,7 +116,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue, settings }: Comp
                 className="absolute inset-0 flex items-center justify-center pt-8"
               >
                 <div className="text-7xl font-black text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]">
-                  {streak}
+                  <AnimatedNumber value={streak} />
                 </div>
               </motion.div>
             </motion.div>

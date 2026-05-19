@@ -2093,16 +2093,18 @@ export default function App() {
   }, [checkTrophies, isDataReady]);
 
   const handleCompleteChallenge = async (finalProgress?: DailyProgress, isCustomPlanFlag?: boolean) => {
+    // Immediate sound feedback for better UX
     if (settings.soundEnabled) {
       play('challenge_unlock'); 
     }
+    
     setEmergencyActive(false);
     const progress = finalProgress || dailyProgress;
     const isCustomPlan = isCustomPlanFlag ?? activeCustomPlan !== null;
 
     // Restoring ice trophies logic
     onUpdateStats(prev => {
-      const hasIce = prev.trophies.some(t => t.type === 'ice');
+      const hasIce = prev.trophies?.some(t => t.type === 'ice');
       if (hasIce) {
         const updated = prev.trophies.map(t => {
           if (t.type === 'ice') return { ...t, type: 'golden' as const, lastUpdated: new Date().toISOString() };
@@ -2123,7 +2125,6 @@ export default function App() {
 
     if (isCustomPlan && user && activeCustomPlan) {
       const customPlanRef = doc(collection(db, 'users', user.uid, 'custom_progress'));
-      // Don't await the network call to keep the UI snappy
       setDoc(customPlanRef, {
         planId: activeCustomPlan.id,
         planName: activeCustomPlan.name,
@@ -2134,8 +2135,6 @@ export default function App() {
 
     const nextCompletionsCount = isCustomPlan ? (dailyProgress.completionsCount || 0) : ((dailyProgress.completionsCount || 0) + 1);
     const canAwardTrophy = completedTasks > 0 || isCustomPlan; 
-
-    // New trophies are always golden
     setSessionTrophy('golden');
 
     if (canAwardTrophy) {
@@ -2156,14 +2155,11 @@ export default function App() {
     let pointsToAdd = 0;
     let xpToAdd = 0;
     let coinsToAdd = 0;
-    let streakIncrease = 0;
 
     if (isCustomPlan) {
       const totalPlanTasks = activeCustomPlan?.challenges.length || 1;
-      // Boosted rewards for custom plans as requested
       xpToAdd = Math.max(15, totalPlanTasks * 10);
       coinsToAdd = Math.max(15, totalPlanTasks * 10);
-      streakIncrease = 1;
       pointsToAdd = xpToAdd;
     } else {
       const isDailyQuest = progress.dailyQuestDone || (challengeStep === dailyQuest);
@@ -2179,45 +2175,44 @@ export default function App() {
       if (completedTasks >= 9) {
         xpToAdd += 10;
         coinsToAdd += 10;
-        streakIncrease = 2; // Extra reward for full flow
-      } else {
-        streakIncrease = 1;
       }
     }
 
-    // Pre-calculate final streak for sync display
+    // STRICT DAILY STREAK CALCULATION
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
     
-    let baseStreakVal = (stats.streak || 0);
-    if (stats.lastCompletedDate !== today && stats.lastCompletedDate !== yesterdayStr) {
-      baseStreakVal = 0;
+    let currentActualStreak = (stats.streak || 0);
+    let finalStreakShow = currentActualStreak;
+
+    // Logic: If last completed was yesterday, increment. If today, stay. If before yesterday, reset to 1.
+    if (stats.lastCompletedDate !== today) {
+       if (stats.lastCompletedDate === yesterdayStr) {
+          finalStreakShow = currentActualStreak + 1;
+       } else {
+          finalStreakShow = 1;
+       }
     }
-    const finalStreakValue = baseStreakVal + 1;
 
     setStats((prevStats) => {
       const oldLevel = prevStats.level || 1;
-      let finalStreak = prevStats.streak || 0;
-      let newBestStreak = prevStats.bestStreak || 0;
-      let newTotalCompletedDays = prevStats.totalCompletedDays || 0;
-      let newLastCompletedDate = prevStats.lastCompletedDate;
-      let streakBonusPoints = 0;
-
-      // Streak Logic
-      let currentBaseStreak = (prevStats.streak || 0);
-      if (prevStats.lastCompletedDate !== today && prevStats.lastCompletedDate !== yesterdayStr) {
-        currentBaseStreak = 0;
-      }
-      finalStreak = currentBaseStreak + 1;
-
-      newBestStreak = Math.max(prevStats.bestStreak || 0, finalStreak);
+      let streakToSave = prevStats.streak || 0;
+      
       if (prevStats.lastCompletedDate !== today) {
-        newTotalCompletedDays = (prevStats.totalCompletedDays || 0) + 1;
+        if (prevStats.lastCompletedDate === yesterdayStr) {
+          streakToSave = (prevStats.streak || 0) + 1;
+        } else {
+          streakToSave = 1;
+        }
       }
-      newLastCompletedDate = today;
+
+      const newBestStreak = Math.max(prevStats.bestStreak || 0, streakToSave);
+      const newTotalCompletedDays = prevStats.lastCompletedDate !== today ? (prevStats.totalCompletedDays || 0) + 1 : (prevStats.totalCompletedDays || 0);
+      const newLastCompletedDate = today;
+      
       const hasDoublePoints = settings.purchasedItems?.includes('double-points');
-      streakBonusPoints = hasDoublePoints ? 10 : 5;
+      const streakBonusPoints = hasDoublePoints ? 10 : 5;
 
       const newPoints = (prevStats.totalPoints || 0) + pointsToAdd + streakBonusPoints;
       const newXP = (prevStats.xp || 0) + xpToAdd;
@@ -2227,17 +2222,10 @@ export default function App() {
       if (newLevel > oldLevel) {
         setShowLevelUp(newLevel);
         levelUpBonusCoins = 50;
-        showToast(`LEVEL UP! You are now Level ${newLevel}! +50 Coins! 🔥`, 'success');
         vibrate(VIBRATION_PATTERNS.TROPHY);
       }
 
-      showToast(`Session Complete! +${pointsToAdd + streakBonusPoints} Points, +${xpToAdd} XP & +${coinsToAdd} Coins! 🏆`, 'success');
-      growPlant();
-
       const newTrophies = [...(prevStats.trophies || [])];
-      if (newTotalCompletedDays === 1 && !newTrophies.find(t => t.id === 'first-steps')) {
-        newTrophies.push({ id: 'first-steps', type: 'golden', earnedDate: new Date().toISOString(), lastUpdated: new Date().toISOString() });
-      }
       if (canAwardTrophy) {
         newTrophies.unshift({
           id: `trophy-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -2255,7 +2243,7 @@ export default function App() {
         weeklyXP: (prevStats.weeklyXP || 0) + xpToAdd,
         level: newLevel,
         coins: (prevStats.coins || 0) + coinsToAdd + levelUpBonusCoins,
-        streak: finalStreak,
+        streak: streakToSave,
         bestStreak: newBestStreak,
         totalCompletedDays: newTotalCompletedDays,
         lastCompletedDate: newLastCompletedDate,
@@ -2275,12 +2263,9 @@ export default function App() {
           photoURL: user.photoURL || '',
           streak: updatedStats.streak,
           totalPoints: updatedStats.totalPoints,
-          weeklyPoints: updatedStats.weeklyPoints,
-          weeklyXP: updatedStats.weeklyXP,
           xp: updatedStats.xp,
           level: newLevel,
-          league: settings.league || 'Bronze'
-        }, { merge: true }).catch(err => console.error("Leaderboard error:", err));
+        }, { merge: true }).catch(err => console.error("LB sync error", err));
       }
 
       return updatedStats;
@@ -2290,7 +2275,6 @@ export default function App() {
       ...prev, 
       completed: isCustomPlan ? prev.completed : true,
       completionsCount: isCustomPlan ? prev.completionsCount : (prev.completionsCount || 0) + 1,
-      // Reset logic flags for replayability
       pushupsDone: false,
       waterChallengeCount: 0,
       breathingDone: false,
@@ -2304,11 +2288,9 @@ export default function App() {
       writingDone: false,
     }));
     
-    // Set data for the Flame Screen and trigger it
     setSessionXP(xpToAdd);
-    setSessionStreak(finalStreakValue);
+    setSessionStreak(finalStreakShow);
 
-    // Streamline transition: CompletionFlame -> TrophyRewardsScreen -> Home
     setShowCompletionFlame(true);
     setActiveScreen('home'); 
     setChallengeStep('home' as any); 
