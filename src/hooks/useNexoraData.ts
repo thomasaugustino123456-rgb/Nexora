@@ -200,10 +200,12 @@ export function useNexoraData(DEFAULT_SETTINGS: UserSettings, DEFAULT_STATS: Use
         // 2. Sync progress always attempts, or can be throttled too
         await setDoc(doc(db, 'users', user.uid, 'progress', today), dailyProgress, { merge: true });
         
-        // 3. Leaderboard sync (only if streak or points changed)
+        // 3. Leaderboard sync (only if streak, points, name or photo changed)
         const lbChanged = !lastSyncedData || 
                           lastSyncedData.st?.totalPoints !== stats.totalPoints ||
-                          lastSyncedData.st?.streak !== stats.streak;
+                          lastSyncedData.st?.streak !== stats.streak ||
+                          lastSyncedData.s?.displayName !== settings.displayName ||
+                          lastSyncedData.s?.profilePic !== settings.profilePic;
 
         if (lbChanged) {
           await setDoc(doc(db, 'leaderboard', user.uid), {

@@ -13,7 +13,7 @@ interface OnboardingProps {
   onComplete: () => void;
   settings: UserSettings;
   setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void;
-  setupFCM: () => Promise<void>;
+  setupFCM: () => Promise<string | null>;
 }
 
 export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }: OnboardingProps) {

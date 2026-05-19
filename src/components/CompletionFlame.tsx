@@ -28,32 +28,43 @@ interface CompletionFlameProps {
   isNewStreak?: boolean;
 }
 
-export function CompletionFlame({ streak, xpEarned, onContinue, settings, isNewStreak = true }: CompletionFlameProps) {
-  const { play } = useSound();
-  const [showContent, setShowContent] = useState(false);
-  const [isBouncing, setIsBouncing] = useState(false);
-  const perfMode = settings?.performanceMode;
+  export function CompletionFlame({ streak, xpEarned, onContinue, settings, isNewStreak = true }: CompletionFlameProps) {
+    const { play, playMusic, stopAllMusic } = useSound();
+    const [showContent, setShowContent] = useState(false);
+    const [isBouncing, setIsBouncing] = useState(false);
+    const [showContinue, setShowContinue] = useState(false);
+    const perfMode = settings?.performanceMode;
 
-  useEffect(() => {
-    // Initial sequence
-    const timer = setTimeout(() => {
-      setShowContent(true);
-      if (settings?.soundEnabled !== false) {
-        play('flame_complete'); 
-      }
-      setIsBouncing(isNewStreak);
-      if (isNewStreak) {
-        setTimeout(() => setIsBouncing(false), 800);
-      }
+    useEffect(() => {
+      // 1. Initial sequence
+      const timer = setTimeout(() => {
+        setShowContent(true);
+        if (settings?.soundEnabled !== false) {
+          playMusic('music-flame-complete'); 
+        }
+        setIsBouncing(isNewStreak);
+        if (isNewStreak) {
+          setTimeout(() => setIsBouncing(false), 800);
+        }
+      }, 50); 
       
-      const fireLoop = setInterval(() => {
-        if (showContent && settings?.soundEnabled !== false) play('fire_ambient');
-      }, 4000); // Throttled ambient sound
-      return () => clearInterval(fireLoop);
-    }, 50); 
+      // Delay before they can click continue to ensure they hear/see the glory
+      const btnTimer = setTimeout(() => setShowContinue(true), 1500);
 
-    return () => clearTimeout(timer);
-  }, [play, showContent, isNewStreak]);
+      // Ambient fire loop - separated to avoid restarts
+      let fireLoop: NodeJS.Timeout;
+      if (settings?.soundEnabled !== false) {
+        fireLoop = setInterval(() => {
+          play('fire_ambient');
+        }, 5000);
+      }
+
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(btnTimer);
+        if (fireLoop) clearInterval(fireLoop);
+      };
+    }, [play, playMusic, isNewStreak, settings?.soundEnabled]); // Removed showContent from deps
 
   return (
     <div className="fixed inset-0 z-[1000] bg-blue-900/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center overflow-hidden">
@@ -163,32 +174,38 @@ export function CompletionFlame({ streak, xpEarned, onContinue, settings, isNewS
             </div>
 
             {/* Continue Button */}
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ delay: 1.0 }}
-              onClick={() => {
-                play('nav_switch');
-                onContinue();
-              }}
-              className="group relative bg-orange-500 hover:bg-orange-600 px-12 py-5 rounded-[2rem] flex items-center gap-4 transition-all shadow-[0_20px_40px_rgba(249,115,22,0.4)]"
-            >
-              <span className="text-white font-black text-xl italic uppercase tracking-tighter">Continue to Trophy Reward</span>
-              <div className="bg-white/20 p-2 rounded-xl group-hover:translate-x-2 transition-transform">
-                <ChevronRight className="text-white" size={24} />
-              </div>
-              
-              {/* Shine effect */}
-              <div className="absolute inset-0 rounded-[2rem] overflow-hidden pointer-events-none">
-                <motion.div 
-                  animate={{ x: ['-100%', '200%'] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="w-1/2 h-full bg-white/20 skew-x-12"
-                />
-              </div>
-            </motion.button>
+            <AnimatePresence>
+              {showContinue && (
+                <motion.button
+                  key="continue-btn"
+                  initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ delay: 0.2 }}
+                  onClick={() => {
+                    play('nav_switch');
+                    onContinue();
+                  }}
+                  className="group relative bg-orange-500 hover:bg-orange-600 px-12 py-5 rounded-[2rem] flex items-center gap-4 transition-all shadow-[0_20px_40px_rgba(249,115,22,0.4)] mt-12"
+                >
+                  <span className="text-white font-black text-xl italic uppercase tracking-tighter">Continue to Trophy Reward</span>
+                  <div className="bg-white/20 p-2 rounded-xl group-hover:translate-x-2 transition-transform">
+                    <ChevronRight className="text-white" size={24} />
+                  </div>
+                  
+                  {/* Shine effect */}
+                  <div className="absolute inset-0 rounded-[2rem] overflow-hidden pointer-events-none">
+                    <motion.div 
+                      animate={{ x: ['-100%', '200%'] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      className="w-1/2 h-full bg-white/20 skew-x-12"
+                    />
+                  </div>
+                </motion.button>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>

@@ -21,7 +21,7 @@ interface SettingsScreenProps {
   onDeleteAccount: () => void;
   fcmToken: string | null;
   fcmError: string | null;
-  onRetryFCM: () => void;
+  onRetryFCM: () => Promise<string | null>;
   onSendTestNotification: () => void;
   onSendMotivation: () => void;
   onSendTestEmail: () => void;

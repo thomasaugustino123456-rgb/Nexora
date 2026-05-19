@@ -18,12 +18,55 @@ export function ProfileScreen({ settings, setSettings, stats, user, setActiveScr
   const [editPhoto, setEditPhoto] = useState(settings.profilePic || user?.photoURL || '');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    setEditName(settings.displayName || user?.displayName || 'Nexora User');
+    setEditPhoto(settings.profilePic || user?.photoURL || '');
+  }, [settings.displayName, settings.profilePic, user]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image is too large! Please choose a smaller one, bro (Max 5MB).");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
-        setEditPhoto(reader.result as string);
+        const img = new Image();
+        img.onload = () => {
+          // Compress using canvas to ensure it fits in localStorage/Firestore
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 400;
+          const MAX_HEIGHT = 400;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            setEditPhoto(dataUrl);
+            
+            // Auto-save the profile picture immediately so the user doesn't have to find the Save button
+            onUpdateProfile(editName || settings.displayName || 'Pioneer', dataUrl);
+          }
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
     }

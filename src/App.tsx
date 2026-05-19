@@ -1137,8 +1137,22 @@ export default function App() {
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showIOSInstallGuide, setShowIOSInstallGuide] = useState(false);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
-  const [fcmToken, setFcmToken] = useState<string | null>(null);
+  const [fcmToken, setFcmToken] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('nexora_fcm_token');
+    }
+    return null;
+  });
   const [fcmError, setFcmError] = useState<string | null>(null);
+
+  // Sync fcmToken from settings if state is empty but setting exists
+  useEffect(() => {
+    if (isDataReady && settings.fcmToken && !fcmToken) {
+      console.log('FCM: Initializing state from settings matching storage/cloud');
+      setFcmToken(settings.fcmToken);
+      localStorage.setItem('nexora_fcm_token', settings.fcmToken);
+    }
+  }, [isDataReady, settings.fcmToken, fcmToken]);
 
   const sendNotification = async (title: string, options: NotificationOptions) => {
     // 1. Local Browser Notification (Immediate feedback if app is open)
@@ -1391,13 +1405,19 @@ export default function App() {
       console.warn('Health check failed', e);
     }
 
-    if (!fcmToken) {
+    let currentToken = fcmToken;
+    if (!currentToken) {
+      console.log('Token missing, attempting auto-setup...');
+      currentToken = await setupFCM();
+    }
+
+    if (!currentToken) {
       showToast('No device token found. Please ensure notifications are enabled in browser settings.', 'error');
-      console.error('FCM Token missing');
+      console.error('FCM Token missing after setup attempt');
       return;
     }
 
-    console.log('Sending test notification to token:', fcmToken);
+    console.log('Sending test notification to token:', currentToken);
     try {
       const response = await fetch('/api/send-notification', {
         method: 'POST',
@@ -1405,7 +1425,7 @@ export default function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          token: fcmToken,
+          token: currentToken,
           title: 'Nexora Challenge BRO! 🚀',
           body: 'This is a test notification from your app. It works!',
         }),
@@ -1433,12 +1453,17 @@ export default function App() {
   };
 
   const sendMotivation = async () => {
-    if (!fcmToken) {
+    let currentToken = fcmToken;
+    if (!currentToken) {
+       currentToken = await setupFCM();
+    }
+
+    if (!currentToken) {
       showToast('Notification token missing. Enable notifications first!', 'error');
       return;
     }
 
-    console.log('Requesting AI Motivation for token:', fcmToken);
+    console.log('Requesting AI Motivation for token:', currentToken);
     try {
       const response = await fetch('/api/send-motivation', {
         method: 'POST',
@@ -1446,7 +1471,7 @@ export default function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          token: fcmToken,
+          token: currentToken,
         }),
       });
 
@@ -1517,7 +1542,7 @@ export default function App() {
     }
   }, [settings.notificationsEnabled, fcmToken, fcmError]);
 
-  const setupFCM = async () => {
+  const setupFCM = async (): Promise<string | null> => {
     const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || VAPID_KEY;
     console.log('FCM: Starting setup with VAPID key:', vapidKey.substring(0, 10) + '...');
     setFcmError(null);
@@ -1535,7 +1560,7 @@ export default function App() {
         if (permission !== 'granted') {
           console.warn('FCM: Notification permission denied.');
           setFcmError('PERMISSION_DENIED');
-          return;
+          return null;
         }
       }
 
@@ -1543,7 +1568,7 @@ export default function App() {
       if (!m) {
         console.warn('FCM: Messaging not supported in this browser.');
         setFcmError('NOT_SUPPORTED');
-        return;
+        return null;
       }
       
       // Ensure service worker is ready
@@ -1551,26 +1576,35 @@ export default function App() {
         const registration = await navigator.serviceWorker.ready;
         console.log('FCM: Service Worker ready:', registration.scope);
         
-        const token = await getToken(m, {
-          vapidKey: vapidKey,
-          serviceWorkerRegistration: registration
-        });
-        
-        if (token) {
-          console.log('FCM Device Token Acquired:', token);
-          setFcmToken(token);
-          localStorage.setItem('nexora_fcm_token', token);
+        try {
+          const token = await getToken(m, {
+            vapidKey: vapidKey,
+            serviceWorkerRegistration: registration
+          });
           
-          // Only update settings if it's different to prevent loops
-          if (settings.fcmToken !== token) {
-            setSettings(prev => ({ ...prev, fcmToken: token, notificationsEnabled: true }));
+          if (token) {
+            console.log('FCM Device Token Acquired:', token);
+            setFcmToken(token);
+            localStorage.setItem('nexora_fcm_token', token);
+            
+            // Only update settings if it's different to prevent loops
+            if (settings.fcmToken !== token) {
+              onUpdateSettings({ fcmToken: token, notificationsEnabled: true });
+            }
+            return token;
+          } else {
+            console.warn('FCM: No token received from getToken.');
+            setFcmError('NO_TOKEN');
+            return cachedToken || null;
           }
-        } else {
-          console.warn('FCM: No token received from getToken.');
-          setFcmError('NO_TOKEN');
+        } catch (tokenErr: any) {
+          console.error('FCM getToken error:', tokenErr);
+          setFcmError(tokenErr.message || 'GET_TOKEN_ERROR');
+          return cachedToken || null;
         }
       } else {
         setFcmError('NO_SW');
+        return null;
       }
     } catch (error: any) {
       console.error('Error setting up FCM:', error);
@@ -1580,7 +1614,9 @@ export default function App() {
       const cachedToken = localStorage.getItem('nexora_fcm_token');
       if (cachedToken) {
         setFcmToken(cachedToken);
+        return cachedToken;
       }
+      return null;
     }
   };
 
@@ -1945,18 +1981,38 @@ export default function App() {
       const unsubscribe = onSnapshot(q, (snapshot) => {
         let data = snapshot.docs.map(doc => doc.data() as any);
         
-        // BOT SYSTEM: If leaderboard is too empty, add some competitive AI players
-        if (data.length < 5) {
-          const bots = [
-            { uid: 'bot-1', displayName: 'Apex_Habit', weeklyXP: 1200, weeklyPoints: 1200, level: 12, streak: 45, league: settings.league || 'Bronze' },
-            { uid: 'bot-2', displayName: 'Zen_Master', weeklyXP: 950, weeklyPoints: 950, level: 10, streak: 32, league: settings.league || 'Bronze' },
-            { uid: 'bot-3', displayName: 'HabitHero_99', weeklyXP: 750, weeklyPoints: 750, level: 8, streak: 15, league: settings.league || 'Bronze' },
-            { uid: 'bot-4', displayName: 'FlowState', weeklyXP: 500, weeklyPoints: 500, level: 6, streak: 8, league: settings.league || 'Bronze' },
-          ];
-          data = [...data, ...bots];
-        }
+        // BOT SYSTEM: Always add some competitive AI players to make it feel alive!
+        const bots = [
+          { uid: 'bot-1', displayName: 'Apex_Habit', weeklyXP: 1250, weeklyPoints: 1250, level: 12, streak: 45, league: settings.league || 'Bronze' },
+          { uid: 'bot-2', displayName: 'Zen_Master', weeklyXP: 950, weeklyPoints: 950, level: 10, streak: 32, league: settings.league || 'Bronze' },
+          { uid: 'bot-3', displayName: 'HabitHero_99', weeklyXP: 750, weeklyPoints: 750, level: 8, streak: 15, league: settings.league || 'Bronze' },
+          { uid: 'bot-4', displayName: 'FlowState', weeklyXP: 500, weeklyPoints: 500, level: 6, streak: 8, league: settings.league || 'Bronze' },
+          { uid: 'bot-5', displayName: 'Iron_Will', weeklyXP: 320, weeklyPoints: 320, level: 4, streak: 5, league: settings.league || 'Bronze' }
+        ];
+        
+        // Merge real users and bots, then deduplicate by ID just in case
+        const allDataMap = new Map();
+        
+        // Only keep real users who have at least > 0 in streak, weeklyXP, or weeklyPoints
+        data.forEach(d => {
+          if ((d.weeklyXP > 0) || (d.streak > 0) || (d.weeklyPoints > 0) || (d.totalPoints && d.totalPoints > 0)) {
+            allDataMap.set(d.uid, d);
+          }
+        });
 
-        if (user && !data.find(d => d.uid === user.uid)) {
+        // Add Bots
+        bots.forEach(b => {
+          if (!allDataMap.has(b.uid)) {
+            allDataMap.set(b.uid, b);
+          }
+        });
+
+        data = Array.from(allDataMap.values());
+
+        // Also handle current user: add them IF they have > 0 points
+        const userHasPoints = (stats.weeklyXP || 0) > 0 || (stats.streak || 0) > 0 || (stats.weeklyPoints || 0) > 0 || (stats.totalPoints || 0) > 0;
+        
+        if (user && !allDataMap.has(user.uid) && userHasPoints) {
           data.push({
             uid: user.uid,
             displayName: settings.displayName || 'Anonymous',
@@ -2442,8 +2498,8 @@ export default function App() {
         const names = await caches.keys();
         await Promise.all(names.map(name => caches.delete(name)));
       }
-      // 2. Clear critical localStorage keys (but KEEP auth/settings/stats)
-      const keysToKeep = ['nexora_settings', 'nexora_stats', 'firebase:authUser'];
+      // 2. Clear critical localStorage keys (but KEEP auth/settings/stats/fcm_token)
+      const keysToKeep = ['nexora_settings', 'nexora_stats', 'firebase:authUser', 'nexora_fcm_token'];
       Object.keys(localStorage).forEach(key => {
         if (!keysToKeep.some(k => key.includes(k))) {
           localStorage.removeItem(key);

@@ -18,24 +18,30 @@ export function TrophyRewardsScreen({ trophyType, onFinish, settings }: TrophyRe
   const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
+    // 1. Stop all previous music immediately (especially the streak ambient stuff)
+    stopAllMusic();
+
     if (settings?.soundEnabled === false) {
       const timer = setTimeout(() => setShowButton(true), 500);
       return () => clearTimeout(timer);
     }
 
-    // Play trophy sound immediately
+    // 2. Play trophy sound immediately
     const trophySound = trophyType === 'golden' ? 'trophy1' : trophyType === 'ice' ? 'trophy2' : 'trophy3';
     play(trophySound);
     vibrate(20);
 
-    // Play a triumphant song using background music system
+    // 3. Play a triumphant song using background music system
     const musicKey = trophyType === 'golden' ? 'music-fanfare' : 'music-triplets';
     
-    try {
-      playMusic(musicKey);
-    } catch (e) {
-      console.error("Music blocked");
-    }
+    // Tiny delay to let the sound effect start first
+    const musicTimer = setTimeout(() => {
+      try {
+        playMusic(musicKey);
+      } catch (e) {
+        console.error("Music blocked");
+      }
+    }, 100);
 
     const timer = setTimeout(() => {
       setShowButton(true);
@@ -43,28 +49,30 @@ export function TrophyRewardsScreen({ trophyType, onFinish, settings }: TrophyRe
 
     return () => {
       clearTimeout(timer);
+      clearTimeout(musicTimer);
       stopAllMusic();
     };
   }, [play, playMusic, stopAllMusic, trophyType, settings?.soundEnabled]);
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-white flex flex-col items-center justify-center p-6 text-center overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute inset-0 pointer-events-none">
-        <motion.div 
-          animate={{ rotate: 360 }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute inset-0 flex items-center justify-center opacity-5"
-        >
-          <div className="w-[150%] aspect-square bg-[conic-gradient(from_0deg,transparent_0deg,#3b82f6_20deg,transparent_40deg)]" />
-        </motion.div>
-      </div>
+    <div className="fixed inset-0 z-[1000] bg-white overflow-y-auto no-scrollbar">
+      <div className="min-h-screen flex flex-col items-center py-12 px-6 text-center">
+        {/* Background Decor */}
+        <div className="fixed inset-0 pointer-events-none">
+          <motion.div 
+            animate={{ rotate: 360 }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute inset-0 flex items-center justify-center opacity-5"
+          >
+            <div className="w-[150%] aspect-square bg-[conic-gradient(from_0deg,transparent_0deg,#3b82f6_20deg,transparent_40deg)]" />
+          </motion.div>
+        </div>
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative z-10 w-full max-w-lg flex flex-col items-center gap-8"
-      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="relative z-10 w-full max-w-lg flex flex-col items-center gap-8"
+        >
         <div className="space-y-2">
           <p className="text-blue-500 font-black uppercase tracking-[0.4em] text-xs">Achievement Unlocked</p>
           <h2 className="text-5xl font-black text-blue-900 italic tracking-tighter uppercase">
@@ -196,7 +204,7 @@ export function TrophyRewardsScreen({ trophyType, onFinish, settings }: TrophyRe
       </div>
 
       {/* Floating Sparkles */}
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="fixed inset-0 pointer-events-none">
         {[...Array(20)].map((_, i) => (
           <motion.div
             key={i}
@@ -217,6 +225,7 @@ export function TrophyRewardsScreen({ trophyType, onFinish, settings }: TrophyRe
             className="absolute w-1 h-1 bg-blue-400 rounded-full"
           />
         ))}
+      </div>
       </div>
     </div>
   );

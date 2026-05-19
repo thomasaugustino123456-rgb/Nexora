@@ -113,7 +113,18 @@ export function LeaderboardScreen({ leaderboard, user, settings, stats, onBack }
         })}
       </div>
 
-      {userRank > 10 && (
+      {userRank === 0 ? (
+        <div className="p-4 bg-gray-100 text-blue-900 border-t-2 border-gray-200">
+           <div className="flex items-center gap-4 max-w-2xl mx-auto">
+             <div className="w-8 text-center font-black text-lg">-</div>
+             <div className="flex-1 font-black text-[10px] uppercase tracking-widest">Complete challenges and earn points to join the ranks! 🚀</div>
+             <div className="text-right">
+               <div className="text-lg font-black">{stats.weeklyXP || 0}</div>
+               <div className="text-[10px] font-bold uppercase tracking-wider text-blue-900/60">XP</div>
+             </div>
+           </div>
+        </div>
+      ) : userRank > 10 ? (
         <div className="p-4 bg-blue-600 text-white shadow-2xl">
            <div className="flex items-center gap-4 max-w-2xl mx-auto">
              <div className="w-8 text-center font-black text-lg">{userRank}</div>
@@ -124,7 +135,7 @@ export function LeaderboardScreen({ leaderboard, user, settings, stats, onBack }
              </div>
            </div>
         </div>
-      )}
+      ) : null}
     </motion.div>
   );
 }
