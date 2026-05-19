@@ -59,6 +59,7 @@
 .sparkle-mascot {
   animation: twinkle 3s infinite ease-in-out;
   transform-origin: center;
+  will-change: transform, opacity;
 }
 
 @keyframes bodyPush {
@@ -68,6 +69,7 @@
 .main-body-pivot {
   animation: bodyPush 2s infinite ease-in-out;
   transform-origin: 160px 480px;
+  will-change: transform;
 }
 
 @keyframes elbowBend {
@@ -85,6 +87,7 @@
 }
 .sweat {
   animation: drip 1.5s infinite linear;
+  will-change: transform, opacity;
 }
 
 @keyframes shimmer {
@@ -109,6 +112,7 @@
 }
 .animate-wave {
   animation: waveFlow 4s infinite linear;
+  will-change: transform;
 }
 
 @keyframes waveFlowMascot {
@@ -117,6 +121,7 @@
 }
 .animate-wave-mascot {
   animation: waveFlowMascot 4s infinite linear;
+  will-change: transform;
 }
 
 @keyframes bubbleRise {
@@ -125,18 +130,18 @@
   90% { opacity: 0.4; }
   100% { transform: translateY(-270px); opacity: 0; }
 }
-.animate-bubble-1 { animation: bubbleRise 2.5s infinite linear; }
-.animate-bubble-2 { animation: bubbleRise 3.5s infinite linear 1s; }
-.animate-bubble-3 { animation: bubbleRise 2s infinite linear 0.5s; }
+.animate-bubble-1 { animation: bubbleRise 2.5s infinite linear; will-change: transform, opacity; }
+.animate-bubble-2 { animation: bubbleRise 3.5s infinite linear 1s; will-change: transform, opacity; }
+.animate-bubble-3 { animation: bubbleRise 2s infinite linear 0.5s; will-change: transform, opacity; }
 
 @keyframes bubbleAngry {
   0% { transform: translateY(0); opacity: 0; }
   20% { opacity: 0.5; }
   100% { transform: translateY(-150px); opacity: 0; }
 }
-.animate-bubble-angry-1 { animation: bubbleAngry 1.2s infinite linear; }
-.animate-bubble-angry-2 { animation: bubbleAngry 1.4s infinite linear; }
-.animate-bubble-angry-3 { animation: bubbleAngry 1.6s infinite linear; }
+.animate-bubble-angry-1 { animation: bubbleAngry 1.2s infinite linear; will-change: transform, opacity; }
+.animate-bubble-angry-2 { animation: bubbleAngry 1.4s infinite linear; will-change: transform, opacity; }
+.animate-bubble-angry-3 { animation: bubbleAngry 1.6s infinite linear; will-change: transform, opacity; }
 
 @keyframes waterDrop {
   0% { transform: translateY(0); opacity: 0; }
@@ -146,6 +151,7 @@
 }
 .animate-water-drop {
   animation: waterDrop 0.8s infinite linear;
+  will-change: transform, opacity;
 }
 
 @keyframes waterRipple {
@@ -194,6 +200,7 @@
 .animate-mascot-ear-left {
   animation: mascotEarLeft 3.5s infinite ease-in-out;
   transform-origin: 120px 210px;
+  will-change: transform;
 }
 
 @keyframes mascotEarRight {
@@ -204,6 +211,7 @@
 .animate-mascot-ear-right {
   animation: mascotEarRight 3.5s infinite ease-in-out;
   transform-origin: 380px 210px;
+  will-change: transform;
 }
 
 

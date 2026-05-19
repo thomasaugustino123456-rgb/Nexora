@@ -74,6 +74,12 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
     vibrate(20);
     setIsCreating(true);
     
+    // Safety timeout to ensure user is not stuck forever
+    const timeout = setTimeout(() => {
+      setIsCreating(false);
+      onBack();
+    }, 15000);
+
     try {
       const newPlan: CustomPlan = {
         id: Math.random().toString(36).substr(2, 9),
@@ -87,13 +93,14 @@ export function PlanBuilder({ onBack, onSave, isPro, existingPlansCount, setting
         reminderTime2: time2,
         createdAt: new Date().toISOString()
       };
+      
       await onSave(newPlan);
-      // App.tsx usually navigates away here, but we cleanup just in case
-      setIsCreating(false);
+      clearTimeout(timeout);
+      // Success - App.tsx should unmount this component via setActiveScreen('home')
     } catch (err) {
       console.error("Plan creation failed:", err);
+      clearTimeout(timeout);
       setIsCreating(false);
-      onBack();
     }
   };
 

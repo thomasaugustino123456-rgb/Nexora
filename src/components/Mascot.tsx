@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { useSound } from '../hooks/useSound';
 
@@ -73,21 +73,24 @@ export const Mascot = React.memo(({
     setMousePos({ x, y });
   };
 
-  const handleMascotClick = async () => {
-    const newCount = clickCount + 1;
-    setClickCount(newCount);
-    
-    // Play sound
-    const isDog = soundPack === 'dog';
-    if (newCount <= 5) play(isDog ? 'dogHappy' : 'catHappy');
-    else if (newCount <= 12) play(isDog ? 'dogHungry' : 'catHungry');
+  const handleMascotClick = useCallback(() => {
+    setClickCount(prev => {
+      const newCount = prev + 1;
+      
+      // Play sound immediately without awaiting
+      const isDog = soundPack === 'dog';
+      if (newCount <= 5) play(isDog ? 'dogHappy' : 'catHappy');
+      else if (newCount <= 12) play(isDog ? 'dogHungry' : 'catHungry');
+
+      return newCount;
+    });
 
     // Water Sloshing Effect
     setSloshAmount(25);
     setTimeout(() => setSloshAmount(0), 800);
 
-    // Professional "Bounce" Animation (Squash and Stretch)
-    await controls.start({
+    // Professional "Bounce" Animation
+    controls.start({
       scaleY: [1, 0.7, 1.2, 1],
       scaleX: [1, 1.3, 0.8, 1],
       y: [0, 15, -40, 0],
@@ -96,9 +99,9 @@ export const Mascot = React.memo(({
     });
     
     if (onClick) onClick();
-  };
+  }, [soundPack, play, controls, onClick]);
 
-  const actualMood = (clickCount >= 9 && clickCount <= 12) ? 'angry' : mood;
+  const actualMood = useMemo(() => (clickCount >= 9 && clickCount <= 12) ? 'angry' : mood, [clickCount, mood]);
   const isAngry = actualMood === 'angry' || actualMood === 'boiling';
   const isBoiling = actualMood === 'boiling';
   const isNeutral = actualMood === 'neutral';

@@ -3,17 +3,19 @@ import { motion, AnimatePresence, useSpring, useTransform, animate } from 'frame
 import { ChevronRight, Flame, Sparkles } from 'lucide-react';
 import { useSound } from '../hooks/useSound';
 
-const AnimatedNumber = ({ value }: { value: number }) => {
-  const [displayValue, setDisplayValue] = useState(value > 0 ? value - 1 : 0);
+const AnimatedNumber = ({ value, isNewStreak }: { value: number, isNewStreak: boolean }) => {
+  const [displayValue, setDisplayValue] = useState(isNewStreak ? (value > 0 ? value - 1 : 0) : value);
 
   useEffect(() => {
+    if (!isNewStreak) return;
+    
     const controls = animate(displayValue, value, {
-      duration: 1.5,
-      ease: "easeOut",
+      duration: 1.2,
+      ease: [0.34, 1.56, 0.64, 1], // Custom bouncy ease
       onUpdate: (latest) => setDisplayValue(Math.floor(latest))
     });
     return () => controls.stop();
-  }, [value]);
+  }, [value, isNewStreak]);
 
   return <>{displayValue}</>;
 };
@@ -23,91 +25,92 @@ interface CompletionFlameProps {
   xpEarned: number;
   onContinue: () => void;
   settings?: any;
+  isNewStreak?: boolean;
 }
 
-export function CompletionFlame({ streak, xpEarned, onContinue, settings }: CompletionFlameProps) {
+export function CompletionFlame({ streak, xpEarned, onContinue, settings, isNewStreak = true }: CompletionFlameProps) {
   const { play } = useSound();
   const [showContent, setShowContent] = useState(false);
   const [isBouncing, setIsBouncing] = useState(false);
   const perfMode = settings?.performanceMode;
 
   useEffect(() => {
-    // Initial sequence - ultra fast
+    // Initial sequence
     const timer = setTimeout(() => {
       setShowContent(true);
       if (settings?.soundEnabled !== false) {
         play('flame_complete'); 
       }
-      setIsBouncing(true);
-      setTimeout(() => setIsBouncing(false), 600);
+      setIsBouncing(isNewStreak);
+      if (isNewStreak) {
+        setTimeout(() => setIsBouncing(false), 800);
+      }
       
       const fireLoop = setInterval(() => {
         if (showContent && settings?.soundEnabled !== false) play('fire_ambient');
-      }, 3000);
+      }, 4000); // Throttled ambient sound
       return () => clearInterval(fireLoop);
     }, 50); 
 
     return () => clearTimeout(timer);
-  }, [play, showContent]);
+  }, [play, showContent, isNewStreak]);
 
   return (
     <div className="fixed inset-0 z-[1000] bg-blue-900/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center overflow-hidden">
       <AnimatePresence>
         {showContent && (
-          <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center"
+          >
             {/* Background Glow */}
             {!perfMode && (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 0.4, scale: 1.5 }}
-                transition={{ duration: 1.5, repeat: Infinity, repeatType: "mirror" }}
-                className="absolute w-64 h-64 bg-orange-600 rounded-full blur-[120px] pointer-events-none"
+                animate={{ opacity: 0.3, scale: 1.8 }}
+                transition={{ duration: 2, repeat: Infinity, repeatType: "mirror" }}
+                className="absolute w-72 h-72 bg-orange-600 rounded-full blur-[130px] pointer-events-none"
               />
             )}
 
-            {/* The Flame Animation (Duolingo Style) */}
+            {/* The Flame Animation */}
             <motion.div
               initial={{ scale: 0, y: 100 }}
               animate={{ 
-                scale: isBouncing ? [0, 1.1, 1] : 1,
+                scale: isBouncing ? [1, 1.25, 1] : 1,
                 y: 0
               }}
-              transition={{ type: "spring", damping: 12, stiffness: 180 }}
+              transition={{ type: "spring", damping: 10, stiffness: 200 }}
               className="relative w-64 h-64 mb-6 flex items-center justify-center"
             >
-              <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-[0_0_30px_rgba(255,100,0,0.6)]">
+              <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-[0_0_40px_rgba(255,100,0,0.7)]">
                 <defs>
                   <linearGradient id="duoFlame" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#FFC107" />
-                    <stop offset="50%" stopColor="#FF9800" />
-                    <stop offset="100%" stopColor="#FF5722" />
+                    <stop offset="0%" stopColor="#FFD54F" />
+                    <stop offset="50%" stopColor="#FFB300" />
+                    <stop offset="100%" stopColor="#FF6D00" />
                   </linearGradient>
                 </defs>
 
-                {/* Outer Flame (Orange) */}
                 <motion.path
                   d="M100,180 C140,180 170,140 170,100 C170,40 100,10 100,10 C100,10 30,40 30,100 C30,140 60,180 100,180 Z"
-                  fill="#FF5722"
+                  fill="url(#duoFlame)"
                   animate={!perfMode ? { 
-                    scaleY: [1, 1.05, 1],
-                    d: [
-                      "M100,180 C140,180 170,140 170,100 C170,40 100,10 100,10 C100,10 30,40 30,100 C30,140 60,180 100,180 Z",
-                      "M100,185 C145,185 175,145 175,105 C175,45 100,5 100,5 C100,5 25,45 25,105 C25,145 55,185 100,185 Z",
-                      "M100,180 C140,180 170,140 170,100 C170,40 100,10 100,10 C100,10 30,40 30,100 C30,140 60,180 100,180 Z"
-                    ]
+                    scaleY: [1, 1.04, 1],
+                    scaleX: [1, 0.98, 1],
                   } : {}}
-                  transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut" }}
+                  transition={{ duration: 0.7, repeat: Infinity, ease: "easeInOut" }}
                 />
 
-                {/* Central Inner Drop (Yellow) */}
                 <motion.path
                   d="M100,165 C125,165 145,140 145,110 C145,80 100,50 100,50 C100,50 55,80 55,110 C55,140 75,165 100,165 Z"
-                  fill="#FFC107"
+                  fill="#FFF"
+                  opacity="0.3"
                   animate={!perfMode ? { 
-                    scale: [1, 0.95, 1],
-                    y: [0, 5, 0]
+                    y: [0, 4, 0]
                   } : {}}
-                  transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
+                  transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut" }}
                 />
               </svg>
 
@@ -118,8 +121,8 @@ export function CompletionFlame({ streak, xpEarned, onContinue, settings }: Comp
                 transition={{ delay: 0.4 }}
                 className="absolute inset-0 flex items-center justify-center pt-8"
               >
-                <div className="text-7xl font-black text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]">
-                  <AnimatedNumber value={streak} />
+                <div className="text-8xl font-black text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] italic">
+                  <AnimatedNumber value={streak} isNewStreak={isNewStreak} />
                 </div>
               </motion.div>
             </motion.div>
@@ -186,7 +189,7 @@ export function CompletionFlame({ streak, xpEarned, onContinue, settings }: Comp
                 />
               </div>
             </motion.button>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

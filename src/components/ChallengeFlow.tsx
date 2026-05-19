@@ -384,37 +384,42 @@ export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUp
           </div>
         </div>
 
-        <div className="space-y-4">
-          {!isFinished ? (
-            <button 
-              onClick={() => {
-                vibrate(VIBRATION_PATTERNS.CLICK);
-                const newProgress = localProgress + 1;
-                setLocalProgress(newProgress);
-                onUpdate(newProgress);
-                if (settings.soundEnabled) {
-                   if (newProgress >= goal) play('challenge_unlock');
-                   else play('water');
-                }
-                if (newProgress >= goal) {
-                   vibrate(VIBRATION_PATTERNS.SUCCESS);
-                   // We delay the auto-continue slightly for visual satisfaction
-                   setTimeout(() => onContinue(), 800);
-                }
-              }} 
-              className="btn-primary w-full flex items-center justify-center gap-2"
-            >
-              Drink +1 💧
-            </button>
-          ) : (
-            <button 
-              onClick={onContinue}
-              className="btn-primary w-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center gap-2 animate-in zoom-in duration-300"
-            >
-              Next Step <ChevronRight size={18} />
-            </button>
-          )}
-        </div>
+            {/* Next Button / Continue */}
+            <div className="flex-1" />
+            <div className="space-y-4">
+              {!isFinished ? (
+                <button 
+                  onClick={() => {
+                    // Play sound instantly at the very start of click
+                    if (settings.soundEnabled) play('water');
+                    
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    const newProgress = localProgress + 1;
+                    setLocalProgress(newProgress);
+                    onUpdate(newProgress);
+                    
+                    if (newProgress >= goal) {
+                       if (settings.soundEnabled) play('challenge_unlock');
+                       vibrate(VIBRATION_PATTERNS.SUCCESS);
+                       setTimeout(() => onContinue(), 800);
+                    }
+                  }} 
+                  className="btn-primary w-full flex items-center justify-center gap-2 py-6 text-xl active:scale-[0.98] active:brightness-90 transition-all font-black"
+                >
+                  Drink +1 Water 💧
+                </button>
+              ) : (
+                <button 
+                  onClick={() => {
+                    if (settings.soundEnabled) play('continue');
+                    onContinue();
+                  }}
+                  className="btn-primary w-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center gap-2 py-6 text-xl"
+                >
+                  Proceed to Next Challenge <ChevronRight size={20} />
+                </button>
+              )}
+            </div>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { Home, BarChart2, BarChart3, User, CheckCircle2, Droplets, Wind, Palette
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useSound } from './hooks/useSound';
-import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType, SocialCircle, Post, SocialComment, NexusNotification, NexusVideo, UserReport, SystemNotification } from './types';
+import { HouseItem, PlacedHouseItem, UserSettings, UserStats, DailyProgress, Screen, ChallengeStep, Trophy, TrophyType, MascotMood, BadgeSettings, LeaderboardEntry, CustomPlan, PlantType, SocialCircle, Post, SocialComment, NexusNotification, NexusVideo, UserReport, SystemNotification, PlantState } from './types';
 import { HOUSE_ITEMS } from './constants/houseItems';
 import { NexoraStudio } from './components/NexoraStudio';
 import { format, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
@@ -217,7 +217,8 @@ export default function App() {
         
         // Only save original if we haven't already (prevents recursive overwrite on refresh)
         if (!originalStatsBeforeProTest) {
-          setOriginalStatsBeforeProTest(JSON.parse(JSON.stringify(stats)));
+          const statsToSave = JSON.parse(JSON.stringify(stats));
+          setOriginalStatsBeforeProTest(statsToSave);
           
           // Apply temporary boost ONLY ONCE
           setStats(prev => ({
@@ -236,10 +237,11 @@ export default function App() {
       
       // If we were previously boosting or detected it was active but expired
       if (originalStatsBeforeProTest) {
+        // Force rollback of stats
         setStats(originalStatsBeforeProTest);
         setOriginalStatsBeforeProTest(null);
-        showToast("PRO TEST PROTOCOL EXPIRED. STATS REVERTED.", "info");
-        onUpdateSettings({ proTestActive: false, proTestExpiresAt: null }); // Keep proTestStartedAt for cooldown
+        showToast("PRO TRIAL ENDED: STATS ROLLBACK SUCCESSFUL.", "info");
+        onUpdateSettings({ proTestActive: false, proTestExpiresAt: null }); 
         setProTestMessage("Your pro features test time is out. If u want it u can pay, bro! 👑");
         vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
       }
@@ -265,6 +267,7 @@ export default function App() {
   }, [settings.proTestExpiresAt, settings.isPro]);
   const [sessionXP, setSessionXP] = useState(0);
   const [sessionStreak, setSessionStreak] = useState(0);
+  const [isNewStreak, setIsNewStreak] = useState(true);
   const [sessionTrophy, setSessionTrophy] = useState<TrophyType>('golden');
   const [globalSavedVideos, setGlobalSavedVideos] = useState<NexusVideo[]>([]);
   const [focusedVideoId, setFocusedVideoId] = useState<string | null>(null);
@@ -730,11 +733,12 @@ export default function App() {
       }
     }
     
-    setSettings(prev => ({
-      ...prev,
-      purchasedHouseItemIds: [...(prev.purchasedHouseItemIds || []), id]
-    }));
+    onUpdateSettings({
+      purchasedHouseItemIds: [...(settings.purchasedHouseItemIds || []), id]
+    });
     showToast(`Purchased ${item.name}! 🏠`, "success");
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
+    if (settings.soundEnabled) play('coin');
   };
 
   const buyEcosystemItem = async (item: any) => {
@@ -744,12 +748,14 @@ export default function App() {
     }
     
     setStats(prev => ({ ...prev, coins: prev.coins - item.price }));
-    setSettings(prev => ({
-      ...prev,
-      purchasedEcosystemItemIds: [...(prev.purchasedEcosystemItemIds || []), item.id]
-    }));
+    
+    const newPurchasedIds = [...(settings.purchasedEcosystemItemIds || []), item.id];
+    onUpdateSettings({
+      purchasedEcosystemItemIds: newPurchasedIds,
+      hasNewPlantItem: true
+    });
 
-    // PERMANENT BACKEND REGISTRATION (New Path)
+    // PERMANENT BACKEND REGISTRATION (Legacy support)
     if (user) {
       try {
         const itemRef = doc(db, 'users', user.uid, 'eco_shop', item.id);
@@ -763,8 +769,8 @@ export default function App() {
 
     showToast(`Ecosystem upgraded: ${item.name}! 🌿`, "success");
     vibrate(VIBRATION_PATTERNS.SUCCESS);
+    if (settings.soundEnabled) play('coin');
     
-    // Analytics tracking for purchase
     trackEvent('item_purchased', {
       item_id: item.id,
       item_name: item.name,
@@ -774,15 +780,14 @@ export default function App() {
   };
 
   const toggleEcosystemItem = (itemId: string) => {
-    setSettings(prev => {
-      const current = prev.activeEcosystemItemIds || [];
-      const isActive = current.includes(itemId);
-      const updated = isActive 
-        ? current.filter(id => id !== itemId)
-        : [...current, itemId];
-      
-      return { ...prev, activeEcosystemItemIds: updated };
-    });
+    const current = settings.activeEcosystemItemIds || [];
+    const isActive = current.includes(itemId);
+    const updated = isActive 
+      ? current.filter(id => id !== itemId)
+      : [...current, itemId];
+    
+    onUpdateSettings({ activeEcosystemItemIds: updated });
+    vibrate(10);
   };
 
   const placeHouseItem = (id: string, x: number, y: number, room: number) => {
@@ -793,45 +798,46 @@ export default function App() {
       y, 
       room 
     };
-    setSettings(prev => ({
-      ...prev,
-      placedHouseItems: [...(prev.placedHouseItems || []), newItem]
-    }));
+    onUpdateSettings({
+      placedHouseItems: [...(settings.placedHouseItems || []), newItem]
+    });
+    vibrate(10);
   };
 
   const removeHouseItem = (instanceId: string) => {
-    setSettings(prev => {
-      const itemToRemove = prev.placedHouseItems?.find(i => i.id === instanceId);
-      return {
-        ...prev,
-        placedHouseItems: (prev.placedHouseItems || []).filter(item => item.id !== instanceId),
-        mascotPinnedItemId: (itemToRemove && prev.mascotPinnedItemId === itemToRemove.id) ? null : prev.mascotPinnedItemId
-      };
+    const itemToRemove = settings.placedHouseItems?.find(i => i.id === instanceId);
+    const updatedItems = (settings.placedHouseItems || []).filter(item => item.id !== instanceId);
+    
+    onUpdateSettings({
+      placedHouseItems: updatedItems,
+      mascotPinnedItemId: (itemToRemove && settings.mascotPinnedItemId === itemToRemove.id) ? null : settings.mascotPinnedItemId
     });
+    vibrate(5);
   };
 
   const updateHouseItemPosition = (instanceId: string, x: number, y: number) => {
-    setSettings(prev => {
-      const currentItems = prev.placedHouseItems || [];
-      const index = currentItems.findIndex(i => i.id === instanceId);
-      if (index === -1) return prev;
-      
-      const movingItem = currentItems[index];
+    const currentItems = settings.placedHouseItems || [];
+    const index = currentItems.findIndex(i => i.id === instanceId);
+    if (index === -1) return;
+    
+    const movingItem = currentItems[index];
 
-      // Update position and bring to front by moving it to the end of the array
-      const otherItems = currentItems.filter(item => item.id !== instanceId);
-      const updatedItem = { ...movingItem, x, y };
-      const updatedItems = [...otherItems, updatedItem];
+    // Update position and bring to front by moving it to the end of the array
+    const otherItems = currentItems.filter(item => item.id !== instanceId);
+    const updatedItem = { ...movingItem, x, y };
+    const updatedItems = [...otherItems, updatedItem];
 
-      // If mascot is pinned to this specific item instance, update mascot position relatively
-      let mascotPos = prev.mascotPos;
-      if (prev.mascotPinnedItemId === movingItem.id && mascotPos) {
-        const dx = x - movingItem.x;
-        const dy = y - movingItem.y;
-        mascotPos = { x: mascotPos.x + dx, y: mascotPos.y + dy };
-      }
+    // If mascot is pinned to this specific item instance, update mascot position relatively
+    let mascotPos = settings.mascotPos;
+    if (settings.mascotPinnedItemId === movingItem.id && mascotPos) {
+      const dx = x - movingItem.x;
+      const dy = y - movingItem.y;
+      mascotPos = { x: mascotPos.x + dx, y: mascotPos.y + dy };
+    }
 
-      return { ...prev, placedHouseItems: updatedItems, mascotPos };
+    onUpdateSettings({ 
+      placedHouseItems: updatedItems,
+      mascotPos
     });
   };
 
@@ -1516,11 +1522,18 @@ export default function App() {
     console.log('FCM: Starting setup with VAPID key:', vapidKey.substring(0, 10) + '...');
     setFcmError(null);
     try {
+      // 1. Check if token already exists in localStorage (Legacy check)
+      const cachedToken = localStorage.getItem('nexora_fcm_token');
+      if (cachedToken && !fcmToken) {
+        console.log('FCM: Restored from localStorage:', cachedToken.substring(0, 8) + '...');
+        setFcmToken(cachedToken);
+      }
+
       // Request permission if not granted
       if (Notification.permission !== 'granted') {
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-          console.log('FCM: Notification permission denied.');
+          console.warn('FCM: Notification permission denied.');
           setFcmError('PERMISSION_DENIED');
           return;
         }
@@ -1528,7 +1541,7 @@ export default function App() {
 
       const m = await messaging();
       if (!m) {
-        console.log('FCM: Messaging not supported in this browser.');
+        console.warn('FCM: Messaging not supported in this browser.');
         setFcmError('NOT_SUPPORTED');
         return;
       }
@@ -1544,11 +1557,16 @@ export default function App() {
         });
         
         if (token) {
-          console.log('FCM Device Token:', token);
+          console.log('FCM Device Token Acquired:', token);
           setFcmToken(token);
-          setSettings(prev => ({ ...prev, fcmToken: token, notificationsEnabled: true }));
+          localStorage.setItem('nexora_fcm_token', token);
+          
+          // Only update settings if it's different to prevent loops
+          if (settings.fcmToken !== token) {
+            setSettings(prev => ({ ...prev, fcmToken: token, notificationsEnabled: true }));
+          }
         } else {
-          console.log('FCM: No token received.');
+          console.warn('FCM: No token received from getToken.');
           setFcmError('NO_TOKEN');
         }
       } else {
@@ -1557,6 +1575,12 @@ export default function App() {
     } catch (error: any) {
       console.error('Error setting up FCM:', error);
       setFcmError(error.message || 'UNKNOWN_ERROR');
+      
+      // Fallback: If we had a cached token, use it anyway even if fresh fetch failed
+      const cachedToken = localStorage.getItem('nexora_fcm_token');
+      if (cachedToken) {
+        setFcmToken(cachedToken);
+      }
     }
   };
 
@@ -2206,16 +2230,20 @@ export default function App() {
     const yesterdayStr = yesterday.toISOString().split('T')[0];
     
     let currentActualStreak = (stats.streak || 0);
+    const wasAlreadyCompletedToday = stats.lastCompletedDate === today;
     let finalStreakShow = currentActualStreak;
 
     // Logic: If last completed was yesterday, increment. If today, stay. If before yesterday, reset to 1.
-    if (stats.lastCompletedDate !== today) {
+    if (!wasAlreadyCompletedToday) {
        if (stats.lastCompletedDate === yesterdayStr) {
           finalStreakShow = currentActualStreak + 1;
        } else {
           finalStreakShow = 1;
        }
     }
+    
+    setSessionStreak(finalStreakShow);
+    setIsNewStreak(!wasAlreadyCompletedToday);
 
     setStats((prevStats) => {
       const oldLevel = prevStats.level || 1;
@@ -2309,6 +2337,52 @@ export default function App() {
       meditationDone: false,
       writingDone: false,
     }));
+    
+    // PLANT GROWTH & HEALING LOGIC
+    if (settings.plantState) {
+      const type = settings.plantState.type;
+      let currentPoints = settings.plantState.growthPoints || 0;
+      let currentStage = settings.plantState.stage || 0;
+      const wasDead = settings.plantState.isDead;
+      
+      // Calculate growth: +25% per full completion
+      let newPoints = currentPoints + 25;
+      let newStage = currentStage;
+      
+      if (newPoints >= 100) {
+        if (currentStage < 5) {
+          newStage = currentStage + 1;
+          newPoints = 0;
+          showToast(`LEVEL UP: Your ${type} reached Stage ${newStage}! 🌿✨`, 'success');
+        } else {
+          newPoints = 100; // Cap at Legendary Stage 5
+        }
+      }
+
+      const updatedPlantState: PlantState = {
+        ...settings.plantState,
+        stage: newStage,
+        growthPoints: newPoints,
+        health: 100,
+        isDead: false,
+        isThirsty: false,
+        lastCheckDate: new Date().toISOString(),
+        lastGrowthDate: new Date().toISOString()
+      };
+
+      onUpdateSettings({
+        plantState: updatedPlantState,
+        plantsProgress: {
+          ...(settings.plantsProgress || {}),
+          [type]: updatedPlantState
+        }
+      });
+      
+      if (wasDead) {
+        showToast("THE ECOSYSTEM HAS BEEN RESTORED! 🌿🔥", "success");
+        vibrate(VIBRATION_PATTERNS.SUCCESS);
+      }
+    }
     
     setSessionXP(xpToAdd);
     setSessionStreak(finalStreakShow);
@@ -2734,18 +2808,18 @@ export default function App() {
                     if (settings.soundEnabled) play('header_switch');
                     setActiveScreen('house');
                   }}
-                  className={`p-3 rounded-2xl transition-all relative ${
+                  className={`p-2.5 rounded-2xl transition-all relative ${
                     activeScreen === 'house' 
-                      ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-110' 
+                      ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-105' 
                       : !settings.spaceOnboardingCompleted
                         ? 'bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-pulse border-2 border-white/50'
                         : 'text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm'
                   }`}
                 >
-                  <Home size={24} />
+                  <Home size={20} />
                   {!settings.spaceOnboardingCompleted && (
                     <div className="absolute -top-1 -right-1">
-                      <Sparkles size={14} className="text-amber-200 animate-spin" />
+                      <Sparkles size={12} className="text-amber-200 animate-spin" />
                     </div>
                   )}
                 </button>
@@ -2756,9 +2830,9 @@ export default function App() {
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('settings');
                 }}
-                className={`p-3 rounded-2xl transition-all ${activeScreen === 'settings' ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-110' : 'text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm'}`}
+                className={`p-2.5 rounded-2xl transition-all ${activeScreen === 'settings' ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-105' : 'text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm'}`}
               >
-                <Settings size={24} />
+                <Settings size={20} />
               </button>
 
               <button 
@@ -2766,12 +2840,12 @@ export default function App() {
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('profile');
                 }}
-                className={`p-3 rounded-2xl transition-all ${activeScreen === 'profile' ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-110' : 'text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm'}`}
+                className={`p-2.5 rounded-2xl transition-all ${activeScreen === 'profile' ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-105' : 'text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm'}`}
               >
                 {settings.profilePic ? (
-                  <img src={settings.profilePic} alt="Profile" className="w-7 h-7 rounded-full object-cover border-2 border-white" referrerPolicy="no-referrer" />
+                  <img src={settings.profilePic} alt="Profile" className="w-5 h-5 rounded-full object-cover border border-white" referrerPolicy="no-referrer" />
                 ) : (
-                  <User size={24} />
+                  <User size={20} />
                 )}
               </button>
 
@@ -2780,10 +2854,10 @@ export default function App() {
                   if (settings.soundEnabled) play('header_switch');
                   setActiveScreen('subscription');
                 }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all ${(activeScreen as string) === 'subscription' ? 'bg-amber-500 text-white shadow-xl shadow-amber-200 scale-110' : 'bg-amber-500/10 text-amber-600 border border-amber-200 backdrop-blur-sm hover:bg-amber-500/20'}`}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl transition-all ${(activeScreen as string) === 'subscription' ? 'bg-amber-500 text-white shadow-xl shadow-amber-200 scale-105' : 'bg-amber-500/10 text-amber-600 border border-amber-200 backdrop-blur-sm hover:bg-amber-500/20'}`}
               >
-                <Crown size={20} />
-                <span className="font-black text-xs uppercase tracking-tight">Pro</span>
+                <Crown size={14} />
+                <span className="font-black text-[10px] uppercase tracking-tight">Pro</span>
               </button>
             </div>
           </header>
@@ -3048,9 +3122,21 @@ export default function App() {
 
                       setStats(prev => ({
                         ...prev,
-                        streak: currency === 'streak' ? prev.streak - item.price : prev.streak,
-                        coins: currency === 'coins' ? (prev.coins || 0) - (item.coinPrice || 0) : (prev.coins || 0)
+                        streak: currency === 'streak' ? Math.max(0, prev.streak - item.price) : prev.streak,
+                        coins: currency === 'coins' ? Math.max(0, (prev.coins || 0) - (item.coinPrice || 0)) : (prev.coins || 0)
                       }));
+
+                      // SYNC WITH ORIGINAL STATS FOR ROLLBACK CONSISTENCY
+                      if (originalStatsBeforeProTest) {
+                        setOriginalStatsBeforeProTest(prev => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            streak: currency === 'streak' ? Math.max(0, prev.streak - item.price) : prev.streak,
+                            coins: currency === 'coins' ? Math.max(0, (prev.coins || 0) - (item.coinPrice || 0)) : (prev.coins || 0)
+                          };
+                        });
+                      }
                     }}
                     onBack={() => {
                       vibrate(VIBRATION_PATTERNS.CLICK);
@@ -3159,62 +3245,62 @@ export default function App() {
                   onDeleteVideo={handleDeleteSavedVideo}
                   onActivate={(id) => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
-                    setSettings(prev => {
-                      const itemToActivate = prev.inventory?.find(i => i.id === id);
-                      const inventory = (prev.inventory || []).map(item => {
-                        if (item.id === id) {
-                          return { ...item, activated: true };
-                        }
-                        // If it's a skin, deactivate other skins
-                        if (item.type === 'skin' && itemToActivate?.type === 'skin') {
-                          return { ...item, activated: false };
-                        }
-                        // If it's music, deactivate other music
-                        if (item.type === 'music' && itemToActivate?.type === 'music') {
-                          return { ...item, activated: false };
-                        }
-                        // If it's sound-pack, deactivate other sound-packs
-                        if (item.type === 'sound-pack' && itemToActivate?.type === 'sound-pack') {
-                          return { ...item, activated: false };
-                        }
-                        return item;
-                      });
-                      
-                      const activeItem = inventory.find(i => i.id === id);
-                      let activeSkin = prev.activeSkin;
-                      if (activeItem?.type === 'skin') {
-                        activeSkin = activeItem.itemId.replace('skin-', '');
+                    const itemToActivate = settings.inventory?.find(i => i.id === id);
+                    if (!itemToActivate) return;
+
+                    const inventory = (settings.inventory || []).map(item => {
+                      if (item.id === id) {
+                        return { ...item, activated: true };
                       }
-
-                      let isDogSoundPackActive = prev.isDogSoundPackActive;
-                      if (activeItem?.type === 'sound-pack') {
-                        isDogSoundPackActive = activeItem.itemId === 'sound-dog';
+                      // If it's a skin, deactivate other skins
+                      if (item.type === 'skin' && itemToActivate.type === 'skin') {
+                        return { ...item, activated: false };
                       }
-
-                      // If it's a gift, give a reward and keep it activated (as opened)
-                      if (activeItem?.type === 'gift' && !activeItem.activated) {
-                        const rewards = [
-                          { type: 'coins', amount: 50, msg: 'You found 50 coins! 💰' },
-                          { type: 'coins', amount: 100, msg: 'Jackpot! 100 coins! 💎' },
-                          { type: 'xp', amount: 200, msg: 'Epic discovery! +200 XP! ✨' },
-                          { type: 'xp', amount: 50, msg: 'Nice! +50 XP! 🌟' },
-                          { type: 'streak', amount: 1, msg: 'Bonus Streak Day! 🔥' }
-                        ];
-                        const reward = rewards[Math.floor(Math.random() * rewards.length)];
-                        
-                        showToast(reward.msg, 'success');
-                        vibrate(VIBRATION_PATTERNS.SUCCESS);
-
-                        setStats(s => ({
-                          ...s,
-                          coins: reward.type === 'coins' ? (s.coins || 0) + reward.amount : s.coins,
-                          xp: reward.type === 'xp' ? (s.xp || 0) + reward.amount : s.xp,
-                          streak: reward.type === 'streak' ? s.streak + reward.amount : s.streak
-                        }));
+                      // If it's music, deactivate other music
+                      if (item.type === 'music' && itemToActivate.type === 'music') {
+                        return { ...item, activated: false };
                       }
-
-                      return { ...prev, inventory, activeSkin, isDogSoundPackActive };
+                      // If it's sound-pack, deactivate other sound-packs
+                      if (item.type === 'sound-pack' && itemToActivate.type === 'sound-pack') {
+                        return { ...item, activated: false };
+                      }
+                      return item;
                     });
+                    
+                    let activeSkin = settings.activeSkin;
+                    if (itemToActivate.type === 'skin') {
+                      activeSkin = itemToActivate.itemId.replace('skin-', '');
+                    }
+
+                    let isDogSoundPackActive = settings.isDogSoundPackActive;
+                    if (itemToActivate.type === 'sound-pack') {
+                      isDogSoundPackActive = itemToActivate.itemId === 'sound-dog';
+                    }
+
+                    // If it's a gift, give a reward and keep it activated (as opened)
+                    if (itemToActivate.type === 'gift' && !itemToActivate.activated) {
+                      const rewards = [
+                        { type: 'coins', amount: 50, msg: 'You found 50 coins! 💰' },
+                        { type: 'coins', amount: 100, msg: 'Jackpot! 100 coins! 💎' },
+                        { type: 'xp', amount: 200, msg: 'Epic discovery! +200 XP! ✨' },
+                        { type: 'xp', amount: 50, msg: 'Nice! +50 XP! 🌟' },
+                        { type: 'streak', amount: 1, msg: 'Bonus Streak Day! 🔥' }
+                      ];
+                      const reward = rewards[Math.floor(Math.random() * rewards.length)];
+                      
+                      showToast(reward.msg, 'success');
+                      vibrate(VIBRATION_PATTERNS.SUCCESS);
+
+                      setStats(s => ({
+                        ...s,
+                        coins: reward.type === 'coins' ? (s.coins || 0) + reward.amount : s.coins,
+                        xp: reward.type === 'xp' ? (s.xp || 0) + reward.amount : s.xp,
+                        streak: reward.type === 'streak' ? s.streak + reward.amount : s.streak
+                      }));
+                    }
+
+                    onUpdateSettings({ inventory, activeSkin, isDogSoundPackActive });
+                    showToast(`${itemToActivate.name} activated!`, 'success');
                   }}
                   onDeactivate={(id) => {
                     vibrate(VIBRATION_PATTERNS.CLICK);
@@ -3453,6 +3539,7 @@ export default function App() {
                     }}
                     onPurchaseEcosystemItem={buyEcosystemItem}
                     onToggleEcosystemItem={toggleEcosystemItem}
+                    onUpdateSettings={onUpdateSettings}
                     settings={settings}
                     stats={stats}
                   />
@@ -3520,6 +3607,7 @@ export default function App() {
             streak={sessionStreak}
             xpEarned={sessionXP}
             settings={settings}
+            isNewStreak={isNewStreak}
             onContinue={() => {
               setShowCompletionFlame(false);
               setActiveScreen('trophy-rewards'); 

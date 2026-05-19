@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout, Target, Trophy, Play, X, Lock, ShoppingBag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout, Target, Trophy, Play, X, Lock, ShoppingBag, Package, Trash2, Power, PowerOff } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { PlantState, UserSettings, UserStats, PlantType } from '../types';
 import { vibrate } from '../lib/vibrate';
 import { PlantRenderer } from './PlantRenderer';
 import { PlantCompletionCard } from './PlantCompletionCard';
-import { PlantShop, EcosystemItem } from './PlantShop';
+import { PlantShop, EcosystemItem, SHOP_ITEMS } from './PlantShop';
 import { VIDEO_URLS } from '../constants/videos';
 import { ForestBackdrop } from './ForestBackdrop';
 
@@ -22,6 +22,7 @@ interface PlantScreenProps {
   onSaveToLibrary: (imageData: string) => void;
   onPurchaseEcosystemItem: (item: EcosystemItem) => void;
   onToggleEcosystemItem: (itemId: string) => void;
+  onUpdateSettings: (settings: Partial<UserSettings>) => void;
   settings: UserSettings;
   stats: UserStats;
 }
@@ -36,6 +37,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   onSaveToLibrary,
   onPurchaseEcosystemItem,
   onToggleEcosystemItem,
+  onUpdateSettings,
   settings,
   stats
 }) => {
@@ -45,6 +47,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   const [showCompletion, setShowCompletion] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showShop, setShowShop] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   const [droneTargetPos, setDroneTargetPos] = useState<{ x: number, y: number } | null>(null);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
   const clickCountRef = useRef(0);
@@ -143,6 +146,23 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
           className={`p-2 transition-colors ${showGarden ? 'text-green-500' : 'text-blue-900/40'}`}
         >
           <Trophy size={24} />
+        </button>
+        <button 
+          onClick={() => { 
+            vibrate(5); 
+            setShowLibrary(true);
+            if (settings.hasNewPlantItem) {
+              onUpdateSettings({ hasNewPlantItem: false });
+            }
+          }}
+          className={`p-2 transition-all relative ${showLibrary ? 'text-blue-600' : 'text-blue-900/40'} ${settings.hasNewPlantItem ? 'scale-110' : ''}`}
+        >
+          <div className={`p-1.5 rounded-xl transition-all ${settings.hasNewPlantItem ? 'bg-yellow-400 text-white shadow-[0_0_15px_rgba(251,191,36,0.8)] animate-pulse' : ''}`}>
+            <Package size={24} />
+          </div>
+          {settings.hasNewPlantItem && (
+             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
+          )}
         </button>
         <button 
           onClick={() => { vibrate(5); setShowShop(true); }}
@@ -266,6 +286,79 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
               onPurchase={onPurchaseEcosystemItem}
               onToggleActive={onToggleEcosystemItem}
             />
+          )}
+
+          {showLibrary && (
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              className="absolute inset-0 bg-white/95 backdrop-blur-md z-[150] p-8 overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex flex-col">
+                  <h2 className="text-2xl font-black text-blue-900 uppercase tracking-tighter italic">Ecosystem Library</h2>
+                  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Saved Sanctuary Items</p>
+                </div>
+                <button onClick={() => setShowLibrary(false)} className="p-2 text-blue-900/40 hover:bg-blue-50 rounded-full transition-colors">
+                  <X size={32} />
+                </button>
+              </div>
+
+              {(settings.purchasedEcosystemItemIds || []).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4 grayscale opacity-50">
+                    <Package size={40} className="text-blue-200" />
+                  </div>
+                  <h3 className="text-xl font-black text-blue-900 uppercase tracking-tighter italic mb-2">Vault is Empty</h3>
+                  <p className="text-blue-900/40 text-xs font-bold uppercase max-w-xs leading-loose">
+                    Buy and save sanctuary items from the shop to customize your environment, bro!
+                  </p>
+                  <button 
+                    onClick={() => { setShowLibrary(false); setShowShop(true); }}
+                    className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
+                  >
+                    Go to Shop
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {(settings.purchasedEcosystemItemIds || []).map((itemId: string) => {
+                    const item = SHOP_ITEMS.find(i => i.id === itemId);
+                    if (!item) return null;
+                    const isActive = (settings.activeEcosystemItemIds || []).includes(itemId);
+                    
+                    return (
+                      <div 
+                        key={itemId}
+                        className={`p-5 rounded-[2rem] border-4 transition-all flex items-center justify-between ${isActive ? 'bg-blue-50 border-blue-400 shadow-xl shadow-blue-500/10' : 'bg-gray-50 border-gray-100 hover:border-blue-200'}`}
+                      >
+                        <div className="flex items-center gap-5">
+                          <div className="text-5xl drop-shadow-sm">{item.icon}</div>
+                          <div className="flex flex-col">
+                            <h3 className="font-black text-blue-900 uppercase text-sm tracking-tight">{item.name}</h3>
+                            <p className="text-[10px] text-blue-900/40 font-bold uppercase tracking-widest">
+                              {isActive ? 'Currently Active' : 'In Library'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <button 
+                          onClick={() => {
+                            vibrate(10);
+                            onToggleEcosystemItem(itemId);
+                          }}
+                          className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 ${isActive ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'}`}
+                        >
+                          {isActive ? <PowerOff size={14} /> : <Power size={14} />}
+                          {isActive ? 'Disable' : 'Apply'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
           )}
         </AnimatePresence>
 

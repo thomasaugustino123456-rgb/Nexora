@@ -22,88 +22,177 @@ const SOUNDS = {
   'music-complicated': "https://res.cloudinary.com/dfoty883a/video/upload/v1775223497/mixkit-complicated-281_iqtv8a.mp3",
   coin: "https://actions.google.com/sounds/v1/ui/gameshow_correct_answer.ogg",
   water: "https://res.cloudinary.com/dfoty883a/video/upload/v1775302429/mixkit-liquid-bubble-3000_dvewrr.wav",
-  nav_switch: "https://res.cloudinary.com/ddtfq9acc/video/upload/q_auto/f_auto/v1777215538/mixkit-retro-arcade-casino-notification-211_chrmoj.wav",
+  nav_switch: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1777215538/mixkit-retro-arcade-casino-notification-211_chrmoj.wav",
   header_switch: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1777215960/mixkit-explainer-video-game-alert-sweep-236_xmqkot.wav",
   fire_streak: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1731515665/mixkit-fire-spell-cast-2311_u5x6zv.wav",
   fire_ambient: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1731515702/mixkit-gentle-fire-crackling-1339_y8zxvj.wav",
-  challenge_unlock: "https://res.cloudinary.com/ddtfq9acc/video/upload/q_auto/f_auto/v1778320911/mixkit-unlock-new-item-game-notification-254_wdigpd.wav",
-  flame_complete: "https://res.cloudinary.com/ddtfq9acc/video/upload/q_auto/f_auto/v1778320170/mixkit-completion-of-a-level-2063_1_l36yrp.wav",
+  challenge_unlock: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1778320911/mixkit-unlock-new-item-game-notification-254_wdigpd.wav",
+  flame_complete: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1778320170/mixkit-completion-of-a-level-2063_1_l36yrp.wav",
 };
 
-// Module-level cache for audio objects
-const audioCache: { [key: string]: HTMLAudioElement } = {};
-let globalActiveMusic: string | null = null;
+// Advanced Audio Engine
+let audioContext: AudioContext | null = null;
+const bufferCache: { [key: string]: AudioBuffer } = {};
+const musicNodes: { [key: string]: { audio: HTMLAudioElement, gain: GainNode } } = {};
+let activeMusicKey: string | null = null;
+let initialized = false;
 
-// Initialize audio objects once
+async function initContext() {
+  if (initialized) return audioContext;
+  
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  
+  if (audioContext.state === 'suspended') {
+    await audioContext.resume();
+  }
+  
+  initialized = true;
+  return audioContext;
+}
+
+// Global Interaction Listener to unlock AudioContext
 if (typeof window !== 'undefined') {
-  Object.entries(SOUNDS).forEach(([key, url]) => {
-    const audio = new Audio(url);
-    audio.preload = "auto";
-    audioCache[key] = audio;
+  const unlock = () => {
+    initContext();
+    document.removeEventListener('touchstart', unlock);
+    document.removeEventListener('mousedown', unlock);
+    document.removeEventListener('keydown', unlock);
+  };
+  document.addEventListener('touchstart', unlock);
+  document.addEventListener('mousedown', unlock);
+  document.addEventListener('keydown', unlock);
+}
+
+// Preload buffers (Effects only at module load)
+if (typeof window !== 'undefined') {
+  Object.entries(SOUNDS).forEach(async ([key, url]) => {
+    if (!key.startsWith('music')) {
+      try {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        // We wait for the first user interaction to decode
+        const checkCtx = () => {
+          if (audioContext && audioContext.state !== 'suspended') {
+            audioContext.decodeAudioData(arrayBuffer, (buffer) => {
+              bufferCache[key] = buffer;
+            });
+            return true;
+          }
+          return false;
+        };
+        
+        // Polling check or wait for first play
+        const interval = setInterval(() => {
+          if (checkCtx()) clearInterval(interval);
+        }, 1000);
+      } catch (e) {
+        console.warn(`Failed to preload ${key}:`, e);
+      }
+    }
   });
 }
 
+const getMusicNode = async (key: string) => {
+  if (musicNodes[key]) return musicNodes[key];
+  
+  const url = (SOUNDS as any)[key];
+  if (!url) return null;
+
+  const audio = new Audio(url);
+  audio.preload = "auto";
+  audio.crossOrigin = "anonymous";
+  
+  const ctx = await initContext();
+  if (!ctx) return null;
+  const source = ctx.createMediaElementSource(audio);
+  const gain = ctx.createGain();
+  source.connect(gain);
+  gain.connect(ctx.destination);
+  
+  musicNodes[key] = { audio, gain };
+  return musicNodes[key];
+};
+
 export function useSound() {
-  const [localActiveMusic, setLocalActiveMusic] = useState<string | null>(globalActiveMusic);
+  const [currentMusic, setCurrentMusic] = useState<string | null>(activeMusicKey);
 
-  const play = useCallback((soundKey: keyof typeof SOUNDS, loop: boolean = false) => {
-    const audio = audioCache[soundKey];
-    if (audio) {
-      audio.loop = loop;
-      audio.currentTime = 0;
-      audio.play().catch(e => {
-        if (e.name !== 'NotAllowedError') {
-          console.error(`Error playing sound ${soundKey}:`, e);
+  const play = useCallback(async (soundKey: keyof typeof SOUNDS) => {
+    try {
+      const ctx = await initContext();
+      if (!ctx) return;
+      let buffer = bufferCache[soundKey];
+      
+      if (!buffer && !soundKey.startsWith('music')) {
+        // Try decoding now if it was fetched but not decoded
+        const url = SOUNDS[soundKey];
+        const resp = await fetch(url);
+        const ab = await resp.arrayBuffer();
+        buffer = await ctx.decodeAudioData(ab);
+        bufferCache[soundKey] = buffer;
+      }
+
+      if (buffer) {
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+      } else if (soundKey.startsWith('music')) {
+        const node = await getMusicNode(soundKey as string);
+        if (node) {
+          node.audio.currentTime = 0;
+          node.audio.play().catch(e => console.error(e));
         }
-      });
+      }
+    } catch (e) {
+      console.error("Audio Engine Error:", e);
     }
   }, []);
 
-  const stop = useCallback((soundKey: keyof typeof SOUNDS) => {
-    const audio = audioCache[soundKey];
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
+  const stop = useCallback(async (soundKey: keyof typeof SOUNDS) => {
+    const node = await getMusicNode(soundKey as string);
+    if (node) {
+      node.audio.pause();
+      node.audio.currentTime = 0;
     }
   }, []);
 
-  const playMusic = useCallback((musicKey: string | null) => {
-    // Stop ANY current music
-    if (globalActiveMusic && audioCache[globalActiveMusic]) {
-      audioCache[globalActiveMusic].pause();
-      audioCache[globalActiveMusic].currentTime = 0;
+  const playMusic = useCallback(async (musicKey: string | null) => {
+    if (activeMusicKey === musicKey) return;
+    
+    // Stop previous
+    if (activeMusicKey) {
+      const prevNode = await getMusicNode(activeMusicKey);
+      if (prevNode) {
+        prevNode.audio.pause();
+        prevNode.audio.currentTime = 0;
+      }
     }
 
-    if (musicKey && audioCache[musicKey]) {
-      const audio = audioCache[musicKey];
-      audio.loop = true;
-      audio.play().catch(e => {
-        if (e.name !== 'NotAllowedError') {
-          console.error(`Error playing music ${musicKey}:`, e);
-        }
-      });
-      globalActiveMusic = musicKey;
-      setLocalActiveMusic(musicKey);
+    if (musicKey) {
+      const node = await getMusicNode(musicKey);
+      if (node) {
+        node.audio.loop = true;
+        node.audio.play().catch(e => console.error(e));
+        activeMusicKey = musicKey;
+        setCurrentMusic(musicKey);
+      }
     } else {
-      globalActiveMusic = null;
-      setLocalActiveMusic(null);
+      activeMusicKey = null;
+      setCurrentMusic(null);
     }
   }, []);
 
   const stopAllMusic = useCallback(() => {
-    Object.keys(SOUNDS).forEach(key => {
-      if (key.startsWith('music') || key === 'music-fanfare') {
-        const audio = audioCache[key];
-        if (audio) {
-          audio.pause();
-          audio.currentTime = 0;
-        }
-      }
+    Object.keys(musicNodes).forEach(key => {
+      musicNodes[key].audio.pause();
+      musicNodes[key].audio.currentTime = 0;
     });
-    globalActiveMusic = null;
-    setLocalActiveMusic(null);
+    activeMusicKey = null;
+    setCurrentMusic(null);
   }, []);
 
-  return { play, stop, playMusic, stopAllMusic, currentMusic: localActiveMusic };
+  return { play, stop, playMusic, stopAllMusic, currentMusic };
 }
 

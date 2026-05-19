@@ -560,8 +560,39 @@ export function SettingsScreen({
                       <p className="text-[10px] text-red-900/60 font-medium">Worker thread disconnected, bro.</p>
                     </div>
                  </div>
-                 <button onClick={onRetryFCM} className="p-2 bg-white text-red-500 rounded-full shadow-sm hover:rotate-180 transition-transform duration-500">
+                 <button 
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    onRetryFCM();
+                  }} 
+                  className="p-3 bg-white text-red-500 rounded-2xl shadow-sm hover:rotate-180 transition-all duration-500 active:scale-90 flex items-center gap-2 border border-red-100"
+                >
                    <RefreshCw size={16} />
+                   <span className="text-[8px] font-black uppercase">Retry</span>
+                 </button>
+              </div>
+            )}
+
+            {!fcmError && !settings.fcmToken && settings.notificationsEnabled && (
+              <div className="p-4 bg-blue-50 border-2 border-blue-100 rounded-2xl flex items-center justify-between mt-4">
+                 <div className="flex items-center gap-3">
+                    <div className="bg-blue-500 p-2 rounded-xl text-white">
+                       <Smartphone size={16} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-blue-600 font-black uppercase mb-1">Token Pending</p>
+                      <p className="text-[10px] text-blue-900/60 font-medium">System waiting for Browser ID...</p>
+                    </div>
+                 </div>
+                 <button 
+                   onClick={() => {
+                     vibrate(VIBRATION_PATTERNS.CLICK);
+                     onRetryFCM();
+                   }} 
+                   className="p-3 bg-white text-blue-500 rounded-2xl shadow-sm hover:bg-blue-50 transition-all active:scale-90 flex items-center gap-2 border border-blue-100 font-black text-[8px] uppercase"
+                 >
+                   <RefreshCw size={14} className="animate-spin-slow" />
+                   Manual Sync
                  </button>
               </div>
             )}

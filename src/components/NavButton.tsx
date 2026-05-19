@@ -1,5 +1,6 @@
 import React from 'react';
 import { vibrate } from '../lib/vibrate';
+import { useSound } from '../hooks/useSound';
 
 interface NavButtonProps {
   active: boolean;
@@ -9,8 +10,11 @@ interface NavButtonProps {
 }
 
 export function NavButton({ active, onClick, icon, label }: NavButtonProps) {
+  const { play } = useSound();
+
   const handleClick = () => {
     vibrate(15);
+    play('nav_switch');
     onClick();
   };
 

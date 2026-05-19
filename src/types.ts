@@ -74,6 +74,7 @@ export interface UserSettings {
   performanceMode?: boolean;
   lowPowerMode?: boolean;
   onboardingCompleted?: boolean;
+  hasNewPlantItem?: boolean;
   challengeCountGoal?: number;
   inventory?: LibraryItem[];
   isDogSoundPackActive?: boolean;

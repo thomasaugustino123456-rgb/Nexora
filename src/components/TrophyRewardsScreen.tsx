@@ -23,6 +23,11 @@ export function TrophyRewardsScreen({ trophyType, onFinish, settings }: TrophyRe
       return () => clearTimeout(timer);
     }
 
+    // Play trophy sound immediately
+    const trophySound = trophyType === 'golden' ? 'trophy1' : trophyType === 'ice' ? 'trophy2' : 'trophy3';
+    play(trophySound);
+    vibrate(20);
+
     // Play a triumphant song using background music system
     const musicKey = trophyType === 'golden' ? 'music-fanfare' : 'music-triplets';
     
@@ -40,7 +45,7 @@ export function TrophyRewardsScreen({ trophyType, onFinish, settings }: TrophyRe
       clearTimeout(timer);
       stopAllMusic();
     };
-  }, [playMusic, stopAllMusic, trophyType, settings?.soundEnabled]);
+  }, [play, playMusic, stopAllMusic, trophyType, settings?.soundEnabled]);
 
   return (
     <div className="fixed inset-0 z-[1000] bg-white flex flex-col items-center justify-center p-6 text-center overflow-hidden">
