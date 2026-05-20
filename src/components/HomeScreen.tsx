@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { 
   AlertCircle, Star, Bell, Flame, Trophy as TrophyIcon, 
   Plus, Trash2, Clock, Target, ChevronRight, Sprout, LogOut, Save, CheckCircle2,
-  Infinity, Zap, Crown, Coins, Brain, Sparkles
+  Infinity, Zap, Crown, Coins, Brain, Sparkles, BookOpen
 } from 'lucide-react';
 import { 
   UserStats, UserSettings, DailyProgress, MascotMood, ChallengeStep, CustomPlan 
@@ -67,7 +67,7 @@ function NextRestorationCountdown({ targetTime }: { targetTime: number | null })
   return <span>{timeLeft}</span>;
 }
 
-export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenNexusVision, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask }: { 
+export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenArchives, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask }: { 
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
@@ -83,7 +83,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
   onDeleteCustomPlan: (id: string) => void,
   onOpenPlanBuilder: () => void,
   onOpenPlant: () => void,
-  onOpenNexusVision: () => void,
+  onOpenArchives: () => void,
   fcmToken: string | null,
   setupFCM: () => void,
   fcmError: string | null,
@@ -211,12 +211,13 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
               <button 
                 onClick={() => {
                   vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                  onOpenNexusVision();
+                  onOpenArchives();
                 }}
-                className="p-3 bg-blue-900 text-white rounded-2xl shadow-xl shadow-blue-900/20 hover:scale-105 transition-all group relative overflow-hidden"
+                className="p-3 bg-gradient-to-br from-[#69C496] to-[#58B383] text-white rounded-2xl shadow-xl shadow-[#69C496]/20 hover:scale-105 transition-all group relative overflow-hidden"
+                title="Retention Academy"
               >
-                <Brain size={20} className="group-hover:rotate-12 transition-transform" />
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/30 to-blue-400/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                <BookOpen size={20} className="group-hover:rotate-12 transition-transform" />
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
               </button>
 
               <button 

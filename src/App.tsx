@@ -3909,9 +3909,9 @@ export default function App() {
                         vibrate(VIBRATION_PATTERNS.CLICK);
                         setActiveScreen("plant");
                       }}
-                      onOpenNexusVision={() => {
+                      onOpenArchives={() => {
                         vibrate(VIBRATION_PATTERNS.CLICK);
-                        setActiveScreen("nexus-vision");
+                        setActiveScreen("archives");
                       }}
                       onSelectTask={(taskId) => {
                         vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
@@ -4301,7 +4301,7 @@ export default function App() {
                       play={play}
                       onBack={() => {
                         vibrate(VIBRATION_PATTERNS.CLICK);
-                        setActiveScreen("profile");
+                        setActiveScreen("home");
                       }}
                     />
                   </Suspense>
