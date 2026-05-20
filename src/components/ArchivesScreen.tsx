@@ -23,7 +23,9 @@ import {
   Lock,
   Compass,
   Trophy,
-  Volume2
+  Volume2,
+  Dumbbell,
+  ShoppingBag
 } from 'lucide-react';
 import { KNOWLEDGE_BOOKS, Book } from '../constants/library';
 import { UserStats, UserSettings } from '../types';
@@ -46,6 +48,10 @@ import optimalSaccadesImg from '../assets/images/optimal_saccades_1779268139737.
 import nootropicNutritionImg from '../assets/images/nootropic_nutrition_1779268157558.png';
 import carnivorousPitcherImg from '../assets/images/carnivorous_pitcher_1779268179856.png';
 import neurogenesisSynapseImg from '../assets/images/neurogenesis_synapse_1779268200962.png';
+import nexoraGuideImg from '../assets/images/nexora_guide_img_1779270251768.png';
+import selfCareImg from '../assets/images/self_care_img_1779270269714.png';
+import challengePracticeImg from '../assets/images/challenge_practice_img_1779270288112.png';
+import shopBuyingGuideImg from '../assets/images/shop_buying_guide_1779270367530.png';
 
 // Map icons cleanly
 const ICON_MAP: Record<string, any> = {
@@ -58,6 +64,9 @@ const ICON_MAP: Record<string, any> = {
   Eye,
   Heart,
   Palette,
+  Compass,
+  Dumbbell,
+  ShoppingBag,
   BookOpen: BookIcon
 };
 
@@ -425,6 +434,54 @@ function BookIllustration({ bookId }: { bookId: string }) {
           <img 
             src={neurogenesisSynapseImg} 
             alt="Neurogenesis Synapse" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'app-purpose':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={nexoraGuideImg} 
+            alt="Nexora Ecosystem" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'self-care':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={selfCareImg} 
+            alt="Self-Care & Balance" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'challenge-practice':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={challengePracticeImg} 
+            alt="Challenge Drills" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'shop-upgrades':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={shopBuyingGuideImg} 
+            alt="Ecosystem Shop" 
             referrerPolicy="no-referrer"
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />

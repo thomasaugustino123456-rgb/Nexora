@@ -498,5 +498,105 @@ export const KNOWLEDGE_BOOKS: Book[] = [
         }
       ]
     }
+  },
+  {
+    id: 'app-purpose',
+    title: 'Nexora Ecosystem',
+    description: 'Deconstruct how Nexora gamifies somatic wellness and real-life focus anchors.',
+    icon: 'Compass',
+    coverColor: 'bg-emerald-700',
+    category: 'research',
+    content: {
+      title: 'Nexora Ecosystem: Core Architectural Philosophy',
+      sections: [
+        {
+          heading: 'Connecting Digital and Biological Gardens',
+          text: 'Nexora is not just an ordinary gamified tracker, bro. It functions as a gorgeous cyber-biological greenhouse where your real-world activities act as nourishment. When you complete real physiological anchors (hydration checks, pushups, resonant breathing cycles), you earn Life Essences to feed and grow high-tech bioluminescent plant species digitally.'
+        },
+        {
+          heading: 'Dopamine Loop Re-alignment',
+          text: 'Traditional gaming loops deplete your dopamine receptors by rewarding unproductive digital milestones. Nexora flips this dynamic on its head. By aligning gamified growth with genuine, highly optimized habits, we turn your natural desire for achievement into a powerful driver for absolute physical and mental wellness.'
+        },
+        {
+          heading: 'Building Your Virtual Oasis',
+          text: 'Each plant you cultivate and each book you unlock represents direct real-world dedication. Your digital showcase acts as a visual monument to your real physical health. As your garden flourishes with colorful alien flora, you are building an authentic, beautiful representation of your own resilient and optimized mind.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'self-care',
+    title: 'Self-Care & Balance',
+    description: 'Learn to synchronize circadian rhythms, hydration, and positive cognitive loops.',
+    icon: 'Heart',
+    coverColor: 'bg-rose-500',
+    category: 'health',
+    content: {
+      title: 'Somatic Wellness Mastery: The Self-Care Protocol',
+      sections: [
+        {
+          heading: 'Circadian Light Alignment',
+          text: 'Taking care of yourself begins with the solar clock, bro. Gaze directly at natural sunlight within 30 minutes of waking for 5 to 10 minutes. This photons-to-retina cascade triggers cortisol release at the perfect biological peak while programming your internal sleep clock for automatic, deep melatonin synthesis tonight.'
+        },
+        {
+          heading: 'Somatic Rest Cycles',
+          text: 'True high-productivity rests on a foundation of deliberate relaxation. Build micro-sessions of continuous deep, quiet breathing or simple floor stretching. Releasing mechanical tension from your hips and shoulders lowers systemic muscle tightness, sending clear safety signals directly back to your nervous system.'
+        },
+        {
+          heading: 'The Positive Memory Anchor',
+          text: 'Self-care isn\'t soft; it is supreme strategic maintenance. Maintain a high-contrast cognitive framework by documenting three daily small wins inside Nexora. This physical reinforcement fires dopamine loops that actively shield your emotional reserves, preventing toxic burnout and sustaining your drive.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'challenge-practice',
+    title: 'Challenge Drills',
+    description: 'Optimize the execution of physical, hydration, and breathing protocols.',
+    icon: 'Dumbbell',
+    coverColor: 'bg-amber-600',
+    category: 'challenge',
+    content: {
+      title: 'Rhythmic Physical Mastery: Practicing Challenges',
+      sections: [
+        {
+          heading: 'The Daily Anchoring Ritual',
+          text: 'Do not approach challenges as a set of exhausting, high-friction chores. Anchor them to existing environmental cues instead. Trigger five deep resonance breaths immediately when walking up stairs, or perform a set of clean pushups right after closing your evening work terminal. Anchoring wipes away decision friction completely.'
+        },
+        {
+          heading: 'Pristine Kinetic Standards',
+          text: 'Never trade quality for raw numbers. Five absolutely flawless, slow, deeply controlled pushups with absolute core lockout are infinitely superior to twenty quick, sloppy repetitions. By emphasizing biomechanical perfection, you optimize deep motor-neuron connectivity and protect your joints from microscopic damage.'
+        },
+        {
+          heading: 'Adapting the Intensity Dial',
+          text: 'Listen to your body daily. If your nervous system feels completely drained from heavy real-world tasks, turn down the intense exercises and pivot to longer, soothing Vagal breathing sessions. Consistency is the ultimate multiplier; adapting your challenges ensures you never break the streak.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'shop-upgrades',
+    title: 'Ecosystem Shop',
+    description: 'Unlock exotic seeds, legendary custom pots, and biological boosters.',
+    icon: 'ShoppingBag',
+    coverColor: 'bg-violet-700',
+    category: 'research',
+    content: {
+      title: 'Upgrade Dynamics: The Merchant Blueprint',
+      sections: [
+        {
+          heading: 'Exotic Bio-Seed Sourcing',
+          text: 'Your earned Essences are the currency of progress inside Nexora, bro. Visit our interactive Merchant shop to secure exotic seeds, such as the Symbiotic Mycelium, Carnivorous Pitcher, or Crystal Cactus. Every seed represents distinct visual growth patterns and introduces a fresh theme to your greenhouse.'
+        },
+        {
+          heading: 'The Power of Organic Upgrades',
+          text: 'Buying custom handcrafted pots and biological soil boosters will speed up plant germination and enhance beauty. Advanced pots offer structural bonuses like hydration optimization, helping you grow magnificent rare botanical specimens with easier maintenance loops.'
+        },
+        {
+          heading: 'Ecosystem Balance Loop',
+          text: 'Maintain a diversified garden! Unlocking a broad variety of flora in the shop keeps your digital environment highly resilient. The broader and healthier your garden grows, the greater your passive daily wellness bonuses become, mirroring the balanced variety of your own real-life habits.'
+        }
+      ]
+    }
   }
 ];
