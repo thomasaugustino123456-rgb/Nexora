@@ -697,20 +697,30 @@ export function ArchivesScreen({
   const [activeLessonStep, setActiveLessonStep] = useState<number>(0);
   const [lessonFinished, setLessonFinished] = useState(false);
 
+  // Playful cozy quotes system inspired by Plant Nanny and cozy gardening games
+  const [tipIndex] = useState(() => Math.floor(Math.random() * 5));
+  const cozyTips = [
+    "💧 Hi friend! Keep going, little sprout! Every drop of daily knowledge makes your habits grow stronger! 🌿",
+    "🌱 Water your habits, nurture your mind, and take three deep breaths. You're doing wonderful!",
+    "🌸 'To grow a beautiful garden, you must nourish the soil every single day.' Let's read a cozy dossier!",
+    "☀️ Did you drink your active water glass today? Let's sip some cool water together while exploring!",
+    "🍀 Your healthy botanical habits garden is looking incredibly lush, vibrant, and well-watered today!"
+  ];
+
   // Read books state
   const completedBookIds = useMemo(() => {
     return settings.readBookIds || [];
   }, [settings.readBookIds]);
 
-  // Categories helper
+  // Clean, beautifully organized categories with cozy garden emojis
   const categories = [
-    { id: 'all', label: 'All Zones', icon: Compass },
-    { id: 'challenge', label: 'Protocols', icon: Zap },
-    { id: 'plant', label: 'Botany', icon: Flower },
-    { id: 'health', label: 'Bio-Hacks', icon: Sun },
+    { id: 'all', label: '🌸 All Seeds', icon: Compass },
+    { id: 'challenge', label: '💧 Life Habits', icon: Zap },
+    { id: 'plant', label: '🌱 Botany Care', icon: Flower },
+    { id: 'health', label: '☀️ Sun Wisdom', icon: Sun },
   ];
 
-  // Random tip or training book
+  // Choosing randomized priority seeds to read/train
   const handleLetTrain = () => {
     const unread = KNOWLEDGE_BOOKS.filter(b => !completedBookIds.includes(b.id));
     const targetBook = unread.length > 0 
@@ -731,20 +741,19 @@ export function ArchivesScreen({
     }
   };
 
-  // Complete current reading session
+  // Safe processing of reading completion
   const completeLesson = () => {
     if (!selectedBook) return;
 
     const isAlreadyRead = completedBookIds.includes(selectedBook.id);
     
-    // Build update payload
     if (!isAlreadyRead) {
       const nextReadBookIds = [...completedBookIds, selectedBook.id];
       onUpdateSettings({
         readBookIds: nextReadBookIds
       });
 
-      // Award +50 XP and +10 Coins!
+      // Award cozy garden incentives (+50 XP and +10 Coins!)
       onUpdateStats((prev: any) => ({
         ...prev,
         coins: (prev.coins || 0) + 10,
@@ -770,122 +779,118 @@ export function ArchivesScreen({
   }, [searchQuery, selectedCategory]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans relative overflow-x-hidden selection:bg-blue-500/20 pb-24">
+    <div className="min-h-screen bg-[#FAF7F2] text-[#4F3F34] font-sans relative overflow-x-hidden selection:bg-emerald-500/20 pb-28">
       
-      {/* Dynamic Warm Ambient Glows layered exactly like the Subscription page but adapted to light bright high contrast */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-20%] w-[100vw] h-[100vw] rounded-full bg-gradient-to-br from-sky-200/20 via-blue-100/5 to-transparent blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-20%] w-[100vw] h-[100vw] rounded-full bg-gradient-to-tl from-emerald-100/25 via-teal-50/10 to-transparent blur-[140px]" />
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.015] mix-blend-overlay" />
+      {/* Playful, cozy background elements similar to Plant Nanny soft garden vibes */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[5%] left-[-15%] w-[80vw] h-[80vw] rounded-full bg-gradient-to-br from-emerald-100/35 via-amber-50/10 to-transparent blur-[80px]" />
+        <div className="absolute bottom-[10%] right-[-15%] w-[85vw] h-[85vw] rounded-full bg-gradient-to-tl from-sky-100/30 via-emerald-50/10 to-transparent blur-[100px]" />
+        {/* Subtle decorative leaf symbols dancing in background */}
+        <div className="absolute top-24 left-[8%] w-6 h-6 text-emerald-200/40 transform rotate-12">🌿</div>
+        <div className="absolute top-[45%] right-[6%] w-8 h-8 text-amber-200/35 transform -rotate-45">🌸</div>
+        <div className="absolute bottom-36 left-[4%] w-7 h-7 text-sky-200/40 transform rotate-45">💧</div>
       </div>
 
-      {/* Sticky High-contrast Professional Navigation Header */}
-      <div className="sticky top-0 z-40 bg-white/70 backdrop-blur-md px-6 py-5 border-b border-slate-200/60 shadow-sm flex items-center justify-between">
+      {/* Cozy Rounded Sticky Navigation Header */}
+      <div className="sticky top-0 z-40 bg-[#FAF7F2]/90 backdrop-blur-md px-6 py-4.5 border-b-2 border-[#E9E4D4]/85 shadow-[0_4px_20px_rgba(100,80,60,0.03)] flex items-center justify-between">
         <div className="flex items-center gap-4">
           <motion.button 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onBack}
-            className="p-3 bg-white hover:bg-slate-50 rounded-2xl shadow-sm border border-slate-200/80 text-slate-705 group cursor-pointer transition-all"
+            className="p-3 bg-white hover:bg-[#FAF7F2] rounded-2.5xl shadow-[0_4px_12px_rgba(100,80,60,0.06)] border-2 border-[#E9E4D4] text-[#4F3F34] group cursor-pointer transition-all"
           >
             <ArrowLeft className="w-5 h-5 stroke-[2.5] group-hover:-translate-x-0.5 transition-transform" />
           </motion.button>
           
           <div>
-            <h2 className="text-xl font-black text-slate-900 leading-none uppercase tracking-wide">Nexus wisdom core</h2>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full uppercase tracking-wider">
-                Readiness: {completedBookIds.length} / {KNOWLEDGE_BOOKS.length} Dossiers
+            <h2 className="text-xl font-bold tracking-tight text-[#4F3F34] font-sans">Cozy Garden Library</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] font-bold text-emerald-800 bg-[#E6F4EA] border border-emerald-200 px-3 py-0.5 rounded-full uppercase tracking-wider">
+                🌱 Grown: {completedBookIds.length} / {KNOWLEDGE_BOOKS.length} seeds
               </span>
             </div>
           </div>
         </div>
 
-        {/* Currency Stat */}
-        <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-2xl border border-amber-200 shadow-sm">
-          <span className="text-xs font-black text-amber-800">🪙 {stats.coins || 0}</span>
+        {/* Currency & Growth Points */}
+        <div className="flex items-center gap-2.5 px-3.5 py-2 bg-amber-50 rounded-2xl border-2 border-amber-200 shadow-sm">
+          <span className="text-xs font-bold text-amber-800 flex items-center gap-1">🪙 {stats.coins || 0}</span>
+          <span className="text-[10px] text-amber-600/80 font-bold">|</span>
+          <span className="text-[10px] font-bold text-emerald-800">✨ {stats.xp || 0} XP</span>
         </div>
       </div>
 
-      {/* Spacious layouts tailored exactly to match the aesthetic of the SubscriptionScreen */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 py-12 space-y-12">
+      {/* Main Container */}
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 py-10 space-y-10">
         
-        {/* Banner Hero block - restructured to match subscription transparency block style */}
+        {/* Plant Nanny Inspiration Header & Interactive Mascot Dialog Box */}
         <motion.div 
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="p-8 rounded-[3.5rem] bg-gradient-to-br from-blue-500/5 via-blue-600/5 to-transparent border border-blue-200/60 relative overflow-hidden"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-6.5 sm:p-8 rounded-[2.8rem] bg-white border-2 border-[#E9E4D4] shadow-[0_8px_30px_rgba(100,80,60,0.05)] relative overflow-hidden"
         >
-          <div className="absolute top-0 right-0 p-16 bg-blue-400/10 rounded-full blur-3xl -mr-16 -mt-16" />
-          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 justify-between">
-            <div className="space-y-4 text-center md:text-left flex-1">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-500/10 text-blue-700 rounded-full text-[9px] font-black uppercase tracking-widest border border-blue-200/30">
-                <Sparkles size={11} className="text-blue-500" /> COGNITIVE DOCKET
+          <div className="absolute top-0 right-0 w-44 h-44 bg-[#E7F5ED] rounded-full blur-3xl -mr-16 -mt-16 opacity-70" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 justify-between">
+            <div className="flex-1 flex flex-col sm:flex-row gap-5 items-center text-center sm:text-left">
+              {/* Cute cozy companion avatar */}
+              <div className="w-18 h-18 bg-[#FFF9EE] border-2 border-[#FBDCA3] rounded-3xl flex items-center justify-center p-2 shadow-sm shrink-0">
+                <Mascot mood="happy" className="w-full h-full" />
               </div>
-              <h1 className="text-3xl md:text-4xl font-black italic tracking-tight text-slate-900 leading-tight uppercase">
-                INTEGRITY RESYNC LORE
-              </h1>
-              <p className="text-slate-500 text-sm max-w-xl leading-relaxed font-medium">
-                Welcome to the Nexus archives. Review your active neural files, master physiological hacks, and synchronize technical data. Completing cognitive updates awards elite performance credentials and coins.
-              </p>
               
-              {/* Sleek inline badges showing structure and no Duolingo noise */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left pt-2">
-                {[
-                  { icon: <Zap size={14} className="text-blue-600" />, text: 'Task Mechanics' },
-                  { icon: <Flower size={14} className="text-emerald-600" />, text: 'Flora Analytics' },
-                  { icon: <Sun size={14} className="text-amber-600" />, text: 'Circadian Balance' },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-2 text-[10px] font-black text-slate-600 uppercase tracking-tight bg-slate-100/50 p-2.5 rounded-xl border border-slate-200/30">
-                    <div className="p-1 bg-white rounded-md shadow-sm border border-slate-100">{item.icon}</div>
-                    {item.text}
-                  </div>
-                ))}
+              <div className="space-y-2">
+                <div className="flex items-center justify-center sm:justify-start gap-1 text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Botanical Caretip
+                </div>
+                <h1 className="text-2xl font-extrabold text-[#4F3F34] leading-tight">
+                  Water Your Habits Today!
+                </h1>
+                <p className="text-[#7D6B58] text-sm max-w-xl leading-relaxed">
+                  {cozyTips[tipIndex]}
+                </p>
               </div>
             </div>
 
-            {/* CTA action button styled cleanly without cartoon chunky aspects */}
-            <div className="w-full md:w-auto flex flex-col items-center gap-3 shrink-0">
+            {/* Quick Action Button */}
+            <div className="shrink-0 w-full md:w-auto">
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
                 onClick={handleLetTrain}
-                className="w-full md:w-auto px-10 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.15em] shadow-xl shadow-blue-500/25 cursor-pointer hover:shadow-2xl hover:shadow-blue-500/35 transition-all"
+                className="w-full md:w-auto px-7 py-4 bg-[#69C496] hover:bg-[#58B383] text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-[0_6px_18px_rgba(105,196,150,0.3)] cursor-pointer border-b-4 border-[#419E6E] active:border-b-0 active:translate-y-1 transition-all"
               >
-                Inquire Unprocessed Dossier
+                🌱 Open Random Seed
               </motion.button>
-              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-                Selects prioritized unread file
-              </span>
             </div>
           </div>
         </motion.div>
 
-        {/* Search controls - clean modern glass look */}
-        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between bg-white/50 backdrop-blur-md p-4 rounded-3xl border border-slate-200/60 shadow-sm relative z-20">
+        {/* Search & Organization Section: Clean, cozy, and highly organized */}
+        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between bg-white p-4.5 rounded-[2.2rem] border-2 border-[#E9E4D4] shadow-[0_6px_22px_rgba(100,80,60,0.03)] relative z-20">
+          {/* Cozy Search Tool */}
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 stroke-[2.5]" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9A8975] w-4.5 h-4.5 stroke-[2.5]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search files, bio-hacks or flora..."
-              className="w-full bg-white text-slate-800 pl-11 pr-4 py-3 rounded-2xl border border-slate-200/80 focus:outline-none focus:border-blue-500 font-semibold text-xs placeholder-slate-400 transition-all shadow-sm"
+              placeholder="Search botanical seeds, habits, care tips..."
+              className="w-full bg-[#FAF7F2] text-[#4F3F34] pl-11 pr-4 py-3 rounded-2xl border-2 border-[#E9E4D4] focus:outline-none focus:border-[#69C496] focus:bg-white font-medium text-xs placeholder-[#9A8975]/60 transition-all"
             />
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 bg-slate-150 hover:bg-slate-200 text-slate-500 rounded-full"
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 bg-[#E9E4D4] text-[#4F3F34] rounded-full hover:bg-red-100 hover:text-red-700"
               >
                 <X className="w-3 h-3" />
               </button>
             )}
           </div>
 
-          {/* Sliding Category filter nodes */}
-          <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
+          {/* Plant Nanny-style Cozy Tabs Selection */}
+          <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar pt-2 md:pt-0">
             {categories.map((cat) => {
-              const CatIcon = cat.icon;
               const isSelected = selectedCategory === cat.id;
               return (
                 <button
@@ -896,99 +901,124 @@ export function ArchivesScreen({
                       try { play('click'); } catch (e) {}
                     }
                   }}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer ${
+                  className={`px-4.5 py-3 rounded-2xl border-2 text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
                     isSelected 
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      ? 'bg-[#69C496] text-white border-[#58B383] shadow-md shadow-[#69C496]/20' 
+                      : 'bg-white text-[#7D6B58] border-[#E9E4D4] hover:bg-[#FAF7F2] hover:border-[#D6CDBC]'
                   }`}
                 >
-                  <CatIcon className="w-3.5 h-3.5" />
-                  <span>{cat.label}</span>
+                  {cat.label}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Redesigned grid of dossiers modeled exactly like the clean stacked cards format of Subscription page */}
+        {/* Seeds Grid */}
         <div className="space-y-6">
           <div className="flex items-center justify-between px-2">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">
-              Synchronizable Dossier Registry ({filteredBooks.length})
+            <h3 className="text-xs font-bold text-[#9A8975] uppercase tracking-wider">
+              🌿 Greenhouse Seeds Inventory ({filteredBooks.length})
             </h3>
           </div>
 
           {filteredBooks.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-[3rem] border border-slate-200 p-8 space-y-4 shadow-sm">
-              <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-400">
-                <BookOpen className="w-6 h-6" />
+            <div className="text-center py-16 bg-white rounded-[2.5rem] border-2 border-[#E9E4D4] p-8 space-y-4 shadow-sm">
+              <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-emerald-400">
+                <Flower className="w-8 h-8" />
               </div>
-              <p className="font-extrabold text-slate-600 text-sm uppercase tracking-wide">No lore elements match the query</p>
+              <p className="font-extrabold text-[#7D6B58] text-sm uppercase tracking-wide">No habit seeds found in this garden zone</p>
               <button 
                 onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }} 
-                className="text-[9px] text-blue-600 font-black uppercase tracking-widest bg-blue-50 hover:bg-blue-100 px-4 py-2.5 rounded-xl border border-blue-100 transition-all"
+                className="text-[10px] text-emerald-800 bg-[#E6F4EA] font-bold uppercase tracking-wider border border-emerald-200 px-4.5 py-2.5 rounded-xl transition-all hover:bg-emerald-100"
               >
-                Flush Search Criteria
+                Clear Filters & Search
               </button>
             </div>
           ) : (
-            /* GRID: Styled like SubscriptionScreen cards - stacked look, beautiful shadows, responsive padding */
+            /* Redesigned grid of dossiers modeled exactly like beautiful botanical cards */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredBooks.map((book) => {
                 const bookIsDone = completedBookIds.includes(book.id);
+                const isChallenge = book.category === 'challenge';
+                const isPlant = book.category === 'plant';
+                
                 return (
                   <motion.div
                     key={book.id}
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     onClick={() => triggerReadingSession(book)}
-                    className="group bg-white rounded-[2.5rem] border border-slate-200 hover:border-blue-400 p-5 transition-all hover:shadow-xl hover:shadow-slate-100 flex flex-col gap-5 cursor-pointer relative"
+                    className="group bg-white rounded-[2.2rem] border-2 border-[#E9E4D4] hover:border-[#69C496] p-4.5 transition-all duration-300 hover:shadow-[0_12px_32px_rgba(100,80,60,0.06)] flex flex-col gap-4.5 cursor-pointer relative"
                   >
-                    {/* Visual Vector Cover Header containing custom-drawn high quality illustration */}
-                    <BookIllustration bookId={book.id} />
-
-                    {/* Meta Section */}
-                    <div className="space-y-3 flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[8.5px] font-black text-indigo-700 uppercase tracking-widest bg-indigo-50 border border-indigo-150/40 px-2.5 py-1 rounded-full">
-                          {book.category === 'challenge' ? 'Task Protocol' : book.category === 'plant' ? 'Greenhouse Flora' : 'System BioResearch'}
+                    {/* Visual Vector Cover Header containing preloaded cartoon illustrations */}
+                    <div className="rounded-2xl overflow-hidden relative shadow-sm h-48 bg-[#FAF7F2] flex items-center justify-center">
+                      <BookIllustration bookId={book.id} />
+                      
+                      {/* Interactive Watering Can Overlay Indicator */}
+                      <div className="absolute top-3 left-3 px-3 py-1 bg-white/95 backdrop-blur-sm rounded-full border border-[#E9E4D4] flex items-center gap-1.5 shadow-sm">
+                        <span className="text-[10px] font-bold text-[#4F3F34]">
+                          {isChallenge ? '💧 Habit Seed' : isPlant ? '🌱 Plant Pet' : '☀️ Sun Secret'}
                         </span>
+                      </div>
+                    </div>
 
+                    {/* Metadata Detail Section */}
+                    <div className="space-y-3 flex-1 px-1">
+                      <div className="flex items-center justify-between">
                         {bookIsDone ? (
-                          <div className="flex items-center gap-1.5 text-emerald-700 font-black text-[8.5px] bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full uppercase">
-                            <Check className="w-3 h-3 stroke-[3]" /> Integrated
-                          </div>
+                          <span className="text-[10px] font-bold text-[#2E7D32] bg-[#E8F5E9] border border-[#A5D6A7] px-3 py-0.5 rounded-full uppercase flex items-center gap-1">
+                            <Check className="w-3 h-3 stroke-[3]" /> Fully Grown
+                          </span>
                         ) : (
-                          <div className="flex items-center gap-1.5 text-blue-700 font-black text-[8.5px] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full uppercase">
-                            <Clock className="w-3 h-3" /> Sync Ready
-                          </div>
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-0.5 rounded-full uppercase flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" /> Needs Watering
+                          </span>
                         )}
+
+                        <span className="text-[10px] text-emerald-800 bg-[#E8F5E9] border border-emerald-100 px-2 py-0.5 rounded-md font-bold">
+                          🪙 +10
+                        </span>
                       </div>
 
                       <div className="space-y-1.5">
-                        <h4 className="font-black text-slate-900 text-lg uppercase tracking-tight leading-snug group-hover:text-blue-600 transition-colors">
+                        <h4 className="font-extrabold text-[#4F3F34] text-lg leading-snug group-hover:text-[#69C496] transition-colors">
                           {book.title}
                         </h4>
-                        <p className="text-xs text-slate-500 font-semibold leading-relaxed line-clamp-2">
+                        <p className="text-xs text-[#7D6B58] font-medium leading-relaxed line-clamp-2">
                           {book.description}
                         </p>
                       </div>
                     </div>
 
-                    {/* Launch footer and card separation line */}
-                    <div className="flex items-center justify-between border-t border-slate-100 pt-3.5 text-[9px] font-black uppercase tracking-wider">
-                      <span className="text-slate-400">
-                        {book.category === 'challenge' 
-                          ? '#TaskScience' 
-                          : book.category === 'plant' 
-                            ? '#BotanyMaturity' 
-                            : '#BioArchitecture'}
-                      </span>
+                    {/* Plant Nanny Moisture Tracking Progress Bar */}
+                    <div className="bg-[#FAF7F2] border-t-2 border-[#E9E4D4]/60 pt-3.5 space-y-2">
+                      <div className="flex items-center justify-between text-[10px] font-bold text-[#9A8975] uppercase px-1">
+                        <span>Hydration Progress</span>
+                        <span className={bookIsDone ? 'text-emerald-700' : 'text-amber-700'}>
+                          {bookIsDone ? '100% Watered' : '0% Dry Seed'}
+                        </span>
+                      </div>
                       
-                      <span className="text-blue-600 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                        Verify dossier <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                      {/* Double border-rounded bar */}
+                      <div className="h-4 bg-amber-100/30 rounded-full border-2 border-[#E9E4D4] overflow-hidden p-[2px]">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            bookIsDone ? 'bg-gradient-to-r from-[#69C496] to-[#58B383]' : 'bg-[#E9E4D4]'
+                          }`}
+                          style={{ width: bookIsDone ? '100%' : '10%' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-1 px-1 text-[10px] font-bold text-[#9A8975] uppercase">
+                      <span>{isChallenge ? '#HealthSprout' : isPlant ? '#CozyBotany' : '#SunShine'}</span>
+                      <span className="text-[#69C496] font-bold flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
+                        Nurture seed <ChevronRight className="w-3.5 h-3.5 stroke-[3]" />
                       </span>
                     </div>
+
                   </motion.div>
                 );
               })}
@@ -996,170 +1026,176 @@ export function ArchivesScreen({
           )}
         </div>
 
-        {/* Footer trademark core */}
-        <p className="text-center text-[9px] text-slate-400 font-black uppercase tracking-[0.4em] pt-12">
-          Nexora Discipline Engineering Lab • Memory Core Authorized
+        {/* Footer trademark core - made wholesome */}
+        <p className="text-center text-[10px] text-[#9A8975] font-extrabold uppercase tracking-widest pt-12">
+          🌸 Nexora Botanical Oasis • Drink Water & Stay Happy! 🌸
         </p>
 
       </div>
 
-      {/* LUXURIOUS GLASS-MORPHIC FULL-SCREEN LESSON DRAWER (Clean, high-tech, responsive, replaces cartoony Duolingo styles) */}
+      {/* COZY opened BOOK SHELF DIALOG WORKSPACE (Fades, clean card structures, beautiful Serif reading fonts) */}
       <AnimatePresence>
         {selectedBook && (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
-            className="fixed inset-0 z-50 bg-[#f8fbff] flex flex-col justify-between overflow-hidden"
+            className="fixed inset-0 z-50 bg-[#FAF7F2] flex flex-col justify-between overflow-hidden"
           >
-            {/* Modal Header: High frequency progress tracker */}
-            <div className="bg-white/90 border-b border-slate-200/60 px-6 py-5 flex items-center justify-between gap-6 backdrop-blur-md">
+            {/* Opened Book Top Navigation */}
+            <div className="bg-[#FAF7F2] border-b-2 border-[#E9E4D4] px-6 py-4.5 flex items-center justify-between gap-6">
               <button 
                 onClick={() => setSelectedBook(null)}
-                className="p-3 hover:bg-slate-100 rounded-2xl text-slate-500 border border-slate-200/50 hover:text-slate-800 transition-all cursor-pointer"
+                className="p-3 hover:bg-[#FAF7F2]/90 rounded-2xl text-[#4F3F34] border-2 border-[#E9E4D4] shadow-sm cursor-pointer"
               >
                 <X className="w-5 h-5 stroke-[2.5]" />
               </button>
 
-              {/* Sophisticated status metric bars */}
-              <div className="flex-1 flex gap-2.5">
+              {/* Plant Growth Water Progress Indicator */}
+              <div className="flex-1 flex gap-2">
                 {selectedBook.content.sections.map((_, idx) => {
                   const isActive = idx === activeLessonStep;
                   const isCompleted = idx < activeLessonStep;
                   return (
                     <div 
                       key={idx} 
-                      className="h-2 flex-1 bg-slate-100/85 rounded-full overflow-hidden border border-slate-200/50 p-0"
+                      className="h-3.5 flex-1 bg-white rounded-full overflow-hidden border-2 border-[#E9E4D4] p-0.5"
                     >
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: isCompleted ? '100%' : isActive ? '60%' : '0%' }}
-                        className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.25)]"
+                        className="h-full bg-gradient-to-r from-[#69C496] to-[#58B383] rounded-full"
                       />
                     </div>
                   );
                 })}
               </div>
 
-              {/* Core Index code */}
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Nodes: {activeLessonStep + 1} / {selectedBook.content.sections.length}
+              {/* Water Levels Met */}
+              <span className="text-[11px] font-bold text-[#7D6B58] uppercase">
+                Watering: {activeLessonStep + 1} / {selectedBook.content.sections.length}
               </span>
             </div>
 
-            {/* Modal Body: Active chapter text and beautifully integrated Companion Mascot */}
+            {/* Book Body: Paper-colored reading view with handwritten-style clean layout */}
             <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col justify-center items-center">
-              <div className="max-w-2xl w-full space-y-8">
+              <div className="max-w-2xl w-full">
                 
                 {lessonFinished ? (
-                  /* Elegant Synchronized celebration status card */
+                  /* Super Cute Confetti & Grown Celebration state */
                   <motion.div 
-                    initial={{ opacity: 0, scale: 0.96 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="text-center space-y-8"
+                    className="text-center space-y-8 py-6"
                   >
-                    {/* Genuine Companion Mascot reacting happily to synchronization */}
-                    <div className="relative inline-block w-36 h-36">
-                      <div className="absolute inset-0 bg-blue-500 rounded-full blur-3xl opacity-15 scale-125 animate-pulse" />
-                      <div className="w-full h-full bg-white rounded-[2.5rem] border border-slate-200/80 shadow-md p-3 relative z-10">
-                        <Mascot mood="happy" theme="sunset" className="w-full h-full" />
+                    {/* Cute Mascot Jumping for Joy */}
+                    <div className="relative inline-block w-40 h-40">
+                      <div className="absolute inset-0 bg-[#E7F5ED] rounded-full blur-2xl opacity-60 scale-125" />
+                      <div className="w-full h-full bg-white rounded-[2.5rem] border-2 border-[#E9E4D4] shadow-sm p-4 relative z-10 flex items-center justify-center">
+                        <Mascot mood="happy" className="w-full h-full transform hover:scale-105 transition-transform" />
                       </div>
+                      
+                      {/* Floating floral and water emojis */}
+                      <span className="absolute -top-3 -right-3 text-2xl animate-bounce">💧</span>
+                      <span className="absolute -bottom-2 -left-3 text-2xl animate-pulse">🌸</span>
+                      <span className="absolute top-1/2 -left-6 text-xl">🌟</span>
                     </div>
 
                     <div className="space-y-2">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-700 rounded-full text-[9px] font-black uppercase tracking-wider border border-emerald-200/30">
-                        <Check size={10} className="stroke-[3]" /> SYNCHRONIZATION COMPLETE
+                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#E8F5E9] text-[#2E7D32] rounded-full text-[10px] font-bold uppercase tracking-wider border border-[#A5D6A7]">
+                        🌿 HYDRATION INTAKE COMPLETELY GROWING!
                       </span>
-                      <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none uppercase">
-                        Dossier Integrated
+                      <h2 className="text-3xl font-extrabold text-[#4F3F34] tracking-tight">
+                        Seed Fully Watered!
                       </h2>
-                      <p className="text-xs font-semibold text-slate-500 max-w-md mx-auto leading-relaxed">
-                        Excellent work, comrade. You have successfully processed and stored the structural files from <span className="text-blue-600 font-extrabold">{selectedBook.title}</span>.
+                      <p className="text-sm font-medium text-[#7D6B58] max-w-sm mx-auto leading-relaxed">
+                        Splendid! You have successfully watered the <span className="text-[#69C496] font-bold">{selectedBook.title}</span> habit seed!
                       </p>
                     </div>
 
-                    {/* Rewards - displayed cleanly like in the Subscription compare module */}
-                    <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
-                      <div className="bg-white border border-slate-200 p-5 rounded-3xl flex flex-col items-center shadow-sm">
-                        <span className="bg-amber-500/10 text-amber-700 px-3 py-1 rounded-full font-black text-[8px] uppercase tracking-wider border border-amber-200/30">
+                    {/* Rewards Grid Styled clean and cozy */}
+                    <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto">
+                      <div className="bg-white border-2 border-[#E9E4D4] p-4.5 rounded-[1.8rem] flex flex-col items-center shadow-sm">
+                        <span className="text-[9px] font-bold text-amber-800 uppercase tracking-wider bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
                           Tokens Awarded
                         </span>
-                        <span className="text-xl font-black text-slate-900 mt-2.5">
+                        <span className="text-lg font-bold text-[#4F3F34] mt-2">
                           +10 🪙
                         </span>
                       </div>
-                      <div className="bg-white border border-slate-200 p-5 rounded-3xl flex flex-col items-center shadow-sm">
-                        <span className="bg-blue-500/10 text-blue-700 px-3 py-1 rounded-full font-black text-[8px] uppercase tracking-wider border border-blue-200/30">
-                          Neural XP synced
+                      <div className="bg-white border-2 border-[#E9E4D4] p-4.5 rounded-[1.8rem] flex flex-col items-center shadow-sm">
+                        <span className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider bg-[#E8F5E9] px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          Botanical XP
                         </span>
-                        <span className="text-xl font-black text-slate-900 mt-2.5">
+                        <span className="text-lg font-bold text-[#4F3F34] mt-2">
                           +50 ✨
                         </span>
                       </div>
                     </div>
 
-                    {/* Companion advice node replacing robotic text logs */}
-                    <div className="bg-slate-50 border border-slate-200/70 rounded-3xl p-5 flex gap-4 items-center justify-start text-left max-w-md mx-auto">
-                      <div className="w-12 h-12 bg-white rounded-2xl border border-slate-200 shrink-0 shadow-sm p-1">
+                    {/* Interactive advice from garden buddy */}
+                    <div className="bg-[#FFFDF9] border-2 border-[#F6EED4] rounded-3xl p-5 flex gap-4.5 items-center justify-start text-left max-w-md mx-auto shadow-sm">
+                      <div className="w-12 h-12 bg-white rounded-2xl border-2 border-[#FBDCA3] shrink-0 p-1">
                         <Mascot mood="happy" className="w-full h-full" />
                       </div>
                       <div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Companion Advice</p>
-                        <p className="text-xs text-slate-600 font-semibold mt-1.5 leading-relaxed">
-                          "Fabulous job, brother! Your cognitive database is expanding. Let's maintain this momentum."
+                        <p className="text-[9px] font-bold text-[#9A8975] uppercase tracking-wider leading-none">Sprout Seed Advisor</p>
+                        <p className="text-xs text-[#7D6B58] font-semibold mt-1.5 leading-relaxed">
+                          "Fantastic! That water seed went deep down into your mind roots! Drink another cup for extra happiness, friend!"
                         </p>
                       </div>
                     </div>
 
                   </motion.div>
                 ) : (
-                  /* Core chapter details */
-                  <div className="space-y-8 w-full">
+                  /* Reading Book Frame */
+                  <div className="space-y-6 w-full">
                     
-                    {/* Integrated Companion Mascot Guide Speech bubble */}
-                    <div className="flex flex-col sm:flex-row gap-5 items-center sm:items-start bg-blue-500/5 border border-blue-200/50 rounded-[2.5rem] p-6 shadow-sm relative overflow-hidden w-full">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-8 -mt-8 pointer-events-none" />
+                    {/* Plant Nanny Advice Balloon */}
+                    <div className="flex flex-col sm:flex-row gap-4.5 items-center sm:items-start bg-[#E8F5E9] border-2 border-[#C8E6C9] rounded-[2.2rem] p-5.5 shadow-sm relative overflow-hidden w-full">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-white/20 rounded-full -mr-6 -mt-6 pointer-events-none" />
                       
-                      {/* Live Companion Mascot widget */}
-                      <div className="w-20 h-20 bg-white rounded-[2rem] border border-blue-100 flex items-center justify-center p-2.5 shrink-0 shadow-md">
+                      {/* Active Mascot guide */}
+                      <div className="w-16 h-16 bg-white rounded-2xl border-2 border-emerald-100 flex items-center justify-center p-2 shrink-0 shadow-sm">
                         <Mascot 
                           mood={activeLessonStep === 0 ? "happy" : activeLessonStep === 1 ? "surprised" : "happy"} 
                           className="w-full h-full" 
                         />
                       </div>
                       
-                      <div className="space-y-1 relative z-10 flex-1 text-center sm:text-left">
-                        <p className="text-[9px] font-black text-blue-800 uppercase tracking-widest leading-none">Companion Mascot Guide</p>
-                        <h4 className="text-base font-black text-slate-900 leading-snug uppercase mt-1">
+                      <div className="space-y-0.5 relative z-10 flex-1 text-center sm:text-left">
+                        <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Garden Greenhouse Companion</p>
+                        <h4 className="text-base font-extrabold text-[#4F3F34] leading-tight">
                           {activeLessonStep === 0 
-                            ? "INITIATING PARALLEL LORE ALIGNMENT..." 
+                            ? "Nurturing the mental roots..." 
                             : activeLessonStep === 1 
-                              ? "EXCELLENT DEEP RECEPTIVITY STATUS!" 
-                              : "CRITICAL PROTOCOL INTEGRATION STEP!"}
+                              ? "Look at those leaves growing!" 
+                              : "Beautiful habit maturity!"}
                         </h4>
-                        <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                          Let's deconstruct this physiological pathway together, brother!
+                        <p className="text-xs text-[#7D6B58] font-medium leading-relaxed">
+                          Let's explore this beautiful wisdom page, cozy comrade!
                         </p>
                       </div>
                     </div>
 
-                    {/* Section Text Content card replacing Duolingo chunky cards */}
+                    {/* Paper Book Reading Content */}
                     <AnimatePresence mode="wait">
                       <motion.div
                         key={activeLessonStep}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="bg-white rounded-[2.5rem] border border-slate-200 p-8 space-y-6 shadow-sm"
+                        className="bg-white rounded-[2.5rem] border-2 border-[#E9E4D4] p-8 space-y-6 shadow-[0_8px_30px_rgba(100,80,60,0.03)]"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="w-1.5 h-6 bg-blue-600 rounded-full" />
-                          <h3 className="text-xl font-black text-slate-900 leading-none uppercase tracking-tight">
+                          <span className="w-1.5 h-6 bg-[#69C496] rounded-full" />
+                          <h3 className="text-xl font-extrabold text-[#4F3F34] uppercase tracking-tight">
                             {selectedBook.content.sections[activeLessonStep]?.heading}
                           </h3>
                         </div>
                         
-                        <p className="text-sm text-slate-600 font-semibold leading-relaxed whitespace-pre-line">
+                        {/* Cozy custom font paragraph */}
+                        <p className="text-sm sm:text-base text-[#4F3F34] font-medium leading-relaxed whitespace-pre-line font-serif pt-1">
                           {selectedBook.content.sections[activeLessonStep]?.text}
                         </p>
                       </motion.div>
@@ -1171,8 +1207,8 @@ export function ArchivesScreen({
               </div>
             </div>
 
-            {/* Modal Bottom control panel: Modern clean buttons tailored to match Subscription Screen standards */}
-            <div className="bg-white border-t border-slate-200/60 px-6 py-6 flex items-center justify-center backdrop-blur-md">
+            {/* Bottom Book Controls: Bubbly cute rounded controls */}
+            <div className="bg-[#FAF7F2] border-t-2 border-[#E9E4D4] px-6 py-5 flex items-center justify-center">
               <div className="max-w-md w-full">
                 {lessonFinished ? (
                   <motion.button
@@ -1184,9 +1220,9 @@ export function ArchivesScreen({
                         try { play('click'); } catch (e) {}
                       }
                     }}
-                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-4.5 px-6 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-emerald-600/20 cursor-pointer text-center"
+                    className="w-full bg-[#69C496] hover:bg-[#58B383] text-white py-4 px-6 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#69C496]/25 cursor-pointer text-center border-b-4 border-[#419E6E] active:border-b-0 active:translate-y-0.5 transition-all"
                   >
-                    Seal Cognitive Integration
+                    Finish Watering & Close Seed
                   </motion.button>
                 ) : (
                   <div className="flex gap-4">
@@ -1200,9 +1236,9 @@ export function ArchivesScreen({
                             try { play('click'); } catch (e) {}
                           }
                         }}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-4.5 px-6 rounded-2xl font-black text-xs uppercase tracking-wider border border-slate-200 transition-all cursor-pointer"
+                        className="bg-white hover:bg-[#FAF7F2] text-[#7D6B58] py-4 px-5 rounded-2xl font-bold text-xs uppercase tracking-wider border-2 border-[#E9E4D4] transition-all cursor-pointer shadow-sm"
                       >
-                        Recovers Previous Node
+                        Previous Page
                       </motion.button>
                     )}
                     
@@ -1220,9 +1256,9 @@ export function ArchivesScreen({
                           completeLesson();
                         }
                       }}
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-4.5 px-6 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-blue-500/25 cursor-pointer text-center"
+                      className="flex-1 bg-[#69C496] hover:bg-[#58B383] text-white py-4 px-6 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md shadow-[#69C496]/20 cursor-pointer text-center border-b-4 border-[#419E6E] active:border-b-0 active:translate-y-0.5 transition-all"
                     >
-                      {activeLessonStep + 1 === selectedBook.content.sections.length ? 'Finalize Synchronization' : 'Assimilate Next Node'}
+                      {activeLessonStep + 1 === selectedBook.content.sections.length ? 'Nourish Seed' : 'Next Page'}
                     </motion.button>
                   </div>
                 )}
