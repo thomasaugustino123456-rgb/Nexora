@@ -694,10 +694,9 @@ export function ArchivesScreen({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'challenge' | 'plant' | 'health'>('all');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [activeLessonStep, setActiveLessonStep] = useState<number>(0);
   const [lessonFinished, setLessonFinished] = useState(false);
 
-  // Playful cozy quotes system inspired by Plant Nanny and cozy gardening games
+  // Playful cozy tips indices
   const [tipIndex] = useState(() => Math.floor(Math.random() * 5));
   const cozyTips = [
     "💧 Hi friend! Keep going, little sprout! Every drop of daily knowledge makes your habits grow stronger! 🌿",
@@ -707,10 +706,170 @@ export function ArchivesScreen({
     "🍀 Your healthy botanical habits garden is looking incredibly lush, vibrant, and well-watered today!"
   ];
 
-  // Read books state
+  // Completed books tracker from settings
   const completedBookIds = useMemo(() => {
     return settings.readBookIds || [];
   }, [settings.readBookIds]);
+
+  // Map and expand knowledge books with custom editorial contents and titles matching Plant Nanny premium feel
+  const mappedBooks: Book[] = useMemo(() => {
+    return KNOWLEDGE_BOOKS.map(book => {
+      if (book.id === 'research-sleep') {
+        return {
+          ...book,
+          title: 'Mental Fortitude: Overcoming Laziness',
+          description: 'Learn to build strong mental guards.',
+          content: {
+            title: 'Mental Fortitude: Overcoming Laziness',
+            sections: [
+              {
+                heading: 'Somatic Inertia vs. Intention',
+                text: 'Daily mental blocks are not laziness, comrade; they are simply cognitive drag. In the Nexora Academy, we recognize that the brain naturally resists high-friction tasks to conserve energy. This inertia is perfectly normal, but it can be bypassed. By establishing a simple 5-minute activation anchor, you can slip right past your amygdala\'s security warning system and step directly into a calm, rewarding state of focus.'
+              },
+              {
+                heading: 'Developing Strong Mental Guards',
+                text: 'To build absolute mental fortitude, we must eliminate sensory noise. Park your smartphone in another room, shutdown non-essential tabs, and layout one clear objective. When you restrict outward distractions, your dopamine baseline resets, forcing your prefrontal command centers to lock securely onto your chosen task with absolute focus and clarity.'
+              },
+              {
+                heading: 'The 5-Minute Activation Trigger',
+                text: 'Forget preparing for high-volume sprints. Instead, commit to working for only five minutes. Start the physical process of writing, sketching, or typing. In ninety percent of cases, this tiny physical momentum breaks the initial dread. Once active, the cerebral friction melts away, replacing your reservation with beautiful, self-sustaining flow.'
+              }
+            ]
+          }
+        };
+      }
+      if (book.id === 'guide-water') {
+        return {
+          ...book,
+          title: 'Advanced Fertilizers',
+          description: 'Learn to nourish your botanical plants with trace nutrients.',
+          content: {
+            title: 'Trace Element Optimization: Advanced Fertilizers',
+            sections: [
+              {
+                heading: 'Understanding Soil Chemistry',
+                text: 'For a plant to grow beautiful foliage, simple watering is not enough, little sprout! The soil requires a balanced trace element profile, including nitrogen, phosphorus, potassium, and magnesium. These organic minerals power the biological engine of the root, helping the plant build strong cell walls.'
+              },
+              {
+                heading: 'The Micro-Dosing Principle',
+                text: 'Flooding the roots with high concentrations of heavy fertilizer will cause chemical burns. Instead, apply the gentle micro-dosing protocol. Dilute the trace minerals slowly in room-temperature water every third watering cycle. This allows the root-hairs to absorb the nutrients smoothly and safely without systemic shock.'
+              },
+              {
+                heading: 'Nurture Your Growth Roots',
+                text: 'Just like your digital greenhouse flowers, your real life habits require subtle, daily nourishment. Reading a lesson, sipping clean mineral water, and writing down micro-wins are the natural fertilizers that feed your subconscious mind. Watch your habits grow into a magnificent lush garden today!'
+              }
+            ]
+          }
+        };
+      }
+      if (book.id === 'plant-desert-guide') {
+        return {
+          ...book,
+          title: 'Pest Prevention',
+          description: 'Defend your flora and greenhouse against invasive digital pests.',
+          content: {
+            title: 'Botanical Defense Blueprint: Pest Prevention',
+            sections: [
+              {
+                heading: 'Spotting the Hidden Invaders',
+                text: 'Greenhouse safety is built on continuous, mindful observation. Common pests like spider mites, mealybugs, and whiteflies often start in small, invisible clusters on the undersides of new leaves. If ignored, they multiply rapidly, draining the sap and vitality of your beautiful flowers.'
+              },
+              {
+                heading: 'Organic Defense Shields',
+                text: 'Instead of using harsh, toxic chemical sprays, deploy natural organic defenses. Mild mixtures of neem oil, pure horticultural soap, and lukewarm water create a protective barrier on the leaf tissue. Spray the leaves gently once a week to repel pests while keeping your plants perfectly moist and clean.'
+              },
+              {
+                heading: 'Mental Pest Filters',
+                text: 'In your daily work routine, notifications, clickbait headlines, and sudden alerts are the digital pests that drain your cognitive energy. Build robust filters: turn on do-not-disturb, block invasive apps, and spray your day with quiet blocks of focus. Keep your mental workspace lush, clean, and pest-free!'
+              }
+            ]
+          }
+        };
+      }
+      if (book.id === 'womens-wellness-deep') {
+        return {
+          ...book,
+          title: 'Mantra Secrets',
+          description: 'Align your neural pathways and quiet stress with ancient chants.',
+          content: {
+            title: 'Resonance Chanting: Mantra Secrets',
+            sections: [
+              {
+                heading: 'The Sonic Brain wave Connection',
+                text: 'Ancient auditory mantras are not mystical magic; they are practical resonant engineering. Repeating a low, rhythmic phonetic vibration creates a steady, gentle hum throughout your vocal cords and chest tissue. This sonic wave stimulates your cranial nerves, sending a strong signaling sequence to slow your heart rate.'
+              },
+              {
+                heading: 'Releasing Daily Muscle Tension',
+                text: 'When we hold thoughts of worry, our physical muscles contract—especially around our jaw, neck, and shoulders. Speaking or sub-vocally repeating a calming mantra overrides this contraction. The continuous vocal resonance acts like an internal ultrasonic massage, breaking down lactic acid and melting stress.'
+              },
+              {
+                heading: 'Designing Your Personal Cue',
+                text: 'Select a humble word or short supportive phrase to act as your semantic anchoring prompt, such as "Peace" or "Stillness." When focus starts to fade, close your eyes, take three deep breaths, and slow repeat your anchor. This immediately redirects chaotic frontal-lobe loops back to baseline centering.'
+              }
+            ]
+          }
+        };
+      }
+      if (book.id === 'active-mom') {
+        return {
+          ...book,
+          title: 'Morning Clarity',
+          description: 'Waken your biomechanics with simple morning hydration triggers.',
+          content: {
+            title: 'Somatic Awakening Loop: Morning Clarity',
+            sections: [
+              {
+                heading: 'The Overnight Dehydration Shock',
+                text: 'During a typical eight-hour sleep, your body breathes out nearly a liter of moisture. When you open your eyes in the morning, your tissues are extremely desiccated. This overnight dehydration manifests as fuzzy morning fatigue, leaden eyelids, and a slow, reluctant cognitive startup.'
+              },
+              {
+                heading: 'The 10-Ounce Water Kickstart',
+                text: 'Before touching your phone, brewing heavy coffee, or planning your day, drink ten ounces of room-temperature mineral water. This instant infusion restarts liver enzymes, hydrates dehydrated red blood cells, and boosts blood flow to your brain, washing away sleep inertia in seconds.'
+              },
+              {
+                heading: 'Morning Focus Alignment',
+                text: 'Pair your morning glass with a brief visual checkout. Look out a window or gaze at your thriving digital plants. Let natural light enter your eyes to lock down your circadian clock. This simple, graceful sequence sets a beautiful, hydrated tone for every challenge that awaits you.'
+              }
+            ]
+          }
+        };
+      }
+      return book;
+    });
+  }, [KNOWLEDGE_BOOKS]);
+
+  // Extract featured insight book definition (Mental Fortitude)
+  const featuredBook = useMemo(() => {
+    return mappedBooks.find(b => b.id === 'research-sleep') || mappedBooks[0];
+  }, [mappedBooks]);
+
+  // Group books for the carousels
+  const plantMasterclassBooks = useMemo(() => {
+    const list = mappedBooks.filter(b => b.category === 'plant' || b.id === 'guide-water' || b.id === 'plant-desert-guide');
+    return [...list].sort((a, b) => {
+      if (a.id === 'guide-water') return -1;
+      if (b.id === 'guide-water') return 1;
+      if (a.id === 'plant-desert-guide') return -1;
+      if (b.id === 'plant-desert-guide') return 1;
+      return 0;
+    });
+  }, [mappedBooks]);
+
+  const mindsetMeditationBooks = useMemo(() => {
+    const list = mappedBooks.filter(b => 
+      b.id !== 'research-sleep' && 
+      b.id !== 'guide-water' && 
+      b.id !== 'plant-desert-guide' && 
+      b.category !== 'plant'
+    );
+    return [...list].sort((a, b) => {
+      if (a.id === 'womens-wellness-deep') return -1;
+      if (b.id === 'womens-wellness-deep') return 1;
+      if (a.id === 'active-mom') return -1;
+      if (b.id === 'active-mom') return 1;
+      return 0;
+    });
+  }, [mappedBooks]);
 
   // Clean, beautifully organized categories with cozy garden emojis
   const categories = [
@@ -720,12 +879,12 @@ export function ArchivesScreen({
     { id: 'health', label: '☀️ Sun Wisdom', icon: Sun },
   ];
 
-  // Choosing randomized priority seeds to read/train
+  // Trigger automated reading search helper
   const handleLetTrain = () => {
-    const unread = KNOWLEDGE_BOOKS.filter(b => !completedBookIds.includes(b.id));
+    const unread = mappedBooks.filter(b => !completedBookIds.includes(b.id));
     const targetBook = unread.length > 0 
       ? unread[Math.floor(Math.random() * unread.length)] 
-      : KNOWLEDGE_BOOKS[Math.floor(Math.random() * KNOWLEDGE_BOOKS.length)];
+      : mappedBooks[Math.floor(Math.random() * mappedBooks.length)];
 
     if (targetBook) {
       triggerReadingSession(targetBook);
@@ -734,14 +893,13 @@ export function ArchivesScreen({
 
   const triggerReadingSession = (book: Book) => {
     setSelectedBook(book);
-    setActiveLessonStep(0);
     setLessonFinished(false);
     if (settings.soundEnabled) {
       try { play('select_task'); } catch (e) {}
     }
   };
 
-  // Safe processing of reading completion
+  // Process completed lesson
   const completeLesson = () => {
     if (!selectedBook) return;
 
@@ -768,15 +926,15 @@ export function ArchivesScreen({
     setLessonFinished(true);
   };
 
-  // Filter book list
+  // Filter book list for search results view
   const filteredBooks = useMemo(() => {
-    return KNOWLEDGE_BOOKS.filter(book => {
+    return mappedBooks.filter(book => {
       const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                             book.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || book.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [mappedBooks, searchQuery, selectedCategory]);
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] text-[#4F3F34] font-sans relative overflow-x-hidden selection:bg-emerald-500/20 pb-28">
@@ -804,10 +962,10 @@ export function ArchivesScreen({
           </motion.button>
           
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-[#4F3F34] font-sans">Cozy Garden Library</h2>
+            <h2 className="text-xl font-bold tracking-tight text-[#4F3F34] font-sans">Nexora Academy</h2>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[10px] font-bold text-emerald-800 bg-[#E6F4EA] border border-emerald-200 px-3 py-0.5 rounded-full uppercase tracking-wider">
-                🌱 Grown: {completedBookIds.length} / {KNOWLEDGE_BOOKS.length} seeds
+                🌱 Grown: {completedBookIds.length} / {mappedBooks.length} Insights
               </span>
             </div>
           </div>
@@ -824,41 +982,39 @@ export function ArchivesScreen({
       {/* Main Container */}
       <div className="relative z-10 w-full max-w-5xl mx-auto px-6 py-10 space-y-10">
         
-        {/* Plant Nanny Inspiration Header & Interactive Mascot Dialog Box */}
+        {/* Wholesome Companion Banner */}
         <motion.div 
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-6.5 sm:p-8 rounded-[2.8rem] bg-white border-2 border-[#E9E4D4] shadow-[0_8px_30px_rgba(100,80,60,0.05)] relative overflow-hidden"
+          className="p-6 rounded-[2.2rem] bg-white border-2 border-[#E9E4D4] shadow-[0_8px_30px_rgba(100,80,60,0.04)] relative overflow-hidden"
         >
-          <div className="absolute top-0 right-0 w-44 h-44 bg-[#E7F5ED] rounded-full blur-3xl -mr-16 -mt-16 opacity-70" />
+          <div className="absolute top-0 right-0 w-36 h-36 bg-[#E7F5ED] rounded-full blur-3xl -mr-12 -mt-12 opacity-70" />
           
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 justify-between">
             <div className="flex-1 flex flex-col sm:flex-row gap-5 items-center text-center sm:text-left">
-              {/* Cute cozy companion avatar */}
-              <div className="w-18 h-18 bg-[#FFF9EE] border-2 border-[#FBDCA3] rounded-3xl flex items-center justify-center p-2 shadow-sm shrink-0">
+              <div className="w-16 h-16 bg-[#FFF9EE] border-2 border-[#FBDCA3] rounded-3xl flex items-center justify-center p-2 shadow-sm shrink-0">
                 <Mascot mood="happy" className="w-full h-full" />
               </div>
               
-              <div className="space-y-2">
+              <div className="space-y-1.5 animate-fade-in">
                 <div className="flex items-center justify-center sm:justify-start gap-1 text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Botanical Caretip
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Botanical Library Advisor
                 </div>
-                <h1 className="text-2xl font-extrabold text-[#4F3F34] leading-tight">
+                <h1 className="text-xl font-extrabold text-[#4F3F34] leading-tight">
                   Water Your Habits Today!
                 </h1>
-                <p className="text-[#7D6B58] text-sm max-w-xl leading-relaxed">
+                <p className="text-[#7D6B58] text-xs max-w-xl leading-relaxed">
                   {cozyTips[tipIndex]}
                 </p>
               </div>
             </div>
 
-            {/* Quick Action Button */}
             <div className="shrink-0 w-full md:w-auto">
               <motion.button
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={handleLetTrain}
-                className="w-full md:w-auto px-7 py-4 bg-[#69C496] hover:bg-[#58B383] text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-[0_6px_18px_rgba(105,196,150,0.3)] cursor-pointer border-b-4 border-[#419E6E] active:border-b-0 active:translate-y-1 transition-all"
+                className="w-full md:w-auto px-6 py-3.5 bg-[#69C496] hover:bg-[#58B383] text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-[0_6px_18px_rgba(105,196,150,0.3)] cursor-pointer border-b-4 border-[#419E6E] active:border-b-0 active:translate-y-1 transition-all"
               >
                 🌱 Open Random Seed
               </motion.button>
@@ -866,17 +1022,16 @@ export function ArchivesScreen({
           </div>
         </motion.div>
 
-        {/* Search & Organization Section: Clean, cozy, and highly organized */}
-        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between bg-white p-4.5 rounded-[2.2rem] border-2 border-[#E9E4D4] shadow-[0_6px_22px_rgba(100,80,60,0.03)] relative z-20">
-          {/* Cozy Search Tool */}
+        {/* Search Input Bar */}
+        <div className="flex items-stretch justify-between bg-white p-3.5 rounded-[1.8rem] border-2 border-[#E9E4D4]/90 shadow-[0_6px_22px_rgba(100,80,60,0.02)] relative z-20">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9A8975] w-4.5 h-4.5 stroke-[2.5]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search botanical seeds, habits, care tips..."
-              className="w-full bg-[#FAF7F2] text-[#4F3F34] pl-11 pr-4 py-3 rounded-2xl border-2 border-[#E9E4D4] focus:outline-none focus:border-[#69C496] focus:bg-white font-medium text-xs placeholder-[#9A8975]/60 transition-all"
+              placeholder="Search botanical seeds, habits, or care tips..."
+              className="w-full bg-[#FAF7F2] text-[#4F3F34] pl-11 pr-4 py-3 rounded-2xl border-2 border-[#E9E4D4]/80 focus:outline-none focus:border-[#69C496] focus:bg-white font-medium text-xs placeholder-[#9A8975]/60 transition-all"
             />
             {searchQuery && (
               <button 
@@ -887,206 +1042,270 @@ export function ArchivesScreen({
               </button>
             )}
           </div>
+        </div>
 
-          {/* Plant Nanny-style Cozy Tabs Selection */}
-          <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar pt-2 md:pt-0">
-            {categories.map((cat) => {
-              const isSelected = selectedCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    setSelectedCategory(cat.id as any);
-                    if (settings.soundEnabled) {
-                      try { play('click'); } catch (e) {}
-                    }
-                  }}
-                  className={`px-4.5 py-3 rounded-2xl border-2 text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
-                    isSelected 
-                      ? 'bg-[#69C496] text-white border-[#58B383] shadow-md shadow-[#69C496]/20' 
-                      : 'bg-white text-[#7D6B58] border-[#E9E4D4] hover:bg-[#FAF7F2] hover:border-[#D6CDBC]'
-                  }`}
+        {/* SECTION CONDITIONAL RENDERING: editorial vs search results */}
+        {searchQuery ? (
+          /* SEARCH RESULTS GRID VIEW */
+          <div className="space-y-6">
+            <div className="flex items-center justify-between px-2">
+              <h3 className="text-xs font-bold text-[#9A8975] uppercase tracking-wider">
+                🔍 Search Results ({filteredBooks.length})
+              </h3>
+            </div>
+
+            {filteredBooks.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-[2.5rem] border-2 border-[#E9E4D4] p-8 space-y-4 shadow-sm">
+                <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-emerald-400">
+                  <Flower className="w-8 h-8" />
+                </div>
+                <p className="font-extrabold text-[#7D6B58] text-sm uppercase tracking-wide">No habit seeds found in this garden zone</p>
+                <button 
+                  onClick={() => setSearchQuery('')} 
+                  className="text-[10px] text-emerald-800 bg-[#E6F4EA] font-bold uppercase tracking-wider border border-emerald-200 px-4.5 py-2.5 rounded-xl transition-all hover:bg-emerald-100"
                 >
-                  {cat.label}
+                  Clear Search Query
                 </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Seeds Grid */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-xs font-bold text-[#9A8975] uppercase tracking-wider">
-              🌿 Greenhouse Seeds Inventory ({filteredBooks.length})
-            </h3>
-          </div>
-
-          {filteredBooks.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-[2.5rem] border-2 border-[#E9E4D4] p-8 space-y-4 shadow-sm">
-              <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-emerald-400">
-                <Flower className="w-8 h-8" />
               </div>
-              <p className="font-extrabold text-[#7D6B58] text-sm uppercase tracking-wide">No habit seeds found in this garden zone</p>
-              <button 
-                onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }} 
-                className="text-[10px] text-emerald-800 bg-[#E6F4EA] font-bold uppercase tracking-wider border border-emerald-200 px-4.5 py-2.5 rounded-xl transition-all hover:bg-emerald-100"
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredBooks.map((book) => {
+                  const bookIsDone = completedBookIds.includes(book.id);
+                  return (
+                    <motion.div
+                      key={book.id}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      onClick={() => triggerReadingSession(book)}
+                      className="group bg-white rounded-[2.2rem] border-2 border-[#E9E4D4] hover:border-[#69C496] p-4.5 transition-all duration-300 hover:shadow-[0_12px_32px_rgba(100,80,60,0.06)] flex flex-col gap-4.5 cursor-pointer relative"
+                    >
+                      <div className="rounded-2xl overflow-hidden relative shadow-sm h-48 bg-[#FAF7F2] flex items-center justify-center">
+                        <BookIllustration bookId={book.id} />
+                      </div>
+
+                      <div className="space-y-3 flex-1 px-1">
+                        <div className="flex items-center justify-between">
+                          {bookIsDone ? (
+                            <span className="text-[10px] font-bold text-[#2E7D32] bg-[#E8F5E9] border border-[#A5D6A7] px-3 py-0.5 rounded-full uppercase flex items-center gap-1">
+                              <Check className="w-3 h-3 stroke-[3]" /> Fully Grown
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-0.5 rounded-full uppercase flex items-center gap-1">
+                              Needs Watering
+                            </span>
+                          )}
+                          <span className="text-[10px] text-emerald-800 bg-[#E8F5E9] border border-emerald-100 px-2 py-0.5 rounded-md font-bold">
+                            🪙 +10
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <h4 className="font-extrabold text-[#4F3F34] text-lg leading-snug group-hover:text-[#69C496] transition-colors">
+                            {book.title}
+                          </h4>
+                          <p className="text-xs text-[#7D6B58] font-medium leading-relaxed line-clamp-2">
+                            {book.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 px-1 text-[10px] font-bold text-[#9A8975] uppercase">
+                        <span>⏱️ 2 min read</span>
+                        <span className="text-[#69C496] font-bold flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
+                          Nurture seed <ChevronRight className="w-3.5 h-3.5 stroke-[3]" />
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* PART 1.2 & 1.3: PREMIUM MAGAZINE EDITORIAL LAYOUT */
+          <div className="space-y-12">
+            
+            {/* HERO ARTICLE CARD (FEATURED INSIGHT) */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-[#9A8975] uppercase tracking-wider px-2 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Featured Insight
+              </h3>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => triggerReadingSession(featuredBook)}
+                className="group w-full bg-white rounded-[2.8rem] border-2 border-[#E9E4D4] hover:border-[#69C496] p-6.5 transition-all duration-300 hover:shadow-[0_16px_40px_rgba(100,80,60,0.06)] flex flex-col md:flex-row gap-8 cursor-pointer relative overflow-hidden"
               >
-                Clear Filters & Search
-              </button>
-            </div>
-          ) : (
-            /* Redesigned grid of dossiers modeled exactly like beautiful botanical cards */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredBooks.map((book) => {
-                const bookIsDone = completedBookIds.includes(book.id);
-                const isChallenge = book.category === 'challenge';
-                const isPlant = book.category === 'plant';
-                
-                return (
-                  <motion.div
-                    key={book.id}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onClick={() => triggerReadingSession(book)}
-                    className="group bg-white rounded-[2.2rem] border-2 border-[#E9E4D4] hover:border-[#69C496] p-4.5 transition-all duration-300 hover:shadow-[0_12px_32px_rgba(100,80,60,0.06)] flex flex-col gap-4.5 cursor-pointer relative"
-                  >
-                    {/* Visual Vector Cover Header containing preloaded cartoon illustrations */}
-                    <div className="rounded-2xl overflow-hidden relative shadow-sm h-48 bg-[#FAF7F2] flex items-center justify-center">
-                      <BookIllustration bookId={book.id} />
-                      
-                      {/* Interactive Watering Can Overlay Indicator */}
-                      <div className="absolute top-3 left-3 px-3 py-1 bg-white/95 backdrop-blur-sm rounded-full border border-[#E9E4D4] flex items-center gap-1.5 shadow-sm">
-                        <span className="text-[10px] font-bold text-[#4F3F34]">
-                          {isChallenge ? '💧 Habit Seed' : isPlant ? '🌱 Plant Pet' : '☀️ Sun Secret'}
-                        </span>
-                      </div>
-                    </div>
+                {/* Image panel left (on desktop) */}
+                <div className="w-full md:w-[48%] h-64 sm:h-76 rounded-3xl overflow-hidden relative shrink-0 bg-[#FAF7F2] flex items-center justify-center shadow-inner">
+                  <BookIllustration bookId={featuredBook.id} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none" />
+                </div>
 
-                    {/* Metadata Detail Section */}
-                    <div className="space-y-3 flex-1 px-1">
-                      <div className="flex items-center justify-between">
-                        {bookIsDone ? (
-                          <span className="text-[10px] font-bold text-[#2E7D32] bg-[#E8F5E9] border border-[#A5D6A7] px-3 py-0.5 rounded-full uppercase flex items-center gap-1">
-                            <Check className="w-3 h-3 stroke-[3]" /> Fully Grown
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-0.5 rounded-full uppercase flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" /> Needs Watering
-                          </span>
-                        )}
-
-                        <span className="text-[10px] text-emerald-800 bg-[#E8F5E9] border border-emerald-100 px-2 py-0.5 rounded-md font-bold">
-                          🪙 +10
-                        </span>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <h4 className="font-extrabold text-[#4F3F34] text-lg leading-snug group-hover:text-[#69C496] transition-colors">
-                          {book.title}
-                        </h4>
-                        <p className="text-xs text-[#7D6B58] font-medium leading-relaxed line-clamp-2">
-                          {book.description}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Plant Nanny Moisture Tracking Progress Bar */}
-                    <div className="bg-[#FAF7F2] border-t-2 border-[#E9E4D4]/60 pt-3.5 space-y-2">
-                      <div className="flex items-center justify-between text-[10px] font-bold text-[#9A8975] uppercase px-1">
-                        <span>Hydration Progress</span>
-                        <span className={bookIsDone ? 'text-emerald-700' : 'text-amber-700'}>
-                          {bookIsDone ? '100% Watered' : '0% Dry Seed'}
-                        </span>
-                      </div>
-                      
-                      {/* Double border-rounded bar */}
-                      <div className="h-4 bg-amber-100/30 rounded-full border-2 border-[#E9E4D4] overflow-hidden p-[2px]">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            bookIsDone ? 'bg-gradient-to-r from-[#69C496] to-[#58B383]' : 'bg-[#E9E4D4]'
-                          }`}
-                          style={{ width: bookIsDone ? '100%' : '10%' }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-1 px-1 text-[10px] font-bold text-[#9A8975] uppercase">
-                      <span>{isChallenge ? '#HealthSprout' : isPlant ? '#CozyBotany' : '#SunShine'}</span>
-                      <span className="text-[#69C496] font-bold flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
-                        Nurture seed <ChevronRight className="w-3.5 h-3.5 stroke-[3]" />
+                {/* Content details right */}
+                <div className="flex-1 flex flex-col justify-between py-1 space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className="px-3.5 py-1.5 bg-[#FFF3E0] text-amber-900 border border-amber-200 rounded-full text-[10px] font-bold uppercase tracking-widest leading-none">
+                        🌱 Daily Mindset Strategy
                       </span>
+                      {completedBookIds.includes(featuredBook.id) && (
+                        <span className="px-3.5 py-1.5 bg-[#E8F5E9] text-[#2E7D32] border border-[#A5D6A7] rounded-full text-[10px] font-bold uppercase tracking-widest leading-none flex items-center gap-1">
+                          <Check className="w-3 h-3 stroke-[3]" /> Read
+                        </span>
+                      )}
                     </div>
 
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-[#4F3F34] leading-tight group-hover:text-[#69C496] transition-colors">
+                      {featuredBook.title}
+                    </h2>
 
-        {/* Footer trademark core - made wholesome */}
+                    <p className="text-sm text-[#7D6B58] font-medium leading-relaxed max-w-lg">
+                      {featuredBook.description} Our core biological guards must be locked in to prevent digital stagnation. Get direct actionable tactics from Sprout.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-[#FAF7F2]">
+                    <span className="text-xs font-bold text-[#9A8975] uppercase flex items-center gap-1.5">
+                      ⏱️ 2 min read
+                    </span>
+
+                    <button className="px-6 py-3 bg-[#69C496] hover:bg-[#58B383] text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-[#69C496]/20 transition-all border-b-2 border-[#419E6E]">
+                      <BookOpen className="w-4 h-4" />
+                      Read Insight
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* SLIDER CAROUSEL 1: 🌱 Plant Masterclass */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-[#9A8975] uppercase tracking-wider px-2 flex items-center gap-1.5">
+                🌱 Plant Masterclass
+              </h3>
+
+              <div className="overflow-x-auto flex gap-6 pb-6 px-1.5 select-none no-scrollbar snap-x snap-mandatory">
+                {plantMasterclassBooks.map((book) => {
+                  const bookIsDone = completedBookIds.includes(book.id);
+                  return (
+                    <motion.div
+                      key={book.id}
+                      whileHover={{ scale: 1.015 }}
+                      onClick={() => triggerReadingSession(book)}
+                      className="group flex-shrink-0 w-64 bg-white rounded-[2rem] border-2 border-[#E9E4D4] hover:border-[#69C496] p-4.5 cursor-pointer transition-all duration-300 shadow-sm hover:shadow-[0_10px_28px_rgba(100,80,60,0.05)] snap-start flex flex-col justify-between"
+                    >
+                      <div className="space-y-4">
+                        {/* Compact thumbnail vertically on top */}
+                        <div className="h-40 rounded-2xl overflow-hidden relative bg-[#FAF7F2] flex items-center justify-center">
+                          <BookIllustration bookId={book.id} />
+                        </div>
+
+                        {/* Text and labels beneath */}
+                        <div className="space-y-1 px-1">
+                          <h4 className="font-extrabold text-[#4F3F34] text-base leading-snug group-hover:text-[#69C496] transition-colors line-clamp-2">
+                            {book.title}
+                          </h4>
+                          <p className="text-[10px] text-[#7D6B58] font-semibold uppercase tracking-wider">
+                            {bookIsDone ? '✅ Watered' : '⏱️ 3 min read'}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* SLIDER CAROUSEL 2: 🧠 Mindset & Meditation */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-[#9A8975] uppercase tracking-wider px-2 flex items-center gap-1.5">
+                🧠 Mindset & Meditation
+              </h3>
+
+              <div className="overflow-x-auto flex gap-6 pb-6 px-1.5 select-none no-scrollbar snap-x snap-mandatory">
+                {mindsetMeditationBooks.map((book) => {
+                  const bookIsDone = completedBookIds.includes(book.id);
+                  return (
+                    <motion.div
+                      key={book.id}
+                      whileHover={{ scale: 1.015 }}
+                      onClick={() => triggerReadingSession(book)}
+                      className="group flex-shrink-0 w-64 bg-white rounded-[2rem] border-2 border-[#E9E4D4] hover:border-[#69C496] p-4.5 cursor-pointer transition-all duration-300 shadow-sm hover:shadow-[0_10px_28px_rgba(100,80,60,0.05)] snap-start flex flex-col justify-between"
+                    >
+                      <div className="space-y-4">
+                        {/* Compact thumbnail vertically on top */}
+                        <div className="h-40 rounded-2xl overflow-hidden relative bg-[#FAF7F2] flex items-center justify-center">
+                          <BookIllustration bookId={book.id} />
+                        </div>
+
+                        {/* Text and labels beneath */}
+                        <div className="space-y-1 px-1">
+                          <h4 className="font-extrabold text-[#4F3F34] text-base leading-snug group-hover:text-[#69C496] transition-colors line-clamp-2">
+                            {book.title}
+                          </h4>
+                          <p className="text-[10px] text-[#7D6B58] font-semibold uppercase tracking-wider">
+                            {bookIsDone ? '✅ Fully Grown' : '⏱️ 2 min read'}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* Footer info banner */}
         <p className="text-center text-[10px] text-[#9A8975] font-extrabold uppercase tracking-widest pt-12">
-          🌸 Nexora Botanical Oasis • Drink Water & Stay Happy! 🌸
+          🌸 Nexora Botanical Oasis • Learn & Stay Healthy! 🌸
         </p>
 
       </div>
 
-      {/* COZY opened BOOK SHELF DIALOG WORKSPACE (Fades, clean card structures, beautiful Serif reading fonts) */}
+      {/* PART 2: THE ARTICLE DETAIL VIEW (READING SCREEN MODAL) */}
       <AnimatePresence>
         {selectedBook && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            transition={{ type: "spring", damping: 24, stiffness: 180 }}
             className="fixed inset-0 z-50 bg-[#FAF7F2] flex flex-col justify-between overflow-hidden"
           >
-            {/* Opened Book Top Navigation */}
-            <div className="bg-[#FAF7F2] border-b-2 border-[#E9E4D4] px-6 py-4.5 flex items-center justify-between gap-6">
+            {/* Elegant transparent sticky header for dismiss actions */}
+            <div className="bg-[#FAF7F2]/90 backdrop-blur-md border-b-2 border-[#E9E4D4] px-6 py-4 flex items-center justify-between gap-6 shrink-0 relative z-10">
               <button 
                 onClick={() => setSelectedBook(null)}
-                className="p-3 hover:bg-[#FAF7F2]/90 rounded-2xl text-[#4F3F34] border-2 border-[#E9E4D4] shadow-sm cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-[#FAF7F2] rounded-2xl text-[#4F3F34] border-2 border-[#E9E4D4] shadow-sm cursor-pointer font-bold text-xs"
               >
-                <X className="w-5 h-5 stroke-[2.5]" />
+                <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
+                Exit Reading
               </button>
 
-              {/* Plant Growth Water Progress Indicator */}
-              <div className="flex-1 flex gap-2">
-                {selectedBook.content.sections.map((_, idx) => {
-                  const isActive = idx === activeLessonStep;
-                  const isCompleted = idx < activeLessonStep;
-                  return (
-                    <div 
-                      key={idx} 
-                      className="h-3.5 flex-1 bg-white rounded-full overflow-hidden border-2 border-[#E9E4D4] p-0.5"
-                    >
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: isCompleted ? '100%' : isActive ? '60%' : '0%' }}
-                        className="h-full bg-gradient-to-r from-[#69C496] to-[#58B383] rounded-full"
-                      />
-                    </div>
-                  );
-                })}
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E6F4EA] border border-emerald-200 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-[#69C496] animate-pulse" />
+                <span className="text-[10px] font-extrabold text-[#2F7A54] uppercase tracking-wider">
+                  Continuous Classroom
+                </span>
               </div>
-
-              {/* Water Levels Met */}
-              <span className="text-[11px] font-bold text-[#7D6B58] uppercase">
-                Watering: {activeLessonStep + 1} / {selectedBook.content.sections.length}
-              </span>
             </div>
 
-            {/* Book Body: Paper-colored reading view with handwritten-style clean layout */}
-            <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col justify-center items-center">
-              <div className="max-w-2xl w-full">
+            {/* Seamless, Vertically Scrollable Content Area */}
+            <div className="flex-1 overflow-y-auto w-full flex flex-col items-center">
+              
+              {/* IMMERSIVE VERTICAL STACKED VIEW */}
+              <div className="w-full max-w-2xl px-6 py-6 pb-32 space-y-10">
                 
                 {lessonFinished ? (
-                  /* Super Cute Confetti & Grown Celebration state */
+                  /* REWARD ACQUISITION JUMP STATE */
                   <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
+                    initial={{ opacity: 0, scale: 0.96 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="text-center space-y-8 py-6"
+                    className="text-center space-y-8 py-12"
                   >
                     {/* Cute Mascot Jumping for Joy */}
                     <div className="relative inline-block w-40 h-40">
@@ -1095,7 +1314,6 @@ export function ArchivesScreen({
                         <Mascot mood="happy" className="w-full h-full transform hover:scale-105 transition-transform" />
                       </div>
                       
-                      {/* Floating floral and water emojis */}
                       <span className="absolute -top-3 -right-3 text-2xl animate-bounce">💧</span>
                       <span className="absolute -bottom-2 -left-3 text-2xl animate-pulse">🌸</span>
                       <span className="absolute top-1/2 -left-6 text-xl">🌟</span>
@@ -1103,23 +1321,23 @@ export function ArchivesScreen({
 
                     <div className="space-y-2">
                       <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#E8F5E9] text-[#2E7D32] rounded-full text-[10px] font-bold uppercase tracking-wider border border-[#A5D6A7]">
-                        🌿 HYDRATION INTAKE COMPLETELY GROWING!
+                        🌿 HYDRATION INSIGHT GROWING COMPLETE!
                       </span>
-                      <h2 className="text-3xl font-extrabold text-[#4F3F34] tracking-tight">
-                        Seed Fully Watered!
+                      <h2 className="text-3xl font-extrabold text-[#4F3F34] tracking-tight font-sans">
+                        Seed Fully Nourished!
                       </h2>
                       <p className="text-sm font-medium text-[#7D6B58] max-w-sm mx-auto leading-relaxed">
-                        Splendid! You have successfully watered the <span className="text-[#69C496] font-bold">{selectedBook.title}</span> habit seed!
+                        Splendid work, friend! You have successfully watered and harvested the <span className="text-[#69C496] font-bold">{selectedBook.title}</span> knowledge capsule!
                       </p>
                     </div>
 
-                    {/* Rewards Grid Styled clean and cozy */}
+                    {/* Rewards Grid */}
                     <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto">
                       <div className="bg-white border-2 border-[#E9E4D4] p-4.5 rounded-[1.8rem] flex flex-col items-center shadow-sm">
                         <span className="text-[9px] font-bold text-amber-800 uppercase tracking-wider bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
                           Tokens Awarded
                         </span>
-                        <span className="text-lg font-bold text-[#4F3F34] mt-2">
+                        <span className="text-lg font-bold text-[#4F3F34] mt-2 font-sans">
                           +10 🪙
                         </span>
                       </div>
@@ -1127,7 +1345,7 @@ export function ArchivesScreen({
                         <span className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider bg-[#E8F5E9] px-2.5 py-0.5 rounded-full border border-emerald-200">
                           Botanical XP
                         </span>
-                        <span className="text-lg font-bold text-[#4F3F34] mt-2">
+                        <span className="text-lg font-bold text-[#4F3F34] mt-2 font-sans">
                           +50 ✨
                         </span>
                       </div>
@@ -1139,129 +1357,107 @@ export function ArchivesScreen({
                         <Mascot mood="happy" className="w-full h-full" />
                       </div>
                       <div>
-                        <p className="text-[9px] font-bold text-[#9A8975] uppercase tracking-wider leading-none">Sprout Seed Advisor</p>
-                        <p className="text-xs text-[#7D6B58] font-semibold mt-1.5 leading-relaxed">
-                          "Fantastic! That water seed went deep down into your mind roots! Drink another cup for extra happiness, friend!"
+                        <p className="text-[9px] font-bold text-[#9A8975] uppercase tracking-wider leading-none">Sprout Companion</p>
+                        <p className="text-xs text-[#7D6B58] font-bold mt-1.5 leading-relaxed">
+                          "Fantastic! That water seed went deep down into your mind roots! Keep sipping cool fluids for daily growth!"
                         </p>
                       </div>
                     </div>
+
+                    <button
+                      onClick={() => setSelectedBook(null)}
+                      className="w-full max-w-xs bg-[#69C496] hover:bg-[#58B383] text-white py-4 px-6 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#69C496]/25 cursor-pointer text-center border-b-4 border-[#419E6E] active:border-b-0 active:translate-y-0.5 transition-all mt-6"
+                    >
+                      Finish Watering and Go Back
+                    </button>
 
                   </motion.div>
                 ) : (
-                  /* Reading Book Frame */
-                  <div className="space-y-6 w-full">
+                  /* IMMERSIVE WRAPPER-FREE VERTICAL TEXT VIEW */
+                  <div className="space-y-10">
                     
-                    {/* Plant Nanny Advice Balloon */}
-                    <div className="flex flex-col sm:flex-row gap-4.5 items-center sm:items-start bg-[#E8F5E9] border-2 border-[#C8E6C9] rounded-[2.2rem] p-5.5 shadow-sm relative overflow-hidden w-full">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-white/20 rounded-full -mr-6 -mt-6 pointer-events-none" />
-                      
-                      {/* Active Mascot guide */}
-                      <div className="w-16 h-16 bg-white rounded-2xl border-2 border-emerald-100 flex items-center justify-center p-2 shrink-0 shadow-sm">
-                        <Mascot 
-                          mood={activeLessonStep === 0 ? "happy" : activeLessonStep === 1 ? "surprised" : "happy"} 
-                          className="w-full h-full" 
-                        />
-                      </div>
-                      
-                      <div className="space-y-0.5 relative z-10 flex-1 text-center sm:text-left">
-                        <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Garden Greenhouse Companion</p>
-                        <h4 className="text-base font-extrabold text-[#4F3F34] leading-tight">
-                          {activeLessonStep === 0 
-                            ? "Nurturing the mental roots..." 
-                            : activeLessonStep === 1 
-                              ? "Look at those leaves growing!" 
-                              : "Beautiful habit maturity!"}
-                        </h4>
-                        <p className="text-xs text-[#7D6B58] font-medium leading-relaxed">
-                          Let's explore this beautiful wisdom page, cozy comrade!
-                        </p>
+                    {/* a) TOP HERO ILLUSTRATION BANNER */}
+                    <div className="w-full h-64 sm:h-80 rounded-[2.5rem] overflow-hidden relative shadow-sm bg-[#FAF7F2] flex items-center justify-center border-2 border-[#E9E4D4]">
+                      <BookIllustration bookId={selectedBook.id} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
+                    </div>
+
+                    {/* b) MAIN HEADLINE INFORMATION */}
+                    <div className="space-y-3">
+                      <span className="px-3.5 py-1 bg-amber-50 text-amber-900 border border-amber-200 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                        🌱 Wisdom Dossier #{selectedBook.id.substring(0, 5).toUpperCase()}
+                      </span>
+                      <h1 className="text-3xl sm:text-4xl font-extrabold text-[#4F3F34] tracking-tight leading-tight pt-1 font-sans">
+                        {selectedBook.title}
+                      </h1>
+                    </div>
+
+                    {/* c) SUBTLE SEPARATOR */}
+                    <div className="h-0.5 w-full bg-[#E9E4D4]" />
+
+                    {/* d) FULL UNINTERRUPTED ARTICLE BODIES */}
+                    <div className="space-y-8">
+                      {selectedBook.content.sections.map((section, index) => {
+                        const isEven = index % 2 === 1;
+                        
+                        return (
+                          <div key={index} className="space-y-4">
+                            {/* Section Heading */}
+                            <div className="flex items-center gap-2">
+                              <span className="w-1.5 h-6 bg-[#69C496] rounded-full" />
+                              <h3 className="text-lg font-bold text-[#4F3F34] uppercase tracking-tight font-sans">
+                                {section.heading}
+                              </h3>
+                            </div>
+
+                            {/* Section Text with inline callout/wisdom accent style conditional */}
+                            {isEven ? (
+                              /* Inline Callout - Botanical Style Advice */
+                              <div className="bg-[#EBF7F0] border-l-4 border-[#69C496] p-6 rounded-r-3xl my-6 shadow-sm">
+                                <span className="text-[9px] font-extrabold text-emerald-800 uppercase tracking-widest flex items-center gap-1">
+                                  🌟 Deep Mind Root Accent
+                                </span>
+                                <p className="text-sm font-semibold text-[#4F3F34] mt-2.5 italic leading-relaxed font-serif">
+                                  {section.text}
+                                </p>
+                              </div>
+                            ) : (
+                              /* Standard elegant prose text */
+                              <p className="text-sm sm:text-base text-[#4F3F34] font-medium leading-loose whitespace-pre-line font-serif pr-2">
+                                {section.text}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* e) THE REWARD TRIGGER (Placed exclusively at the absolute bottom of the scroll) */}
+                    <div className="pt-10 border-t border-[#E9E4D4] flex flex-col items-center">
+                      <div className="w-full bg-white p-6.5 rounded-[2.2rem] border-2 border-[#E9E4D4] text-center space-y-5 shadow-sm max-w-lg">
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full uppercase">
+                          🎁 Completed Reading Incentives
+                        </span>
+                        
+                        <div className="space-y-1">
+                          <h4 className="text-lg font-extrabold text-[#4F3F34]">Nourish with Wisdom</h4>
+                          <p className="text-xs text-[#7D6B58] font-medium max-w-sm mx-auto">
+                            Harvest this seed knowledge capsule to claim +10 Coins and +50 XP directly!
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={completeLesson}
+                          className="w-full bg-[#69C496] hover:bg-[#58B383] text-white py-4 px-6 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#69C496]/20 cursor-pointer border-b-4 border-[#419E6E] active:border-b-0 active:translate-y-0.5 transition-all"
+                        >
+                          🌿 Claim Knowledge & Rewards (+10 Coins, +50 XP)
+                        </button>
                       </div>
                     </div>
 
-                    {/* Paper Book Reading Content */}
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={activeLessonStep}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="bg-white rounded-[2.5rem] border-2 border-[#E9E4D4] p-8 space-y-6 shadow-[0_8px_30px_rgba(100,80,60,0.03)]"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="w-1.5 h-6 bg-[#69C496] rounded-full" />
-                          <h3 className="text-xl font-extrabold text-[#4F3F34] uppercase tracking-tight">
-                            {selectedBook.content.sections[activeLessonStep]?.heading}
-                          </h3>
-                        </div>
-                        
-                        {/* Cozy custom font paragraph */}
-                        <p className="text-sm sm:text-base text-[#4F3F34] font-medium leading-relaxed whitespace-pre-line font-serif pt-1">
-                          {selectedBook.content.sections[activeLessonStep]?.text}
-                        </p>
-                      </motion.div>
-                    </AnimatePresence>
-
                   </div>
                 )}
 
-              </div>
-            </div>
-
-            {/* Bottom Book Controls: Bubbly cute rounded controls */}
-            <div className="bg-[#FAF7F2] border-t-2 border-[#E9E4D4] px-6 py-5 flex items-center justify-center">
-              <div className="max-w-md w-full">
-                {lessonFinished ? (
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setSelectedBook(null);
-                      if (settings.soundEnabled) {
-                        try { play('click'); } catch (e) {}
-                      }
-                    }}
-                    className="w-full bg-[#69C496] hover:bg-[#58B383] text-white py-4 px-6 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#69C496]/25 cursor-pointer text-center border-b-4 border-[#419E6E] active:border-b-0 active:translate-y-0.5 transition-all"
-                  >
-                    Finish Watering & Close Seed
-                  </motion.button>
-                ) : (
-                  <div className="flex gap-4">
-                    {activeLessonStep > 0 && (
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => {
-                          setActiveLessonStep(prev => prev - 1);
-                          if (settings.soundEnabled) {
-                            try { play('click'); } catch (e) {}
-                          }
-                        }}
-                        className="bg-white hover:bg-[#FAF7F2] text-[#7D6B58] py-4 px-5 rounded-2xl font-bold text-xs uppercase tracking-wider border-2 border-[#E9E4D4] transition-all cursor-pointer shadow-sm"
-                      >
-                        Previous Page
-                      </motion.button>
-                    )}
-                    
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        const nextStep = activeLessonStep + 1;
-                        if (nextStep < selectedBook.content.sections.length) {
-                          setActiveLessonStep(nextStep);
-                          if (settings.soundEnabled) {
-                            try { play('click'); } catch (e) {}
-                          }
-                        } else {
-                          completeLesson();
-                        }
-                      }}
-                      className="flex-1 bg-[#69C496] hover:bg-[#58B383] text-white py-4 px-6 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md shadow-[#69C496]/20 cursor-pointer text-center border-b-4 border-[#419E6E] active:border-b-0 active:translate-y-0.5 transition-all"
-                    >
-                      {activeLessonStep + 1 === selectedBook.content.sections.length ? 'Nourish Seed' : 'Next Page'}
-                    </motion.button>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -1272,3 +1468,4 @@ export function ArchivesScreen({
     </div>
   );
 }
+
