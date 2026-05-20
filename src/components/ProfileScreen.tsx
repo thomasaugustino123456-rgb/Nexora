@@ -193,32 +193,27 @@ export function ProfileScreen({
               {settings.displayName || user?.displayName || "Nexora User"}
             </h2>
           )}
-          <div className="flex items-center gap-2 justify-center">
-            <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full">
+          <div className="flex flex-col sm:flex-row items-center gap-2 justify-center mt-3">
+            <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100/80">
               Level {stats.level || 1} Pioneer
             </span>
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-200" />
+            <div className="hidden sm:block w-1 h-1 rounded-full bg-blue-200" />
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setActiveScreen("archives")}
+              className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-emerald-700 rounded-full flex items-center gap-1.5 cursor-pointer transition-all font-black text-[9px] uppercase tracking-widest"
+            >
+              <Book size={12} className="stroke-[2.5]" />
+              <span>Nexus Wisdom</span>
+            </motion.button>
+            <div className="hidden sm:block w-1 h-1 rounded-full bg-blue-200" />
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest leading-loose flex items-center gap-1 hover:text-blue-600"
+              className="text-[9px] font-black text-blue-900/40 uppercase tracking-widest leading-none flex items-center gap-1 hover:text-blue-650 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full hover:bg-slate-100/80 transition-all"
             >
               {isEditing ? "Cancel Edit" : "Edit Page"}
             </button>
-          </div>
-
-          <div className="flex justify-center pt-1">
-            <motion.button
-              whileHover={{ scale: 1.04, y: -1 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => setActiveScreen("archives")}
-              className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100/50 border-2 border-emerald-100/80 rounded-2xl flex items-center gap-2 cursor-pointer text-emerald-600 shadow-sm transition-all"
-            >
-              <Book size={16} className="stroke-[2.5]" />
-              <div className="text-left">
-                <p className="font-black text-[9px] uppercase tracking-widest leading-none">Nexus Wisdom</p>
-                <p className="text-[7.5px] text-emerald-400 font-extrabold uppercase mt-0.5 leading-none">Archives of Retention</p>
-              </div>
-            </motion.button>
           </div>
         </div>
       </div>
