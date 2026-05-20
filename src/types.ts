@@ -122,6 +122,7 @@ export interface UserSettings {
   feedbackSubmitted?: boolean;
   isWalkthroughCompleted?: boolean;
   readBookIds?: string[];
+  bookClaimTimestamps?: Record<string, number>;
 }
 
 export interface ShopItem {

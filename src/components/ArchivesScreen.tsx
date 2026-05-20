@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -665,6 +665,189 @@ function BookIllustration({ bookId }: { bookId: string }) {
         </div>
       );
 
+    case 'context-clues-traveling':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#FEF9C3] via-[#FFFBEB] to-[#FEF08A] overflow-hidden flex items-center justify-center border-b-4 border-amber-200 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,255,255,0.25),transparent_70%)]" />
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            <circle cx="100" cy="85" r="50" fill="#FEF08A" opacity="0.6" filter="blur(4px)" />
+            <g fill="#FBBF24">
+              <path d="M 40,30 Q 40,40 30,40 Q 40,40 40,50 Q 40,40 40,30 Z" opacity="0.8" />
+              <path d="M 160,50 Q 160,55 155,55 Q 160,55 160,60 Q 160,55 165,55 Q 160,55 160,50 Z" opacity="0.8" />
+              <circle cx="35" cy="80" r="2" />
+              <circle cx="165" cy="110" r="3" />
+            </g>
+            <g stroke="#1a2a3a" strokeWidth="4" strokeLinejoin="round">
+              <path d="M 68,60 C 68,50 78,52 82,59" fill="#60A5FA" />
+              <path d="M 132,60 C 132,50 122,52 118,59" fill="#60A5FA" />
+              <path d="M 60,110 C 60,75 140,75 140,110 C 140,135 60,135 60,110 Z" fill="#3B82F6" />
+              <path d="M 68,95 C 68,85 132,85 132,95" stroke="#93C5FD" strokeWidth="3" fill="none" opacity="0.5" strokeLinecap="round" />
+            </g>
+            <g>
+              <circle cx="88" cy="100" r="8" fill="#0F172A" />
+              <circle cx="86" cy="98" r="3" fill="#FFFFFF" />
+              <circle cx="90" cy="102" r="1.5" fill="#FFFFFF" />
+              <circle cx="112" cy="100" r="8" fill="#0F172A" />
+              <circle cx="110" cy="98" r="3" fill="#FFFFFF" />
+              <circle cx="114" cy="102" r="1.5" fill="#FFFFFF" />
+              <path d="M 96,108 Q 100,114 104,108" stroke="#0F172A" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+              <path d="M 97,109 Q 100,114 103,109" fill="#EF4444" />
+              <circle cx="78" cy="106" r="4" fill="#F472B6" opacity="0.6" />
+              <circle cx="122" cy="106" r="4" fill="#F472B6" opacity="0.6" />
+            </g>
+            <g stroke="#1a2a3a" strokeWidth="3.5" strokeLinejoin="round">
+              <path d="M 72,120 L 128,120 L 125,135 L 75,135 Z" fill="#A16207" />
+              <path d="M 92,120 L 100,128 L 108,120 Z" fill="#FFFFFF" />
+              <path d="M 98,125 L 102,125 L 104,138 L 100,143 L 96,138 Z" fill="#1E293B" strokeWidth="1" />
+              <path d="M 72,120 L 92,124 L 90,135 L 75,135 Z" fill="#854D0E" />
+              <path d="M 128,120 L 108,124 L 110,135 L 125,135 Z" fill="#854D0E" />
+            </g>
+            <text x="100" y="117" fill="#FFFFFF" fontSize="13" fontWeight="900" textAnchor="middle" fontStyle="italic" stroke="#2563EB" strokeWidth="0.5">N</text>
+            <g stroke="#1a2a3a" strokeWidth="4" strokeLinejoin="round">
+              <path d="M 52,70 Q 100,60 148,70 Q 100,75 52,70 Z" fill="#78350F" />
+              <path d="M 70,68 C 70,40 130,40 130,68 Z" fill="#78350F" />
+              <path d="M 70,64 Q 100,60 130,64 L 129,68 Q 100,64 71,68 Z" fill="#451A03" />
+            </g>
+            <g stroke="#1a2a3a" strokeWidth="3" strokeLinejoin="round" transform="translate(4, -4)">
+              <circle cx="145" cy="118" r="7" fill="#60A5FA" />
+              <circle cx="145" cy="118" r="5" fill="#3B82F6" stroke="none" />
+              <path d="M 149,122 L 162,138" stroke="#451A03" strokeWidth="4.5" strokeLinecap="round" />
+              <circle cx="164" cy="102" r="14" fill="#93C5FD" opacity="0.5" stroke="#475569" strokeWidth="3" />
+              <path d="M 158,96 Q 166,92 170,98" stroke="#FFFFFF" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+            </g>
+          </svg>
+        </div>
+      );
+
+    case 'perfect-water-time':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#ECECFB] via-[#E0E0FC] to-[#D4D4FB] overflow-hidden flex items-center justify-center border-b-4 border-[#5E5EDD]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.3),transparent_60%)]" />
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            <circle cx="100" cy="80" r="45" fill="#818CF8" opacity="0.25" filter="blur(6px)" />
+            <path d="M 20,110 Q 50,60 100,50 T 180,60" fill="none" stroke="#60A5FA" strokeWidth="3" opacity="0.4" strokeLinecap="round" />
+            <path d="M 10,95 Q 60,110 110,85 T 190,110" fill="none" stroke="#22D3EE" strokeWidth="2.5" opacity="0.3" strokeLinecap="round" />
+            <g fill="#22D3EE" opacity="0.6">
+              <path d="M 40,65 Q 40,75 35,75 Q 30,75 35,65 Z" transform="rotate(-15, 35, 70)" />
+              <path d="M 165,85 Q 165,95 160,95 Q 155,95 160,85 Z" transform="rotate(20, 160, 90)" />
+            </g>
+            <g>
+              <path d="M 75,50 C 60,50 45,70 42,95 C 40,110 50,130 65,135 C 70,120 75,90 75,50 Z" fill="#4338CA" />
+              <path d="M 125,50 C 140,50 155,70 158,95 C 160,110 150,130 135,135 C 130,120 125,90 125,50 Z" fill="#4338CA" />
+              <path d="M 90,85 L 110,85 L 115,110 L 85,110 Z" fill="#FCE7F3" />
+              <path d="M 75,110 C 75,100 125,100 125,110 L 135,140 L 65,140 Z" fill="#EEF2F6" stroke="#E2E8F0" strokeWidth="1" />
+              <path d="M 82,60 C 82,45 118,45 118,60 C 118,75 110,90 100,90 C 90,90 82,75 82,60 Z" fill="#FCE7F3" />
+              <path d="M 100,32 C 70,32 55,55 52,80 C 50,95 56,110 68,115 C 62,95 72,70 100,70" fill="#8B5CF6" />
+              <path d="M 98,32 C 125,32 140,55 145,80 C 148,95 142,110 130,115 C 136,95 126,70 98,70" fill="#A21CAF" />
+              <path d="M 100,32 C 85,30 75,42 85,55 C 92,48 100,42 100,32" fill="#D946EF" />
+              <path d="M 52,80 C 45,98 50,120 62,130 C 65,120 58,100 52,80 Z" fill="#D946EF" />
+              <path d="M 145,80 C 152,98 147,120 135,130 C 132,120 139,100 145,80 Z" fill="#8B5CF6" />
+              <path d="M 88,65 Q 93,68 96,64" stroke="#4338CA" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M 104,65 Q 107,68 112,64" stroke="#4338CA" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M 95,64 L 97,62" stroke="#4338CA" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M 105,64 L 103,62" stroke="#4338CA" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M 97,76 Q 100,79 103,76" stroke="#C084FC" strokeWidth="2" strokeLinecap="round" fill="none" />
+              <ellipse cx="87" cy="71" rx="3" ry="2" fill="#F472B6" opacity="0.6" />
+              <ellipse cx="113" cy="71" rx="3" ry="2" fill="#F472B6" opacity="0.6" />
+            </g>
+            <g transform="translate(14, 0)">
+              <ellipse cx="100" cy="115" rx="5" ry="5" fill="#FCE7F3" stroke="#4338CA" strokeWidth="1.5" />
+              <path d="M 94,98 L 106,98 L 103,115 L 97,115 Z" fill="#E0F2FE" stroke="#0284C7" strokeWidth="2" opacity="0.9" />
+              <path d="M 95,103 L 105,103 L 103,115 L 97,115 Z" fill="#0EA5E9" opacity="0.75" />
+              <path d="M 100,94 Q 100,98 98,98 Q 100,98 100,102 Q 100,98 102,98 Q 100,98 100,94 Z" fill="#FFFFFF" />
+            </g>
+          </svg>
+        </div>
+      );
+
+    case 'fruits-body-guide':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#FEF2E6] via-[#FFF8F2] to-[#FDE8D2] overflow-hidden flex items-center justify-center border-b-4 border-[#FFA07A]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.3),transparent_60%)]" />
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            <circle cx="100" cy="80" r="45" fill="#F97316" opacity="0.15" filter="blur(6px)" />
+            <g transform="translate(138, 70) scale(0.95)" stroke="#1e293b" strokeWidth="1.5" strokeLinejoin="round">
+              <path d="M 10,0 C 18,-10 25,5 23,16 C 21,24 10,28 0,22 C -8,17 -5,5 10,0 Z" fill="#15803D" />
+              <path d="M 8,2 C 13,-6 18,5 17,13 C 15,19 7,22 -1,17 C -7,13 -4,5 8,2 Z" fill="#A3E635" />
+              <circle cx="8" cy="11" r="5" fill="#78350F" stroke="#1e293b" strokeWidth="1" />
+            </g>
+            <g transform="translate(42, 75)" stroke="#1e293b" strokeWidth="1.5">
+              <circle cx="0" cy="0" r="7.5" fill="#1E3A8A" />
+              <path d="M -3,-5 Q 0,-3 3,-5 L 2,-7 Q 0,-5 -2,-7 Z" fill="#1E40AF" />
+              <circle cx="-2.5" cy="-2.5" r="1.5" fill="#FFFFFF" stroke="none" />
+            </g>
+            <g transform="translate(34, 95) scale(0.85)" stroke="#1e293b" strokeWidth="1" fill="#BE123C">
+              <circle cx="0" cy="0" r="3" />
+              <circle cx="4" cy="1" r="3" />
+              <circle cx="-4" cy="1" r="3" />
+              <circle cx="2" cy="4" r="3.5" />
+              <circle cx="-2" cy="4" r="3.5" />
+              <circle cx="0" cy="7" r="3" />
+              <path d="M -2,-2 L 2,-2 L 0,-5 Z" fill="#15803D" stroke="#1e293b" strokeWidth="1" />
+            </g>
+            <g>
+              <path d="M 75,50 C 60,50 45,70 42,95 C 40,110 50,130 65,135 C 70,120 75,90 75,50 Z" fill="#4338CA" />
+              <path d="M 125,50 C 140,50 155,70 158,95 C 160,110 150,130 135,135 C 130,120 125,90 125,50 Z" fill="#4338CA" />
+              <path d="M 90,85 L 110,85 L 115,110 L 85,110 Z" fill="#FCE7F3" />
+              <path d="M 75,110 C 75,100 125,100 125,110 L 132,140 L 68,140 Z" fill="#FEF3C7" stroke="#FDE68A" strokeWidth="1" />
+              <path d="M 82,60 C 82,45 118,45 118,60 C 118,75 110,90 100,90 C 90,90 82,75 82,60 Z" fill="#FCE7F3" />
+              <path d="M 100,32 C 70,32 55,55 52,80 C 50,95 56,110 68,115 C 62,95 72,70 100,70" fill="#8B5CF6" />
+              <path d="M 98,32 C 125,32 140,55 145,80 C 148,95 142,110 130,115 C 136,95 126,70 98,70" fill="#A21CAF" />
+              <path d="M 100,32 C 85,30 75,42 85,55 C 92,48 100,42 100,32" fill="#D946EF" />
+              <path d="M 52,80 C 45,98 50,120 62,130 C 65,120 58,100 52,80 Z" fill="#D946EF" />
+              <path d="M 145,80 C 152,98 147,120 135,130 C 132,120 139,100 145,80 Z" fill="#8B5CF6" />
+              <path d="M 88,64 Q 92,67 96,64" stroke="#4338CA" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M 104,64 Q 108,67 112,64" stroke="#4338CA" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M 97,74 Q 100,79 103,74" stroke="#A21CAF" strokeWidth="2" strokeLinecap="round" fill="none" />
+              <ellipse cx="87" cy="71" rx="3" ry="1.8" fill="#F472B6" opacity="0.6" />
+              <ellipse cx="113" cy="71" rx="3" ry="1.8" fill="#F472B6" opacity="0.6" />
+            </g>
+            <g transform="translate(-16, 12)">
+              <ellipse cx="100" cy="108" rx="4.5" ry="4.5" fill="#FCE7F3" stroke="#4338CA" strokeWidth="1.5" />
+              <path d="M 100,97 Q 100,101 98,101 Q 100,101 100,105 Q 100,101 102,101 Q 100,101 100,97 Z" fill="#FBBF24" />
+            </g>
+          </svg>
+        </div>
+      );
+
+    case 'how-grow-faster':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#ECE8F7] via-[#E2DCF3] to-[#D5CDEC] overflow-hidden flex items-center justify-center border-b-4 border-[#735EA9]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.3),transparent_60%)]" />
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            <circle cx="100" cy="80" r="45" fill="#C084FC" opacity="0.2" filter="blur(6px)" />
+            <g opacity="0.6">
+              <path d="M 60,65 L 75,50 L 90,65" fill="none" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M 110,65 L 125,50 L 140,65" fill="none" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M 85,45 L 100,30 L 115,45" fill="none" stroke="#10B981" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="50" cy="45" r="2.5" fill="#FBBF24" />
+              <circle cx="150" cy="45" r="2.5" fill="#FBBF24" />
+              <circle cx="100" cy="18" r="3" fill="#34D399" />
+            </g>
+            <g transform="translate(0, 5)">
+              <path d="M 75,50 C 60,50 45,70 42,95 C 40,110 50,130 65,135 C 70,120 75,90 75,50 Z" fill="#4338CA" />
+              <path d="M 125,50 C 140,50 155,70 158,95 C 160,110 150,130 135,135 C 130,120 125,90 125,50 Z" fill="#4338CA" />
+              <path d="M 90,85 L 110,85 L 115,110 L 85,110 Z" fill="#FCE7F3" />
+              <path d="M 75,110 C 75,100 125,100 125,110 L 132,140 L 68,140 Z" fill="#DDD6FE" stroke="#C7D2FE" strokeWidth="1" />
+              <path d="M 82,57 C 82,42 118,42 118,57 C 118,72 110,87 100,87 C 90,87 82,72 82,57 Z" fill="#FCE7F3" />
+              <path d="M 100,28 C 70,28 55,51 52,76 C 50,91 56,106 68,111 C 62,91 74,66 100,66" fill="#8B5CF6" />
+              <path d="M 98,28 C 125,28 140,51 145,76 C 148,91 142,106 130,111 C 136,91 126,66 98,66" fill="#A21CAF" />
+              <path d="M 100,28 C 85,26 75,38 85,51 C 92,44 100,38 100,28" fill="#D946EF" />
+              <path d="M 52,76 C 45,94 50,116 62,126 C 65,116 58,96 52,76 Z" fill="#D946EF" />
+              <path d="M 145,76 C 152,94 147,116 135,126 C 132,116 139,96 145,76 Z" fill="#8B5CF6" />
+              <path d="M 87,58 Q 91,54 95,58" stroke="#4338CA" strokeWidth="3" strokeLinecap="round" fill="none" />
+              <path d="M 105,58 Q 109,54 113,58" stroke="#4338CA" strokeWidth="3" strokeLinecap="round" fill="none" />
+              <circle cx="91" cy="56" r="1.5" fill="#4338CA" />
+              <circle cx="109" cy="56" r="1.5" fill="#4338CA" />
+              <path d="M 97,71 Q 100,75 103,71" stroke="#A21CAF" strokeWidth="2" strokeLinecap="round" fill="none" />
+              <path d="M 98,72 Q 100,75 102,72" fill="#F472B6" />
+              <ellipse cx="86" cy="65" rx="3.2" ry="1.8" fill="#F472B6" opacity="0.6" />
+              <ellipse cx="114" cy="65" rx="3.2" ry="1.8" fill="#F472B6" opacity="0.6" />
+            </g>
+          </svg>
+        </div>
+      );
+
     default:
       return (
         <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-blue-500 to-indigo-600 overflow-hidden flex items-center justify-center border-b-4 border-blue-900 shadow-inner">
@@ -695,6 +878,44 @@ export function ArchivesScreen({
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'challenge' | 'plant' | 'health'>('all');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [lessonFinished, setLessonFinished] = useState(false);
+
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getBookClaimStatus = (bookId: string) => {
+    const lastClaim = settings.bookClaimTimestamps?.[bookId] || 0;
+    const cooldownMs = 1.5 * 24 * 60 * 60 * 1000; // 36 hours (1.5 days)
+    const timePassed = now - lastClaim;
+    const isCooldownActive = lastClaim > 0 && timePassed < cooldownMs;
+    const timeRemainingMs = isCooldownActive ? cooldownMs - timePassed : 0;
+
+    let countdownStr = '';
+    if (isCooldownActive) {
+      const totalSecs = Math.floor(timeRemainingMs / 1000);
+      const days = Math.floor(totalSecs / (24 * 3600));
+      const hours = Math.floor((totalSecs % (24 * 3600)) / 3600);
+      const mins = Math.floor((totalSecs % 3600) / 60);
+      const secs = totalSecs % 60;
+      if (days > 0) {
+        countdownStr = `${days}d ${hours}h`;
+      } else if (hours > 0) {
+        countdownStr = `${hours}h ${mins}m`;
+      } else {
+        countdownStr = `${mins}m ${secs}s`;
+      }
+    }
+
+    return {
+      isCooldownActive,
+      timeRemainingMs,
+      countdownStr
+    };
+  };
 
   // Playful cozy tips indices
   const [tipIndex] = useState(() => Math.floor(Math.random() * 5));
@@ -903,12 +1124,20 @@ export function ArchivesScreen({
   const completeLesson = () => {
     if (!selectedBook) return;
 
-    const isAlreadyRead = completedBookIds.includes(selectedBook.id);
+    const { isCooldownActive } = getBookClaimStatus(selectedBook.id);
     
-    if (!isAlreadyRead) {
-      const nextReadBookIds = [...completedBookIds, selectedBook.id];
+    if (!isCooldownActive) {
+      const nextReadBookIds = completedBookIds.includes(selectedBook.id)
+        ? completedBookIds
+        : [...completedBookIds, selectedBook.id];
+      const nextClaimTimestamps = {
+        ...(settings.bookClaimTimestamps || {}),
+        [selectedBook.id]: Date.now()
+      };
+
       onUpdateSettings({
-        readBookIds: nextReadBookIds
+        readBookIds: nextReadBookIds,
+        bookClaimTimestamps: nextClaimTimestamps
       });
 
       // Award cozy garden incentives (+50 XP and +10 Coins!)
@@ -1070,7 +1299,7 @@ export function ArchivesScreen({
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredBooks.map((book) => {
-                  const bookIsDone = completedBookIds.includes(book.id);
+                  const { isCooldownActive, countdownStr } = getBookClaimStatus(book.id);
                   return (
                     <motion.div
                       key={book.id}
@@ -1085,13 +1314,13 @@ export function ArchivesScreen({
 
                       <div className="space-y-3 flex-1 px-1">
                         <div className="flex items-center justify-between">
-                          {bookIsDone ? (
-                            <span className="text-[10px] font-bold text-[#2E7D32] bg-[#E8F5E9] border border-[#A5D6A7] px-3 py-0.5 rounded-full uppercase flex items-center gap-1">
-                              <Check className="w-3 h-3 stroke-[3]" /> Fully Grown
+                          {isCooldownActive ? (
+                            <span className="text-[10px] font-bold text-amber-900 bg-amber-50 border border-amber-200 px-3 py-0.5 rounded-full uppercase flex items-center gap-1">
+                              ⏳ Rest {countdownStr}
                             </span>
                           ) : (
-                            <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-0.5 rounded-full uppercase flex items-center gap-1">
-                              Needs Watering
+                            <span className="text-[10px] font-bold text-emerald-800 bg-[#E6F4EA] border border-emerald-200 px-3 py-0.5 rounded-full uppercase flex items-center gap-1 animate-pulse">
+                              ✨ Claimable
                             </span>
                           )}
                           <span className="text-[10px] text-emerald-800 bg-[#E8F5E9] border border-emerald-100 px-2 py-0.5 rounded-md font-bold">
@@ -1150,11 +1379,18 @@ export function ArchivesScreen({
                       <span className="px-3.5 py-1.5 bg-[#FFF3E0] text-amber-900 border border-amber-200 rounded-full text-[10px] font-bold uppercase tracking-widest leading-none">
                         🌱 Daily Mindset Strategy
                       </span>
-                      {completedBookIds.includes(featuredBook.id) && (
-                        <span className="px-3.5 py-1.5 bg-[#E8F5E9] text-[#2E7D32] border border-[#A5D6A7] rounded-full text-[10px] font-bold uppercase tracking-widest leading-none flex items-center gap-1">
-                          <Check className="w-3 h-3 stroke-[3]" /> Read
-                        </span>
-                      )}
+                      {(() => {
+                        const status = getBookClaimStatus(featuredBook.id);
+                        return status.isCooldownActive ? (
+                          <span className="px-3.5 py-1.5 bg-amber-50 text-amber-950 border border-amber-200 rounded-full text-[10px] font-bold uppercase tracking-widest leading-none flex items-center gap-1">
+                            ⏳ Cooldown {status.countdownStr}
+                          </span>
+                        ) : (
+                          <span className="px-3.5 py-1.5 bg-emerald-50 text-[#2E7D32] border border-emerald-200 rounded-full text-[10px] font-bold uppercase tracking-widest leading-none flex items-center gap-1 animate-pulse">
+                            ✨ Claimable
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     <h2 className="text-2xl sm:text-3xl font-extrabold text-[#4F3F34] leading-tight group-hover:text-[#69C496] transition-colors">
@@ -1188,7 +1424,7 @@ export function ArchivesScreen({
 
               <div className="overflow-x-auto flex gap-6 pb-6 px-1.5 select-none no-scrollbar snap-x snap-mandatory">
                 {plantMasterclassBooks.map((book) => {
-                  const bookIsDone = completedBookIds.includes(book.id);
+                  const { isCooldownActive, countdownStr } = getBookClaimStatus(book.id);
                   return (
                     <motion.div
                       key={book.id}
@@ -1207,8 +1443,8 @@ export function ArchivesScreen({
                           <h4 className="font-extrabold text-[#4F3F34] text-base leading-snug group-hover:text-[#69C496] transition-colors line-clamp-2">
                             {book.title}
                           </h4>
-                          <p className="text-[10px] text-[#7D6B58] font-semibold uppercase tracking-wider">
-                            {bookIsDone ? '✅ Watered' : '⏱️ 3 min read'}
+                          <p className={`text-[10px] font-bold uppercase tracking-wider ${isCooldownActive ? 'text-amber-700' : 'text-emerald-700 animate-pulse'}`}>
+                            {isCooldownActive ? `⏳ COOLDOWN ${countdownStr}` : '✨ CLAIMABLE 🪙'}
                           </p>
                         </div>
                       </div>
@@ -1226,7 +1462,7 @@ export function ArchivesScreen({
 
               <div className="overflow-x-auto flex gap-6 pb-6 px-1.5 select-none no-scrollbar snap-x snap-mandatory">
                 {mindsetMeditationBooks.map((book) => {
-                  const bookIsDone = completedBookIds.includes(book.id);
+                  const { isCooldownActive, countdownStr } = getBookClaimStatus(book.id);
                   return (
                     <motion.div
                       key={book.id}
@@ -1245,8 +1481,8 @@ export function ArchivesScreen({
                           <h4 className="font-extrabold text-[#4F3F34] text-base leading-snug group-hover:text-[#69C496] transition-colors line-clamp-2">
                             {book.title}
                           </h4>
-                          <p className="text-[10px] text-[#7D6B58] font-semibold uppercase tracking-wider">
-                            {bookIsDone ? '✅ Fully Grown' : '⏱️ 2 min read'}
+                          <p className={`text-[10px] font-bold uppercase tracking-wider ${isCooldownActive ? 'text-amber-700' : 'text-emerald-700 animate-pulse'}`}>
+                            {isCooldownActive ? `⏳ COOLDOWN ${countdownStr}` : '✨ CLAIMABLE 🪙'}
                           </p>
                         </div>
                       </div>
@@ -1435,23 +1671,37 @@ export function ArchivesScreen({
                     {/* e) THE REWARD TRIGGER (Placed exclusively at the absolute bottom of the scroll) */}
                     <div className="pt-10 border-t border-[#E9E4D4] flex flex-col items-center">
                       <div className="w-full bg-white p-6.5 rounded-[2.2rem] border-2 border-[#E9E4D4] text-center space-y-5 shadow-sm max-w-lg">
-                        <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full uppercase">
-                          🎁 Completed Reading Incentives
-                        </span>
-                        
-                        <div className="space-y-1">
-                          <h4 className="text-lg font-extrabold text-[#4F3F34]">Nourish with Wisdom</h4>
-                          <p className="text-xs text-[#7D6B58] font-medium max-w-sm mx-auto">
-                            Harvest this seed knowledge capsule to claim +10 Coins and +50 XP directly!
-                          </p>
-                        </div>
+                        {(() => {
+                          const status = getBookClaimStatus(selectedBook.id);
+                          return (
+                            <>
+                              <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase inline-block ${status.isCooldownActive ? 'text-amber-800 bg-amber-50 border border-amber-200' : 'text-emerald-800 bg-[#E6F4EA] border border-emerald-200'}`}>
+                                {status.isCooldownActive ? '⏳ Regrowing Wisdom Capsule' : '🎁 Completed Reading Incentives'}
+                              </span>
+                              
+                              <div className="space-y-1">
+                                <h4 className="text-lg font-extrabold text-[#4F3F34]">{status.isCooldownActive ? 'Wisdom Capsule Absorbed' : 'Nourish with Wisdom'}</h4>
+                                <p className="text-xs text-[#7D6B58] font-medium max-w-sm mx-auto leading-relaxed">
+                                  {status.isCooldownActive 
+                                    ? `This botanical knowledge seed has been watered. You can claim another harvest reward in ${status.countdownStr}.` 
+                                    : 'Harvest this seed knowledge capsule to claim +10 Coins and +50 XP directly!'}
+                                </p>
+                              </div>
 
-                        <button
-                          onClick={completeLesson}
-                          className="w-full bg-[#69C496] hover:bg-[#58B383] text-white py-4 px-6 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#69C496]/20 cursor-pointer border-b-4 border-[#419E6E] active:border-b-0 active:translate-y-0.5 transition-all"
-                        >
-                          🌿 Claim Knowledge & Rewards (+10 Coins, +50 XP)
-                        </button>
+                              <button
+                                onClick={status.isCooldownActive ? undefined : completeLesson}
+                                disabled={status.isCooldownActive}
+                                className={`w-full py-4 px-6 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all select-none ${status.isCooldownActive 
+                                  ? 'bg-amber-100 text-amber-900/60 border-b-2 border-amber-200/50 cursor-not-allowed' 
+                                  : 'bg-[#69C496] hover:bg-[#58B383] text-white shadow-lg shadow-[#69C496]/20 cursor-pointer border-b-4 border-[#419E6E] active:border-b-0 active:translate-y-0.5'}`}
+                              >
+                                {status.isCooldownActive 
+                                  ? `⏳ Regenerating (${status.countdownStr} left)` 
+                                  : '🌿 Claim Knowledge & Rewards (+10 Coins, +50 XP)'}
+                              </button>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
 

@@ -923,5 +923,105 @@ export const KNOWLEDGE_BOOKS: Book[] = [
         }
       ]
     }
+  },
+  {
+    id: 'context-clues-traveling',
+    title: 'How to use Context Clues while Traveling',
+    description: 'Deconstruct verbal and visual signposts to decode foreign scenery like a detective master.',
+    icon: 'Compass',
+    coverColor: 'bg-[#7B5E43]',
+    category: 'research',
+    content: {
+      title: 'How to use Context Clues while Traveling',
+      sections: [
+        {
+          heading: 'The Traveling Detective: Visual Decoding',
+          text: 'Traveling is not merely about sightseeing, bro; it is an active exercise in semiotics—the decoding of symbols, behaviors, and environmental signposts. Just like a detective holding a magnifying glass, your mind must search for critical visual indicators to read unfamiliar spaces. Pay close attention to localized patterns: the density of local residents in small side-street eateries (the ultimate signal of high price-to-quality ratios), the directional flow of pedestrians in the morning (which pins down local transport hubs or secret markets), and structural architectural transitions (like shifting roofing materials or window treatments) which tell you when you are entering distinct historic, socioeconomic, or cultural zones.'
+        },
+        {
+          heading: 'Deciphering Verbal and Textual Clues',
+          text: 'When you do not speak the regional language, context clues are your ultimate translator, bro! Analyze the layout of written words in public signs: the size, color coding, and placement of phrases can easily distinguish a helpful warning from general promotional information. Combine these symbols with human feedback: track micro-expressions of shopkeepers or transit agents, look at body language angles during conversations (are they open and leaning in, or defensive and closed?), and note the voice pitch and cadence. This allows you to decipher complex social agreements, locate hidden treasures, and stay safe in foreign surroundings.'
+        },
+        {
+          heading: 'Spatial Mapping and Cognitive Anchors',
+          text: 'To travel like an absolute master, build a continuous spatial map of your surroundings using permanent cognitive landmarks—historical towers, large green park belts, or distinct hills. Never glue your eyes to digital screens! Look up and actively search for environmental markers. Note the smells (salt air, baked spices, high exhaust fumes) to recognize micro-neighborhoods, and track the position of the sun to maintain orientation. By consciously reading these environmental anchors, your hippocampus stays fully awake, creating deep, everlasting memories of your journeys.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'perfect-water-time',
+    title: 'Perfect Water Timings',
+    description: 'Align fluid intake with biological clocks to maximize metabolic and hormonal efficiency.',
+    icon: 'Droplet',
+    coverColor: 'bg-[#4F86C6]',
+    category: 'health',
+    content: {
+      title: 'When Will Be the Perfect Time to Drink Water',
+      sections: [
+        {
+          heading: 'The Circadian Fluid Balance',
+          text: 'Timing your hydration is just as critical as the volume you drink, bro! When you wake up after 8 hours of sleep, your body is naturally dehydrated and your blood density is at its highest. Flooding your system with a large glass of warm water inside the first 10 minutes acts as an instant mechanical jumpstart for your entire metabolic loop. This dilutes your morning blood, flushes out accumulated metabolic compounds from your kidney filters, and activates cortisol excretion curves to naturally wake up your brain without caffeinated jitters.'
+        },
+        {
+          heading: 'Meal-Time Hydration Mechanics',
+          text: 'A huge physiological mistake is gulping freezing water during heavy meals. This dilutes stomach acids, shifting your digestive pH levels and leading to slow nutrient absorption and uncomfortable bloating, bro! The ideal schedule is: drink one large glass of water exactly 30 minutes before a meal to prep the stomach linings and hydrate saliva glands, and wait at least 30 to 45 minutes after eating to let your gastric enzymes break down proteins and fats fully.'
+        },
+        {
+          heading: 'Bedtime Hydration and Sleep Loops',
+          text: 'Before sleeping, your cells undergo extensive rebuilding. Sip half a glass of lukewarm water 30 minutes before bed. This provides your body with the fluid needed to maintain cardiovascular pressure through the night, preventing muscle cramps and reducing morning throat dryness. Combine this with pre-workout hydration (a glass of water 20 minutes before physical exertion) to keep your blood plasma thick and cushion your cartilage rings fully.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'fruits-body-guide',
+    title: 'Fruits for Your Body',
+    description: 'Deconstruct the biochemical keys of healthy fruits vs. high-fructose industrial items.',
+    icon: 'Flower',
+    coverColor: 'bg-[#E59A54]',
+    category: 'health',
+    content: {
+      title: 'The Somatic Fruit Guide: What to Eat vs. What to Avoid',
+      sections: [
+        {
+          heading: 'Super-Fruits for High Vitality',
+          text: 'Fruits are natural bio-capsules of structured water, enzymes, and essential trace minerals, bro! To optimize cellular energy, focus on low-glycemic, antioxidant-dense options. Avocados are the ultimate crown jewel: loaded with clean monounsaturated fats that lubricate blood vessels and assist in absorbing fat-soluble vitamins. Blueberries, organic blackberries, and raspberries are packed with active anthocyanins that cross the blood-brain barrier to reduce brain fog and support memory systems. Lemons, limes, and grapefruits contain highly bioavailable vitamin C and natural organic acids that alkalize urine buffers and stimulate liver detoxification.'
+        },
+        {
+          heading: 'Fruits to Limit and Strategic Timings',
+          text: 'Not all fruit sugars are created equal, bro! Industrial, oversized modern fruits like seedless seed grapes, sweet mangoes, pineapples, and dried dates contain highly concentrated amounts of free fructose. Eating these in massive quantities on an empty stomach triggers rapid liver fat buildup and spikes blood sugar levels, causing a heavy insulin crash. If you enjoy sweet tropical fruits, eat them strategically: immediately after a high-intensity workout (when your liver/muscle glycogen stores are dry and ready for rapid refilling) or paired with healthy proteins and fats (like walnuts or Greek yogurt) to slow down sugar absorption.'
+        },
+        {
+          heading: 'The Artificial Fruit Traps',
+          text: 'Avoid processed juices, canned fruits swimming in thick corn-syrup glaze, and pasteurized purées, bro! When you filter out the natural insoluble fibers from fruits, you transform a beautiful healthy food into an aggressive liquid sugar bomb. Without the structural fiber matrix to buffer gut transit, the fructose floods your portal vein instantly, taxing your liver metabolic pathways, triggering gut irritation, and leaving you feeling exhausted and hungry soon after.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'how-grow-faster',
+    title: 'How to Grow Faster',
+    description: 'Unlock the biological keys of human growth hormone, deep sleep, and structural nutrients.',
+    icon: 'Zap',
+    coverColor: 'bg-[#7B5EAB]',
+    category: 'health',
+    content: {
+      title: 'Human Growth Dynamics: How to Grow Faster',
+      sections: [
+        {
+          heading: 'Activating Human Growth Hormone (HGH)',
+          text: 'Human physical and cognitive growth occurs in rapid cellular surges, heavily governed by the endocrine system, bro! The ultimate master key is Human Growth Hormone (HGH), secreted by your pituitary gland. HGH peaks dramatically during slow-wave Deep Sleep (stages 3 & 4), which occurs primarily within the first 3 hours of your sleep cycle. To maximize this growth window, establish a rigid sleep schedule: sleep before 10 PM in a fully blacked-out, cold bedroom (65°F/18°C), and avoid eating high-sugar foods or heavy carbs 2 hours before bed, as high insulin levels instantly block HGH secretion!'
+        },
+        {
+          heading: 'Somatic Exercises to Stimulate Bone Length',
+          text: 'To maximize height and align your bones elegantly, you must put safe mechanical stress on your skeletal framework, bro! Engage in regular high-impact training like basketball vertical drills, jumping rope, sprinting, and hanging from a pull-up bar for 60 to 90 seconds. These movements trigger micro-tears in the epiphyseal plates of long bones, which heal thicker and stronger. Combine this with deep hanging stretches (to decompress the spinal vertebral discs) and posture correction drills to lock in your spine\'s vertical length.'
+        },
+        {
+          heading: 'The Growth Nutrition Blueprint',
+          text: 'Your bones and joints cannot expand without a continuous supply of vital building materials, bro! Supercharge your meals with bioavailable calcium (found in raw dairy or dark leafy greens) paired with Vitamin D3 and K2 to guide that calcium out of your blood vessels and lock it directly into your bone matrix. Combine this with grass-fed collagen or gelatin, bone broth, and high-quality zinc/magnesium (from pumpkin seeds, eggs, and red meat) to synthesize thick collagen webs that support height extension and accelerate physical organ growth.'
+        }
+      ]
+    }
   }
 ];
