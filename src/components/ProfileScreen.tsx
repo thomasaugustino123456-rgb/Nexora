@@ -205,6 +205,21 @@ export function ProfileScreen({
               {isEditing ? "Cancel Edit" : "Edit Page"}
             </button>
           </div>
+
+          <div className="flex justify-center pt-1">
+            <motion.button
+              whileHover={{ scale: 1.04, y: -1 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => setActiveScreen("archives")}
+              className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100/50 border-2 border-emerald-100/80 rounded-2xl flex items-center gap-2 cursor-pointer text-emerald-600 shadow-sm transition-all"
+            >
+              <Book size={16} className="stroke-[2.5]" />
+              <div className="text-left">
+                <p className="font-black text-[9px] uppercase tracking-widest leading-none">Nexus Wisdom</p>
+                <p className="text-[7.5px] text-emerald-400 font-extrabold uppercase mt-0.5 leading-none">Archives of Retention</p>
+              </div>
+            </motion.button>
+          </div>
         </div>
       </div>
 
@@ -233,7 +248,7 @@ export function ProfileScreen({
           Nexus Support Protocols
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <button
             onClick={() => {
               if (
@@ -307,23 +322,6 @@ export function ProfileScreen({
               </p>
               <p className="text-[8px] text-blue-400 font-bold uppercase mt-1">
                 Access Neural Logs
-              </p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setActiveScreen("archives")}
-            className="glass-card p-6 flex flex-col items-center text-center gap-4 hover:border-emerald-400 group transition-all"
-          >
-            <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform">
-              <Book size={24} />
-            </div>
-            <div>
-              <p className="font-black text-blue-900 text-[10px] uppercase tracking-widest">
-                Nexus Wisdom
-              </p>
-              <p className="text-[8px] text-blue-400 font-bold uppercase mt-1">
-                Archives of Retention
               </p>
             </div>
           </button>

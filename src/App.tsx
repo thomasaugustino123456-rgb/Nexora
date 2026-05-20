@@ -3712,9 +3712,12 @@ export default function App() {
         </AnimatePresence>
 
         <div className="w-full flex flex-col min-h-screen relative z-10 px-0 sm:px-6">
-          {activeScreen !== "challenge" &&
-            activeScreen !== "subscription" &&
-            activeScreen !== "nexus-vision" &&
+          {(activeScreen as string) !== "challenge" &&
+            (activeScreen as string) !== "subscription" &&
+            (activeScreen as string) !== "nexus-vision" &&
+            (activeScreen as string) !== "plant" &&
+            (activeScreen as string) !== "house" &&
+            (activeScreen as string) !== "archives" &&
             !showArchitectLab && (
               <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl">
                 <div className="flex items-center gap-4">
@@ -3736,7 +3739,7 @@ export default function App() {
                         setActiveScreen("house");
                       }}
                       className={`p-2.5 rounded-2xl transition-all relative ${
-                        activeScreen === "house"
+                        (activeScreen as string) === "house"
                           ? "bg-blue-600 text-white shadow-xl shadow-blue-200 scale-105"
                           : !settings.spaceOnboardingCompleted
                             ? "bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-pulse border-2 border-white/50"
@@ -4279,6 +4282,11 @@ export default function App() {
                     }
                   >
                     <ArchivesScreen
+                      stats={stats}
+                      onUpdateStats={onUpdateStats}
+                      settings={settings}
+                      onUpdateSettings={onUpdateSettings}
+                      play={play}
                       onBack={() => {
                         vibrate(VIBRATION_PATTERNS.CLICK);
                         setActiveScreen("profile");
@@ -4807,9 +4815,12 @@ export default function App() {
             />
           )}
 
-          {activeScreen !== "challenge" &&
-            activeScreen !== "subscription" &&
-            activeScreen !== "nexus-vision" &&
+          {(activeScreen as string) !== "challenge" &&
+            (activeScreen as string) !== "subscription" &&
+            (activeScreen as string) !== "nexus-vision" &&
+            (activeScreen as string) !== "plant" &&
+            (activeScreen as string) !== "house" &&
+            (activeScreen as string) !== "archives" &&
             !showArchitectLab && (
               <motion.div
                 initial={false}

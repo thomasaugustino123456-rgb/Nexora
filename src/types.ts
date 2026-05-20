@@ -121,6 +121,7 @@ export interface UserSettings {
   lastFeedbackPromptDate?: string;
   feedbackSubmitted?: boolean;
   isWalkthroughCompleted?: boolean;
+  readBookIds?: string[];
 }
 
 export interface ShopItem {
