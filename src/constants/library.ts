@@ -598,5 +598,330 @@ export const KNOWLEDGE_BOOKS: Book[] = [
         }
       ]
     }
+  },
+  {
+    id: 'winter-warmth',
+    title: 'Cozy Winter Fluids',
+    description: 'What to drink in freezing winter to trigger rapid thermal response.',
+    icon: 'Droplet',
+    coverColor: 'bg-cyan-600',
+    category: 'health',
+    content: {
+      title: 'The Thermogenic Fluid Shield: Winter Warmth',
+      sections: [
+        {
+          heading: 'The Thermogenic Fluid Shield',
+          text: 'When winter winds freeze, bro, staying warm isn\'t just about cozy coats. Drinking warm beverages like herbal tisanes, lemon-ginger brews, or clean hot water initiates internal thermogenesis. The heat warms your esophagus and thoracic vessels directly, speeding up blood circulation to chilly extremities!'
+        },
+        {
+          heading: 'The Hidden Winter Dehydration Trap',
+          text: 'Did you know you dehydrate just as fast in the winter, bro? Cold dry air depletes moisture from your breath, but since you don\'t feel hot, you forget to drink. Keep an eye on your water schedule to maintain premium metabolic rate and keep body temperature steady.'
+        },
+        {
+          heading: 'Perfect Warming Recipes',
+          text: 'Boil clean filtered water, add a thick slice of fiery ginger, a splash of raw lemon juice, and a tiny pinch of cayenne pepper! This simple, sugar-free formula opens up blood vessels, fires thermoreceptors, and builds instant internal fire without heavy caffeine crashes.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'immune-water',
+    title: 'Immunity & Hydration',
+    description: 'Discover how drinking proper amounts of water supercharges lymphatic cells.',
+    icon: 'Shield',
+    coverColor: 'bg-emerald-600',
+    category: 'health',
+    content: {
+      title: 'The Lymphatic Transport System: Immunity Booster',
+      sections: [
+        {
+          heading: 'The Lymphatic Transport System',
+          text: 'Your immune cells travel in a clean fluid called lymph, which is 95% water, bro. When you are dehydrated, your lymph becomes thick and sluggish. Drinking enough water ensures your white blood cell defenders can flow at high speeds to neutralize pathogens before they multiply!'
+        },
+        {
+          heading: 'Mucosal Barrier Integrity',
+          text: 'The wet membranes in your nose and throat are your body\'s frontline shields. They secrete active immunoglobulins to trap viruses. If you dry out, these mucosal shields crack wide open, leaving you vulnerable. Keep your body wet to keep the shield up!'
+        },
+        {
+          heading: 'Consistent Flushing Action',
+          text: 'Make a habit of sipping clean water consistently. This flushes lingering dry throat microbes down into the stomach, where active digestive enzymes safely destroy them. Hydrating is simple, natural, and highly bulletproof disease prevention.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'warning-adaptation',
+    title: 'The Stagnation Signs',
+    description: 'Red flags that show your body is crying for physical challenges and drills.',
+    icon: 'Activity',
+    coverColor: 'bg-red-500',
+    category: 'challenge',
+    content: {
+      title: 'Warning Signs of Stagnation: Time to Practice',
+      sections: [
+        {
+          heading: 'Mental Fog and Low Drive',
+          text: 'When you omit daily physical challenges, your dopamine receptors become sluggish, bro. If you find yourself scrolling mindlessly, feeling morning lethargy, or lacking cognitive focus, it is a warning sign of sensory deprivation. Your body is screaming for movement and oxygen!'
+        },
+        {
+          heading: 'Chronic Joint & Spine Tightness',
+          text: 'Sitting idle for hours causes cervical and lumbar joints to dry out, resulting in constant muscle tension. This mechanical lock reduces the blood supply to your spinal muscles. Don\'t ignore stiffness; it\'s your skeletal blueprint warning you to complete stretching drills.'
+        },
+        {
+          heading: 'Unlocking the Adaptation Spark',
+          text: 'Bust through stagnation instantly. Run a single set of maximum pushups or trigger a 5-minute deep Vagal breathing loop. This rapid metabolic shift restarts dopamine production, opens blood flow, and signals your neurochemistry to re-engage with your day.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'sport-essentials',
+    title: 'Sport Kinetics & Recovery',
+    description: 'Essential requirements, fuel, and somatic practices for peak performance.',
+    icon: 'Trophy',
+    coverColor: 'bg-amber-500',
+    category: 'challenge',
+    content: {
+      title: 'Peak Somatic Vigor: Sport & Athletics Blueprint',
+      sections: [
+        {
+          heading: 'The Muscle Glycogen Load',
+          text: 'Performing sports requires proper muscular fuel and active range of motion, bro. Without healthy electrolyte balances (sodium, potassium, magnesium), your muscles suffer microscopic muscle spasms and lactic acid backup, leading to painful cramps and slow recovery times.'
+        },
+        {
+          heading: 'Dynamic vs. Static Warmups',
+          text: 'Never run sports with cold joints. Initiate dynamic lunges, arm circles, and leg swings to warm synovial fluid first. Save deep, static stretches for after your activity when the tissues are warm, enabling perfect flexibility and structural safety.'
+        },
+        {
+          heading: 'Post-Sport Supercompensation',
+          text: 'Your recovery window determines your progress. Consume clean, simple proteins, plenty of clean fluids, and ensure 8+ hours of deep restorative sleep. This accelerates myelin synthesis, repairs muscle fibers, and builds awesome athletic endurance.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'coffee-counting',
+    title: 'The Hydration Debate',
+    description: 'Do caffeinated coffee and tea actually count toward your daily water metrics?',
+    icon: 'Flame',
+    coverColor: 'bg-orange-500',
+    category: 'research',
+    content: {
+      title: 'The True Fluid Metrics: Coffee, Tea & Water Intake',
+      sections: [
+        {
+          heading: 'The Mild Diuretic Reality',
+          text: 'Many people claim coffee and tea don\'t count because caffeine acts as a diuretic, bro. But science shows that for regular drinkers, a light moderate caffeine load does not cause net body water loss! Your body easily adapts to the formula, absorbing the hydration benefits.'
+        },
+        {
+          heading: 'Establishing Clean Limits',
+          text: 'While the fluids do count, avoid overloading your system with sugary syrups, artificial creamers, or excessive amounts of concentrated caffeine. Too much caffeine triggers cortisol spikes, elevating baseline stress and disrupting evening restorative REM sleep cycles.'
+        },
+        {
+          heading: 'The Pure Water Baseline',
+          text: 'Treat coffee and tea as bonus fluids, but keep clean, pure mineral water as your absolute main hydration anchor. Drinking crisp, unflavored water ensures your kidneys filter metabolic elements with zero extra digestive stress, maintaining high energy.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'heart-hydraulic',
+    title: 'Heart Hydraulics',
+    description: 'How hydration maintains healthy blood viscosity and relieves cardiac strain.',
+    icon: 'Heart',
+    coverColor: 'bg-red-600',
+    category: 'health',
+    content: {
+      title: 'Cardiovascular Pressure Balance: Hydration Hydraulics',
+      sections: [
+        {
+          heading: 'The Viscosity Struggle',
+          text: 'Your heart is a robust hydraulic pump, bro. When you skip drinking fluids, your total blood volume drops, making blood thick and honey-like. To maintain adequate oxygen flow, your heart has to pump double as hard, skyrocketing blood pressure!'
+        },
+        {
+          heading: 'Vascular Compression Support',
+          text: 'Drinking proper fluids keeps blood vessels elastic and flexible. It ensures smooth blood flow, allowing high-quality oxygen and vital nutrients to enter your organs smoothly while putting zero unnecessary friction on your arterial walls.'
+        },
+        {
+          heading: 'Establishing Long-Term Vigor',
+          text: 'Sipping clean water throughout the day acts as a continuous somatic heart massage. It guarantees proper stroke volume and maintains balanced blood pressure baseline values, building resilient, bulletproof cardiovascular health.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'cellular-glow',
+    title: 'Dermal Moisture Sync',
+    description: 'Pristine glowing skin begins at the deep cellular and digestive level.',
+    icon: 'Palette',
+    coverColor: 'bg-pink-500',
+    category: 'health',
+    content: {
+      title: 'Cosmetic Cellular Rejuvenation: Healthy Skin From Within',
+      sections: [
+        {
+          heading: 'The Deep Intestinal Connection',
+          text: 'Outer skin health is a direct mirror of inner digestion and cellular hydration, bro. Costly visual face creams can only do so much. When your gut barriers are dry and inflamed, toxins enter blood pathways and flare up on your face as dry skin and blemishes.'
+        },
+        {
+          heading: 'Saturating the Collagen Matrix',
+          text: 'Your skin feels plump and bouncy when your dermal collagen matrix is fully saturated with water molecules. Proper hydration optimizes sebum balance, naturally lubricating your face, closing active pores, and creating a gorgeous, energetic glowing look!'
+        },
+        {
+          heading: 'The Inner Rejuvenation Routine',
+          text: 'Ditch the sugary sodas that trigger skin glycation. Drink fresh lemon-infused water, consume clean fats (omega-3s), and maintain consistent water habits. Your skin cells will flush out accumulated micro-debris, radiating high-fidelity vitality.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'neural-fluid',
+    title: 'The Hydrated Brain',
+    description: 'Maintain cognitive focus by preventing cerebral shrinkage.',
+    icon: 'BookOpen',
+    coverColor: 'bg-blue-600',
+    category: 'research',
+    content: {
+      title: 'Cerebral Tissue Hydraulics: Water and Your Brain',
+      sections: [
+        {
+          heading: 'Cerebral Tissue Shrinkage',
+          text: 'Your brain cells are 75% water, bro. When hydration drops by mere 2%, your brain tissue physically starts to shrink away from the skull, triggering headaches and forcing the brain to spend massive energetic reserves just to process basic logic tasks!'
+        },
+        {
+          heading: 'Synaptic Signal Speed',
+          text: 'Cognitive focus relies on rapid electrical charge transfers between synapses. Water facilitates clean, fast movement of vital sodium and potassium ions through cell borders. Keep your brain fully hydrated to lock in rapid reflexes and high memory recall.'
+        },
+        {
+          heading: 'Clearing Out Cerebral Debris',
+          text: 'During sleep, your brain is washed by cerebrospinal fluid, removing accumulated metabolic toxins. Drinking a tall, clean glass of water right when waking instantly rehydrates this clearing system, throwing away morning fog and starting your brain engine.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'active-mom',
+    title: 'The Energetic Mom',
+    description: 'Fun actionable tricks for busy mothers to stay healthy, hydrated, and active.',
+    icon: 'Compass',
+    coverColor: 'bg-teal-500',
+    category: 'health',
+    content: {
+      title: 'High-Energy Motherhood: Active Parenting Blueprint',
+      sections: [
+        {
+          heading: 'The Active Family Hydration Game',
+          text: 'Being a mother is a supreme high-intensity workout, bro! Turn daily hydration into a playful garden challenge with your children. Play the "Plant Nanny" rule: every time your child drinks, you take a refreshing zip. This keeps the whole team hydrated and smiling!'
+        },
+        {
+          heading: 'Playground Kinetic Drills',
+          text: 'Do not stress if you cannot visit a commercial gym. Turn playground time into clean functional movement! While your kids play, do slow calf raises, beautiful bench steps, or perfect wall pushups. Your children get to watch a passionate, healthy role model!'
+        },
+        {
+          heading: 'Crafting Micro Rest Zones',
+          text: 'Moms carry immense cognitive loads. Carve out tiny 2-minute "Me-Time" breathing boxes. Practice slow nasal inhales and long, calming mouth sighs while holding a warm ceramic cup. This simple vagal reset clears stress loops, keeping you patient and strong.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'womens-wellness-deep',
+    title: 'Women\'s Somatic Wellness',
+    description: 'Synchronize sleep, physical training, and hydration for peak vital balances.',
+    icon: 'Activity',
+    coverColor: 'bg-rose-600',
+    category: 'health',
+    content: {
+      title: 'Somatic Synergies: Women\'s Health & Active Recovery',
+      sections: [
+        {
+          heading: 'Hormonal Fluid Fluctuations',
+          text: 'A woman\'s biological cycle triggers natural fluid retention and temperature changes, bro. During high-progesterone phases, metabolic rate goes up, increasing sweat and water needs. Adjust your intake margins, adding light sea salt to keep minerals solid.'
+        },
+        {
+          heading: 'Restorative Sleep Architecture',
+          text: 'Quality rest is crucial for female nervous system recovery. Turn off bright LED phone screens 1 hour before bed, and sleep in a cool, dark room. High hydration and physical movement through the day help guarantee deeper slow-wave sleep cycles.'
+        },
+        {
+          heading: 'Somatic Exercise Balancing',
+          text: 'Don\'t drain your energy by pushing heavy training when your body feels flat. Match exercises to your natural energy flow: do intense workouts during peak strength states, and switch to gentle pelvic flows, yoga, or walks during quiet recovery states.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'pregnant-joy',
+    title: 'Pregnancy Refreshment',
+    description: 'Making the beautiful pregnancy journey a refreshing, hydrated, and joyful path.',
+    icon: 'Heart',
+    coverColor: 'bg-purple-500',
+    category: 'health',
+    content: {
+      title: 'The Maternal Hydraulic Loop: Pregnancy Hydration',
+      sections: [
+        {
+          heading: 'The Twin Hydraulic Loop',
+          text: 'During pregnancy, your body synthesizes a massive 50% more blood, bro! This beautiful fluid supports the growing placenta and baby. Excellent hydration is vital to maintain amniotic fluid levels and ensure proper nutrient pathways reach the child.'
+        },
+        {
+          heading: 'Cooling Down Morning Distress',
+          text: 'Morning sickness can dry you out rapidly. Battle this by sipping cold, sparkling strawberry or ginger-lemon-infused water in tiny, easy portions. Ginger calms the stomach nerves naturally, while the bubbly water quickly cools down core temperatures.'
+        },
+        {
+          heading: 'Low-Impact Muscle Care',
+          text: 'Support your back and pelvis by doing gentle swimming, cozy forest walks, and soft stretching. Keep a colourful, happy bottle nearby to sip constantly, washing away leg cramps and keeping your joints fully cushioned and happy.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'period-hydration-deep',
+    title: 'Cycle Flow Support',
+    description: 'Sipping clean warm fluids to soothe uterine cramps and optimize cycle energy.',
+    icon: 'Activity',
+    coverColor: 'bg-pink-600',
+    category: 'health',
+    content: {
+      title: 'Somatic Menstruation Support: Warm Hydration Protocols',
+      sections: [
+        {
+          heading: 'Flushing Out Cycle Fatigue',
+          text: 'Menstruation is a highly active biological process, bro. Dehydration limits healthy blood circulation, worsening uterine cramps and triggering severe cycle headaches. Keep sipping warm water to relax smooth muscles and soothe tension.'
+        },
+        {
+          heading: 'Preventing the Bloating Loop',
+          text: 'It sounds paradoxical, but holding back on drinking water actually forces your body to hold on to excess fluids, causing uncomfortable bloating! Flooding your system with clean water signals your kidneys to release extra sodium, clearing out bulk swelling.'
+        },
+        {
+          heading: 'Soothing Mineral Tea Formulas',
+          text: 'Brew warm chamomile, raspberry leaf, or peppermint tea during your cycle. These natural infusions contain active antispasmodic compounds that calm uterine contractions naturally, comforting your mind while keeping your body wet.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'mens-activities-deep',
+    title: 'Men\'s Biomechanical Training',
+    description: 'Essential strength exercises, core stabilization, and structural safety.',
+    icon: 'Dumbbell',
+    coverColor: 'bg-blue-600',
+    category: 'challenge',
+    content: {
+      title: 'Men\'s Functional Longevity: Key Biomechanics Protocols',
+      sections: [
+        {
+          heading: 'The Core Lockout Foundation',
+          text: 'For men, building real functional strength requires complete stabilization, bro. Before picking up any weight, lock your transverse abdominis and squeeze your glutes. This forms a protective internal belt, securing your spine during high-load exercises.'
+        },
+        {
+          heading: 'Multi-Joint Compound Drills',
+          text: 'Prioritize full compound movements like goblet squats, clean pushups, pull-ups, and farmer carries. These natural, three-dimensional physical drills activate multiple muscle groups synchronously, developing clean, athletic bone density.'
+        },
+        {
+          heading: 'Hydrating the Skeletal System',
+          text: 'Cartilage inside joints is 80% water. Heavy physical workouts put massive mechanical compression on knees and back disks. Continuous hydration acts as a thick, flexible sponge that absorbs workout impact, guaranteeing healthy joints and longevity.'
+        }
+      ]
+    }
   }
 ];
