@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Droplets, Flame, User, Globe, Sparkles, Loader2, CheckCircle2, ArrowLeft, Briefcase, Zap, Brain } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { UserSettings } from '../types';
@@ -57,7 +57,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
     updates.pushupsGoal = pushups;
 
     try {
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), updates);
+      await setDoc(doc(db, 'users', auth.currentUser.uid), updates, { merge: true });
       
       setSettings({
         ...settings,
@@ -711,11 +711,16 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.1, duration: 0.8 }}
-                  onClick={async () => {
-                    await setupFCM();
+                  onClick={() => {
+                    // Fully robust and non-blocking background trigger
+                    try {
+                      setupFCM().catch(err => console.warn("FCM error on background setup:", err));
+                    } catch (e) {
+                      console.warn("FCM setup setupFCM error:", e);
+                    }
                     nextStep();
                   }}
-                  className="btn-primary w-full py-4 text-lg font-bold"
+                  className="btn-primary w-full py-4 text-lg font-bold cursor-pointer"
                 >
                   Enable Smart Alerts
                 </motion.button>
@@ -724,7 +729,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.3, duration: 0.8 }}
                   onClick={nextStep}
-                  className="w-full py-4 text-blue-900/50 font-bold hover:text-blue-900/70 transition-colors"
+                  className="w-full py-4 text-blue-900/50 font-bold hover:text-blue-900/70 transition-colors cursor-pointer"
                 >
                   Skip for now
                 </motion.button>

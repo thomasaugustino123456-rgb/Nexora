@@ -3446,6 +3446,7 @@ export default function App() {
         <OnboardingScreen
           onComplete={() => {
             onUpdateSettings({ onboardingCompleted: true });
+            setNeedsOnboarding(false);
           }}
           settings={settings}
           setSettings={onUpdateSettings}

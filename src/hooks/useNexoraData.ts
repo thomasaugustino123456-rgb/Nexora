@@ -72,9 +72,7 @@ export function useNexoraData(
         },
   );
 
-  const [needsOnboarding, setNeedsOnboarding] = useState(
-    cachedUserId ? !cachedOnboarding : false
-  );
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const dataLoadedFromFirestore = useRef(false);
   const quotaExceededRef = useRef(false);
   const lastSyncedRef = useRef<string>("");
@@ -195,7 +193,9 @@ export function useNexoraData(
             trophies: data.stats?.trophies || [],
           };
 
-          const isCompleted = data.onboardingCompleted === true;
+          // If the profile exists in Firestore, the user is an existing user.
+          // By default, do NOT show onboarding unless explicitly set to false.
+          const isCompleted = data.onboardingCompleted !== false;
           setSettings(firestoreSettings);
           setStats(firestoreStats);
           setNeedsOnboarding(!isCompleted);
