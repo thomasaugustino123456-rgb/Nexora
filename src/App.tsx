@@ -754,6 +754,22 @@ export default function App() {
     }
   }, [user, isDataReady]);
 
+  // Preload large content images lazily in background
+  useEffect(() => {
+    if (isDataReady) {
+      const timer = setTimeout(() => {
+        import("./lib/preloader")
+          .then((m) => {
+            m.startPreloading();
+          })
+          .catch((err) => {
+            console.warn("NEXORA: Background image preloader load skipped (offline mode)", err);
+          });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isDataReady]);
+
   // Handle URL parameters for PWA Shortcuts
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

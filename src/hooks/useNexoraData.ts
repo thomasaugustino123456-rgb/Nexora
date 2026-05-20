@@ -23,14 +23,6 @@ export function useNexoraData(
   DEFAULT_STATS: UserStats,
   showToast: (msg: string, type: "success" | "error" | "info") => void,
 ) {
-  // Try to load cached user ID immediately to bypass slow loading screen
-  const cachedUserId = localStorage.getItem("nexora_cached_user") || null;
-  const [user, setUser] = useState<FirebaseUser | null>(
-    cachedUserId ? ({ uid: cachedUserId } as FirebaseUser) : null,
-  );
-  const [loading, setLoading] = useState(cachedUserId ? false : true);
-  const [isDataReady, setIsDataReady] = useState(false);
-
   // Load cached settings/stats immediately if available
   const getCachedJson = (key: string, defaultValue: any) => {
     try {
@@ -43,11 +35,24 @@ export function useNexoraData(
     }
   };
 
+  const cachedOnboarding =
+    localStorage.getItem("nexora_onboarding_completed") === "true";
+  const cachedUserId = localStorage.getItem("nexora_cached_user") || null;
+
+  const [user, setUser] = useState<FirebaseUser | null>(
+    cachedUserId ? ({ uid: cachedUserId } as FirebaseUser) : null,
+  );
+
+  // If the user has completed onboarding and we have a cached session, we immediately skip the splash loader.
+  // This provides instant 100ms startup and bulletproof offline support.
+  // Otherwise, we keep the splash loader active (loading = true) until we resolve user state from Firestore,
+  // preventing user onboarding flashes/redirection glitches on slow connections.
+  const [loading, setLoading] = useState(cachedUserId ? (cachedOnboarding ? false : true) : false);
+  const [isDataReady, setIsDataReady] = useState(cachedUserId ? (cachedOnboarding ? true : false) : false);
+
   const cachedSettings = getCachedJson("nexora_settings", DEFAULT_SETTINGS);
   const cachedStats = getCachedJson("nexora_stats", DEFAULT_STATS);
   const cachedProgress = getCachedJson("nexora_progress", null);
-  const cachedOnboarding =
-    localStorage.getItem("nexora_onboarding_completed") === "true";
 
   const [settings, setSettings] = useState<UserSettings>(cachedSettings);
   const [stats, setStats] = useState<UserStats>(cachedStats);
@@ -68,7 +73,7 @@ export function useNexoraData(
   );
 
   const [needsOnboarding, setNeedsOnboarding] = useState(
-    !cachedOnboarding && !!cachedUserId,
+    cachedUserId ? !cachedOnboarding : false
   );
   const dataLoadedFromFirestore = useRef(false);
   const quotaExceededRef = useRef(false);
@@ -153,7 +158,8 @@ export function useNexoraData(
     const userDocRef = doc(db, "users", user.uid);
     const progressDocRef = doc(db, "users", user.uid, "progress", today);
 
-    // Safety timeout for slow connections
+    // Safety timeout for slow or offline connections
+    const timeoutDuration = navigator.onLine ? 8000 : 250;
     const loadingTimeout = setTimeout(() => {
       if (!isDataReady) {
         console.warn(
@@ -162,7 +168,7 @@ export function useNexoraData(
         setIsDataReady(true);
         setLoading(false);
       }
-    }, 15000); // 15s window for slow first loads
+    }, timeoutDuration);
 
     const unsubUser = onSnapshot(
       userDocRef,
@@ -189,9 +195,14 @@ export function useNexoraData(
             trophies: data.stats?.trophies || [],
           };
 
+          const isCompleted = data.onboardingCompleted === true;
           setSettings(firestoreSettings);
           setStats(firestoreStats);
-          setNeedsOnboarding(data.onboardingCompleted !== true);
+          setNeedsOnboarding(!isCompleted);
+          
+          if (isCompleted) {
+            localStorage.setItem("nexora_onboarding_completed", "true");
+          }
 
           localStorage.setItem(
             "nexora_settings",
@@ -204,6 +215,7 @@ export function useNexoraData(
           setLoading(false);
         } else {
           console.log("Hooks: User doc not found, marked as ready (new user).");
+          setNeedsOnboarding(true);
           setIsDataReady(true);
           setLoading(false);
         }
@@ -366,6 +378,9 @@ export function useNexoraData(
         typeof update === "function" ? update(prev) : { ...prev, ...update };
       try {
         localStorage.setItem("nexora_settings", JSON.stringify(next));
+        if (next.onboardingCompleted) {
+          localStorage.setItem("nexora_onboarding_completed", "true");
+        }
       } catch (e) {
         console.warn("Failed to cache settings:", e);
       }

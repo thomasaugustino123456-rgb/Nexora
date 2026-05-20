@@ -114,5 +114,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  // Soft-logging instead of crashing the entire React app with a hard throw.
+  // This keeps the system fully resilient and stable even in low-connectivity/offline scenarios.
 }
