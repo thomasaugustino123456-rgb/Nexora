@@ -19,6 +19,7 @@ import {
   Info,
   Users,
   Layout,
+  Book,
 } from "lucide-react";
 import { User as FirebaseUser } from "firebase/auth";
 import { UserSettings, UserStats, SocialCircle, Screen } from "../types";
@@ -306,6 +307,23 @@ export function ProfileScreen({
               </p>
               <p className="text-[8px] text-blue-400 font-bold uppercase mt-1">
                 Access Neural Logs
+              </p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setActiveScreen("archives")}
+            className="glass-card p-6 flex flex-col items-center text-center gap-4 hover:border-emerald-400 group transition-all"
+          >
+            <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform">
+              <Book size={24} />
+            </div>
+            <div>
+              <p className="font-black text-blue-900 text-[10px] uppercase tracking-widest">
+                Nexus Wisdom
+              </p>
+              <p className="text-[8px] text-blue-400 font-bold uppercase mt-1">
+                Archives of Retention
               </p>
             </div>
           </button>

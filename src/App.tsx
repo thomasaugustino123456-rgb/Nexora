@@ -176,6 +176,11 @@ import { CelebrationModal } from "./components/CelebrationModal";
 const HouseScreen = lazy(() =>
   import("./components/HouseScreen").then((m) => ({ default: m.HouseScreen })),
 );
+const ArchivesScreen = lazy(() =>
+  import("./components/ArchivesScreen").then((m) => ({
+    default: m.ArchivesScreen,
+  })),
+);
 const LibraryScreen = lazy(() =>
   import("./components/LibraryScreen").then((m) => ({
     default: m.LibraryScreen,
@@ -4253,6 +4258,31 @@ export default function App() {
                       isPro={isPro}
                       existingPlansCount={customPlans.length}
                       settings={settings}
+                    />
+                  </Suspense>
+                </motion.div>
+              )}
+              {activeScreen === "archives" && (
+                <motion.div
+                  key="archives"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className="w-full"
+                >
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center p-20 animate-pulse text-blue-900 font-black">
+                        OPENING ARCHIVES...
+                      </div>
+                    }
+                  >
+                    <ArchivesScreen
+                      onBack={() => {
+                        vibrate(VIBRATION_PATTERNS.CLICK);
+                        setActiveScreen("profile");
+                      }}
                     />
                   </Suspense>
                 </motion.div>

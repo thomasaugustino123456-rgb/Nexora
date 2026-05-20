@@ -1,342 +1,322 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ArrowLeft, Package, Video, Trash2, CheckCircle2, XCircle, 
+  ChevronRight, Play, Book as BookIcon, Palette, StickyNote,
+  Zap, Gift, Star, Shield
+} from 'lucide-react';
 import { LibraryItem, UserStats, UserSettings, NexusVideo } from '../types';
-import { ArrowLeft, Trash2, Power, PowerOff, Package, Book, Image as ImageIcon, Sparkles, Music, Play, Pause, Volume2, Video } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
 
-export function LibraryScreen({ 
-  items, 
+interface LibraryScreenProps {
+  items: LibraryItem[];
+  stats: UserStats;
+  settings: UserSettings;
+  savedVideos: NexusVideo[];
+  onPlayVideo: (v: NexusVideo) => void;
+  onDeleteVideo: (id: string) => void;
+  onActivate: (id: string) => void;
+  onDeactivate: (id: string) => void;
+  onDelete: (id: string) => void;
+  onDeleteNote: (id: string) => void;
+  onDeleteDrawing: (index: number) => void;
+  onDeleteChallenge: (id: string) => void;
+  onBack: () => void;
+}
+
+type Tab = 'inventory' | 'media' | 'creative' | 'archive';
+
+export function LibraryScreen({
+  items,
   stats,
   settings,
   savedVideos,
-  onActivate, 
-  onDeactivate, 
-  onDelete, 
-  onDeleteNote,
-  onDeleteChallenge,
-  onDeleteDrawing,
-  onDeleteVideo,
   onPlayVideo,
-  onBack 
-}: { 
-  items: LibraryItem[]; 
-  stats: UserStats;
-  settings: UserSettings;
-  savedVideos?: NexusVideo[];
-  onActivate: (id: string) => void; 
-  onDeactivate: (id: string) => void; 
-  onDelete: (id: string) => void; 
-  onDeleteNote: (id: string) => void; 
-  onDeleteChallenge: (id: string) => void;
-  onDeleteDrawing: (index: number) => void;
-  onDeleteVideo?: (id: string) => void;
-  onPlayVideo?: (v: NexusVideo) => void;
-  onBack: () => void; 
-}) {
-  const powerUps = items.filter(item => item.type === 'power-up');
-  const skins = items.filter(item => item.type === 'skin');
-  const musicItems = items.filter(item => item.type === 'music' || item.type === 'sound-pack');
-  const gifts = items.filter(item => item.type === 'gift');
-  const notes = stats.gratitudeEntries || [];
-  const drawings = stats.drawings || [];
-  const savedChallenges = settings.savedChallengeIds || [];
-  const savedVideosList = savedVideos || [];
+  onDeleteVideo,
+  onActivate,
+  onDeactivate,
+  onDelete,
+  onDeleteNote,
+  onDeleteDrawing,
+  onDeleteChallenge,
+  onBack
+}: LibraryScreenProps) {
+  const [activeTab, setActiveTab] = useState<Tab>('inventory');
 
-  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const tabs = [
+    { id: 'inventory', label: 'Vault', icon: Package },
+    { id: 'media', label: 'Media', icon: Video },
+    { id: 'creative', label: 'Canvas', icon: Palette },
+    { id: 'archive', label: 'Logs', icon: StickyNote },
+  ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="p-6 pb-24 max-w-2xl mx-auto"
-    >
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={onBack} className="p-2 rounded-full hover:bg-blue-100 transition-colors">
-          <ArrowLeft size={24} className="text-blue-900" />
+    <div className="min-h-screen bg-[#f8fbff] pb-32">
+      {/* Header */}
+      <div className="sticky top-0 z-30 bg-[#f8fbff]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-blue-100">
+        <button 
+          onClick={onBack}
+          className="p-3 bg-white rounded-2xl shadow-sm border border-blue-100 text-blue-900 active:scale-90 transition-transform"
+        >
+          <ArrowLeft size={20} />
         </button>
-        <h1 className="text-3xl font-black text-blue-900">My Library</h1>
-        <div className="ml-auto p-2 bg-blue-100 rounded-xl">
-          <Package size={24} className="text-blue-600" />
+        <div className="text-center">
+          <h2 className="text-xs font-black text-blue-900 uppercase tracking-[0.3em]">Personal Library</h2>
+          <p className="text-[8px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">Asset Management Hub</p>
         </div>
+        <div className="w-12 h-12" />
       </div>
 
-      {(items.length === 0 && notes.length === 0 && drawings.length === 0 && savedChallenges.length === 0) ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4">
-            <Package size={40} className="text-blue-200" />
-          </div>
-          <h2 className="text-xl font-bold text-blue-900 mb-2">Your library is empty</h2>
-          <p className="text-blue-900/40 max-w-xs">Buy items in the shop or save notes to see them here, bro! ✍️</p>
-          <button 
-            onClick={onBack}
-            className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors"
-          >
-            Go to Shop
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-12">
-          {/* Shop Items Section */}
-          {(powerUps.length > 0 || skins.length > 0 || musicItems.length > 0 || gifts.length > 0) && (
-            <div className="space-y-8">
-              {powerUps.length > 0 && (
-                <section>
-                  <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Active Power-Ups</h2>
-                  <div className="grid grid-cols-1 gap-4">
-                    {powerUps.map((item) => (
-                      <LibraryItemCard 
-                        key={item.id} 
-                        item={item} 
-                        onActivate={onActivate} 
-                        onDeactivate={onDeactivate} 
-                        onDelete={onDelete} 
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
+      {/* Tabs */}
+      <div className="flex px-4 gap-2 py-4 overflow-x-auto no-scrollbar bg-white/50 border-b border-blue-50">
+        {tabs.map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as Tab)}
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${
+                isActive 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105' 
+                  : 'bg-white text-blue-900/40 hover:bg-blue-50'
+              }`}
+            >
+              <Icon size={14} />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-              {musicItems.length > 0 && (
-                <section>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Music size={16} className="text-blue-400" />
-                    <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest">Music & Sound Packs</h2>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4">
-                    {musicItems.map((item) => (
-                      <LibraryItemCard 
-                        key={item.id} 
-                        item={item} 
-                        onActivate={onActivate} 
-                        onDeactivate={onDeactivate} 
-                        onDelete={onDelete} 
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {skins.length > 0 && (
-                <section>
-                  <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Mascot Styles</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {skins.map((item) => (
-                      <LibraryItemCard 
-                        key={item.id} 
-                        item={item} 
-                        onActivate={onActivate} 
-                        onDeactivate={onDeactivate} 
-                        onDelete={onDelete} 
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {gifts.length > 0 && (
-                <section>
-                  <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-4">Mystery Gifts</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {gifts.map((item) => (
-                      <LibraryItemCard 
-                        key={item.id} 
-                        item={item} 
-                        onActivate={onActivate} 
-                        onDeactivate={onDeactivate} 
-                        onDelete={onDelete} 
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-            </div>
-          )}
-
-          {/* Saved Challenges Section */}
-          {savedChallenges.length > 0 && (
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles size={16} className="text-blue-400" />
-                <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest">Saved Challenges</h2>
+      <div className="p-6 max-w-2xl mx-auto space-y-6">
+        <AnimatePresence mode="wait">
+          {activeTab === 'inventory' && (
+            <motion.div
+              key="inventory"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center justify-between px-2">
+                <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.2em]">Stored Assets</h3>
+                <span className="text-[10px] font-bold text-blue-500">{items.length} Units</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {savedChallenges.map((challengeId, i) => (
-                  <div key={i} className="glass-card p-4 flex items-center justify-between border-l-4 border-l-blue-400">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500">
-                        <Sparkles size={20} />
+              
+              {items.length === 0 ? (
+                <div className="glass-card p-12 flex flex-col items-center text-center space-y-4">
+                  <div className="p-4 bg-blue-50 rounded-full text-blue-200">
+                    <Package size={48} />
+                  </div>
+                  <p className="text-sm font-bold text-blue-900/40 uppercase tracking-widest">Vault is empty, bro.</p>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {items.map(item => (
+                    <div key={item.id} className="glass-card p-4 flex items-center gap-4">
+                      <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-3xl shadow-inner border border-white">
+                        {item.icon}
                       </div>
-                      <div>
-                        <p className="text-blue-900 font-bold capitalize">{challengeId}</p>
-                        <p className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Challenge</p>
+                      <div className="flex-1">
+                        <h4 className="font-black text-blue-900 text-sm uppercase tracking-tight">{item.name}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[8px] font-black text-blue-500 uppercase bg-blue-50 px-2 py-0.5 rounded-full">
+                            {item.type}
+                          </span>
+                          {item.activated && (
+                            <span className="text-[8px] font-black text-emerald-500 uppercase bg-emerald-50 px-2 py-0.5 rounded-full animate-pulse">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => item.activated ? onDeactivate(item.id) : onActivate(item.id)}
+                          className={`p-3 rounded-xl transition-all ${
+                            item.activated 
+                              ? 'bg-amber-50 text-amber-600' 
+                              : 'bg-emerald-50 text-emerald-600'
+                          }`}
+                        >
+                          {item.activated ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
+                        </button>
+                        <button
+                          onClick={() => onDelete(item.id)}
+                          className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => onDeleteChallenge(challengeId)}
-                      className="p-2 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
+                  ))}
+                </div>
+              )}
+            </motion.div>
           )}
 
-
-          {/* Notes Section */}
-          {notes.length > 0 && (
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <Book size={16} className="text-blue-400" />
-                <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest">My Saved Notes</h2>
+          {activeTab === 'media' && (
+            <motion.div
+              key="media"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+               <div className="flex items-center justify-between px-2">
+                <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.2em]">Nexus Records</h3>
+                <span className="text-[10px] font-bold text-blue-500">{savedVideos.length} Downloads</span>
               </div>
-              <div className="space-y-4">
-                {notes.map((note) => (
-                  <div key={note.id} className="glass-card p-4 flex flex-col gap-3 border-l-4 border-l-amber-400">
-                    <div className="flex items-start justify-between gap-4">
-                      <p className="text-blue-900 font-medium text-sm whitespace-pre-wrap">{note.text}</p>
-                      <button 
-                        onClick={() => onDeleteNote(note.id)}
-                        className="p-2 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-colors"
-                      >
+
+              {savedVideos.length === 0 ? (
+                <div className="glass-card p-12 flex flex-col items-center text-center space-y-4">
+                  <div className="p-4 bg-blue-50 rounded-full text-blue-200">
+                    <Video size={48} />
+                  </div>
+                  <p className="text-sm font-bold text-blue-900/40 uppercase tracking-widest">No recordings found.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {savedVideos.map(video => (
+                    <div key={video.id} className="glass-card overflow-hidden group">
+                      <div className="aspect-[9/16] bg-blue-900 relative">
+                        {video.videoUrl && (
+                          <video 
+                            src={video.videoUrl} 
+                            className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                            muted
+                            loop
+                            playsInline
+                          />
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <button 
+                            onClick={() => onPlayVideo(video)}
+                            className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform"
+                          >
+                            <Play size={20} fill="white" />
+                          </button>
+                        </div>
+                        <button 
+                          onClick={() => onDeleteVideo(video.id)}
+                          className="absolute top-2 right-2 p-2 bg-red-600/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      <div className="p-3">
+                        <p className="text-[10px] font-black text-blue-900 uppercase truncate mb-1">{video.caption || 'Nexus Clip'}</p>
+                        <p className="text-[8px] font-bold text-blue-400 uppercase">{new Date(video.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'creative' && (
+            <motion.div
+              key="creative"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center justify-between px-2">
+                <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.2em]">Neural Artifacts</h3>
+                <span className="text-[10px] font-bold text-blue-500">{stats.drawings?.length || 0} Sketches</span>
+              </div>
+
+              {!stats.drawings || stats.drawings.length === 0 ? (
+                <div className="glass-card p-12 flex flex-col items-center text-center space-y-4">
+                  <div className="p-4 bg-blue-50 rounded-full text-blue-200">
+                    <Palette size={48} />
+                  </div>
+                  <p className="text-sm font-bold text-blue-900/40 uppercase tracking-widest">The canvas is blank, bro.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {stats.drawings.map((drawing, idx) => (
+                    <div key={idx} className="glass-card overflow-hidden group aspect-square">
+                      <div className="w-full h-full bg-white relative">
+                        <img src={drawing} className="w-full h-full object-contain" />
+                        <button 
+                          onClick={() => onDeleteDrawing(idx)}
+                          className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'archive' && (
+            <motion.div
+              key="archive"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center justify-between px-2">
+                <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.2em]">Log History</h3>
+              </div>
+
+              {/* Gratitude Entries */}
+              <div className="space-y-3">
+                <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest px-2">Neuro-Gratitude Signals</p>
+                {(!stats.gratitudeEntries || stats.gratitudeEntries.length === 0) ? (
+                  <p className="text-xs font-bold text-blue-900/20 text-center py-4 uppercase">No logs recorded</p>
+                ) : (
+                  stats.gratitudeEntries.map(entry => (
+                    <div key={entry.id} className="glass-card p-4 flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-medium text-blue-900">{entry.text}</p>
+                        <p className="text-[8px] font-bold text-blue-400 uppercase mt-1">{new Date(entry.date).toLocaleDateString()}</p>
+                      </div>
+                      <button onClick={() => onDeleteNote(entry.id)} className="text-red-400 hover:text-red-600">
                         <Trash2 size={16} />
                       </button>
                     </div>
-                    <div className="text-[10px] font-bold text-blue-900/30 uppercase">
-                      {format(parseISO(note.date), 'MMM d, yyyy')}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Drawings Section */}
-          {drawings.length > 0 && (
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <ImageIcon size={16} className="text-blue-400" />
-                <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest">My Masterpieces</h2>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {drawings.map((drawing, i) => (
-                  <div key={i} className="bg-white p-2 rounded-2xl shadow-md border-2 border-blue-100 overflow-hidden group relative cursor-pointer" onClick={() => setViewingImage(drawing)}>
-                    <img src={drawing} alt={`Drawing ${i}`} className="w-full aspect-square object-cover rounded-xl" loading="lazy" />
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); onDeleteDrawing(i); }}
-                      className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Delete Drawing"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    <div className="mt-2 flex justify-between items-center px-1">
-                      <span className="text-[10px] font-bold text-blue-400">#{i + 1}</span>
-                      <Sparkles size={12} className="text-blue-300" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <AnimatePresence>
-                {viewingImage && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm"
-                    onClick={() => setViewingImage(null)}
-                  >
-                    <motion.div
-                      initial={{ scale: 0.5, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.5, opacity: 0 }}
-                      className="bg-white p-4 rounded-3xl shadow-2xl max-w-sm w-full"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <img src={viewingImage} alt="Viewed Masterpiece" className="w-full rounded-2xl" />
-                      <button 
-                        onClick={() => setViewingImage(null)}
-                        className="mt-4 w-full py-3 bg-blue-100 text-blue-900 font-black uppercase tracking-widest text-xs rounded-xl hover:bg-blue-200"
-                      >
-                        Close
-                      </button>
-                    </motion.div>
-                  </motion.div>
+                  ))
                 )}
-              </AnimatePresence>
-            </section>
+              </div>
+
+              {/* Saved Challenges */}
+              <div className="space-y-3 pt-4">
+                <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest px-2">Pinned Protocols</p>
+                {(!settings.savedChallengeIds || settings.savedChallengeIds.length === 0) ? (
+                  <p className="text-xs font-bold text-blue-900/20 text-center py-4 uppercase">No pinned protocols</p>
+                ) : (
+                  settings.savedChallengeIds.map(cid => (
+                    <div key={cid} className="glass-card p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                          <Zap size={14} />
+                        </div>
+                        <p className="text-xs font-black text-blue-900 uppercase tracking-tight">{cid}</p>
+                      </div>
+                      <button onClick={() => onDeleteChallenge(cid)} className="text-red-400">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
           )}
-        </div>
-      )}
-    </motion.div>
-  );
-}
-
-function LibraryItemCard({ 
-  item, 
-  onActivate, 
-  onDeactivate, 
-  onDelete 
-}: { 
-  item: LibraryItem; 
-  onActivate: (id: string) => void; 
-  onDeactivate: (id: string) => void; 
-  onDelete: (id: string) => void; 
-}) {
-  const isMusic = item.type === 'music';
-  const isSoundPack = item.type === 'sound-pack';
-  const isGift = item.type === 'gift';
-
-  return (
-    <div className={`glass-card p-4 flex items-center gap-4 transition-all ${item.activated ? 'border-blue-500 bg-blue-50/50 shadow-lg shadow-blue-100' : 'border-transparent'}`}>
-      <div className="relative">
-        <div className={`text-4xl drop-shadow-sm ${isGift && !item.activated ? 'animate-bounce' : ''}`}>{item.icon}</div>
-        {item.activated && (isMusic || isSoundPack) && (
-          <motion.div 
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 1, repeat: 0 /* performance */ }}
-            className="absolute -top-1 -right-1 bg-blue-500 text-white p-1 rounded-full shadow-md"
-          >
-            <Volume2 size={10} />
-          </motion.div>
-        )}
+        </AnimatePresence>
       </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-blue-900 truncate">{item.name}</h3>
-        <p className="text-[10px] text-blue-900/40 font-medium">
-          {item.activated 
-            ? (isMusic ? 'Now Playing' : isGift ? 'Gimme more! ✨' : 'Now Active') 
-            : (isGift ? 'Tap to Reveal Surprise' : 'Inactive')}
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        {item.activated ? (
-          <button 
-            onClick={() => onDeactivate(item.id)}
-            disabled={isGift} // Gifts can't be "un-opened"
-            className={`p-2 rounded-lg transition-colors ${isMusic ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'} ${isGift ? 'opacity-20' : ''}`}
-            title={isMusic ? "Stop Music" : "Deactivate"}
-          >
-            {isMusic ? <Pause size={18} /> : <PowerOff size={18} />}
-          </button>
-        ) : (
-          <button 
-            onClick={() => onActivate(item.id)}
-            className={`p-2 rounded-lg transition-colors ${isMusic || isGift ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md' : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'}`}
-            title={isMusic ? "Play Music" : isGift ? "Open Gift" : "Activate"}
-          >
-            {isMusic ? <Play size={18} /> : isGift ? <Sparkles size={18} /> : <Power size={18} />}
-          </button>
-        )}
-        <button 
-          onClick={() => onDelete(item.id)}
-          className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-          title="Delete (Return to Shop)"
-        >
-          <Trash2 size={18} />
-        </button>
+
+      {/* Footer Info */}
+      <div className="px-6 py-10 opacity-20 text-center space-y-2">
+          <BookIcon size={32} className="mx-auto text-blue-900" />
+          <p className="text-[8px] font-black text-blue-900 uppercase tracking-[0.5em]">Nexus Digital Vault v2.0</p>
       </div>
     </div>
   );
