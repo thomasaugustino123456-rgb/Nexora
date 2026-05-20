@@ -29,6 +29,14 @@ import { KNOWLEDGE_BOOKS, Book } from '../constants/library';
 import { UserStats, UserSettings } from '../types';
 import { Mascot } from './Mascot';
 
+// Import custom generated high-quality images dynamically
+import pushupProtocolImg from '../assets/images/pushup_protocol_1779266637886.png';
+import hydrationLogicImg from '../assets/images/hydration_logic_1779266652867.png';
+import vagalNerveImg from '../assets/images/vagal_nerve_1779266670752.png';
+import creativeSynapseImg from '../assets/images/creative_synapse_1779266690417.png';
+import crystalCactusImg from '../assets/images/crystal_cactus_1779266705542.png';
+import circadianMasteryImg from '../assets/images/circadian_mastery_1779266725119.png';
+
 // Map icons cleanly
 const ICON_MAP: Record<string, any> = {
   Zap,
@@ -49,172 +57,37 @@ function BookIllustration({ bookId }: { bookId: string }) {
   switch (bookId) {
     case 'guide-pushups':
       return (
-        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-900 overflow-hidden flex items-center justify-center border border-indigo-900/50 shadow-inner group">
-          {/* Neon Grid Gridline Backdrop */}
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.15),transparent_70%)]" />
-          
-          <div className="absolute bottom-2 inset-x-0 flex justify-center">
-            {/* Ground mat */}
-            <div className="w-4/5 h-1.5 bg-blue-800/40 rounded-full blur-[1px]" />
-          </div>
-
-          {/* Athletic Bald Man doing pushups vector */}
-          <svg viewBox="0 0 300 150" className="w-44 h-24 relative z-10">
-            {/* Vector athlete */}
-            <g className="origin-bottom-left transition-transform duration-1000">
-              {/* Dynamic pushup animation */}
-              <motion.g
-                animate={{ 
-                  y: [0, 16, 0],
-                  rotate: [0, -3, 0]
-                }}
-                transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-              >
-                {/* Floor mat */}
-                <rect x="20" y="115" width="260" height="4" rx="2" fill="#2563eb" opacity="0.3" />
-                
-                {/* Arm bending */}
-                <path d="M 125,115 L 120,95 L 115,80" stroke="#f1f5f9" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                
-                {/* Head (Bald Man) */}
-                <circle cx="108" cy="62" r="10" fill="#fda4af" />
-                {/* Head contour */}
-                <circle cx="105" cy="59" r="8" fill="#fecdd3" opacity="0.9" />
-                
-                {/* Torso & Legs alignment */}
-                <path d="M 115,80 L 195,90 L 255,105" stroke="#1e293b" strokeWidth="16" strokeLinecap="round" fill="none" />
-                <path d="M 115,80 L 195,90 L 255,105" stroke="#3b82f6" strokeWidth="12" strokeLinecap="round" fill="none" />
-                
-                {/* Training shirt sleeve */}
-                <path d="M 115,80 L 145,84" stroke="#000" strokeWidth="14" strokeLinecap="round" opacity="0.15" />
-                
-                {/* Training Shorts */}
-                <path d="M 185,88 L 210,92" stroke="#2563eb" strokeWidth="14" strokeLinecap="round" />
-                {/* Training Shorts details */}
-                <path d="M 188,88 L 205,92" stroke="#60a5fa" strokeWidth="10" strokeLinecap="round" />
-                
-                {/* Back Foot support */}
-                <path d="M 255,105 L 260,115" stroke="#fecdd3" strokeWidth="6" strokeLinecap="round" fill="none" />
-              </motion.g>
-            </g>
-          </svg>
-
-          {/* Muscle force ring indicators */}
-          <motion.div 
-            animate={{ scale: [0.9, 1.15, 0.9], opacity: [0.3, 0.6, 0.3] }}
-            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-            className="absolute top-1/2 left-[30%] -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full border-2 border-dashed border-blue-400/20" 
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={pushupProtocolImg} 
+            alt="The Pushups Protocol" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
         </div>
       );
 
     case 'guide-water':
       return (
-        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-sky-400 via-sky-500 to-cyan-600 overflow-hidden flex items-center justify-center border border-sky-300 shadow-inner group">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.3),transparent_60%)]" />
-          
-          {/* Abstract bubbles */}
-          <motion.div animate={{ y: [-10, -80], opacity: [0, 0.4, 0] }} transition={{ repeat: Infinity, duration: 4, delay: 0.5 }} className="absolute bottom-4 left-10 w-3 h-3 rounded-full bg-white/40" />
-          <motion.div animate={{ y: [-10, -90], opacity: [0, 0.5, 0] }} transition={{ repeat: Infinity, duration: 5, delay: 2 }} className="absolute bottom-6 right-16 w-2 h-2 rounded-full bg-white/50" />
-          <motion.div animate={{ y: [-15, -70], opacity: [0, 0.3, 0] }} transition={{ repeat: Infinity, duration: 3, delay: 1 }} className="absolute bottom-2 left-1/2 w-1.5 h-1.5 rounded-full bg-white/30" />
-
-          {/* Girl drinking water illustration */}
-          <svg viewBox="0 0 200 150" className="w-36 h-28 relative z-10">
-            {/* Hair ponytail */}
-            <path d="M 72,55 C 60,30 35,45 28,65 C 22,80 30,100 45,95 C 40,88 41,75 52,68 C 55,65 60,65 72,55" fill="#1e293b" />
-            
-            {/* Head and Neck */}
-            <path d="M 85,95 L 85,115 L 98,115 L 95,95 Z" fill="#ffd4c4" />
-            <circle cx="85" cy="70" r="22" fill="#ffd4c4" />
-            
-            {/* Ear */}
-            <ellipse cx="68" cy="73" r="5" ry="6" fill="#fca5a5" />
-            
-            {/* Closed eye */}
-            <path d="M 84,68 Q 90,71 96,68" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" fill="none" />
-            
-            {/* Blue training shirt */}
-            <path d="M 50,118 C 50,110 65,112 85,114 C 105,112 120,110 120,118 L 120,150 L 50,150 Z" fill="#3b82f6" />
-            
-            {/* Glass Cup with floating dynamic water */}
-            <g className="origin-bottom-left">
-              <motion.g
-                animate={{ rotate: [0, 10, 0] }}
-                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-              >
-                {/* Drinking glass casing */}
-                <path d="M 103,73 L 118,93" stroke="#fff" strokeWidth="24" strokeLinecap="round" opacity="0.4" />
-                {/* Water line inside */}
-                <path d="M 105,75 L 115,88" stroke="#0ea5e9" strokeWidth="18" strokeLinecap="round" />
-                
-                {/* Hand holding glass */}
-                <path d="M 125,95 C 130,90 125,75 110,85" stroke="#ffd4c4" strokeWidth="6" strokeLinecap="round" fill="none" />
-              </motion.g>
-            </g>
-          </svg>
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={hydrationLogicImg} 
+            alt="Hydration Logic" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
         </div>
       );
 
     case 'guide-breathing':
       return (
-        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-violet-500 via-indigo-500 to-indigo-700 overflow-hidden flex items-center justify-center border border-indigo-400 shadow-inner group">
-          <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.1)_10%,transparent_80%)]" />
-          
-          {/* Smooth expanding respiratory resonance feedback rings */}
-          <motion.div 
-            animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0.1, 0.4] }} 
-            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }} 
-            className="absolute w-28 h-28 rounded-full border-2 border-white/20 flex items-center justify-center"
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={vagalNerveImg} 
+            alt="Vagal Nerve Hacks" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
-          <motion.div 
-            animate={{ scale: [1, 1.7, 1], opacity: [0.2, 0, 0.2] }} 
-            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut", delay: 1 }} 
-            className="absolute w-36 h-36 rounded-full border border-white/10"
-          />
-
-          {/* Floating musical notes and sound cues */}
-          <motion.div animate={{ y: [0, -15, 0], x:[0, 5, 0] }} transition={{ repeat: Infinity, duration: 3, delay: 0.5 }} className="absolute top-12 left-12 text-indigo-200 opacity-60">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-          </motion.div>
-          
-          <motion.div animate={{ y: [0, 15, 0], x:[0, -5, 0] }} transition={{ repeat: Infinity, duration: 3.5 }} className="absolute bottom-12 right-12 text-white/50 opacity-40 text-xs font-mono select-none">
-            ♫ 5.5s
-          </motion.div>
-
-          {/* Soothing Vagal response silhouette face & soothing hand on neck */}
-          <svg viewBox="0 0 200 150" className="w-36 h-28 relative z-10">
-            {/* Face outline (woman with purple/pink hair) */}
-            <path d="M 50,150 C 45,100 60,35 110,35 C 150,35 155,75 145,95 C 135,115 118,125 108,135 L 105,150 Z" fill="#71717a" opacity="0.1" />
-            
-            {/* Gorgeous colorful hair overlay with absolute high performance */}
-            <path d="M 60,150 C 52,110 55,50 100,45 C 145,40 160,80 150,110 C 140,140 120,150 108,150 Z" fill="url(#purple-hair)" />
-            
-            {/* Beautiful gradient definitions */}
-            <defs>
-              <linearGradient id="purple-hair" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#d946ef" />
-                <stop offset="50%" stopColor="#8b5cf6" />
-                <stop offset="100%" stopColor="#ec4899" />
-              </linearGradient>
-            </defs>
-
-            {/* Glowing neck nerves vagus pathways */}
-            <path d="M 98,90 Q 94,103 91,120" stroke="#a7f3d0" strokeWidth="3" strokeLinecap="round" fill="none" className="animate-pulse" />
-            <path d="M 103,94 Q 100,108 98,124" stroke="#a7f3d0" strokeWidth="2" strokeLinecap="round" fill="none" className="animate-pulse" />
-            
-            {/* Eyes closed peacefully */}
-            <path d="M 120,70 Q 126,73 132,70" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-            
-            {/* Soothing Blue / Cyan hand gently touching neck */}
-            <motion.path 
-              animate={{ y: [0, 2, 0], scale: [1, 1.02, 1] }}
-              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-              d="M 130,115 C 110,105 85,95 88,85 C 90,80 95,85 105,95 C 110,100 120,105 130,115 Z" 
-              fill="#22d3ee" 
-              opacity="0.85" 
-            />
-          </svg>
         </div>
       );
 
@@ -266,55 +139,13 @@ function BookIllustration({ bookId }: { bookId: string }) {
 
     case 'guide-drawing':
       return (
-        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-amber-400 via-orange-500 to-amber-500 overflow-hidden flex items-center justify-center border border-orange-300 shadow-inner group">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(255,255,255,0.4),transparent_60%)]" />
-          
-          {/* Floating light splatters in warm tones */}
-          <motion.div animate={{ scale: [0.8, 1.2, 0.8], opacity: [0.5, 0.9, 0.5] }} transition={{ repeat: Infinity, duration: 4 }} className="absolute top-6 right-20 w-3 h-3 rounded-full bg-yellow-200" />
-          <motion.div animate={{ scale: [1.1, 0.7, 1.1], opacity: [0.4, 0.8, 0.4] }} transition={{ repeat: Infinity, duration: 5, delay: 1 }} className="absolute bottom-10 left-10 w-4 h-4 rounded-full bg-amber-200" />
-
-          {/* Artist girl drawing on easel scene */}
-          <svg viewBox="0 0 200 150" className="w-40 h-32 relative z-10">
-            {/* Background window */}
-            <rect x="130" y="10" width="50" height="70" rx="6" fill="#bfdbfe" opacity="0.4" stroke="#fff" strokeWidth="2" />
-            <line x1="155" y1="10" x2="155" y2="80" stroke="#fff" strokeWidth="1.5" />
-            <line x1="130" y1="45" x2="180" y2="45" stroke="#fff" strokeWidth="1.5" />
-
-            {/* Easel stand */}
-            <path d="M 50,130 L 70,30 L 90,130 M 70,30 L 70,140" stroke="#78350f" strokeWidth="4" strokeLinecap="round" fill="none" />
-            {/* Canvas */}
-            <rect x="40" y="45" width="50" height="60" rx="3" fill="#fff" stroke="#1e293b" strokeWidth="3" />
-            {/* Outline of portrait on canvas */}
-            <circle cx="65" cy="70" r="14" fill="#fed7aa" opacity="0.6" />
-            <path d="M 55,75 Q 65,80 75,75" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" fill="none" />
-
-            {/* Anime Artist girl painting layout */}
-            <g>
-              {/* Back Hair ponytail */}
-              <circle cx="106" cy="66" r="15" fill="#111827" />
-              
-              {/* Head & neck */}
-              <circle cx="112" cy="75" r="12" fill="#ffd4c4" />
-              
-              {/* Apron */}
-              <path d="M 103,115 C 103,98 123,98 123,115 L 123,150 L 103,150 Z" fill="#065f46" stroke="#111827" strokeWidth="2.5" />
-              
-              {/* Arm reaching out with brush */}
-              <motion.path 
-                animate={{ rotate: [-2, 3, -2], x: [0, 2, 0] }}
-                transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                d="M 100,103 L 80,95 L 68,96 L 75,102" 
-                stroke="#ffd4c4" 
-                strokeWidth="7" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                fill="none" 
-              />
-              
-              {/* Stylus holder line */}
-              <line x1="68" y1="96" x2="57" y2="84" stroke="#7c2d12" strokeWidth="2.5" strokeLinecap="round" />
-            </g>
-          </svg>
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={creativeSynapseImg} 
+            alt="Creative Synapse" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
         </div>
       );
 
@@ -375,120 +206,25 @@ function BookIllustration({ bookId }: { bookId: string }) {
 
     case 'plant-desert-guide':
       return (
-        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-amber-200 via-orange-300 to-rose-400 overflow-hidden flex items-center justify-center border border-orange-300 shadow-inner group">
-          <div className="absolute top-6 left-12 w-14 h-14 rounded-full bg-yellow-100 opacity-40 blur-md" />
-          
-          {/* Shimmering desert ambient waves */}
-          <div className="absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-orange-400/30 to-transparent" />
-
-          {/* Majestic round succulent cactus with massive pink lotus blossom on top */}
-          <svg viewBox="0 0 200 150" className="w-36 h-28 relative z-10">
-            {/* Ground Soil sand */}
-            <ellipse cx="100" cy="115" rx="55" ry="12" fill="#ea580c" opacity="0.4" />
-            
-            {/* Round spherical cactus */}
-            <circle cx="100" cy="74" r="32" fill="#059669" stroke="#1e293b" strokeWidth="4.5" />
-            
-            {/* Visual Ribs vertical curves */}
-            <path d="M 82,54 Q 100,48 118,54" stroke="#047857" strokeWidth="4.5" fill="none" opacity="0.5" />
-            <path d="M 82,94 Q 100,100 118,94" stroke="#047857" strokeWidth="4.5" fill="none" opacity="0.5" />
-            <path d="M 100,42 L 100,106" stroke="#047857" strokeWidth="4.5" fill="none" opacity="0.6" />
-            <path d="M 78,74 Q 100,74 122,74" stroke="#047857" strokeWidth="4.5" fill="none" opacity="0.5" />
-
-            {/* Spike indicators (defensive needles) */}
-            <g stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round">
-              {/* Spikes all around boundary */}
-              <line x1="68" y1="74" x2="58" y2="74" />
-              <line x1="132" y1="74" x2="142" y2="74" />
-              <line x1="78" y1="52" x2="70" y2="44" />
-              <line x1="122" y1="52" x2="130" y2="44" />
-              <line x1="78" y1="96" x2="70" y2="104" />
-              <line x1="122" y1="96" x2="130" y2="104" />
-              <line x1="100" y1="42" x2="100" y2="34" />
-            </g>
-
-            {/* Glowing neon pink lotus blossom blooming perfectly on top of cactus */}
-            <g className="origin-bottom">
-              <motion.g
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-              >
-                {/* Back petals */}
-                <path d="M 80,44 C 80,24 100,10 100,44 Z" fill="#ec4899" stroke="#1e293b" strokeWidth="3" />
-                <path d="M 120,44 C 120,24 100,10 100,44 Z" fill="#ec4899" stroke="#1e293b" strokeWidth="3" />
-                
-                {/* Mid petals */}
-                <path d="M 90,44 C 75,20 100,4 100,44 Z" fill="#f43f5e" stroke="#1e293b" strokeWidth="3" />
-                <path d="M 110,44 C 125,20 100,4 100,44 Z" fill="#f43f5e" stroke="#1e293b" strokeWidth="3" />
-                
-                {/* Central lotus heart */}
-                <circle cx="100" cy="38" r="5" fill="#eab308" />
-              </motion.g>
-            </g>
-          </svg>
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={crystalCactusImg} 
+            alt="Crystal Cactus" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
         </div>
       );
 
     case 'research-sleep':
       return (
-        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 overflow-hidden flex items-center justify-center border border-slate-800 shadow-inner group">
-          {/* Dual-themed split sun & moon backdrop clock dials */}
-          <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-orange-500/10 to-transparent" />
-          <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:12px_12px]" />
-
-          {/* Celestial dial spinning slowly */}
-          <motion.div 
-            animate={{ rotate: 360 }} 
-            transition={{ repeat: Infinity, duration: 30, ease: "linear" }} 
-            className="absolute w-36 h-36 rounded-full border border-dashed border-white/5 flex items-center justify-center opacity-60"
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={circadianMasteryImg} 
+            alt="Circadian Mastery" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
-
-          {/* Left shows woman sleeping peacefully on soft pillow under star-lit moon; 
-              Right shows her meditating in front of giant radiant sun and sleep-cycle clock */}
-          <svg viewBox="0 0 200 150" className="w-44 h-32 relative z-10">
-            {/* Split boundary Line (harmonic curve) */}
-            <path d="M 100,0 C 95,50 105,100 100,150" stroke="rgba(255,255,255,0.08)" strokeWidth="2.5" strokeDasharray="4 4" fill="none" />
-
-            {/* Left Zone: Sleeping peaceful female */}
-            <g transform="translate(-5, 0)">
-              {/* Crescent Moon */}
-              <path d="M 30,22 C 30,42 45,46 50,44 C 40,42 36,32 40,22 Z" fill="#fbbf24" opacity="0.85" />
-              {/* Pillow */}
-              <ellipse cx="44" cy="98" rx="20" ry="10" fill="#f8fafc" stroke="#1e293b" strokeWidth="2" />
-              {/* Sleep Head on pillow */}
-              <circle cx="44" cy="85" r="14" fill="#fed7aa" stroke="#1e293b" strokeWidth="2" />
-              <path d="M 32,85 C 32,70 56,70 56,85 Z" fill="#3b82f6" /> {/* Sleep mask */}
-              {/* Peaceful breath indicator */}
-              <motion.circle 
-                animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.7, 0.2] }}
-                transition={{ repeat: Infinity, duration: 4 }}
-                cx="58" cy="85" r="3" fill="#60a5fa" 
-              />
-            </g>
-
-            {/* Right Zone: Meditating in lotus posture */}
-            <g transform="translate(10, 0)">
-              {/* Giant radiating Sun / Clock dial */}
-              <circle cx="150" cy="40" r="18" fill="#eab308" opacity="0.2" />
-              <circle cx="150" cy="40" r="14" fill="#eab308" opacity="0.6" stroke="#eab308" strokeWidth="2.5" />
-              {/* Clock pointer */}
-              <line x1="150" y1="40" x2="150" y2="30" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
-              <line x1="150" y1="40" x2="158" y2="40" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
-
-              {/* Meditating figure in front */}
-              <g transform="translate(125, 68)">
-                {/* Torso Zen lotus pose */}
-                <path d="M 25,25 L 12,45 L 38,45 Z" fill="#10b981" stroke="#1e293b" strokeWidth="2" />
-                {/* Meditating Head */}
-                <circle cx="25" cy="14" r="8" fill="#fed7aa" stroke="#1e293b" strokeWidth="2" />
-                <path d="M 18,14 Q 25,6 32,14 Z" fill="#f43f5e" /> {/* Hair bun */}
-                
-                {/* Left/Right raised hands */}
-                <circle cx="8" cy="38" r="3" fill="#fed7aa" />
-                <circle cx="42" cy="38" r="3" fill="#fed7aa" />
-              </g>
-            </g>
-          </svg>
         </div>
       );
 
