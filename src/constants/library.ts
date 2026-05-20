@@ -248,5 +248,255 @@ export const KNOWLEDGE_BOOKS: Book[] = [
         }
       ]
     }
+  },
+  {
+    id: 'guide-posture',
+    title: 'The Posture Protocol',
+    description: 'Establish absolute skeletal integrity and eliminate cerebral drainage.',
+    icon: 'Shield',
+    coverColor: 'bg-emerald-600',
+    category: 'challenge',
+    content: {
+      title: 'Structural Spine Restoration: The Posture Blueprint',
+      sections: [
+        {
+          heading: 'Cerebral Kinetic Alignment',
+          text: 'Slouching isn\'t just a bad visual habit, bro; it is physical drainage. When your head tilts forward, the muscular skeletal load on your cervical spine increases by up to 30 pounds. This sustained muscle contraction constricts major blood pathways, reducing blood and oxygen supply directly to your logic centers and resulting in rapid cognitive exhaustion.'
+        },
+        {
+          heading: 'The Ergonomic Lockout Technique',
+          text: 'To lock down perfect thoracic extension, apply the "Scapular Trigger." Draw your shoulder blades gently down and back as if sliding them into your back pockets. Elevate your sternum by two inches, and pull your ears directly back over your shoulders. Plant both feet flatly on the support deck to evenly anchor pelvic weight, immediately releasing pressure and easing deep breathing.'
+        },
+        {
+          heading: 'Isometric Spinal Maintenance',
+          text: 'Set an hourly micro-cue. Every 60 minutes, perform a "Wall Angel" or simple chin-tuck lock. Press your back of head, shoulders, and hips flat against a secure surface, holding for 30 seconds. This simple isometric activation resets neural tone, reinforces structural muscle memory, and locks in pristine vertical alignment.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'research-cold',
+    title: 'Thermal Hormesis',
+    description: 'Trigger systemic vaso-constriction and norepinephrine release.',
+    icon: 'Snowflake',
+    coverColor: 'bg-blue-500',
+    category: 'health',
+    content: {
+      title: 'Arctic Neuro-Chemical Reboot: Thermal Hormesis',
+      sections: [
+        {
+          heading: 'The Norepinephrine Surge',
+          text: 'Plunging into cold water (below 55°F/13°C) triggers an immediate thermal response. Your body initiates a dramatic, safe endocrine surge, releasing norepinephrine up to 500% above baseline. This is not just a wake-up call; norepinephrine acts as a powerful anti-inflammatory and cognitive optimizer that clears neural fog instantly.'
+        },
+        {
+          heading: 'Systemic Vaso-Constriction Loop',
+          text: 'Cold water exposure forces blood away from your extremities and inward to secure vital organs, activating deep internal warmth. This vaso-constriction flushes metabolic debris from peripheral tissues. When you exit, natural dilatory warming floods clean, high-oxygen blood back to your limbs, triggering a supreme feeling of physical restoration.'
+        },
+        {
+          heading: 'Somatic Breath Hardening',
+          text: 'The initial cold contact triggers an automatic hyperventilation reflex. To conquer this, you must run our "Calm Control" protocol. Override the panic signal by long, slow exhales. Keeping your respirations steady at 6 breaths per minute under extreme cold exposure builds immense mental power, transferring absolute composure into daily high-pressure life situations.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'research-fasting',
+    title: 'Autophagy Sync',
+    description: 'Initiate cellular self-cleaning and elevate ketone utility.',
+    icon: 'Activity',
+    coverColor: 'bg-indigo-600',
+    category: 'health',
+    content: {
+      title: 'Cellular Reclamation Cycles: Autophagy Sync',
+      sections: [
+        {
+          heading: 'Molecular Housekeeping',
+          text: 'When you secure a metabolic fasting window of 16 hours or more, your cells trigger "autophagy"—designing internal cleanup systems that identify, digest, and recycle damaged organelles, stale proteins, and metabolic garbage. This is cellular rejuvenation, removing dysfunctional structures and restoring high cellular performance.'
+        },
+        {
+          heading: 'Ketotic Cognitive Fueling',
+          text: 'As liver glycogen stores decrease, your hepatocytes transition to burning fat reserves, synthesizing ketones (beta-hydroxybutyrate). Ketones are a super-clean, high-output fuel source for cerebral mitochondria, producing more adenosine triphosphate (ATP) per oxygen unit than glucose while generating zero toxic oxidative waste products.'
+        },
+        {
+          heading: 'Strategic Re-entry Matrix',
+          text: 'How you conclude a fasting cycle is critical, bro. Avoid blasting your system with rapid high-glycemic carbohydrates or cheap processed snacks. This causes massive insulin spikes and digest fatigue. Re-entry should consist of clean bone broths, healthy fats like avocado, and easily digestible amino acids, maintaining high focus levels.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'plant-mycelium',
+    title: 'Symbiotic Fungi',
+    description: 'Deploy subterranean mycelial networks to synchronize resource routing.',
+    icon: 'Sprout',
+    coverColor: 'bg-purple-800',
+    category: 'plant',
+    content: {
+      title: 'Wood Wide Web Logic: Symbiotic Mycelium',
+      sections: [
+        {
+          heading: 'Dynamic Subterranean Routing',
+          text: 'Beneath the forest floor lies an organic network of ultra-thin mycelial threads. These fungi fuse directly with plant root tips, creating a massive, collaborative distribution web. Rather than engaging in selfish isolate competition, flora and fungi use this highway sync to feed nutrition, sugars, and warnings directly to weaker trees.'
+        },
+        {
+          heading: 'Chemical Signal Transmission',
+          text: 'When a plant is attacked by defensive pests, it transmits warning signals through the mycelial network to adjacent flora. Upon receiving this warning, neighboring plants immediately begin synthesizing protective defense chemicals. This subterranean internet teaches a profound lesson in interconnected, collaborative community resilience.'
+        },
+        {
+          heading: 'The Soil Enrichment Engine',
+          text: 'Fruiting mushrooms represent only the tiny surface tip of a vast organic engine that continuously decomposes tough raw matter into rich, fertile soils. Similarly, your daily micro habits and deep archives logs are the underlying subterranean foundation that feeds and nurtures your visual garden greenhouse.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'guide-binaural',
+    title: 'Auditory Brainwaves',
+    description: 'Leverage binaural frequency delta/theta differentials to guide mental focus.',
+    icon: 'Music',
+    coverColor: 'bg-pink-600',
+    category: 'challenge',
+    content: {
+      title: 'Neuro-Entrainment Harmonics: Auditory Brainwaves',
+      sections: [
+        {
+          heading: 'The Differential Frequency Trick',
+          text: 'When you feed a sound of 400Hz to your left ear and 440Hz to your right ear, your temporal lobe cannot process them as separate inputs. Instead, it synthesizes an internal "differential beat" of exactly 40Hz. This cognitive differential matches a perfect Gamma wave frequency, pulling your neural circuits into dynamic focus.'
+        },
+        {
+          heading: 'Somatic Frequency Zones',
+          text: 'By changing these differential margins, you can easily guide your focus state. Set a 4Hz to 7Hz differential to tap into creative Theta waves, perfect for freeform sketching or creative synapse exercises. Switch to 10Hz to 14Hz Alpha waves to foster a relaxed, calm working flow state that minimizes systemic anxiety.'
+        },
+        {
+          heading: 'Acoustic Isolation Cues',
+          text: 'Combine binaural frequency loops with continuous brown or pink ambient noise. This acoustic texture blankets distracting room echoes and sudden outer noises, protecting your working memory from shock disruptions. Put on your headphones, trigger the sound waves, and establish complete acoustic isolation.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'guide-forest',
+    title: 'Phytoncide Bathing',
+    description: 'Inhale airborne organic terpenes to reduce systemic cytokine indices.',
+    icon: 'Compass',
+    coverColor: 'bg-teal-600',
+    category: 'challenge',
+    content: {
+      title: 'Somatic Forest Immersion: Phytoncide Chemistry',
+      sections: [
+        {
+          heading: 'Inhaling Organic Shields',
+          text: 'Redwood trees and old-growth pines release "phytoncides"—antimicrobial organic compounds designed to protect the tree from invasive insects or fungal rot. When humans inhale these active terpenes during forest walking, our bodies trigger a rapid protective response, boosting natural killer white blood cells.'
+        },
+        {
+          heading: 'Cortisol Suppression Dynamics',
+          text: 'Spending as little as 30 minutes walking calmly through old growth forests suppresses cortisol by more than 16% and lowers elevated systolic blood pressure. This isn\'t just a simple feeling of calm; it represents direct systemic reduction of inflammatory cytokine markers, refreshing your biological health.'
+        },
+        {
+          heading: 'The Sensory Grounding Trail',
+          text: 'Maximize forest bathing by engaging all your senses. Observe the rich green lichen, touch the rough redwood bark, and inhale the earthy petrichor. This multi-layered focus anchors your sensory attention to the present moment, clearing away heavy digital memory overload and restoring your mental capacity.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'guide-saccadic',
+    title: 'Optimal Saccades',
+    description: 'Deploy rapid optical pursuit drills to coordinate spatial balance.',
+    icon: 'Eye',
+    coverColor: 'bg-blue-800',
+    category: 'challenge',
+    content: {
+      title: 'Target Saccadic Drills: Eye Movement Protocol',
+      sections: [
+        {
+          heading: 'The Optical Brain Connection',
+          text: 'Your eye tracking movement is highly tied to your cerebellum and prefrontal cortex. Staring continuously at a static screen at a single fixed distance causes visual muscle strain and limits peripheral sensory inputs, triggering systemic fatigue and shutting down spatial tracking circuits.'
+        },
+        {
+          heading: 'Pursuit Tracking Training',
+          text: 'Perform rapid horizontal saccades to re-engage your cerebellum. Extend both thumbs outward, and hold them 18 inches apart at eye level. Rapidly look back and forth from left thumb to right thumb without moving your neck, repeating for 30 cycles. This physical action refreshes optic coordination and resets cognitive reflexes.'
+        },
+        {
+          heading: 'The Near-Far Reset Loop',
+          text: 'Prevent visual degradation by running the 20-20-20 rule. Every 20 minutes, focus your eyes on an object at least 20 feet away for 20 seconds. This shifts your ciliary lens muscles from deep near-contraction into absolute relaxation, instantly relieving optic strain and supporting sustained focus.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'research-nutrition',
+    title: 'Nootropic Nutrition',
+    description: 'Feed essential lipids and antioxidants to build high-fidelity myelin sheaths.',
+    icon: 'Flame',
+    coverColor: 'bg-orange-600',
+    category: 'health',
+    content: {
+      title: 'Cortical Cellular Fueling: Nootropic Nutrition',
+      sections: [
+        {
+          heading: 'The Myelin Lipid Shield',
+          text: 'Your brain cells communicate through long axons wrapped inside insulated protective sleeves called myelin sheaths. These sheaths are composed of 80% natural lipids. Consuming clean, high-fidelity essential fatty acids (specifically omega-3 DHA and EPA found in walnuts and wild-derived fish) reinforces this vital insulating shield, accelerating nerve signals.'
+        },
+        {
+          heading: 'Antioxidant Oxidative Block',
+          text: 'Your brain consumes a massive 20% of your body\'s total oxygen supply, exposing its cells to continuous oxidative friction. Dark polyphenol-rich foods like wild blueberries, clean raw cacao, and green tea act as powerful antioxidant filters, sweeping away free radicals before they can damage your cells.'
+        },
+        {
+          heading: 'The Blood-Brain Integrity Barrier',
+          text: 'Your blood-brain barrier is highly selective, letting only vital fuels pass through. Feed it clean, whole foods and avoid processed seed oils or excess refined sugars that trigger gut inflammation. A clean, calm gut microbiome communicates directly with your brain via the vagus pathway to ensure superb daily mood balance.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'plant-carnivorous',
+    title: 'Carnivorous Catch',
+    description: 'Thrive on nutrient deficits with precise fluid biochemical traps.',
+    icon: 'Flower',
+    coverColor: 'bg-violet-600',
+    category: 'plant',
+    content: {
+      title: 'Carnivorous Adaptations: The Pitcher Protocol',
+      sections: [
+        {
+          heading: 'Thriving in Barren Swamps',
+          text: 'The Carnivorous Pitcher plant thrives in acidic soils entirely devoid of typical plant nutrition like nitrogen and phosphorus. Rather than suffering from these severe deficits, this plant evolved leaves into beautiful fluid cavities that attract, capture, and digest external elements.'
+        },
+        {
+          heading: 'The Slip Surface Geometry',
+          text: 'The rim of the pitcher is coated in slippery waxes and water-receptive grooves. When a target steps onto this rim, it loses traction instantly and slides into the digestive reservoir. This is nature\'s absolute peak optimization: utilizing geometry rather than spending active energy to capture resources.'
+        },
+        {
+          heading: 'Converting Inputs to Growth',
+          text: 'Inside the pitcher, active enzymatic fluids break down raw material into basic elements, supplying the plant with premium energy. In your digital journey, view heavy challenges not as stressful blockers, but as delicious raw inputs to digest and convert directly into experience milestones.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'research-neurogenesis',
+    title: 'Neurogenesis Synapse',
+    description: 'Synthesize brain-derived neurotrophic factor to forge neural pathways.',
+    icon: 'LineChart',
+    coverColor: 'bg-purple-600',
+    category: 'health',
+    content: {
+      title: 'Adult Cortical Expansion: Neurogenesis Synapse',
+      sections: [
+        {
+          heading: 'The Adult Neurogenesis Proof',
+          text: 'For decades, doctors falsely assumed that humans were born with a fixed set of brain cells that slowly decayed over time. Modern neuroscience has proven that your hippocampus continues synthesizing brand new neurons throughout your adult life, a remarkable process known as adult neurogenesis.'
+        },
+        {
+          heading: 'The BDNF Growth Catalyst',
+          text: 'Brain-Derived Neurotrophic Factor (BDNF) acts as an organic fertilizer for your gray matter, protecting existing cells and triggering the growth of fresh neural connections. You can dramatically ramp up BDNF synthesis through daily aerobic exercise, deep restorative sleep, and consistent learning challenges.'
+        },
+        {
+          heading: 'Synaptic Pruning Sovereignty',
+          text: 'Your brain continuously runs a baseline optimization script: "use it or lose it." Pathways that are rarely activated are pruned away, while circuits that you consistently trigger are heavily reinforced with thick protective myelin. Consistently review these archives, clear daily goals, and feed your mental garden.'
+        }
+      ]
+    }
   }
 ];

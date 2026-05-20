@@ -36,6 +36,16 @@ import vagalNerveImg from '../assets/images/vagal_nerve_1779266670752.png';
 import creativeSynapseImg from '../assets/images/creative_synapse_1779266690417.png';
 import crystalCactusImg from '../assets/images/crystal_cactus_1779266705542.png';
 import circadianMasteryImg from '../assets/images/circadian_mastery_1779266725119.png';
+import postureProtocolImg from '../assets/images/posture_protocol_1779268031305.png';
+import thermalHormesisImg from '../assets/images/thermal_hormesis_1779268048761.png';
+import autophagySyncImg from '../assets/images/autophagy_sync_1779268068080.png';
+import symbioticFungiImg from '../assets/images/symbiotic_fungi_1779268089516.png';
+import binauralBrainwavesImg from '../assets/images/binaural_brainwaves_1779268106033.png';
+import forestBathingImg from '../assets/images/forest_bathing_1779268121767.png';
+import optimalSaccadesImg from '../assets/images/optimal_saccades_1779268139737.png';
+import nootropicNutritionImg from '../assets/images/nootropic_nutrition_1779268157558.png';
+import carnivorousPitcherImg from '../assets/images/carnivorous_pitcher_1779268179856.png';
+import neurogenesisSynapseImg from '../assets/images/neurogenesis_synapse_1779268200962.png';
 
 // Map icons cleanly
 const ICON_MAP: Record<string, any> = {
@@ -298,6 +308,126 @@ function BookIllustration({ bookId }: { bookId: string }) {
               </motion.g>
             </g>
           </svg>
+        </div>
+      );
+
+    case 'guide-posture':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={postureProtocolImg} 
+            alt="The Posture Protocol" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'research-cold':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={thermalHormesisImg} 
+            alt="Thermal Hormesis" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'research-fasting':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={autophagySyncImg} 
+            alt="Autophagy Sync" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'plant-mycelium':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={symbioticFungiImg} 
+            alt="Symbiotic Fungi" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'guide-binaural':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={binauralBrainwavesImg} 
+            alt="Auditory Brainwaves" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'guide-forest':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={forestBathingImg} 
+            alt="Phytoncide Bathing" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'guide-saccadic':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={optimalSaccadesImg} 
+            alt="Optimal Saccades" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'research-nutrition':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={nootropicNutritionImg} 
+            alt="Nootropic Nutrition" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'plant-carnivorous':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={carnivorousPitcherImg} 
+            alt="Carnivorous Catch" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        </div>
+      );
+
+    case 'research-neurogenesis':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+          <img 
+            src={neurogenesisSynapseImg} 
+            alt="Neurogenesis Synapse" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
         </div>
       );
 
