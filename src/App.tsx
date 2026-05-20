@@ -1811,13 +1811,14 @@ export default function App() {
     lastUpdateTime,
   ]);
 
-  const handleUpdate = async () => {
+  const handleUpdate = async (infoArg?: any) => {
     vibrate(VIBRATION_PATTERNS.SUCCESS);
-    if (updateInfo) {
+    const info = infoArg && typeof infoArg === "object" && infoArg.version ? infoArg : updateInfo;
+    if (info) {
       const now = new Date().toISOString();
-      localStorage.setItem("nexora_dismissed_version", updateInfo.version);
+      localStorage.setItem("nexora_dismissed_version", info.version);
       localStorage.setItem("nexora_last_update_time", now);
-      localStorage.setItem("nexora_version", updateInfo.version);
+      localStorage.setItem("nexora_version", info.version);
       setLastUpdateTime(now);
     }
 
@@ -1847,8 +1848,9 @@ export default function App() {
     // Clear session storage just in case
     sessionStorage.clear();
 
-    // Forced fresh reload
-    window.location.href = "/?v=" + (updateInfo?.version || Date.now());
+    // Forced fresh reload with cache busters
+    const targetVer = info?.version || "fresh";
+    window.location.href = "/?v=" + targetVer + "&t=" + Date.now();
   };
 
   // Version check interval - Optimized for performance
@@ -1882,13 +1884,7 @@ export default function App() {
                 data.version,
               );
               setUpdateInfo(data);
-
-              if (data.forceUpdate) {
-                console.log("PWA: Force update active. Triggering sequence.");
-                handleUpdate();
-              } else {
-                setShowUpdatePopup(true);
-              }
+              setShowUpdatePopup(true);
 
               // If it's a new version, we should also ensure the badge is set immediately
               if ("setAppBadge" in navigator) {
