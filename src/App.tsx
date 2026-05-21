@@ -2102,10 +2102,10 @@ export default function App() {
   }, [settings.notificationsEnabled, fcmToken, fcmError]);
 
   const setupFCM = async (): Promise<string | null> => {
-    const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || VAPID_KEY;
+    const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || VAPID_KEY || "";
     console.log(
       "FCM: Starting setup with VAPID key:",
-      vapidKey.substring(0, 10) + "...",
+      vapidKey ? vapidKey.substring(0, 10) + "..." : "none",
     );
     setFcmError(null);
     try {
@@ -2117,6 +2117,13 @@ export default function App() {
           cachedToken.substring(0, 8) + "...",
         );
         setFcmToken(cachedToken);
+      }
+
+      // Check if Notification is supported
+      if (!("Notification" in window) || !window.Notification) {
+        console.warn("FCM: Notifications not supported/blocked in this window environment.");
+        setFcmError("NOT_SUPPORTED");
+        return null;
       }
 
       // Request permission if not granted

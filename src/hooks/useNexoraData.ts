@@ -111,7 +111,7 @@ export function useNexoraData(
             completionsCount: 0,
             nextRestorationTime: null,
           });
-          setNeedsOnboarding(true);
+          setNeedsOnboarding(false);
           dataLoadedFromFirestore.current = false;
           setIsDataReady(false);
           setLoading(true);
@@ -194,8 +194,8 @@ export function useNexoraData(
           };
 
           // If the profile exists in Firestore, the user is an existing user.
-          // By default, do NOT show onboarding unless explicitly set to false.
-          const isCompleted = data.onboardingCompleted !== false;
+          // Since their user document exists, they are 100% an existing user and should skip onboarding.
+          const isCompleted = true;
           setSettings(firestoreSettings);
           setStats(firestoreStats);
           setNeedsOnboarding(!isCompleted);
@@ -301,7 +301,7 @@ export function useNexoraData(
               stats: stats,
               isTodayCompleted: dailyProgress.completed,
               updatedAt: serverTimestamp(),
-              onboardingCompleted: !needsOnboarding,
+              onboardingCompleted: true,
             },
             { merge: true },
           );
