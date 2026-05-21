@@ -242,75 +242,67 @@ export function LeaderboardScreen({
         </div>
       </div>
 
-      {/* 2. Interactive League Slider Track - Gorgeous horizontal bento pathway */}
-      <div className="px-6 pt-6 pb-2">
-        <div className="bg-white/80 border border-slate-150 rounded-[2.5rem] p-5 shadow-xl shadow-slate-200/45 flex flex-col gap-4">
-          <div className="flex justify-between items-center px-1">
-            <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider">Your League Journey</span>
-            <div className="flex items-center gap-1.5 bg-yellow-50 border border-yellow-100/60 px-2.5 py-1 rounded-full text-[10px] font-black text-yellow-600">
-              <Zap size={12} className="fill-yellow-500 text-yellow-500 animate-bounce" />
-              <span>Rank Up Now</span>
-            </div>
+      {/* 2. Interactive League Slider Track - Gorgeous horizontal progression (UNBOXED) */}
+      <div className="px-6 pt-6 pb-2 flex flex-col gap-3">
+        <div className="flex justify-between items-center px-1">
+          <span className="text-[11px] font-black uppercase text-slate-500 tracking-wider">Your League Journey</span>
+          <div className="flex items-center gap-1.5 bg-yellow-50 border border-yellow-100/60 px-2.5 py-1 rounded-full text-[10px] font-black text-yellow-600">
+            <Zap size={11} className="fill-yellow-500 text-yellow-500 animate-bounce" />
+            <span>Rank Up Now</span>
           </div>
-          
-          <div className="flex items-center gap-5 overflow-x-auto py-3 px-2 no-scrollbar">
-            {LEAGUES.map((l, i) => {
-              const isActive = l === currentLeague;
-              const isCompleted = i < leagueIndex;
-              return (
-                <div key={l} className="flex flex-col items-center gap-2 flex-shrink-0 relative">
-                  <div className="relative">
-                    <LeagueIcon league={l} active={isActive || isCompleted} className="w-16 h-16 transition-transform duration-300 hover:scale-110" />
-                    {isCompleted && (
-                      <div className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full p-1 border border-white text-white shadow-md">
-                        <CheckCircle2 size={12} className="fill-emerald-500 text-white" />
-                      </div>
-                    )}
-                    {isActive && (
-                      <div className="absolute -top-1 right-1/2 translate-x-1/2 bg-yellow-400 text-[8px] font-black uppercase text-yellow-950 px-1.5 py-0.5 rounded-md shadow-md animate-bounce">
-                        ACTIVE
-                      </div>
-                    )}
-                  </div>
-                  <span className={`text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-blue-900 font-extrabold' : 'text-slate-400'}`}>
-                    {l}
-                  </span>
+        </div>
+        
+        <div className="flex items-center gap-5 overflow-x-auto py-2 px-1 no-scrollbar">
+          {LEAGUES.map((l, i) => {
+            const isActive = l === currentLeague;
+            const isCompleted = i < leagueIndex;
+            return (
+              <div key={l} className="flex flex-col items-center gap-2 flex-shrink-0 relative">
+                <div className="relative">
+                  <LeagueIcon league={l} active={isActive || isCompleted} className="w-15 h-15 transition-transform duration-300 hover:scale-110" />
+                  {isCompleted && (
+                    <div className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full p-1 border border-white text-white shadow-md">
+                      <CheckCircle2 size={11} className="fill-emerald-500 text-white" />
+                    </div>
+                  )}
+                  {isActive && (
+                    <div className="absolute -top-1.5 right-1/2 translate-x-1/2 bg-yellow-400 text-[8px] font-black uppercase text-yellow-950 px-1.5 py-0.5 rounded-md shadow-md animate-bounce">
+                      ACTIVE
+                    </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Competitive Alert & Status Header - Cozy illustration pattern matched to Retention Section */}
-      <div className="px-6 py-4">
-        <div className="bg-gradient-to-r from-blue-900 to-indigo-950 text-white rounded-[2.5rem] p-6 shadow-xl shadow-blue-950/20 relative overflow-hidden">
-          {/* Animated matrix light waves in bg */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(56,189,248,0.22),transparent_60%)] opacity-70" />
-          <div className="absolute -right-10 -bottom-10 w-36 h-36 bg-indigo-500/20 rounded-full blur-3xl" />
-          
-          <div className="relative z-10 flex items-center justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full w-fit backdrop-blur-md border border-white/10">
-                <Clock size={12} className="text-sky-300 animate-spin-slow" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-sky-200">{daysString}</span>
+                <span className={`text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-blue-900 font-extrabold' : 'text-slate-400'}`}>
+                  {l}
+                </span>
               </div>
-              <h3 className="text-lg font-black tracking-tight leading-tight">THE CHRONO CHAMPIONSHIP IS LIVE!</h3>
-              <p className="text-xs text-blue-200 font-medium max-w-[240px]">
-                Finish your habits daily! The top 3 users in the arena advance to the prestige ranks.
-              </p>
+            );
+          })}
+        </div>
+        <div className="h-[1px] bg-slate-200/60 mt-1" />
+      </div>
+
+      {/* 3. Competitive Alert & Status Header - Flat integrated notification banner */}
+      <div className="px-6 py-2">
+        <div className="flex items-center justify-between gap-4 py-2.5 border-b border-slate-150 pb-4">
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center gap-1.5 text-blue-600">
+              <Clock size={12} className="text-blue-600 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-wider text-sky-700">{daysString}</span>
             </div>
-            
-            <div className="w-20 h-20 flex-shrink-0 flex items-center justify-center">
-              <TrophyIcon size={58} className="text-yellow-400 drop-shadow-[0_4px_12px_rgba(250,204,21,0.5)] animate-pulse" />
-            </div>
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Chrono Championship is Live</h3>
+            <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+              Complete active habits daily! The top 3 users in the arena advance to the prestige ranks.
+            </p>
+          </div>
+          <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-blue-50 border border-blue-100 rounded-2xl text-blue-600">
+            <TrophyIcon size={24} className="fill-blue-50 text-blue-600" />
           </div>
         </div>
       </div>
 
-      {/* 4. The Leaderboard List Grid - Elegant micro-border cards with rich responsive details */}
-      <div className="flex-1 px-6 py-2 space-y-3">
-        <div className="flex items-center justify-between px-2 mb-2">
+      {/* 4. The Leaderboard List Stream - Clean continuous layout with separators */}
+      <div className="flex-1 px-6 py-3">
+        <div className="flex items-center justify-between py-2 mb-3">
           <div className="flex items-center gap-1.5">
             <Award size={14} className="text-emerald-500" />
             <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Arena Rankings</span>
@@ -319,137 +311,122 @@ export function LeaderboardScreen({
         </div>
 
         {leaderboard.length === 0 ? (
-          <div className="bg-white border-2 border-dashed border-slate-200 rounded-[2.5rem] p-12 text-center flex flex-col items-center gap-4">
-            <div className="w-24 h-24">
+          <div className="border-2 border-dashed border-slate-200 rounded-[2rem] p-10 text-center flex flex-col items-center gap-4">
+            <div className="w-20 h-20">
               <Mascot mood="neutral" className="w-full h-full" />
             </div>
-            <h4 className="text-slate-750 font-black uppercase text-sm">No Combatants Active</h4>
-            <p className="text-slate-400 text-xs max-w-xs font-medium">
+            <h4 className="text-slate-800 font-black uppercase text-xs">No Combatants Active</h4>
+            <p className="text-slate-400 text-[11px] max-w-xs font-medium">
               Complete your active habits, log some hydration, or write in your workbook to claim your position instantly, bro!
             </p>
           </div>
         ) : (
-          leaderboard.map((entry, index) => {
-            const isCurrentUser = entry.uid === user?.uid;
-            const rank = index + 1;
-            
-            // Special styling variables for top 3 visual prestige
-            const isBronze = rank === 3;
-            const isSilver = rank === 2;
-            const isGold = rank === 1;
-            const isTop3 = rank <= 3;
-            
-            let cardBg = "bg-white border border-slate-100 shadow-sm";
-            let rankBadgeStyle = "bg-slate-100 text-slate-500 border border-slate-200";
-            let pointsTextStyle = "text-blue-950 font-black";
-            
-            if (isCurrentUser) {
-              cardBg = "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-500/25 border-2 border-blue-400 scale-[1.015]";
-              rankBadgeStyle = "bg-white/20 text-white border border-white/30";
-              pointsTextStyle = "text-white font-black";
-            } else if (isGold) {
-              cardBg = "bg-gradient-to-r from-amber-50 to-amber-100/50 border border-amber-200 shadow-md shadow-amber-100/30";
-              rankBadgeStyle = "bg-yellow-400 text-yellow-950 font-black border border-yellow-500";
-            } else if (isSilver) {
-              cardBg = "bg-gradient-to-r from-slate-50 to-slate-100/50 border border-slate-200 shadow-sm";
-              rankBadgeStyle = "bg-slate-350 text-slate-800 font-black border border-slate-400";
-            } else if (isBronze) {
-              cardBg = "bg-gradient-to-r from-orange-50 to-orange-100/50 border border-orange-200 shadow-sm";
-              rankBadgeStyle = "bg-orange-400 text-orange-950 font-black border border-orange-500";
-            }
+          <div className="divide-y divide-slate-100">
+            {leaderboard.map((entry, index) => {
+              const isCurrentUser = entry.uid === user?.uid;
+              const rank = index + 1;
+              const isTop3 = rank <= 3;
+              
+              let rowBg = "bg-transparent";
+              let textColor = "text-slate-800";
+              let subTextColor = "text-slate-500";
+              let pointsTextStyle = "text-blue-950 font-black";
+              let rankBadge = "";
+              
+              if (rank === 1) rankBadge = "👑";
+              else if (rank === 2) rankBadge = "🥈";
+              else if (rank === 3) rankBadge = "🥉";
+              else rankBadge = rank.toString();
 
-            return (
-              <React.Fragment key={entry.uid}>
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: Math.min(index * 0.04, 0.5) }}
-                  className={`flex items-center gap-4 p-4 rounded-[2rem] transition-all relative overflow-hidden ${cardBg}`}
-                >
-                  {/* Subtle water splash details inside rows */}
-                  {!isCurrentUser && isTop3 && (
-                    <div className="absolute -left-4 -bottom-4 w-12 h-12 bg-white/20 rounded-full blur-xl pointer-events-none" />
+              if (isCurrentUser) {
+                rowBg = "bg-blue-50/70 border-x border-y border-blue-100/50 rounded-2xl my-1 relative";
+                textColor = "text-blue-950 font-black";
+                subTextColor = "text-blue-600";
+                pointsTextStyle = "text-blue-600 font-black";
+              }
+
+              return (
+                <React.Fragment key={entry.uid}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: Math.min(index * 0.03, 0.4) }}
+                    className={`flex items-center gap-4 py-3.5 px-3 transition-all relative overflow-hidden ${rowBg}`}
+                  >
+                    {/* Rank Position */}
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs">
+                      {rankBadge}
+                    </div>
+
+                    {/* Profile Picture / Avatar */}
+                    <div className="relative">
+                      {entry.photoURL ? (
+                        <img 
+                          src={entry.photoURL} 
+                          alt={entry.displayName} 
+                          className="w-11 h-11 rounded-xl object-cover ring-2 ring-white/35 shadow-sm flex-shrink-0" 
+                          referrerPolicy="no-referrer" 
+                          loading="lazy" 
+                        />
+                      ) : (
+                        <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm bg-gradient-to-tr from-blue-100 to-indigo-150 text-blue-700 ring-2 ring-white/35 shadow-sm">
+                          {(entry.displayName || 'U').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      {isTop3 && (
+                        <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-0.5 shadow border border-white">
+                          <Star size={7} className="text-yellow-950 fill-yellow-950" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Name and Level Details */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className={`font-black text-sm uppercase tracking-wide truncate ${textColor}`}>
+                        {entry.displayName || "Nexora Champion"}
+                        {isCurrentUser && <span className="ml-1.5 font-bold text-[8px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">You</span>}
+                      </h4>
+                      
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-150">
+                          Lvl {entry.level || 1}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 text-[10px] font-black tracking-tight">
+                          <Flame size={11} className="text-orange-500" />
+                          <span className={subTextColor}>
+                            {entry.streak || 0} Day Streak
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Points Counter */}
+                    <div className="text-right pl-2 flex-shrink-0">
+                      <div className={`text-base ${pointsTextStyle}`}>
+                        {entry.weeklyPoints !== undefined ? entry.weeklyPoints : ((entry as any).weeklyXP || 0)}
+                      </div>
+                      <div className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                        XP
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Duolingo promotion dashed zone line */}
+                  {rank === 3 && leaderboard.length > 3 && (
+                    <div className="my-3 flex items-center gap-3 px-2">
+                      <div className="h-[1px] flex-grow bg-emerald-400/40" />
+                      <span className="text-[9px] font-black uppercase tracking-[0.15em] text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                        <Shield size={9} className="fill-emerald-400 text-teal-600" />
+                        Promotion Cut-off
+                      </span>
+                      <div className="h-[1px] flex-grow bg-emerald-400/40" />
+                    </div>
                   )}
-
-                  {/* Rank Position */}
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${rankBadgeStyle}`}>
-                    {rank === 1 ? '👑' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}
-                  </div>
-
-                  {/* Profile Picture with Custom Avatar / Hat status indicator */}
-                  <div className="relative">
-                    {entry.photoURL ? (
-                      <img 
-                        src={entry.photoURL} 
-                        alt={entry.displayName} 
-                        className="w-13 h-13 rounded-2xl object-cover ring-2 ring-white/35 shadow-md flex-shrink-0" 
-                        referrerPolicy="no-referrer" 
-                        loading="lazy" 
-                      />
-                    ) : (
-                      <div className={`w-13 h-13 rounded-2xl flex items-center justify-center font-black text-base ring-2 ring-white/35 shadow-md ${
-                        isCurrentUser ? 'bg-white/20 text-white' : 'bg-gradient-to-tr from-blue-100 to-indigo-150 text-blue-700'
-                      }`}>
-                        {(entry.displayName || 'U').charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    {isTop3 && (
-                      <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full p-1 shadow border border-white">
-                        <Star size={8} className="text-yellow-950 fill-yellow-950 animate-pulse" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Name and Level Details */}
-                  <div className="flex-1 min-w-0">
-                    <h4 className={`font-black text-sm uppercase tracking-wide truncate ${isCurrentUser ? 'text-white' : 'text-slate-800'}`}>
-                      {entry.displayName || "Nexora Champion"}
-                      {isCurrentUser && <span className="ml-1.5 font-bold text-[9px] bg-white/20 px-1.5 py-0.5 rounded">You</span>}
-                    </h4>
-                    
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <div className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${
-                        isCurrentUser 
-                          ? 'bg-white/25 text-white' 
-                          : 'bg-slate-100 border border-slate-150 text-slate-500'
-                      }`}>
-                        Lvl {entry.level || 1}
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-[10px] font-black tracking-tight">
-                        <Flame size={12} className={isCurrentUser ? 'text-orange-300' : 'text-orange-500'} />
-                        <span className={isCurrentUser ? 'text-blue-100' : 'text-slate-500'}>
-                          {entry.streak || 0} Day Streak
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Points Counter */}
-                  <div className="text-right pl-2 flex-shrink-0">
-                    <div className={`text-base ${pointsTextStyle}`}>
-                      {entry.weeklyPoints !== undefined ? entry.weeklyPoints : ((entry as any).weeklyXP || 0)}
-                    </div>
-                    <div className={`text-[8px] font-black uppercase tracking-widest ${isCurrentUser ? 'text-white/70' : 'text-slate-400'}`}>
-                      XP
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Duolingo promotion dashed zone line */}
-                {rank === 3 && leaderboard.length > 3 && (
-                  <div className="my-5 flex items-center gap-3 px-2">
-                    <div className="h-[2px] flex-grow bg-gradient-to-r from-emerald-400 to-transparent" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500 flex items-center gap-1.5 bg-emerald-50/80 px-3 py-1.5 rounded-2xl border border-emerald-100 shadow-sm animate-pulse">
-                      <Shield size={10} className="fill-emerald-400 text-teal-600" />
-                      Promotion Cut-off Zone
-                    </span>
-                    <div className="h-[2px] flex-grow bg-gradient-to-l from-emerald-400 to-transparent" />
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          })
+                </React.Fragment>
+              );
+            })}
+          </div>
         )}
       </div>
 
