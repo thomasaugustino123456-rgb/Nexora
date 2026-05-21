@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ArrowLeft, Package, Video, Trash2, CheckCircle2, XCircle, 
-  ChevronRight, Play, Book as BookIcon, Palette, StickyNote,
-  Zap, Gift, Star, Shield
+  Package, Video, Trash2, CheckCircle2, Play, Pause,
+  Palette, StickyNote, Zap, Heart, Disc, Eye, Sparkles, AlertCircle
 } from 'lucide-react';
 import { LibraryItem, UserStats, UserSettings, NexusVideo } from '../types';
 
@@ -21,6 +20,7 @@ interface LibraryScreenProps {
   onDeleteDrawing: (index: number) => void;
   onDeleteChallenge: (id: string) => void;
   onBack: () => void;
+  onPlayChallenge: (cid: string) => void;
 }
 
 type Tab = 'inventory' | 'media' | 'creative' | 'archive';
@@ -38,36 +38,45 @@ export function LibraryScreen({
   onDeleteNote,
   onDeleteDrawing,
   onDeleteChallenge,
-  onBack
+  onPlayChallenge
 }: LibraryScreenProps) {
   const [activeTab, setActiveTab] = useState<Tab>('inventory');
 
   const tabs = [
-    { id: 'inventory', label: 'Vault', icon: Package },
-    { id: 'media', label: 'Media', icon: Video },
-    { id: 'creative', label: 'Canvas', icon: Palette },
-    { id: 'archive', label: 'Logs', icon: StickyNote },
+    { id: 'inventory', label: 'Vault', icon: Package, desc: 'Cosmetic Skins & Music' },
+    { id: 'media', label: 'Media', icon: Video, desc: 'Nexus Recorded Reels' },
+    { id: 'creative', label: 'Sketches', icon: Palette, desc: 'Neural Canvas Artworks' },
+    { id: 'archive', label: 'Protocols', icon: StickyNote, desc: 'Gratitude & Replay Pins' },
   ];
 
+  // Helper to determine if an item is currently playing
+  const isPlayingMusic = (item: LibraryItem) => {
+    return item.type === 'music' && item.activated;
+  };
+
   return (
-    <div className="min-h-screen bg-[#f8fbff] pb-32">
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-[#f8fbff]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-blue-100">
-        <button 
-          onClick={onBack}
-          className="p-3 bg-white rounded-2xl shadow-sm border border-blue-100 text-blue-900 active:scale-90 transition-transform"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div className="text-center">
-          <h2 className="text-xs font-black text-blue-900 uppercase tracking-[0.3em]">Personal Library</h2>
-          <p className="text-[8px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">Asset Management Hub</p>
+    <div className="w-full bg-[#fcfdff] min-h-screen pb-36 px-4 md:px-6">
+      {/* 1. High-Prestige Hero Banner - Integrated flat information header */}
+      <div className="pt-6 pb-2">
+        <div className="flex items-center justify-between gap-4 py-4 border-b border-slate-100">
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center gap-1.5 text-blue-600">
+              <Sparkles size={11} className="fill-blue-50 text-blue-600 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-600">Nexus Vault System</span>
+            </div>
+            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Your Asset Treasury</h3>
+            <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+              Equip unlocked cosmetic skins, stream custom high-frequency ambient audio, or practice pinned task guidelines.
+            </p>
+          </div>
+          <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-blue-50 border border-blue-100/50 rounded-2xl text-blue-600">
+            <Package size={22} className="fill-blue-50 text-blue-600" />
+          </div>
         </div>
-        <div className="w-12 h-12" />
       </div>
 
-      {/* Tabs */}
-      <div className="flex px-4 gap-2 py-4 overflow-x-auto no-scrollbar bg-white/50 border-b border-blue-50">
+      {/* 2. Horizontal Navigation Bento Tabs - Streamlined continuous layout */}
+      <div className="flex px-1 gap-2 py-4 overflow-x-auto no-scrollbar">
         {tabs.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -75,81 +84,147 @@ export function LibraryScreen({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as Tab)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${
+              className={`flex flex-col items-start p-3 rounded-2xl border transition-all text-left flex-shrink-0 min-w-[110px] sm:min-w-[130px] ${
                 isActive 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105' 
-                  : 'bg-white text-blue-900/40 hover:bg-blue-50'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/15 scale-[1.03]' 
+                  : 'bg-white text-slate-700 border-slate-200/60 hover:bg-slate-50'
               }`}
             >
-              <Icon size={14} />
-              {tab.label}
+              <div className="flex items-center gap-2 mb-1">
+                <Icon size={14} className={isActive ? 'text-white' : 'text-slate-400'} />
+                <span className="text-[10px] font-black uppercase tracking-wider">{tab.label}</span>
+              </div>
+              <span className={`text-[8px] font-bold uppercase tracking-wide truncate w-full ${isActive ? 'text-blue-100' : 'text-slate-400'}`}>
+                {tab.desc}
+              </span>
             </button>
           );
         })}
       </div>
 
-      <div className="p-6 max-w-2xl mx-auto space-y-6">
+      <div className="mt-4 max-w-2xl mx-auto space-y-6">
         <AnimatePresence mode="wait">
           {activeTab === 'inventory' && (
             <motion.div
               key="inventory"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              exit={{ opacity: 0, y: -8 }}
               className="space-y-4"
             >
-              <div className="flex items-center justify-between px-2">
-                <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.2em]">Stored Assets</h3>
-                <span className="text-[10px] font-bold text-blue-500">{items.length} Units</span>
+              <div className="flex items-center justify-between px-1 mb-2">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Stored Items</span>
+                <span className="text-[10px] font-black text-blue-600 uppercase bg-blue-50 px-2 py-0.5 rounded-full">{items.length} Unlocked</span>
               </div>
               
               {items.length === 0 ? (
-                <div className="glass-card p-12 flex flex-col items-center text-center space-y-4">
-                  <div className="p-4 bg-blue-50 rounded-full text-blue-200">
-                    <Package size={48} />
+                <div className="border-2 border-dashed border-slate-200 rounded-[2rem] p-12 text-center flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-400">
+                    <Package size={28} />
                   </div>
-                  <p className="text-sm font-bold text-blue-900/40 uppercase tracking-widest">Vault is empty, bro.</p>
+                  <h4 className="text-slate-800 font-black uppercase text-xs">Treasury is Empty</h4>
+                  <p className="text-slate-400 text-[11px] max-w-xs leading-relaxed">
+                    Check out the Shop tab to buy awesome skins for your mascot, unlock background music tracks, and claim sound packs!
+                  </p>
                 </div>
               ) : (
-                <div className="grid gap-3">
-                  {items.map(item => (
-                    <div key={item.id} className="glass-card p-4 flex items-center gap-4">
-                      <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-3xl shadow-inner border border-white">
-                        {item.icon}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-black text-blue-900 text-sm uppercase tracking-tight">{item.name}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[8px] font-black text-blue-500 uppercase bg-blue-50 px-2 py-0.5 rounded-full">
-                            {item.type}
-                          </span>
-                          {item.activated && (
-                            <span className="text-[8px] font-black text-emerald-500 uppercase bg-emerald-50 px-2 py-0.5 rounded-full animate-pulse">
-                              Active
+                <div className="divide-y divide-slate-100 bg-white border border-slate-150 rounded-[2rem] p-4 shadow-sm">
+                  {items.map(item => {
+                    const isMusic = item.type === 'music';
+                    const isSkin = item.type === 'skin';
+                    const isSoundPack = item.type === 'sound-pack';
+                    const active = item.activated;
+
+                    return (
+                      <div key={item.id} className="flex items-center gap-4 py-3.5 first:pt-1 last:pb-1">
+                        {/* Interactive Avatar Container */}
+                        <div className="relative">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-inner border transition-all ${
+                            active 
+                              ? 'bg-blue-550 border-blue-400 text-white ring-2 ring-blue-105' 
+                              : 'bg-slate-50 border-slate-100'
+                          }`}>
+                            {item.icon}
+                          </div>
+                          {active && (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                             </span>
                           )}
                         </div>
+
+                        {/* Text Information & Status Label */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-black text-slate-800 text-xs sm:text-sm uppercase tracking-wide truncate">{item.name}</h4>
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            <span className="text-[8px] font-black text-slate-400 uppercase bg-slate-100 border border-slate-150 px-2 py-0.5 rounded">
+                              {item.type}
+                            </span>
+                            {isMusic && (
+                              <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded flex items-center gap-1 ${
+                                active 
+                                  ? 'bg-emerald-50 text-emerald-600 animate-pulse' 
+                                  : 'bg-slate-100 text-slate-400'
+                              }`}>
+                                <Disc size={8} className={active ? 'animate-spin' : ''} />
+                                {active ? 'Now Playing 🟢' : 'Stopped 🔴'}
+                              </span>
+                            )}
+                            {isSkin && active && (
+                              <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded uppercase">
+                                Equipped 👑
+                              </span>
+                            )}
+                            {isSoundPack && active && (
+                              <span className="text-[8px] font-black text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">
+                                System Voice Active 🔊
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Interactive Action Control */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              if (active) {
+                                onDeactivate(item.id);
+                              } else {
+                                onActivate(item.id);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-wider transition-all flex items-center gap-1.5 border min-w-[85px] justify-center ${
+                              active 
+                                ? 'bg-red-50 text-red-500 border-red-100' 
+                                : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                            }`}
+                          >
+                            {isMusic ? (
+                              active ? (
+                                <>
+                                  <Pause size={10} fill="currentColor" /> Turn Off
+                                </>
+                              ) : (
+                                <>
+                                  <Play size={10} fill="currentColor" /> Turn On
+                                </>
+                              )
+                            ) : (
+                              active ? 'Equipped • Off' : 'Active • On'
+                            )}
+                          </button>
+                          
+                          <button
+                            onClick={() => onDelete(item.id)}
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => item.activated ? onDeactivate(item.id) : onActivate(item.id)}
-                          className={`p-3 rounded-xl transition-all ${
-                            item.activated 
-                              ? 'bg-amber-50 text-amber-600' 
-                              : 'bg-emerald-50 text-emerald-600'
-                          }`}
-                        >
-                          {item.activated ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
-                        </button>
-                        <button
-                          onClick={() => onDelete(item.id)}
-                          className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </motion.div>
@@ -158,28 +233,31 @@ export function LibraryScreen({
           {activeTab === 'media' && (
             <motion.div
               key="media"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              exit={{ opacity: 0, y: -8 }}
               className="space-y-4"
             >
-               <div className="flex items-center justify-between px-2">
-                <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.2em]">Nexus Records</h3>
-                <span className="text-[10px] font-bold text-blue-500">{savedVideos.length} Downloads</span>
+              <div className="flex items-center justify-between px-1 mb-2">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Recorded Reels</span>
+                <span className="text-[10px] font-black text-blue-600 uppercase bg-blue-50 px-2 py-0.5 rounded-full">{savedVideos.length} Saved</span>
               </div>
 
               {savedVideos.length === 0 ? (
-                <div className="glass-card p-12 flex flex-col items-center text-center space-y-4">
-                  <div className="p-4 bg-blue-50 rounded-full text-blue-200">
-                    <Video size={48} />
+                <div className="border-2 border-dashed border-slate-200 rounded-[2rem] p-12 text-center flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-400">
+                    <Video size={28} />
                   </div>
-                  <p className="text-sm font-bold text-blue-900/40 uppercase tracking-widest">No recordings found.</p>
+                  <h4 className="text-slate-800 font-black uppercase text-xs">No Records Found</h4>
+                  <p className="text-slate-400 text-[11px] max-w-xs leading-relaxed">
+                    Make awesome custom videos and animations using the Nexora Studio workspace to preserve real-time updates!
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-4">
                   {savedVideos.map(video => (
-                    <div key={video.id} className="glass-card overflow-hidden group">
-                      <div className="aspect-[9/16] bg-blue-900 relative">
+                    <div key={video.id} className="bg-white border border-slate-150 rounded-2xl overflow-hidden shadow-sm group relative flex flex-col">
+                      <div className="aspect-[9/16] bg-slate-900 relative">
                         {video.videoUrl && (
                           <video 
                             src={video.videoUrl} 
@@ -192,21 +270,21 @@ export function LibraryScreen({
                         <div className="absolute inset-0 flex items-center justify-center">
                           <button 
                             onClick={() => onPlayVideo(video)}
-                            className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform"
+                            className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:scale-110 active:scale-90 transition-transform"
                           >
-                            <Play size={20} fill="white" />
+                            <Play size={16} fill="white" />
                           </button>
                         </div>
                         <button 
                           onClick={() => onDeleteVideo(video.id)}
-                          className="absolute top-2 right-2 p-2 bg-red-600/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-2 right-2 p-2 bg-red-650/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={12} />
                         </button>
                       </div>
-                      <div className="p-3">
-                        <p className="text-[10px] font-black text-blue-900 uppercase truncate mb-1">{video.caption || 'Nexus Clip'}</p>
-                        <p className="text-[8px] font-bold text-blue-400 uppercase">{new Date(video.createdAt).toLocaleDateString()}</p>
+                      <div className="p-3 bg-white">
+                        <p className="text-[10px] font-black text-slate-800 uppercase truncate mb-1">{video.caption || 'Nexus Clip'}</p>
+                        <p className="text-[8px] font-bold text-slate-400 uppercase">{new Date(video.createdAt).toLocaleDateString()}</p>
                       </div>
                     </div>
                   ))}
@@ -218,35 +296,42 @@ export function LibraryScreen({
           {activeTab === 'creative' && (
             <motion.div
               key="creative"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              exit={{ opacity: 0, y: -8 }}
               className="space-y-4"
             >
-              <div className="flex items-center justify-between px-2">
-                <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.2em]">Neural Artifacts</h3>
-                <span className="text-[10px] font-bold text-blue-500">{stats.drawings?.length || 0} Sketches</span>
+              <div className="flex items-center justify-between px-1 mb-2">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Sketches & Sketches</span>
+                <span className="text-[10px] font-black text-blue-600 uppercase bg-blue-50 px-2 py-0.5 rounded-full">{(stats.drawings?.length || 0)} Saved</span>
               </div>
 
               {!stats.drawings || stats.drawings.length === 0 ? (
-                <div className="glass-card p-12 flex flex-col items-center text-center space-y-4">
-                  <div className="p-4 bg-blue-50 rounded-full text-blue-200">
-                    <Palette size={48} />
+                <div className="border-2 border-dashed border-slate-200 rounded-[2rem] p-12 text-center flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-400">
+                    <Palette size={28} />
                   </div>
-                  <p className="text-sm font-bold text-blue-900/40 uppercase tracking-widest">The canvas is blank, bro.</p>
+                  <h4 className="text-slate-800 font-black uppercase text-xs">No Canvas Artworks</h4>
+                  <p className="text-slate-400 text-[11px] max-w-xs leading-relaxed">
+                    Unleash your creative skills by performing the Interactive Drawing Step of Challenge protocol!
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-4">
                   {stats.drawings.map((drawing, idx) => (
-                    <div key={idx} className="glass-card overflow-hidden group aspect-square">
-                      <div className="w-full h-full bg-white relative">
+                    <div key={idx} className="bg-white border border-slate-150 rounded-2xl overflow-hidden shadow-sm group aspect-square relative p-2">
+                      <div className="w-full h-full bg-slate-50 rounded-xl relative overflow-hidden flex items-center justify-center">
                         <img src={drawing} className="w-full h-full object-contain" />
-                        <button 
-                          onClick={() => onDeleteDrawing(idx)}
-                          className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        
+                        {/* Action Overlays */}
+                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => onDeleteDrawing(idx)}
+                            className="p-2.5 bg-red-650 text-white rounded-xl shadow border border-red-500 hover:scale-110"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -258,65 +343,98 @@ export function LibraryScreen({
           {activeTab === 'archive' && (
             <motion.div
               key="archive"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-4"
+              exit={{ opacity: 0, y: -8 }}
+              className="space-y-6"
             >
-              <div className="flex items-center justify-between px-2">
-                <h3 className="text-[10px] font-black text-blue-900/30 uppercase tracking-[0.2em]">Log History</h3>
-              </div>
-
-              {/* Gratitude Entries */}
+              {/* Pinned Protocols - Savable Challenge Flow */}
               <div className="space-y-3">
-                <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest px-2">Neuro-Gratitude Signals</p>
-                {(!stats.gratitudeEntries || stats.gratitudeEntries.length === 0) ? (
-                  <p className="text-xs font-bold text-blue-900/20 text-center py-4 uppercase">No logs recorded</p>
+                <div className="flex items-center justify-between px-1 mb-2">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Pinned Protocols (Replay Arenas)</span>
+                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Practice Mode</span>
+                </div>
+
+                {/* Sub-notification warning explaining practice details */}
+                <div className="flex items-start gap-3 bg-blue-50/60 border border-blue-100 p-3.5 rounded-2xl text-blue-900 leading-relaxed text-[11px] font-semibold">
+                  <AlertCircle size={14} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                  <p>
+                    Replaying pinned challenges here runs them in <span className="font-bold text-blue-950">Practice Mode</span>. Work out, meditate, or write as many times as you want! <span className="font-bold">Note:</span> Practice sessions yield standard focus improvements but do NOT grant XP, coins, streaks, or trophies.
+                  </p>
+                </div>
+
+                {(!settings.savedChallengeIds || settings.savedChallengeIds.length === 0) ? (
+                  <div className="border border-dashed border-slate-200 rounded-[2rem] p-8 text-center flex flex-col items-center gap-2">
+                    <p className="text-xs font-black text-slate-450 uppercase">No Pinned Protocols</p>
+                    <p className="text-[10px] text-slate-400 max-w-xs">
+                      During active challenge screens, click the "Pin" icon to save that specific step guideline for quick access back here!
+                    </p>
+                  </div>
                 ) : (
-                  stats.gratitudeEntries.map(entry => (
-                    <div key={entry.id} className="glass-card p-4 flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-xs font-medium text-blue-900">{entry.text}</p>
-                        <p className="text-[8px] font-bold text-blue-400 uppercase mt-1">{new Date(entry.date).toLocaleDateString()}</p>
+                  <div className="divide-y divide-slate-100 bg-white border border-slate-150 rounded-[2rem] p-4 shadow-sm">
+                    {settings.savedChallengeIds.map(cid => (
+                      <div key={cid} className="flex items-center justify-between py-3 first:pt-1 last:pb-1">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-1D0">
+                            <Zap size={14} className="fill-blue-50" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-slate-800 uppercase tracking-tight">{cid}</p>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block mt-0.5">UNLIMITED PRACTICES</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => onPlayChallenge(cid)}
+                            className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 rounded-xl font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                          >
+                            <Play size={10} fill="currentColor" /> Take Challenge
+                          </button>
+                          
+                          <button 
+                            onClick={() => onDeleteChallenge(cid)} 
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border border-transparent"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
-                      <button onClick={() => onDeleteNote(entry.id)} className="text-red-400 hover:text-red-600">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
               </div>
 
-              {/* Saved Challenges */}
-              <div className="space-y-3 pt-4">
-                <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest px-2">Pinned Protocols</p>
-                {(!settings.savedChallengeIds || settings.savedChallengeIds.length === 0) ? (
-                  <p className="text-xs font-bold text-blue-900/20 text-center py-4 uppercase">No pinned protocols</p>
+              {/* Gratitude Entries */}
+              <div className="space-y-3 pt-2">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-1">Neuro-Gratitude Signals (Gratitude Journals)</span>
+                {(!stats.gratitudeEntries || stats.gratitudeEntries.length === 0) ? (
+                  <div className="border border-dashed border-slate-200 rounded-[2rem] p-8 text-center flex flex-col items-center gap-2">
+                    <p className="text-xs font-black text-slate-450 uppercase">No Notes Captured</p>
+                    <p className="text-[10px] text-slate-400">Complete the Gratitude Journal step in active daily challenges to preserve notes here!</p>
+                  </div>
                 ) : (
-                  settings.savedChallengeIds.map(cid => (
-                    <div key={cid} className="glass-card p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                          <Zap size={14} />
+                  <div className="divide-y divide-slate-100 bg-white border border-slate-150 rounded-[2rem] p-4 shadow-sm">
+                    {stats.gratitudeEntries.map(entry => (
+                      <div key={entry.id} className="flex items-center justify-between gap-4 py-3.5 first:pt-1 last:pb-1">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[12px] font-semibold text-slate-700 leading-relaxed italic">"{entry.text}"</p>
+                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block mt-1.5">{new Date(entry.date).toLocaleDateString()}</span>
                         </div>
-                        <p className="text-xs font-black text-blue-900 uppercase tracking-tight">{cid}</p>
+                        <button 
+                          onClick={() => onDeleteNote(entry.id)} 
+                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
-                      <button onClick={() => onDeleteChallenge(cid)} className="text-red-400">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-
-      {/* Footer Info */}
-      <div className="px-6 py-10 opacity-20 text-center space-y-2">
-          <BookIcon size={32} className="mx-auto text-blue-900" />
-          <p className="text-[8px] font-black text-blue-900 uppercase tracking-[0.5em]">Nexus Digital Vault v2.0</p>
       </div>
     </div>
   );

@@ -250,6 +250,7 @@ import { CompletionFlame } from "./components/CompletionFlame";
 import { TrophyRewardsScreen } from "./components/TrophyRewardsScreen";
 
 const SOCIAL_LOCKED = false;
+let globalLibraryAudio: HTMLAudioElement | null = null;
 
 import { vibrate, VIBRATION_PATTERNS } from "./lib/vibrate";
 import {
@@ -521,6 +522,7 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [dailyQuest, setDailyQuest] = useState<ChallengeStep>("water");
   const [emergencyActive, setEmergencyActive] = useState(false);
+  const [isLibraryReplay, setIsLibraryReplay] = useState(false);
   const [challengeStep, setChallengeStep] = useState<ChallengeStep | null>(
     null,
   );
@@ -1324,6 +1326,45 @@ export default function App() {
       }
     };
   }, [settings.zenModeEnabled, activeScreen]);
+
+  // Library Active Ambient Audio Player
+  useEffect(() => {
+    const activeMusicItem = settings.inventory?.find(
+      (item) => item.type === "music" && item.activated
+    );
+
+    if (activeMusicItem) {
+      const SHOP_MUSIC_URLS: Record<string, string> = {
+        "music-fanfare": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+        "music-funkee": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+        "music-triplets": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+        "music-forest": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+        "music-cbpd": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+        "music-nba": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+        "music-complicated": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3",
+      };
+      
+      const url = SHOP_MUSIC_URLS[activeMusicItem.itemId] || "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+      
+      if (!globalLibraryAudio || globalLibraryAudio.src !== url) {
+        if (globalLibraryAudio) {
+          globalLibraryAudio.pause();
+        }
+        globalLibraryAudio = new Audio(url);
+        globalLibraryAudio.loop = true;
+        globalLibraryAudio.volume = 0.25;
+      }
+      
+      globalLibraryAudio.play().catch((err) =>
+        console.log("Library music play blocked by browser/gesture:", err)
+      );
+    } else {
+      if (globalLibraryAudio) {
+        globalLibraryAudio.pause();
+        globalLibraryAudio = null;
+      }
+    }
+  }, [settings.inventory]);
 
   // PLANT LOGIC: GROWTH & HEALTH CHECKER
   const ECOSYSTEM_PATH: PlantType[] = [
@@ -2918,10 +2959,37 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [checkTrophies, isDataReady]);
 
+  const handlePlayLibraryChallenge = (cid: string) => {
+    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    setIsLibraryReplay(true);
+    setActiveCustomPlan({
+      id: `replay-${cid}`,
+      userId: user?.uid || "guest",
+      name: `Replaying ${cid.toUpperCase()}`,
+      icon: "🎯",
+      color: "#10B981",
+      challenges: [cid as ChallengeStep],
+      days: [0, 1, 2, 3, 4, 5, 6],
+      createdAt: new Date().toISOString()
+    });
+    setChallengeStep(cid as ChallengeStep);
+    setActiveScreen("challenge");
+  };
+
   const handleCompleteChallenge = async (
     finalProgress?: DailyProgress,
     isCustomPlanFlag?: boolean,
   ) => {
+    // If completed from library replay (Practice Mode), do not award items, XP, or stars!
+    if (isLibraryReplay) {
+      showToast("Practice Protocol Completed! Great work, bro! 🔥", "success");
+      setIsLibraryReplay(false);
+      setActiveCustomPlan(null);
+      setChallengeStep(null);
+      setActiveScreen("library");
+      return;
+    }
+
     // Immediate sound feedback for better UX
     if (settings.soundEnabled) {
       play("challenge_unlock");
@@ -3868,7 +3936,23 @@ export default function App() {
                       onStartChallenge={() => {
                         vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                         setActiveCustomPlan(null);
-                        setChallengeStep("pushups");
+                        
+                        // Select a random first step as requested by user
+                        const possibleStarts: ChallengeStep[] = [
+                          "pushups",
+                          "water",
+                          "breathing",
+                          "drawing",
+                          "football",
+                          "bubbles",
+                          "memory",
+                          "gratitude",
+                          "reaction",
+                          "meditation"
+                        ];
+                        const randomStart = possibleStarts[Math.floor(Math.random() * possibleStarts.length)];
+                        setChallengeStep(randomStart);
+                        
                         setActiveScreen("challenge");
                         // Reset session flags for replayability
                         setDailyProgress((prev) => ({
@@ -4380,7 +4464,7 @@ export default function App() {
                         },
                       );
 
-                      let activeSkin = settings.activeSkin;
+                      let activeSkin = settings.activeSkin || "none";
                       if (itemToActivate.type === "skin") {
                         activeSkin = itemToActivate.itemId.replace("skin-", "");
                       }
@@ -4389,6 +4473,31 @@ export default function App() {
                       if (itemToActivate.type === "sound-pack") {
                         isDogSoundPackActive =
                           itemToActivate.itemId === "sound-dog";
+                      }
+
+                      // Dynamic Audio play context to execute synchronously with user gesture
+                      if (itemToActivate.type === "music") {
+                        try {
+                          const SHOP_MUSIC_URLS: Record<string, string> = {
+                            "music-fanfare": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+                            "music-funkee": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+                            "music-triplets": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+                            "music-forest": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+                            "music-cbpd": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+                            "music-nba": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+                            "music-complicated": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3",
+                          };
+                          const url = SHOP_MUSIC_URLS[itemToActivate.itemId] || "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+                          if (globalLibraryAudio) {
+                            globalLibraryAudio.pause();
+                          }
+                          globalLibraryAudio = new Audio(url);
+                          globalLibraryAudio.loop = true;
+                          globalLibraryAudio.volume = 0.25;
+                          globalLibraryAudio.play().catch(e => console.log("Gesture-based audio play blocked:", e));
+                        } catch (err) {
+                          console.log("Audio play error", err);
+                        }
                       }
 
                       // If it's a gift, give a reward and keep it activated (as opened)
@@ -4445,71 +4554,78 @@ export default function App() {
                       onUpdateSettings({
                         inventory,
                         activeSkin,
+                        activeHat: activeSkin,
                         isDogSoundPackActive,
                       });
                       showToast(`${itemToActivate.name} activated!`, "success");
                     }}
                     onDeactivate={(id) => {
                       vibrate(VIBRATION_PATTERNS.CLICK);
-                      setSettings((prev) => {
-                        const itemToDeactivate = prev.inventory?.find(
-                          (i) => i.id === id,
-                        );
-                        const inventory = (prev.inventory || []).map((item) => {
-                          if (item.id === id) {
-                            return { ...item, activated: false };
-                          }
-                          return item;
-                        });
-
-                        let activeSkin = prev.activeSkin;
-                        if (itemToDeactivate?.type === "skin") {
-                          activeSkin = "none";
+                      const itemToDeactivate = settings.inventory?.find(
+                        (i) => i.id === id,
+                      );
+                      const inventory = (settings.inventory || []).map((item) => {
+                        if (item.id === id) {
+                          return { ...item, activated: false };
                         }
-
-                        let isDogSoundPackActive = prev.isDogSoundPackActive;
-                        if (itemToDeactivate?.type === "sound-pack") {
-                          isDogSoundPackActive = false;
-                        }
-
-                        return {
-                          ...prev,
-                          inventory,
-                          activeSkin,
-                          isDogSoundPackActive,
-                        };
+                        return item;
                       });
+
+                      let activeSkin = settings.activeSkin || "none";
+                      if (itemToDeactivate?.type === "skin") {
+                        activeSkin = "none";
+                      }
+
+                      let isDogSoundPackActive = settings.isDogSoundPackActive;
+                      if (itemToDeactivate?.type === "sound-pack") {
+                        isDogSoundPackActive = false;
+                      }
+
+                      if (itemToDeactivate?.type === "music" && globalLibraryAudio) {
+                        globalLibraryAudio.pause();
+                        globalLibraryAudio = null;
+                      }
+
+                      onUpdateSettings({
+                        inventory,
+                        activeSkin,
+                        activeHat: activeSkin,
+                        isDogSoundPackActive,
+                      });
+                      showToast(`${itemToDeactivate?.name || "Item"} deactivated!`, "info");
                     }}
                     onDelete={(id) => {
                       vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                      setSettings((prev) => {
-                        const itemToDelete = prev.inventory?.find(
-                          (i) => i.id === id,
-                        );
-                        const inventory = (prev.inventory || []).filter(
-                          (item) => item.id !== id,
-                        );
+                      const itemToDelete = settings.inventory?.find(
+                        (i) => i.id === id,
+                      );
+                      const inventory = (settings.inventory || []).filter(
+                        (item) => item.id !== id,
+                      );
 
-                        // If deleted, remove from purchasedItems so it can be bought again
-                        // But ONLY if it's not a bonus gift (bonus gifts don't exist in shop)
-                        const purchasedItems = (
-                          prev.purchasedItems || []
-                        ).filter((pid) => pid !== itemToDelete?.itemId);
+                      // If deleted, remove from purchasedItems so it can be bought again
+                      const purchasedItems = (
+                        settings.purchasedItems || []
+                      ).filter((pid) => pid !== itemToDelete?.itemId);
 
-                        let activeSkin = prev.activeSkin;
-                        if (
-                          itemToDelete?.type === "skin" &&
-                          itemToDelete.activated
-                        ) {
-                          activeSkin = "none";
-                        }
+                      let activeSkin = settings.activeSkin || "none";
+                      if (
+                        itemToDelete?.type === "skin" &&
+                        itemToDelete.activated
+                      ) {
+                        activeSkin = "none";
+                      }
 
-                        return {
-                          ...prev,
-                          inventory,
-                          purchasedItems,
-                          activeSkin,
-                        };
+                      if (itemToDelete?.type === "music" && itemToDelete.activated && globalLibraryAudio) {
+                        globalLibraryAudio.pause();
+                        globalLibraryAudio = null;
+                      }
+
+                      onUpdateSettings({
+                        inventory,
+                        purchasedItems,
+                        activeSkin,
+                        activeHat: activeSkin,
                       });
                       showToast("Item deleted from library", "info");
                     }}
@@ -4533,18 +4649,19 @@ export default function App() {
                     }}
                     onDeleteChallenge={(id) => {
                       vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                      setSettings((prev) => ({
-                        ...prev,
-                        savedChallengeIds: (
-                          prev.savedChallengeIds || []
-                        ).filter((cid) => cid !== id),
-                      }));
+                      const updatedSavedIds = (
+                        settings.savedChallengeIds || []
+                      ).filter((cid) => cid !== id);
+                      onUpdateSettings({
+                        savedChallengeIds: updatedSavedIds
+                      });
                       showToast("Challenge removed", "info");
                     }}
                     onBack={() => {
                       vibrate(VIBRATION_PATTERNS.CLICK);
                       setActiveScreen("home");
                     }}
+                    onPlayChallenge={handlePlayLibraryChallenge}
                   />
                 </motion.div>
               )}
