@@ -51,64 +51,333 @@ try {
   console.error("Firebase Admin Initialization Failed:", err.message);
 }
 
-// Background Scheduler for Reminders
+const MOTIVATIONAL_QUOTES = [
+  { title: "Crush It Bro! 🚀", body: "Don't let your streak die today. You're a beast!" },
+  { title: "Level Up! 🔥", body: "Consistency is the key to greatness. Get your habits done!" },
+  { title: "Nexora Power ⚡", body: "Small wins every day lead to massive results. Keep going!" },
+  { title: "Stay Disciplined 🧠", body: "Motivation gets you started, discipline keeps you going." },
+  { title: "No Excuses 🚫", body: "Your future self will thank you for the work you do today." },
+  { title: "Champion Mindset 🏆", body: "Champions keep playing until they get it right. Let's go!" },
+  { title: "Focus Bro! 🎯", body: "Distractions are the enemy of progress. Stay focused on your goals." },
+];
+
+const generateMotivationalQuote = async (): Promise<{ title: string; body: string }> => {
+  let title = "Nexora Motivation 🔥";
+  let body = "Don't let your streak die! You're a beast, bro!";
+  
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = "You are Nexora, a friendly water-bottle mascot for a productivity app. Generate a super short, punchy, and aggressive-but-friendly motivational push notification message for a user who needs to finish their habits today. Max 20 words. Include one emoji. Format: Title | Body";
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      if (text.includes("|")) {
+        const parts = text.split("|");
+        title = parts[0].trim();
+        body = parts[1].trim();
+      } else {
+        body = text;
+      }
+    } catch (aiErr) {
+      console.error("AI Quote Generation failed, using static fallback:", aiErr);
+      const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+      title = randomQuote.title;
+      body = randomQuote.body;
+    }
+  } else {
+    const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+    title = randomQuote.title;
+    body = randomQuote.body;
+  }
+  return { title, body };
+};
+
+// Keep track of sent notifications in memory to prevent double sending within the same minute or day
+const sentNotifications = new Map<string, string>(); // key: userId_type_time, value: date_string (YYYY-MM-DD)
+
+// Background Scheduler for Reminders and Plant/Trophy Status Warnings
 const startScheduler = () => {
-  console.log("[V2 Scheduler] Starting... (Checking every 10 minutes)");
+  console.log("[V3 Scheduler] Starting... (Checking every 1 minute with precise timezone-awareness, robot-deduplication, trophy deterioration, botanic-watch & custom plan engines)");
+  
+  // Cleanup sent notifications once a day to prevent memory bloat
+  setInterval(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    for (const [key, value] of sentNotifications.entries()) {
+      if (value !== todayStr) {
+        sentNotifications.delete(key);
+      }
+    }
+  }, 86400000); // Daily cleanup
+
   setInterval(async () => {
     if (!db) return;
     
     const now = new Date();
     try {
-      const usersSnapshot = await db.collection("users")
-        .where("notificationsEnabled", "==", true)
-        .limit(100) 
-        .get();
+      // Fetch all users to support nested settings.notificationsEnabled and in-memory fallback robust indexing
+      const usersSnapshot = await db.collection("users").get();
+      
+      // Fetch all custom plans to map against users
+      const plansSnapshot = await db.collection("customPlans").get();
+      const userPlansMap = new Map<string, any[]>();
+      for (const planDoc of plansSnapshot.docs) {
+        const planData = planDoc.data();
+        if (planData.userId) {
+          if (!userPlansMap.has(planData.userId)) {
+            userPlansMap.set(planData.userId, []);
+          }
+          userPlansMap.get(planData.userId)!.push({ id: planDoc.id, ...planData });
+        }
+      }
       
       for (const userDoc of usersSnapshot.docs) {
         const userData = userDoc.data();
-        const fcmToken = userData.fcmToken || (userData.settings && userData.settings.fcmToken);
-        const tz = userData.timezone || 'UTC';
+        const settings = userData.settings || {};
+        
+        // Notifications & FCM Token checks
+        const enabled = userData.notificationsEnabled === true || settings.notificationsEnabled === true;
+        if (!enabled) continue;
+        
+        const fcmToken = userData.fcmToken || settings.fcmToken;
+        if (!fcmToken) continue;
+        
+        const tz = settings.timezone || userData.timezone || 'UTC';
 
-        // Get user's local time string "HH:mm"
+        // Calculate user timezone precise time & date strings
         let userTimeStr = "";
+        let userDay = 0;
+        let todayStr = "";
         try {
-          const localDate = new Date(now.toLocaleString("en-US", {timeZone: tz}));
+          const localDate = new Date(now.toLocaleString("en-US", { timeZone: tz }));
           const userHour = localDate.getHours().toString().padStart(2, '0');
           const userMin = localDate.getMinutes().toString().padStart(2, '0');
           userTimeStr = `${userHour}:${userMin}`;
+          userDay = localDate.getDay();
+          
+          const yyyy = localDate.getFullYear();
+          const mm = (localDate.getMonth() + 1).toString().padStart(2, '0');
+          const dd = localDate.getDate().toString().padStart(2, '0');
+          todayStr = `${yyyy}-${mm}-${dd}`;
         } catch (e) {
           const userHour = now.getUTCHours().toString().padStart(2, '0');
           const userMin = now.getUTCMinutes().toString().padStart(2, '0');
           userTimeStr = `${userHour}:${userMin}`;
+          userDay = now.getUTCDay();
+          
+          const yyyy = now.getUTCFullYear();
+          const mm = (now.getUTCMonth() + 1).toString().padStart(2, '0');
+          const dd = now.getUTCDate().toString().padStart(2, '0');
+          todayStr = `${yyyy}-${mm}-${dd}`;
         }
 
-        const reminder1 = userData.reminderTime || (userData.settings && userData.settings.reminderTime);
-        const reminder2 = userData.reminderTime2 || (userData.settings && userData.settings.reminderTime2);
+        const userId = userDoc.id;
+
+        // 1. STANDARD REMINDERS (Reminder 1 and Reminder 2)
+        const reminder1 = settings.reminderTime || userData.reminderTime;
+        const reminder2 = settings.reminderTime2 || userData.reminderTime2;
+        const isTodayCompleted = userData.isTodayCompleted === true;
 
         if ((reminder1 && userTimeStr === reminder1) || (reminder2 && userTimeStr === reminder2)) {
-          if (!userData.isTodayCompleted) {
-            await sendPush(fcmToken, 'Nexora 🔥', 'Hey 👋 Ready for today’s challenge? Don\'t let that streak die!');
+          if (!isTodayCompleted) {
+            const rKey = `${userId}_standard_${userTimeStr}`;
+            if (sentNotifications.get(rKey) !== todayStr) {
+              sentNotifications.set(rKey, todayStr);
+              await sendPush(fcmToken, 'Nexora 🔥', "Hey 👋 Ready for today’s challenge? Don't let that streak die!");
+            }
           }
         }
 
-        if (userTimeStr === '22:00' && !userData.isTodayCompleted) {
-          await sendPush(fcmToken, 'Streak at Risk! ⚠️', 'Bro, your streak is about to die! 💀 Spend 2 minutes now to save it!');
+        // 2. PRE-MIDNIGHT STREAK AT RISK
+        if (userTimeStr === '22:00' && !isTodayCompleted) {
+          const rKey = `${userId}_streak_22:00`;
+          if (sentNotifications.get(rKey) !== todayStr) {
+            sentNotifications.set(rKey, todayStr);
+            await sendPush(fcmToken, 'Streak at Risk! ⚠️', 'Bro, your streak is about to die! 💀 Spend 2 minutes now to save it!');
+          }
         }
 
-        // Additional status checks
-        const plantState = userData.plantState;
-        if (plantState && !plantState.isDead && plantState.isThirsty && (userTimeStr === '18:00' || userTimeStr === '21:00')) {
-          await sendPush(fcmToken, 'Water Needed! 💧', `Your ${plantState.type} is drying out, bro!`);
+        // 3. TROPHY DEGRADATION CHECK & ALERTS
+        const stats = userData.stats || {};
+        const trophies = stats.trophies || [];
+        let trophiesChanged = false;
+        const nowMs = now.getTime();
+        
+        const updatedTrophies = trophies.map((t: any) => {
+          if (!t.earnedDate) return t;
+          const earnedTime = new Date(t.earnedDate).getTime();
+          if (isNaN(earnedTime)) return t;
+          
+          const daysSince = (nowMs - earnedTime) / (1000 * 60 * 60 * 24);
+          
+          if (t.type === "golden" && daysSince >= 3) {
+            trophiesChanged = true;
+            return {
+              ...t,
+              type: "ice",
+              lastUpdated: new Date().toISOString()
+            };
+          }
+          if (t.type === "ice" && daysSince >= 5) {
+            trophiesChanged = true;
+            return {
+              ...t,
+              type: "broken",
+              lastUpdated: new Date().toISOString()
+            };
+          }
+          return t;
+        });
+
+        if (trophiesChanged) {
+          const hadIceTransition = updatedTrophies.some((t: any, idx: number) => {
+            return t.type === "ice" && trophies[idx].type === "golden";
+          });
+          const hadBrokenTransition = updatedTrophies.some((t: any, idx: number) => {
+            return t.type === "broken" && trophies[idx].type === "ice";
+          });
+
+          if (hadIceTransition) {
+            const rKey = `${userId}_trophy_ice_${todayStr}`;
+            if (sentNotifications.get(rKey) !== todayStr) {
+              sentNotifications.set(rKey, todayStr);
+              await sendPush(fcmToken, 'Trophy Alert! 🧊', 'One of your trophies just turned to ICE! Complete a challenge now to save it, bro!');
+            }
+          } else if (hadBrokenTransition) {
+            const rKey = `${userId}_trophy_broken_${todayStr}`;
+            if (sentNotifications.get(rKey) !== todayStr) {
+              sentNotifications.set(rKey, todayStr);
+              await sendPush(fcmToken, 'Trophy Alert! 💔', 'Oh no! A trophy has BROKEN! Don\'t let more break, bro!');
+            }
+          }
+
+          // Update backend doc
+          await userDoc.ref.update({
+            "stats.trophies": updatedTrophies,
+            "updatedAt": admin.firestore.FieldValue.serverTimestamp()
+          });
+        }
+
+        // 4. BOTANICAL AND ECOSYSTEM HEALTH CHECK & ALERTS
+        const plantState = settings.plantState || userData.plantState;
+        if (plantState && !plantState.isDead) {
+          const lastCheckStr = plantState.lastCheckDate;
+          if (lastCheckStr) {
+            const lastCheck = new Date(lastCheckStr);
+            if (!isNaN(lastCheck.getTime())) {
+              const diffMs = nowMs - lastCheck.getTime();
+              const diffHours = diffMs / (1000 * 60 * 60);
+              
+              const activeItems = settings.activeEcosystemItemIds || [];
+              const hasSprinkler = activeItems.includes("eco_sprinkler_01");
+              const deathThreshold = 48; // 2 days
+              const thirstThreshold = hasSprinkler ? 48 : 36; // 1.5 days or 2 days with tech
+
+              if (diffHours >= deathThreshold) {
+                // Plant dies
+                const type = plantState.type || 'sprout';
+                const plantsProgress = settings.plantsProgress || {};
+                const currentProgress = plantsProgress[type] || {
+                  stage: plantState.stage || 1,
+                  growthPoints: plantState.growthPoints || 0,
+                  lastGrowthDate: plantState.lastGrowthDate || null,
+                  health: 100,
+                  isDead: false,
+                  isThirsty: false,
+                };
+
+                const updatedProgress = {
+                  ...currentProgress,
+                  isDead: true,
+                  health: 0,
+                  isThirsty: true,
+                };
+
+                await userDoc.ref.update({
+                  "settings.plantState.isDead": true,
+                  "settings.plantState.health": 0,
+                  "settings.plantState.isThirsty": true,
+                  "settings.plantState.lastCheckDate": now.toISOString(),
+                  [`settings.plantsProgress.${type}`]: updatedProgress,
+                  "updatedAt": admin.firestore.FieldValue.serverTimestamp()
+                });
+
+                const rKey = `${userId}_plant_death`;
+                if (sentNotifications.get(rKey) !== todayStr) {
+                  sentNotifications.set(rKey, todayStr);
+                  await sendPush(fcmToken, 'Your Nexora Ecosystem has died... 🥀', 'Bro, your plants need discipline! Restore the room and try again.');
+                }
+              } else if (diffHours >= thirstThreshold && !plantState.isThirsty) {
+                // Plant becomes thirsty
+                const type = plantState.type || 'sprout';
+                const plantsProgress = settings.plantsProgress || {};
+                const currentProgress = plantsProgress[type] || {
+                  stage: plantState.stage || 1,
+                  growthPoints: plantState.growthPoints || 0,
+                  lastGrowthDate: plantState.lastGrowthDate || null,
+                  health: 100,
+                  isDead: false,
+                  isThirsty: false,
+                };
+
+                const updatedProgress = { ...currentProgress, isThirsty: true };
+
+                await userDoc.ref.update({
+                  "settings.plantState.isThirsty": true,
+                  [`settings.plantsProgress.${type}`]: updatedProgress,
+                  "updatedAt": admin.firestore.FieldValue.serverTimestamp()
+                });
+
+                if (userTimeStr === '18:00' || userTimeStr === '21:00') {
+                  const rKey = `${userId}_plant_thirst_${userTimeStr}`;
+                  if (sentNotifications.get(rKey) !== todayStr) {
+                    sentNotifications.set(rKey, todayStr);
+                    await sendPush(fcmToken, 'Water Needed! 💧', `Your ${type} is drying out, bro! Give it some water now!`);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // 5. CUSTOM PLAN ALARMS
+        const userPlans = userPlansMap.get(userId) || [];
+        for (const plan of userPlans) {
+          const hoursMatch = plan.reminderTime === userTimeStr || plan.reminderTime2 === userTimeStr;
+          const daysMatch = plan.days && plan.days.includes(userDay);
+          if (hoursMatch && daysMatch) {
+            const pKey = `${userId}_plan_${plan.id}_${userTimeStr}`;
+            if (sentNotifications.get(pKey) !== todayStr) {
+              sentNotifications.set(pKey, todayStr);
+              await sendPush(fcmToken, `${plan.name} 🚀`, `Time for your custom plan: ${plan.name}! Let's keep that momentum, bro!`);
+            }
+          }
+        }
+
+        // 6. MOTIVATIONAL SYSTEM
+        const pushMotivationEnabled = settings.pushMotivationEnabled === true || userData.pushMotivationEnabled === true;
+        const motivationTime = settings.motivationTime || userData.motivationTime || "09:00";
+        if (pushMotivationEnabled && userTimeStr === motivationTime) {
+          const mKey = `${userId}_motivation`;
+          if (sentNotifications.get(mKey) !== todayStr) {
+            sentNotifications.set(mKey, todayStr);
+            try {
+              const quote = await generateMotivationalQuote();
+              await sendPush(fcmToken, quote.title, quote.body);
+            } catch (quoteErr) {
+              console.error("Failed to generate scheduler motivation:", quoteErr);
+            }
+          }
         }
       }
     } catch (error: any) {
       if (error.message.includes("PERMISSION_DENIED")) {
-        console.warn("[V2 Scheduler] Permission Denied. Skipping scheduler ticks.");
+        console.warn("[V3 Scheduler] Permission Denied. Skipping scheduler ticks.");
       } else {
-        console.error("Scheduler Error:", error);
+        console.error("[V3 Scheduler] Unexpected Error:", error);
       }
     }
-  }, 600000); 
+  }, 6000); // Check precisely every 1 minute
 };
 
 // Version Watcher (Automatic Update Notifications)
@@ -179,16 +448,6 @@ const getResend = () => {
   }
   return resend;
 };
-
-const MOTIVATIONAL_QUOTES = [
-  { title: "Crush It Bro! 🚀", body: "Don't let your streak die today. You're a beast!" },
-  { title: "Level Up! 🔥", body: "Consistency is the key to greatness. Get your habits done!" },
-  { title: "Nexora Power ⚡", body: "Small wins every day lead to massive results. Keep going!" },
-  { title: "Stay Disciplined 🧠", body: "Motivation gets you started, discipline keeps you going." },
-  { title: "No Excuses 🚫", body: "Your future self will thank you for the work you do today." },
-  { title: "Champion Mindset 🏆", body: "Champions keep playing until they get it right. Let's go!" },
-  { title: "Focus Bro! 🎯", body: "Distractions are the enemy of progress. Stay focused on your goals." },
-];
 
 async function startServer() {
   const app = express();
@@ -279,35 +538,7 @@ async function startServer() {
     }
 
     try {
-      let title = "Nexora Motivation 🔥";
-      let body = "Don't let your streak die! You're a beast, bro!";
-      
-      // Try to use Gemini to generate a fresh quote
-      if (process.env.GEMINI_API_KEY) {
-        try {
-          const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-          const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-          const prompt = "You are Nexora, a friendly water-bottle mascot for a productivity app. Generate a super short, punchy, and aggressive-but-friendly motivational push notification message for a user who needs to finish their habits today. Max 20 words. Include one emoji. Format: Title | Body";
-          const result = await model.generateContent(prompt);
-          const text = result.response.text().trim();
-          if (text.includes("|")) {
-            const parts = text.split("|");
-            title = parts[0].trim();
-            body = parts[1].trim();
-          } else {
-            body = text;
-          }
-        } catch (aiErr) {
-          console.error("AI Quote Generation failed, using static fallback:", aiErr);
-          const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
-          title = randomQuote.title;
-          body = randomQuote.body;
-        }
-      } else {
-        const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
-        title = randomQuote.title;
-        body = randomQuote.body;
-      }
+      const { title, body } = await generateMotivationalQuote();
       
       const message = {
         notification: {

@@ -848,6 +848,484 @@ function BookIllustration({ bookId }: { bookId: string }) {
         </div>
       );
 
+    case 'retention-progress-engine':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#ECEFFE] via-[#E2E6FF] to-[#D0D7FF] overflow-hidden flex items-center justify-center border-b-4 border-[#6366F1]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.35),transparent_60%)]" />
+          
+          {/* Animated sparkly stars floating up */}
+          <motion.span animate={{ y: [0, -45], x: [0, -10], opacity: [0, 1, 0], scale: [0.6, 1.1, 0.6] }} transition={{ repeat: Infinity, duration: 4.8, ease: "easeOut" }} className="absolute text-yellow-400 font-extrabold top-12 left-10 text-xs">⭐</motion.span>
+          <motion.span animate={{ y: [0, -50], x: [0, 12], opacity: [0, 0.9, 0], scale: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 5.2, delay: 1.5, ease: "easeOut" }} className="absolute text-amber-400 font-extrabold top-8 right-12 text-[10px]">✨</motion.span>
+
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            {/* Colorful progress bars staircase */}
+            <rect x="30" y="110" width="30" height="15" rx="3" fill="#D0D3FE" stroke="#4338CA" strokeWidth="2.5" />
+            <rect x="65" y="90" width="30" height="35" rx="3" fill="#A5B4FC" stroke="#4338CA" strokeWidth="2.5" />
+            <rect x="100" y="70" width="30" height="55" rx="3" fill="#818CF8" stroke="#4338CA" strokeWidth="2.5" />
+            <rect x="135" y="50" width="30" height="75" rx="3" fill="#6366F1" stroke="#4338CA" strokeWidth="2.5" />
+
+            {/* Glowing flag at the peak */}
+            <path d="M 150,50 L 150,22" stroke="#4338CA" strokeWidth="3" strokeLinecap="round" />
+            <motion.path 
+              animate={{ d: ["M 150,22 L 170,27 L 150,32 Z", "M 150,22 L 166,25 L 150,30 Z", "M 150,22 L 170,27 L 150,32 Z"] }}
+              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+              d="M 150,22 L 170,27 L 150,32 Z" fill="#F43F5E" stroke="#4338CA" strokeWidth="2.5" 
+            />
+
+            {/* Cute leafy character climbing up */}
+            <g transform="translate(68, 5)">
+              <motion.g
+                animate={{ y: [42, 22, 42], x: [0, 35, 0] }}
+                transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+              >
+                {/* Character core body */}
+                <rect x="10" y="20" width="22" height="22" rx="7" fill="#FFF" stroke="#4338CA" strokeWidth="2.5" />
+                {/* Green sprout head leaf */}
+                <path d="M 21,20 C 18,10 28,8 24,20" fill="#10B981" stroke="#4338CA" strokeWidth="2" />
+                {/* Cheerful happy eyes */}
+                <circle cx="16" cy="29" r="2" fill="#4338CA" />
+                <circle cx="26" cy="29" r="2" fill="#4338CA" />
+                {/* Smiling mouth */}
+                <path d="M 19,34 Q 21,37 23,34" stroke="#4338CA" strokeWidth="2" strokeLinecap="round" fill="none" />
+              </motion.g>
+            </g>
+          </svg>
+        </div>
+      );
+
+    case 'retention-smart-nudges':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#FEEFF6] via-[#FCE3F0] to-[#FAD4E8] overflow-hidden flex items-center justify-center border-b-4 border-[#EC4899]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.35),transparent_60%)]" />
+          
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            {/* Soft cloud base */}
+            <path d="M 40,110 C 30,110 25,100 35,90 C 25,80 40,65 55,75 C 65,60 90,65 85,85 C 95,95 85,110 70,110 Z" fill="#FFF" stroke="#9D174D" strokeWidth="2" opacity="0.85" />
+            
+            {/* Floating music/ring vibrations */}
+            <g opacity="0.7" fill="#EC4899">
+              <motion.path animate={{ scale: [0.8, 1.2, 0.8], opacity: [0.3, 0.8, 0.3] }} transition={{ repeat: Infinity, duration: 1.8 }} d="M 140,50 C 145,45 152,48 150,55" stroke="#EC4899" strokeWidth="2" fill="none" strokeLinecap="round" />
+              <motion.path animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.7, 0.2] }} transition={{ repeat: Infinity, duration: 2, delay: 0.4 }} d="M 145,42 C 154,36 162,41 158,52" stroke="#EC4899" strokeWidth="2" fill="none" strokeLinecap="round" />
+            </g>
+
+            {/* Swinging Hanging smart bell */}
+            <g transform="translate(100, 30)">
+              <motion.g
+                animate={{ rotate: [-10, 10, -10] }}
+                transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
+                style={{ transformOrigin: "50px 10px" }}
+              >
+                {/* Support rope bar */}
+                <path d="M 50,10 L 50,30" stroke="#9D174D" strokeWidth="2.5" />
+                
+                {/* Cute Bell body */}
+                <path d="M 33,65 C 33,40 67,40 67,65 Z" fill="#FDE047" stroke="#9D174D" strokeWidth="3" />
+                <rect x="28" y="65" width="44" height="6" rx="2.5" fill="#FACC15" stroke="#9D174D" strokeWidth="3" />
+                
+                {/* Little cartoon eyes on the bell */}
+                <ellipse cx="44" cy="55" rx="2" ry="2.5" fill="#9D174D" />
+                <ellipse cx="56" cy="55" rx="2" ry="2.5" fill="#9D174D" />
+                {/* Happy smile */}
+                <path d="M 48,60 Q 50,62 52,60" stroke="#9D174D" strokeWidth="1.8" fill="none" />
+
+                {/* Swinging clapper */}
+                <motion.circle 
+                  animate={{ x: [-4, 4, -4] }}
+                  transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
+                  cx="50" cy="77" r="5" fill="#F43F5E" stroke="#9D174D" strokeWidth="2.5" 
+                />
+              </motion.g>
+            </g>
+          </svg>
+        </div>
+      );
+
+    case 'retention-secure-lockbox':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#E6F9F1] via-[#D1F3E4] to-[#BEEBD6] overflow-hidden flex items-center justify-center border-b-4 border-[#10B981]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.4),transparent_60%)]" />
+          
+          {/* Nano-bees hovering protecting */}
+          <motion.div animate={{ y: [0, -12, 0], x: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 3.2 }} className="absolute text-emerald-800 top-11 left-12 text-sm">🐝</motion.div>
+          <motion.div animate={{ y: [0, 10, 0], x: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3.8, delay: 1 }} className="absolute text-emerald-800 bottom-14 right-14 text-xs">🐝</motion.div>
+
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            {/* Secure gold treasure chest */}
+            <g stroke="#064E3B" strokeWidth="3" strokeLinejoin="round">
+              {/* Chest base brown/gold */}
+              <rect x="55" y="75" width="90" height="42" rx="8" fill="#F59E0B" />
+              {/* Steel corners protection */}
+              <path d="M 55,75 L 70,75 L 70,117 L 55,117 Z" fill="#059669" />
+              <path d="M 145,75 L 130,75 L 130,117 L 145,117 Z" fill="#059669" />
+              
+              {/* Lid curve arch */}
+              <path d="M 55,75 C 55,48 145,48 145,75 Z" fill="#D97706" />
+              <path d="M 55,75 C 55,48 70,50 70,75 Z" fill="#059669" />
+              <path d="M 145,75 C 145,48 130,50 130,75 Z" fill="#059669" />
+            </g>
+
+            {/* Big cute lock right in the middle */}
+            <g transform="translate(88, 62)">
+              <motion.g
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ repeat: Infinity, duration: 2.5 }}
+              >
+                {/* Lock shackle path steel */}
+                <path d="M 10,12 L 10,-4 C 10,-10 26,-10 26,-4 L 26,12" stroke="#059669" strokeWidth="4.5" fill="none" />
+                
+                {/* Locking body gold */}
+                <rect x="0" y="8" width="36" height="30" rx="9" fill="#047857" stroke="#064E3B" strokeWidth="2.5" />
+                
+                {/* Cute smiling eyes in lock */}
+                <circle cx="11" cy="20" r="2.2" fill="#FFF" />
+                <circle cx="25" cy="20" r="2.2" fill="#FFF" />
+                <path d="M 15,28 Q 18,31 21,28" stroke="#FFF" strokeWidth="2" strokeLinecap="round" fill="none" />
+              </motion.g>
+            </g>
+          </svg>
+        </div>
+      );
+
+    case 'retention-team-responders':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#FEF7E6] via-[#FDEED3] to-[#FCDFA8] overflow-hidden flex items-center justify-center border-b-4 border-[#F59E0B]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.35),transparent_60%)]" />
+          
+          {/* Pulsing light bulb for ideas inspiration */}
+          <motion.div animate={{ scale: [0.95, 1.12, 0.95], opacity: [0.7, 1, 0.7] }} transition={{ repeat: Infinity, duration: 2 }} className="absolute text-yellow-500 top-8 right-16 text-lg">💡</motion.div>
+
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            {/* The artist drawing tablet desk */}
+            <rect x="35" y="45" width="130" height="85" rx="10" fill="#2D3748" stroke="#78350F" strokeWidth="3" />
+            <rect x="42" y="52" width="116" height="71" rx="4" fill="#E2E8F0" />
+
+            {/* Drawn sketch: Cute companion character waving hello with cartoon heart */}
+            <g transform="translate(68, 55)">
+              {/* Sprout head */}
+              <circle cx="32" cy="32" r="16" fill="#FFF" stroke="#2D3748" strokeWidth="2.5" />
+              <path d="M 32,16 C 30,5 38,5 36,16" fill="#22C55E" stroke="#2D3748" strokeWidth="1.8" />
+              <path d="M 26,28 Q 32,32 38,28" stroke="#2D3748" strokeWidth="2" fill="none" />
+              <path d="M 30,42 Q 32,45 34,42" fill="#EF4444" />
+              <motion.path 
+                animate={{ scale: [1, 1.25, 1] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+                d="M 52,20 C 50,16 56,12 56,18 L 52,20" fill="#EF4444" 
+              />
+            </g>
+
+            {/* Floating digital animator hand/pencil */}
+            <g transform="translate(132, 60)">
+              <motion.g
+                animate={{ x: [-8, 6, -8], y: [6, -6, 6] }}
+                transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+              >
+                {/* Yellow Pencil tool */}
+                <path d="M -15,22 L 15,-8 L 22,-1 L -8,29 Z" fill="#FBBF24" stroke="#2D3748" strokeWidth="2.5" />
+                {/* Pencil eraser red */}
+                <rect x="18" y="-4" width="6" height="6" fill="#FB7185" stroke="#2D3748" strokeWidth="1.5" transform="rotate(45)" />
+                {/* Pencil lead tip drawing */}
+                <path d="M -15,22 L -19,29 L -10,27 Z" fill="#1E293B" stroke="#2D3748" strokeWidth="2" />
+              </motion.g>
+            </g>
+          </svg>
+        </div>
+      );
+
+    case 'retention-alien-botany':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#F5EFFF] via-[#EAE1FF] to-[#DBD2FF] overflow-hidden flex items-center justify-center border-b-4 border-[#8B5CF6]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.355),transparent_60%)]" />
+
+          {/* Bioluminescent flying particles */}
+          <motion.div animate={{ opacity: [0.1, 0.9, 0.1], y: [0, -20, 0] }} transition={{ repeat: Infinity, duration: 3 }} className="absolute text-cyan-400 font-bold top-10 left-16 text-[8px]">✦</motion.div>
+          <motion.div animate={{ opacity: [0.2, 1, 0.2], y: [0, -25, 0] }} transition={{ repeat: Infinity, duration: 3.5, delay: 1 }} className="absolute text-fuchsia-400 font-bold bottom-16 right-20 text-[6px]">✦</motion.div>
+
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            {/* Round glass terrarium dome dome */}
+            <circle cx="100" cy="85" r="45" fill="#FFF" stroke="#5B21B6" strokeWidth="3" opacity="0.2" />
+            <path d="M 57,98 C 57,53 143,53 143,98 Z" fill="none" stroke="#5B21B6" strokeWidth="3.2" strokeLinecap="round" />
+            <ellipse cx="100" cy="98" rx="43" ry="12" fill="#DDD6FE" stroke="#5B21B6" strokeWidth="3" />
+
+            {/* Glowing neon alien botany mushroom character */}
+            <g transform="translate(73, 50)">
+              {/* Stem */}
+              <rect x="22" y="24" width="12" height="26" rx="5" fill="#E879F9" stroke="#5B21B6" strokeWidth="2.5" />
+              
+              {/* Neon glowing bioluminescent cap */}
+              <motion.path 
+                animate={{ fill: ["#A78BFA", "#C084FC", "#F472B6", "#A78BFA"] }}
+                transition={{ repeat: Infinity, duration: 4.2 }}
+                d="M 6,24 C 6,4 50,4 50,24 Z" stroke="#5B21B6" strokeWidth="3" 
+              />
+              
+              {/* Bright glowing spots on alien cap */}
+              <circle cx="20" cy="14" r="3" fill="#FFF" opacity="0.8" />
+              <circle cx="36" cy="12" r="2.5" fill="#FFF" opacity="0.8" />
+              <circle cx="14" cy="20" r="2" fill="#FFF" opacity="0.8" />
+              <circle cx="42" cy="19" r="2" fill="#FFF" opacity="0.8" />
+              
+              {/* Cute sleeping cozy face */}
+              <path d="M 24,32 Q 28,34 32,32" stroke="#5B21B6" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+            </g>
+
+            {/* Nurturing robot drone hover hovering on side */}
+            <g transform="translate(130, 32)">
+              <motion.g
+                animate={{ y: [-4, 5, -4], rotate: [-4, 4, -4] }}
+                transition={{ repeat: Infinity, duration: 3.4, ease: "easeInOut" }}
+              >
+                {/* Drone metallic chassis */}
+                <ellipse cx="20" cy="25" rx="14" ry="10" fill="#94A3B8" stroke="#5B21B6" strokeWidth="2.5" />
+                {/* Drone propeller blades */}
+                <path d="M 6,15 L 34,15" stroke="#475569" strokeWidth="2" strokeLinecap="round" />
+                <circle cx="20" cy="15" r="3" fill="#475569" />
+                
+                {/* Drone round cyclic laser optics glowing light */}
+                <circle cx="20" cy="25" r="4" fill="#06B6D4" />
+
+                {/* Laser beam focusing coordinates */}
+                <motion.line 
+                  animate={{ opacity: [0.1, 0.7, 0.1], strokeWidth: [1, 3, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                  x1="20" y1="35" x2="-20" y2="52" stroke="#22D3EE" 
+                />
+              </motion.g>
+            </g>
+          </svg>
+        </div>
+      );
+
+    case 'retention-habit-blueprint':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#EEF4FF] via-[#E0EBFF] to-[#CDDFFF] overflow-hidden flex items-center justify-center border-b-4 border-[#3B82F6]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.4),transparent_60%)]" />
+
+          {/* Animated reward level scores popping up */}
+          <motion.div animate={{ y: [42, -50], opacity: [0, 1, 0], scale: [0.7, 1.1, 0.7] }} transition={{ repeat: Infinity, duration: 2.8, ease: "easeOut" }} className="absolute text-[#3B82F6] font-black text-xs left-10 pt-10">+10 XP</motion.div>
+          <motion.div animate={{ y: [48, -42], opacity: [0, 1, 0], scale: [0.7, 1.1, 0.7] }} transition={{ repeat: Infinity, duration: 3, delay: 1.3, ease: "easeOut" }} className="absolute text-amber-600 font-black text-xs right-8 pt-12">+5 COINS</motion.div>
+
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            {/* Comic style fight slash stars */}
+            <path d="M 50,45 Q 100,25 100,5" fill="none" stroke="#BFDBFE" strokeWidth="6" strokeLinecap="round" opacity="0.4" />
+            <path d="M 150,45 Q 100,25 100,5" fill="none" stroke="#BFDBFE" strokeWidth="6" strokeLinecap="round" opacity="0.4" />
+
+            {/* Retro Gameboy console framing */}
+            <rect x="52" y="30" width="96" height="106" rx="14" fill="#93C5FD" stroke="#1E40AF" strokeWidth="3" />
+            <rect x="62" y="40" width="76" height="52" rx="4" fill="#1E40AF" stroke="#1E40AF" strokeWidth="2" />
+            
+            {/* Pixels screens */}
+            <rect x="64" y="42" width="72" height="48" rx="2" fill="#86EFAC" />
+
+            {/* Cute mini active platform level avatar */}
+            <g transform="translate(85, 52)">
+              <motion.g
+                animate={{ y: [0, -12, 0] }}
+                transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
+              >
+                {/* Body sprout */}
+                <rect x="4" y="12" width="22" height="20" rx="6" fill="#FFF" stroke="#1E40AF" strokeWidth="2.5" />
+                <path d="M 15,12 C 12,3 20,3 18,12" stroke="#1E40AF" strokeWidth="2" fill="none" />
+                {/* Sword held hero */}
+                <path d="M 26,22 L 36,12" stroke="#1E40AF" strokeWidth="3.2" strokeLinecap="round" />
+                <line x1="30" y1="18" x2="33" y2="21" stroke="#1E40AF" strokeWidth="2" />
+                {/* Little dot eyes */}
+                <circle cx="10" cy="20" r="1.5" fill="#1E40AF" />
+                <circle cx="20" cy="20" r="1.5" fill="#1E40AF" />
+              </motion.g>
+            </g>
+
+            {/* Gaming D-pad buttons */}
+            <rect x="65" y="104" width="24" height="6" rx="2.5" fill="#1E40AF" />
+            <rect x="74" y="95" width="6" height="24" rx="2.5" fill="#1E40AF" />
+            
+            <circle cx="118" cy="107" r="5" fill="#F43F5E" />
+            <circle cx="130" cy="107" r="5" fill="#FBBF24" />
+          </svg>
+        </div>
+      );
+
+    case 'retention-focus-isolation':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#EFF1F5] via-[#E2E4EB] to-[#CED2DE] overflow-hidden flex items-center justify-center border-b-4 border-[#1E293B]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.4),transparent_60%)]" />
+
+          {/* Sound wave lines fading */}
+          <motion.div animate={{ scale: [1, 1.4, 1], opacity: [0.1, 0.45, 0.1] }} transition={{ repeat: Infinity, duration: 3.5 }} className="absolute w-28 h-28 border border-slate-400 rounded-full" />
+          <motion.div animate={{ scale: [1, 1.4, 1], opacity: [0.1, 0.5, 0.1] }} transition={{ repeat: Infinity, duration: 3.5, delay: 1.5 }} className="absolute w-36 h-36 border border-slate-300 rounded-full" />
+
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            {/* Transparent Isolation protective forcefield shield dome */}
+            <circle cx="100" cy="80" r="48" fill="#F1F5F9" opacity="0.3" stroke="#475569" strokeWidth="2" strokeDasharray="5 5" />
+            
+            {/* Headset noise-canceling bands */}
+            <g transform="translate(68, 48)">
+              {/* Cute cozy character sitting in pad */}
+              <rect x="15" y="20" width="34" height="34" rx="11" fill="#FFF" stroke="#1E293B" strokeWidth="3" />
+              {/* Closed relaxed eyes */}
+              <path d="M 21,34 Q 24,37 26,34" stroke="#1E293B" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+              <path d="M 38,34 Q 41,37 43,34" stroke="#1E293B" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+              {/* Smiling peaceful lips */}
+              <path d="M 29,42 Q 32,44 35,42" stroke="#1E293B" strokeWidth="2" strokeLinecap="round" fill="none" />
+
+              {/* Sprout atop head */}
+              <path d="M 32,20 C 30,8 38,8 36,20" fill="#22C55E" stroke="#1E293B" strokeWidth="2.2" />
+
+              {/* Big thick headphone ears cups enclosing him */}
+              <motion.g animate={{ y: [-1, 1, -1] }} transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}>
+                {/* Band */}
+                <path d="M 12,25 C 12,5 52,5 52,25" stroke="#1E293B" strokeWidth="3.5" fill="none" />
+                {/* Left cup */}
+                <rect x="8" y="24" width="8" height="15" rx="3.5" fill="#3B82F6" stroke="#1E293B" strokeWidth="2.5" />
+                {/* Right cup */}
+                <rect x="48" y="24" width="8" height="15" rx="3.5" fill="#3B82F6" stroke="#1E293B" strokeWidth="2.5" />
+              </motion.g>
+            </g>
+          </svg>
+        </div>
+      );
+
+    case 'retention-anti-burnout':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#FFF0F0] via-[#FDE2E2] to-[#FCD3D3] overflow-hidden flex items-center justify-center border-b-4 border-[#EF4444]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.4),transparent_60%)]" />
+
+          {/* Hot amber sun on one side */}
+          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 25, ease: "linear" }} className="absolute text-amber-500 top-6 left-10 text-base">☀️</motion.div>
+          {/* Cool sleep moon on the other side */}
+          <motion.div animate={{ y: [-3, 3, -3] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }} className="absolute text-indigo-500 top-8 right-12 text-base">🌙</motion.div>
+
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            {/* The compass architecture ring */}
+            <circle cx="100" cy="80" r="42" fill="#FFF" stroke="#991B1B" strokeWidth="3" />
+            <circle cx="100" cy="80" r="34" fill="none" stroke="#FEE2E2" strokeWidth="2" strokeDasharray="3 3" />
+
+            {/* Central pivot point */}
+            <circle cx="100" cy="80" r="4" fill="#991B1B" />
+
+            {/* Spirit Butterfly balancing indicator pointer */}
+            <g transform="translate(100, 80)">
+              <motion.g
+                animate={{ rotate: [-22, 22, -22] }}
+                transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+              >
+                {/* Pointer needles */}
+                <path d="M 0,0 L 0,-30 L 3,-25 Z" fill="#EF4444" stroke="#991B1B" strokeWidth="1.5" />
+                <path d="M 0,0 L 0,30 L -3,25 Z" fill="#94A3B8" stroke="#991B1B" strokeWidth="1.5" />
+
+                {/* Animated soft butterfly wings resting upon pointer */}
+                <g transform="translate(0, -32) scale(0.65)" stroke="#991B1B" strokeWidth="1.8">
+                  <motion.path 
+                    animate={{ rotateY: [0, 68, 0] }}
+                    transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut" }}
+                    style={{ transformOrigin: "0px 0px" }}
+                    d="M 0,0 C 12,-15 25,-5 20,4 C 18,10 5,5 0,0" fill="#EF4444" 
+                  />
+                  <motion.path 
+                    animate={{ rotateY: [0, -68, 0] }}
+                    transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut" }}
+                    style={{ transformOrigin: "0px 0px" }}
+                    d="M 0,0 C -12,-15 -25,-5 -20,4 C -18,10 -5,5 0,0" fill="#EF4444" 
+                  />
+                </g>
+              </motion.g>
+            </g>
+          </svg>
+        </div>
+      );
+
+    case 'retention-secure-sharing':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#E6F8FA] via-[#D1F2F5] to-[#BFECEF] overflow-hidden flex items-center justify-center border-b-4 border-[#06B6D4]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.4),transparent_60%)]" />
+
+          {/* Glowing firefly delivering letters */}
+          <motion.div animate={{ y: [2, -18, 2], x: [-15, 15, -15], opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 5 }} className="absolute text-cyan-700 font-extrabold top-12 left-1/2 -translate-x-1/2 text-sm z-20">✉️</motion.div>
+
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            {/* Left plant pot */}
+            <g transform="translate(42, 85)" stroke="#164E63" strokeWidth="2.5" strokeLinejoin="round">
+              <path d="M 4,20 L 26,20 L 22,36 L 8,36 Z" fill="#A5F3FC" />
+              {/* Cute leaf sprout */}
+              <circle cx="15" cy="18" r="10" fill="#FFF" />
+              <path d="M 15,10 C 13,2 20,2 18,10" fill="#14B8A6" />
+              <circle cx="12" cy="16" r="1" fill="#164E63" />
+              <circle cx="18" cy="16" r="1" fill="#164E63" />
+            </g>
+
+            {/* Right plant pot */}
+            <g transform="translate(128, 85)" stroke="#164E63" strokeWidth="2.5" strokeLinejoin="round">
+              <path d="M 4,20 L 26,20 L 22,36 L 8,36 Z" fill="#A5F3FC" />
+              {/* Cute leaf sprout */}
+              <circle cx="15" cy="18" r="10" fill="#FFF" />
+              <path d="M 15,10 C 13,2 20,2 18,10" fill="#14B8A6" />
+              <circle cx="12" cy="16" r="1" fill="#164E63" />
+              <circle cx="18" cy="16" r="1" fill="#164E63" />
+            </g>
+
+            {/* Beautiful glowing green connecting trail vine */}
+            <motion.path 
+              animate={{ strokeDashoffset: [0, -40] }}
+              transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+              strokeDasharray="4 6"
+              d="M 57,98 C 80,75 118,75 143,98" fill="none" stroke="#06B6D4" strokeWidth="3" strokeLinecap="round" 
+            />
+
+            {/* Golden glowing central connection spark heart */}
+            <motion.path 
+              animate={{ scale: [0.95, 1.25, 0.95], opacity: [0.6, 1, 0.6] }}
+              transition={{ repeat: Infinity, duration: 1.8 }}
+              d="M 100,74 C 98,70 102,66 100,70 L 100,74" stroke="#F59E0B" strokeWidth="3.2" strokeLinecap="round" 
+            />
+          </svg>
+        </div>
+      );
+
+    case 'retention-future-upgrades':
+      return (
+        <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-[#FFF0F2] via-[#FDE2E6] to-[#FCD3DB] overflow-hidden flex items-center justify-center border-b-4 border-[#F43F5E]/15 shadow-inner group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.4),transparent_60%)]" />
+
+          {/* Dotted target upgrades spark */}
+          <motion.div animate={{ scale: [0.93, 1.1, 0.93] }} transition={{ repeat: Infinity, duration: 2.5 }} className="absolute text-rose-500 top-10 right-14 text-[11px] font-black">⚙️ FUTURE</motion.div>
+
+          <svg viewBox="0 0 200 150" className="w-44 h-36 relative z-10 transition-transform duration-500 group-hover:scale-105">
+            {/* The Blueprint blueprint background paper sheets grid grid */}
+            <rect x="35" y="35" width="130" height="96" rx="8" fill="#1E3A8A" stroke="#881337" strokeWidth="2.5" />
+            <line x1="35" y1="59" x2="165" y2="59" stroke="#3B82F6" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1="35" y1="83" x2="165" y2="83" stroke="#3B82F6" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1="35" y1="107" x2="165" y2="107" stroke="#3B82F6" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1="67" y1="35" x2="67" y2="131" stroke="#3B82F6" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1="100" y1="35" x2="100" y2="131" stroke="#3B82F6" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1="133" y1="35" x2="133" y2="131" stroke="#3B82F6" strokeWidth="1" strokeDasharray="2 3" />
+
+            {/* Futuristic drafted layout of robotic helper or mega-cactus and mechanics arm coordinates */}
+            <g opacity="0.9" stroke="#93C5FD" strokeWidth="2" strokeDasharray="2 2" fill="none">
+              <ellipse cx="100" cy="90" rx="20" ry="25" />
+              <path d="M 100,115 L 100,123" strokeWidth="3" />
+              
+              {/* Top antennas / sunglasses draft */}
+              <line x1="88" y1="78" x2="112" y2="78" strokeWidth="2.5" />
+              <circle cx="92" cy="78" r="4" fill="#93C5FD" />
+              <circle cx="108" cy="78" r="4" fill="#93C5FD" />
+
+              {/* Upgraded micro-drip arm robotic nozzle helper */}
+              <motion.path 
+                animate={{ rotate: [-8, 12, -8] }}
+                transition={{ repeat: Infinity, duration: 3 }}
+                style={{ transformOrigin: "145px 55px" }}
+                d="M 145,55 Q 120,45 110,65 L 104,60" stroke="#FFF" strokeWidth="2.5" 
+              />
+            </g>
+
+            {/* Glowing upgrade sparkles design */}
+            <g fill="#FFF">
+              <motion.circle animate={{ r: [1.5, 3.5, 1.5] }} transition={{ repeat: Infinity, duration: 1.5 }} cx="62" cy="50" r="2.5" />
+              <motion.circle animate={{ r: [1.5, 3.5, 1.5] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.7 }} cx="138" cy="115" r="2.5" />
+            </g>
+          </svg>
+        </div>
+      );
+
     default:
       return (
         <div className="relative w-full h-48 rounded-[2rem] bg-gradient-to-br from-blue-500 to-indigo-600 overflow-hidden flex items-center justify-center border-b-4 border-blue-900 shadow-inner">

@@ -1023,5 +1023,255 @@ export const KNOWLEDGE_BOOKS: Book[] = [
         }
       ]
     }
+  },
+  {
+    id: 'retention-progress-engine',
+    title: 'The Compound Progress Engine',
+    description: 'How Nexora tracks, visualizes, and celebrates your micro-habits for ultimate lifestyle compounding.',
+    icon: 'Activity',
+    coverColor: 'bg-[#6366F1]',
+    category: 'research',
+    content: {
+      title: 'Structural Habit Aggregation: The Progress Engine',
+      sections: [
+        {
+          heading: 'Micro-Steps as Atomic Fuel',
+          text: 'Many people fail in their self-growth journeys because they try to climb Everest on day one, bro! In Nexora, we break down your goals into tiny, non-exhausting physical and cognitive anchors. Completing a set of 5 pushups or taking a single sip of pure water feels effortless, but repeating this pattern daily triggers neural myelination, compounding into massive lifestyle upgrades.'
+        },
+        {
+          heading: 'Visualizing Hidden Momentum',
+          text: 'Your brain struggles to stay motivated when progress is invisible. That\'s why Nexora translates your real physical habits into direct digital nutrients. Every completed habit releases a splash of Life Essence, immediately growing your alien greenhouse plant species. This visual loop feeds your reward centers, showing you that every single action counts.'
+        },
+        {
+          heading: 'The Power of Long-Term Streaks',
+          text: 'Maintaining a daily streak builds immense mental momentum. When you see your garden flourish, your mind naturally protects that progress, turning healthy habits into an outstanding, automatic routine. Your growth charts aren\'t just numbers, comrade; they represent a real physical monument to your discipline.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'retention-smart-nudges',
+    title: 'Gentle Nudges, No Noise',
+    description: 'Our smart-reminder architecture adapts to your natural routine without alert fatigue.',
+    icon: 'Bell',
+    coverColor: 'bg-[#EC4899]',
+    category: 'research',
+    content: {
+      title: 'Circadian Notification Logic: Frictionless Reminders',
+      sections: [
+        {
+          heading: 'The Fight Against Spam',
+          text: 'Traditional apps bombard your phone with obnoxious alerts, triggering stress cortisol spikes and forcing you to block notifications entirely. Nexora is built differently, bro! We despise digital noise. Our notification engine is engineered to work in harmony with your natural biological clock, stepping back when you need absolute quiet.'
+        },
+        {
+          heading: 'Adaptive Reminders',
+          text: 'Nexora tracks your peak focus windows and schedules micro-reminders exactly when your cognitive reserves are running low. If you have been deep in study for 60 minutes, a soft notification nudges you to complete a 5.5-second resonant breathing cycle or sip crisp mineral water, keeping your brain hydrated and highly alert.'
+        },
+        {
+          heading: 'Customizing Your Shield',
+          text: 'You hold absolute command over the notification dial, comrade. Adjust reminder hours, turn off specific anchors, or silence alerts completely during your resting hours. We build tools that serve your lifestyle, giving you a powerful shield to protect your attention span and enjoy focus sovereignty.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'retention-secure-lockbox',
+    title: 'Your Private Lockbox',
+    description: 'Offline-first security and database protocols that keep your biometric focus data 100% private.',
+    icon: 'Shield',
+    coverColor: 'bg-[#10B981]',
+    category: 'research',
+    content: {
+      title: 'Cryptographic Sovereignty: Data Security Protocol',
+      sections: [
+        {
+          heading: 'True Privacy in the Cloud Era',
+          text: 'Most modern apps treat your personal biometric data as a product, harvesting and selling it to third-party ad networks. In the Nexora Protocol, your privacy is our ironclad covenant, bro! Your focus logs, physical stats, and garden histories belong solely to you, protected by rigorous, modern security.'
+        },
+        {
+          heading: 'Offline-First Storage',
+          text: 'Nexora is architected with a sandbox, offline-first structure. All your daily stats and custom settings reside securely inside your local container database. Any Firestore synchronization is fully transparent, cryptographically insulated, and managed with strict server-side rules, meaning nobody can peek inside your lockbox.'
+        },
+        {
+          heading: 'Absolute Cloud Defenses',
+          text: 'Our Firebase database infrastructure uses defensive, multi-layer security rules. Every piece of information requires secure authentication and individual user ID ownership verification before being processed. Rest easy knowing your digital greenhouse is an impenetrable, private sanctuary.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'retention-team-responders',
+    title: 'Co-Crafting Nexora',
+    description: 'How our crew responds to your feedback and bug reports to build your dream workspace.',
+    icon: 'MessageSquare',
+    coverColor: 'bg-[#F59E0B]',
+    category: 'research',
+    content: {
+      title: 'Radical User Collaboration: Feedback Pipelines',
+      sections: [
+        {
+          heading: 'No Corporate Bureaucracy',
+          text: 'Have you ever sent a bug report to a massive software company only to receive a robotic email reply that is never followed up on? It\'s incredibly irritating, bro! Our development crew belongs to the community. We read every bug ticket, crash log, and feature suggestion directly, acting on them with rapid speed.'
+        },
+        {
+          heading: 'Rapid Iteration Cycles',
+          text: 'We roll out continuous updates to fix bottlenecks and add new mechanics. When our users requested new botanical options and custom companions, we designed and shipped the Gardener Drone, the Nano-Bees Swarm, and the Spirit Butterfly. Your ideas are the direct architectural blueprints of our updates!'
+        },
+        {
+          heading: 'Reporting Made Simple',
+          text: 'Spotted a visual bug or have a legendary idea for a custom Alien Seed? Reach out directly using our feedback pipelines in the settings panel. Our engineering crew reviews and processes reports daily, co-crafting a pristine, high-contrast, and deeply rewarding experience with you.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'retention-alien-botany',
+    title: 'Bioluminescent Botany',
+    description: 'Why nurturing alien flora mirrors your real-world cognitive and physical accomplishments.',
+    icon: 'Compass',
+    coverColor: 'bg-[#8B5CF6]',
+    category: 'research',
+    content: {
+      title: 'Cyber-Biological Symbiosis: Alien Plant Rhythms',
+      sections: [
+        {
+          heading: 'The Greenhouse Connection',
+          text: 'Nexora\'s garden greenhouse is not a meaningless visual background, bro. It is a simulated cyber-biological ecosystem where your real physiological habits act as actual light and soil nutrients. By drinking pure water or executing perfect pushups, you release essential Life Essences that feed rare exotic species.'
+        },
+        {
+          heading: 'Somatic Mutation Codes',
+          text: 'Each botanical species has unique genetic pathways. The Crystal Cactus expands its spikes based on your active streak milestones, whereas the Symbiotic Mycelium expands its underground networks when you record reflective daily wins. Your garden acts as a high-fidelity visual mirror of your organic self-discipline.'
+        },
+        {
+          heading: 'Unlocking Exotic Seeds',
+          text: 'Visit the Merchant shop to purchase high-tech seeds (like the Carnivorous Pitcher or the Zen Bonsai) using your hard-earned Coins. Expanding your garden is a rewarding milestone: the more diverse and healthy your green oasis grows, the more passive mental focus bonuses you unlock!'
+        }
+      ]
+    }
+  },
+  {
+    id: 'retention-habit-blueprint',
+    title: 'Habit Level-Up Loop',
+    description: 'Deconstructing the gamification psychology that turns boring habits into exciting level-ups.',
+    icon: 'Trophy',
+    coverColor: 'bg-[#3B82F6]',
+    category: 'research',
+    content: {
+      title: 'Neurological Dopamine Re-Alignment: Habit Gamification',
+      sections: [
+        {
+          heading: 'Hacking the Cheat Code',
+          text: 'Modern mobile feeds and console games exploit your dopamine systems, rewarding useless virtual milestones that drain your real attention. Nexora turns this strategy entirely on its head, bro! We utilize the exact same excitement mechanisms, but align them directly with your real health goals.'
+        },
+        {
+          heading: 'The Level-Up Reward Matrix',
+          text: 'When you log a hydration check, complete a set of physical exercises, or finish reading deep archives books, you instantly receive XP and golden Coins. Watching your level gauge fill and hearing the satisfying chime fires off reward pathways, training your brain to love real productive actions.'
+        },
+        {
+          heading: 'Constructive Progression Cycles',
+          text: 'Leveling up unlocks fresh shop accessories, exotic pots, and powerful soil boosters. This progression creates a beautiful self-sustaining circle: real habits fuel digital level-ups, and digital achievements inspire you to stay dedicated, fit, and composed.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'retention-focus-isolation',
+    title: 'Focus Isolation Rig',
+    description: 'Reclaim deep attention spans using auditory and somatic boundaries.',
+    icon: 'Dumbbell',
+    coverColor: 'bg-[#1E293B]',
+    category: 'research',
+    content: {
+      title: 'Somatic Attention Architecture: The Isolation Rig',
+      sections: [
+        {
+          heading: 'The Fractured Attention Epidemic',
+          text: 'Stuck inside endless scrolls, modern attention spans are completely shattered, leaving people exhausted. To break this cycle, you must build absolute physical barriers, bro! True focus is not about fighting temptation; it is about designing a quiet, distraction-free environment.'
+        },
+        {
+          heading: 'Auditory Isolation Shields',
+          text: 'Combine Nexora\'s Binaural Auditory loops with steady pink or brown noise inside your ears. This rich, continuous acoustic texture blocks out unpredictable background noise and room echoes immediately, shielding your working memory from sudden visual or audio disruptions.'
+        },
+        {
+          heading: 'Defining Spatial Boundaries',
+          text: 'Designate a pure "Focus Desk" entirely free of phones, notes, or toys. Initiate a 60-minute isolation session, load your study materials, and let your brain sit with low-frequency, deep work. Reclaim focus sovereignty and watch your productivity expand.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'retention-anti-burnout',
+    title: 'Sustainable Stoicism',
+    description: 'How Nexora guards against systemic fatigue and balances intensive days with restorative rests.',
+    icon: 'Heart',
+    coverColor: 'bg-[#EF4444]',
+    category: 'research',
+    content: {
+      title: 'Adaptive Energy Preservation: Fatigue Control Protocol',
+      sections: [
+        {
+          heading: 'The Toxic Burnout Cycle',
+          text: 'In our high-pressure society, people push themselves to exhaustion, only to crash and burn within weeks. This is highly inefficient, bro! High performance requires consistent physical maintenance. If you force yourself to go at 100% capacity daily, your nervous system will collapse.'
+        },
+        {
+          heading: 'Intelligent Energy Restorations',
+          text: 'Nexora is equipped with automatic rest guardrails. If your stats show extreme exertion or consecutive intense workouts, we encourage you to balance physical triggers with longer, restorative vagal breathing sessions. Honoring recovery ensures you never break your streaks.'
+        },
+        {
+          heading: 'Listen to the Body Dial',
+          text: 'If you feel low-grade fatigue or mental fog, do not try to bulldoze through it with caffeine, comrade. Turn down active intensity. Lower your workout repetitions, double your hydration rate, and complete a simple chin-tuck reset. Treat recovery with the respect it deserves.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'retention-secure-sharing',
+    title: 'Symmetric Social Echoes',
+    description: 'Safe, non-intrusive accountability structures to share garden achievements with trusted peers.',
+    icon: 'Users',
+    coverColor: 'bg-[#06B6D4]',
+    category: 'research',
+    content: {
+      title: 'Sovereign Social Connections: Accountability Bridges',
+      sections: [
+        {
+          heading: 'The Toxicity of Public Feeds',
+          text: 'Public social networks are design traps that fuel comparison anxiety, toxic envy, and endless visual bragging. Nexora bypasses this toxic noise. We believe in symmetric, secure sharing—connecting you directly with small, high-fidelity groups of trusted friends.'
+        },
+        {
+          heading: 'Synchronizing Growth Monuments',
+          text: 'By checking your friends\' greenhouse status, you can see their flourishing Alien Plants and stats. If a comrade falls behind on their water checks, send a supportive notification nudge. This quiet, mutual support provides massive accountability without corporate noise.'
+        },
+        {
+          heading: 'Quiet Accountability',
+          text: 'No likes, no comments, no endless feeds to scroll, bro. Just direct, visual proof of real dedication. Sharing your garden is a beautiful silent agreement to keep growing together, reinforcing physical disciplines and achieving collective stoic focus.'
+        }
+      ]
+    }
+  },
+  {
+    id: 'retention-future-upgrades',
+    title: 'Ecosystem Dreams',
+    description: 'A sneak peek of legendary upgrades, robot helpers, and upcoming custom flora.',
+    icon: 'Sparkles',
+    coverColor: 'bg-[#F43F5E]',
+    category: 'research',
+    content: {
+      title: 'Greenhouse Extension Blueprints: Future Roadmap',
+      sections: [
+        {
+          heading: 'Exotic Bio-Species Concepts',
+          text: 'The Nexora Greenhouse is constantly expanding, comrade! Our botanists are currently synthesizing beautiful alien species, like the Chronos Moss (which changes bioluminescent colors based on raw focus times) and the Solar Orchid (which absorbs physical sun exposure data).'
+        },
+        {
+          heading: 'Mechanical Garden Companions',
+          text: 'Upgrading your greenhouse will soon include incredible mechanical helpers. We are designing custom automation nodes: micro-drip soil sensors, flying solar scanners, and tiny companion birds that play beautiful, ambient sitar melodies depending on your daily mood logs.'
+        },
+        {
+          heading: 'Sovereign Integration Systems',
+          text: 'We are planning direct local integrations with physical focus dials, e-paper dashboards, and smart water bottles. The future of Nexora is a seamless connection between your physical home, biological health, and digital greenhouse. Get ready for legendary adventures, bro!'
+        }
+      ]
+    }
   }
 ];
