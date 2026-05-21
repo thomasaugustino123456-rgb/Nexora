@@ -2688,7 +2688,16 @@ export default function App() {
             localEntry.photoURL = settings.profilePic || localEntry.photoURL;
           }
           setLeaderboard(
-            data.sort((a, b) => (b.weeklyXP || 0) - (a.weeklyXP || 0)),
+            data.sort((a, b) => {
+              // Primary: weeklyXP desc
+              const xpDiff = (b.weeklyXP || 0) - (a.weeklyXP || 0);
+              if (xpDiff !== 0) return xpDiff;
+              // Secondary: streak desc
+              const streakDiff = (b.streak || 0) - (a.streak || 0);
+              if (streakDiff !== 0) return streakDiff;
+              // Tertiary: level desc
+              return (b.level || 0) - (a.level || 0);
+            }),
           );
         },
         (error) => {
