@@ -8,6 +8,7 @@ import {
 import {
   doc,
   getDoc,
+  getDocs,
   setDoc,
   serverTimestamp,
   onSnapshot,
@@ -149,32 +150,44 @@ export function useNexoraData(
     return unsubscribeAuth;
   }, []);
 
-  // Separate effect for standardizing firestore listeners to prevent leaks
+  // Separate effect for standardizing firestore listeners to prevent leaks (Optimized to getDoc on login to prevent infinite feedback rendering loops)
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setIsDataReady(false);
+      setLoading(false);
+      return;
+    }
 
-    const userDocRef = doc(db, "users", user.uid);
-    const progressDocRef = doc(db, "users", user.uid, "progress", today);
+    const loadData = async () => {
+      const userDocRef = doc(db, "users", user.uid);
+      const progressDocRef = doc(db, "users", user.uid, "progress", today);
+      const ecoShopRef = collection(db, "users", user.uid, "eco_shop");
 
-    // Safety timeout for slow or offline connections
-    const timeoutDuration = navigator.onLine ? 8000 : 250;
-    const loadingTimeout = setTimeout(() => {
-      if (!isDataReady) {
-        console.warn(
-          "Hooks: Loading timeout reached, forcing ready state for offline use.",
-        );
-        setIsDataReady(true);
-        setLoading(false);
-      }
-    }, timeoutDuration);
+      try {
+        const [docSnap, progressSnap, ecoSnap] = await Promise.all([
+          getDoc(userDocRef),
+          getDoc(progressDocRef),
+          getDocs(ecoShopRef),
+        ]);
 
-    const unsubUser = onSnapshot(
-      userDocRef,
-      (docSnap) => {
-        clearTimeout(loadingTimeout);
+        let firestoreSettings = DEFAULT_SETTINGS;
+        let firestoreStats = DEFAULT_STATS;
+        let firestoreProgress = {
+          date: today,
+          completed: false,
+          pushupsDone: false,
+          waterDrank: 0,
+          breathingDone: false,
+          drawingDone: false,
+          footballDone: false,
+          bubblesDone: false,
+          completionsCount: 0,
+          nextRestorationTime: null,
+        } as DailyProgress;
+
         if (docSnap.exists()) {
           const data = docSnap.data();
-          const firestoreSettings = {
+          firestoreSettings = {
             ...DEFAULT_SETTINGS,
             ...data,
             plantState: {
@@ -183,7 +196,7 @@ export function useNexoraData(
             },
           };
 
-          const firestoreStats = {
+          firestoreStats = {
             ...DEFAULT_STATS,
             ...(data.stats || {}),
             pointsByCategory: {
@@ -192,73 +205,71 @@ export function useNexoraData(
             },
             trophies: data.stats?.trophies || [],
           };
-
-          // If the profile exists in Firestore, the user is an existing user.
-          // Since their user document exists, they are 100% an existing user and should skip onboarding.
-          const isCompleted = true;
-          setSettings(firestoreSettings);
-          setStats(firestoreStats);
-          setNeedsOnboarding(!isCompleted);
-          
-          if (isCompleted) {
-            localStorage.setItem("nexora_onboarding_completed", "true");
-          }
-
-          localStorage.setItem(
-            "nexora_settings",
-            JSON.stringify(firestoreSettings),
-          );
-          localStorage.setItem("nexora_stats", JSON.stringify(firestoreStats));
-
-          dataLoadedFromFirestore.current = true;
-          setIsDataReady(true);
-          setLoading(false);
+          setNeedsOnboarding(false);
+          localStorage.setItem("nexora_onboarding_completed", "true");
         } else {
-          console.log("Hooks: User doc not found, marked as ready (new user).");
+          console.log("Hooks: User doc not found, introducing onboarding.");
           setNeedsOnboarding(true);
-          setIsDataReady(true);
-          setLoading(false);
         }
-      },
-      (error) => {
-        console.error("Hooks: User snapshot error:", error);
+
+        if (progressSnap.exists()) {
+          const pData = progressSnap.data();
+          if (pData.date === today) {
+            firestoreProgress = {
+              ...firestoreProgress,
+              ...pData,
+            };
+          }
+        }
+
+        // Add eco shop items to settings
+        const ecoIds = ecoSnap.docs.map((d) => d.id);
+        if (ecoIds.length > 0) {
+          firestoreSettings.purchasedEcosystemItemIds = [
+            ...new Set([
+              ...(firestoreSettings.purchasedEcosystemItemIds || []),
+              ...ecoIds,
+            ]),
+          ];
+        }
+
+        // Save to state and local cache immediately
+        setSettings(firestoreSettings);
+        setStats(firestoreStats);
+        setDailyProgress(firestoreProgress);
+
+        localStorage.setItem("nexora_settings", JSON.stringify(firestoreSettings));
+        localStorage.setItem("nexora_stats", JSON.stringify(firestoreStats));
+        localStorage.setItem("nexora_progress", JSON.stringify(firestoreProgress));
+        localStorage.setItem(`nexora_progress_${today}`, JSON.stringify(firestoreProgress));
+
+        // Background preload remaining progress history docs from Firestore
+        try {
+          const progressCollRef = collection(db, "users", user.uid, "progress");
+          const historySnap = await getDocs(progressCollRef);
+          historySnap.forEach((doc) => {
+            const hData = doc.data();
+            if (hData && hData.date) {
+              localStorage.setItem(`nexora_progress_${hData.date}`, JSON.stringify(hData));
+            }
+          });
+        } catch (historyErr) {
+          console.warn("Hooks: Error fetching history list from firestore:", historyErr);
+        }
+
+        dataLoadedFromFirestore.current = true;
         setIsDataReady(true);
         setLoading(false);
-      },
-    );
-
-    const unsubProgress = onSnapshot(progressDocRef, (progressSnap) => {
-      if (progressSnap.exists()) {
-        const pData = progressSnap.data();
-        setDailyProgress((prev) => {
-          // Only update if dates match and it's actually different
-          if (pData.date === today) {
-            return { ...prev, ...pData };
-          }
-          return prev;
-        });
+      } catch (err) {
+        console.error("Hooks: Error loading initial user data, fallback to cache: ", err);
+        // Offline check / query blocked: fallback immediately to local cache so user can work uninterrupted
+        dataLoadedFromFirestore.current = true;
+        setIsDataReady(true);
+        setLoading(false);
       }
-    });
-
-    // NEW: Load Ecosystem Shop Items
-    const ecoShopRef = collection(db, "users", user.uid, "eco_shop");
-    const unsubEcoShop = onSnapshot(ecoShopRef, (snap) => {
-      const ecoIds = snap.docs.map((doc) => doc.id);
-      if (ecoIds.length > 0) {
-        setSettings((prev) => ({
-          ...prev,
-          purchasedEcosystemItemIds: [
-            ...new Set([...(prev.purchasedEcosystemItemIds || []), ...ecoIds]),
-          ],
-        }));
-      }
-    });
-
-    return () => {
-      unsubUser();
-      unsubProgress();
-      unsubEcoShop();
     };
+
+    loadData();
   }, [user]);
 
   // Background Sync Effect with Aggressive Throttling (Optimized)
@@ -331,6 +342,8 @@ export function useNexoraData(
               photoURL: settings.profilePic || user.photoURL || "",
               streak: stats.streak || 0,
               totalPoints: stats.totalPoints || 0,
+              weeklyXP: stats.weeklyXP || 0,
+              weeklyPoints: stats.weeklyPoints || 0,
               level: Math.floor((stats.totalPoints || 0) / 1000) + 1,
               league: settings.league || "Bronze",
             },
@@ -350,11 +363,11 @@ export function useNexoraData(
       }
     };
 
-    // 5-second debounce for faster background sync
+    // 1-second debounce for faster background sync (Ensures no data loss on immediate exits)
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     if (document.hidden) return; // Don't sync if tab is backgrounded
 
-    syncTimeoutRef.current = setTimeout(syncData, 5000);
+    syncTimeoutRef.current = setTimeout(syncData, 1000);
 
     return () => {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);

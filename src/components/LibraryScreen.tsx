@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, Video, Trash2, CheckCircle2, Play, Pause,
-  Palette, StickyNote, Zap, Heart, Disc, Eye, Sparkles, AlertCircle
+  Palette, StickyNote, Zap, Heart, Disc, Eye, Sparkles, AlertCircle,
+  ChevronRight
 } from 'lucide-react';
 import { LibraryItem, UserStats, UserSettings, NexusVideo } from '../types';
 
@@ -38,7 +39,8 @@ export function LibraryScreen({
   onDeleteNote,
   onDeleteDrawing,
   onDeleteChallenge,
-  onPlayChallenge
+  onPlayChallenge,
+  onBack
 }: LibraryScreenProps) {
   const [activeTab, setActiveTab] = useState<Tab>('inventory');
 
@@ -55,54 +57,66 @@ export function LibraryScreen({
   };
 
   return (
-    <div className="w-full bg-[#fcfdff] min-h-screen pb-36 px-4 md:px-6">
-      {/* 1. High-Prestige Hero Banner - Integrated flat information header */}
-      <div className="pt-6 pb-2">
-        <div className="flex items-center justify-between gap-4 py-4 border-b border-slate-100">
-          <div className="flex-1 space-y-1">
-            <div className="flex items-center gap-1.5 text-blue-600">
-              <Sparkles size={11} className="fill-blue-50 text-blue-600 animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-wider text-blue-600">Nexus Vault System</span>
-            </div>
-            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Your Asset Treasury</h3>
-            <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-              Equip unlocked cosmetic skins, stream custom high-frequency ambient audio, or practice pinned task guidelines.
-            </p>
-          </div>
-          <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-blue-50 border border-blue-100/50 rounded-2xl text-blue-600">
-            <Package size={22} className="fill-blue-50 text-blue-600" />
-          </div>
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-[#F3F7FA] via-white to-white pb-36 overflow-x-hidden w-full">
+      {/* 1. Sticky Premium Header - Styled exactly like the Rank section's leaderboard bar */}
+      <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-slate-100 shadow-sm">
+        <button 
+          onClick={onBack} 
+          className="p-3 bg-slate-50 border border-slate-100 shadow-sm rounded-2xl text-blue-900/60 hover:text-blue-900 hover:bg-slate-100 active:scale-95 transition-all text-[12px] font-black uppercase tracking-wider flex items-center gap-1"
+        >
+          <ChevronRight className="rotate-180" size={16} /> BACK
+        </button>
+        <div className="text-center">
+          <p className="text-[10px] font-black uppercase text-blue-500 tracking-[0.2em] animate-pulse">Your Treasury</p>
+          <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">Vault System</h2>
+        </div>
+        <div className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-inner">
+          <Package size={18} className="text-blue-600" />
         </div>
       </div>
 
-      {/* 2. Horizontal Navigation Bento Tabs - Streamlined continuous layout */}
-      <div className="flex px-1 gap-2 py-4 overflow-x-auto no-scrollbar">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as Tab)}
-              className={`flex flex-col items-start p-3 rounded-2xl border transition-all text-left flex-shrink-0 min-w-[110px] sm:min-w-[130px] ${
-                isActive 
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/15 scale-[1.03]' 
-                  : 'bg-white text-slate-700 border-slate-200/60 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <Icon size={14} className={isActive ? 'text-white' : 'text-slate-400'} />
-                <span className="text-[10px] font-black uppercase tracking-wider">{tab.label}</span>
-              </div>
-              <span className={`text-[8px] font-bold uppercase tracking-wide truncate w-full ${isActive ? 'text-blue-100' : 'text-slate-400'}`}>
-                {tab.desc}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <div className="px-4 md:px-6 mt-4">
+        {/* 2. Flat High-Prestige Description Card */}
+        <div className="max-w-2xl mx-auto bg-white border border-slate-150 rounded-[2rem] p-5 shadow-sm flex items-start gap-4 mb-4">
+          <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-2xl text-indigo-600 mt-0.5 flex-shrink-0 animate-bounce">
+            <Sparkles size={16} className="text-indigo-600 fill-indigo-100" />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">Nexus Asset Treasury</h3>
+            <p className="text-[11px] text-slate-500 font-semibold leading-relaxed mt-1">
+              Toggle purchased custom songs, equip exclusive skins for your mascot, replay pinned step guidelines, and admire your sketches dynamically.
+            </p>
+          </div>
+        </div>
 
-      <div className="mt-4 max-w-2xl mx-auto space-y-6">
+        {/* 3. Horizontal Bento Tabs - Elegant flat continuous layout */}
+        <div className="max-w-2xl mx-auto flex gap-2.5 pb-2 overflow-x-auto no-scrollbar scroll-smooth">
+          {tabs.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as Tab)}
+                className={`flex flex-col items-start p-3.5 rounded-2xl border transition-all text-left flex-shrink-0 min-w-[125px] sm:min-w-[145px] hover:scale-[1.02] active:scale-[0.98] ${
+                  isActive 
+                    ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white border-blue-600 shadow-md shadow-blue-500/20' 
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-sm'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Icon size={14} className={isActive ? 'text-white' : 'text-slate-400'} />
+                  <span className="text-[10px] font-black uppercase tracking-wider">{tab.label}</span>
+                </div>
+                <span className={`text-[9px] font-bold uppercase tracking-wide truncate w-full block ${isActive ? 'text-blue-100' : 'text-slate-400'}`}>
+                  {tab.desc}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 max-w-2xl mx-auto space-y-6">
         <AnimatePresence mode="wait">
           {activeTab === 'inventory' && (
             <motion.div
@@ -437,5 +451,6 @@ export function LibraryScreen({
         </AnimatePresence>
       </div>
     </div>
+  </div>
   );
 }

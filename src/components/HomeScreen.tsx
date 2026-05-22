@@ -428,7 +428,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
               <Mascot 
                 className="w-full h-full" 
                 mood={mascotMood}
-                hat={settings.activeSkin || settings.activeHat || 'none'}
+                hat={settings.activeHat || 'none'}
                 theme={settings.activeSkin || 'standard'}
                 soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'}
                 onClick={handleMascotTap}
