@@ -74,6 +74,7 @@ export function useNexoraData(
   );
 
   const [needsOnboarding, setNeedsOnboarding] = useState(!cachedOnboarding);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const dataLoadedFromFirestore = useRef(false);
   const lastLoadedUserIdRef = useRef<string | null>(null);
   const quotaExceededRef = useRef(false);
@@ -185,17 +186,20 @@ export function useNexoraData(
 
     // Safety timeout: if Firestore takes too long (or user is offline), immediately open using local cached data!
     // This stops the app from getting stuck on the SplashScreen indefinitely and makes loading immediate.
-    const timeoutDuration = navigator.onLine ? 3000 : 300;
-    const loadingTimeout = setTimeout(() => {
-      if (!isLoaderResolved) {
-        console.warn("Hooks: Loading timeout reached, letting user open with cached local data.");
-        // We set isDataReady or loading so the app opens instantly.
-        // We do NOT set dataLoadedFromFirestore to true so background sync is blocked,
-        // preventing any default overwriting of the database.
-        setIsDataReady(true);
-        setLoading(false);
-      }
-    }, timeoutDuration);
+    // ONLY apply timeout if we have local cache to fall back on. If we just logged in (no cache),
+    // we MUST wait for Firestore, otherwise returning users are forced into Onboarding!
+    let loadingTimeout: NodeJS.Timeout | null = null;
+    
+    if (hasCache) {
+      const timeoutDuration = navigator.onLine ? 3000 : 300;
+      loadingTimeout = setTimeout(() => {
+        if (!isLoaderResolved) {
+          console.warn("Hooks: Loading timeout reached, letting user open with cached local data.");
+          setIsDataReady(true);
+          setLoading(false);
+        }
+      }, timeoutDuration);
+    }
 
     const loadData = async () => {
       const userDocRef = doc(db, "users", user.uid);
@@ -303,20 +307,28 @@ export function useNexoraData(
         // Successfully loaded. Safe to sync background changes now!
         dataLoadedFromFirestore.current = true;
         lastLoadedUserIdRef.current = user.uid;
-        clearTimeout(loadingTimeout);
+        if (loadingTimeout) clearTimeout(loadingTimeout);
         isLoaderResolved = true;
         setIsDataReady(true);
         setLoading(false);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Hooks: Error loading initial user data, fallback to cache: ", err);
         if (!isLoaderResolved) {
-          clearTimeout(loadingTimeout);
+          if (loadingTimeout) clearTimeout(loadingTimeout);
           isLoaderResolved = true;
 
           // Check if local cache indicates onboarding is already completed
           const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
-          setNeedsOnboarding(!onboardingComp);
+          
+          if (!hasCache) {
+             console.error("Critical: User has no local cache and Firestore failed. Halting app to prevent data overwrite.");
+             setLoadError("A network or server error occurred while retrieving your profile. Please check your connection and try again later.");
+             setIsDataReady(false);
+             setLoading(false);
+             return;
+          }
 
+          setNeedsOnboarding(!onboardingComp);
           setIsDataReady(true);
           setLoading(false);
         }
@@ -326,7 +338,7 @@ export function useNexoraData(
     loadData();
 
     return () => {
-      clearTimeout(loadingTimeout);
+      if (loadingTimeout) clearTimeout(loadingTimeout);
     };
   }, [user]);
 
@@ -508,5 +520,6 @@ export function useNexoraData(
     needsOnboarding,
     setNeedsOnboarding,
     dataLoadedFromFirestore,
+    loadError,
   };
 }
