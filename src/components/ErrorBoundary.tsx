@@ -26,6 +26,29 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('NEXORA CRITICAL ERROR:', error, errorInfo);
+    
+    // Check for dynamic import failure or chunk missing due to live hot patches / updates
+    const errorMsg = error.message || '';
+    if (
+      errorMsg.includes('Failed to fetch dynamically imported module') ||
+      errorMsg.includes('loading chunk') ||
+      errorMsg.includes('dynamic import') ||
+      errorMsg.includes('Dynamic import')
+    ) {
+      console.warn("NEXORA SEAMLESS SELF-HEAL: Dynamic import failed due to live app deployment update. Fetching latest assets...", errorMsg);
+      const reloadKey = 'nexora_chunk_reload_timestamp';
+      const lastReload = sessionStorage.getItem(reloadKey);
+      const now = Date.now();
+      
+      // Auto-reboot at most once every 15 seconds to avoid recursive infinite reload loops
+      if (!lastReload || now - parseInt(lastReload) > 15000) {
+        sessionStorage.setItem(reloadKey, String(now));
+        // Force a hard reload by adding a cache-busting timestamp parameter
+        const url = new URL(window.location.href);
+        url.searchParams.set('reload', String(now));
+        window.location.href = url.toString();
+      }
+    }
   }
 
   private handleReset = () => {

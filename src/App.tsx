@@ -3380,25 +3380,20 @@ export default function App() {
     const performDeletion = async (currentUser: FirebaseUser) => {
       const userId = currentUser.uid;
 
-      // 1. Delete user data from Firestore (Best effort)
+      // 1. Delete user data from Firestore
       try {
         const todayStr = new Date().toISOString().split("T")[0];
         await deleteDoc(doc(db, "users", userId, "progress", todayStr));
         await deleteDoc(doc(db, "leaderboard", userId));
-      } catch (e) {
-        console.warn("Failed to delete some associated documents", e);
-      }
-
-      try {
         await deleteDoc(doc(db, "users", userId));
       } catch (e) {
-        console.warn("Failed to delete user root document", e);
+        console.warn("Failed to delete user documents", e);
       }
 
       // 2. Delete the auth account
       await deleteUser(currentUser);
 
-      // Clear localStorage unconditionally
+      // Clear localStorage
       Object.keys(localStorage).forEach((key) => {
         if (key.startsWith("nexora_")) {
           localStorage.removeItem(key);

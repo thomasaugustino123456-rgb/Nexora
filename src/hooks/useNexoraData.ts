@@ -73,7 +73,7 @@ export function useNexoraData(
         },
   );
 
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(!cachedOnboarding);
   const dataLoadedFromFirestore = useRef(false);
   const lastLoadedUserIdRef = useRef<string | null>(null);
   const quotaExceededRef = useRef(false);
