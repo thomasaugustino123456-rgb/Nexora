@@ -23,30 +23,60 @@
     background: linear-gradient(180deg, #020813 0%, #05142B 50%, #0B2545 100%) !important;
     background-color: #020813 !important;
     color: #E2F1FF !important;
+    --surface-bg: rgba(8, 20, 42, 0.85);
+    --input-bg: rgba(5, 12, 28, 0.75);
+    --border-color: rgba(0, 242, 254, 0.18);
+    --text-primary: #F0FAFF;
+    --text-secondary: #8CACC2;
+    --accent-glow: rgba(0, 242, 254, 0.06);
   }
 
   body.theme-oceanic_midnight {
     background: linear-gradient(180deg, #020813 0%, #05142B 50%, #0B2545 100%) !important;
     background-color: #020813 !important;
     color: #E2F1FF !important;
+    --surface-bg: rgba(8, 20, 42, 0.85);
+    --input-bg: rgba(5, 12, 28, 0.75);
+    --border-color: rgba(0, 242, 254, 0.18);
+    --text-primary: #F0FAFF;
+    --text-secondary: #8CACC2;
+    --accent-glow: rgba(0, 242, 254, 0.06);
   }
 
   body.theme-obsidian {
     background: linear-gradient(180deg, #05070A 0%, #0B0E14 60%, #121620 100%) !important;
     background-color: #05070A !important;
     color: #E2E8F0 !important;
+    --surface-bg: rgba(13, 17, 26, 0.85);
+    --input-bg: rgba(8, 11, 18, 0.75);
+    --border-color: rgba(255, 255, 255, 0.12);
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --accent-glow: rgba(255, 255, 255, 0.02);
   }
 
   body.theme-neural_bio {
     background: linear-gradient(180deg, #020604 0%, #05150D 60%, #082214 100%) !important;
     background-color: #020604 !important;
     color: #E6F4EA !important;
+    --surface-bg: rgba(6, 18, 12, 0.85);
+    --input-bg: rgba(4, 12, 8, 0.75);
+    --border-color: rgba(16, 185, 129, 0.25);
+    --text-primary: #F0FDF4;
+    --text-secondary: #A7F3D0;
+    --accent-glow: rgba(16, 185, 129, 0.08);
   }
 
   body.theme-sunset {
     background: linear-gradient(180deg, #0F040F 0%, #1A071A 60%, #320820 100%) !important;
     background-color: #0F040F !important;
     color: #FDF2F8 !important;
+    --surface-bg: rgba(20, 8, 22, 0.85);
+    --input-bg: rgba(12, 4, 14, 0.75);
+    --border-color: rgba(244, 63, 94, 0.25);
+    --text-primary: #FFF5F5;
+    --text-secondary: #FDA4AF;
+    --accent-glow: rgba(244, 63, 94, 0.05);
   }
 }
 
@@ -239,6 +269,50 @@
   color: rgba(255, 255, 255, 0.05) !important;
 }
 
+/* Universal Dark Variant Adaptation Filters to automatically match ANY active premium skin */
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-white {
+  background-color: var(--surface-bg, rgba(13, 17, 26, 0.85)) !important;
+  color: var(--text-primary, #F8FAFC) !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-white\/80 {
+  background-color: var(--surface-bg, rgba(13, 17, 26, 0.8)) !important;
+  color: var(--text-primary, #F8FAFC) !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50\/50,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-purple-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-orange-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-emerald-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-yellow-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-purple-50\/50,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-red-50\/50 {
+  background-color: var(--input-bg, rgba(8, 11, 18, 0.75)) !important;
+  color: var(--text-primary, #F8FAFC) !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-blue-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-blue-200,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-emerald-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-orange-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-yellow-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-purple-200,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-white\/50 {
+  border-color: var(--border-color, rgba(255, 255, 255, 0.12)) !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900 {
+  color: var(--text-primary, #F8FAFC) !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-600,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-500 {
+  color: var(--text-secondary, #94A3B8) !important;
+}
+
 /* background and border adaptive filters */
 :is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-900\/10 {
   background-color: rgba(255, 255, 255, 0.08) !important;
@@ -247,9 +321,6 @@
   background-color: rgba(255, 255, 255, 0.04) !important;
 }
 :is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-blue-900\/10 {
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-white\/50 {
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 :is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50 {
