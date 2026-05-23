@@ -90,9 +90,11 @@ export function useNexoraData(
     initAuth();
 
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      const prevUserId = localStorage.getItem("nexora_cached_user");
+
       if (currentUser) {
-        const prevUserId = localStorage.getItem("nexora_cached_user");
-        if (prevUserId !== currentUser.uid) {
+        if (prevUserId && prevUserId !== currentUser.uid) {
+          console.log("Hooks: Different user detected, resetting caches in-memory and locally.");
           Object.keys(localStorage).forEach((key) => {
             if (key.startsWith("nexora_") && key !== "nexora_cached_user") {
               localStorage.removeItem(key);
@@ -120,27 +122,32 @@ export function useNexoraData(
         localStorage.setItem("nexora_cached_user", currentUser.uid);
         setUser(currentUser);
       } else {
-        Object.keys(localStorage).forEach((key) => {
-          if (key.startsWith("nexora_")) {
-            localStorage.removeItem(key);
-          }
-        });
-        setSettings(DEFAULT_SETTINGS);
-        setStats(DEFAULT_STATS);
-        setDailyProgress({
-          date: today,
-          completed: false,
-          pushupsDone: false,
-          waterDrank: 0,
-          breathingDone: false,
-          drawingDone: false,
-          footballDone: false,
-          bubblesDone: false,
-          completionsCount: 0,
-          nextRestorationTime: null,
-        });
+        // Only clear caches if they actually had an active user before (explicit sign out).
+        // This prevents erasing local caches/onboarding flags during transient startup initialization.
+        if (prevUserId) {
+          console.log("Hooks: User explicit logout, clearing caches.");
+          Object.keys(localStorage).forEach((key) => {
+            if (key.startsWith("nexora_")) {
+              localStorage.removeItem(key);
+            }
+          });
+          setSettings(DEFAULT_SETTINGS);
+          setStats(DEFAULT_STATS);
+          setDailyProgress({
+            date: today,
+            completed: false,
+            pushupsDone: false,
+            waterDrank: 0,
+            breathingDone: false,
+            drawingDone: false,
+            footballDone: false,
+            bubblesDone: false,
+            completionsCount: 0,
+            nextRestorationTime: null,
+          });
+        }
         setUser(null);
-        setIsDataReady(false);
+        setIsDataReady(true);
         dataLoadedFromFirestore.current = false;
         setNeedsOnboarding(false);
         setLoading(false);
@@ -150,13 +157,29 @@ export function useNexoraData(
     return unsubscribeAuth;
   }, []);
 
-  // Separate effect for standardizing firestore listeners to prevent leaks (Optimized to getDoc on login to prevent infinite feedback rendering loops)
+  // Separate effect for standardizing firestore loaders to prevent leaks (Optimized with safety timeout & prevents default overwrite on network errors)
   useEffect(() => {
     if (!user) {
       setIsDataReady(false);
       setLoading(false);
       return;
     }
+
+    let isLoaderResolved = false;
+
+    // Safety timeout: if Firestore takes too long (or user is offline), immediately open using local cached data!
+    // This stops the app from getting stuck on the SplashScreen indefinitely and makes loading immediate.
+    const timeoutDuration = navigator.onLine ? 3000 : 300;
+    const loadingTimeout = setTimeout(() => {
+      if (!isLoaderResolved) {
+        console.warn("Hooks: Loading timeout reached, letting user open with cached local data.");
+        // We set isDataReady or loading so the app opens instantly.
+        // We do NOT set dataLoadedFromFirestore to true so background sync is blocked,
+        // preventing any default overwriting of the database.
+        setIsDataReady(true);
+        setLoading(false);
+      }
+    }, timeoutDuration);
 
     const loadData = async () => {
       const userDocRef = doc(db, "users", user.uid);
@@ -208,7 +231,7 @@ export function useNexoraData(
           setNeedsOnboarding(false);
           localStorage.setItem("nexora_onboarding_completed", "true");
         } else {
-          console.log("Hooks: User doc not found, introducing onboarding.");
+          console.log("Hooks: User doc not found on Firestore. Introducing onboarding.");
           setNeedsOnboarding(true);
         }
 
@@ -222,7 +245,6 @@ export function useNexoraData(
           }
         }
 
-        // Add eco shop items to settings
         const ecoIds = ecoSnap.docs.map((d) => d.id);
         if (ecoIds.length > 0) {
           firestoreSettings.purchasedEcosystemItemIds = [
@@ -243,7 +265,6 @@ export function useNexoraData(
         localStorage.setItem("nexora_progress", JSON.stringify(firestoreProgress));
         localStorage.setItem(`nexora_progress_${today}`, JSON.stringify(firestoreProgress));
 
-        // Background preload remaining progress history docs from Firestore
         try {
           const progressCollRef = collection(db, "users", user.uid, "progress");
           const historySnap = await getDocs(progressCollRef);
@@ -257,19 +278,33 @@ export function useNexoraData(
           console.warn("Hooks: Error fetching history list from firestore:", historyErr);
         }
 
+        // Successfully loaded. Safe to sync background changes now!
         dataLoadedFromFirestore.current = true;
+        clearTimeout(loadingTimeout);
+        isLoaderResolved = true;
         setIsDataReady(true);
         setLoading(false);
       } catch (err) {
         console.error("Hooks: Error loading initial user data, fallback to cache: ", err);
-        // Offline check / query blocked: fallback immediately to local cache so user can work uninterrupted
-        dataLoadedFromFirestore.current = true;
-        setIsDataReady(true);
-        setLoading(false);
+        if (!isLoaderResolved) {
+          clearTimeout(loadingTimeout);
+          isLoaderResolved = true;
+
+          // Check if local cache indicates onboarding is already completed
+          const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
+          setNeedsOnboarding(!onboardingComp);
+
+          setIsDataReady(true);
+          setLoading(false);
+        }
       }
     };
 
     loadData();
+
+    return () => {
+      clearTimeout(loadingTimeout);
+    };
   }, [user]);
 
   // Background Sync Effect with Aggressive Throttling (Optimized)
