@@ -43,14 +43,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   }, [step]);
 
   const handleComplete = async () => {
-    console.log("handleComplete called, auth.currentUser:", auth.currentUser);
-    if (!auth.currentUser) {
-      console.error("Cannot complete onboarding: No authenticated user found.");
-      // Just in case, try to complete anyway if the app state is inconsistent? 
-      // Maybe not the right approach. Let's see if this fixes it by logging.
-      return;
-    }
+    const user = auth.currentUser;
+    console.log("handleComplete called, user:", user);
     
+    // Proceed regardless for now, Firestore will handle the case where user is null
     const updates: any = { onboardingCompleted: true };
     if (name.trim()) updates.displayName = name.trim();
     if (gender) updates.gender = gender;
@@ -63,8 +59,12 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
     updates.pushupsGoal = pushups;
 
     try {
-      console.log("Updating Firestore with:", updates);
-      await setDoc(doc(db, 'users', auth.currentUser.uid), updates, { merge: true });
+      if (user) {
+        console.log("Updating Firestore with:", updates);
+        await setDoc(doc(db, 'users', user.uid), updates, { merge: true });
+      } else {
+        console.warn("handleComplete: No authenticated user, skipping Firestore update!");
+      }
       
       setSettings({
         ...settings,

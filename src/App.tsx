@@ -3374,7 +3374,12 @@ export default function App() {
   };
 
   const handleDeleteAccount = async () => {
-    if (!user) return;
+    console.log("handleDeleteAccount clicked, user:", user);
+    if (!user) {
+      console.warn("handleDeleteAccount: No user found!");
+      showToast("Error: No user session found.", "error");
+      return;
+    }
     vibrate(VIBRATION_PATTERNS.ERROR);
 
     const performDeletion = async (currentUser: FirebaseUser) => {
