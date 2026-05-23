@@ -121,24 +121,35 @@
 }
 
 .theme-neural_bio .glass-card {
-  background: rgba(6, 15, 10, 0.85) !important;
-  border-color: rgba(16, 185, 129, 0.15) !important;
+  background: rgba(6, 18, 12, 0.8) !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
   color: #E6F4EA !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(16, 185, 129, 0.05) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 25px rgba(16, 185, 129, 0.08) !important;
 }
 .theme-neural_bio .safe-glass {
-  background: rgba(6, 15, 10, 0.92) !important;
-  border-color: rgba(16, 185, 129, 0.15) !important;
+  background: rgba(4, 15, 9, 0.9) !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
   color: #E6F4EA !important;
 }
 .theme-neural_bio h1,
 .theme-neural_bio h2,
-.theme-neural_bio h3,
+.theme-neural_bio h3:not(.text-blue-900),
 .theme-neural_bio h4 {
   color: #F0FDF4 !important;
 }
 .theme-neural_bio p {
-  color: #86EFAC !important;
+  color: #A7F3D0 !important;
+}
+.theme-neural_bio span {
+  color: inherit;
+}
+.theme-neural_bio div:not(.btn-primary) {
+  border-color: rgba(16, 185, 129, 0.15) !important;
+}
+.theme-neural_bio input, .theme-neural_bio textarea {
+  background-color: rgba(6, 18, 12, 0.6) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #F0FDF4 !important;
 }
 
 .theme-sunset .glass-card {

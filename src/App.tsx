@@ -276,7 +276,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   showQuotes: true,
   unitSystem: "metric",
   activeHat: "none",
-  activeSkin: "none",
+  activeSkin: "neural_bio",
   zenModeEnabled: false,
   challengeCountGoal: 3,
   league: "Bronze",
