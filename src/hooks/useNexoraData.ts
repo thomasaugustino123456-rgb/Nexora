@@ -365,6 +365,7 @@ export function useNexoraData(
           await setDoc(
             userRef,
             {
+              displayName: settings.displayName || user.displayName || 'Champion',
               ...settings,
               uid: user.uid,
               email: user.email || `${user.uid}@nexora.app`,

@@ -48,7 +48,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
       const updates: any = { onboardingCompleted: true };
       
       const safeName = (name && typeof name === 'string') ? name.trim() : '';
-      if (safeName) updates.displayName = safeName;
+      updates.displayName = safeName || 'Champion';
       if (gender) updates.gender = gender;
       if (source) updates.source = source;
       if (workType) updates.workType = workType;

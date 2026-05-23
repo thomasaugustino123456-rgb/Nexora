@@ -337,6 +337,13 @@ service cloud.firestore {
         allow delete: if isOwner(userId) || isAdmin();
       }
 
+      match /eco_shop/{shopId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
       match /notifications/{notifId} {
         allow read: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) || isAdmin();
