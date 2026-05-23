@@ -129,7 +129,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
       setIsSuccess(true);
       triggerJump();
     } catch (err: any) {
-      console.error("Email auth error:", err.code, err.message);
+      console.warn("Handled email auth error info:", err.code, err.message);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
         setError('Invalid email or password.');
       } else if (err.code === 'auth/email-already-in-use') {
@@ -156,11 +156,11 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
       setIsSuccess(true);
       triggerJump();
     } catch (err: any) {
-      console.error("Google auth error:", err.code, err.message);
+      console.warn("Handled Google auth status:", err.code, err.message);
       if (err.code === 'auth/cancelled-popup-request' || err.code === 'auth/popup-closed-by-user') {
-        console.log("Sign in popup closed by user");
+        console.log("Sign in popup closed by user (cancelled).");
       } else {
-        console.error("Error signing in with Google:", err);
+        console.warn("Error signing in with Google:", err);
         setError(`Failed to sign in with Google: ${err.code} - ${err.message}`);
       }
     } finally {

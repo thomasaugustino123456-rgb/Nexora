@@ -4,7 +4,7 @@ const WhatIsNewModal = lazy(() => import('./WhatIsNewModal'));
 const HappyMascot_Lazy = lazy(() => import('./FeedbackUI').then(m => ({ default: m.HappyMascot })));
 const LevelUpCelebration_Lazy = lazy(() => import('./FeedbackUI').then(m => ({ default: m.LevelUpCelebration })));
 const CoinAnimation_Lazy = lazy(() => import('./FeedbackUI').then(m => ({ default: m.CoinAnimation })));
-const MascotAI_Lazy = lazy(() => import('./MascotAI').then(m => ({ default: m.MascotAI })));
+const MascotAI_Lazy = lazy(() => import('./MascotAI'));
 
 export function WhatIsNewModalWrapper(props: any) {
   return (

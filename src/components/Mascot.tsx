@@ -135,6 +135,13 @@ export const Mascot = React.memo(({
           aura: "rgba(239, 68, 68, 0.2)",
           nColor: "#fff"
         };
+      case 'oceanic_midnight':
+        return {
+          water: ["#00F2FE", "#0072FF", "#0A1C36"],
+          edge: "#00F2FE",
+          aura: "rgba(0, 242, 254, 0.25)",
+          nColor: "#00F2FE"
+        };
       default:
         return {
           water: [isBoiling ? "#FF5C5C" : "#5CD6FF", isBoiling ? "#FF2A2A" : "#0095FF", isBoiling ? "#D60000" : "#0047FF"],

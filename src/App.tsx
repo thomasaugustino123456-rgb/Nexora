@@ -382,6 +382,22 @@ export default function App() {
     dataLoadedFromFirestore,
   } = useNexoraData(DEFAULT_SETTINGS, DEFAULT_STATS, showToast);
 
+  useEffect(() => {
+    const skin = settings.activeSkin || 'none';
+    const themeClass = skin === 'obsidian' 
+      ? 'theme-obsidian' 
+      : skin === 'neural_bio'
+        ? 'theme-neural_bio'
+        : skin === 'sunset'
+          ? 'theme-sunset'
+          : skin === 'oceanic_midnight'
+            ? 'theme-oceanic_midnight'
+            : 'theme-standard';
+            
+    document.body.classList.remove('theme-standard', 'theme-obsidian', 'theme-neural_bio', 'theme-sunset', 'theme-oceanic_midnight');
+    document.body.classList.add(themeClass);
+  }, [settings.activeSkin]);
+
   const onUpdateSettings = useCallback(
     (
       newSettings:
@@ -3593,7 +3609,17 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div
-        className="min-h-screen w-full flex flex-col items-center overflow-x-hidden"
+        className={`min-h-screen w-full flex flex-col items-center overflow-x-hidden ${
+          settings.activeSkin === 'obsidian' 
+            ? 'theme-obsidian' 
+            : settings.activeSkin === 'neural_bio'
+              ? 'theme-neural_bio'
+              : settings.activeSkin === 'sunset'
+                ? 'theme-sunset'
+                : settings.activeSkin === 'oceanic_midnight'
+                  ? 'theme-oceanic_midnight'
+                  : 'theme-standard'
+        }`}
         style={{ "--accent-color": settings.themeColor } as React.CSSProperties}
       >
         {/* Connection Status Banner (Nexora Shield) */}

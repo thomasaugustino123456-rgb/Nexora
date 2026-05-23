@@ -109,3 +109,5 @@ export function MascotAI({ stats, settings, showToast }: { stats: UserStats, set
     </div>
   );
 }
+
+export default MascotAI;

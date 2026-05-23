@@ -55,6 +55,7 @@ const HOME_SECTIONS = [
 
 const PREMIUM_THEMES = [
   { id: 'standard', label: 'Classic Nexora', color: 'bg-blue-600', textColor: 'text-white' },
+  { id: 'oceanic_midnight', label: 'Oceanic Midnight', color: 'bg-gradient-to-r from-cyan-500 to-blue-600', textColor: 'text-cyan-400' },
   { id: 'neural_bio', label: 'Neural Bio-Link', color: 'bg-emerald-600', textColor: 'text-white' },
   { id: 'obsidian', label: 'Obsidian Void', color: 'bg-slate-950', textColor: 'text-blue-400' },
   { id: 'sunset', label: 'Cyber Sunset', color: 'bg-orange-500', textColor: 'text-white' },

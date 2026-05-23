@@ -105,13 +105,52 @@ if (typeof window !== "undefined") {
     if (!key.startsWith("music")) {
       try {
         const response = await fetch(url);
+        if (!response.ok) {
+          console.warn(`Audio: Preload failed for ${key} due to status ${response.status}`);
+          return;
+        }
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("text/html")) {
+          console.warn(`Audio: Preload failed for ${key} - returned HTML instead of audio`);
+          return;
+        }
+
         const arrayBuffer = await response.arrayBuffer();
+        if (arrayBuffer.byteLength === 0) {
+          console.warn(`Audio: Preload failed for ${key} - empty arrayBuffer`);
+          return;
+        }
+
+        let isDecoded = false;
+        let attemptsCount = 0;
         // We wait for the first user interaction to decode
         const checkCtx = () => {
+          if (isDecoded) return true;
+          if (attemptsCount > 30) {
+            // Stop trying after several attempts
+            return true;
+          }
           if (audioContext && audioContext.state !== "suspended") {
-            audioContext.decodeAudioData(arrayBuffer, (buffer) => {
-              bufferCache[key] = buffer;
-            });
+            attemptsCount++;
+            try {
+              audioContext.decodeAudioData(
+                arrayBuffer,
+                (buffer) => {
+                  bufferCache[key] = buffer;
+                  isDecoded = true;
+                },
+                (err) => {
+                  console.warn(`Audio: Error decoding ${key}:`, err);
+                  isDecoded = true; // stop trying
+                }
+              ).catch((err) => {
+                console.warn(`Audio: Promise caught error decoding ${key}:`, err);
+                isDecoded = true; // stop trying
+              });
+            } catch (err) {
+              console.warn(`Audio: Sync catch error decoding ${key}:`, err);
+              isDecoded = true; // stop trying
+            }
             return true;
           }
           return false;
@@ -119,7 +158,7 @@ if (typeof window !== "undefined") {
 
         // Polling check or wait for first play
         const interval = setInterval(() => {
-          if (checkCtx()) clearInterval(interval);
+          if (checkCtx() || isDecoded) clearInterval(interval);
         }, 1000);
       } catch (e) {
         console.warn(`Failed to preload ${key}:`, e);
@@ -134,20 +173,102 @@ const getMusicNode = async (key: string) => {
   const url = (SOUNDS as any)[key];
   if (!url) return null;
 
-  const audio = new Audio(url);
-  audio.preload = "auto";
-  audio.crossOrigin = "anonymous";
+  try {
+    const audio = new Audio(url);
+    audio.preload = "auto";
+    audio.crossOrigin = "anonymous";
 
-  const ctx = await initContext();
-  if (!ctx) return null;
-  const source = ctx.createMediaElementSource(audio);
-  const gain = ctx.createGain();
-  source.connect(gain);
-  gain.connect(ctx.destination);
+    const ctx = await initContext();
+    if (!ctx) return null;
+    const source = ctx.createMediaElementSource(audio);
+    const gain = ctx.createGain();
+    source.connect(gain);
+    gain.connect(ctx.destination);
 
-  musicNodes[key] = { audio, gain };
-  return musicNodes[key];
+    musicNodes[key] = { audio, gain };
+    return musicNodes[key];
+  } catch (err) {
+    console.warn("Audio: Error setting up music node:", err);
+    return null;
+  }
 };
+
+// High-fidelity fallback synthesizer for offline or 404 assets
+function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
+  try {
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+
+    if (soundKey === "coin") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, now); // D5
+      osc.frequency.setValueAtTime(880, now + 0.08); // A5
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.12, now + 0.03);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    } else if (soundKey === "nav_switch" || soundKey === "header_switch") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(1000, now);
+      osc.frequency.exponentialRampToValueAtTime(300, now + 0.04);
+      gainNode.gain.setValueAtTime(0.05, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+      osc.start(now);
+      osc.stop(now + 0.04);
+    } else if (soundKey === "water") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(120, now);
+      osc.frequency.exponentialRampToValueAtTime(500, now + 0.12);
+      gainNode.gain.setValueAtTime(0.1, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } else if (soundKey === "losing") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.linearRampToValueAtTime(60, now + 0.45);
+      gainNode.gain.setValueAtTime(0.15, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+      osc.start(now);
+      osc.stop(now + 0.45);
+    } else if (soundKey === "emergency") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(500, now);
+      osc.frequency.linearRampToValueAtTime(250, now + 0.2);
+      gainNode.gain.setValueAtTime(0.12, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } else if (soundKey === "continue" || soundKey === "challenge_unlock" || soundKey === "flame_complete") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(261.63, now); // C4
+      osc.frequency.setValueAtTime(329.63, now + 0.1); // E4
+      osc.frequency.setValueAtTime(392.00, now + 0.2); // G4
+      osc.frequency.setValueAtTime(523.25, now + 0.3); // C5
+
+      gainNode.gain.setValueAtTime(0.12, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } else {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(440, now);
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.08, now + 0.04);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    }
+  } catch (err) {
+    console.warn("Audio Fallback Synthesizer failed:", err);
+  }
+}
 
 export function useSound() {
   const [currentMusic, setCurrentMusic] = useState<string | null>(
@@ -163,10 +284,21 @@ export function useSound() {
       if (!buffer && !soundKey.startsWith("music")) {
         // Try decoding now if it was fetched but not decoded
         const url = SOUNDS[soundKey];
-        const resp = await fetch(url);
-        const ab = await resp.arrayBuffer();
-        buffer = await ctx.decodeAudioData(ab);
-        bufferCache[soundKey] = buffer;
+        try {
+          const resp = await fetch(url);
+          if (resp.ok) {
+            const contentType = resp.headers.get("content-type") || "";
+            if (!contentType.includes("text/html")) {
+              const ab = await resp.arrayBuffer();
+              if (ab.byteLength > 0) {
+                buffer = await ctx.decodeAudioData(ab);
+                bufferCache[soundKey] = buffer;
+              }
+            }
+          }
+        } catch (fetchErr) {
+          console.warn(`Audio: On-demand fetch/decode failed for ${soundKey}:`, fetchErr);
+        }
       }
 
       if (buffer) {
@@ -174,12 +306,10 @@ export function useSound() {
         source.buffer = buffer;
         source.connect(ctx.destination);
         source.start(0);
-      } else if (soundKey.startsWith("music")) {
-        const node = await getMusicNode(soundKey as string);
-        if (node) {
-          node.audio.currentTime = 0;
-          node.audio.play().catch((e) => console.error(e));
-        }
+      } else {
+        // Fallback programmatic synthesizer if no buffer could be downloaded/decoded!
+        console.log(`Audio: Fallback browser-synthesizer invoked for ${soundKey}`);
+        synthesizeFallbackSound(soundKey as string, ctx);
       }
     } catch (e) {
       console.error("Audio Engine Error:", e);
