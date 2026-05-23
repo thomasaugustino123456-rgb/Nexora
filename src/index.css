@@ -68,15 +68,16 @@
   }
 
   body.theme-sunset {
-    background: linear-gradient(180deg, #0F040F 0%, #1A071A 60%, #320820 100%) !important;
-    background-color: #0F040F !important;
-    color: #FDF2F8 !important;
-    --surface-bg: rgba(20, 8, 22, 0.85);
-    --input-bg: rgba(12, 4, 14, 0.75);
-    --border-color: rgba(244, 63, 94, 0.25);
+    background: linear-gradient(180deg, #050a16 0%, #0c112b 40%, #1a0f26 75%, #2a0e1b 100%) !important;
+    background-color: #050a16 !important;
+    color: #FFF5F5 !important;
+    --surface-bg: rgba(18, 22, 42, 0.85);
+    --input-bg: rgba(9, 11, 25, 0.75);
+    --border-color: rgba(244, 63, 94, 0.22);
     --text-primary: #FFF5F5;
     --text-secondary: #FDA4AF;
-    --accent-glow: rgba(244, 63, 94, 0.05);
+    --accent-glow: rgba(244, 63, 94, 0.08);
+    --accent-color: #F43F5E !important;
   }
 }
 
@@ -102,8 +103,9 @@
 }
 
 .theme-sunset {
-  background: linear-gradient(180deg, #0F040F 0%, #1A071A 60%, #320820 100%) !important;
-  color: #FDF2F8 !important;
+  background: linear-gradient(180deg, #050a16 0%, #0c112b 40%, #1a0f26 75%, #2a0e1b 100%) !important;
+  color: #FFF5F5 !important;
+  --accent-color: #F43F5E !important;
 }
 
 /* Theme specific overrides for internal glass structure and typography */
@@ -210,21 +212,21 @@
 }
 
 .theme-sunset .glass-card {
-  background: rgba(20, 8, 22, 0.8) !important;
-  border-color: rgba(244, 63, 94, 0.2) !important;
-  color: #FDF2F8 !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(244, 63, 94, 0.05) !important;
+  background: rgba(18, 22, 42, 0.82) !important;
+  border-color: rgba(244, 63, 94, 0.22) !important;
+  color: #FFF5F5 !important;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.55), 0 0 25px rgba(244, 63, 94, 0.08) !important;
 }
 .theme-sunset .safe-glass {
-  background: rgba(20, 8, 22, 0.9) !important;
-  border-color: rgba(244, 63, 94, 0.2) !important;
-  color: #FDF2F8 !important;
+  background: rgba(18, 22, 42, 0.9) !important;
+  border-color: rgba(244, 63, 94, 0.22) !important;
+  color: #FFF5F5 !important;
 }
 .theme-sunset h1,
 .theme-sunset h2,
 .theme-sunset h3,
 .theme-sunset h4 {
-  color: #FFF5F5 !important;
+  color: #FFFAFC !important;
 }
 .theme-sunset p {
   color: #FDA4AF !important;
@@ -233,14 +235,14 @@
   color: inherit;
 }
 .theme-sunset div:not(.btn-primary) {
-  border-color: rgba(244, 63, 94, 0.12) !important;
+  border-color: rgba(244, 63, 94, 0.15) !important;
 }
 .theme-sunset input, 
 .theme-sunset textarea,
 .theme-sunset select {
-  background-color: rgba(12, 4, 14, 0.7) !important;
+  background-color: rgba(9, 11, 25, 0.75) !important;
   border-color: rgba(244, 63, 94, 0.25) !important;
-  color: #FDF2F8 !important;
+  color: #FFF5F5 !important;
 }
 
 /* Universal Overrides for text-blue-900 utility typography in any dark skin */
@@ -540,7 +542,7 @@
   background: linear-gradient(180deg, #020604 0%, #05150D 60%, #082214 100%) !important;
 }
 .theme-sunset .challenge-flow-bg {
-  background: linear-gradient(180deg, #0F040F 0%, #1A071A 60%, #320820 100%) !important;
+  background: linear-gradient(180deg, #050a16 0%, #0c112b 40%, #1a0f26 75%, #2a0e1b 100%) !important;
 }
 
 .settings-header-bg {
@@ -556,7 +558,7 @@
   background-color: rgba(2, 6, 4, 0.95) !important;
 }
 .theme-sunset .settings-header-bg {
-  background-color: rgba(15, 4, 15, 0.95) !important;
+  background-color: rgba(5, 10, 22, 0.95) !important;
 }
 
 

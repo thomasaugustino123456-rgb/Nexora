@@ -276,7 +276,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   showQuotes: true,
   unitSystem: "metric",
   activeHat: "none",
-  activeSkin: "obsidian",
+  activeSkin: "sunset",
   zenModeEnabled: false,
   challengeCountGoal: 3,
   league: "Bronze",
