@@ -92,7 +92,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-[#E0F2FF] to-[#F0E6FF] z-[100] flex flex-col items-center overflow-y-auto">
+    <div className="fixed inset-0 challenge-flow-bg z-[100] flex flex-col items-center overflow-y-auto">
       <div className="w-full max-w-4xl flex flex-col min-h-screen">
         <header className="p-6 flex items-center justify-between">
           <button onClick={handleBackClick} className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors">

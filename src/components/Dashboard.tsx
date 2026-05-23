@@ -149,12 +149,12 @@ export const StatsCharts: React.FC<DashboardProps> = ({ history }) => {
         <div className="h-[200px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={lineData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E0F2FF" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--chart-grid, rgba(255, 255, 255, 0.12))" />
               <XAxis 
                 dataKey="name" 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fill: '#1E3A8A', fontSize: 12, opacity: 0.4 }}
+                tick={{ fill: 'var(--chart-text, #E2F1FF)', fontSize: 12, opacity: 0.6 }}
               />
               <YAxis hide />
               <Tooltip 

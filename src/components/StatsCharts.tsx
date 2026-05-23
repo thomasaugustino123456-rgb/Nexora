@@ -47,12 +47,12 @@ export function StatsCharts({ history }: { history: DailyProgress[] }) {
         <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={last7Days}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f9ff" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--chart-grid, rgba(255, 255, 255, 0.12))" />
               <XAxis 
                 dataKey="name" 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fontSize: 12, fontWeight: 900, fill: '#1e3a8a', opacity: 0.8 }}
+                tick={{ fontSize: 12, fontWeight: 900, fill: 'var(--chart-text, #E2F1FF)', opacity: 0.8 }}
               />
               <YAxis hide />
               <Tooltip 
@@ -83,7 +83,7 @@ export function StatsCharts({ history }: { history: DailyProgress[] }) {
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 12, fontWeight: 900, fill: '#1e3a8a', opacity: 0.8 }}
+                  tick={{ fontSize: 12, fontWeight: 900, fill: 'var(--chart-text, #E2F1FF)', opacity: 0.8 }}
                 />
                 <Tooltip 
                   cursor={{ fill: 'rgba(59, 130, 246, 0.05)' }}

@@ -62,7 +62,7 @@ export function SettingsScreen({
       className="max-w-2xl mx-auto w-full space-y-8 pb-40"
     >
       {/* Header */}
-      <div className="flex items-center gap-4 sticky top-0 bg-[#E0F2FF]/95 z-40 py-4 px-2 -mx-2">
+      <div className="flex items-center gap-4 sticky top-0 settings-header-bg z-40 py-4 px-2 -mx-2">
         <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm text-blue-900 active:scale-95 transition-all">
            <ChevronLeft size={24} />
         </button>
