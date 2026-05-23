@@ -73,19 +73,19 @@
 
 /* Theme specific overrides for internal glass structure and typography */
 .theme-oceanic_midnight .glass-card {
-  background: rgba(8, 18, 36, 0.75) !important;
-  border-color: rgba(0, 242, 254, 0.15) !important;
+  background: rgba(8, 20, 42, 0.75) !important;
+  border-color: rgba(0, 242, 254, 0.18) !important;
   color: #E2F1FF !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 242, 254, 0.05) !important;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.55), 0 0 25px rgba(0, 242, 254, 0.06) !important;
 }
 .theme-oceanic_midnight .safe-glass {
-  background: rgba(8, 18, 36, 0.85) !important;
-  border-color: rgba(0, 242, 254, 0.15) !important;
+  background: rgba(8, 20, 42, 0.85) !important;
+  border-color: rgba(0, 242, 254, 0.18) !important;
   color: #E2F1FF !important;
 }
 .theme-oceanic_midnight h1,
 .theme-oceanic_midnight h2,
-.theme-oceanic_midnight h3:not(.text-blue-900),
+.theme-oceanic_midnight h3,
 .theme-oceanic_midnight h4 {
   color: #F0FAFF !important;
 }
@@ -96,18 +96,25 @@
   color: inherit;
 }
 .theme-oceanic_midnight div:not(.btn-primary) {
-  border-color: rgba(0, 242, 254, 0.1) !important;
+  border-color: rgba(0, 242, 254, 0.12) !important;
+}
+.theme-oceanic_midnight input, 
+.theme-oceanic_midnight textarea, 
+.theme-oceanic_midnight select {
+  background-color: rgba(5, 12, 28, 0.7) !important;
+  border-color: rgba(0, 242, 254, 0.25) !important;
+  color: #E2F1FF !important;
 }
 
 .theme-obsidian .glass-card {
-  background: rgba(13, 17, 23, 0.8) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(13, 17, 26, 0.82) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
   color: #E2E8F0 !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.65) !important;
 }
 .theme-obsidian .safe-glass {
-  background: rgba(13, 17, 23, 0.9) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(13, 17, 26, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
   color: #E2E8F0 !important;
 }
 .theme-obsidian h1,
@@ -118,6 +125,19 @@
 }
 .theme-obsidian p {
   color: #94A3B8 !important;
+}
+.theme-obsidian span {
+  color: inherit;
+}
+.theme-obsidian div:not(.btn-primary) {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.theme-obsidian input, 
+.theme-obsidian textarea, 
+.theme-obsidian select {
+  background-color: rgba(8, 11, 18, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #F2F5F8 !important;
 }
 
 .theme-neural_bio .glass-card {
@@ -133,7 +153,7 @@
 }
 .theme-neural_bio h1,
 .theme-neural_bio h2,
-.theme-neural_bio h3:not(.text-blue-900),
+.theme-neural_bio h3,
 .theme-neural_bio h4 {
   color: #F0FDF4 !important;
 }
@@ -146,21 +166,23 @@
 .theme-neural_bio div:not(.btn-primary) {
   border-color: rgba(16, 185, 129, 0.15) !important;
 }
-.theme-neural_bio input, .theme-neural_bio textarea {
+.theme-neural_bio input, 
+.theme-neural_bio textarea,
+.theme-neural_bio select {
   background-color: rgba(6, 18, 12, 0.6) !important;
   border-color: rgba(16, 185, 129, 0.3) !important;
   color: #F0FDF4 !important;
 }
 
 .theme-sunset .glass-card {
-  background: rgba(18, 8, 20, 0.8) !important;
-  border-color: rgba(244, 63, 94, 0.15) !important;
+  background: rgba(20, 8, 22, 0.8) !important;
+  border-color: rgba(244, 63, 94, 0.2) !important;
   color: #FDF2F8 !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(244, 63, 94, 0.05) !important;
 }
 .theme-sunset .safe-glass {
-  background: rgba(18, 8, 20, 0.9) !important;
-  border-color: rgba(244, 63, 94, 0.15) !important;
+  background: rgba(20, 8, 22, 0.9) !important;
+  border-color: rgba(244, 63, 94, 0.2) !important;
   color: #FDF2F8 !important;
 }
 .theme-sunset h1,
@@ -171,6 +193,62 @@
 }
 .theme-sunset p {
   color: #FDA4AF !important;
+}
+.theme-sunset span {
+  color: inherit;
+}
+.theme-sunset div:not(.btn-primary) {
+  border-color: rgba(244, 63, 94, 0.12) !important;
+}
+.theme-sunset input, 
+.theme-sunset textarea,
+.theme-sunset select {
+  background-color: rgba(12, 4, 14, 0.7) !important;
+  border-color: rgba(244, 63, 94, 0.25) !important;
+  color: #FDF2F8 !important;
+}
+
+/* Universal Overrides for text-blue-900 utility typography in any dark skin */
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900 {
+  color: #FFFFFF !important;
+}
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/80 {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/60 {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/40 {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/30 {
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/20 {
+  color: rgba(255, 255, 255, 0.2) !important;
+}
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/10 {
+  color: rgba(255, 255, 255, 0.1) !important;
+}
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/5 {
+  color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* background and border adaptive filters */
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-900\/10 {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-900\/5 {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-blue-900\/10 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-white\/50 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+:is(.theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50 {
+  background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 @layer components {
