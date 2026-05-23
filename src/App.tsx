@@ -1735,13 +1735,13 @@ export default function App() {
     options: NotificationOptions,
   ) => {
     // 1. Local Browser Notification (Immediate feedback if app is open)
-    if ("Notification" in window && Notification.permission === "granted") {
+    if (typeof window !== "undefined" && "Notification" in window && window.Notification && window.Notification.permission === "granted") {
       if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.ready.then((registration) => {
           registration.showNotification(title, options);
         });
       } else {
-        new Notification(title, options);
+        new window.Notification(title, options);
       }
     }
 
@@ -2218,8 +2218,8 @@ export default function App() {
       }
 
       // Request permission if not granted
-      if (Notification.permission !== "granted") {
-        const permission = await Notification.requestPermission();
+      if (window.Notification.permission !== "granted") {
+        const permission = await window.Notification.requestPermission();
         if (permission !== "granted") {
           console.warn("FCM: Notification permission denied.");
           setFcmError("PERMISSION_DENIED");
@@ -2382,17 +2382,17 @@ export default function App() {
     }
 
     // Request notification permission on mount if supported
-    if ("Notification" in window && Notification.permission === "default") {
-      // Show a friendly message first? (Optional, but user asked for it)
-      // For simplicity, we just request it.
-      Notification.requestPermission().then((permission) => {
-        if (permission === "granted") {
-          console.log("PWA: Notification permission granted");
-          setupFCM();
-        }
-      });
-    } else if (Notification.permission === "granted") {
-      setupFCM();
+    if (typeof window !== "undefined" && "Notification" in window && window.Notification) {
+      if (window.Notification.permission === "default") {
+        window.Notification.requestPermission().then((permission) => {
+          if (permission === "granted") {
+            console.log("PWA: Notification permission granted");
+            setupFCM();
+          }
+        });
+      } else if (window.Notification.permission === "granted") {
+        setupFCM();
+      }
     }
 
     // Smart In-App Reminder: Check last active time
@@ -2489,7 +2489,7 @@ export default function App() {
   useEffect(() => {
     const checkReminders = () => {
       if (!settings.notificationsEnabled) return;
-      if (!("Notification" in window) || Notification.permission !== "granted")
+      if (typeof window === "undefined" || !("Notification" in window) || !window.Notification || window.Notification.permission !== "granted")
         return;
 
       const now = new Date();

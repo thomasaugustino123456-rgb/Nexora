@@ -5,22 +5,22 @@ import { doc, updateDoc } from 'firebase/firestore';
 export const VAPID_KEY = 'BF2tHGVbbJHc3wxlE98atQFPU1TRqX3shN0bhSsaNf-UxdDxgoj25zLhpttoeDsrjQ8l24cnysfF-eyzH3P7baw'; // Standard fallback
 
 export async function requestNotificationPermission(userId: string) {
-  if (!('Notification' in window)) {
+  if (typeof window === 'undefined' || !('Notification' in window) || !window.Notification) {
     console.warn('This browser does not support notifications.');
     return null;
   }
 
-  if (Notification.permission === 'granted') {
+  if (window.Notification.permission === 'granted') {
     return getAndSaveToken(userId);
   }
 
-  if (Notification.permission === 'denied') {
+  if (window.Notification.permission === 'denied') {
     console.warn('Notifications blocked by user.');
     return null;
   }
 
   try {
-    const permission = await Notification.requestPermission();
+    const permission = await window.Notification.requestPermission();
     if (permission === 'granted') {
       return getAndSaveToken(userId);
     }
