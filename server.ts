@@ -9,6 +9,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 import { Resend } from "resend";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -636,6 +637,138 @@ async function startServer() {
     } catch (error: any) {
       console.error("Error sending notification:", error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Server-Side Gemini API Proxy for Notebook Mood/Arrangement Analysis
+  app.post("/api/gemini/analyze-note", async (req, res) => {
+    const { title, content } = req.body;
+    if (!content) {
+      return res.status(400).json({ error: "Content is required" });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("AI Service: GEMINI_API_KEY missing. Using simulated response.");
+      return res.json({
+        mood: "Calm & Reflective",
+        neural_insight: "Writing down your ideas fosters cognitive stability and creative focus, bro.",
+        biological_recommendation: "Take 3 deep breaths then write down your next target milestone."
+      });
+    }
+
+    try {
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+      const prompt = `
+        Analyze this brain dump/note:
+        Title: ${title || "Untitled Note"}
+        Content: ${content}
+        
+        Return a JSON object:
+        {
+          "mood": "Short mood description",
+          "neural_insight": "One sentence psychological insight",
+          "biological_recommendation": "One physical action to take based on this mood"
+        }
+      `;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+
+      if (!response || !response.text) {
+        throw new Error("Empty response from Gemini API");
+      }
+
+      const cleanText = response.text.trim();
+      res.json(JSON.parse(cleanText));
+    } catch (error: any) {
+      console.error("Server Note Analysis failed:", error);
+      res.status(500).json({ error: "Neural link interrupted. Please try again, bro." });
+    }
+  });
+
+  // Server-Side Gemini API Proxy for Habits Pattern Analysis
+  app.post("/api/gemini/analyze-habits", async (req, res) => {
+    const { stats, history } = req.body;
+    if (!stats || !history) {
+      return res.status(400).json({ error: "Stats and history are required" });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("AI Service: GEMINI_API_KEY missing. Using simulated response.");
+      return res.json({
+        analysis: `NEXUS VISION PROTOCOL: SIMULATED ANALYSIS.
+        
+BIOLOGICAL STATUS: ASCENDING.
+
+PATTERN INSIGHT: YOUR MOMENTUM INDICATES HIGH NEURAL PLASTICITY. STREAK OF ${stats.streak || 0} IS OPTIMAL.
+
+OVERRIDE PROTOCOL: INCREASE HYDRATION FREQUENCY TO MAINTAIN COGNITIVE FLOW.`
+      });
+    }
+
+    try {
+      const summary = history.slice(-7).map((h: any) => ({
+        date: h.date,
+        completed: h.completed,
+        tasks: {
+          pushups: h.pushupsDone,
+          water: h.waterDrank,
+          breathing: h.breathingDone,
+          writing: h.drawingDone,
+          football: h.footballDone
+        }
+      }));
+
+      const prompt = `
+        You are Nexora Vision, a futuristic biological optimization AI.
+        Analyze the following user habit data from the last 7 days:
+        ${JSON.stringify(summary)}
+        
+        Total XP: ${stats.xp}
+        Streak: ${stats.streak}
+        
+        Provide a "Nexus Optimization Protocol" in an authoritative, futuristic, and encouraging tone.
+        Include:
+        1. A "Current Biological Status" (e.g. Optimized, Fatigued, Ascending).
+        2. One specific insight about their patterns.
+        3. One "Override Protocol" (a suggested habit shift).
+        
+        Keep it short (max 100 words), use uppercase for emphasis, and sound like a high-end AI assistant.
+      `;
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+      });
+
+      if (!response || !response.text) {
+        throw new Error("Empty response from Gemini API");
+      }
+
+      res.json({ analysis: response.text });
+    } catch (error: any) {
+      console.error("Server Habit Analysis failed:", error);
+      res.status(500).json({ error: "Neural link interrupted. Please try again, bro." });
     }
   });
 

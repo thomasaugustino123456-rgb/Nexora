@@ -152,25 +152,42 @@ export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: 
                 </div>
              </div>
 
-             <input 
-               autoFocus
-               type="text" value={title} onChange={e => setTitle(e.target.value)}
-               placeholder="MANIFEST TITLE..."
-               className="w-full bg-transparent text-4xl font-black text-blue-900 uppercase tracking-tighter focus:outline-none mb-6 placeholder:opacity-10"
-             />
+             <div className="flex flex-col gap-5 flex-1 overflow-y-auto mb-4">
+                {/* Title Section */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1">
+                    <PenTool size={10} /> Manifest Title / Topic
+                  </label>
+                  <input 
+                    autoFocus
+                    type="text" 
+                    value={title} 
+                    onChange={e => setTitle(e.target.value)}
+                    placeholder="Enter note title..."
+                    className="w-full bg-transparent text-lg font-bold text-black border-b-2 border-stone-200 focus:border-emerald-500 focus:outline-none pb-2 placeholder:text-stone-300"
+                  />
+                </div>
 
-             <textarea 
-               value={content} onChange={e => setContent(e.target.value)}
-               placeholder="START THE FLOW OF FOCUS..."
-               className="w-full flex-1 bg-transparent text-lg font-medium text-blue-900/60 focus:outline-none resize-none placeholder:opacity-10 leading-relaxed italic"
-             />
+                {/* Content Section */}
+                <div className="flex flex-col gap-1.5 flex-1">
+                  <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1">
+                    <BookOpen size={10} /> Thought Flow / Manifest Body
+                  </label>
+                  <textarea 
+                    value={content} 
+                    onChange={e => setContent(e.target.value)}
+                    placeholder="Write body content of your dump here..."
+                    className="w-full h-full min-h-[120px] bg-transparent text-sm font-medium text-black focus:outline-none resize-none leading-relaxed placeholder:text-stone-300 border border-stone-200 rounded-2xl p-4 bg-stone-50 focus:border-emerald-500 focus:bg-white transition-all"
+                  />
+                </div>
+             </div>
 
              <AnimatePresence>
                {neuralInsight && (
                  <motion.div 
                    initial={{ opacity: 0, height: 0 }}
                    animate={{ opacity: 1, height: 'auto' }}
-                   className="mb-6 p-6 bg-blue-900/5 rounded-3xl border border-blue-900/10 space-y-3"
+                   className="mb-4 p-4 bg-blue-900/5 rounded-3xl border border-blue-900/10 space-y-3"
                  >
                    <div className="flex items-center gap-2 text-blue-600">
                      <Sparkles size={16} />
@@ -190,35 +207,43 @@ export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: 
                )}
              </AnimatePresence>
 
-             <div className="pt-8 flex items-center justify-between">
-                <div className="flex gap-4">
+             <div className="pt-4 flex items-center justify-between border-t border-stone-200">
+                <div className="flex gap-2">
+                  {/* Delete Button (Compact) */}
                   <button 
+                    title="Delete Note"
                     onClick={() => {
                       const newEntries = entries.filter((e: any) => e.id !== activeNote?.id);
                       setStats({ ...stats, gratitudeEntries: newEntries });
                       setIsCreating(false);
                       showToast('Note Deleted', 'info');
                     }}
-                    className="p-5 text-red-400 hover:text-red-600 active:scale-90 transition-all bg-red-500/5 rounded-2xl"
+                    className="p-3 text-red-500 hover:text-red-700 hover:bg-red-50 bg-red-500/10 rounded-xl active:scale-90 transition-all border border-red-200/40"
                   >
-                    <Trash2 size={24} />
+                    <Trash2 size={18} />
                   </button>
+                  
+                  {/* Neural Mode Button (Compact) */}
                   <button 
                     onClick={handleNeuralAnalysis}
                     disabled={isAnalyzing || !content.trim()}
-                    className={`flex items-center gap-3 px-6 py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${
-                      isAnalyzing ? 'bg-blue-100 text-blue-400' : 'bg-blue-900 text-white shadow-xl shadow-blue-900/20 hover:scale-105'
+                    className={`flex items-center gap-2 px-4 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all border ${
+                      isAnalyzing 
+                        ? 'bg-blue-50 border-blue-100 text-blue-400' 
+                        : 'bg-blue-950 text-white border-blue-900 hover:bg-blue-900 active:scale-95'
                     }`}
                   >
-                    {isAnalyzing ? <Loader2 className="animate-spin" size={18} /> : <Wand2 size={18} />}
-                    {isAnalyzing ? 'Analyzing Node...' : 'Neural Mode'}
+                    {isAnalyzing ? <Loader2 className="animate-spin" size={14} /> : <Wand2 size={14} />}
+                    {isAnalyzing ? 'Analyzing...' : 'Neural Mode'}
                   </button>
                 </div>
+
+                {/* Finish Button (Compact) */}
                 <button 
                   onClick={handleSave}
-                  className="px-10 py-5 bg-emerald-600 text-white rounded-3xl font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all flex items-center gap-3"
+                  className="px-5 py-3 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl font-bold uppercase text-[10px] tracking-widest active:scale-95 transition-all flex items-center gap-2 border border-emerald-500 shadow-sm"
                 >
-                  <Save size={20} /> Commit to Memory
+                  <Save size={14} /> Commit
                 </button>
              </div>
           </motion.div>

@@ -45,50 +45,46 @@ export function LibraryScreen({
   const [activeTab, setActiveTab] = useState<Tab>('inventory');
 
   const tabs = [
-    { id: 'inventory', label: 'Vault', icon: Package, desc: 'Skins & Meditations' },
-    { id: 'media', label: 'Media', icon: Video, desc: 'Nexus Recorded Records' },
-    { id: 'creative', label: 'Sketches', icon: Palette, desc: 'Neural Canvas Art' },
-    { id: 'archive', label: 'Protocols', icon: StickyNote, desc: 'Gratitude & Pins' },
+    { id: 'inventory', label: 'Vault', icon: Package, desc: 'Skins & Tracks' },
+    { id: 'media', label: 'Media', icon: Video, desc: 'Saved Reels & Clips' },
+    { id: 'creative', label: 'Sketches', icon: Palette, desc: 'Saved Masterpieces' },
+    { id: 'archive', label: 'Protocols', icon: StickyNote, desc: 'Saved Brain Dumps' },
   ];
 
-  const isPlayingMusic = (item: LibraryItem) => {
-    return item.type === 'music' && item.activated;
-  };
-
   return (
-    <div className="flex flex-col min-h-screen bg-transparent pb-36 overflow-x-hidden w-full">
-      {/* Dynamic Header incorporating Theme settings-header-bg */}
-      <div className="sticky top-0 z-[100] settings-header-bg backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-[#E9E4D4] shadow-sm">
+    <div className="flex flex-col min-h-screen bg-[#FCFAF6] pb-36 overflow-x-hidden w-full">
+      {/* Dynamic Header incorporating Sunset Sand Theme style */}
+      <div className="sticky top-0 z-[100] bg-[#FAF7F2]/90 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-[#E9E4D4] shadow-sm">
         <button 
           onClick={onBack} 
-          className="p-3 bg-white/65 hover:bg-white border border-[#E9E4D4] shadow-sm rounded-2xl text-blue-900/80 hover:text-[#4F3F34] active:scale-95 transition-all text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5"
+          className="p-2.5 bg-white hover:bg-[#FAF7F2] border border-[#E9E4D4] shadow-sm rounded-xl text-[#4F3F34] active:scale-95 transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5"
         >
-          <ChevronRight className="rotate-180 text-[#69C496]" size={16} /> BACK
+          <ChevronRight className="rotate-180 text-[#69C496]" size={14} /> BACK
         </button>
         <div className="text-center">
-          <p className="text-[10px] font-black uppercase text-[#69C496] tracking-[0.2em] animate-pulse">Your Treasury</p>
-          <h2 className="text-lg font-black text-blue-900 uppercase tracking-tight">Vault System</h2>
+          <p className="text-[9px] font-black uppercase text-[#69C496] tracking-[0.22em] animate-pulse">Retention Treasury</p>
+          <h2 className="text-base font-black text-[#4F3F34] uppercase tracking-tight">Vault System</h2>
         </div>
-        <div className="w-11 h-11 rounded-2xl bg-white border border-[#E9E4D4] flex items-center justify-center text-[#69C496] shadow-sm">
-          <Package size={18} />
+        <div className="w-10 h-10 rounded-xl bg-white border border-[#E9E4D4] flex items-center justify-center text-[#69C496] shadow-sm">
+          <Package size={16} />
         </div>
       </div>
 
       <div className="px-4 md:px-6 mt-6">
-        {/* Dynamic, Theme-matching Description */}
-        <div className="max-w-2xl mx-auto glass-card p-5 flex items-start gap-4 mb-6">
-          <div className="p-3 bg-[#69C496]/10 border border-[#69C496]/25 rounded-2xl text-[#69C496] flex-shrink-0 animate-pulse">
+        {/* Dynamic description of the Vault section */}
+        <div className="max-w-2xl mx-auto bg-white border border-[#E9E4D4] rounded-3xl p-5 flex items-start gap-4 mb-6 shadow-sm">
+          <div className="p-3 bg-[#69C496]/10 border border-[#69C496]/20 rounded-2xl text-[#69C496] flex-shrink-0 animate-pulse">
             <Sparkles size={16} className="fill-[#69C496]/20" />
           </div>
           <div>
-            <h3 className="text-sm font-black text-blue-900 uppercase tracking-wide">Nexus Asset Treasury</h3>
-            <p className="text-[11px] text-blue-900/80 font-semibold leading-relaxed mt-1">
-              Equip unlocked skins for your companion mascot, toggle therapeutic audio tracks, replay your pinned protocols, and review your neural sketch achievements.
+            <h3 className="text-xs font-black text-[#4F3F34] uppercase tracking-wide">Integrated Treasury</h3>
+            <p className="text-[11px] text-[#4F3F34]/70 font-bold leading-relaxed mt-1">
+              Select unlocks for your biological companion, trigger therapeutic audio streams, relive curated challenges, and appreciate your custom generated assets, bro.
             </p>
           </div>
         </div>
 
-        {/* Elegant Bento Navigation Tabs matching the organic look */}
+        {/* Bento Navigation Tabs with Sunset/Sand accents */}
         <div className="max-w-2xl mx-auto flex gap-3 pb-3 overflow-x-auto no-scrollbar scroll-smooth">
           {tabs.map(tab => {
             const Icon = tab.icon;
@@ -97,17 +93,17 @@ export function LibraryScreen({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as Tab)}
-                className={`flex flex-col items-start p-4 rounded-2xl border transition-all text-left flex-shrink-0 min-w-[130px] sm:min-w-[155px] hover:scale-[1.02] active:scale-[0.98] ${
+                className={`flex flex-col items-start p-4 rounded-2xl border transition-all text-left flex-shrink-0 min-w-[135px] sm:min-w-[155px] hover:scale-[1.02] active:scale-[0.98] ${
                   isActive 
-                    ? 'bg-gradient-to-tr from-[#69C496] to-[#51AF7E] text-white border-[#51AF7E] shadow-md shadow-[#69C496]/30' 
-                    : 'bg-white text-blue-900 border-[#E9E4D4] hover:bg-white/90 shadow-sm'
+                    ? 'bg-[#4F3F34] text-[#FCFAF6] border-[#4F3F34] shadow-md shadow-[#4F3F34]/20' 
+                    : 'bg-white text-[#4F3F34] border-[#E9E4D4] hover:bg-[#FAF7F2] shadow-sm'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon size={14} className={isActive ? 'text-white' : 'text-[#69C496]'} />
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Icon size={14} className={isActive ? 'text-[#69C496]' : 'text-[#69C496]'} />
                   <span className="text-[10px] font-black uppercase tracking-wider">{tab.label}</span>
                 </div>
-                <span className={`text-[9px] font-bold uppercase tracking-wide truncate w-full block ${isActive ? 'text-[#E8F5EE]' : 'text-blue-900/60'}`}>
+                <span className={`text-[9px] font-bold uppercase tracking-wide truncate w-full block ${isActive ? 'text-[#FAF7F2]/60' : 'text-[#4F3F34]/40'}`}>
                   {tab.desc}
                 </span>
               </button>
@@ -126,22 +122,22 @@ export function LibraryScreen({
                 className="space-y-4"
               >
                 <div className="flex items-center justify-between px-1 mb-2">
-                  <span className="text-[10px] font-black uppercase text-blue-900/60 tracking-wider">Stored Items</span>
-                  <span className="text-[10px] font-black text-[#69C496] uppercase bg-[#69C496]/10 px-2 py-0.5 rounded-full">{items.length} Unlocked</span>
+                  <span className="text-[10px] font-black uppercase text-[#4F3F34]/60 tracking-wider">Acquired Collectibles</span>
+                  <span className="text-[10px] font-black text-[#69C496] uppercase bg-[#E8F5EE] border border-[#D0EFE0] px-2 py-0.5 rounded-full">{items.length} Unlocked</span>
                 </div>
                 
                 {items.length === 0 ? (
-                  <div className="border-2 border-dashed border-[#E9E4D4] rounded-[2.5rem] p-12 text-center bg-white/70 flex flex-col items-center gap-4">
+                  <div className="border border-dashed border-[#E9E4D4] rounded-[2.5rem] p-12 text-center bg-white flex flex-col items-center gap-4">
                     <div className="w-16 h-16 bg-[#69C496]/10 rounded-full flex items-center justify-center text-[#69C496]">
                       <Package size={28} />
                     </div>
-                    <h4 className="text-blue-900 font-black uppercase text-xs">Treasury is Empty</h4>
-                    <p className="text-blue-900/60 text-[11px] max-w-xs leading-relaxed">
-                      Visit the Shop section to purchase beautiful skins for your mascot, unlock organic backgrounds, and grab sound packs!
+                    <h4 className="text-[#4F3F34] font-black uppercase text-xs">Treasury is Empty</h4>
+                    <p className="text-[#4F3F34]/50 text-[11px] max-w-xs leading-relaxed font-bold">
+                      Navigate to the Eco Store to trigger and cultivate beautiful botanical companion skins, customized focus backgrounds, and custom ambient sounds, bro!
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-[#E9E4D4] bg-white border border-[#E9E4D4] rounded-[2.5rem] p-6 shadow-sm">
+                  <div className="divide-y divide-[#E9E4D4] bg-white border border-[#E9E4D4] rounded-[2rem] p-5 shadow-sm">
                     {items.map(item => {
                       const isMusic = item.type === 'music';
                       const isSkin = item.type === 'skin';
@@ -150,55 +146,55 @@ export function LibraryScreen({
 
                       return (
                         <div key={item.id} className="flex items-center gap-4 py-4 first:pt-1 last:pb-1">
-                          {/* Avatar Display */}
+                          {/* Item display icon */}
                           <div className="relative">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-inner border transition-all ${
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner border transition-all ${
                               active 
-                                ? 'bg-gradient-to-br from-[#69C496] to-[#51AF7E] border-[#51AF7E] text-white' 
+                                ? 'bg-[#FAF7F2] border-[#69C496] text-[#4F3F34]' 
                                 : 'bg-[#FFFDF9] border-[#E9E4D4]'
                             }`}>
                               {item.icon}
                             </div>
                             {active && (
-                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#69C496] opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-[#69C496]"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#69C496]"></span>
                               </span>
                             )}
                           </div>
 
-                          {/* Data Column */}
+                          {/* Detail display panel */}
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-black text-blue-900 text-xs sm:text-sm uppercase tracking-wide truncate">{item.name}</h4>
+                            <h4 className="font-extrabold text-[#4F3F34] text-xs sm:text-sm uppercase tracking-wide truncate">{item.name}</h4>
                             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                              <span className="text-[8px] font-black text-blue-900/60 bg-[#FAF7F2] border border-[#E9E4D4] px-2 py-0.5 rounded">
+                              <span className="text-[8px] font-black text-[#4F3F34]/60 bg-[#FAF7F2] border border-[#E9E4D4] px-2 py-0.5 rounded uppercase">
                                 {item.type}
                               </span>
                               {isMusic && (
                                 <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded flex items-center gap-1 ${
                                   active 
                                     ? 'bg-[#E8F5EE] text-[#69C496] animate-pulse' 
-                                    : 'bg-[#FAF7F2] text-blue-900/40'
+                                    : 'bg-[#FAF7F2] text-[#4F3F34]/40'
                                 }`}>
                                   <Disc size={8} className={active ? 'animate-spin' : ''} />
-                                  {active ? 'Playing' : 'In Library'}
+                                  {active ? 'Playing Track' : 'In Library'}
                                 </span>
                               )}
                               {isSkin && active && (
                                 <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded uppercase">
-                                  Equipped 👑
+                                  Equipped Mascot 👑
                                 </span>
                               )}
                               {isSoundPack && active && (
-                                <span className="text-[8px] font-black text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">
-                                  System Voice Active 🔊
+                                <span className="text-[8px] font-black text-[#69C496] bg-[#E8F5EE] px-1.5 py-0.5 rounded uppercase">
+                                  Auditory Sync Active 🔊
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          {/* Trigger Area */}
-                          <div className="flex gap-2.5">
+                          {/* Control buttons */}
+                          <div className="flex items-center gap-2">
                             <button
                               onClick={() => {
                                 if (active) {
@@ -207,7 +203,7 @@ export function LibraryScreen({
                                   onActivate(item.id);
                                 }
                               }}
-                              className={`px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-wider transition-all flex items-center gap-1.5 border min-w-[90px] justify-center ${
+                              className={`px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-wider transition-all flex items-center gap-1 border min-w-[85px] justify-center active:scale-95 ${
                                 active 
                                   ? 'bg-[#FDF2F2] text-red-600 border-red-200 hover:bg-[#FCE8E8]' 
                                   : 'bg-[#E8F5EE] text-[#69C496] border-[#D0EFE0] hover:bg-[#DDF7EB]'
@@ -216,21 +212,21 @@ export function LibraryScreen({
                               {isMusic ? (
                                 active ? (
                                   <>
-                                    <Pause size={10} fill="currentColor" /> Turn Off
+                                    <Pause size={10} fill="currentColor" /> Pause
                                   </>
                                 ) : (
                                   <>
-                                    <Play size={10} fill="currentColor" /> Turn On
+                                    <Play size={10} fill="currentColor" /> Play
                                   </>
                                 )
                               ) : (
-                                active ? 'Equipped • Off' : 'Active • On'
+                                active ? 'Deactivate' : 'Activate'
                               )}
                             </button>
                             
                             <button
                               onClick={() => onDelete(item.id)}
-                              className="p-2 text-blue-900/40 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100"
+                              className="p-1.5 text-[#4F3F34]/30 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all border border-transparent hover:border-red-100"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -252,25 +248,25 @@ export function LibraryScreen({
                 className="space-y-4"
               >
                 <div className="flex items-center justify-between px-1 mb-2">
-                  <span className="text-[10px] font-black uppercase text-blue-900/60 tracking-wider">Recorded Reels</span>
-                  <span className="text-[10px] font-black text-[#69C496] uppercase bg-[#69C496]/10 px-2 py-0.5 rounded-full">{savedVideos.length} Saved</span>
+                  <span className="text-[10px] font-black uppercase text-[#4F3F34]/60 tracking-wider">Recorded Reels</span>
+                  <span className="text-[10px] font-black text-[#69C496] uppercase bg-[#E8F5EE] border border-[#D0EFE0] px-2 py-0.5 rounded-full">{savedVideos.length} Saved</span>
                 </div>
 
                 {savedVideos.length === 0 ? (
-                  <div className="border-2 border-dashed border-[#E9E4D4] rounded-[2.5rem] p-12 text-center bg-white/70 flex flex-col items-center gap-4">
+                  <div className="border border-dashed border-[#E9E4D4] rounded-[2.5rem] p-12 text-center bg-white flex flex-col items-center gap-4">
                     <div className="w-16 h-16 bg-[#69C496]/10 rounded-full flex items-center justify-center text-[#69C496]">
                       <Video size={28} />
                     </div>
-                    <h4 className="text-blue-900 font-black uppercase text-xs">No Records Found</h4>
-                    <p className="text-blue-900/60 text-[11px] max-w-xs leading-relaxed">
-                      Make awesome custom animations and records inside the Nexora Studio sandbox to store files!
+                    <h4 className="text-[#4F3F34] font-black uppercase text-xs">No Recorded Material</h4>
+                    <p className="text-[#4F3F34]/50 text-[11px] max-w-xs leading-relaxed font-bold">
+                      Build and capture visual layout compositions inside the Nexora Studio sandbox to store video reels here, bro.
                     </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     {savedVideos.map(video => (
                       <div key={video.id} className="bg-white border border-[#E9E4D4] rounded-2xl overflow-hidden shadow-sm group relative flex flex-col">
-                        <div className="aspect-[9/16] bg-slate-950 relative">
+                        <div className="aspect-[9/16] bg-stone-900 relative">
                           {video.videoUrl && (
                             <video 
                               src={video.videoUrl} 
@@ -283,9 +279,9 @@ export function LibraryScreen({
                           <div className="absolute inset-0 flex items-center justify-center">
                             <button 
                               onClick={() => onPlayVideo(video)}
-                              className="w-11 h-11 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:scale-110 active:scale-90 transition-transform"
+                              className="w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:scale-110 active:scale-90 transition-transform"
                             >
-                              <Play size={18} fill="white" className="ml-0.5" />
+                              <Play size={16} fill="white" className="ml-0.5" />
                             </button>
                           </div>
                           <button 
@@ -296,8 +292,8 @@ export function LibraryScreen({
                           </button>
                         </div>
                         <div className="p-3 bg-white border-t border-[#E9E4D4]">
-                          <p className="text-[10px] font-black text-blue-900 uppercase truncate mb-1">{video.caption || 'Nexus Clip'}</p>
-                          <p className="text-[8px] font-bold text-blue-900/40 uppercase">{new Date(video.createdAt).toLocaleDateString()}</p>
+                          <p className="text-[10px] font-black text-[#4F3F34] uppercase truncate mb-1">{video.caption || 'Nexus Clip'}</p>
+                          <p className="text-[8px] font-bold text-[#4F3F34]/40 uppercase">{new Date(video.createdAt).toLocaleDateString()}</p>
                         </div>
                       </div>
                     ))}
@@ -315,25 +311,25 @@ export function LibraryScreen({
                 className="space-y-4"
               >
                 <div className="flex items-center justify-between px-1 mb-2">
-                  <span className="text-[10px] font-black uppercase text-blue-900/60 tracking-wider">Canvas Artworks</span>
-                  <span className="text-[10px] font-black text-[#69C496] uppercase bg-[#69C496]/10 px-2 py-0.5 rounded-full">{(stats.drawings?.length || 0)} Saved</span>
+                  <span className="text-[10px] font-black uppercase text-[#4F3F34]/60 tracking-wider">Canvas Artworks</span>
+                  <span className="text-[10px] font-black text-[#69C496] uppercase bg-[#E8F5EE] border border-[#D0EFE0] px-2 py-0.5 rounded-full">{(stats.drawings?.length || 0)} Saved</span>
                 </div>
 
                 {!stats.drawings || stats.drawings.length === 0 ? (
-                  <div className="border-2 border-dashed border-[#E9E4D4] rounded-[2.5rem] p-12 text-center bg-white/70 flex flex-col items-center gap-4">
+                  <div className="border border-dashed border-[#E9E4D4] rounded-[2.5rem] p-12 text-center bg-white flex flex-col items-center gap-4">
                     <div className="w-16 h-16 bg-[#69C496]/10 rounded-full flex items-center justify-center text-[#69C496]">
                       <Palette size={28} />
                     </div>
-                    <h4 className="text-blue-900 font-black uppercase text-xs">No Canvas Artworks</h4>
-                    <p className="text-blue-900/60 text-[11px] max-w-xs leading-relaxed">
-                      Express your creative skills in the drawing steps during the Core Challenge flow.
+                    <h4 className="text-[#4F3F34] font-black uppercase text-xs">Art Treasury Empty</h4>
+                    <p className="text-[#4F3F34]/50 text-[11px] max-w-xs leading-relaxed font-bold">
+                      Draw on the digital drawing board during focus tasks to secure beautiful canvas artwork logs here, bro.
                     </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     {stats.drawings.map((drawing, idx) => (
                       <div key={idx} className="bg-white border border-[#E9E4D4] rounded-2xl overflow-hidden shadow-sm group aspect-square relative p-2">
-                        <div className="w-full h-full bg-[#FFFDF9] rounded-xl relative overflow-hidden flex items-center justify-center">
+                        <div className="w-full h-full bg-[#FFFDF9] rounded-xl relative overflow-hidden flex items-center justify-center border border-[#E9E4D4]">
                           <img src={drawing} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                           
                           <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -362,35 +358,35 @@ export function LibraryScreen({
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between px-1 mb-2">
-                    <span className="text-[10px] font-black uppercase text-blue-900/60 tracking-wider">Pinned Protocols</span>
-                    <span className="text-[10px] font-black text-[#69C496] bg-[#69C496]/10 px-2 py-0.5 rounded-full">Practice Arena</span>
+                    <span className="text-[10px] font-black uppercase text-[#4F3F34]/60 tracking-wider">Saved Arena Protocols</span>
+                    <span className="text-[10px] font-black text-[#69C496] bg-[#E8F5EE] border border-[#D0EFE0] px-2 py-0.5 rounded-full">Replay Gym</span>
                   </div>
 
-                  <div className="flex items-start gap-3 bg-[#E8F5EE] border border-[#D0EFE0] p-4 rounded-2xl text-blue-900 leading-relaxed text-[11px] font-semibold shadow-sm">
+                  <div className="flex items-start gap-3 bg-[#E8F5EE] border border-[#D0EFE0] p-4 rounded-2xl text-[#4F3F34] leading-relaxed text-[11px] font-bold shadow-sm">
                     <AlertCircle size={15} className="text-[#69C496] mt-0.5 flex-shrink-0" />
                     <p>
-                      Replaying challenges here runs in <span className="font-bold text-[#4F3F34]">Practice Mode</span>. Work out or practice as many times as you like! Practice mode provides experience but does not increment competitive streaks or trophies.
+                      Replaying challenges in the Library processes in <span className="font-extrabold text-[#4F3F34]">Practice Mode</span>. Work out or practice as many times as you like, bro! Complete loops earn XP but do not wipe competitive streaks.
                     </p>
                   </div>
 
                   {(!settings.savedChallengeIds || settings.savedChallengeIds.length === 0) ? (
-                    <div className="border border-dashed border-[#E9E4D4] rounded-[2.5rem] p-8 text-center bg-white/75 flex flex-col items-center gap-2">
-                      <p className="text-xs font-black text-blue-900/40 uppercase">No Pinned Protocols</p>
-                      <p className="text-[10px] text-blue-900/50 max-w-xs">
-                        Pin interesting challenges from your main feeding screen to collect them here for warmups!
+                    <div className="border border-dashed border-[#E9E4D4] rounded-[2.5rem] p-8 text-center bg-white flex flex-col items-center gap-2 shadow-sm">
+                      <p className="text-xs font-black text-[#4F3F34]/40 uppercase">No Saved Protocols</p>
+                      <p className="text-[10px] text-[#4F3F34]/50 max-w-sm leading-relaxed font-bold">
+                        Pin and store interest-driven challenges from your active streams to capture them here for target practice!
                       </p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-[#E9E4D4] bg-white border border-[#E9E4D4] rounded-[2.5rem] p-5 shadow-sm">
+                    <div className="divide-y divide-[#E9E4D4] bg-white border border-[#E9E4D4] rounded-[2rem] p-5 shadow-sm">
                       {settings.savedChallengeIds.map(cid => (
-                        <div key={cid} className="flex items-center justify-between py-3.5 first:pt-1 last:pb-1">
+                        <div key={cid} className="flex items-center justify-between py-3.5 first:pt-1 last:pb-1 animate-fadeIn">
                           <div className="flex items-center gap-3">
                             <div className="p-2.5 bg-[#E8F5EE] text-[#69C496] rounded-xl border border-[#D0EFE0]">
                               <Zap size={14} className="fill-[#69C496]/40" />
                             </div>
                             <div>
-                              <p className="text-xs font-black text-blue-900 uppercase tracking-tight">{cid.replace(/-/g, ' ')}</p>
-                              <span className="text-[8px] font-black text-blue-900/40 uppercase tracking-wider block mt-0.5">UNLIMITED REPLAYS</span>
+                              <p className="text-xs font-black text-[#4F3F34] uppercase tracking-tight">{cid.replace(/-/g, ' ')}</p>
+                              <span className="text-[8px] font-black text-[#4F3F34]/40 uppercase tracking-wider block mt-0.5">UNLIMITED REPLAYS</span>
                             </div>
                           </div>
                           
@@ -399,12 +395,12 @@ export function LibraryScreen({
                               onClick={() => onPlayChallenge(cid)}
                               className="px-4 py-2 bg-[#E8F5EE] hover:bg-[#DDF7EB] text-[#69C496] border border-[#D0EFE0] rounded-xl font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
                             >
-                              <Play size={10} fill="currentColor" /> Take Challenge
+                              <Play size={10} fill="currentColor" /> Replay
                             </button>
                             
                             <button 
                               onClick={() => onDeleteChallenge(cid)} 
-                              className="p-2 text-blue-900/30 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                              className="p-2 text-[#4F3F34]/30 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -415,25 +411,25 @@ export function LibraryScreen({
                   )}
                 </div>
 
-                {/* Gratitude signals */}
+                {/* Brain Dump Manifest Logs */}
                 <div className="space-y-3 pt-2">
-                  <span className="text-[10px] font-black uppercase text-blue-900/60 tracking-wider px-1">Neuro-Gratitude Signals</span>
+                  <span className="text-[10px] font-black uppercase text-[#4F3F34]/60 tracking-wider px-1">Recorded Manifest Logs</span>
                   {(!stats.gratitudeEntries || stats.gratitudeEntries.length === 0) ? (
-                    <div className="border border-dashed border-[#E9E4D4] rounded-[2.5rem] p-8 text-center bg-white/75 flex flex-col items-center gap-2">
-                      <p className="text-xs font-black text-blue-900/40 uppercase font-bold">No Records Saved</p>
-                      <p className="text-[10px] text-blue-900/50">Your active gratitude thoughts will automatically save here.</p>
+                    <div className="border border-dashed border-[#E9E4D4] rounded-[2.5rem] p-8 text-center bg-white flex flex-col items-center gap-2 shadow-sm">
+                      <p className="text-xs font-black text-[#4F3F34]/40 uppercase font-bold">No Brain Dumps Stored</p>
+                      <p className="text-[10px] text-[#4F3F34]/50 leading-relaxed font-bold">Your active gratitude and dump thoughts will sync right here, bro.</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-[#E9E4D4] bg-white border border-[#E9E4D4] rounded-[2.5rem] p-5 shadow-sm">
+                    <div className="divide-y divide-[#E9E4D4] bg-white border border-[#E9E4D4] rounded-[2rem] p-5 shadow-sm">
                       {stats.gratitudeEntries.map(entry => (
-                        <div key={entry.id} className="flex items-center justify-between gap-4 py-3.5 first:pt-1 last:pb-1">
+                        <div key={entry.id} className="flex items-center justify-between gap-4 py-4 first:pt-1 last:pb-1">
                           <div className="min-w-0 flex-1">
-                            <p className="text-[12px] font-semibold text-blue-900/80 leading-relaxed italic">"{entry.text}"</p>
-                            <span className="text-[8px] font-black text-blue-900/40 uppercase tracking-wider block mt-1.5">{new Date(entry.date).toLocaleDateString()}</span>
+                            <p className="text-xs font-bold text-[#4F3F34] leading-relaxed italic">"{entry.text}"</p>
+                            <span className="text-[8px] font-black text-[#4F3F34]/40 uppercase tracking-widest block mt-1.5">{new Date(entry.date).toLocaleDateString()}</span>
                           </div>
                           <button 
                             onClick={() => onDeleteNote(entry.id)} 
-                            className="p-2 text-blue-900/30 hover:text-red-500 hover:bg-gradient-to-br rounded-xl"
+                            className="p-2 text-[#4F3F34]/30 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100"
                           >
                             <Trash2 size={13} />
                           </button>

@@ -64,10 +64,10 @@ export function StatsCharts({ history = [], stats }: { history: DailyProgress[];
   return (
     <div className="space-y-6">
       {/* Line Chart: Performance Trend */}
-      <div className="safe-glass p-6">
+      <div className="safe-glass bg-white border border-[#E9E4D4] rounded-3xl p-6 shadow-sm">
         <div className="flex items-center gap-2.5 mb-6">
           <TrendingUp className="text-[#69C496]" size={18} />
-          <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Volt Output Trend</h3>
+          <h3 className="text-xs font-black text-[#4F3F34] uppercase tracking-widest">Volt Output Trend</h3>
         </div>
         <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -104,11 +104,11 @@ export function StatsCharts({ history = [], stats }: { history: DailyProgress[];
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Bar Chart: Hydration */}
-        <div className="safe-glass p-6">
+        {/* Bar Chart: Hydration Efficiency */}
+        <div className="safe-glass bg-white border border-[#E9E4D4] rounded-3xl p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-6">
             <Droplets className="text-[#69C496]" size={16} />
-            <h3 className="text-xs font-black text-blue-900 uppercase tracking-widest">Hydration Efficiency</h3>
+            <h3 className="text-xs font-black text-[#4F3F34] uppercase tracking-widest">Hydration Efficiency</h3>
           </div>
           <div className="h-40 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -138,11 +138,11 @@ export function StatsCharts({ history = [], stats }: { history: DailyProgress[];
           </div>
         </div>
 
-        {/* Pie Chart: Discipline Mix */}
-        <div className="safe-glass p-6">
+        {/* Pie Chart: Discipline Allocation */}
+        <div className="safe-glass bg-white border border-[#E9E4D4] rounded-3xl p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-6">
             <PieIcon className="text-amber-700" size={16} />
-            <h3 className="text-xs font-black text-blue-900 uppercase tracking-widest">Discipline Allocation</h3>
+            <h3 className="text-xs font-black text-[#4F3F34] uppercase tracking-widest">Discipline Allocation</h3>
           </div>
           <div className="h-40 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -165,7 +165,7 @@ export function StatsCharts({ history = [], stats }: { history: DailyProgress[];
                   verticalAlign="bottom" 
                   height={30}
                   iconType="circle"
-                  formatter={(value) => <span className="text-[9px] font-black text-blue-900/60 uppercase tracking-widest">{value}</span>}
+                  formatter={(value) => <span className="text-[9px] font-black text-[#4F3F34]/75 uppercase tracking-widest">{value}</span>}
                 />
               </PieChart>
             </ResponsiveContainer>

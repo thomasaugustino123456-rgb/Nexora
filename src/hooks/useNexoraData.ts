@@ -173,6 +173,14 @@ export function useNexoraData(
       return;
     }
 
+    // Force loading state for non-cached or newly logged-in sessions to let Firestore data resolve
+    // this completely prevents existing users from flashing onboarding screens during transitional sign-ins!
+    const hasCache = localStorage.getItem("nexora_onboarding_completed") === "true";
+    if (!hasCache) {
+      setLoading(true);
+      setIsDataReady(false);
+    }
+
     let isLoaderResolved = false;
 
     // Safety timeout: if Firestore takes too long (or user is offline), immediately open using local cached data!
