@@ -43,7 +43,13 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   }, [step]);
 
   const handleComplete = async () => {
-    if (!auth.currentUser) return;
+    console.log("handleComplete called, auth.currentUser:", auth.currentUser);
+    if (!auth.currentUser) {
+      console.error("Cannot complete onboarding: No authenticated user found.");
+      // Just in case, try to complete anyway if the app state is inconsistent? 
+      // Maybe not the right approach. Let's see if this fixes it by logging.
+      return;
+    }
     
     const updates: any = { onboardingCompleted: true };
     if (name.trim()) updates.displayName = name.trim();
@@ -57,6 +63,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
     updates.pushupsGoal = pushups;
 
     try {
+      console.log("Updating Firestore with:", updates);
       await setDoc(doc(db, 'users', auth.currentUser.uid), updates, { merge: true });
       
       setSettings({
@@ -67,6 +74,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
         onboardingCompleted: true
       });
       
+      console.log("Calling onComplete");
       onComplete();
     } catch (error) {
       console.error("Error saving onboarding data:", error);
@@ -76,7 +84,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   };
 
   const handleContinueClick = (action: () => void) => {
-    vibrate(15);
+    // vibrate(15);
     action();
   };
 
