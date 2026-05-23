@@ -43,42 +43,43 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   }, [step]);
 
   const handleComplete = async () => {
-    const user = auth.currentUser;
-    console.log("handleComplete called, user:", user);
-    
-    // Proceed regardless for now, Firestore will handle the case where user is null
-    const updates: any = { onboardingCompleted: true };
-    if (name.trim()) updates.displayName = name.trim();
-    if (gender) updates.gender = gender;
-    if (source) updates.source = source;
-    if (workType) updates.workType = workType;
-    if (energyPeak) updates.energyPeak = energyPeak;
-    if (priorityFocus) updates.priorityFocus = priorityFocus;
-    if (commitmentLevel) updates.commitmentLevel = commitmentLevel;
-    updates.waterGoal = water;
-    updates.pushupsGoal = pushups;
-
     try {
+      const user = auth.currentUser;
+      const updates: any = { onboardingCompleted: true };
+      
+      const safeName = (name && typeof name === 'string') ? name.trim() : '';
+      if (safeName) updates.displayName = safeName;
+      if (gender) updates.gender = gender;
+      if (source) updates.source = source;
+      if (workType) updates.workType = workType;
+      if (energyPeak) updates.energyPeak = energyPeak;
+      if (priorityFocus) updates.priorityFocus = priorityFocus;
+      if (commitmentLevel) updates.commitmentLevel = commitmentLevel;
+      updates.waterGoal = water || 2;
+      updates.pushupsGoal = pushups || 5;
+
       if (user) {
-        console.log("Updating Firestore with:", updates);
-        await setDoc(doc(db, 'users', user.uid), updates, { merge: true });
-      } else {
-        console.warn("handleComplete: No authenticated user, skipping Firestore update!");
+        updates.uid = user.uid;
+        updates.email = user.email || `${user.uid}@nexora.app`;
+        updates.role = 'user';
+
+        setDoc(doc(db, 'users', user.uid), updates, { merge: true }).catch(err => {
+          console.error("Firestore update failed behind scenes:", err);
+        });
       }
       
-      setSettings({
-        ...settings,
-        displayName: name.trim() || settings.displayName,
-        waterGoal: water,
-        pushupsGoal: pushups,
+      setSettings(prev => ({
+        ...prev,
+        displayName: safeName || prev.displayName,
+        waterGoal: water || 2,
+        pushupsGoal: pushups || 5,
         onboardingCompleted: true
-      });
-      
-      console.log("Calling onComplete");
-      onComplete();
+      }));
+
     } catch (error) {
-      console.error("Error saving onboarding data:", error);
-      // Fallback to complete anyway so user isn't stuck
+      console.error("Critical error in handleComplete:", error);
+    } finally {
+      console.log("Forcing onComplete");
       onComplete();
     }
   };
@@ -811,7 +812,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
               </div>
               
               <button 
-                onClick={() => handleContinueClick(handleComplete)} 
+                onClick={handleComplete} 
                 onMouseEnter={() => handleButtonHover(true)}
                 onMouseLeave={() => handleButtonHover(false)}
                 className={`bg-emerald-500 text-white py-4 px-8 rounded-xl font-black shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2 text-lg ${buttonPulse ? 'scale-105 shadow-emerald-500/50' : ''}`}

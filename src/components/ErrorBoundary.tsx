@@ -9,6 +9,7 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  isUpdating?: boolean;
 }
 
 export class ErrorBoundary extends React.Component<Props, State> {
@@ -16,26 +17,27 @@ export class ErrorBoundary extends React.Component<Props, State> {
     super(props);
     this.state = {
       hasError: false,
-      error: null
+      error: null,
+      isUpdating: false
     };
   }
 
   public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    const errorMsg = error.message || '';
+    const isUpdating = 
+      errorMsg.includes('Failed to fetch dynamically imported module') ||
+      errorMsg.includes('loading chunk') ||
+      errorMsg.includes('dynamic import') ||
+      errorMsg.includes('Dynamic import');
+      
+    return { hasError: true, error, isUpdating };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('NEXORA CRITICAL ERROR:', error, errorInfo);
     
-    // Check for dynamic import failure or chunk missing due to live hot patches / updates
-    const errorMsg = error.message || '';
-    if (
-      errorMsg.includes('Failed to fetch dynamically imported module') ||
-      errorMsg.includes('loading chunk') ||
-      errorMsg.includes('dynamic import') ||
-      errorMsg.includes('Dynamic import')
-    ) {
-      console.warn("NEXORA SEAMLESS SELF-HEAL: Dynamic import failed due to live app deployment update. Fetching latest assets...", errorMsg);
+    if (this.state.isUpdating) {
+      console.warn("NEXORA SEAMLESS SELF-HEAL: Dynamic import failed due to live app deployment update. Fetching latest assets...");
       const reloadKey = 'nexora_chunk_reload_timestamp';
       const lastReload = sessionStorage.getItem(reloadKey);
       const now = Date.now();
@@ -58,6 +60,20 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   public render(): ReactNode {
     if (this.state.hasError) {
+      if (this.state.isUpdating) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-blue-50 p-6 font-sans">
+            <div className="text-center animate-pulse">
+              <div className="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <RefreshCw size={32} className="animate-spin" />
+              </div>
+              <h2 className="text-2xl font-black text-blue-900 mb-2">Downloading Update...</h2>
+              <p className="text-blue-900/60 font-bold">Hold tight bro, getting the latest features!</p>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="min-h-screen flex items-center justify-center bg-[#F0F4F8] p-6 font-sans">
           <motion.div 

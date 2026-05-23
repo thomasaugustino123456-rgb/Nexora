@@ -367,6 +367,8 @@ export function useNexoraData(
             {
               ...settings,
               uid: user.uid,
+              email: user.email || `${user.uid}@nexora.app`,
+              role: 'user',
               stats: stats,
               isTodayCompleted: dailyProgress.completed,
               updatedAt: serverTimestamp(),

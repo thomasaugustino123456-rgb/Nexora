@@ -3382,10 +3382,39 @@ export default function App() {
     }
     vibrate(VIBRATION_PATTERNS.ERROR);
 
-    const performDeletion = async (currentUser: FirebaseUser) => {
-      const userId = currentUser.uid;
+    try {
+      let activeUser = auth.currentUser;
+      if (!activeUser) {
+        showToast("Error: Session expired.", "error");
+        return;
+      }
 
-      // 1. Delete user data from Firestore
+      // Check if re-authentication is required BEFORE wiping firestore data
+      const isGoogle = activeUser.providerData.some((p) => p.providerId === "google.com");
+      if (isGoogle) {
+          try {
+            const credential = await reauthenticateWithPopup(activeUser, new GoogleAuthProvider());
+            activeUser = credential.user;
+          } catch (e: any) {
+             console.warn("Re-auth failed or cancelled");
+             showToast("Authentication failed. Cannot delete.", "error");
+             return;
+          }
+      } else {
+         // Without a custom password prompt UI, we cannot easily reauth email users on the spot.
+         // We must check if their token is fresh enough (e.g. less than 5 minutes old).
+         const lastSignIn = activeUser.metadata.lastSignInTime ? new Date(activeUser.metadata.lastSignInTime).getTime() : 0;
+         const now = Date.now();
+         if (now - lastSignIn > 5 * 60 * 1000) {
+             showToast("Security Protocol: Re-authentication needed. Logging out...", "error");
+             setTimeout(() => signOut(auth), 2000);
+             return; // Halt to protect their data!
+         }
+      }
+
+      const userId = activeUser.uid;
+
+      // 1. Delete user data from Firestore (now we are reasonably sure we have fresh auth for Google users)
       try {
         const todayStr = new Date().toISOString().split("T")[0];
         await deleteDoc(doc(db, "users", userId, "progress", todayStr));
@@ -3396,7 +3425,7 @@ export default function App() {
       }
 
       // 2. Delete the auth account
-      await deleteUser(currentUser);
+      await deleteUser(activeUser);
 
       // Clear localStorage
       Object.keys(localStorage).forEach((key) => {
@@ -3406,50 +3435,14 @@ export default function App() {
       });
 
       showToast("Account deleted successfully.", "success");
-    };
-
-    try {
-      let activeUser = auth.currentUser;
-      if (!activeUser) {
-        showToast("Error: Session expired.", "error");
-        return;
-      }
-
-      try {
-        await performDeletion(activeUser);
-      } catch (error: any) {
-        // If we require a recent login, let's try the popup immediately.
-        if (error.code === "auth/requires-recent-login") {
-          const isGoogle = activeUser.providerData.some(
-            (p) => p.providerId === "google.com",
-          );
-          if (isGoogle) {
-            showToast("Confirm account deletion with Google.", "info");
-            const credential = await reauthenticateWithPopup(
-              activeUser,
-              new GoogleAuthProvider(),
-            );
-
-            // Because Firestore rules check `isOwner`, let's make sure our local token is super fresh
-            // maybe we don't even need this, reauthenticateWithPopup refreshes it.
-            await performDeletion(credential.user);
-          } else {
-            showToast(
-              "Security Protocol: Re-authentication needed. Logging out...",
-              "error",
-            );
-            setTimeout(() => signOut(auth), 2000);
-          }
-        } else {
-          throw error; // Re-throw to be caught by outer catch
-        }
-      }
     } catch (error: any) {
-      console.error("Delete Error:", error);
-      showToast(
-        `Delete failed: ${error.message || error.code || "System error"}`,
-        "error",
-      );
+       if (error.code === "auth/requires-recent-login") {
+         showToast("Security Protocol: Re-authentication needed. Logging out...", "error");
+         setTimeout(() => signOut(auth), 2000);
+       } else {
+         console.error("Delete Error:", error);
+         showToast(`Delete failed: ${error.message || error.code || "System error"}`, "error");
+       }
     }
   };
 
