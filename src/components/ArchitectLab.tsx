@@ -58,7 +58,7 @@ const PREMIUM_THEMES = [
   { id: 'oceanic_midnight', label: 'Oceanic Midnight', color: 'bg-gradient-to-r from-cyan-500 to-blue-600', textColor: 'text-cyan-400' },
   { id: 'neural_bio', label: 'Neural Bio-Link', color: 'bg-emerald-600', textColor: 'text-white' },
   { id: 'obsidian', label: 'Obsidian Void', color: 'bg-slate-950', textColor: 'text-blue-400' },
-  { id: 'sunset', label: 'Oceanic Sunset Minimalist', color: 'bg-gradient-to-r from-blue-950 via-rose-500 to-amber-500', textColor: 'text-rose-400' },
+  { id: 'sunset', label: 'Retention Sand (Organic & Warm)', color: 'bg-gradient-to-r from-[#FCFAF6] via-[#FAF7F2] to-[#E9E4D4]', textColor: 'text-[#4F3F34]' },
 ];
 
 export function ArchitectLab({ settings, onUpdateSettings, onClose }: ArchitectLabProps) {

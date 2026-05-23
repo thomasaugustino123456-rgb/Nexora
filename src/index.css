@@ -68,16 +68,16 @@
   }
 
   body.theme-sunset {
-    background: linear-gradient(180deg, #050a16 0%, #0c112b 40%, #1a0f26 75%, #2a0e1b 100%) !important;
-    background-color: #050a16 !important;
-    color: #FFF5F5 !important;
-    --surface-bg: rgba(18, 22, 42, 0.85);
-    --input-bg: rgba(9, 11, 25, 0.75);
-    --border-color: rgba(244, 63, 94, 0.22);
-    --text-primary: #FFF5F5;
-    --text-secondary: #FDA4AF;
-    --accent-glow: rgba(244, 63, 94, 0.08);
-    --accent-color: #F43F5E !important;
+    background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+    background-color: #FAF7F2 !important;
+    color: #4F3F34 !important;
+    --surface-bg: rgba(255, 255, 255, 0.95);
+    --input-bg: #FFFDF9;
+    --border-color: #E9E4D4;
+    --text-primary: #4F3F34;
+    --text-secondary: #7D6B58;
+    --accent-glow: rgba(105, 196, 150, 0.15);
+    --accent-color: #69C496 !important;
   }
 }
 
@@ -103,9 +103,9 @@
 }
 
 .theme-sunset {
-  background: linear-gradient(180deg, #050a16 0%, #0c112b 40%, #1a0f26 75%, #2a0e1b 100%) !important;
-  color: #FFF5F5 !important;
-  --accent-color: #F43F5E !important;
+  background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+  color: #4F3F34 !important;
+  --accent-color: #69C496 !important;
 }
 
 /* Theme specific overrides for internal glass structure and typography */
@@ -212,121 +212,199 @@
 }
 
 .theme-sunset .glass-card {
-  background: rgba(18, 22, 42, 0.82) !important;
-  border-color: rgba(244, 63, 94, 0.22) !important;
-  color: #FFF5F5 !important;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.55), 0 0 25px rgba(244, 63, 94, 0.08) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: #E9E4D4 !important;
+  color: #4F3F34 !important;
+  box-shadow: 0 10px 30px rgba(79, 63, 52, 0.05), 0 2px 10px rgba(79, 63, 52, 0.02) !important;
 }
 .theme-sunset .safe-glass {
-  background: rgba(18, 22, 42, 0.9) !important;
-  border-color: rgba(244, 63, 94, 0.22) !important;
-  color: #FFF5F5 !important;
+  background: #FFFDF9 !important;
+  border-color: #E9E4D4 !important;
+  color: #4F3F34 !important;
 }
 .theme-sunset h1,
 .theme-sunset h2,
 .theme-sunset h3,
 .theme-sunset h4 {
-  color: #FFFAFC !important;
+  color: #4F3F34 !important;
 }
 .theme-sunset p {
-  color: #FDA4AF !important;
+  color: #7D6B58 !important;
 }
 .theme-sunset span {
   color: inherit;
 }
 .theme-sunset div:not(.btn-primary) {
-  border-color: rgba(244, 63, 94, 0.15) !important;
+  border-color: #E9E4D4 !important;
 }
 .theme-sunset input, 
 .theme-sunset textarea,
 .theme-sunset select {
-  background-color: rgba(9, 11, 25, 0.75) !important;
-  border-color: rgba(244, 63, 94, 0.25) !important;
-  color: #FFF5F5 !important;
+  background-color: #FFFDF9 !important;
+  border-color: #E9E4D4 !important;
+  color: #4F3F34 !important;
 }
 
 /* Universal Overrides for text-blue-900 utility typography in any dark skin */
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900 {
   color: #FFFFFF !important;
 }
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/80 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/80 {
   color: rgba(255, 255, 255, 0.9) !important;
 }
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/60 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/60 {
   color: rgba(255, 255, 255, 0.7) !important;
 }
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/40 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/40 {
   color: rgba(255, 255, 255, 0.5) !important;
 }
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/30 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/30 {
   color: rgba(255, 255, 255, 0.35) !important;
 }
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/20 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/20 {
   color: rgba(255, 255, 255, 0.2) !important;
 }
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/10 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/10 {
   color: rgba(255, 255, 255, 0.1) !important;
 }
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/5 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/5 {
   color: rgba(255, 255, 255, 0.05) !important;
 }
 
 /* Universal Dark Variant Adaptation Filters to automatically match ANY active premium skin */
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-white {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-white {
   background-color: var(--surface-bg, rgba(13, 17, 26, 0.85)) !important;
   color: var(--text-primary, #F8FAFC) !important;
 }
 
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-white\/80 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-white\/80 {
   background-color: var(--surface-bg, rgba(13, 17, 26, 0.8)) !important;
   color: var(--text-primary, #F8FAFC) !important;
 }
 
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50\/50,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50\/30,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-100,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-purple-50\/30,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-orange-50\/30,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-emerald-50\/30,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-yellow-50\/30,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-purple-50\/50,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-red-50\/50 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-blue-50\/50,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-blue-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-blue-50,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-blue-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-purple-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-orange-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-emerald-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-yellow-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-purple-50\/50,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-red-50\/50 {
   background-color: var(--input-bg, rgba(8, 11, 18, 0.75)) !important;
   color: var(--text-primary, #F8FAFC) !important;
 }
 
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-blue-100,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-blue-200,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-emerald-100,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-orange-100,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-yellow-100,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-purple-200,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-white\/50 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-blue-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-blue-200,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-emerald-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-orange-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-yellow-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-purple-200,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-white\/50 {
   border-color: var(--border-color, rgba(255, 255, 255, 0.12)) !important;
 }
 
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900 {
   color: var(--text-primary, #F8FAFC) !important;
 }
 
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-600,
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-500 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-600,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-500 {
   color: var(--text-secondary, #94A3B8) !important;
 }
 
 /* background and border adaptive filters */
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-900\/10 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-blue-900\/10 {
   background-color: rgba(255, 255, 255, 0.08) !important;
 }
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-900\/5 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-blue-900\/5 {
   background-color: rgba(255, 255, 255, 0.04) !important;
 }
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-blue-900\/10 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-blue-900\/10 {
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
-:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50 {
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-blue-50 {
   background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Custom Light-Sand Adaptation Filters for theme-sunset (Retention Sand/Cream Theme) */
+.theme-sunset .text-blue-900 {
+  color: #4F3F34 !important;
+}
+.theme-sunset .text-blue-900\/80 {
+  color: rgba(79, 63, 52, 0.8) !important;
+}
+.theme-sunset .text-blue-900\/60 {
+  color: rgba(79, 63, 52, 0.6) !important;
+}
+.theme-sunset .text-blue-900\/40 {
+  color: rgba(79, 63, 52, 0.4) !important;
+}
+.theme-sunset .text-blue-900\/30 {
+  color: rgba(79, 63, 52, 0.3) !important;
+}
+.theme-sunset .text-blue-900\/20 {
+  color: rgba(79, 63, 52, 0.2) !important;
+}
+.theme-sunset .text-blue-900\/10 {
+  color: rgba(79, 63, 52, 0.1) !important;
+}
+.theme-sunset .text-blue-900\/5 {
+  color: rgba(79, 63, 52, 0.05) !important;
+}
+
+.theme-sunset .bg-white {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #4F3F34 !important;
+}
+.theme-sunset .bg-white\/80 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  color: #4F3F34 !important;
+}
+
+.theme-sunset .bg-blue-50\/50,
+.theme-sunset .bg-blue-50\/30,
+.theme-sunset .bg-blue-50,
+.theme-sunset .bg-blue-100,
+.theme-sunset .bg-purple-50\/30,
+.theme-sunset .bg-orange-50\/30,
+.theme-sunset .bg-emerald-50\/30,
+.theme-sunset .bg-yellow-50\/30,
+.theme-sunset .bg-purple-50\/50,
+.theme-sunset .bg-red-50\/50 {
+  background-color: #FFFDF9 !important;
+  color: #4F3F34 !important;
+  border-color: #E9E4D4 !important;
+}
+
+.theme-sunset .border-blue-100,
+.theme-sunset .border-blue-200,
+.theme-sunset .border-emerald-100,
+.theme-sunset .border-orange-100,
+.theme-sunset .border-yellow-100,
+.theme-sunset .border-purple-200,
+.theme-sunset .border-white\/50 {
+  border-color: #E9E4D4 !important;
+}
+
+.theme-sunset .text-blue-600,
+.theme-sunset .text-blue-500 {
+  color: #69C496 !important; /* Elegant leaf green match */
+}
+
+.theme-sunset .bg-blue-900\/10 {
+  background-color: rgba(105, 196, 150, 0.1) !important;
+}
+.theme-sunset .bg-blue-900\/5 {
+  background-color: rgba(105, 196, 150, 0.05) !important;
+}
+.theme-sunset .border-blue-900\/10 {
+  border-color: #E9E4D4 !important;
+}
+.theme-sunset .bg-blue-50 {
+  background-color: rgba(255, 253, 249, 0.8) !important;
 }
 
 @layer components {
@@ -542,7 +620,7 @@
   background: linear-gradient(180deg, #020604 0%, #05150D 60%, #082214 100%) !important;
 }
 .theme-sunset .challenge-flow-bg {
-  background: linear-gradient(180deg, #050a16 0%, #0c112b 40%, #1a0f26 75%, #2a0e1b 100%) !important;
+  background: linear-gradient(180deg, #FCFAF6 0%, #FAF7F2 100%) !important;
 }
 
 .settings-header-bg {
@@ -558,7 +636,7 @@
   background-color: rgba(2, 6, 4, 0.95) !important;
 }
 .theme-sunset .settings-header-bg {
-  background-color: rgba(5, 10, 22, 0.95) !important;
+  background-color: rgba(250, 247, 242, 0.95) !important;
 }
 
 
