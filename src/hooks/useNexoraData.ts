@@ -75,6 +75,7 @@ export function useNexoraData(
 
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const dataLoadedFromFirestore = useRef(false);
+  const lastLoadedUserIdRef = useRef<string | null>(null);
   const quotaExceededRef = useRef(false);
   const lastSyncedRef = useRef<string>("");
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -97,7 +98,7 @@ export function useNexoraData(
           console.log("Hooks: Different user detected, resetting caches in-memory and locally.");
           Object.keys(localStorage).forEach((key) => {
             if (key.startsWith("nexora_") && key !== "nexora_cached_user") {
-              localStorage.removeItem(key);
+               localStorage.removeItem(key);
             }
           });
           setSettings(DEFAULT_SETTINGS);
@@ -116,6 +117,7 @@ export function useNexoraData(
           });
           setNeedsOnboarding(false);
           dataLoadedFromFirestore.current = false;
+          lastLoadedUserIdRef.current = null;
           setIsDataReady(false);
           setLoading(true);
         }
@@ -149,6 +151,7 @@ export function useNexoraData(
         setUser(null);
         setIsDataReady(true);
         dataLoadedFromFirestore.current = false;
+        lastLoadedUserIdRef.current = null;
         setNeedsOnboarding(false);
         setLoading(false);
       }
@@ -162,6 +165,11 @@ export function useNexoraData(
     if (!user) {
       setIsDataReady(false);
       setLoading(false);
+      return;
+    }
+
+    if (lastLoadedUserIdRef.current === user.uid && dataLoadedFromFirestore.current) {
+      console.log("Hooks: User already loaded, avoiding redundant loadData trigger.");
       return;
     }
 
@@ -231,8 +239,14 @@ export function useNexoraData(
           setNeedsOnboarding(false);
           localStorage.setItem("nexora_onboarding_completed", "true");
         } else {
-          console.log("Hooks: User doc not found on Firestore. Introducing onboarding.");
-          setNeedsOnboarding(true);
+          const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
+          if (onboardingComp) {
+            console.log("Hooks: User doc not found on Firestore, but onboarding completed locally. Skipping onboarding.");
+            setNeedsOnboarding(false);
+          } else {
+            console.log("Hooks: User doc not found on Firestore. Introducing onboarding.");
+            setNeedsOnboarding(true);
+          }
         }
 
         if (progressSnap.exists()) {
@@ -280,6 +294,7 @@ export function useNexoraData(
 
         // Successfully loaded. Safe to sync background changes now!
         dataLoadedFromFirestore.current = true;
+        lastLoadedUserIdRef.current = user.uid;
         clearTimeout(loadingTimeout);
         isLoaderResolved = true;
         setIsDataReady(true);
