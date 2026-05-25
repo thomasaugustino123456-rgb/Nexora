@@ -137,8 +137,8 @@ export interface LootDropResult {
 export const calculateLootDrop = (): LootDropResult => {
   const overallRoll = Math.random(); // 0.0 to 1.0
 
-  // 35% overall drop chance
-  if (overallRoll > 0.35) {
+  // 50% overall drop chance
+  if (overallRoll > 0.5) {
     return {
       triggered: false,
       seedId: null,
@@ -197,11 +197,12 @@ export const addSeedToInventory = (
     return currentState;
   }
 
-  return {
+  const newState = {
     ...currentState,
     inventory: {
       ...currentState.inventory,
       [seedType]: (currentState.inventory[seedType] || 0) + 1,
     },
   };
+  return newState;
 };
