@@ -58,6 +58,19 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
       updates.waterGoal = water || 2;
       updates.pushupsGoal = pushups || 5;
 
+      // Filter and pre-archive tasks that do not align with the selected Core Objective focus
+      let archivedChallenges: string[] = [];
+      if (priorityFocus === 'physical') {
+        archivedChallenges = ['breathing', 'drawing', 'bubbles', 'memory', 'meditation', 'gratitude', 'writing'];
+      } else if (priorityFocus === 'mental') {
+        archivedChallenges = ['pushups', 'water', 'football', 'reaction', 'meditation', 'gratitude'];
+      } else if (priorityFocus === 'stress') {
+        archivedChallenges = ['pushups', 'drawing', 'football', 'reaction', 'memory'];
+      } else if (priorityFocus === 'habit') {
+        archivedChallenges = ['drawing', 'football', 'bubbles', 'reaction', 'meditation'];
+      }
+      updates.archivedOfficialChallenges = archivedChallenges;
+
       if (user) {
         updates.uid = user.uid;
         updates.email = user.email || `${user.uid}@nexora.app`;
@@ -73,6 +86,8 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
         displayName: safeName || prev.displayName,
         waterGoal: water || 2,
         pushupsGoal: pushups || 5,
+        priorityFocus: priorityFocus || prev.priorityFocus,
+        archivedOfficialChallenges: archivedChallenges,
         onboardingCompleted: true
       }));
 

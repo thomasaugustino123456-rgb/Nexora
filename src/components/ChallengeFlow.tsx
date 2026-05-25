@@ -33,7 +33,12 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   isCustomPlan?: boolean
 }) {
   const baseSteps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'gratitude', 'reaction'];
-  const defaultSteps: ChallengeStep[] = [...baseSteps, ...(settings.isPro ? ['writing' as ChallengeStep] : []), 'meditation' as ChallengeStep];
+  const archived = settings.archivedOfficialChallenges || [];
+  const defaultSteps: ChallengeStep[] = [
+    ...baseSteps.filter(s => !archived.includes(s)), 
+    ...(settings.isPro && !archived.includes('writing') ? ['writing' as ChallengeStep] : []), 
+    ...(!archived.includes('meditation') ? ['meditation' as ChallengeStep] : [])
+  ];
   const steps = customSteps || defaultSteps;
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [sessionWaterCount, setSessionWaterCount] = useState(0);

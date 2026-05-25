@@ -35,9 +35,12 @@ const TASK_CONFIG: Record<string, { label: string, icon: any, color: string, xp:
 };
 
 export const DeepChecklist: React.FC<DeepChecklistProps> = ({ progress, stats, settings, onSelectTask }) => {
-  const tasks = Object.entries(TASK_CONFIG);
-  const completedCount = Object.values(progress).filter(v => v === true || v > 0).length;
-  const totalTasks = tasks.length;
+  const archived = settings.archivedOfficialChallenges || [];
+  const tasks = Object.entries(TASK_CONFIG).filter(([id]) => !archived.includes(id));
+  const completedCount = tasks.filter(([id]) => {
+    return (progress as any)[id + 'Done'] || (id === 'water' && progress.waterDrank >= (settings.waterGoal || 2));
+  }).length;
+  const totalTasks = tasks.length || 1;
   const completionRate = Math.round((completedCount / totalTasks) * 100);
 
   return (

@@ -4024,8 +4024,9 @@ export default function App() {
                         vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                         setActiveCustomPlan(null);
                         
-                        // Select a random first step as requested by user
-                        const possibleStarts: ChallengeStep[] = [
+                        // Select a random first step that is not archived
+                        const archived = settings.archivedOfficialChallenges || [];
+                        const possibleStarts: ChallengeStep[] = ([
                           "pushups",
                           "water",
                           "breathing",
@@ -4036,8 +4037,10 @@ export default function App() {
                           "gratitude",
                           "reaction",
                           "meditation"
-                        ];
-                        const randomStart = possibleStarts[Math.floor(Math.random() * possibleStarts.length)];
+                        ] as ChallengeStep[]).filter(s => !archived.includes(s));
+                        
+                        const finalStarts = possibleStarts.length > 0 ? possibleStarts : ["water" as ChallengeStep];
+                        const randomStart = finalStarts[Math.floor(Math.random() * finalStarts.length)];
                         setChallengeStep(randomStart);
                         
                         setActiveScreen("challenge");

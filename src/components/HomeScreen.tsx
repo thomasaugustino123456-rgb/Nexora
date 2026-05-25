@@ -306,15 +306,16 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
 
               <div className="flex items-center justify-center gap-3 py-2">
                 {[
-                  { done: dailyProgress.pushupsDone, icon: "💪" },
-                  { done: dailyProgress.waterDrank >= settings.waterGoal, icon: "💧" },
-                  { done: dailyProgress.breathingDone, icon: "🧘" },
-                  { done: dailyProgress.drawingDone, icon: "🎨" },
-                  { done: dailyProgress.footballDone, icon: "⚽" },
-                  { done: dailyProgress.bubblesDone, icon: "🫧" },
-                  { done: dailyProgress.memoryDone, icon: "🧠" },
-                  { done: dailyProgress.gratitudeDone, icon: "🙏" }
-                ].map((task, i) => (
+                  { id: "pushups", done: dailyProgress.pushupsDone, icon: "💪" },
+                  { id: "water", done: dailyProgress.waterDrank >= settings.waterGoal, icon: "💧" },
+                  { id: "breathing", done: dailyProgress.breathingDone, icon: "🧘" },
+                  { id: "drawing", done: dailyProgress.drawingDone, icon: "🎨" },
+                  { id: "football", done: dailyProgress.footballDone, icon: "⚽" },
+                  { id: "bubbles", done: dailyProgress.bubblesDone, icon: "🫧" },
+                  { id: "memory", done: dailyProgress.memoryDone, icon: "🧠" },
+                  { id: "gratitude", done: dailyProgress.gratitudeDone, icon: "🙏" },
+                  { id: "reaction", done: dailyProgress.reactionDone, icon: "⚡" }
+                ].filter(task => !(settings.archivedOfficialChallenges || []).includes(task.id)).map((task, i) => (
                   <div 
                     key={i} 
                     className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all duration-500 scale-90 ${
