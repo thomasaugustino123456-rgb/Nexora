@@ -1,5 +1,12 @@
 export type SeedRarity = "Common" | "Rare" | "Epic" | "Legendary";
 
+export type MascotMood = 'happy' | 'neutral' | 'sad' | 'angry';
+
+export interface MascotState {
+  mood: MascotMood;
+  lastInteracted: number;
+}
+
 export interface PlantArchetype {
   id: string;
   name: string;
@@ -30,6 +37,8 @@ export interface GardenTile {
 export interface GardenState {
   tiles: GardenTile[];
   inventory: Record<string, number>; // Maps Plant Archetype ID to quantity owned
+  mascotState: MascotState;
+  streakSavers: number;
 }
 
 // 1. Core Cozy Plant Archetypes Definitions
@@ -76,7 +85,7 @@ export const PLANT_ARCHETYPES: Record<string, PlantArchetype> = {
     coinCostToWater: 20,
     xpReward: 120,
     coinReward: 60,
-    premiumRewardEffect: "1x Double-XP Card",
+    premiumRewardEffect: "1x Streak-Saver Card",
     themeColor: "text-fuchsia-500 bg-fuchsia-50 border-fuchsia-200",
   },
   "dream-shroom": {
@@ -118,6 +127,11 @@ export const createInitialGardenState = (): GardenState => {
   return {
     tiles,
     inventory,
+    mascotState: {
+        mood: 'happy',
+        lastInteracted: Date.now()
+    },
+    streakSavers: 0,
   };
 };
 
@@ -137,8 +151,8 @@ export interface LootDropResult {
 export const calculateLootDrop = (): LootDropResult => {
   const overallRoll = Math.random(); // 0.0 to 1.0
 
-  // 50% overall drop chance
-  if (overallRoll > 0.5) {
+  // 35% overall drop chance
+  if (overallRoll > 0.35) {
     return {
       triggered: false,
       seedId: null,
@@ -205,4 +219,59 @@ export const addSeedToInventory = (
     },
   };
   return newState;
+};
+
+// 4. New Logic Helper Functions
+
+/**
+ * Updates the mascot's mood based on consistency traits.
+ */
+export const updateMascotMood = (currentStreak: number, missedDays: number): MascotMood => {
+    if (missedDays > 3) return 'angry';
+    if (missedDays > 1) return 'sad';
+    if (currentStreak > 5) return 'happy';
+    return 'neutral';
+};
+
+/**
+ * Harvests a plant, clears tile, and rolls for premium loot reward.
+ */
+export const harvestPlant = (currentState: GardenState, tileId: number): { updatedState: GardenState; rewardDropped: string | null } => {
+    const tile = currentState.tiles[tileId];
+    if (!tile || tile.growthStage !== 'Fully Grown') {
+        return { updatedState: currentState, rewardDropped: null };
+    }
+
+    // Clear tile
+    const newTiles = [...currentState.tiles];
+    newTiles[tileId] = {
+        tileIndex: tileId,
+        plantId: null,
+        plantName: null,
+        rarity: null,
+        growthStage: null,
+        plantedAt: null,
+        lastWateredAt: null,
+        waterCount: 0,
+        waterRequired: 0,
+    };
+
+    // Roll for Loot (e.g., Streak Saver)
+    const lootRoll = Math.random();
+    let rewardDropped: string | null = null;
+    let newStreakSavers = currentState.streakSavers;
+
+    if (lootRoll < 0.3) {
+        rewardDropped = "Streak Saver";
+        newStreakSavers += 1;
+    }
+
+    return {
+        updatedState: {
+            ...currentState,
+            tiles: newTiles,
+            streakSavers: newStreakSavers,
+        },
+        rewardDropped,
+    };
 };
