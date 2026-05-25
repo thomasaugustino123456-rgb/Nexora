@@ -173,6 +173,9 @@ import {
 
 import { CelebrationModal } from "./components/CelebrationModal";
 
+const GardenScreen = lazy(() =>
+  import("./components/GardenScreen").then((m) => ({ default: m.GardenScreen })),
+);
 const HouseScreen = lazy(() =>
   import("./components/HouseScreen").then((m) => ({ default: m.HouseScreen })),
 );
@@ -377,6 +380,8 @@ export default function App() {
     setStats,
     dailyProgress,
     setDailyProgress,
+    gardenState,
+    setGardenState,
     needsOnboarding,
     setNeedsOnboarding,
     dataLoadedFromFirestore,
@@ -4105,6 +4110,10 @@ export default function App() {
                         vibrate(VIBRATION_PATTERNS.CLICK);
                         setActiveScreen("archives");
                       }}
+                      onOpenGarden={() => {
+                        vibrate(VIBRATION_PATTERNS.CLICK);
+                        setActiveScreen("garden");
+                      }}
                       onSelectTask={(taskId) => {
                         vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                         setActiveCustomPlan(null);
@@ -4970,6 +4979,25 @@ export default function App() {
                   </Suspense>
                 </motion.div>
               )}
+              {activeScreen === "garden" && (
+                <motion.div
+                  key="garden"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="w-full"
+                >
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center p-20 animate-pulse text-green-700 font-black italic uppercase tracking-widest">
+                        NURTURING GARDEN...
+                      </div>
+                    }
+                  >
+                    <GardenScreen onBack={() => setActiveScreen("home")} />
+                  </Suspense>
+                </motion.div>
+              )}
               {activeScreen === "challenge" && (
                 <motion.div
                   key="challenge"
@@ -5006,6 +5034,8 @@ export default function App() {
                       play={play}
                       dailyQuest={dailyQuest}
                       isCustomPlan={activeCustomPlan !== null}
+                      gardenState={gardenState}
+                      setGardenState={setGardenState}
                     />
                   </Suspense>
                 </motion.div>

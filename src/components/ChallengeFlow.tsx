@@ -5,6 +5,7 @@ import {
   CheckCircle2, X, Star, Flame, Award, Heart, Brain, Zap, Crown
 } from 'lucide-react';
 import { UserSettings, UserStats, DailyProgress, ChallengeStep } from '../types';
+import { GardenState, calculateLootDrop, addSeedToInventory } from '../types/garden';
 import { VIBRATION_PATTERNS, vibrate } from '../lib/vibrate';
 import { playTrophySound, GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
 import { PushupMascot } from './PushupMascot';
@@ -14,7 +15,7 @@ import { ArtistMascot } from './ArtistMascot';
 import { WritingMascot } from './WritingMascot';
 import { HappyMascot } from './FeedbackUI';
 
-export function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest, isCustomPlan }: { 
+export function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest, isCustomPlan, gardenState, setGardenState }: { 
   step: ChallengeStep, 
   setStep: (s: ChallengeStep) => void, 
   customSteps?: ChallengeStep[],
@@ -30,7 +31,9 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   showToast: (msg: string, type?: 'success' | 'info' | 'error') => void,
   play: (s: any) => void,
   dailyQuest: ChallengeStep | null,
-  isCustomPlan?: boolean
+  isCustomPlan?: boolean,
+  gardenState: GardenState,
+  setGardenState: (g: GardenState) => void
 }) {
   const baseSteps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'gratitude', 'reaction'];
   const archived = settings.archivedOfficialChallenges || [];
@@ -60,6 +63,14 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
     }
     if (!skipped) {
       showToast('Step Complete! Keep going, bro! 🔥', 'success');
+      
+      // Attempt Loot Drop
+      const drop = calculateLootDrop();
+      if (drop.triggered) {
+        showToast(drop.message || "Loot drop!", 'success');
+        const newState = addSeedToInventory(gardenState, drop.seedId!);
+        setGardenState(newState);
+      }
     }
     const updates: Partial<DailyProgress> = {};
     if (step === 'pushups') updates.pushupsDone = !skipped;

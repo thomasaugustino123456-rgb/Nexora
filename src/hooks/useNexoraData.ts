@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import { UserSettings, UserStats, DailyProgress } from "../types";
+import { GardenState, createInitialGardenState } from "../types/garden";
 
 const today = new Date().toISOString().split("T")[0];
 
@@ -54,6 +55,7 @@ export function useNexoraData(
   const cachedSettings = getCachedJson("nexora_settings", DEFAULT_SETTINGS);
   const cachedStats = getCachedJson("nexora_stats", DEFAULT_STATS);
   const cachedProgress = getCachedJson("nexora_progress", null);
+  const cachedGarden = getCachedJson("nexora_garden", createInitialGardenState());
 
   const [settings, setSettings] = useState<UserSettings>(cachedSettings);
   const [stats, setStats] = useState<UserStats>(cachedStats);
@@ -72,6 +74,7 @@ export function useNexoraData(
           completionsCount: 0,
         },
   );
+  const [gardenState, setGardenState] = useState<GardenState>(cachedGarden);
 
   const [needsOnboarding, setNeedsOnboarding] = useState(!cachedOnboarding);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -227,6 +230,7 @@ export function useNexoraData(
           completionsCount: 0,
           nextRestorationTime: null,
         } as DailyProgress;
+        let firestoreGarden = createInitialGardenState();
 
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -248,6 +252,7 @@ export function useNexoraData(
             },
             trophies: data.stats?.trophies || [],
           };
+          firestoreGarden = data.garden || createInitialGardenState();
           setNeedsOnboarding(false);
           localStorage.setItem("nexora_onboarding_completed", "true");
         } else {
@@ -285,11 +290,13 @@ export function useNexoraData(
         setSettings(firestoreSettings);
         setStats(firestoreStats);
         setDailyProgress(firestoreProgress);
+        setGardenState(firestoreGarden);
 
         localStorage.setItem("nexora_settings", JSON.stringify(firestoreSettings));
         localStorage.setItem("nexora_stats", JSON.stringify(firestoreStats));
         localStorage.setItem("nexora_progress", JSON.stringify(firestoreProgress));
         localStorage.setItem(`nexora_progress_${today}`, JSON.stringify(firestoreProgress));
+        localStorage.setItem("nexora_garden", JSON.stringify(firestoreGarden));
 
         try {
           const progressCollRef = collection(db, "users", user.uid, "progress");
@@ -357,6 +364,7 @@ export function useNexoraData(
           cc: dailyProgress.completionsCount,
           d: dailyProgress.date,
         },
+        g: gardenState,
       });
 
       if (currentStateStr === lastSyncedRef.current) return;
@@ -383,6 +391,7 @@ export function useNexoraData(
               email: user.email || `${user.uid}@nexora.app`,
               role: 'user',
               stats: stats,
+              garden: gardenState,
               isTodayCompleted: dailyProgress.completed,
               updatedAt: serverTimestamp(),
               onboardingCompleted: true,
@@ -507,6 +516,21 @@ export function useNexoraData(
     });
   };
 
+  const onUpdateGardenState = (
+    update: Partial<GardenState> | ((prev: GardenState) => GardenState),
+  ) => {
+    setGardenState((prev) => {
+      const next =
+        typeof update === "function" ? update(prev) : { ...prev, ...update };
+      try {
+        localStorage.setItem("nexora_garden", JSON.stringify(next));
+      } catch (e) {
+        console.warn("Failed to cache garden:", e);
+      }
+      return next;
+    });
+  };
+
   return {
     user,
     loading,
@@ -517,6 +541,8 @@ export function useNexoraData(
     setStats: onUpdateStats,
     dailyProgress,
     setDailyProgress: onUpdateDailyProgress,
+    gardenState,
+    setGardenState: onUpdateGardenState,
     needsOnboarding,
     setNeedsOnboarding,
     dataLoadedFromFirestore,

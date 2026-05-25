@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { 
   AlertCircle, Star, Bell, Flame, Trophy as TrophyIcon, 
   Plus, Trash2, Clock, Target, ChevronRight, Sprout, LogOut, Save, CheckCircle2,
-  Infinity, Zap, Crown, Coins, Brain, Sparkles, BookOpen
+  Infinity, Zap, Crown, Coins, Brain, Sparkles, BookOpen, Flower2
 } from 'lucide-react';
 import { 
   UserStats, UserSettings, DailyProgress, MascotMood, ChallengeStep, CustomPlan 
@@ -67,7 +67,7 @@ function NextRestorationCountdown({ targetTime }: { targetTime: number | null })
   return <span>{timeLeft}</span>;
 }
 
-export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenArchives, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask }: { 
+export interface HomeScreenProps {
   stats: UserStats, 
   onStartChallenge: () => void, 
   isCompletedToday: boolean,
@@ -89,8 +89,12 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
   fcmError: string | null,
   showToast?: (m: string, t: any) => void,
   onArchiveChallenge?: (id: string) => void,
-  onSelectTask: (taskId: string) => void
-}) => {
+  onSelectTask: (taskId: string) => void,
+  onOpenGarden: () => void
+}
+
+export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenArchives, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask, onOpenGarden }: HomeScreenProps) => {
+
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
   const layoutConfig = settings.layoutConfig || {};
@@ -208,6 +212,14 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
             </div>
 
             <div className="flex items-center gap-2">
+              <button 
+                onClick={onOpenGarden}
+                className="p-3 bg-gradient-to-br from-[#8D7D62] to-[#5A5040] text-white rounded-2xl shadow-xl shadow-[#8D7D62]/20 hover:scale-105 transition-all group relative overflow-hidden"
+                title="My Garden"
+              >
+                <Flower2 size={20} className="group-hover:rotate-12 transition-transform" />
+              </button>
+ 
               <button 
                 onClick={() => {
                   vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
