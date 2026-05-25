@@ -15,7 +15,7 @@ import { ArtistMascot } from './ArtistMascot';
 import { WritingMascot } from './WritingMascot';
 import { HappyMascot } from './FeedbackUI';
 
-export function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest, isCustomPlan, gardenState, setGardenState }: { 
+export function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest, isCustomPlan, gardenState, setGardenState, onLootFound }: { 
   step: ChallengeStep, 
   setStep: (s: ChallengeStep) => void, 
   customSteps?: ChallengeStep[],
@@ -33,7 +33,8 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   dailyQuest: ChallengeStep | null,
   isCustomPlan?: boolean,
   gardenState: GardenState,
-  setGardenState: (g: GardenState) => void
+  setGardenState: (g: GardenState) => void,
+  onLootFound: (loot: any) => void
 }) {
   const baseSteps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'gratitude', 'reaction'];
   const archived = settings.archivedOfficialChallenges || [];
@@ -67,7 +68,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
       // Attempt Loot Drop
       const drop = calculateLootDrop();
       if (drop.triggered) {
-        showToast(drop.message || "Loot drop!", 'success');
+        onLootFound(drop);
         const newState = addSeedToInventory(gardenState, drop.seedId!);
         setGardenState(newState);
       }

@@ -155,6 +155,8 @@ import { OnboardingScreen } from "./components/OnboardingScreen";
 import { useAppIcon } from "./hooks/useAppIcon";
 import { PlanBuilder } from "./components/PlanBuilder";
 import { HomeScreen } from "./components/HomeScreen";
+import { LootDropResult } from "./types/garden";
+import { LootCard } from "./components/LootCard";
 import { Mascot } from "./components/Mascot";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import {
@@ -708,6 +710,7 @@ export default function App() {
     "nexora_active_screen",
     "home",
   );
+  const [foundLoot, setFoundLoot] = useState<LootDropResult | null>(null);
 
   // SMART FEEDBACK TRIGGER
   useEffect(() => {
@@ -5036,6 +5039,7 @@ export default function App() {
                       isCustomPlan={activeCustomPlan !== null}
                       gardenState={gardenState}
                       setGardenState={setGardenState}
+                      onLootFound={setFoundLoot}
                     />
                   </Suspense>
                 </motion.div>
@@ -5073,6 +5077,10 @@ export default function App() {
                 setActiveScreen("trophy-rewards");
               }}
             />
+          )}
+
+          {foundLoot && (
+            <LootCard loot={foundLoot} onCollect={() => setFoundLoot(null)} />
           )}
 
           {activeScreen === "trophy-rewards" && (
