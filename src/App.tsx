@@ -176,82 +176,25 @@ import {
 import { CelebrationModal } from "./components/CelebrationModal";
 import { playLootSound } from "./components/LootCard";
 import { addSeedToInventory } from "./types/garden";
+import { startPreloading } from "./lib/preloader";
 
-const GardenScreen = lazy(() =>
-  import("./components/GardenScreen").then((m) => ({ default: m.GardenScreen })),
-);
-const HouseScreen = lazy(() =>
-  import("./components/HouseScreen").then((m) => ({ default: m.HouseScreen })),
-);
-const ArchivesScreen = lazy(() =>
-  import("./components/ArchivesScreen").then((m) => ({
-    default: m.ArchivesScreen,
-  })),
-);
-const LibraryScreen = lazy(() =>
-  import("./components/LibraryScreen").then((m) => ({
-    default: m.LibraryScreen,
-  })),
-);
-const ShopScreen = lazy(() =>
-  import("./components/ShopScreen").then((m) => ({ default: m.ShopScreen })),
-);
-const PlantScreen = lazy(() =>
-  import("./components/PlantScreen").then((m) => ({ default: m.PlantScreen })),
-);
-const SocialScreen = lazy(() =>
-  import("./components/SocialScreen").then((m) => ({
-    default: m.SocialScreen,
-  })),
-);
-const LeaderboardScreen = lazy(() =>
-  import("./components/LeaderboardScreen").then((m) => ({
-    default: m.LeaderboardScreen,
-  })),
-);
-const ProgressScreen = lazy(() =>
-  import("./components/ProgressScreen").then((m) => ({
-    default: m.ProgressScreen,
-  })),
-);
-const ProfileScreen = lazy(() =>
-  import("./components/ProfileScreen").then((m) => ({
-    default: m.ProfileScreen,
-  })),
-);
-const SettingsScreen = lazy(() =>
-  import("./components/SettingsScreen").then((m) => ({
-    default: m.SettingsScreen,
-  })),
-);
-const SubscriptionScreen = lazy(() =>
-  import("./components/SubscriptionScreen").then((m) => ({
-    default: m.SubscriptionScreen,
-  })),
-);
-const GalleryScreen = lazy(() =>
-  import("./components/GalleryScreen").then((m) => ({
-    default: m.GalleryScreen,
-  })),
-);
-const NotebookScreen = lazy(() =>
-  import("./components/NotebookScreen").then((m) => ({
-    default: m.NotebookScreen,
-  })),
-);
-const ChallengeFlow = lazy(() =>
-  import("./components/ChallengeFlow").then((m) => ({
-    default: m.ChallengeFlow,
-  })),
-);
-const ArchitectLab = lazy(() =>
-  import("./components/ArchitectLab").then((m) => ({
-    default: m.ArchitectLab,
-  })),
-);
-const NexusVision = lazy(() =>
-  import("./components/NexusVision").then((m) => ({ default: m.NexusVision })),
-);
+import { GardenScreen } from "./components/GardenScreen";
+import { HouseScreen } from "./components/HouseScreen";
+import { ArchivesScreen } from "./components/ArchivesScreen";
+import { LibraryScreen } from "./components/LibraryScreen";
+import { ShopScreen } from "./components/ShopScreen";
+import { PlantScreen } from "./components/PlantScreen";
+import { SocialScreen } from "./components/SocialScreen";
+import { LeaderboardScreen } from "./components/LeaderboardScreen";
+import { ProgressScreen } from "./components/ProgressScreen";
+import { ProfileScreen } from "./components/ProfileScreen";
+import { SettingsScreen } from "./components/SettingsScreen";
+import { SubscriptionScreen } from "./components/SubscriptionScreen";
+import { GalleryScreen } from "./components/GalleryScreen";
+import { NotebookScreen } from "./components/NotebookScreen";
+import { ChallengeFlow } from "./components/ChallengeFlow";
+import { ArchitectLab } from "./components/ArchitectLab";
+import { NexusVision } from "./components/NexusVision";
 import { DeepChecklist } from "./components/DeepChecklist";
 import { CompletionFlame } from "./components/CompletionFlame";
 import { TrophyRewardsScreen } from "./components/TrophyRewardsScreen";
@@ -793,14 +736,12 @@ export default function App() {
   useEffect(() => {
     if (isDataReady) {
       const timer = setTimeout(() => {
-        import("./lib/preloader")
-          .then((m) => {
-            m.startPreloading();
-          })
-          .catch((err) => {
-            console.warn("NEXORA: Background image preloader load skipped (offline mode)", err);
-          });
-      }, 3000);
+        try {
+          startPreloading();
+        } catch (err) {
+          console.warn("NEXORA: Background image preloader load skipped (offline mode)", err);
+        }
+      }, 100);
       return () => clearTimeout(timer);
     }
   }, [isDataReady]);
