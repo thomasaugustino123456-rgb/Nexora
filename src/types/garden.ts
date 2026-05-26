@@ -152,9 +152,9 @@ export interface LootDropResult {
 
 export const calculateLootDrop = (lastSeedDropAt?: number): LootDropResult => {
   const now = Date.now();
-  const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+  const onceADayMs = 20 * 60 * 60 * 1000; // flexible 20-hour daily cooldown
 
-  if (lastSeedDropAt && (now - lastSeedDropAt < twoDaysMs)) {
+  if (lastSeedDropAt && (now - lastSeedDropAt < onceADayMs)) {
     return {
       triggered: false,
       seedId: null,

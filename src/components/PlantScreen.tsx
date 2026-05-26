@@ -334,156 +334,53 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
                 </button>
               </div>
 
-              {/* TWO TABS SEGMENT */}
-              <div className="flex border-b border-gray-100 mb-6">
-                <button
-                  onClick={() => { vibrate(5); setLibraryTab('decorations'); }}
-                  className={`flex-1 pb-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${libraryTab === 'decorations' ? 'border-blue-600 text-blue-900' : 'border-transparent text-gray-400'}`}
-                >
-                  Sanctuary Decos
-                </button>
-                <button
-                  onClick={() => { vibrate(5); setLibraryTab('seeds'); }}
-                  className={`flex-1 pb-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all flex items-center justify-center gap-1 ${libraryTab === 'seeds' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-400'}`}
-                >
-                  <span>Celestial Seeds</span>
-                  {Object.values(gardenState?.inventory || {}).some(qty => qty > 0) && (
-                    <span className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />
-                  )}
-                </button>
-              </div>
-
-              {libraryTab === 'decorations' ? (
-                (settings.purchasedEcosystemItemIds || []).length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4 grayscale opacity-50">
-                      <Package size={40} className="text-blue-200" />
-                    </div>
-                    <h3 className="text-xl font-black text-blue-900 uppercase tracking-tighter italic mb-2">Vault is Empty</h3>
-                    <p className="text-blue-900/40 text-xs font-bold uppercase max-w-xs leading-loose">
-                      Buy and save sanctuary items from the shop to customize your environment, bro!
-                    </p>
-                    <button 
-                      onClick={() => { setShowLibrary(false); setShowShop(true); }}
-                      className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
-                    >
-                      Go to Shop
-                    </button>
+              {(settings.purchasedEcosystemItemIds || []).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4 grayscale opacity-50">
+                    <Package size={40} className="text-blue-200" />
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-4">
-                    {(settings.purchasedEcosystemItemIds || []).map((itemId: string) => {
-                      const item = SHOP_ITEMS.find(i => i.id === itemId);
-                      if (!item) return null;
-                      const isActive = (settings.activeEcosystemItemIds || []).includes(itemId);
-                      
-                      return (
-                        <div 
-                          key={itemId}
-                          className={`p-5 rounded-[2rem] border-4 transition-all flex items-center justify-between ${isActive ? 'bg-blue-50 border-blue-400 shadow-xl shadow-blue-500/10' : 'bg-gray-50 border-gray-100 hover:border-blue-200'}`}
-                        >
-                          <div className="flex items-center gap-5">
-                            <div className="text-5xl drop-shadow-sm">{item.icon}</div>
-                            <div className="flex flex-col">
-                              <h3 className="font-black text-blue-900 uppercase text-sm tracking-tight">{item.name}</h3>
-                              <p className="text-[10px] text-blue-900/40 font-bold uppercase tracking-widest">
-                                {isActive ? 'Currently Active' : 'In Library'}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <button 
-                            onClick={() => {
-                              vibrate(10);
-                              onToggleEcosystemItem(itemId);
-                            }}
-                            className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 ${isActive ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'}`}
-                          >
-                            {isActive ? <PowerOff size={14} /> : <Power size={14} />}
-                            {isActive ? 'Disable' : 'Apply'}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
+                  <h3 className="text-xl font-black text-blue-900 uppercase tracking-tighter italic mb-2">Vault is Empty</h3>
+                  <p className="text-blue-900/40 text-xs font-bold uppercase max-w-xs leading-loose">
+                    Buy and save sanctuary items from the shop to customize your environment, bro!
+                  </p>
+                  <button 
+                    onClick={() => { setShowLibrary(false); setShowShop(true); }}
+                    className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
+                  >
+                    Go to Shop
+                  </button>
+                </div>
               ) : (
-                /* MY SEEDS VAULT LIST */
                 <div className="grid grid-cols-1 gap-4">
-                  {cozySeedsList.map((seed) => {
-                    const ownedQuantity = gardenState?.inventory?.[seed.id] || 0;
-                    const archetype = PLANT_ARCHETYPES[seed.id] || { growthTimeMinutes: 10, waterRequired: 2 };
-
+                  {(settings.purchasedEcosystemItemIds || []).map((itemId: string) => {
+                    const item = SHOP_ITEMS.find(i => i.id === itemId);
+                    if (!item) return null;
+                    const isActive = (settings.activeEcosystemItemIds || []).includes(itemId);
+                    
                     return (
                       <div 
-                        key={seed.id}
-                        className={`p-5 rounded-[2rem] border-4 transition-all flex items-center justify-between gap-4 ${ownedQuantity > 0 ? 'bg-amber-50/20 border-amber-300/40 shadow-xl' : 'bg-gray-50 border-gray-100 opacity-60'}`}
+                        key={itemId}
+                        className={`p-5 rounded-[2rem] border-4 transition-all flex items-center justify-between ${isActive ? 'bg-blue-50 border-blue-400 shadow-xl shadow-blue-500/10' : 'bg-gray-50 border-gray-100 hover:border-blue-200'}`}
                       >
-                        <div className="flex items-center gap-4">
-                          <div className="text-4xl p-3 bg-amber-100/40 rounded-2xl drop-shadow-sm">{seed.emoji}</div>
+                        <div className="flex items-center gap-5">
+                          <div className="text-5xl drop-shadow-sm">{item.icon}</div>
                           <div className="flex flex-col">
-                            <h3 className="font-black text-stone-900 uppercase text-sm tracking-tight">{seed.name}</h3>
-                            <div className="flex items-center gap-2">
-                              <span className={`text-[9px] font-black uppercase tracking-wider ${
-                                seed.rarity === 'Legendary' ? 'text-rose-500' :
-                                seed.rarity === 'Epic' ? 'text-fuchsia-500' :
-                                seed.rarity === 'Rare' ? 'text-blue-500' :
-                                'text-emerald-600'
-                              }`}>
-                                {seed.rarity}
-                              </span>
-                              <span className="text-[10px] text-stone-400 font-mono font-bold">
-                                • {ownedQuantity} in Vault
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-gray-400 font-bold mt-1">
-                              Takes {archetype.growthTimeMinutes}m • Requires {archetype.waterRequired} drips
+                            <h3 className="font-black text-blue-900 uppercase text-sm tracking-tight">{item.name}</h3>
+                            <p className="text-[10px] text-blue-900/40 font-bold uppercase tracking-widest">
+                              {isActive ? 'Currently Active' : 'In Library'}
                             </p>
                           </div>
                         </div>
-
+                        
                         <button 
-                          disabled={ownedQuantity <= 0}
                           onClick={() => {
-                            if (!gardenState || !setGardenState) return;
-                            vibrate(20);
-                            playLootSound('success');
-                            
-                            // switch active type
-                            onSwitchType(seed.id as PlantType);
-
-                            // deduct 1 seed
-                            const currentQty = gardenState.inventory[seed.id] || 0;
-                            const updatedInventory = {
-                              ...gardenState.inventory,
-                              [seed.id]: Math.max(0, currentQty - 1)
-                            };
-
-                            setGardenState({
-                              ...gardenState,
-                              inventory: updatedInventory
-                            });
-
-                            // trigger main active switch
-                            onUpdateSettings({
-                              plantState: {
-                                ...settings.plantState!,
-                                type: seed.id as PlantType,
-                                stage: 1, // Reset active level to sprout stage 1 to grow it afresh!
-                                growthPoints: 0,
-                                isThirsty: false,
-                                isDead: false,
-                                health: 100,
-                                lastCheckDate: new Date().toISOString()
-                              }
-                            });
-
-                            setShowLibrary(false);
-                            localStorage.setItem('nexora_new_plant_unlocked', 'false');
+                            vibrate(10);
+                            onToggleEcosystemItem(itemId);
                           }}
-                          className={`px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${ownedQuantity > 0 ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-black shadow-lg shadow-amber-500/25 border border-amber-300/30' : 'bg-stone-150 text-stone-400 cursor-not-allowed border-none'}`}
+                          className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 ${isActive ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'}`}
                         >
-                          Grow 🌿
+                          {isActive ? <PowerOff size={14} /> : <Power size={14} />}
+                          {isActive ? 'Disable' : 'Apply'}
                         </button>
                       </div>
                     );

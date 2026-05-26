@@ -55,7 +55,22 @@ export function useNexoraData(
   const cachedSettings = getCachedJson("nexora_settings", DEFAULT_SETTINGS);
   const cachedStats = getCachedJson("nexora_stats", DEFAULT_STATS);
   const cachedProgress = getCachedJson("nexora_progress", null);
-  const cachedGarden = getCachedJson("nexora_garden", createInitialGardenState());
+  
+  const rawCachedGarden = getCachedJson("nexora_garden", createInitialGardenState());
+  const initialGardenDefault = createInitialGardenState();
+  const cachedGarden = {
+    ...initialGardenDefault,
+    ...rawCachedGarden,
+    mascotState: {
+      ...initialGardenDefault.mascotState,
+      ...(rawCachedGarden?.mascotState || {}),
+    },
+    inventory: {
+      ...initialGardenDefault.inventory,
+      ...(rawCachedGarden?.inventory || {}),
+    },
+    tiles: rawCachedGarden?.tiles || initialGardenDefault.tiles,
+  };
 
   const [settings, setSettings] = useState<UserSettings>(cachedSettings);
   const [stats, setStats] = useState<UserStats>(cachedStats);
@@ -252,7 +267,20 @@ export function useNexoraData(
             },
             trophies: data.stats?.trophies || [],
           };
-          firestoreGarden = data.garden || createInitialGardenState();
+          const initialGardenDb = createInitialGardenState();
+          firestoreGarden = {
+            ...initialGardenDb,
+            ...(data.garden || {}),
+            mascotState: {
+              ...initialGardenDb.mascotState,
+              ...(data.garden?.mascotState || {}),
+            },
+            inventory: {
+              ...initialGardenDb.inventory,
+              ...(data.garden?.inventory || {}),
+            },
+            tiles: data.garden?.tiles || initialGardenDb.tiles,
+          };
           setNeedsOnboarding(false);
           localStorage.setItem("nexora_onboarding_completed", "true");
         } else {
@@ -379,7 +407,8 @@ export function useNexoraData(
         const coreChanged =
           !lastSyncedData ||
           JSON.stringify(lastSyncedData.s) !== JSON.stringify(settings) ||
-          JSON.stringify(lastSyncedData.st) !== JSON.stringify(stats);
+          JSON.stringify(lastSyncedData.st) !== JSON.stringify(stats) ||
+          JSON.stringify(lastSyncedData.g) !== JSON.stringify(gardenState);
 
         if (coreChanged) {
           await setDoc(

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { 
   GardenState, createInitialGardenState, PLANT_ARCHETYPES, 
-  addSeedToInventory, harvestPlant 
+  addSeedToInventory, harvestPlant, GardenTile, GrowthStage
 } from '../types/garden';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { playLootSound } from './LootCard';
@@ -23,7 +23,14 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
   setGardenState 
 }) => {
   // Use props state as the primary source of truth, fall back to initial on blank
-  const activeGarden = gardenState || createInitialGardenState();
+  const initial = createInitialGardenState();
+  const activeGarden = {
+    ...initial,
+    ...gardenState,
+    tiles: gardenState?.tiles || initial.tiles,
+    inventory: { ...initial.inventory, ...(gardenState?.inventory || {}) },
+    mascotState: { ...initial.mascotState, ...(gardenState?.mascotState || {}) }
+  };
   const dispatchUpdate = setGardenState || (() => {});
 
   const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
@@ -45,7 +52,7 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
       setSelectedTileIndex(index);
       setShowSeedSelector(true);
       playLootSound('click');
-    } else if (tile.growthStage < 5) {
+    } else if (tile.growthStage !== 'Fully Grown') {
       // Growing sprout: Water it to progress growth!
       playLootSound('click');
       vibrate(15);
@@ -58,10 +65,18 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
           const nextWater = t.waterCount + 1;
           // If watered enough, it develops into the next stage!
           const shouldGrow = nextWater >= archetype.waterRequired;
+          
+          let nextStage = t.growthStage;
+          if (shouldGrow) {
+            if (t.growthStage === "Seed") nextStage = "Sprout";
+            else if (t.growthStage === "Sprout") nextStage = "Bud";
+            else if (t.growthStage === "Bud" || !t.growthStage) nextStage = "Fully Grown";
+          }
+
           return {
             ...t,
             waterCount: shouldGrow ? 0 : nextWater,
-            growthStage: shouldGrow ? Math.min(5, t.growthStage + 1) : t.growthStage,
+            growthStage: nextStage,
             lastWateredAt: Date.now()
           };
         }
@@ -81,7 +96,7 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
         mascotState: updatedMascot
       });
     } else {
-      // Fully mature (Stage 5): Harvest it for loot!
+      // Fully mature (Stage 4 - Fully Grown): Harvest it for loot!
       vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
       playLootSound('success');
 
@@ -102,12 +117,12 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
     vibrate(20);
     playLootSound('success');
 
-    const updatedTiles = activeGarden.tiles.map(t => {
+    const updatedTiles: GardenTile[] = activeGarden.tiles.map((t): GardenTile => {
       if (t.tileIndex === selectedTileIndex) {
         return {
           ...t,
           plantId: seedId,
-          growthStage: 1,
+          growthStage: "Seed" as GrowthStage,
           waterCount: 0,
           plantedAt: Date.now()
         };
@@ -190,8 +205,15 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
         <div className="grid grid-cols-3 gap-4 w-full aspect-square bg-stone-100 p-4 rounded-[2.5rem] border-2 border-stone-200/45 shadow-inner">
           {activeGarden.tiles.map((tile) => {
             const archetype = tile.plantId ? PLANT_ARCHETYPES[tile.plantId] : null;
+
+            const stageNum = 
+              tile.growthStage === "Seed" ? 1 :
+              tile.growthStage === "Sprout" ? 2 :
+              tile.growthStage === "Bud" ? 3 :
+              tile.growthStage === "Fully Grown" ? 4 : 0;
+
             const percentage = tile.plantId && archetype 
-              ? Math.floor((tile.growthStage / 5) * 100) 
+              ? Math.floor((stageNum / 4) * 100) 
               : 0;
 
             return (
@@ -206,7 +228,7 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
                 }`}
               >
                 {/* Glowing halo when mature */}
-                {tile.plantId && tile.growthStage === 5 && (
+                {tile.plantId && tile.growthStage === "Fully Grown" && (
                   <div className="absolute inset-0 bg-yellow-400/5 animate-pulse" />
                 )}
 
@@ -214,17 +236,16 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
                   <div className="flex flex-col items-center justify-center space-y-1">
                     {/* Stage icon/emoji depiction */}
                     <div className="text-3xl filter drop-shadow">
-                      {tile.growthStage === 1 ? '🌱' : 
-                       tile.growthStage === 2 ? '🌿' : 
-                       tile.growthStage === 3 ? '🍀' : 
-                       tile.growthStage === 4 ? '🪴' : 
+                      {tile.growthStage === "Seed" ? '🌱' : 
+                       tile.growthStage === "Sprout" ? '🌿' : 
+                       tile.growthStage === "Bud" ? '🍀' : 
                        (tile.plantId === 'dream-shroom' ? '🍄' : '🌸')}
                     </div>
                     <span className="text-[8px] font-black text-stone-500 uppercase truncate max-w-[70px]">
                       {archetype.name}
                     </span>
                     <span className="text-[7px] font-mono text-stone-400">
-                      STG {tile.growthStage}/5 ({percentage}%)
+                      STG {stageNum}/4 ({percentage}%)
                     </span>
                   </div>
                 ) : (
@@ -235,7 +256,7 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
                 )}
 
                 {/* Floating Droplet count badge */}
-                {tile.plantId && archetype && tile.growthStage < 5 && (
+                {tile.plantId && archetype && tile.growthStage !== "Fully Grown" && (
                   <div className="absolute bottom-2 right-2 bg-blue-50 text-blue-600 border border-blue-200/60 rounded-full px-1.5 py-0.5 text-[8px] font-black flex items-center gap-0.5 animate-pulse">
                     <Droplet size={8} className="fill-blue-500" />
                     <span>{tile.waterCount}/{archetype.waterRequired}</span>
@@ -243,7 +264,7 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
                 )}
 
                 {/* Sparkling Harvest indicator */}
-                {tile.plantId && tile.growthStage === 5 && (
+                {tile.plantId && tile.growthStage === "Fully Grown" && (
                   <div className="absolute top-2 right-2 bg-yellow-400 text-stone-900 border border-yellow-300 rounded-full p-1 text-[8px] font-black flex items-center justify-center animate-bounce">
                     <Sparkles size={10} />
                   </div>
@@ -326,7 +347,7 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
               ) : (
                 <div className="grid grid-cols-1 gap-3">
                   {ownedSeeds.map((seed) => {
-                    const arche = PLANT_ARCHETYPES[seed.id] || { name: seed.id, themeColor: 'bg-emerald-100' };
+                    const arche = PLANT_ARCHETYPES[seed.id] || { name: seed.id, themeColor: 'bg-emerald-100', waterRequired: 3 };
                     return (
                       <button 
                         key={seed.id}
