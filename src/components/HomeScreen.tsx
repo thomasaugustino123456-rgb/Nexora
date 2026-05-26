@@ -8,6 +8,7 @@ import {
 import { 
   UserStats, UserSettings, DailyProgress, MascotMood, ChallengeStep, CustomPlan 
 } from '../types';
+import { GardenState } from '../types/garden';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { Mascot } from './Mascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
@@ -90,10 +91,11 @@ export interface HomeScreenProps {
   showToast?: (m: string, t: any) => void,
   onArchiveChallenge?: (id: string) => void,
   onSelectTask: (taskId: string) => void,
-  onOpenGarden: () => void
+  onOpenGarden: () => void,
+  gardenState?: GardenState
 }
 
-export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenArchives, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask, onOpenGarden }: HomeScreenProps) => {
+export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenArchives, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask, onOpenGarden, gardenState }: HomeScreenProps) => {
 
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
@@ -237,18 +239,25 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                 className={`p-3 rounded-2xl transition-all flex items-center justify-center group relative ${
                   !settings.plantOnboardingCompleted
                     ? 'bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-pulse border-2 border-white/50'
-                    : settings.plantState?.isThirsty || localStorage.getItem('nexora_new_plant_unlocked') === 'true'
-                      ? 'bg-yellow-400 text-white shadow-xl shadow-yellow-200 animate-pulse' 
-                      : 'bg-emerald-500 text-white shadow-xl shadow-emerald-200'
+                    : gardenState?.pendingLootSeed
+                      ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-[0_0_35px_rgba(245,158,11,1.0)] border-3 border-yellow-200 animate-[bounce_1.5s_infinite] scale-110 z-10'
+                      : settings.plantState?.isThirsty || localStorage.getItem('nexora_new_plant_unlocked') === 'true'
+                        ? 'bg-yellow-400 text-white shadow-xl shadow-yellow-200 animate-pulse' 
+                        : 'bg-emerald-500 text-white shadow-xl shadow-emerald-200'
                 }`}
               >
                 <Sprout size={20} className="group-hover:rotate-12 transition-transform" />
-                {!settings.plantOnboardingCompleted && (
+                {gardenState?.pendingLootSeed && (
                   <div className="absolute -top-1 -right-1">
                     <Sparkles size={14} className="text-amber-200 animate-spin" />
                   </div>
                 )}
-                {settings.plantState?.isThirsty && settings.plantOnboardingCompleted && (
+                {!settings.plantOnboardingCompleted && !gardenState?.pendingLootSeed && (
+                  <div className="absolute -top-1 -right-1">
+                    <Sparkles size={14} className="text-amber-200 animate-spin" />
+                  </div>
+                )}
+                {settings.plantState?.isThirsty && settings.plantOnboardingCompleted && !gardenState?.pendingLootSeed && (
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white animate-bounce" />
                 )}
               </button>

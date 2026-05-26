@@ -96,6 +96,11 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
     if (isThirsty) return { primary: '#C5E1A5', secondary: '#9CCC65', accent: '#7CB342' };
     
     switch (type) {
+      case 'slime-berry': return { primary: '#10b981', secondary: '#059669', accent: '#34d399' };
+      case 'solar-flare-pea': return { primary: '#f59e0b', secondary: '#d97706', accent: '#fef08a' };
+      case 'moon-sprout': return { primary: '#6366f1', secondary: '#4f46e5', accent: '#a5b4fc' };
+      case 'star-silk-leaf': return { primary: '#d946ef', secondary: '#c026d3', accent: '#f5d0fe' };
+      case 'dream-shroom': return { primary: '#f43f5e', secondary: '#e11d48', accent: '#fda4af' };
       case 'zen': return { primary: '#4CAF50', secondary: '#388E3C', accent: '#2E7D32' };
       case 'desert': return { primary: '#81C784', secondary: '#43A047', accent: '#FB8C00' };
       case 'tropical': return { primary: '#00C853', secondary: '#00E676', accent: '#FF4081' };
@@ -1352,6 +1357,11 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
 
   const getEcosystemRenderer = () => {
     switch (type) {
+      case 'slime-berry': return renderSprout();
+      case 'solar-flare-pea': return renderVolcano();
+      case 'moon-sprout': return renderCrystal();
+      case 'star-silk-leaf': return renderMeadow();
+      case 'dream-shroom': return renderForest();
       case 'zen': return renderZen();
       case 'desert': return renderDesert();
       case 'tropical': return renderTropical();

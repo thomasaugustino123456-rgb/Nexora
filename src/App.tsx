@@ -4128,6 +4128,7 @@ export default function App() {
                       fcmError={fcmError}
                       showToast={showToast}
                       onArchiveChallenge={handleArchiveChallenge}
+                      gardenState={gardenState}
                     />
                   </motion.div>
                 )
@@ -4978,6 +4979,8 @@ export default function App() {
                       onUpdateSettings={onUpdateSettings}
                       settings={settings}
                       stats={stats}
+                      gardenState={gardenState}
+                      setGardenState={setGardenState}
                     />
                   </Suspense>
                 </motion.div>
@@ -4997,7 +5000,11 @@ export default function App() {
                       </div>
                     }
                   >
-                    <GardenScreen onBack={() => setActiveScreen("home")} />
+                    <GardenScreen 
+                      onBack={() => setActiveScreen("home")} 
+                      gardenState={gardenState}
+                      setGardenState={setGardenState}
+                    />
                   </Suspense>
                 </motion.div>
               )}

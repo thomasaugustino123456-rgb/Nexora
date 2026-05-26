@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout,
 import { Mascot } from './Mascot';
 import { PlantState, UserSettings, UserStats, PlantType } from '../types';
 import { vibrate } from '../lib/vibrate';
+import { GardenState, addSeedToInventory, PLANT_ARCHETYPES } from '../types/garden';
+import { playLootSound } from './LootCard';
 import { PlantRenderer } from './PlantRenderer';
 import { PlantCompletionCard } from './PlantCompletionCard';
 import { PlantShop, EcosystemItem, SHOP_ITEMS } from './PlantShop';
@@ -25,6 +27,8 @@ interface PlantScreenProps {
   onUpdateSettings: (settings: Partial<UserSettings>) => void;
   settings: UserSettings;
   stats: UserStats;
+  gardenState?: GardenState;
+  setGardenState?: (g: GardenState) => void;
 }
 
 export const PlantScreen: React.FC<PlantScreenProps> = ({
@@ -39,7 +43,9 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   onToggleEcosystemItem,
   onUpdateSettings,
   settings,
-  stats
+  stats,
+  gardenState,
+  setGardenState
 }) => {
   const [step, setStep] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
@@ -49,6 +55,9 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   const [showShop, setShowShop] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [droneTargetPos, setDroneTargetPos] = useState<{ x: number, y: number } | null>(null);
+  const [isLibraryShaking, setIsLibraryShaking] = useState(false);
+  const [isAnimatingSeed, setIsAnimatingSeed] = useState(false);
+  const [libraryTab, setLibraryTab] = useState<'decorations' | 'seeds'>('decorations');
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
   const clickCountRef = useRef(0);
 
@@ -86,8 +95,21 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     mourningSprout: { name: "Mourning Sprout", description: "A gentle soul that feels the weight of missed tasks. Its tears nourish the sand below." },
     breezeTulip: { name: "Breeze Tulip", description: "A happy blue tulip that loves the fresh morning wind. It sways happily and inhales the sweet scents of nature." },
     happyTulip: { name: "Radiant Red", description: "A cheerful red tulip that waves its leaves and sparkles with joy. Its happiness is as vibrant as its petals!" },
-    distressedRose: { name: "Distressed Rose", description: "A tired rose facing a caterpillar invasion. It needs your tasks to stay strong and dizzy-free!" }
+    distressedRose: { name: "Distressed Rose", description: "A tired rose facing a caterpillar invasion. It needs your tasks to stay strong and dizzy-free!" },
+    'slime-berry': { name: "Slime-Berry Sprout", description: "An energetic lime sprout of pure celestial joy. It giggles on check-ins, bro!" },
+    'solar-flare-pea': { name: "Solar Flare Pea", description: "A radiant, fiery blossom of discipline. Its leaves glow with the warmth of the sun!" },
+    'moon-sprout': { name: "Moon Sprout", description: "A majestic indigo bloom aligned with the moon. It shimmers in cosmic harmony!" },
+    'star-silk-leaf': { name: "Star-Silk Leaf", description: "An ultra-rare cosmic clover. Sways with beautiful magenta starlight." },
+    'dream-shroom': { name: "Dream-Shroom Forest", description: "A legendary bioluminescent mushroom. It hums motivational chord sequences!" }
   };
+
+  const cozySeedsList = [
+    { id: 'slime-berry', name: 'Slime-Berry', rarity: 'Common', emoji: '🌱' },
+    { id: 'solar-flare-pea', name: 'Solar Flare Pea', rarity: 'Rare', emoji: '🔥' },
+    { id: 'moon-sprout', name: 'Moon Sprout', rarity: 'Rare', emoji: '🌙' },
+    { id: 'star-silk-leaf', name: 'Star-Silk Leaf', rarity: 'Epic', emoji: '✨' },
+    { id: 'dream-shroom', name: 'Dream-Shroom', rarity: 'Legendary', emoji: '🍄' }
+  ];
 
   const onboardingSteps = [
     "Welcome to your Living Plant, bro! 🌿 This space is a reflection of your discipline. As you grow, your ecosystem grows too!",
@@ -155,13 +177,20 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
               onUpdateSettings({ hasNewPlantItem: false });
             }
           }}
-          className={`p-2 transition-all relative ${showLibrary ? 'text-blue-600' : 'text-blue-900/40'} ${settings.hasNewPlantItem ? 'scale-110' : ''}`}
+          className={`p-2 transition-all relative ${showLibrary ? 'text-blue-600' : 'text-blue-900/40'} ${settings.hasNewPlantItem || gardenState?.pendingLootSeed ? 'scale-110' : ''}`}
         >
-          <div className={`p-1.5 rounded-xl transition-all ${settings.hasNewPlantItem ? 'bg-yellow-400 text-white shadow-[0_0_15px_rgba(251,191,36,0.8)] animate-pulse' : ''}`}>
+          <motion.div 
+            animate={isLibraryShaking ? {
+              rotate: [0, -15, 15, -10, 10, -5, 5, 0],
+              scale: [1, 1.25, 1.25, 1.15, 1.15, 1],
+            } : {}}
+            transition={{ duration: 0.6 }}
+            className={`p-1.5 rounded-xl transition-all ${settings.hasNewPlantItem || gardenState?.pendingLootSeed ? 'bg-yellow-400 text-white shadow-[0_0_15px_rgba(251,191,36,0.8)] animate-pulse' : ''}`}
+          >
             <Package size={24} />
-          </div>
-          {settings.hasNewPlantItem && (
-             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
+          </motion.div>
+          {(settings.hasNewPlantItem || gardenState?.pendingLootSeed) && (
+             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-ping" />
           )}
         </button>
         <button 
@@ -295,7 +324,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
               exit={{ x: '-100%' }}
               className="absolute inset-0 bg-white/95 backdrop-blur-md z-[150] p-8 overflow-y-auto"
             >
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center justify-between mb-6">
                 <div className="flex flex-col">
                   <h2 className="text-2xl font-black text-blue-900 uppercase tracking-tighter italic">Ecosystem Library</h2>
                   <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Saved Sanctuary Items</p>
@@ -305,59 +334,261 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
                 </button>
               </div>
 
-              {(settings.purchasedEcosystemItemIds || []).length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4 grayscale opacity-50">
-                    <Package size={40} className="text-blue-200" />
+              {/* TWO TABS SEGMENT */}
+              <div className="flex border-b border-gray-100 mb-6">
+                <button
+                  onClick={() => { vibrate(5); setLibraryTab('decorations'); }}
+                  className={`flex-1 pb-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${libraryTab === 'decorations' ? 'border-blue-600 text-blue-900' : 'border-transparent text-gray-400'}`}
+                >
+                  Sanctuary Decos
+                </button>
+                <button
+                  onClick={() => { vibrate(5); setLibraryTab('seeds'); }}
+                  className={`flex-1 pb-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all flex items-center justify-center gap-1 ${libraryTab === 'seeds' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-400'}`}
+                >
+                  <span>Celestial Seeds</span>
+                  {Object.values(gardenState?.inventory || {}).some(qty => qty > 0) && (
+                    <span className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />
+                  )}
+                </button>
+              </div>
+
+              {libraryTab === 'decorations' ? (
+                (settings.purchasedEcosystemItemIds || []).length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4 grayscale opacity-50">
+                      <Package size={40} className="text-blue-200" />
+                    </div>
+                    <h3 className="text-xl font-black text-blue-900 uppercase tracking-tighter italic mb-2">Vault is Empty</h3>
+                    <p className="text-blue-900/40 text-xs font-bold uppercase max-w-xs leading-loose">
+                      Buy and save sanctuary items from the shop to customize your environment, bro!
+                    </p>
+                    <button 
+                      onClick={() => { setShowLibrary(false); setShowShop(true); }}
+                      className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
+                    >
+                      Go to Shop
+                    </button>
                   </div>
-                  <h3 className="text-xl font-black text-blue-900 uppercase tracking-tighter italic mb-2">Vault is Empty</h3>
-                  <p className="text-blue-900/40 text-xs font-bold uppercase max-w-xs leading-loose">
-                    Buy and save sanctuary items from the shop to customize your environment, bro!
-                  </p>
-                  <button 
-                    onClick={() => { setShowLibrary(false); setShowShop(true); }}
-                    className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
-                  >
-                    Go to Shop
-                  </button>
-                </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {(settings.purchasedEcosystemItemIds || []).map((itemId: string) => {
+                      const item = SHOP_ITEMS.find(i => i.id === itemId);
+                      if (!item) return null;
+                      const isActive = (settings.activeEcosystemItemIds || []).includes(itemId);
+                      
+                      return (
+                        <div 
+                          key={itemId}
+                          className={`p-5 rounded-[2rem] border-4 transition-all flex items-center justify-between ${isActive ? 'bg-blue-50 border-blue-400 shadow-xl shadow-blue-500/10' : 'bg-gray-50 border-gray-100 hover:border-blue-200'}`}
+                        >
+                          <div className="flex items-center gap-5">
+                            <div className="text-5xl drop-shadow-sm">{item.icon}</div>
+                            <div className="flex flex-col">
+                              <h3 className="font-black text-blue-900 uppercase text-sm tracking-tight">{item.name}</h3>
+                              <p className="text-[10px] text-blue-900/40 font-bold uppercase tracking-widest">
+                                {isActive ? 'Currently Active' : 'In Library'}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <button 
+                            onClick={() => {
+                              vibrate(10);
+                              onToggleEcosystemItem(itemId);
+                            }}
+                            className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 ${isActive ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'}`}
+                          >
+                            {isActive ? <PowerOff size={14} /> : <Power size={14} />}
+                            {isActive ? 'Disable' : 'Apply'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
               ) : (
+                /* MY SEEDS VAULT LIST */
                 <div className="grid grid-cols-1 gap-4">
-                  {(settings.purchasedEcosystemItemIds || []).map((itemId: string) => {
-                    const item = SHOP_ITEMS.find(i => i.id === itemId);
-                    if (!item) return null;
-                    const isActive = (settings.activeEcosystemItemIds || []).includes(itemId);
-                    
+                  {cozySeedsList.map((seed) => {
+                    const ownedQuantity = gardenState?.inventory?.[seed.id] || 0;
+                    const archetype = PLANT_ARCHETYPES[seed.id] || { growthTimeMinutes: 10, waterRequired: 2 };
+
                     return (
                       <div 
-                        key={itemId}
-                        className={`p-5 rounded-[2rem] border-4 transition-all flex items-center justify-between ${isActive ? 'bg-blue-50 border-blue-400 shadow-xl shadow-blue-500/10' : 'bg-gray-50 border-gray-100 hover:border-blue-200'}`}
+                        key={seed.id}
+                        className={`p-5 rounded-[2rem] border-4 transition-all flex items-center justify-between gap-4 ${ownedQuantity > 0 ? 'bg-amber-50/20 border-amber-300/40 shadow-xl' : 'bg-gray-50 border-gray-100 opacity-60'}`}
                       >
-                        <div className="flex items-center gap-5">
-                          <div className="text-5xl drop-shadow-sm">{item.icon}</div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-4xl p-3 bg-amber-100/40 rounded-2xl drop-shadow-sm">{seed.emoji}</div>
                           <div className="flex flex-col">
-                            <h3 className="font-black text-blue-900 uppercase text-sm tracking-tight">{item.name}</h3>
-                            <p className="text-[10px] text-blue-900/40 font-bold uppercase tracking-widest">
-                              {isActive ? 'Currently Active' : 'In Library'}
+                            <h3 className="font-black text-stone-900 uppercase text-sm tracking-tight">{seed.name}</h3>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[9px] font-black uppercase tracking-wider ${
+                                seed.rarity === 'Legendary' ? 'text-rose-500' :
+                                seed.rarity === 'Epic' ? 'text-fuchsia-500' :
+                                seed.rarity === 'Rare' ? 'text-blue-500' :
+                                'text-emerald-600'
+                              }`}>
+                                {seed.rarity}
+                              </span>
+                              <span className="text-[10px] text-stone-400 font-mono font-bold">
+                                • {ownedQuantity} in Vault
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-gray-400 font-bold mt-1">
+                              Takes {archetype.growthTimeMinutes}m • Requires {archetype.waterRequired} drips
                             </p>
                           </div>
                         </div>
-                        
+
                         <button 
+                          disabled={ownedQuantity <= 0}
                           onClick={() => {
-                            vibrate(10);
-                            onToggleEcosystemItem(itemId);
+                            if (!gardenState || !setGardenState) return;
+                            vibrate(20);
+                            playLootSound('success');
+                            
+                            // switch active type
+                            onSwitchType(seed.id as PlantType);
+
+                            // deduct 1 seed
+                            const currentQty = gardenState.inventory[seed.id] || 0;
+                            const updatedInventory = {
+                              ...gardenState.inventory,
+                              [seed.id]: Math.max(0, currentQty - 1)
+                            };
+
+                            setGardenState({
+                              ...gardenState,
+                              inventory: updatedInventory
+                            });
+
+                            // trigger main active switch
+                            onUpdateSettings({
+                              plantState: {
+                                ...settings.plantState!,
+                                type: seed.id as PlantType,
+                                stage: 1, // Reset active level to sprout stage 1 to grow it afresh!
+                                growthPoints: 0,
+                                isThirsty: false,
+                                isDead: false,
+                                health: 100,
+                                lastCheckDate: new Date().toISOString()
+                              }
+                            });
+
+                            setShowLibrary(false);
+                            localStorage.setItem('nexora_new_plant_unlocked', 'false');
                           }}
-                          className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 ${isActive ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'}`}
+                          className={`px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${ownedQuantity > 0 ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-black shadow-lg shadow-amber-500/25 border border-amber-300/30' : 'bg-stone-150 text-stone-400 cursor-not-allowed border-none'}`}
                         >
-                          {isActive ? <PowerOff size={14} /> : <Power size={14} />}
-                          {isActive ? 'Disable' : 'Apply'}
+                          Grow 🌿
                         </button>
                       </div>
                     );
                   })}
                 </div>
               )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* CINEMATIC SEED FLY AND OVERLAY SEQUENCE */}
+        <AnimatePresence>
+          {gardenState?.pendingLootSeed && !isAnimatingSeed && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/75 backdrop-blur-sm z-[180] flex items-center justify-center p-6"
+            >
+              <div className="absolute w-80 h-80 bg-amber-400/15 rounded-full blur-[60px] animate-pulse pointer-events-none" />
+              
+              <motion.div
+                initial={{ scale: 0.9, y: 30 }}
+                animate={{ scale: 1, y: 0 }}
+                transition={{ type: 'spring', damping: 12 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!gardenState || !setGardenState) return;
+                  
+                  // Play dynamic woosh audio
+                  vibrate(30);
+                  playLootSound('click');
+                  playLootSound('woosh');
+                  
+                  // Trigger flying animation
+                  setIsAnimatingSeed(true);
+                  setIsLibraryShaking(true);
+                  
+                  // Dispatch inventory update on completion
+                  setTimeout(() => {
+                    setIsAnimatingSeed(false);
+                    setIsLibraryShaking(false);
+                    
+                    const loot = gardenState.pendingLootSeed;
+                    if (loot && loot.seedId) {
+                      const withInventory = addSeedToInventory(gardenState, loot.seedId);
+                      setGardenState({
+                        ...withInventory,
+                        pendingLootSeed: null
+                      });
+                    }
+                  }, 850);
+                }}
+                className="w-full max-w-xs bg-stone-900 border-4 border-amber-400 rounded-[3rem] p-8 text-center shadow-2xl relative overflow-hidden group cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_2.5s_infinite] pointer-events-none" />
+                
+                <h3 className="text-[10px] font-black uppercase text-amber-400 tracking-[0.2em] mb-3">Mystical Drop Secured</h3>
+                
+                <div className="relative my-6 select-none flex items-center justify-center">
+                  <div className="absolute inset-0 bg-amber-500/20 rounded-full blur-xl scale-125" />
+                  <motion.div
+                    animate={{ y: [0, -8, 0], scale: [1, 1.05, 1] }}
+                    transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+                    className="text-7xl filter drop-shadow-[0_8px_16px_rgba(245,158,11,0.5)]"
+                  >
+                    ✉️
+                  </motion.div>
+                </div>
+
+                <h2 className="text-xl font-black text-amber-550 uppercase tracking-tight text-white">
+                  {gardenState.pendingLootSeed.seedName}
+                </h2>
+                <span className="text-[9px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full uppercase tracking-widest mt-2 inline-block">
+                  {gardenState.pendingLootSeed.rarity} Seed
+                </span>
+
+                <p className="text-xs text-stone-400 font-bold mt-6 leading-relaxed">
+                  Click the seed card to fly it directly to your Sanctuary Vault, bro! 💫
+                </p>
+                
+                <div className="mt-6 w-full py-4 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/35 rounded-2xl flex items-center justify-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-300">Collect Seed</span>
+                  <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-ping" />
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {isAnimatingSeed && (
+            <motion.div
+              initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+              animate={{ 
+                x: '34vw', 
+                y: '-42vh', 
+                scale: 0.15,
+                opacity: 0.3,
+                rotate: 360
+              }}
+              transition={{ duration: 0.85, ease: [0.25, 0.1, 0.25, 1.0] }}
+              className="fixed inset-0 z-[190] flex items-center justify-center pointer-events-none"
+            >
+              <div className="bg-amber-400 p-5 rounded-full text-3xl shadow-[0_0_20px_rgba(251,191,36,0.85)] border-4 border-white">
+                🌱
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

@@ -66,10 +66,14 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
       showToast('Step Complete! Keep going, bro! 🔥', 'success');
       
       // Attempt Loot Drop
-      const drop = calculateLootDrop();
+      const drop = calculateLootDrop(gardenState.lastSeedDropAt);
       if (drop.triggered) {
         onLootFound(drop);
-        const newState = addSeedToInventory(gardenState, drop.seedId!);
+        const newState = {
+          ...gardenState,
+          pendingLootSeed: drop,
+          lastSeedDropAt: Date.now(),
+        };
         setGardenState(newState);
       }
     }

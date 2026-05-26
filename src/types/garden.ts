@@ -39,6 +39,8 @@ export interface GardenState {
   inventory: Record<string, number>; // Maps Plant Archetype ID to quantity owned
   mascotState: MascotState;
   streakSavers: number;
+  pendingLootSeed?: LootDropResult | null; // Track seed awaiting collection on the Plant section
+  lastSeedDropAt?: number; // Rate-limiting limit: Once every 2 days
 }
 
 // 1. Core Cozy Plant Archetypes Definitions
@@ -148,7 +150,20 @@ export interface LootDropResult {
   message: string | null;
 }
 
-export const calculateLootDrop = (): LootDropResult => {
+export const calculateLootDrop = (lastSeedDropAt?: number): LootDropResult => {
+  const now = Date.now();
+  const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+
+  if (lastSeedDropAt && (now - lastSeedDropAt < twoDaysMs)) {
+    return {
+      triggered: false,
+      seedId: null,
+      seedName: null,
+      rarity: null,
+      message: "cooldown",
+    };
+  }
+
   const overallRoll = Math.random(); // 0.0 to 1.0
 
   // 35% overall drop chance
