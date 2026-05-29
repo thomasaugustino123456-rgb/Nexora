@@ -92,44 +92,82 @@ const ICON_MAP: Record<string, any> = {
 };
 
 // Beautiful native vector illustrations for book covers – high quality, animated, and no watermarks!
+function AestheticImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [loaded, setLoaded] = React.useState(false);
+
+  return (
+    <div className="relative w-full h-full bg-[#FAF7F2] flex items-center justify-center overflow-hidden">
+      {/* Sleek, soft pulsing vector placeholder prior to asset rendering */}
+      {!loaded && (
+        <div className="absolute inset-0 bg-[#E9E4D4] animate-pulse flex items-center justify-center">
+          <BookIcon className="w-8 h-8 text-[#7D6B58] opacity-35" />
+        </div>
+      )}
+      
+      <img
+        src={src}
+        alt={alt}
+        referrerPolicy="no-referrer"
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+        className={`${className} ${loaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'} transition-all duration-500 ease-out`}
+      />
+    </div>
+  );
+}
+
+const IMAGE_BOOKS_MAP: Record<string, { src: string; alt: string }> = {
+  'guide-pushups': { src: pushupProtocolImg, alt: "The Pushups Protocol" },
+  'guide-water': { src: hydrationLogicImg, alt: "Hydration Logic" },
+  'guide-breathing': { src: vagalNerveImg, alt: "Vagal Nerve Hacks" },
+  'guide-drawing': { src: creativeSynapseImg, alt: "Creative Synapse" },
+  'plant-desert-guide': { src: crystalCactusImg, alt: "Crystal Cactus" },
+  'research-sleep': { src: circadianMasteryImg, alt: "Circadian Mastery" },
+  'guide-posture': { src: postureProtocolImg, alt: "The Posture Protocol" },
+  'research-cold': { src: thermalHormesisImg, alt: "Thermal Hormesis" },
+  'research-fasting': { src: autophagySyncImg, alt: "Autophagy Sync" },
+  'plant-mycelium': { src: symbioticFungiImg, alt: "Symbiotic Fungi" },
+  'guide-binaural': { src: binauralBrainwavesImg, alt: "Auditory Brainwaves" },
+  'guide-forest': { src: forestBathingImg, alt: "Phytoncide Bathing" },
+  'guide-saccadic': { src: optimalSaccadesImg, alt: "Optimal Saccades" },
+  'research-nutrition': { src: nootropicNutritionImg, alt: "Nootropic Nutrition" },
+  'plant-carnivorous': { src: carnivorousPitcherImg, alt: "Carnivorous Catch" },
+  'research-neurogenesis': { src: neurogenesisSynapseImg, alt: "Neurogenesis Synapse" },
+  'app-purpose': { src: nexoraGuideImg, alt: "Nexora Ecosystem" },
+  'self-care': { src: selfCareImg, alt: "Self-Care & Balance" },
+  'challenge-practice': { src: challengePracticeImg, alt: "Challenge Drills" },
+  'shop-upgrades': { src: shopBuyingGuideImg, alt: "Ecosystem Shop" },
+  'winter-warmth': { src: winterDrinksImg, alt: "Cozy Winter Fluids" },
+  'immune-water': { src: waterImmunityImg, alt: "Immunity & Hydration" },
+  'warning-adaptation': { src: warningSignsImg, alt: "The Stagnation Signs" },
+  'sport-essentials': { src: sportNeedsImg, alt: "Sport Kinetics & Recovery" },
+  'coffee-counting': { src: coffeeTeaIntakeImg, alt: "The Hydration Debate" },
+  'heart-hydraulic': { src: hydrateHeartImg, alt: "Heart Valve Hydraulics" },
+  'cellular-glow': { src: healthySkinImg, alt: "Dermal Moisture Sync" },
+  'neural-fluid': { src: waterBrainImg, alt: "The Hydrated Brain" },
+  'active-mom': { src: momHealthImg, alt: "The Energetic Mom" },
+  'womens-wellness-deep': { src: womensWellnessImg, alt: "Women's Somatic Wellness" },
+  'pregnant-joy': { src: pregnancyHydrationImg, alt: "Pregnancy Refreshment" },
+  'period-hydration-deep': { src: periodHydrationImg, alt: "Cycle Flow Support" },
+  'mens-activities-deep': { src: challengePracticeImg, alt: "Men's Biomechanical Training" }
+};
+
 function BookIllustration({ bookId }: { bookId: string }) {
+  const mapped = IMAGE_BOOKS_MAP[bookId];
+  if (mapped) {
+    return (
+      <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
+        <AestheticImage
+          src={mapped.src}
+          alt={mapped.alt}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+        />
+      </div>
+    );
+  }
+
   // Render a personalized aesthetic animated scene depending on the book
   switch (bookId) {
-    case 'guide-pushups':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={pushupProtocolImg} 
-            alt="The Pushups Protocol" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'guide-water':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={hydrationLogicImg} 
-            alt="Hydration Logic" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'guide-breathing':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={vagalNerveImg} 
-            alt="Vagal Nerve Hacks" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
 
     case 'guide-gratitude':
       return (
@@ -174,18 +212,6 @@ function BookIllustration({ bookId }: { bookId: string }) {
             </div>
 
           </div>
-        </div>
-      );
-
-    case 'guide-drawing':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={creativeSynapseImg} 
-            alt="Creative Synapse" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
         </div>
       );
 
@@ -241,30 +267,6 @@ function BookIllustration({ bookId }: { bookId: string }) {
               <circle cx="109" cy="26" r="6" fill="#10b981" />
             </g>
           </svg>
-        </div>
-      );
-
-    case 'plant-desert-guide':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={crystalCactusImg} 
-            alt="Crystal Cactus" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'research-sleep':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={circadianMasteryImg} 
-            alt="Circadian Mastery" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
         </div>
       );
 
@@ -341,329 +343,7 @@ function BookIllustration({ bookId }: { bookId: string }) {
         </div>
       );
 
-    case 'guide-posture':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={postureProtocolImg} 
-            alt="The Posture Protocol" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
 
-    case 'research-cold':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={thermalHormesisImg} 
-            alt="Thermal Hormesis" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'research-fasting':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={autophagySyncImg} 
-            alt="Autophagy Sync" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'plant-mycelium':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={symbioticFungiImg} 
-            alt="Symbiotic Fungi" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'guide-binaural':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={binauralBrainwavesImg} 
-            alt="Auditory Brainwaves" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'guide-forest':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={forestBathingImg} 
-            alt="Phytoncide Bathing" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'guide-saccadic':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={optimalSaccadesImg} 
-            alt="Optimal Saccades" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'research-nutrition':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={nootropicNutritionImg} 
-            alt="Nootropic Nutrition" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'plant-carnivorous':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={carnivorousPitcherImg} 
-            alt="Carnivorous Catch" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'research-neurogenesis':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={neurogenesisSynapseImg} 
-            alt="Neurogenesis Synapse" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'app-purpose':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={nexoraGuideImg} 
-            alt="Nexora Ecosystem" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'self-care':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={selfCareImg} 
-            alt="Self-Care & Balance" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'challenge-practice':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={challengePracticeImg} 
-            alt="Challenge Drills" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'shop-upgrades':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={shopBuyingGuideImg} 
-            alt="Ecosystem Shop" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'winter-warmth':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={winterDrinksImg} 
-            alt="Cozy Winter Fluids" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'immune-water':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={waterImmunityImg} 
-            alt="Immunity & Hydration" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'warning-adaptation':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={warningSignsImg} 
-            alt="The Stagnation Signs" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'sport-essentials':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={sportNeedsImg} 
-            alt="Sport Kinetics & Recovery" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'coffee-counting':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={coffeeTeaIntakeImg} 
-            alt="The Hydration Debate" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'heart-hydraulic':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={hydrateHeartImg} 
-            alt="Heart Valve Hydraulics" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'cellular-glow':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={healthySkinImg} 
-            alt="Dermal Moisture Sync" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'neural-fluid':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={waterBrainImg} 
-            alt="The Hydrated Brain" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'active-mom':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={momHealthImg} 
-            alt="The Energetic Mom" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'womens-wellness-deep':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={womensWellnessImg} 
-            alt="Women's Somatic Wellness" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'pregnant-joy':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={pregnancyHydrationImg} 
-            alt="Pregnancy Refreshment" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'period-hydration-deep':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={periodHydrationImg} 
-            alt="Cycle Flow Support" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
-
-    case 'mens-activities-deep':
-      return (
-        <div className="relative w-full h-48 rounded-[2rem] overflow-hidden flex items-center justify-center border border-slate-200/65 shadow-md group bg-slate-100">
-          <img 
-            src={challengePracticeImg} 
-            alt="Men's Biomechanical Training" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        </div>
-      );
 
     case 'context-clues-traveling':
       return (

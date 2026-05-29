@@ -996,8 +996,15 @@ export default function App() {
       await setDoc(
         leaderboardRef,
         {
+          uid: user.uid,
           displayName: name,
-          photoURL: photoURL,
+          photoURL: photoURL || settings.profilePic || user.photoURL || "",
+          streak: stats.streak || 0,
+          totalPoints: stats.totalPoints || 0,
+          weeklyXP: stats.weeklyXP || 0,
+          weeklyPoints: stats.weeklyPoints || 0,
+          level: stats.level || Math.floor((stats.totalPoints || 0) / 100) + 1,
+          league: settings.league || "Bronze",
         },
         { merge: true },
       );
@@ -3230,14 +3237,23 @@ export default function App() {
           {
             uid: user.uid,
             displayName: settings.displayName || "Anonymous",
-            photoURL: user.photoURL || "",
+            photoURL: settings.profilePic || user.photoURL || "",
             streak: updatedStats.streak,
             totalPoints: updatedStats.totalPoints,
+            weeklyXP: updatedStats.weeklyXP || 0,
+            weeklyPoints: updatedStats.weeklyPoints || 0,
             xp: updatedStats.xp,
             level: newLevel,
+            league: settings.league || "Bronze",
           },
           { merge: true },
-        ).catch((err) => console.error("LB sync error", err));
+        ).catch((err) => {
+          try {
+            handleFirestoreError(err, OperationType.WRITE, `leaderboard/${user.uid}`);
+          } catch (e) {
+            console.error("LB sync error", e);
+          }
+        });
       }
 
       return updatedStats;

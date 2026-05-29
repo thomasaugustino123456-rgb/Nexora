@@ -455,7 +455,7 @@ export function useNexoraData(
               totalPoints: stats.totalPoints || 0,
               weeklyXP: stats.weeklyXP || 0,
               weeklyPoints: stats.weeklyPoints || 0,
-              level: Math.floor((stats.totalPoints || 0) / 1000) + 1,
+              level: stats.level || Math.floor((stats.totalPoints || 0) / 100) + 1,
               league: settings.league || "Bronze",
             },
             { merge: true },

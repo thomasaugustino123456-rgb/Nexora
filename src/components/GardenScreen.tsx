@@ -85,9 +85,8 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
 
       // Update mascot to happy for keeping up with garden discipline!
       const updatedMascot = {
-        ...activeGarden.mascotState,
         mood: 'happy' as const,
-        lastInteractedAt: Date.now()
+        lastInteracted: activeGarden?.mascotState?.lastInteracted || Date.now()
       };
 
       dispatchUpdate({
@@ -189,14 +188,14 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
         {/* Mascot / Mood Panel */}
         <div className="w-full bg-white border border-stone-200/50 p-5 rounded-[2rem] flex items-center gap-5 shadow-sm">
           <div className="text-4xl select-none filter drop-shadow">
-            {activeGarden.mascotState.mood === 'happy' ? '🦊✨' :
-             activeGarden.mascotState.mood === 'angry' ? '🦊💢' :
-             activeGarden.mascotState.mood === 'sad' ? '🦊💧' : '🦊😐'}
+            {(activeGarden?.mascotState?.mood || 'happy') === 'happy' ? '🦊✨' :
+             (activeGarden?.mascotState?.mood || 'happy') === 'angry' ? '🦊💢' :
+             (activeGarden?.mascotState?.mood || 'happy') === 'sad' ? '🦊💧' : '🦊😐'}
           </div>
           <div className="flex flex-col">
             <h3 className="text-xs font-black uppercase text-stone-500 tracking-wider">Mascot State</h3>
             <p className="text-xs font-bold text-stone-400 uppercase mt-1">
-              "N" is currently feeling <span className="text-emerald-600 font-extrabold">{activeGarden.mascotState.mood}</span>! Keep your daily discipline sharp to secure their joyful mood!
+              "N" is currently feeling <span className="text-emerald-600 font-extrabold">{activeGarden?.mascotState?.mood || 'happy'}</span>! Keep your daily discipline sharp to secure their joyful mood!
             </p>
           </div>
         </div>
