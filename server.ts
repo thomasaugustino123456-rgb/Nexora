@@ -173,33 +173,110 @@ const startScheduler = () => {
         }
 
         const userId = userDoc.id;
+        const stats = userData.stats || {};
+        const streakVal = stats.streak || 0;
 
-        // 1. STANDARD REMINDERS (Reminder 1 and Reminder 2)
-        const reminder1 = settings.reminderTime || userData.reminderTime;
-        const reminder2 = settings.reminderTime2 || userData.reminderTime2;
+        // Custom Duolingo-style notification content generator
+        const getDuolingoStyleNotification = (streak: number) => {
+          const messages = [
+            {
+              title: "Nexora is waiting... 💧",
+              body: `Don’t let your ${streak}-day streak die today, bro! Spend 2 minutes now!`
+            },
+            {
+              title: "Knock knock, bro! 🚪",
+              body: "It's Nexora! Duo has a green owl, but you have me. Let's crush your challenges!"
+            },
+            {
+              title: "Your streak is crying... 😭",
+              body: `Your ${streak}-day streak and virtual plants need some serious discipline, bro. Let's work!`
+            },
+            {
+              title: "Just 2 minutes! ⏳",
+              body: "That's all it takes to complete a habit and protect your elite progress! Let's do it, bro!"
+            },
+            {
+              title: "Where are you, bro? 🔍",
+              body: "Your hydration levels are dropping and your streak is at risk. Get in here and level up!"
+            },
+            {
+              title: "Discipline > Motivation 🧠",
+              body: "Don't count the days, make the days count. Come complete your habit right now, bro!"
+            },
+            {
+              title: "Am I annoying? 👀",
+              body: "Maybe! But protecting your streak and holding you accountable is my sacred duty. Let's go!"
+            }
+          ];
+          return messages[Math.floor(Math.random() * messages.length)];
+        };
+
+        const getCustomPlanDuolingoStyleNotification = (planName: string) => {
+          const messages = [
+            {
+              title: `${planName} Protocol! 🚀`,
+              body: `Your custom plan "${planName}" is waiting for you, bro! Get in and dominate!`
+            },
+            {
+              title: `Time to shine, bro! ✨`,
+              body: `It is time for your "${planName}" custom plan. Zero excuses, let’s crush it!`
+            },
+            {
+              title: "Your custom plan is ready ⚡",
+              body: `Don’t let "${planName}" wait. Protect your streak and level up now!`
+            },
+            {
+              title: "Nexora custom alert! 🎯",
+              body: `Your "${planName}" challenges are waiting. Spend 2 minutes now and feel like a king!`
+            }
+          ];
+          return messages[Math.floor(Math.random() * messages.length)];
+        };
+
+        // 1. STANDARD REMINDERS (With guaranteed defaults if not customized by user)
+        const customReminder1 = settings.reminderTime || userData.reminderTime;
+        const customReminder2 = settings.reminderTime2 || userData.reminderTime2;
         const isTodayCompleted = userData.isTodayCompleted === true;
 
-        if ((reminder1 && userTimeStr === reminder1) || (reminder2 && userTimeStr === reminder2)) {
+        const standardReminderTimes = [];
+        if (customReminder1) standardReminderTimes.push(customReminder1);
+        if (customReminder2) standardReminderTimes.push(customReminder2);
+
+        // Fallback to default daily times if no custom triggers exist - solves offline bug!
+        if (standardReminderTimes.length === 0) {
+          standardReminderTimes.push("08:00");
+          standardReminderTimes.push("14:00");
+          standardReminderTimes.push("19:00");
+        }
+
+        if (standardReminderTimes.includes(userTimeStr)) {
           if (!isTodayCompleted) {
             const rKey = `${userId}_standard_${userTimeStr}`;
             if (sentNotifications.get(rKey) !== todayStr) {
               sentNotifications.set(rKey, todayStr);
-              await sendPush(fcmToken, 'Nexora 🔥', "Hey 👋 Ready for today’s challenge? Don't let that streak die!");
+              const duolingoNotif = getDuolingoStyleNotification(streakVal);
+              await sendPush(fcmToken, duolingoNotif.title, duolingoNotif.body);
             }
           }
         }
 
-        // 2. PRE-MIDNIGHT STREAK AT RISK
+        // 2. PRE-MIDNIGHT STREAK AT RISK (Extreme Duolingo Urgency)
         if (userTimeStr === '22:00' && !isTodayCompleted) {
           const rKey = `${userId}_streak_22:00`;
           if (sentNotifications.get(rKey) !== todayStr) {
             sentNotifications.set(rKey, todayStr);
-            await sendPush(fcmToken, 'Streak at Risk! ⚠️', 'Bro, your streak is about to die! 💀 Spend 2 minutes now to save it!');
+            const highUrgencyMessages = [
+              "Bro, your streak is about to die! 💀 Spend 2 minutes now to save it!",
+              "Nexora is crying in the corner... 😭 Save your streak right now, bro!",
+              "Only 2 hours left! ⏳ Protect your legendary progress before it fades forever!",
+              "Is your bed more important than your discipline? 👀 Complete your habit!"
+            ];
+            const extremeMsg = highUrgencyMessages[Math.floor(Math.random() * highUrgencyMessages.length)];
+            await sendPush(fcmToken, 'Streak at Risk! ⚠️', extremeMsg);
           }
         }
 
         // 3. TROPHY DEGRADATION CHECK & ALERTS
-        const stats = userData.stats || {};
         const trophies = stats.trophies || [];
         let trophiesChanged = false;
         const nowMs = now.getTime();
@@ -341,7 +418,7 @@ const startScheduler = () => {
           }
         }
 
-        // 5. CUSTOM PLAN ALARMS
+        // 5. CUSTOM PLAN ALARMS (Fully interactive Duolingo-style)
         const userPlans = userPlansMap.get(userId) || [];
         for (const plan of userPlans) {
           const hoursMatch = plan.reminderTime === userTimeStr || plan.reminderTime2 === userTimeStr;
@@ -350,7 +427,8 @@ const startScheduler = () => {
             const pKey = `${userId}_plan_${plan.id}_${userTimeStr}`;
             if (sentNotifications.get(pKey) !== todayStr) {
               sentNotifications.set(pKey, todayStr);
-              await sendPush(fcmToken, `${plan.name} 🚀`, `Time for your custom plan: ${plan.name}! Let's keep that momentum, bro!`);
+              const customPlanNotif = getCustomPlanDuolingoStyleNotification(plan.name);
+              await sendPush(fcmToken, customPlanNotif.title, customPlanNotif.body);
             }
           }
         }
