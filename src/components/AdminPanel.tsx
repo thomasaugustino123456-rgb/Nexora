@@ -22,18 +22,17 @@ import {
   Droplets,
   Calendar,
   Layers,
-  HelpCircle
+  HelpCircle,
+  Eye,
+  CheckCircle,
+  Inbox,
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react";
 import {
   collection,
   getDocs,
-  query,
-  where,
-  addDoc,
-  serverTimestamp,
-  doc,
-  getDoc,
-  updateDoc
+  addDoc
 } from "firebase/firestore";
 import { db } from "../firebase";
 import {
@@ -96,6 +95,15 @@ interface FeedbackLog {
   createdAt: any;
 }
 
+// Active tabs mapping
+// default tab: 'overview' (displays nice high-level stats cards & beautiful charts)
+// 'tab_population': deep dive into current registrants list
+// 'tab_cultivated': list of users who have planted botanical companions
+// 'tab_arsenal': greenhouse inventories of all users
+// 'tab_signals': signals & feedback messaging logs with read/unread tracking
+// 'tab_broadcast': broadcaster workspace
+type AdminSectionTab = "overview" | "tab_population" | "tab_cultivated" | "tab_arsenal" | "tab_signals" | "tab_broadcast";
+
 export const AdminPanel: React.FC<AdminPanelProps> = ({
   currentUserId,
   currentUserEmail,
@@ -107,22 +115,35 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"users" | "analytics" | "feedback" | "notifications">("users");
+  const [activeTab, setActiveTab] = useState<AdminSectionTab>("overview");
 
-  // Notification Broadcaster State
+  // Track read feedbacks using local state backed by localStorage
+  const [readFeedbackIds, setReadFeedbackIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("admin_read_feedback_ids");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Track active feedback displaying in details card
+  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackLog | null>(null);
+
+  // Broadcast dispatch states
   const [broadcastTitle, setBroadcastTitle] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastType, setBroadcastType] = useState<"system" | "reward" | "alert" | "mascot">("system");
   const [isBroadcasting, setIsBroadcasting] = useState(false);
 
-  // Authenticate Access
+  // Security Credentials validation
   const isAuthorized =
     currentUserId === "G77faQhRPfe5jr4hbY0O0L4fNUs2" ||
     currentUserEmail === "thomasaugustino12345678@gmail.com";
 
   useEffect(() => {
     if (!isAuthorized) {
-      showToast("Access Denied: Admin Privilege Required", "error");
+      showToast("Access Denied: Admin Credentials Missing", "error");
       onBack();
       return;
     }
@@ -138,7 +159,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       
       usersSnap.forEach((docSnap) => {
         const data = docSnap.data();
-        // Fallback for stats that might be embedded in the doc or in a subcollection
         const userStats = data.stats || {};
         
         parsedUsers.push({
@@ -175,25 +195,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           createdAt: fbData.createdAt
         });
       });
+      
       // Sort Feedbacks by Date descending
       parsedFeedbacks.sort((a, b) => {
         const timeA = a.createdAt?.seconds || 0;
         const timeB = b.createdAt?.seconds || 0;
         return timeB - timeA;
       });
+      
       setFeedbacks(parsedFeedbacks);
+      
+      // Set the first feedback as selected as default in details panel
+      if (parsedFeedbacks.length > 0) {
+        setSelectedFeedback(parsedFeedbacks[0]);
+      }
     } catch (error) {
-      console.error("Admin: Error fetching admin dashboard details:", error);
-      showToast("Sync Error: Failed to retrieve system statistics", "error");
+      console.error("AdminPanel: Error loading cloud database metrics:", error);
+      showToast("Sync Failure: Restricted operational path", "error");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Broadcast critical guidance notification to ALL users
+  // Flag feedback as read and dismiss green dot
+  const handleSelectFeedback = (fb: FeedbackLog) => {
+    setSelectedFeedback(fb);
+    if (!readFeedbackIds.includes(fb.id)) {
+      const updated = [...readFeedbackIds, fb.id];
+      setReadFeedbackIds(updated);
+      localStorage.setItem("admin_read_feedback_ids", JSON.stringify(updated));
+    }
+  };
+
+  // Transmit Broadcast Notification globally to all users' document paths
   const handleBroadcast = async () => {
     if (!broadcastTitle || !broadcastMessage) {
-      showToast("Please fill in both title and message text first", "info");
+      showToast("Please supply a dispatch title & guidance context", "info");
       return;
     }
 
@@ -201,7 +238,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     try {
       let broadcastCount = 0;
       for (const u of usersList) {
-        // Build notification collection path for each user
         const notifRef = collection(db, "users", u.uid, "notifications");
         await addDoc(notifRef, {
           title: broadcastTitle,
@@ -209,17 +245,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           type: broadcastType,
           read: false,
           createdAt: new Date().toISOString(),
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 day expiration
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         });
         broadcastCount++;
       }
 
-      showToast(`Success: Broadcasted dispatch to ${broadcastCount} users!`, "success");
+      showToast(`Transmit Successful: Dispatched system directive to ${broadcastCount} operatives!`, "success");
       setBroadcastTitle("");
       setBroadcastMessage("");
     } catch (e) {
-      console.error("Admin: Broadcast Dispatch Failed", e);
-      showToast("Broadcast Failed: Write operations restricted", "error");
+      console.error("AdminPanel: Broadcast Delivery failure", e);
+      showToast("Dispatch Failed: High priority protocol lock active", "error");
     } finally {
       setIsBroadcasting(false);
     }
@@ -227,19 +263,36 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   if (!isAuthorized) return null;
 
-  // Search & Filter
+  // Filter accounts according to query
   const filteredUsers = usersList.filter(
     (u) =>
       u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.displayName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Compute Analytics Data
+  // Cultivated users index (at least one plant placed on tiles or plantState exists)
+  const cultivatedUsers = usersList.filter((u) => {
+    let hasPlanted = false;
+    if (u.plantState && u.plantState.type) hasPlanted = true;
+    if (u.garden?.tiles) {
+      u.garden.tiles.forEach((tile) => {
+        if (tile && tile.plantId) hasPlanted = true;
+      });
+    }
+    return hasPlanted;
+  });
+
+  // Stored arsenal users index (having items in greenhouse inventory)
+  const arsenalUsers = usersList.filter((u) => {
+    if (!u.garden?.inventory) return false;
+    return Object.values(u.garden.inventory).some((cnt) => (cnt || 0) > 0);
+  });
+
+  // Numeric summary calculations
   const totalUsersCount = usersList.length;
-  const totalCoinsGenerated = usersList.reduce((acc, curr) => acc + (curr.coins || 0), 0);
-  const totalXPGenerated = usersList.reduce((acc, curr) => acc + (curr.xp || 0), 0);
+  const totalFeedbackCount = feedbacks.length;
   
-  // Calculate total seeds planted & in inventory
+  // Plant count on current active tiles
   let totalSeedsPlantedCount = 0;
   let totalSeedsInInventory = 0;
   usersList.forEach((u) => {
@@ -247,6 +300,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       u.garden.tiles.forEach(tile => {
         if (tile && tile.plantId) totalSeedsPlantedCount++;
       });
+    } else if (u.plantState && u.plantState.type) {
+      totalSeedsPlantedCount++;
     }
     if (u.garden?.inventory) {
       Object.values(u.garden.inventory).forEach(count => {
@@ -255,11 +310,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   });
 
-  // Level Distribution (Pie Chart Data)
+  // Pie Chart: Level Buckets
   const levelBuckets = { "Level 1-10": 0, "Level 11-30": 0, "Level 31-50": 0, "Level 50+": 0 };
   usersList.forEach((u) => {
     if (u.level <= 10) levelBuckets["Level 1-10"]++;
-    else if (u.level <= 30) levelBuckets["Level 11-30"]++;
+    else if (u.level <= 30) levelBuckets["Level 11-10"]++;
     else if (u.level <= 50) levelBuckets["Level 31-50"]++;
     else levelBuckets["Level 50+"]++;
   });
@@ -268,8 +323,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     value
   })).filter(item => item.value > 0);
 
-  // Growth / Progress stats over categories (Line Graph Data)
-  // Group metrics by active plant types as an activity index
+  // Ecosystem Trends: Botanical companion counts layout
   const plantTypeCounts: Record<string, number> = {};
   usersList.forEach((u) => {
     const pType = u.plantState?.type || "None/Sprout";
@@ -280,123 +334,231 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     value
   }));
 
-  // Mock a structured line chart representing engagement levels based on total XP progression milestones among top users
-  const topUsersByXp = [...usersList].sort((a, b) => b.xp - a.xp).slice(0, 7);
+  // Line Chart: Engagement curve of active players
+  const topUsersByXp = [...usersList].sort((a, b) => b.xp - a.xp).slice(0, 10);
   const xpProgressionData = topUsersByXp.map((u, i) => ({
-    index: `User ${i + 1}`,
-    name: u.displayName.slice(0, 8),
+    index: `#${i + 1}`,
+    name: u.displayName.length > 8 ? u.displayName.slice(0, 7) + ".." : u.displayName,
     XP: u.xp,
     Coins: u.coins
   }));
 
-  const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#ef4444"];
+  const chartColors = ["#10B981", "#3B82F6", "#F59E0B", "#EC4899", "#8B5CF6", "#EF4444"];
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans pb-12 relative overflow-hidden">
-      {/* Decorative Blur Accents */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans relative overflow-hidden">
+      {/* Dynamic Command Grid Background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none opacity-40" />
+      <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-red-500/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-12 left-1/4 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Top Header Navigation */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-white/5 py-4 px-6 flex items-center justify-between">
+      {/* Control Deck Header */}
+      <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-white/5 px-6 py-5 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-white/5 active:scale-95 transition-all text-slate-400 hover:text-white rounded-xl"
+            className="p-3 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-2xl active:scale-95 transition-all outline-none border border-white/10"
+            title="Return to profile"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} />
           </button>
           <div>
-            <span className="text-[10px] font-black tracking-widest text-[#69C496] uppercase">SYSTEM COMMAND</span>
-            <h1 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-              Commander Control Deck <Shield size={18} className="text-emerald-500 animate-pulse" />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black tracking-widest text-[#69C496] uppercase font-mono">SECURE INTERFACE HOST</span>
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
+            </div>
+            <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2 uppercase">
+              Command Center <Shield size={20} className="text-red-500" />
             </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-4">
           <div className="hidden md:flex flex-col text-right">
-            <span className="text-[10px] text-slate-400 font-bold uppercase">{currentUserEmail || "Commander Mode"}</span>
-            <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">PRO SECURE CONNECTION Verified</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase">{currentUserEmail}</span>
+            <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">Root Level Sovereign</span>
           </div>
           <button
             onClick={fetchAdminData}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 transition-all text-slate-200 text-xs font-black uppercase tracking-wider rounded-xl border border-white/5"
+            title="Reload Cloud State"
+            className="p-3 bg-white/5 hover:bg-white/15 border border-white/10 text-slate-200 text-xs font-black uppercase tracking-wider rounded-2xl transition-all shadow-lg hover:scale-105 active:scale-95 flex items-center gap-2"
           >
-            Force Sync 🔄
+            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Sync Cloud</span>
           </button>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto w-full px-4 sm:px-6 mt-8 flex-1 flex flex-col gap-8">
-        {/* Top Analytics Hero Bento - Real Backend Values */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-slate-950/40 border border-white/5 p-5 rounded-3xl relative overflow-hidden backdrop-blur shadow-xl">
-            <div className="absolute top-4 right-4 text-blue-500 bg-blue-500/10 p-2 rounded-xl">
-              <Users size={20} />
+      {/* Main Command Workspace */}
+      <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-6 flex flex-col gap-6 relative z-10">
+        
+        {/* Interactive Interactive Bento Matrix boxes */}
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Bento box 1: Active Population */}
+          <div
+            onClick={() => setActiveTab("tab_population")}
+            className={`p-5 rounded-3xl cursor-pointer border transition-all relative overflow-hidden shadow-xl hover:scale-[1.03] active:scale-[0.98] ${
+              activeTab === "tab_population"
+                ? "bg-slate-900 border-emerald-500/50 shadow-emerald-950/20"
+                : "bg-slate-900/60 border-white/5 hover:border-white/10"
+            }`}
+          >
+            <div className={`absolute top-4 right-4 p-2 rounded-xl transition-colors ${
+              activeTab === "tab_population" ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-slate-400"
+            }`}>
+              <Users size={18} />
             </div>
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Population</span>
-            <div className="text-3xl font-black text-white mt-1 tracking-tight">
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total Population</span>
+            <div className="text-3xl font-black text-white mt-2 tracking-tight">
               {isLoading ? "..." : totalUsersCount}
             </div>
-            <p className="text-[9px] text-slate-500 font-bold mt-1.5 uppercase">Registered User Profiles</p>
+            <p className="text-[9px] font-bold mt-2 uppercase text-emerald-400 flex items-center gap-1">
+              Active accounts index <Sparkles size={10} />
+            </p>
           </div>
 
-          <div className="bg-slate-950/40 border border-white/5 p-5 rounded-3xl relative overflow-hidden backdrop-blur shadow-xl">
-            <div className="absolute top-4 right-4 text-emerald-500 bg-emerald-500/10 p-2 rounded-xl">
-              <Sprout size={20} />
+          {/* Bento box 2: Soils Cultivated */}
+          <div
+            onClick={() => setActiveTab("tab_cultivated")}
+            className={`p-5 rounded-3xl cursor-pointer border transition-all relative overflow-hidden shadow-xl hover:scale-[1.03] active:scale-[0.98] ${
+              activeTab === "tab_cultivated"
+                ? "bg-slate-900 border-blue-500/50 shadow-blue-950/20"
+                : "bg-slate-900/60 border-white/5 hover:border-white/10"
+            }`}
+          >
+            <div className={`absolute top-4 right-4 p-2 rounded-xl transition-colors ${
+              activeTab === "tab_cultivated" ? "bg-blue-500/20 text-blue-400" : "bg-white/5 text-slate-400"
+            }`}>
+              <Sprout size={18} />
             </div>
-            <span className="text-[9px] font-black text-[#69C496] uppercase tracking-widest font-mono">Soils Cultivated</span>
-            <div className="text-3xl font-black text-white mt-1 tracking-tight">
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 font-mono">Planted Companions</span>
+            <div className="text-3xl font-black text-white mt-2 tracking-tight">
               {isLoading ? "..." : totalSeedsPlantedCount}
             </div>
-            <p className="text-[9px] text-[#A2D2AB] font-bold mt-1.5 uppercase">Active planted Seeds</p>
+            <p className="text-[9px] font-bold mt-2 uppercase text-blue-400 flex items-center gap-1">
+              Planted companion seeds <Droplets size={10} />
+            </p>
           </div>
 
-          <div className="bg-slate-950/40 border border-white/5 p-5 rounded-3xl relative overflow-hidden backdrop-blur shadow-xl">
-            <div className="absolute top-4 right-4 text-[#8D7D62] bg-[#8D7D62]/10 p-2 rounded-xl">
-              <Layers size={20} />
+          {/* Bento box 3: Greenhouse Arsenal */}
+          <div
+            onClick={() => setActiveTab("tab_arsenal")}
+            className={`p-5 rounded-3xl cursor-pointer border transition-all relative overflow-hidden shadow-xl hover:scale-[1.03] active:scale-[0.98] ${
+              activeTab === "tab_arsenal"
+                ? "bg-slate-900 border-amber-500/50 shadow-amber-950/20"
+                : "bg-slate-900/60 border-white/5 hover:border-white/10"
+            }`}
+          >
+            <div className={`absolute top-4 right-4 p-2 rounded-xl transition-colors ${
+              activeTab === "tab_arsenal" ? "bg-amber-500/20 text-amber-400" : "bg-white/5 text-slate-400"
+            }`}>
+              <Layers size={18} />
             </div>
-            <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Stored Arsenal</span>
-            <div className="text-3xl font-black text-white mt-1 tracking-tight">
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Greenhouse Stash</span>
+            <div className="text-3xl font-black text-white mt-2 tracking-tight">
               {isLoading ? "..." : totalSeedsInInventory}
             </div>
-            <p className="text-[9px] text-slate-500 font-bold mt-1.5 uppercase">Seeds in inventories</p>
+            <p className="text-[9px] font-bold mt-2 uppercase text-amber-400 flex items-center gap-1">
+              Unplanted reserve seeds <Trophy size={10} />
+            </p>
           </div>
 
-          <div className="bg-slate-950/40 border border-white/5 p-5 rounded-3xl relative overflow-hidden backdrop-blur shadow-xl">
-            <div className="absolute top-4 right-4 text-rose-500 bg-rose-500/10 p-2 rounded-xl">
-              <MessageSquare size={20} />
+          {/* Bento box 4: User signals / Signals message logs */}
+          <div
+            onClick={() => setActiveTab("tab_signals")}
+            className={`p-5 rounded-3xl cursor-pointer border transition-all relative overflow-hidden shadow-xl hover:scale-[1.03] active:scale-[0.98] ${
+              activeTab === "tab_signals"
+                ? "bg-slate-900 border-red-500/50 shadow-red-950/20"
+                : "bg-slate-900/60 border-white/5 hover:border-white/10"
+            }`}
+          >
+            <div className={`absolute top-4 right-4 p-2 rounded-xl transition-colors ${
+              activeTab === "tab_signals" ? "bg-red-500/20 text-red-400" : "bg-white/5 text-slate-400"
+            }`}>
+              <MessageSquare size={18} />
             </div>
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">User Signals</span>
-            <div className="text-3xl font-black text-white mt-1 tracking-tight">
-              {isLoading ? "..." : feedbacks.length}
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Transmissions Received</span>
+            <div className="text-3xl font-black text-white mt-2 tracking-tight flex items-center gap-2">
+              {isLoading ? "..." : totalFeedbackCount}
+              {/* Green notification indicator light */}
+              {!isLoading && feedbacks.some((fb) => !readFeedbackIds.includes(fb.id)) && (
+                <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-ping" title="Fresh feedback available!" />
+              )}
             </div>
-            <p className="text-[9px] text-slate-500 font-bold mt-1.5 uppercase">Feedbacks Submitted</p>
+            <p className="text-[9px] font-bold mt-2 uppercase text-red-400 flex items-center gap-1">
+              Operator feedbacks log <Bell size={10} />
+            </p>
           </div>
         </section>
 
-        {/* Tab Controls */}
-        <section className="flex border-b border-white/5 gap-2 overflow-x-auto pb-px">
-          {(["users", "analytics", "feedback", "notifications"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-5 py-3 text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap border-b-2 ${
-                activeTab === tab
-                  ? "border-[#69C496] text-white bg-slate-950/40"
-                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900/60"
-              }`}
-            >
-              {tab === "users" && "👥 Users Index"}
-              {tab === "analytics" && "📊 System Charts"}
-              {tab === "feedback" && `💬 Signals Room (${feedbacks.length})`}
-              {tab === "notifications" && "📢 Broadcast Dispatch"}
-            </button>
-          ))}
+        {/* Workspace Operations Tab Buttons BAR */}
+        <section className="flex bg-slate-900/40 border border-white/5 p-1 rounded-3xl gap-1 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`px-6 py-3.5 text-xs font-black uppercase tracking-wider rounded-2xl transition-all whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "overview"
+                ? "bg-slate-800 text-white shadow-md border border-white/5"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            📊 Command Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab("tab_population")}
+            className={`px-6 py-3.5 text-xs font-black uppercase tracking-wider rounded-2xl transition-all whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "tab_population"
+                ? "bg-slate-800 text-white shadow-md border border-white/5"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            👥 Accounts Inventory ({totalUsersCount})
+          </button>
+          <button
+            onClick={() => setActiveTab("tab_cultivated")}
+            className={`px-6 py-3.5 text-xs font-black uppercase tracking-wider rounded-2xl transition-all whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "tab_cultivated"
+                ? "bg-slate-800 text-white shadow-md border border-white/5"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            🌿 Placed Gardeners ({cultivatedUsers.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("tab_arsenal")}
+            className={`px-6 py-3.5 text-xs font-black uppercase tracking-wider rounded-2xl transition-all whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "tab_arsenal"
+                ? "bg-slate-800 text-white shadow-md border border-white/5"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            🎒 Stash Vaults ({arsenalUsers.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("tab_signals")}
+            className={`px-6 py-3.5 text-xs font-black uppercase tracking-wider rounded-2xl transition-all whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "tab_signals"
+                ? "bg-slate-800 text-white shadow-md border border-white/5"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            💬 Signal Transmissions ({totalFeedbackCount})
+            {feedbacks.some((fb) => !readFeedbackIds.includes(fb.id)) && (
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-bounce" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("tab_broadcast")}
+            className={`px-6 py-3.5 text-xs font-black uppercase tracking-wider rounded-2xl transition-all whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "tab_broadcast"
+                ? "bg-slate-800 text-white shadow-md border border-white/5"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            📢 Headquarters Broadcaster
+          </button>
         </section>
 
-        {/* Tab Contents */}
+        {/* Tab content views rendering */}
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div
@@ -406,193 +568,138 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               exit={{ opacity: 0 }}
               className="flex flex-col items-center justify-center py-20 gap-4"
             >
-              <div className="w-12 h-12 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
-              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Securing System Decoders...</p>
+              <div className="w-10 h-10 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+              <p className="text-xs font-black uppercase tracking-widest text-[#69C496]">Siphoning Cloud Metrics...</p>
             </motion.div>
           ) : (
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.25 }}
               className="w-full flex flex-col gap-6"
             >
-              {/* USERS INDEX */}
-              {activeTab === "users" && (
-                <div className="flex flex-col gap-4">
-                  {/* Search Bar */}
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input
-                      type="text"
-                      placeholder="Search accounts by username, display name, or email address..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-11 pr-4 py-3 bg-slate-950/50 border border-white/5 rounded-2xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-[#69C496] transition-all"
-                    />
-                  </div>
-
-                  {/* Users Table */}
-                  <div className="overflow-x-auto bg-slate-950/40 border border-white/5 rounded-3xl shadow-xl">
-                    <table className="w-full border-collapse text-left text-xs">
-                      <thead>
-                        <tr className="border-b border-white/5 text-slate-400 font-mono text-[9px] uppercase tracking-widest">
-                          <th className="p-4 pl-6 font-bold">User Identity</th>
-                          <th className="p-4 font-bold">Total Power (XP)</th>
-                          <th className="p-4 font-bold">Level</th>
-                          <th className="p-4 font-bold">Coins</th>
-                          <th className="p-4 font-bold">Active Streak</th>
-                          <th className="p-4 font-bold">Active Plant</th>
-                          <th className="p-4 text-center pr-6 font-bold">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5 font-semibold text-slate-300">
-                        {filteredUsers.length === 0 ? (
-                          <tr>
-                            <td colSpan={7} className="p-8 text-center text-slate-500 font-bold uppercase tracking-wide">
-                              No matching user records detected
-                            </td>
-                          </tr>
-                        ) : (
-                          filteredUsers.map((u) => {
-                            const plantType = u.plantState?.type || "None";
-                            const plantStage = u.plantState?.stage || 0;
-                            
-                            return (
-                              <tr key={u.uid} className="hover:bg-white/[0.02] transition-colors">
-                                <td className="p-4 pl-6">
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="text-white font-black text-sm">{u.displayName}</span>
-                                    <span className="text-[10px] text-slate-400 font-mono select-all bg-slate-900/40 px-1 py-0.5 rounded border border-white/5 w-fit">
-                                      {u.email}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="p-4 font-bold text-slate-100">
-                                  <span className="flex items-center gap-1.5">
-                                    <Star size={12} className="text-blue-400" /> {u.xp || 0} XP
-                                  </span>
-                                </td>
-                                <td className="p-4">
-                                  <span className="px-2 py-0.5 bg-slate-800 text-blue-300 rounded font-bold text-[10px]">
-                                    Lvl {u.level}
-                                  </span>
-                                </td>
-                                <td className="p-4 font-bold text-amber-400 flex items-center gap-1">
-                                  <Coins size={12} /> {u.coins || 0}
-                                </td>
-                                <td className="p-4">
-                                  <span className="flex items-center gap-1 text-orange-400 font-black">
-                                    <Flame size={14} /> {u.streak}d
-                                  </span>
-                                </td>
-                                <td className="p-4">
-                                  <span className="text-[10px] uppercase text-emerald-400 flex items-center gap-1">
-                                    <Sprout size={12} /> {plantType} (S{plantStage})
-                                  </span>
-                                </td>
-                                <td className="p-4 text-center pr-6">
-                                  <button
-                                    onClick={() => setSelectedUser(u)}
-                                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 hover:scale-105 active:scale-95 text-white font-black uppercase text-[9px] rounded-lg tracking-wider shadow transition-all"
-                                  >
-                                    Inspect Account 🔍
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* SYSTEM CHARTS */}
-              {activeTab === "analytics" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6">
-                  {/* Line Graph: XP Milestone Progression of Top Players */}
-                  <div className="bg-slate-950/40 border border-white/5 p-5 rounded-3xl flex flex-col justify-between shadow-xl">
-                    <div className="mb-4">
-                      <span className="text-[9px] font-black tracking-widest text-[#69C496] uppercase">XP & Coins Matrix</span>
-                      <h3 className="text-sm font-black text-white uppercase mt-0.5">Top Performers Discipline Indexes</h3>
+              
+              {/* TABS 1: OVERVIEW METRIC DASHBOARD (With Highly Optimized legibility Charts) */}
+              {activeTab === "overview" && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  
+                  {/* Line Chart curve */}
+                  <div className="bg-slate-900 border border-white/5 p-6 rounded-3xl flex flex-col shadow-xl">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <span className="text-[9px] font-black text-[#69C496] uppercase tracking-[0.2em]">Discipline Engagement Vector</span>
+                        <h3 className="text-base font-black text-white uppercase mt-1">XP Milestones of Top Players</h3>
+                      </div>
+                      <TrendingUp size={18} className="text-blue-500" />
                     </div>
-                    <div className="h-64 mt-2">
+                    
+                    <div className="h-72 w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={xpProgressionData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" />
-                          <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} />
-                          <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
+                        <LineChart data={xpProgressionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.6} />
+                          <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
                           <Tooltip
-                            contentStyle={{ background: "#090d16", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "1rem" }}
-                            labelStyle={{ fontWeight: "bold" }}
+                            contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "1rem" }}
+                            labelStyle={{ color: "#94a3b8", fontWeight: "bold", fontSize: "11px" }}
+                            itemStyle={{ fontSize: "12px", padding: "2px 0" }}
                           />
-                          <Line type="monotone" dataKey="XP" stroke="#3b82f6" strokeWidth={3} activeDot={{ r: 8 }} />
-                          <Line type="monotone" dataKey="Coins" stroke="#f59e0b" strokeWidth={2} />
+                          <Line type="monotone" dataKey="XP" stroke="#3b82f6" strokeWidth={3} dot={{ strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                          <Line type="monotone" dataKey="Coins" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
+                    
+                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-4 text-center">
+                      Reflecting dynamic XP peaks relative to user account vaults
+                    </p>
                   </div>
 
-                  {/* Pie Chart: Level Buckets among Users */}
-                  <div className="bg-slate-950/40 border border-white/5 p-5 rounded-3xl flex flex-col justify-between shadow-xl">
-                    <div className="mb-4">
-                      <span className="text-[9px] font-black tracking-widest text-amber-500 uppercase">Power Segments</span>
-                      <h3 className="text-sm font-black text-white uppercase mt-0.5">User Level bracket Distribution</h3>
+                  {/* Pie chart with descriptive breakdowns */}
+                  <div className="bg-slate-900 border border-white/5 p-6 rounded-3xl flex flex-col shadow-xl">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <span className="text-[9px] font-black text-[#8D7D62] uppercase tracking-[0.2em]">User Tier Matrix</span>
+                        <h3 className="text-base font-black text-white uppercase mt-1">Player Experience Buckets</h3>
+                      </div>
+                      <PieChartIcon size={18} className="text-amber-500" />
                     </div>
-                    <div className="h-64 mt-2 flex items-center justify-center">
-                      {levelChartData.length === 0 ? (
-                        <p className="text-slate-500 text-xs font-bold uppercase font-mono">No level stats available</p>
-                      ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={levelChartData}
-                              cx="50%"
-                              cy="50%"
-                              labelLine={false}
-                              outerRadius={80}
-                              fill="#8884d8"
-                              dataKey="value"
-                              label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                            >
-                              {levelChartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                              ))}
-                            </Pie>
-                            <Tooltip
-                              contentStyle={{ background: "#000000", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "1rem" }}
-                            />
-                            <Legend />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                      <div className="h-60 w-full flex items-center justify-center">
+                        {levelChartData.length === 0 ? (
+                          <p className="text-slate-500 text-xs font-bold uppercase">No user level aggregates</p>
+                        ) : (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={levelChartData}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                outerRadius={75}
+                                dataKey="value"
+                              >
+                                {levelChartData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.08)" }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+
+                      {/* Explicit Legend indicators for quick understanding */}
+                      <div className="flex flex-col gap-3">
+                        <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Level Distributions Detailed</h4>
+                        {levelChartData.map((bucket, index) => {
+                          const percent = ((bucket.value / totalUsersCount) * 100).toFixed(0);
+                          return (
+                            <div key={bucket.name} className="flex items-center justify-between bg-white/[0.02] p-2 rounded-xl border border-white/5">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: chartColors[index % chartColors.length] }} />
+                                <span className="text-xs font-bold text-slate-300">{bucket.name}</span>
+                              </div>
+                              <span className="text-xs font-black text-white">{bucket.value} accounts ({percent}%)</span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Bar Chart: Botanical Selections mapping */}
-                  <div className="bg-slate-950/40 border border-white/5 p-5 rounded-3xl flex flex-col justify-between shadow-xl md:col-span-2">
-                    <div className="mb-4">
-                      <span className="text-[9px] font-black tracking-widest text-[#8D7D62] uppercase">Ecosystem Trends</span>
-                      <h3 className="text-sm font-black text-white uppercase mt-0.5">Primary botanical plant Selections across User base</h3>
+                  {/* Horizontal Bar Chart: Popular plant companion selections */}
+                  <div className="bg-slate-900 border border-white/5 p-6 rounded-3xl flex flex-col shadow-xl lg:col-span-2">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.2em]">Botanical trends metric</span>
+                        <h3 className="text-base font-black text-white uppercase mt-1">Ecosystem companion selection distribution</h3>
+                      </div>
+                      <Sprout size={18} className="text-[#69C496]" />
                     </div>
-                    <div className="h-64 mt-2">
+
+                    <div className="h-72 w-full mt-4">
                       {plantChartData.length === 0 ? (
-                        <p className="text-slate-500 text-xs font-bold uppercase font-mono text-center">No plant choices parsed</p>
+                        <div className="flex items-center justify-center h-full">
+                          <p className="text-slate-500 text-xs font-bold uppercase tracking-wide">Ecosystem companions not seeded yet</p>
+                        </div>
                       ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={plantChartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" />
-                            <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} />
-                            <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
+                          <BarChart data={plantChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.6} />
+                            <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                            <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
                             <Tooltip
-                              contentStyle={{ background: "#090d16", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "1rem" }}
+                              contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "1rem" }}
                             />
-                            <Bar dataKey="value" fill="#10b981" radius={[10, 10, 0, 0]}>
+                            <Bar dataKey="value" fill="#10B981" radius={[8, 8, 0, 0]}>
                               {plantChartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                               ))}
                             </Bar>
                           </BarChart>
@@ -603,107 +710,394 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               )}
 
-              {/* SIGNALS ROOM (User Feedbacks) */}
-              {activeTab === "feedback" && (
-                <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-2 pb-6">
-                  {feedbacks.length === 0 ? (
-                    <div className="bg-slate-950/40 border border-white/5 p-8 rounded-3xl text-center shadow-xl">
-                      <HelpCircle className="mx-auto text-slate-500 mb-2" size={32} />
-                      <p className="text-slate-500 text-xs font-bold uppercase tracking-wide">No feedback signals received yet</p>
+              {/* TAB 2: ACTIVE POPULATION INVENTORY LIST */}
+              {activeTab === "tab_population" && (
+                <div className="bg-slate-900 border border-white/5 p-6 rounded-3xl flex flex-col gap-5 shadow-xl">
+                  <div className="flex justify-between items-center flex-wrap gap-4">
+                    <div>
+                      <h3 className="text-base font-black text-white uppercase">Sovereign Accounts Registry</h3>
+                      <p className="text-[10px] text-slate-400">Search and deep-dive into registered operative profiles</p>
                     </div>
-                  ) : (
-                    feedbacks.map((fb) => (
-                      <div
-                        key={fb.id}
-                        className="bg-slate-950/40 border border-white/5 p-5 rounded-3xl flex flex-col gap-2 relative shadow-lg"
-                      >
-                        <div className="flex justify-between items-start flex-wrap gap-2">
-                          <div className="flex flex-col">
-                            <span className="px-2 py-0.5 bg-[#8D7D62]/20 text-[#DBCBB1] text-[9px] font-black uppercase rounded-lg w-fit">
-                              {fb.category}
-                            </span>
-                            <span className="text-white font-bold text-sm mt-1">{fb.userName}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{fb.userEmail}</span>
-                          </div>
+                    <div className="relative w-full sm:w-80">
+                      <Search className="absolute left-4.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input
+                        type="text"
+                        placeholder="Search by nickname or email..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-white/5 rounded-2xl text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-red-500"
+                      />
+                    </div>
+                  </div>
 
-                          <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-lg text-xs font-black">
-                            <Star size={12} fill="currentColor" /> {fb.rating}/5
-                          </div>
-                        </div>
-
-                        <p className="text-xs text-slate-300 font-semibold bg-slate-950/30 p-3 rounded-2xl border border-white/5 leading-relaxed mt-2 select-all">
-                          {fb.message}
-                        </p>
-
-                        <div className="text-[8px] font-mono text-slate-500 text-right mt-1">
-                          Ref ID: {fb.id}
-                        </div>
-                      </div>
-                    ))
-                  )}
+                  <div className="overflow-x-auto rounded-2xl border border-white/5">
+                    <table className="w-full border-collapse text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-white/5 bg-slate-950/50 text-slate-400 font-mono text-[9px] uppercase tracking-wider">
+                          <th className="p-4 font-bold">NickName / Contact</th>
+                          <th className="p-4 font-bold">Total Power (XP)</th>
+                          <th className="p-4 font-bold">Experience level</th>
+                          <th className="p-4 font-bold">Vault Balance</th>
+                          <th className="p-4 font-bold">Active Streak</th>
+                          <th className="p-4 text-center font-bold">Interactions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5 text-slate-300 font-semibold font-mono">
+                        {filteredUsers.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="p-8 text-center text-slate-500 font-bold uppercase tracking-wider">
+                              No matching citizen accounts found
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredUsers.map((u) => (
+                            <tr key={u.uid} className="hover:bg-white/[0.01] transition-colors">
+                              <td className="p-4 font-sans">
+                                <span className="text-white font-black text-sm block">{u.displayName}</span>
+                                <span className="text-[10.5px] text-slate-400 font-mono select-all bg-slate-950 px-1.5 py-0.5 rounded border border-white/5 mt-1 block w-fit">
+                                  {u.email}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <span className="flex items-center gap-1.5 font-bold text-slate-100 text-sm">
+                                  <Star size={14} className="text-blue-400" fill="currentColor" /> {u.xp} XP
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <span className="px-2.5 py-1 bg-slate-950 border border-white/10 text-blue-300 rounded-lg font-black text-[10.5px]">
+                                  Lvl {u.level}
+                                </span>
+                              </td>
+                              <td className="p-4 font-bold text-amber-400 flex items-center gap-1 mt-2">
+                                <Coins size={14} /> {u.coins}
+                              </td>
+                              <td className="p-4">
+                                <span className="flex items-center gap-1 text-orange-400 font-black">
+                                  <Flame size={15} /> {u.streak}d
+                                </span>
+                              </td>
+                              <td className="p-4 text-center">
+                                <button
+                                  onClick={() => setSelectedUser(u)}
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] rounded-xl tracking-wider hover:scale-105 active:scale-95 transition-all shadow-md"
+                                >
+                                  Deep Inspect 🔍
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 
-              {/* BROADCAST DISPATCH */}
-              {activeTab === "notifications" && (
-                <div className="bg-slate-950/40 border border-white/5 p-6 rounded-3xl shadow-xl flex flex-col gap-5 max-w-2xl mx-auto pb-8">
+              {/* TAB 3: PLANTED COMPANIONS DETAILED LIST */}
+              {activeTab === "tab_cultivated" && (
+                <div className="bg-slate-900 border border-white/5 p-6 rounded-3xl flex flex-col gap-4 shadow-xl">
                   <div>
-                    <span className="text-[9px] font-black tracking-widest text-[#69C496] uppercase">HQ broadcast</span>
-                    <h3 className="text-sm font-black text-white uppercase mt-0.5">Command Dispatch Broadcast</h3>
-                    <p className="text-[10px] text-slate-400 leading-tight mt-1">
-                      Transmit guidance, challenge updates or alerts. This operation queues real-time dispatch elements inside every account's in-app workspace instantly.
+                    <h3 className="text-base font-black text-white uppercase">Ecosystem Garden Active Logs</h3>
+                    <p className="text-[10px] text-slate-400">Reviewing placed companion status and growth points progression among citizens</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {cultivatedUsers.length === 0 ? (
+                      <div className="col-span-2 p-8 text-center text-slate-500 font-bold uppercase tracking-wider bg-slate-950/20 rounded-2xl border border-white/5">
+                        No companions planted on citizen grid soils yet
+                      </div>
+                    ) : (
+                      cultivatedUsers.map((u) => {
+                        const plant = u.plantState;
+                        const tiles = u.garden?.tiles || [];
+                        const placedCount = tiles.filter(t => t && t.plantId).length;
+                        
+                        return (
+                          <div
+                            key={u.uid}
+                            className="bg-slate-950/50 border border-white/5 p-5 rounded-2xl flex flex-col gap-4 relative hover:border-white/10 transition-colors"
+                          >
+                            <div className="flex justify-between items-start border-b border-white/5 pb-3">
+                              <div>
+                                <h4 className="font-black text-sm text-white">{u.displayName}</h4>
+                                <span className="text-[10px] text-slate-400 font-mono select-all block mt-0.5">{u.email}</span>
+                              </div>
+                              <span className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/10 text-emerald-400 rounded-lg text-[9px] font-black uppercase tracking-wider block">
+                                Companion Deployed
+                              </span>
+                            </div>
+
+                            <div className="grid grid-flow-row gap-3">
+                              {plant && (
+                                <div className="flex items-center justify-between bg-white/[0.01] p-3 rounded-xl border border-white/5">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400">
+                                      <Sprout size={18} />
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-slate-400 uppercase font-black tracking-widest block">Primary Capsule</span>
+                                      <span className="font-black text-xs uppercase text-white mt-0.5 block">{plant.type}</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-[9px] text-slate-400 uppercase font-black tracking-widest block">Vitality</span>
+                                    <span className="font-black text-xs text-rose-400 block">{plant.health}% Health</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-[9px] text-slate-400 uppercase font-black tracking-widest block">Phase</span>
+                                    <span className="font-black text-xs text-blue-400 block">Stage {plant.stage}</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-between text-xs font-semibold">
+                                <span className="text-slate-400">Total Placed Seeds (3x3 Grid):</span>
+                                <span className="px-2 py-0.5 bg-slate-900 border border-white/5 text-emerald-300 rounded font-bold text-[10px]">
+                                  {placedCount} Soils Active
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => setSelectedUser(u)}
+                              className="mt-2 w-full py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white font-black text-[10px] uppercase rounded-xl transition-all border border-white/5"
+                            >
+                              Inspect Garden Drawer 🔍
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: STORED SEEDS GREENHOUSE ARSENAL */}
+              {activeTab === "tab_arsenal" && (
+                <div className="bg-slate-900 border border-white/5 p-6 rounded-3xl flex flex-col gap-4 shadow-xl">
+                  <div>
+                    <h3 className="text-base font-black text-white uppercase">Sovereign Greenland Seed Silos</h3>
+                    <p className="text-[10px] text-slate-400">Checking unplanted botanical seeds sitting in operative greenhouse vaults</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {arsenalUsers.length === 0 ? (
+                      <div className="col-span-2 p-8 text-center text-slate-500 font-bold uppercase tracking-wider bg-slate-950/20 rounded-2xl border border-white/5">
+                        No seed inventory found in citizen inventories
+                      </div>
+                    ) : (
+                      arsenalUsers.map((u) => {
+                        const inventory = u.garden?.inventory || {};
+                        const items = Object.entries(inventory).filter(([_, count]) => (count || 0) > 0);
+                        
+                        return (
+                          <div
+                            key={u.uid}
+                            className="bg-slate-950/50 border border-white/5 p-5 rounded-2xl flex flex-col justify-between gap-4 hover:border-white/10 transition-colors"
+                          >
+                            <div className="flex justify-between items-start border-b border-white/5 pb-3">
+                              <div>
+                                <h4 className="font-black text-sm text-white">{u.displayName}</h4>
+                                <span className="text-[10px] text-slate-400 font-mono select-all block mt-0.5">{u.email}</span>
+                              </div>
+                              <span className="px-2 py-1 bg-amber-500/10 border border-amber-500/10 text-amber-400 rounded-lg text-[9px] font-black uppercase tracking-wider block">
+                                Vault Reserve
+                              </span>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 py-1">
+                              {items.map(([seedId, quantity]) => (
+                                <span
+                                  key={seedId}
+                                  className="px-3 py-1 bg-slate-900 text-slate-200 border border-white/5 rounded-xl text-[10.5px] font-bold uppercase tracking-wide flex items-center gap-2 shadow-sm"
+                                >
+                                  {seedId.replace("-", " ")}
+                                  <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 font-black rounded text-[9.5px]">
+                                    {quantity}
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+
+                            <button
+                              onClick={() => setSelectedUser(u)}
+                              className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white font-black text-[10px] uppercase rounded-xl transition-all border border-white/5 mt-2"
+                            >
+                              Account details 🔍
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: SIGNALS AND FEEDBACK ROOM (Dynamic notification dots, unread read logic) */}
+              {activeTab === "tab_signals" && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-6">
+                  
+                  {/* Left Column: List of Feedback Cards */}
+                  <div className="lg:col-span-5 flex flex-col gap-3 max-h-[580px] overflow-y-auto pr-2">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Incoming Signal List</span>
+                    {feedbacks.length === 0 ? (
+                      <div className="bg-slate-900 border border-white/5 p-8 rounded-3xl text-center shadow-xl">
+                        <Inbox className="mx-auto text-slate-500 mb-2" size={32} />
+                        <p className="text-slate-500 text-xs font-bold uppercase tracking-wide">No signals reported yet</p>
+                      </div>
+                    ) : (
+                      feedbacks.map((fb) => {
+                        const isRead = readFeedbackIds.includes(fb.id);
+                        const isCurrentlySelected = selectedFeedback?.id === fb.id;
+                        
+                        return (
+                          <div
+                            key={fb.id}
+                            onClick={() => handleSelectFeedback(fb)}
+                            className={`p-4 rounded-2xl cursor-pointer border transition-all flex items-center justify-between gap-4 relative ${
+                              isCurrentlySelected
+                                ? "bg-slate-800 border-red-500/40 shadow-inner"
+                                : "bg-slate-900 border-white/5 hover:border-white/10"
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 bg-[#8D7D62]/20 text-[#DBCBB1] text-[8.5px] font-black uppercase rounded-md block">
+                                  {fb.category}
+                                </span>
+                                {/* Green notification dot lamp representing New/Unread message */}
+                                {!isRead && (
+                                  <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse border-2 border-slate-950 flex-shrink-0" title="Unread Transmission Notification!" />
+                                )}
+                              </div>
+                              <span className="text-white font-black text-sm block mt-1.5 truncate">{fb.userName}</span>
+                              <span className="text-[10px] text-slate-400 font-mono truncate block">{fb.userEmail}</span>
+                            </div>
+
+                            <div className="text-right flex flex-col items-end gap-1 flex-shrink-0">
+                              <span className="text-[9px] font-mono text-slate-500 block">Open ➔</span>
+                              <div className="flex items-center gap-0.5 bg-yellow-500/15 text-yellow-500 px-1.5 py-0.5 rounded text-[10px] font-black">
+                                <Star size={10} fill="currentColor" /> {fb.rating}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Right Column: Deep message viewing details container */}
+                  <div className="lg:col-span-7 bg-slate-900 border border-white/5 p-6 rounded-3xl shadow-xl min-h-[400px] flex flex-col justify-between relative">
+                    {selectedFeedback ? (
+                      <div className="flex flex-col gap-4">
+                        <div className="flex justify-between items-start border-b border-white/5 pb-4 flex-wrap gap-2">
+                          <div>
+                            <span className="text-[8px] font-black text-[#69C496] uppercase tracking-widest font-mono">Transmission Signal Active</span>
+                            <h3 className="text-lg font-black text-white uppercase mt-0.5">{selectedFeedback.userName}</h3>
+                            <span className="text-xs text-slate-400 font-mono select-all block mt-0.5">{selectedFeedback.userEmail}</span>
+                          </div>
+                          
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="px-2.5 py-1 bg-slate-950 text-yellow-500 border border-yellow-500/10 rounded-lg text-xs font-black flex items-center gap-1">
+                              <Star size={12} fill="currentColor" /> {selectedFeedback.rating} Rating
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-mono mt-1">Ref Ref: {selectedFeedback.id}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Signals Context Message:</span>
+                          <div className="bg-slate-950 p-5 rounded-2xl border border-white/5 text-slate-200 text-sm font-semibold leading-relaxed whitespace-pre-wrap select-all shadow-inner">
+                            {selectedFeedback.message}
+                          </div>
+                        </div>
+
+                        {/* Interactive quick feedback dismiss verification block */}
+                        <div className="bg-emerald-500/5 border border-emerald-500/10 p-4 rounded-2xl flex items-center gap-3 mt-2">
+                          <CheckCircle className="text-emerald-400 flex-shrink-0" size={20} />
+                          <div className="text-left">
+                            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wide block">Reviewed & Authenticated</span>
+                            <p className="text-[10px] text-slate-400">This feedback read indicator has been permanent-cleared. The green notice light has disappeared.</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full py-20 text-slate-500 gap-2">
+                        <AlertTriangle size={32} className="text-slate-400 mb-1" />
+                        <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Select an Operative Signal to inspect</span>
+                        <p className="text-[10px] text-slate-500 uppercase text-center">Feedback signal deep-dive metrics are ready to expand</p>
+                      </div>
+                    )}
+
+                    <div className="border-t border-white/5 pt-4 mt-6 flex justify-between items-center text-[10px] text-slate-500 uppercase font-mono">
+                      <span>COMMAND MONITOR SECURE SYSTEM</span>
+                      <span>Ver 2.50.0</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 6: HEADQUARTERS BROADCASTER WORKSPACE */}
+              {activeTab === "tab_broadcast" && (
+                <div className="bg-slate-900 border border-white/5 p-6 rounded-3xl shadow-xl flex flex-col gap-5 max-w-2xl mx-auto pb-8">
+                  <div>
+                    <span className="text-[9px] font-black tracking-widest text-[#69C496] uppercase font-mono">Broadcast Core Interface</span>
+                    <h3 className="text-base font-black text-white uppercase mt-0.5">Real-time HQ Broadcast transmit</h3>
+                    <p className="text-[10px] text-slate-400 leading-relaxed mt-1">
+                      Instantly queue a notification badge with custom advice or alert indicators inside every user's personal in-app control screen. Keep messages high value and supportive!
                     </p>
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Alert Level Category</label>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Alert Type Category</label>
                     <select
                       value={broadcastType}
                       onChange={(e: any) => setBroadcastType(e.target.value)}
-                      className="w-full bg-slate-955 border border-white/5 rounded-2xl px-4 py-3 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-[#69C496] transition-all font-semibold"
+                      className="w-full bg-slate-950 border border-white/5 rounded-2xl px-4 py-3 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-red-500 font-semibold"
                     >
-                      <option value="system">🛠️ System (Informational / Patch Updates)</option>
-                      <option value="reward">🎁 Reward (Bonus points or item highlights)</option>
-                      <option value="alert">🚨 Alert (Urgent check-ins or system maintenance)</option>
-                      <option value="mascot">✨ Mascot (Encouraging advice from botanical guides)</option>
+                      <option value="system">🛠️ System (Informational / Feature Releases)</option>
+                      <option value="reward">🎁 Reward (Bonus points, XP boosts or item alerts)</option>
+                      <option value="alert">🚨 Security Alert (Check-ins or milestone maintenance)</option>
+                      <option value="mascot">✨ Companion guidance (Supportive tips from guides)</option>
                     </select>
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Broadcaster Dispatch Title</label>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Dispatch Header Title</label>
                     <input
                       type="text"
-                      placeholder="e.g. System Protocol Upgrade Active!"
+                      placeholder="e.g., Extreme discipline Boost Activated!"
                       value={broadcastTitle}
                       onChange={(e) => setBroadcastTitle(e.target.value)}
-                      className="w-full bg-slate-955 border border-white/5 rounded-2xl px-4 py-3 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-[#69C496] transition-all font-semibold"
+                      className="w-full bg-slate-950 border border-white/5 rounded-2xl px-4 py-3 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-red-500 font-semibold"
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Broadcast Message Body</label>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Directive Context Details</label>
                     <textarea
-                      placeholder="Please structure your dispatch simply, clearly and encourage consistency..."
+                      placeholder="Input the guidance directive to transmit instantly to all user accounts..."
                       value={broadcastMessage}
                       onChange={(e) => setBroadcastMessage(e.target.value)}
-                      rows={4}
-                      className="w-full bg-slate-955 border border-white/5 rounded-2xl px-4 py-3 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-[#69C496] transition-all font-semibold resize-none"
+                      rows={5}
+                      className="w-full bg-slate-950 border border-white/5 rounded-2xl px-4 py-3 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-red-500 font-semibold resize-none"
                     />
                   </div>
 
                   <button
                     onClick={handleBroadcast}
                     disabled={isBroadcasting}
-                    className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all text-center flex items-center justify-center gap-2 mt-2"
+                    className="w-full py-4 bg-gradient-to-r from-red-650 to-rose-700 hover:from-red-600 hover:to-rose-600 border-none text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all text-center flex items-center justify-center gap-2 mt-2"
+                    style={{ backgroundColor: "#be123c", backgroundImage: "linear-gradient(to bottom right, #be123c, #9f1239)" }}
                   >
                     {isBroadcasting ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                        Transmitting to users...
+                        Transmitting protocol alerts...
                       </>
                     ) : (
                       <>
-                        Transmit Broadcast <Send size={14} />
+                        Deliver HQ Broadcast dispatch <Send size={14} />
                       </>
                     )}
                   </button>
@@ -712,100 +1106,99 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
-      </main>
+      </div>
 
-      {/* USER DETAIL MODAL/DEEP-DIVE DRAWER */}
+      {/* DETAILED USER PROFILE DEEP-DIVE SLIDEOUT DRAWER */}
       <AnimatePresence>
         {selectedUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-950/70 backdrop-blur-sm">
-            {/* Backdrop Dismiss click */}
+          <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-950/80 backdrop-blur-sm">
             <div className="absolute inset-0" onClick={() => setSelectedUser(null)} />
-
-            {/* Inspect Panel Content */}
+            
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 180 }}
-              className="relative w-full max-w-xl h-full bg-slate-950 border-l border-white/10 z-10 flex flex-col justify-between shadow-2xl p-6 sm:p-8 overflow-y-auto"
+              className="relative w-full max-w-xl h-full bg-slate-950 border-l border-white/10 z-10 flex flex-col justify-between shadow-2xl p-6 sm:p-8 overflow-y-auto font-mono text-xs"
             >
               <div className="flex flex-col gap-6">
-                {/* Header info */}
+                
+                {/* Header Profile Summary info */}
                 <div className="flex justify-between items-start border-b border-white/5 pb-4">
-                  <div className="flex flex-col">
-                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest font-mono">ACCOUNT CODENAME</span>
-                    <h2 className="text-xl font-black text-white mt-0.5">{selectedUser.displayName}</h2>
-                    <span className="text-xs text-slate-400 font-mono mt-0.5 select-all">{selectedUser.email}</span>
+                  <div className="flex flex-col font-sans">
+                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest font-mono">CITIZEN PROFILE DEEP DIVE</span>
+                    <h2 className="text-xl font-black text-white mt-1 uppercase tracking-tight">{selectedUser.displayName}</h2>
+                    <span className="text-xs text-slate-400 font-mono select-all block mt-0.5">{selectedUser.email}</span>
                   </div>
                   <button
                     onClick={() => setSelectedUser(null)}
-                    className="p-2 bg-slate-900 border border-white/5 rounded-xl text-slate-400 hover:text-white active:scale-95 transition-all text-xs"
+                    className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 font-black uppercase text-[9px] rounded-lg tracking-wider border border-white/10 transition-all shadow"
                   >
-                    Dismiss Esc
+                    Close Esc
                   </button>
                 </div>
 
-                {/* Sub Stats Row */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-900/60 p-4 border border-white/5 rounded-2xl">
+                {/* Sub Stats Grid layout */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-900 border border-white/5 p-4 rounded-2xl text-left block">
                   <div className="flex flex-col">
-                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Level Target</span>
-                    <span className="text-base font-black text-white mt-0.5">Lvl {selectedUser.level}</span>
+                    <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-tight">Level Status</span>
+                    <span className="text-sm font-black text-white mt-1">Lvl {selectedUser.level}</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Accumulated XP</span>
-                    <span className="text-base font-black text-blue-300 mt-0.5">{selectedUser.xp} XP</span>
+                    <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-tight">Sovereign XP</span>
+                    <span className="text-sm font-black text-blue-300 mt-1">{selectedUser.xp} XP</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Streak Days</span>
-                    <span className="text-base font-black text-orange-400 mt-0.5">{selectedUser.streak} days</span>
+                    <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-tight">Streak active</span>
+                    <span className="text-sm font-black text-orange-400 mt-1">{selectedUser.streak} days</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Vault Coins</span>
-                    <span className="text-base font-black text-amber-400 mt-0.5">{selectedUser.coins}</span>
+                    <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-tight">Coins balance</span>
+                    <span className="text-sm font-black text-amber-500 mt-1">{selectedUser.coins}</span>
                   </div>
                 </div>
 
-                {/* Botanical Ecosystem Overview */}
-                <div className="flex flex-col gap-2">
+                {/* Botanical Companion Overview */}
+                <div className="flex flex-col gap-2 font-sans">
                   <h4 className="text-xs font-black uppercase text-emerald-400 tracking-wider flex items-center gap-1">
-                    <Sprout size={14} /> Botanical Ecosystem Overview
+                    <Sprout size={14} /> Botanical Companion Stats
                   </h4>
-                  <div className="bg-slate-900/40 border border-white/5 p-4 rounded-2xl flex flex-col gap-3">
+                  <div className="bg-slate-900 border border-white/5 p-4 rounded-2xl flex flex-col gap-3">
                     {selectedUser.plantState ? (
-                      <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
                         <div className="flex flex-col">
-                          <span className="text-[10px] text-slate-400 font-bold uppercase">Active Companion</span>
-                          <span className="text-sm font-black text-white mt-0.5 uppercase tracking-wide">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase">Active Companion</span>
+                          <span className="text-sm font-black text-white mt-0.5 uppercase tracking-wide font-mono">
                             {selectedUser.plantState.type}
                           </span>
                         </div>
-                        <div className="flex gap-4">
+                        <div className="flex gap-4 font-mono text-[10px]">
                           <div className="flex flex-col">
-                            <span className="text-[8px] text-slate-400 uppercase font-black text-right">Growth stage</span>
-                            <span className="text-xs font-black text-emerald-400 text-right">Stage {selectedUser.plantState.stage}</span>
+                            <span className="text-[8px] text-slate-400 uppercase font-black text-right block">Phase level</span>
+                            <span className="font-black text-emerald-400 text-right mt-0.5 block">Stage {selectedUser.plantState.stage}</span>
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-[8px] text-slate-400 uppercase font-black text-right">Vitality (Health)</span>
-                            <span className="text-xs font-black text-rose-400 text-right">{selectedUser.plantState.health}%</span>
+                            <span className="text-[8px] text-slate-400 uppercase font-black text-right block">Vitality</span>
+                            <span className="font-black text-rose-400 text-right mt-0.5 block">{selectedUser.plantState.health}% Health</span>
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-[8px] text-slate-400 uppercase font-black text-right">State</span>
-                            <span className="text-xs font-black text-amber-300 text-right">
+                            <span className="text-[8px] text-slate-400 uppercase font-black text-right block">Status</span>
+                            <span className="font-black text-amber-300 text-right mt-0.5 block">
                               {selectedUser.plantState.isThirsty ? "⚠️ Thirsty" : "✅ Sated"}
                             </span>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide py-1 text-center">
-                        Active botanical capsule not deployed yet
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide py-1 text-center font-mono">
+                        No active capsule deployed on standard companion state
                       </p>
                     )}
 
                     {/* Stored Seeds details */}
                     <div className="border-t border-white/5 pt-3">
                       <span className="text-[9px] text-slate-400 uppercase font-black tracking-wider block mb-2">
-                        Total Plant Seeds Owned
+                        Greenhouse Silo Seed Reserves
                       </span>
                       {selectedUser.garden?.inventory && Object.keys(selectedUser.garden.inventory).length > 0 ? (
                         <div className="flex flex-wrap gap-2">
@@ -814,7 +1207,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             return (
                               <span
                                 key={id}
-                                className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/10 rounded-lg text-[9px] font-black uppercase tracking-wide flex items-center gap-1.5"
+                                className="px-2.5 py-1 bg-slate-950 text-emerald-400 border border-emerald-500/10 rounded-lg text-[9.5px] font-black uppercase tracking-wide flex items-center gap-1.5"
                               >
                                 {id.replace("-", " ")} <span className="px-1 py-0.5 bg-emerald-400/10 text-emerald-300 rounded font-bold">{quantity}</span>
                               </span>
@@ -822,28 +1215,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           })}
                         </div>
                       ) : (
-                        <p className="text-[10.5px] text-slate-500 font-semibold italic">No greenhouse seed inventory initialized yet.</p>
+                        <p className="text-[10.5px] text-slate-500 font-semibold italic">No unplanted custom seed stocks detected.</p>
                       )}
                     </div>
                   </div>
                 </div>
 
                 {/* Purchased Shop Inventory */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 font-sans">
                   <h4 className="text-xs font-black uppercase text-amber-500 tracking-wider flex items-center gap-1">
-                    <Trophy size={14} /> Shop purchases & Custom Assets
+                    <Trophy size={14} /> Shop transactions & Custom Assets
                   </h4>
-                  <div className="bg-slate-900/40 border border-white/5 p-4 rounded-2xl flex flex-col gap-3">
+                  <div className="bg-slate-900 border border-white/5 p-4 rounded-2xl flex flex-col gap-3">
                     <div className="flex flex-col">
                       <span className="text-[9px] text-slate-400 uppercase font-black tracking-wider block mb-2">
-                        Purchased items & Gear
+                        Unlocked Gear Items
                       </span>
                       {selectedUser.purchasedItems && selectedUser.purchasedItems.length > 0 ? (
                         <div className="flex flex-wrap gap-1.5">
                           {selectedUser.purchasedItems.map((itemId) => (
                             <span
                               key={itemId}
-                              className="px-2 py-0.5 bg-amber-500/10 text-amber-300 border border-amber-500/10 rounded text-[9px] font-black uppercase"
+                              className="px-2 py-0.5 bg-slate-950 text-amber-300 border border-amber-500/10 rounded text-[9px] font-black uppercase font-mono"
                             >
                               {itemId.replace("skin-", "").replace("sound-", "")}
                             </span>
@@ -854,23 +1247,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           {selectedUser.purchasedHouseItemIds.map((itemId) => (
                             <span
                               key={itemId}
-                              className="px-2 py-0.5 bg-amber-500/10 text-amber-300 border border-amber-500/10 rounded text-[9px] font-black uppercase"
+                              className="px-2 py-0.5 bg-slate-950 text-amber-300 border border-amber-500/10 rounded text-[9px] font-black uppercase font-mono"
                             >
                               {itemId.replace("house-", "")}
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-[10.5px] text-slate-500 font-semibold italic">No shop transactions registered for this account.</p>
+                        <p className="text-[10.5px] text-slate-500 font-semibold italic">No shop purchase histories reported</p>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Technical Coordinates block */}
+                {/* Security ID Ref */}
                 <div className="flex flex-col gap-1 border-t border-white/5 pt-4">
-                  <span className="text-[7.5px] font-mono text-slate-500 uppercase font-black">Authentication Ref:</span>
-                  <span className="text-[9.5px] font-mono text-slate-400 break-all bg-slate-900/60 p-2.5 rounded-xl border border-white/5 select-all">
+                  <span className="text-[7.5px] font-mono text-slate-500 uppercase font-black">Authorized Operative ID:</span>
+                  <span className="text-[9.5px] font-mono text-slate-400 break-all bg-slate-950 p-3 rounded-xl border border-white/5 select-all">
                     {selectedUser.uid}
                   </span>
                 </div>
@@ -879,9 +1272,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <div className="border-t border-white/5 pt-4 mt-6">
                 <button
                   onClick={() => setSelectedUser(null)}
-                  className="w-full py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all text-center"
+                  className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all text-center border border-white/10"
                 >
-                  Dismiss Deep-Dive
+                  Return to Control Deck
                 </button>
               </div>
             </motion.div>

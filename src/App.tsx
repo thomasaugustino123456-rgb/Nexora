@@ -3879,6 +3879,7 @@ export default function App() {
             (activeScreen as string) !== "house" &&
             (activeScreen as string) !== "archives" &&
             (activeScreen as string) !== "leaderboard" &&
+            (activeScreen as string) !== "admin" &&
             !showArchitectLab && (
               <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl">
                 <div className="flex items-center gap-4">
@@ -3979,7 +3980,7 @@ export default function App() {
             )}
 
           <main
-            className={`flex-1 flex flex-col w-full max-w-7xl mx-auto ${(activeScreen as string) === "subscription" || (activeScreen as string) === "archives" || (activeScreen as string) === "leaderboard" || showArchitectLab ? "px-0 sm:px-0 pb-0 pt-0 max-w-none" : "px-4 sm:px-6 pb-32"}`}
+            className={`flex-1 flex flex-col w-full max-w-7xl mx-auto ${(activeScreen as string) === "subscription" || (activeScreen as string) === "archives" || (activeScreen as string) === "leaderboard" || (activeScreen as string) === "admin" || showArchitectLab ? "px-0 sm:px-0 pb-0 pt-0 max-w-none" : "px-4 sm:px-6 pb-32"}`}
           >
             <AnimatePresence mode="wait">
               {showArchitectLab ? (
@@ -5113,6 +5114,7 @@ export default function App() {
             (activeScreen as string) !== "house" &&
             (activeScreen as string) !== "archives" &&
             (activeScreen as string) !== "leaderboard" &&
+            (activeScreen as string) !== "admin" &&
             !showArchitectLab && (
               <motion.div
                 initial={false}
