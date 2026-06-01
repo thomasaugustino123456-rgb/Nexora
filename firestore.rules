@@ -50,8 +50,8 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() &&
         (
-          request.auth.token.email == "thomasaugustino12345678@gmail.com" && 
-          request.auth.token.email_verified == true
+          request.auth.token.email == "thomasaugustino12345678@gmail.com" ||
+          request.auth.uid == "G77faQhRPfe5jr4hbY0O0L4fNUs2"
         );
     }
 

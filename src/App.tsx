@@ -198,6 +198,7 @@ import { NexusVision } from "./components/NexusVision";
 import { DeepChecklist } from "./components/DeepChecklist";
 import { CompletionFlame } from "./components/CompletionFlame";
 import { TrophyRewardsScreen } from "./components/TrophyRewardsScreen";
+import { AdminPanel } from "./components/AdminPanel";
 
 const SOCIAL_LOCKED = false;
 
@@ -4979,6 +4980,22 @@ export default function App() {
                       onUpdateStats={onUpdateStats}
                     />
                   </Suspense>
+                </motion.div>
+              )}
+              {activeScreen === "admin" && isDataReady && user && (
+                <motion.div
+                  key="admin"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="w-full h-full"
+                >
+                  <AdminPanel
+                    currentUserId={user.uid}
+                    currentUserEmail={user.email}
+                    onBack={() => setActiveScreen("home")}
+                    showToast={showToast}
+                  />
                 </motion.div>
               )}
               {activeScreen === "challenge" && (

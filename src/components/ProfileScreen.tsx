@@ -342,6 +342,43 @@ export function ProfileScreen({
         </div>
       </div>
 
+      {/* Commander Deck Control for admin privileges */}
+      {(user?.uid === "G77faQhRPfe5jr4hbY0O0L4fNUs2" || user?.email === "thomasaugustino12345678@gmail.com") && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[10px] font-black text-red-500/80 uppercase tracking-[0.4em]">
+              Commander Security Center
+            </h3>
+            <span className="bg-gradient-to-r from-red-500 to-rose-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">
+              ADMIN CONTROL
+            </span>
+          </div>
+
+          <button
+            onClick={() => setActiveScreen("admin")}
+            className="w-full glass-card p-6 flex items-center justify-between bg-gradient-to-br from-red-605 to-rose-700 border-none text-white shadow-xl shadow-red-500/20 group hover:scale-[1.02] transition-all"
+            style={{ backgroundColor: "#be123c", backgroundImage: "linear-gradient(to bottom right, #be123c, #9f1239)" }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md group-hover:rotate-12 transition-transform">
+                <Shield size={24} />
+              </div>
+              <div className="text-left">
+                <p className="font-black text-sm uppercase tracking-wider italic">
+                  Commander Control Deck
+                </p>
+                <p className="text-[10px] font-medium opacity-85">
+                  Inspect System Metrics, User Databases, Signals & Transmissions
+                </p>
+              </div>
+            </div>
+            <span className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-[9px] font-black uppercase rounded-lg border border-white/10 tracking-widest relative z-10">
+              LAUNCH ⚡
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* Nexora Architect Lab for Pro Users */}
       {settings.isPro && (
         <div className="space-y-6">
