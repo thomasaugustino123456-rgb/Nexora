@@ -73,6 +73,7 @@ import {
   Video,
   Lock,
   WifiOff,
+  Shield,
 } from "lucide-react";
 import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
 import { useLocalStorage } from "./hooks/useLocalStorage";
@@ -3946,6 +3947,20 @@ export default function App() {
                       <User size={20} />
                     )}
                   </button>
+
+                  {(user?.uid === "G77faQhRPfe5jr4hbY0O0L4fNUs2" || user?.email === "thomasaugustino12345678@gmail.com") && (
+                    <button
+                      onClick={() => {
+                        if (settings.soundEnabled) play("header_switch");
+                        setActiveScreen("admin");
+                      }}
+                      className={`p-2.5 rounded-2xl transition-all hover:scale-105 text-white flex items-center justify-center`}
+                      style={{ backgroundColor: activeScreen === "admin" ? "#9f1239" : "#e11d48", boxShadow: "0 10px 15px -3px rgba(225, 29, 72, 0.3)" }}
+                      title="Commander Control Deck"
+                    >
+                      <Shield size={20} />
+                    </button>
+                  )}
 
                   <button
                     onClick={() => {
