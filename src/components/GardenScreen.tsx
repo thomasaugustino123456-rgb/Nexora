@@ -17,6 +17,7 @@ interface GardenScreenProps {
   setGardenState?: (g: GardenState) => void;
   stats?: any;
   onUpdateStats?: (updater: any) => void;
+  showToast?: (message: string, type?: 'success' | 'info' | 'error') => void;
 }
 
 export const GardenScreen: React.FC<GardenScreenProps> = ({ 
@@ -24,7 +25,8 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
   gardenState, 
   setGardenState,
   stats,
-  onUpdateStats
+  onUpdateStats,
+  showToast
 }) => {
   // Use props state as the primary source of truth, fall back to initial on blank
   const initial = createInitialGardenState();
@@ -47,49 +49,88 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
   const [revealedSeed, setRevealedSeed] = useState<any>(null);
   const [isLuckySeed, setIsLuckySeed] = useState<boolean>(false);
 
+  // Added interactive states for Cozy Luck Draw
+  const [correctPodIndex, setCorrectPodIndex] = useState<number>(() => Math.floor(Math.random() * 3));
+  const [rollCost, setRollCost] = useState<number>(5);
+  const [wrongPods, setWrongPods] = useState<number[]>([]);
+
   // Helper inside click handler to guess a pod
   const handleGuessPod = (podIdx: number) => {
     if (guessStatus !== 'idle') return;
+    if (wrongPods.includes(podIdx)) return;
     
+    // Check if they have enough coins
+    const currentCoins = stats?.coins || 0;
+    if (currentCoins < rollCost) {
+      if (showToast) {
+        showToast("Not enough Coins for Celestial Materializer roll, bro! 🪙", "error");
+      }
+      vibrate(VIBRATION_PATTERNS.ERROR);
+      return;
+    }
+
     vibrate(30);
     playLootSound('click');
     setActivePodIndex(podIdx);
     setGuessStatus('shaking');
 
-    // Pay 100 coins if possible
-    if (stats && onUpdateStats && stats.coins >= 100) {
+    // Deduct coins
+    if (stats && onUpdateStats) {
       onUpdateStats((prev: any) => ({
         ...prev,
-        coins: Math.max(0, prev.coins - 100)
+        coins: Math.max(0, prev.coins - rollCost)
       }));
     }
 
     setTimeout(() => {
-      // 60% chance for custom dynamic Luck Seed, 40% standard seed
-      const isLuckMaterialized = Math.random() < 0.6;
-      let chosenId = '';
-      
-      if (isLuckMaterialized) {
-        const luckPool = ['luck-lotus', 'luck-fern', 'luck-clover', 'luck-orchid', 'luck-cactus'];
-        chosenId = luckPool[Math.floor(Math.random() * luckPool.length)];
-        setIsLuckySeed(true);
-      } else {
-        const stdPool = ['slime-berry', 'solar-flare-pea', 'moon-sprout', 'star-silk-leaf', 'dream-shroom'];
-        chosenId = stdPool[Math.floor(Math.random() * stdPool.length)];
-        setIsLuckySeed(false);
-      }
+      // Check if chosen pod matches correctPodIndex
+      if (podIdx === correctPodIndex) {
+        // Correct Choice! Winner! Only ONE pod shows a plant seed upon success
+        // 60% chance for custom dynamic Luck Seed, 40% standard seed
+        const isLuckMaterialized = Math.random() < 0.6;
+        let chosenId = '';
+        
+        if (isLuckMaterialized) {
+          const luckPool = ['luck-lotus', 'luck-fern', 'luck-clover', 'luck-orchid', 'luck-cactus'];
+          chosenId = luckPool[Math.floor(Math.random() * luckPool.length)];
+          setIsLuckySeed(true);
+        } else {
+          const stdPool = ['slime-berry', 'solar-flare-pea', 'moon-sprout', 'star-silk-leaf', 'dream-shroom'];
+          chosenId = stdPool[Math.floor(Math.random() * stdPool.length)];
+          setIsLuckySeed(false);
+        }
 
-      const archetype = PLANT_ARCHETYPES[chosenId];
-      if (archetype) {
-        const updated = addSeedToInventory(activeGarden, chosenId);
-        dispatchUpdate(updated);
+        const archetype = PLANT_ARCHETYPES[chosenId];
+        if (archetype) {
+          const added = addSeedToInventory(activeGarden, chosenId);
+          dispatchUpdate(added);
 
-        setRevealedSeed(archetype);
-        setGuessStatus('revealed');
-        vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-        playLootSound('success');
+          setRevealedSeed(archetype);
+          setGuessStatus('revealed');
+          vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+          playLootSound('success');
+          
+          // Reset cost and empty status for next game
+          setRollCost(5);
+          setWrongPods([]);
+          setCorrectPodIndex(Math.floor(Math.random() * 3));
+          if (showToast) {
+            showToast(`Awesome! Found the Seed in Pod ${String.fromCharCode(65 + podIdx)}! Cost reset to 5 Coins. 🌱🏆`, "success");
+          }
+        } else {
+          setGuessStatus('idle');
+          setWrongPods([]);
+        }
       } else {
+        // Wrong Choice!
         setGuessStatus('idle');
+        setWrongPods(prev => [...prev, podIdx]);
+        // Increase roll cost by 5
+        setRollCost(prev => prev + 5);
+        vibrate(VIBRATION_PATTERNS.ERROR);
+        if (showToast) {
+          showToast(`Empty Pod, bro! Finding cost increased to ${rollCost + 5} Coins. Target the remaining pods! 🔮`, "error");
+        }
       }
     }, 1400);
   };
@@ -273,18 +314,30 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
 
           {guessStatus === 'idle' && (
             <div className="grid grid-cols-3 gap-3 pt-2">
-              {[0, 1, 2].map((idx) => (
-                <motion.button
-                  key={idx}
-                  whileHover={{ scale: 1.05, y: -4 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleGuessPod(idx)}
-                  className="bg-stone-800/80 hover:bg-stone-850 border border-amber-500/20 hover:border-amber-400 p-4 rounded-2xl flex flex-col items-center justify-center space-y-2 relative group focus:outline-none"
-                >
-                  <div className="text-3xl text-amber-300 group-hover:animate-bounce duration-1000">🔮</div>
-                  <span className="text-[10px] font-black tracking-widest text-[#9A8975] uppercase">POD {String.fromCharCode(65 + idx)}</span>
-                </motion.button>
-              ))}
+              {[0, 1, 2].map((idx) => {
+                const isWrong = wrongPods.includes(idx);
+                return (
+                  <motion.button
+                    key={idx}
+                    disabled={isWrong}
+                    whileHover={isWrong ? {} : { scale: 1.05, y: -4 }}
+                    whileTap={isWrong ? {} : { scale: 0.95 }}
+                    onClick={() => handleGuessPod(idx)}
+                    className={`p-4 rounded-2xl flex flex-col items-center justify-center space-y-2 relative group focus:outline-none transition-all ${
+                      isWrong 
+                        ? 'bg-stone-900/60 border border-stone-800 text-stone-600 opacity-40 cursor-not-allowed select-none' 
+                        : 'bg-stone-800/80 hover:bg-stone-850 border border-amber-500/20 hover:border-amber-400'
+                    }`}
+                  >
+                    <div className="text-3xl text-amber-300 group-hover:animate-bounce duration-1000">
+                      {isWrong ? '💨' : '🔮'}
+                    </div>
+                    <span className={`text-[10px] font-black tracking-widest uppercase ${isWrong ? 'text-stone-700 font-bold' : 'text-[#9A8975]'}`}>
+                      {isWrong ? 'EMPTY' : `POD ${String.fromCharCode(65 + idx)}`}
+                    </span>
+                  </motion.button>
+                );
+              })}
             </div>
           )}
 
@@ -364,8 +417,8 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
           )}
 
           <div className="flex justify-between items-center bg-stone-950/40 px-4 py-2.5 rounded-xl text-[9px] font-black text-stone-400 tracking-wider">
-            <span>COST PER ROLL: <span className="text-amber-400">100 COINS</span></span>
-            <span>YOUR VAULT: <span className={(stats?.coins || 0) >= 100 ? "text-emerald-400 animate-pulse" : "text-stone-500"}>{(stats?.coins || 0)} COINS</span></span>
+            <span>COST PER ROLL: <span className="text-amber-400">{rollCost} COINS</span></span>
+            <span>YOUR VAULT: <span className={(stats?.coins || 0) >= rollCost ? "text-emerald-400 animate-pulse" : "text-stone-500"}>{(stats?.coins || 0)} COINS</span></span>
           </div>
         </div>
 

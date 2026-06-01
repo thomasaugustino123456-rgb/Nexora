@@ -267,26 +267,28 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
             </div>
 
             {/* Cozy Garden Promotional Card */}
-            <div className="w-full bg-gradient-to-br from-[#1E251C] via-[#2F3A2A] to-[#1E251C] border border-[#8D7D62]/30 p-5 rounded-3xl text-white relative overflow-hidden shadow-lg group">
-              <div className="absolute top-1/2 -translate-y-1/2 right-6 opacity-[0.08] text-6xl select-none pointer-events-none group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">🌸</div>
-              <div className="flex items-center justify-between gap-5 flex-wrap relative z-10">
-                <div className="flex-1">
-                  <span className="text-[8px] font-black text-amber-300 uppercase tracking-widest flex items-center gap-1">
-                    <Sparkles size={10} className="text-amber-300 animate-pulse" /> BOTANICAL SANCTUARY
-                  </span>
-                  <h4 className="text-sm font-black uppercase tracking-tight mt-0.5 text-stone-100">Cozy Sanctuary Garden & Seed Draw</h4>
-                  <p className="text-[10px] text-[#DBCBB1] font-bold uppercase mt-1.5 leading-relaxed max-w-lg">
-                    Sow harvested plant seeds into your 3x3 soil grid! Spend 100 surplus coins to guess/draw celestial pods for rare, epic & legendary botanical seeds.
-                  </p>
+            {!settings.hasEnteredGarden && (
+              <div className="w-full bg-gradient-to-br from-[#1E251C] via-[#2F3A2A] to-[#1E251C] border border-[#8D7D62]/30 p-5 rounded-3xl text-white relative overflow-hidden shadow-lg group">
+                <div className="absolute top-1/2 -translate-y-1/2 right-6 opacity-[0.08] text-6xl select-none pointer-events-none group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">🌸</div>
+                <div className="flex items-center justify-between gap-5 flex-wrap relative z-10">
+                  <div className="flex-1">
+                    <span className="text-[8px] font-black text-amber-300 uppercase tracking-widest flex items-center gap-1">
+                      <Sparkles size={10} className="text-amber-300 animate-pulse" /> BOTANICAL SANCTUARY
+                    </span>
+                    <h4 className="text-sm font-black uppercase tracking-tight mt-0.5 text-stone-100">Cozy Sanctuary Garden & Seed Draw</h4>
+                    <p className="text-[10px] text-[#DBCBB1] font-bold uppercase mt-1.5 leading-relaxed max-w-lg">
+                      Sow harvested plant seeds into your 3x3 soil grid! Spend 100 surplus coins to guess/draw celestial pods for rare, epic & legendary botanical seeds.
+                    </p>
+                  </div>
+                  <button
+                    onClick={onOpenGarden}
+                    className="w-full sm:w-auto px-5 py-3 bg-[#8D7D62] hover:bg-[#9E8B6E] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all text-center"
+                  >
+                    Enter Garden 🔮
+                  </button>
                 </div>
-                <button
-                  onClick={onOpenGarden}
-                  className="w-full sm:w-auto px-5 py-3 bg-[#8D7D62] hover:bg-[#9E8B6E] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all text-center"
-                >
-                  Enter Garden 🔮
-                </button>
               </div>
-            </div>
+            )}
           </div>
         );
 

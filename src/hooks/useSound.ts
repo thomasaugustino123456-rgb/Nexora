@@ -178,14 +178,8 @@ const getMusicNode = async (key: string) => {
     audio.preload = "auto";
     audio.crossOrigin = "anonymous";
 
-    const ctx = await initContext();
-    if (!ctx) return null;
-    const source = ctx.createMediaElementSource(audio);
-    const gain = ctx.createGain();
-    source.connect(gain);
-    gain.connect(ctx.destination);
-
-    musicNodes[key] = { audio, gain };
+    // Direct simple playback node — no Web Audio API wrap for maximum CORS / mobile compatibility!
+    musicNodes[key] = { audio, gain: {} as any };
     return musicNodes[key];
   } catch (err) {
     console.warn("Audio: Error setting up music node:", err);

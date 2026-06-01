@@ -3136,28 +3136,71 @@ export default function App() {
       }
     }
 
+    // CONSUMABLES AND MULTIPLIERS ENGINE
+    const inventoryItems = settings.inventory || [];
+    const hasStreakProtection = inventoryItems.some(item => item.itemId === "streak-protection" && item.activated);
+    const hasDoubleXP = inventoryItems.some(item => item.itemId === "double-points" && item.activated);
+    const hasXPBoost = inventoryItems.some(item => item.itemId === "xp-boost" && item.activated);
+    const hasCoinMagnet = inventoryItems.some(item => item.itemId === "coin-magnet" && item.activated);
+
+    let xpMultiplier = 1;
+    let usedDoubleXP = false;
+    let usedXPBoost = false;
+
+    if (hasXPBoost) {
+      xpMultiplier = 3;
+      usedXPBoost = true;
+    } else if (hasDoubleXP) {
+      xpMultiplier = 2;
+      usedDoubleXP = true;
+    }
+
+    let coinMultiplier = 1;
+    let usedCoinMagnet = false;
+    if (hasCoinMagnet) {
+      coinMultiplier = 1.35;
+      usedCoinMagnet = true;
+    }
+
+    pointsToAdd = Math.round(pointsToAdd * xpMultiplier);
+    xpToAdd = Math.round(xpToAdd * xpMultiplier);
+    coinsToAdd = Math.round(coinsToAdd * coinMultiplier);
+
     // STRICT DAILY STREAK CALCULATION
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split("T")[0];
 
     let currentActualStreak = stats.streak || 0;
-    const wasAlreadyCompletedToday = stats.lastCompletedDate === today;
     let finalStreakShow = currentActualStreak;
+    let usedStreakProtection = false;
 
-    // Logic requested by user: unconditionally increase streak EVERY time a challenge is finished,
-    // but still reset to 1 if a full day was missed.
     if (
       stats.lastCompletedDate === today ||
       stats.lastCompletedDate === yesterdayStr
     ) {
       finalStreakShow = currentActualStreak + 1;
+    } else if (hasStreakProtection) {
+      finalStreakShow = currentActualStreak + 1;
+      usedStreakProtection = true;
     } else {
       finalStreakShow = 1;
     }
 
     setSessionStreak(finalStreakShow);
     setIsNewStreak(true); // Always treat it as a new streak bump for the animation since it always increases now
+
+    if (usedXPBoost) {
+      showToast("XP Overdrive consumed! Triple XP added! 🚀⚡", "success");
+    } else if (usedDoubleXP) {
+      showToast("Double XP active! 2x XP added! 🌟", "success");
+    }
+    if (usedCoinMagnet) {
+      showToast("Coin Magnet consumed! +35% bonus coins added! 🧲🪙", "success");
+    }
+    if (usedStreakProtection) {
+      showToast("Streak Protection Saved! Your daily streak didn't break! 🛡️🔥", "success");
+    }
 
     setStats((prevStats) => {
       const oldLevel = prevStats.level || 1;
@@ -3167,6 +3210,8 @@ export default function App() {
         prevStats.lastCompletedDate === today ||
         prevStats.lastCompletedDate === yesterdayStr
       ) {
+        streakToSave = (prevStats.streak || 0) + 1;
+      } else if (hasStreakProtection) {
         streakToSave = (prevStats.streak || 0) + 1;
       } else {
         streakToSave = 1;
@@ -3180,7 +3225,7 @@ export default function App() {
       const newLastCompletedDate = today;
 
       const hasDoublePoints =
-        settings.purchasedItems?.includes("double-points");
+        settings.purchasedItems?.includes("double-points") || hasDoubleXP;
       const streakBonusPoints = hasDoublePoints ? 10 : 5;
 
       const newPoints =
@@ -3195,8 +3240,10 @@ export default function App() {
         vibrate(VIBRATION_PATTERNS.TROPHY);
       }
 
-      const newTrophies = [...(prevStats.trophies || [])];
+      let newTrophies = [...(prevStats.trophies || [])];
       if (canAwardTrophy) {
+        // Filter out any older degraded/ice/broken trophies now that a new Golden Trophy is earned
+        newTrophies = newTrophies.filter((t) => t.type !== "ice" && t.type !== "broken");
         newTrophies.unshift({
           id: `trophy-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           type: "golden",
@@ -3281,6 +3328,27 @@ export default function App() {
     }));
 
     // PLANT GROWTH & HEALING LOGIC
+    let finalInventory = settings.inventory || [];
+    let itemsToConsume: string[] = [];
+
+    if (usedStreakProtection) itemsToConsume.push("streak-protection");
+    if (usedXPBoost) itemsToConsume.push("xp-boost");
+    else if (usedDoubleXP) itemsToConsume.push("double-points");
+    if (usedCoinMagnet) itemsToConsume.push("coin-magnet");
+
+    if (itemsToConsume.length > 0) {
+      finalInventory = finalInventory.map(item => {
+        if (itemsToConsume.includes(item.itemId) && item.activated) {
+          return { ...item, activated: false }; // Consume item
+        }
+        return item;
+      });
+    }
+
+    const settingsUpdate: any = {
+      inventory: finalInventory,
+    };
+
     if (settings.plantState) {
       const type = settings.plantState.type;
       let currentPoints = settings.plantState.growthPoints || 0;
@@ -3315,19 +3383,19 @@ export default function App() {
         lastGrowthDate: new Date().toISOString(),
       };
 
-      onUpdateSettings({
-        plantState: updatedPlantState,
-        plantsProgress: {
-          ...(settings.plantsProgress || {}),
-          [type]: updatedPlantState,
-        },
-      });
+      settingsUpdate.plantState = updatedPlantState;
+      settingsUpdate.plantsProgress = {
+        ...(settings.plantsProgress || {}),
+        [type]: updatedPlantState,
+      };
 
       if (wasDead) {
         showToast("THE ECOSYSTEM HAS BEEN RESTORED! 🌿🔥", "success");
         vibrate(VIBRATION_PATTERNS.SUCCESS);
       }
     }
+
+    onUpdateSettings(settingsUpdate);
 
     setSessionXP(xpToAdd);
     setSessionStreak(finalStreakShow);
@@ -4099,6 +4167,9 @@ export default function App() {
                       onOpenGarden={() => {
                         vibrate(VIBRATION_PATTERNS.CLICK);
                         setActiveScreen("garden");
+                        if (!settings.hasEnteredGarden) {
+                          onUpdateSettings({ hasEnteredGarden: true });
+                        }
                       }}
                       onSelectTask={(taskId) => {
                         vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
@@ -4328,9 +4399,9 @@ export default function App() {
                             });
                           }
 
-                          let activeSkin = prev.activeSkin;
+                          let activeHat = prev.activeHat;
                           if (isSkin) {
-                            activeSkin = item.id.replace("skin-", "");
+                            activeHat = item.id.replace("skin-", "");
                           }
 
                           let isDogSoundPackActive = prev.isDogSoundPackActive;
@@ -4340,7 +4411,8 @@ export default function App() {
 
                           return {
                             ...prev,
-                            activeSkin,
+                            activeSkin: prev.activeSkin,
+                            activeHat,
                             isDogSoundPackActive,
                             purchasedItems: [
                               ...(prev.purchasedItems || []),
@@ -4556,7 +4628,7 @@ export default function App() {
                       );
                       if (!itemToActivate) return;
 
-                      const inventory = (settings.inventory || []).map(
+                      let inventory = (settings.inventory || []).map(
                         (item) => {
                           if (item.id === id) {
                             return { ...item, activated: true };
@@ -4587,14 +4659,37 @@ export default function App() {
                       );
 
                       let activeSkin = settings.activeSkin;
+                      let activeHat = settings.activeHat;
                       if (itemToActivate.type === "skin") {
-                        activeSkin = itemToActivate.itemId.replace("skin-", "");
+                        activeHat = itemToActivate.itemId.replace("skin-", "");
                       }
 
                       let isDogSoundPackActive = settings.isDogSoundPackActive;
                       if (itemToActivate.type === "sound-pack") {
                         isDogSoundPackActive =
                           itemToActivate.itemId === "sound-dog";
+                      }
+
+                      let updatedPlantState = settings.plantState;
+                      if (itemToActivate.itemId === "plant-recovery") {
+                        const nextHealth = Math.min(100, (settings.plantState?.health || 100) + 25);
+                        updatedPlantState = settings.plantState ? {
+                          ...settings.plantState,
+                          health: nextHealth,
+                          isDead: nextHealth <= 0 ? settings.plantState.isDead : false
+                        } : {
+                          type: "sprout",
+                          stage: 0,
+                          growthPoints: 0,
+                          lastGrowthDate: null,
+                          health: nextHealth,
+                          isDead: false,
+                          isThirsty: false,
+                          unlockedTypes: ["sprout"],
+                          lastCheckDate: new Date().toISOString()
+                        };
+                        inventory = inventory.filter(item => item.id !== itemToActivate.id);
+                        showToast("Nano Fertilizer used! Restored 25% plant health! 🧪🌱", "success");
                       }
 
                       // If it's a gift, give a reward and keep it activated (as opened)
@@ -4651,9 +4746,13 @@ export default function App() {
                       onUpdateSettings({
                         inventory,
                         activeSkin,
+                        activeHat,
                         isDogSoundPackActive,
+                        plantState: updatedPlantState,
                       });
-                      showToast(`${itemToActivate.name} activated!`, "success");
+                      if (itemToActivate.itemId !== "plant-recovery") {
+                        showToast(`${itemToActivate.name} activated!`, "success");
+                      }
                     }}
                     onDeactivate={(id) => {
                       vibrate(VIBRATION_PATTERNS.CLICK);
@@ -4668,9 +4767,9 @@ export default function App() {
                           return item;
                         });
 
-                        let activeSkin = prev.activeSkin;
+                        let activeHat = prev.activeHat;
                         if (itemToDeactivate?.type === "skin") {
-                          activeSkin = "none";
+                          activeHat = "none";
                         }
 
                         let isDogSoundPackActive = prev.isDogSoundPackActive;
@@ -4681,7 +4780,8 @@ export default function App() {
                         return {
                           ...prev,
                           inventory,
-                          activeSkin,
+                          activeSkin: prev.activeSkin,
+                          activeHat,
                           isDogSoundPackActive,
                         };
                       });
@@ -4702,19 +4802,20 @@ export default function App() {
                           prev.purchasedItems || []
                         ).filter((pid) => pid !== itemToDelete?.itemId);
 
-                        let activeSkin = prev.activeSkin;
+                        let activeHat = prev.activeHat;
                         if (
                           itemToDelete?.type === "skin" &&
                           itemToDelete.activated
                         ) {
-                          activeSkin = "none";
+                          activeHat = "none";
                         }
 
                         return {
                           ...prev,
                           inventory,
                           purchasedItems,
-                          activeSkin,
+                          activeSkin: prev.activeSkin,
+                          activeHat,
                         };
                       });
                       showToast("Item deleted from library", "info");
@@ -4968,6 +5069,9 @@ export default function App() {
                       onOpenGarden={() => {
                         vibrate(5);
                         setActiveScreen("garden");
+                        if (!settings.hasEnteredGarden) {
+                          onUpdateSettings({ hasEnteredGarden: true });
+                        }
                       }}
                     />
                   </Suspense>
@@ -4994,6 +5098,7 @@ export default function App() {
                       setGardenState={setGardenState}
                       stats={stats}
                       onUpdateStats={onUpdateStats}
+                      showToast={showToast}
                     />
                   </Suspense>
                 </motion.div>

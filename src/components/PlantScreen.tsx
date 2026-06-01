@@ -141,6 +141,34 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     }
   }, [step, onboardingCompleted]);
 
+  useEffect(() => {
+    if (onboardingCompleted && stats) {
+      const userLevel = stats.level || Math.floor((stats.xp || 0) / 1000) + 1;
+      const maxUnlockedIdx = Math.min(ECOSYSTEM_PATH.length - 1, Math.floor(userLevel / 5));
+      
+      const currentUnlocked = plantState?.unlockedTypes || ['sprout'];
+      let needsUpdate = false;
+      const newUnlocked = [...currentUnlocked];
+      
+      for (let i = 0; i <= maxUnlockedIdx; i++) {
+        const typeToUnlock = ECOSYSTEM_PATH[i];
+        if (!newUnlocked.includes(typeToUnlock)) {
+          newUnlocked.push(typeToUnlock);
+          needsUpdate = true;
+        }
+      }
+      
+      if (needsUpdate) {
+        onUpdateSettings({
+          plantState: {
+            ...plantState,
+            unlockedTypes: newUnlocked,
+          }
+        });
+      }
+    }
+  }, [stats?.level, stats?.xp, onboardingCompleted, plantState?.unlockedTypes?.length]);
+
   const handleNext = () => {
     vibrate(10);
     if (step < onboardingSteps.length - 1) {
