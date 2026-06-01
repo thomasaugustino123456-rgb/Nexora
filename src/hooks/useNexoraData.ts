@@ -13,6 +13,8 @@ import {
   serverTimestamp,
   onSnapshot,
   collection,
+  getDocFromCache,
+  getDocsFromCache,
 } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import { UserSettings, UserStats, DailyProgress } from "../types";
@@ -220,16 +222,58 @@ export function useNexoraData(
     }
 
     const loadData = async () => {
+      // If offline and cache is present, bypass Firestore completely for instant rendering
+      if (!navigator.onLine && hasCache) {
+        console.log("Hooks: Offline mode detected with active cache. Directly using cached state.");
+        setNeedsOnboarding(false);
+        setIsDataReady(true);
+        setLoading(false);
+        dataLoadedFromFirestore.current = true;
+        lastLoadedUserIdRef.current = user.uid;
+        return;
+      }
+
       const userDocRef = doc(db, "users", user.uid);
       const progressDocRef = doc(db, "users", user.uid, "progress", today);
       const ecoShopRef = collection(db, "users", user.uid, "eco_shop");
 
+      const getDocWithCacheFallback = async (docRef: any) => {
+        if (!navigator.onLine) {
+          try {
+            return await getDocFromCache(docRef);
+          } catch (e) {
+            console.warn("getDocFromCache failed, falling back to network getDoc:", e);
+          }
+        }
+        return await getDoc(docRef);
+      };
+
+      const getDocsWithCacheFallback = async (queryRef: any) => {
+        if (!navigator.onLine) {
+          try {
+            return await getDocsFromCache(queryRef);
+          } catch (e) {
+            console.warn("getDocsFromCache failed, falling back to network getDocs:", e);
+          }
+        }
+        return await getDocs(queryRef);
+      };
+
       try {
-        const [docSnap, progressSnap, ecoSnap] = await Promise.all([
-          getDoc(userDocRef),
-          getDoc(progressDocRef),
-          getDocs(ecoShopRef),
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Firebase network timed out (2.5s)")), 2500)
+        );
+
+        const fetchPromise = Promise.all([
+          getDocWithCacheFallback(userDocRef),
+          getDocWithCacheFallback(progressDocRef),
+          getDocsWithCacheFallback(ecoShopRef),
         ]);
+
+        const [docSnap, progressSnap, ecoSnap] = (await Promise.race([
+          fetchPromise,
+          timeoutPromise,
+        ])) as [any, any, any];
 
         let firestoreSettings = DEFAULT_SETTINGS;
         let firestoreStats = DEFAULT_STATS;
@@ -328,9 +372,9 @@ export function useNexoraData(
 
         try {
           const progressCollRef = collection(db, "users", user.uid, "progress");
-          const historySnap = await getDocs(progressCollRef);
-          historySnap.forEach((doc) => {
-            const hData = doc.data();
+          const historySnap = await getDocsWithCacheFallback(progressCollRef) as any;
+          historySnap.forEach((doc: any) => {
+            const hData = doc.data() as any;
             if (hData && hData.date) {
               localStorage.setItem(`nexora_progress_${hData.date}`, JSON.stringify(hData));
             }
@@ -347,7 +391,13 @@ export function useNexoraData(
         setIsDataReady(true);
         setLoading(false);
       } catch (err: any) {
-        console.error("Hooks: Error loading initial user data, fallback to cache: ", err);
+        const isOfflineReason = !navigator.onLine || err?.message?.includes("offline") || err?.message?.includes("timed out") || err?.code === "unavailable";
+        if (isOfflineReason) {
+          console.warn("Hooks: Firestore backend unreachable. Gracefully initializing from local cache fallback.");
+        } else {
+          console.error("Hooks: Error loading initial user data, fallback to cache: ", err);
+        }
+
         if (!isLoaderResolved) {
           if (loadingTimeout) clearTimeout(loadingTimeout);
           isLoaderResolved = true;

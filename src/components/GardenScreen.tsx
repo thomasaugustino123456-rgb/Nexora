@@ -15,12 +15,16 @@ interface GardenScreenProps {
   onBack: () => void;
   gardenState?: GardenState;
   setGardenState?: (g: GardenState) => void;
+  stats?: any;
+  onUpdateStats?: (updater: any) => void;
 }
 
 export const GardenScreen: React.FC<GardenScreenProps> = ({ 
   onBack, 
   gardenState, 
-  setGardenState 
+  setGardenState,
+  stats,
+  onUpdateStats
 }) => {
   // Use props state as the primary source of truth, fall back to initial on blank
   const initial = createInitialGardenState();
@@ -36,6 +40,59 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
   const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
   const [showSeedSelector, setShowSeedSelector] = useState(false);
   const [harvestReward, setHarvestReward] = useState<{ plantName: string; loot: string } | null>(null);
+
+  // Celestial Seed Guess Mini-game state
+  const [guessStatus, setGuessStatus] = useState<'idle' | 'shaking' | 'revealed'>('idle');
+  const [activePodIndex, setActivePodIndex] = useState<number | null>(null);
+  const [revealedSeed, setRevealedSeed] = useState<any>(null);
+  const [isLuckySeed, setIsLuckySeed] = useState<boolean>(false);
+
+  // Helper inside click handler to guess a pod
+  const handleGuessPod = (podIdx: number) => {
+    if (guessStatus !== 'idle') return;
+    
+    vibrate(30);
+    playLootSound('click');
+    setActivePodIndex(podIdx);
+    setGuessStatus('shaking');
+
+    // Pay 100 coins if possible
+    if (stats && onUpdateStats && stats.coins >= 100) {
+      onUpdateStats((prev: any) => ({
+        ...prev,
+        coins: Math.max(0, prev.coins - 100)
+      }));
+    }
+
+    setTimeout(() => {
+      // 60% chance for custom dynamic Luck Seed, 40% standard seed
+      const isLuckMaterialized = Math.random() < 0.6;
+      let chosenId = '';
+      
+      if (isLuckMaterialized) {
+        const luckPool = ['luck-lotus', 'luck-fern', 'luck-clover', 'luck-orchid', 'luck-cactus'];
+        chosenId = luckPool[Math.floor(Math.random() * luckPool.length)];
+        setIsLuckySeed(true);
+      } else {
+        const stdPool = ['slime-berry', 'solar-flare-pea', 'moon-sprout', 'star-silk-leaf', 'dream-shroom'];
+        chosenId = stdPool[Math.floor(Math.random() * stdPool.length)];
+        setIsLuckySeed(false);
+      }
+
+      const archetype = PLANT_ARCHETYPES[chosenId];
+      if (archetype) {
+        const updated = addSeedToInventory(activeGarden, chosenId);
+        dispatchUpdate(updated);
+
+        setRevealedSeed(archetype);
+        setGuessStatus('revealed');
+        vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+        playLootSound('success');
+      } else {
+        setGuessStatus('idle');
+      }
+    }, 1400);
+  };
 
   // Helper to identify owned seeds
   const ownedSeeds = Object.entries(activeGarden.inventory || {})
@@ -197,6 +254,118 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
             <p className="text-xs font-bold text-stone-400 uppercase mt-1">
               "N" is currently feeling <span className="text-emerald-600 font-extrabold">{activeGarden?.mascotState?.mood || 'happy'}</span>! Keep your daily discipline sharp to secure their joyful mood!
             </p>
+          </div>
+        </div>
+
+        {/* Celestial Guessing & Luck Seed Draw Section */}
+        <div className="w-full bg-gradient-to-br from-stone-900 via-amber-950/80 to-stone-900 text-white border-2 border-amber-500/25 p-6 rounded-[2.5rem] space-y-4 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-5 font-bold text-7xl select-none pointer-events-none">✨</div>
+          
+          <div className="flex flex-col">
+            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+              <Sparkles size={11} className="text-amber-400 rotate-12" /> COZY LUCK DRAW
+            </span>
+            <h3 className="text-sm font-black uppercase tracking-tight italic mt-0.5">Celestial Seed Materializer</h3>
+            <p className="text-[10px] font-bold text-stone-300 leading-relaxed uppercase tracking-wider mt-1">
+              Select one of the 3 mystical pods to guess and reveal a rare seed! Saved instantly to your Botanical Library.
+            </p>
+          </div>
+
+          {guessStatus === 'idle' && (
+            <div className="grid grid-cols-3 gap-3 pt-2">
+              {[0, 1, 2].map((idx) => (
+                <motion.button
+                  key={idx}
+                  whileHover={{ scale: 1.05, y: -4 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleGuessPod(idx)}
+                  className="bg-stone-800/80 hover:bg-stone-850 border border-amber-500/20 hover:border-amber-400 p-4 rounded-2xl flex flex-col items-center justify-center space-y-2 relative group focus:outline-none"
+                >
+                  <div className="text-3xl text-amber-300 group-hover:animate-bounce duration-1000">🔮</div>
+                  <span className="text-[10px] font-black tracking-widest text-[#9A8975] uppercase">POD {String.fromCharCode(65 + idx)}</span>
+                </motion.button>
+              ))}
+            </div>
+          )}
+
+          {guessStatus === 'shaking' && (
+            <div className="py-6 flex flex-col items-center justify-center space-y-3">
+              <motion.div
+                animate={{ 
+                  x: [-4, 4, -4, 4, 0],
+                  y: [-2, 2, -1, 1, 0],
+                  rotate: [-3, 3, -1, 1, 0]
+                }}
+                transition={{ 
+                  repeat: Infinity,
+                  duration: 0.25,
+                  ease: "easeInOut"
+                }}
+                className="text-5xl"
+              >
+                🔮⚡
+              </motion.div>
+              <p className="text-[10px] text-amber-200 font-bold uppercase tracking-widest flex items-center gap-1">
+                <span className="w-2 h-2 bg-amber-400 rounded-full animate-ping" />
+                Materializing Celestial Matrix...
+              </p>
+            </div>
+          )}
+
+          {guessStatus === 'revealed' && revealedSeed && (
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="py-4 bg-[#FAF9F6]/5 border border-white/10 rounded-2xl flex flex-col items-center justify-center p-5 text-center relative"
+            >
+              <div className="absolute top-2 right-2 text-xs">
+                <Sparkles className="text-amber-400 animate-spin" size={14} />
+              </div>
+
+              {/* Glowing Halo around seed */}
+              <div className="relative my-3 w-20 h-20 bg-amber-500/10 rounded-full border border-amber-400/20 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                <span className="text-5xl filter drop-shadow animate-bounce">
+                  {revealedSeed.id === 'luck-lotus' ? '🌸' :
+                   revealedSeed.id === 'luck-fern' ? '🌿' :
+                   revealedSeed.id === 'luck-clover' ? '🍀' :
+                   revealedSeed.id === 'luck-orchid' ? '🌌' :
+                   revealedSeed.id === 'luck-cactus' ? '🌵' :
+                   revealedSeed.id === 'slime-berry' ? '🟢' :
+                   revealedSeed.id === 'solar-flare-pea' ? '🔥' :
+                   revealedSeed.id === 'moon-sprout' ? '🌙' : '⭐'}
+                </span>
+              </div>
+
+              <span className="text-[9px] font-black uppercase text-amber-400 tracking-widest block">
+                {revealedSeed.rarity} Secret Sprout Securified
+              </span>
+              <h4 className="text-lg font-black text-white uppercase tracking-tight mt-1">
+                {revealedSeed.name}
+              </h4>
+              <p className="text-[10px] text-stone-400 font-bold uppercase mt-1 leading-relaxed max-w-[280px]">
+                {revealedSeed.id.startsWith('luck-') 
+                  ? 'A rare dynamically altered mutation. Cultivate this inside the Ecosystem Library Seeds tab!'
+                  : 'A gorgeous celestial base seed. Plant it in the grid below or grow it in your mind garden!'}
+              </p>
+
+              <button
+                onClick={() => {
+                  vibrate(10);
+                  playLootSound('click');
+                  setGuessStatus('idle');
+                  setActivePodIndex(null);
+                  setRevealedSeed(null);
+                }}
+                className="mt-4 px-6 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-stone-900 border border-amber-300/20 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-transform"
+              >
+                Claim Seed & Materialize More! 👍
+              </button>
+            </motion.div>
+          )}
+
+          <div className="flex justify-between items-center bg-stone-950/40 px-4 py-2.5 rounded-xl text-[9px] font-black text-stone-400 tracking-wider">
+            <span>COST PER ROLL: <span className="text-amber-400">100 COINS</span></span>
+            <span>YOUR VAULT: <span className={(stats?.coins || 0) >= 100 ? "text-emerald-400 animate-pulse" : "text-stone-500"}>{(stats?.coins || 0)} COINS</span></span>
           </div>
         </div>
 

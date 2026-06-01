@@ -176,91 +176,116 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
       case 'stats':
         if (layoutConfig.hideStats) return null;
         return (
-          <div key="stats" className="glass-card p-4 flex flex-wrap items-center justify-between gap-4 border-white/50 shadow-blue-900/5 transition-colors">
-            <div className="flex items-center gap-6 px-2">
-              <div className="flex flex-col">
-                <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Discipline Streak</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500">
-                    <Flame size={20} />
+          <div key="stats" className="glass-card p-4 flex flex-col gap-4 border-white/50 shadow-blue-900/5 transition-colors">
+            {/* Stats Overview */}
+            <div className="flex flex-wrap items-center justify-between gap-4 w-full">
+              <div className="flex items-center gap-6 px-2">
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Discipline Streak</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500">
+                      <Flame size={20} />
+                    </div>
+                    <span className="text-2xl font-black text-blue-900 tracking-tight">{stats.streak}</span>
                   </div>
-                  <span className="text-2xl font-black text-blue-900 tracking-tight">{stats.streak}</span>
+                </div>
+                
+                <div className="h-10 w-px bg-blue-900/10" />
+
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Growth XP</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                      <Star size={20} />
+                    </div>
+                    <span className="text-2xl font-black text-blue-900 tracking-tight">{stats.xp || 0}</span>
+                  </div>
+                </div>
+
+                <div className="h-10 w-px bg-blue-900/10" />
+
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Earned Coins</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                      <Coins size={20} />
+                    </div>
+                    <span className="text-2xl font-black text-blue-900 tracking-tight">{stats.coins || 0}</span>
+                  </div>
                 </div>
               </div>
-              
-              <div className="h-10 w-px bg-blue-900/10" />
 
-              <div className="flex flex-col">
-                <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Growth XP</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                    <Star size={20} />
-                  </div>
-                  <span className="text-2xl font-black text-blue-900 tracking-tight">{stats.xp || 0}</span>
-                </div>
-              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={onOpenGarden}
+                  className="p-3 bg-gradient-to-br from-[#8D7D62] to-[#5A5040] text-white rounded-2xl shadow-xl shadow-[#8D7D62]/20 hover:scale-105 transition-all group relative overflow-hidden"
+                  title="My Garden"
+                >
+                  <Flower2 size={20} className="group-hover:rotate-12 transition-transform" />
+                </button>
+    
+                <button 
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                    onOpenArchives();
+                  }}
+                  className="p-3 bg-gradient-to-br from-[#69C496] to-[#58B383] text-white rounded-2xl shadow-xl shadow-[#69C496]/20 hover:scale-105 transition-all group relative overflow-hidden"
+                  title="Retention Academy"
+                >
+                  <BookOpen size={20} className="group-hover:rotate-12 transition-transform" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                </button>
 
-              <div className="h-10 w-px bg-blue-900/10" />
-
-              <div className="flex flex-col">
-                <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Earned Coins</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                    <Coins size={20} />
-                  </div>
-                  <span className="text-2xl font-black text-blue-900 tracking-tight">{stats.coins || 0}</span>
-                </div>
+                <button 
+                  onClick={onOpenPlant}
+                  className={`p-3 rounded-2xl transition-all flex items-center justify-center group relative ${
+                    !settings.plantOnboardingCompleted
+                      ? 'bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-pulse border-2 border-white/50'
+                      : gardenState?.pendingLootSeed
+                        ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-[0_0_35px_rgba(245,158,11,1.0)] border-3 border-yellow-200 animate-[bounce_1.5s_infinite] scale-110 z-10'
+                        : settings.plantState?.isThirsty || localStorage.getItem('nexora_new_plant_unlocked') === 'true'
+                          ? 'bg-yellow-400 text-white shadow-xl shadow-yellow-200 animate-pulse' 
+                          : 'bg-emerald-500 text-white shadow-xl shadow-emerald-200'
+                  }`}
+                >
+                  <Sprout size={20} className="group-hover:rotate-12 transition-transform" />
+                  {gardenState?.pendingLootSeed && (
+                    <div className="absolute -top-1 -right-1">
+                      <Sparkles size={14} className="text-amber-200 animate-spin" />
+                    </div>
+                  )}
+                  {!settings.plantOnboardingCompleted && !gardenState?.pendingLootSeed && (
+                    <div className="absolute -top-1 -right-1">
+                      <Sparkles size={14} className="text-amber-200 animate-spin" />
+                    </div>
+                  )}
+                  {settings.plantState?.isThirsty && settings.plantOnboardingCompleted && !gardenState?.pendingLootSeed && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white animate-bounce" />
+                  )}
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={onOpenGarden}
-                className="p-3 bg-gradient-to-br from-[#8D7D62] to-[#5A5040] text-white rounded-2xl shadow-xl shadow-[#8D7D62]/20 hover:scale-105 transition-all group relative overflow-hidden"
-                title="My Garden"
-              >
-                <Flower2 size={20} className="group-hover:rotate-12 transition-transform" />
-              </button>
- 
-              <button 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                  onOpenArchives();
-                }}
-                className="p-3 bg-gradient-to-br from-[#69C496] to-[#58B383] text-white rounded-2xl shadow-xl shadow-[#69C496]/20 hover:scale-105 transition-all group relative overflow-hidden"
-                title="Retention Academy"
-              >
-                <BookOpen size={20} className="group-hover:rotate-12 transition-transform" />
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              </button>
-
-              <button 
-                onClick={onOpenPlant}
-                className={`p-3 rounded-2xl transition-all flex items-center justify-center group relative ${
-                  !settings.plantOnboardingCompleted
-                    ? 'bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-pulse border-2 border-white/50'
-                    : gardenState?.pendingLootSeed
-                      ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-[0_0_35px_rgba(245,158,11,1.0)] border-3 border-yellow-200 animate-[bounce_1.5s_infinite] scale-110 z-10'
-                      : settings.plantState?.isThirsty || localStorage.getItem('nexora_new_plant_unlocked') === 'true'
-                        ? 'bg-yellow-400 text-white shadow-xl shadow-yellow-200 animate-pulse' 
-                        : 'bg-emerald-500 text-white shadow-xl shadow-emerald-200'
-                }`}
-              >
-                <Sprout size={20} className="group-hover:rotate-12 transition-transform" />
-                {gardenState?.pendingLootSeed && (
-                  <div className="absolute -top-1 -right-1">
-                    <Sparkles size={14} className="text-amber-200 animate-spin" />
-                  </div>
-                )}
-                {!settings.plantOnboardingCompleted && !gardenState?.pendingLootSeed && (
-                  <div className="absolute -top-1 -right-1">
-                    <Sparkles size={14} className="text-amber-200 animate-spin" />
-                  </div>
-                )}
-                {settings.plantState?.isThirsty && settings.plantOnboardingCompleted && !gardenState?.pendingLootSeed && (
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white animate-bounce" />
-                )}
-              </button>
+            {/* Cozy Garden Promotional Card */}
+            <div className="w-full bg-gradient-to-br from-[#1E251C] via-[#2F3A2A] to-[#1E251C] border border-[#8D7D62]/30 p-5 rounded-3xl text-white relative overflow-hidden shadow-lg group">
+              <div className="absolute top-1/2 -translate-y-1/2 right-6 opacity-[0.08] text-6xl select-none pointer-events-none group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">🌸</div>
+              <div className="flex items-center justify-between gap-5 flex-wrap relative z-10">
+                <div className="flex-1">
+                  <span className="text-[8px] font-black text-amber-300 uppercase tracking-widest flex items-center gap-1">
+                    <Sparkles size={10} className="text-amber-300 animate-pulse" /> BOTANICAL SANCTUARY
+                  </span>
+                  <h4 className="text-sm font-black uppercase tracking-tight mt-0.5 text-stone-100">Cozy Sanctuary Garden & Seed Draw</h4>
+                  <p className="text-[10px] text-[#DBCBB1] font-bold uppercase mt-1.5 leading-relaxed max-w-lg">
+                    Sow harvested plant seeds into your 3x3 soil grid! Spend 100 surplus coins to guess/draw celestial pods for rare, epic & legendary botanical seeds.
+                  </p>
+                </div>
+                <button
+                  onClick={onOpenGarden}
+                  className="w-full sm:w-auto px-5 py-3 bg-[#8D7D62] hover:bg-[#9E8B6E] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all text-center"
+                >
+                  Enter Garden 🔮
+                </button>
+              </div>
             </div>
           </div>
         );

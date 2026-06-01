@@ -4947,6 +4947,11 @@ export default function App() {
                       stats={stats}
                       gardenState={gardenState}
                       setGardenState={setGardenState}
+                      showToast={showToast}
+                      onOpenGarden={() => {
+                        vibrate(5);
+                        setActiveScreen("garden");
+                      }}
                     />
                   </Suspense>
                 </motion.div>
@@ -4970,6 +4975,8 @@ export default function App() {
                       onBack={() => setActiveScreen("home")} 
                       gardenState={gardenState}
                       setGardenState={setGardenState}
+                      stats={stats}
+                      onUpdateStats={onUpdateStats}
                     />
                   </Suspense>
                 </motion.div>
