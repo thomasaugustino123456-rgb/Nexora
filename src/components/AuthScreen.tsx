@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../firebase';
-import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { motion, useAnimationControls } from 'framer-motion';
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Mascot, MascotMood } from './Mascot';
@@ -27,6 +27,8 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState('');
   
   // Mascot Interaction State
   const [tapCount, setTapCount] = useState(0);
@@ -144,6 +146,34 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     }
   };
 
+  const handleForgotPassword = async () => {
+    vibrate(15);
+    setError('');
+    setResetSuccessMessage('');
+    if (!email) {
+      setError('Please type your email address first so we know where to send the link!');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setResetSuccessMessage('Secure link sent! Check your email inbox to set/change your password and connect your Google login. 🚀');
+      triggerJump();
+    } catch (err: any) {
+      console.warn("Forgot password request failed:", err);
+      if (err.code === 'auth/user-not-found') {
+        setError('No account found under this email. Try typing it again, or use Google below!');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else {
+        setError(`Failed to send password reset: ${err.message}`);
+      }
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     vibrate(15);
     if (isSigningIn) return;
@@ -226,8 +256,8 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
               <span>{error}</span>
             </div>
             {error.includes('Invalid email or password') && (
-              <p className="text-[10px] text-red-400 font-bold uppercase pl-7">
-                Tip: If you signed up with Google, please use the Google button below!
+              <p className="text-[10px] text-red-500 font-bold uppercase pl-7 leading-normal">
+                Tip: If you originally joined via Google, please sign in with Google or enter your email & tap "Forgot/Set Password" to add a password to your Google account!
               </p>
             )}
             {error.includes('already exists') && (
@@ -236,11 +266,23 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
                   setIsSignUp(false);
                   setError('');
                 }}
-                className="text-xs font-bold text-red-700 underline pl-7 hover:text-red-900"
+                className="text-xs font-bold text-red-700 underline pl-7 hover:text-red-900 text-left"
               >
                 Click here to Sign In instead
               </button>
             )}
+          </div>
+        )}
+
+        {resetSuccessMessage && (
+          <div className="w-full bg-green-50 text-green-700 p-3.5 rounded-xl text-sm font-semibold flex items-start gap-2 text-left border border-green-100">
+            <span className="text-lg">✉️</span>
+            <div>
+              <p className="font-bold leading-relaxed">{resetSuccessMessage}</p>
+              <p className="text-[10px] text-green-600 font-bold uppercase mt-1">
+                Security confirmation: All garden items, stats, levels, and notes remain 100% saved!
+              </p>
+            </div>
           </div>
         )}
 
@@ -283,6 +325,18 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+            {!isSignUp && (
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={isResettingPassword}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline transition-all focus:outline-none"
+                >
+                  {isResettingPassword ? 'Sending security link...' : 'Forgot/Set Password for Google Account Users'}
+                </button>
+              </div>
+            )}
           </div>
 
           <button 
