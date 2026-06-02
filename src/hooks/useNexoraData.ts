@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   onAuthStateChanged,
   User as FirebaseUser,
@@ -117,6 +117,13 @@ export function useNexoraData(
       if (currentUser) {
         if (prevUserId && prevUserId !== currentUser.uid) {
           console.log("Hooks: Different user detected, resetting caches in-memory and locally.");
+          // Clear sync blockers and caches first
+          dataLoadedFromFirestore.current = false;
+          lastSyncedRef.current = "";
+          lastLoadedUserIdRef.current = null;
+          setIsDataReady(false);
+          setLoading(true);
+
           Object.keys(localStorage).forEach((key) => {
             if (key.startsWith("nexora_") && key !== "nexora_cached_user") {
                localStorage.removeItem(key);
@@ -136,11 +143,8 @@ export function useNexoraData(
             completionsCount: 0,
             nextRestorationTime: null,
           });
+          setGardenState(createInitialGardenState());
           setNeedsOnboarding(false);
-          dataLoadedFromFirestore.current = false;
-          lastLoadedUserIdRef.current = null;
-          setIsDataReady(false);
-          setLoading(true);
         }
         localStorage.setItem("nexora_cached_user", currentUser.uid);
         setUser(currentUser);
@@ -149,6 +153,13 @@ export function useNexoraData(
         // This prevents erasing local caches/onboarding flags during transient startup initialization.
         if (prevUserId) {
           console.log("Hooks: User explicit logout, clearing caches.");
+          
+          // CRITICAL: Block any sync during state resets
+          dataLoadedFromFirestore.current = false;
+          setIsDataReady(false);
+          lastSyncedRef.current = "";
+          lastLoadedUserIdRef.current = null;
+
           Object.keys(localStorage).forEach((key) => {
             if (key.startsWith("nexora_")) {
               localStorage.removeItem(key);
@@ -168,11 +179,13 @@ export function useNexoraData(
             completionsCount: 0,
             nextRestorationTime: null,
           });
+          setGardenState(createInitialGardenState());
         }
         setUser(null);
-        setIsDataReady(true);
+        setIsDataReady(false); // DO NOT allow ready state without user
         dataLoadedFromFirestore.current = false;
         lastLoadedUserIdRef.current = null;
+        lastSyncedRef.current = "";
         setNeedsOnboarding(false);
         setLoading(false);
       }
@@ -358,6 +371,20 @@ export function useNexoraData(
           ];
         }
 
+        // Initialize lastSyncedRef with the exact loaded structure before enabling sync.
+        // This ensures the next background sync check sees full identity and returns early,
+        // preventing any race overrides of defaulted memory states!
+        lastSyncedRef.current = JSON.stringify({
+          s: firestoreSettings,
+          st: firestoreStats,
+          p: {
+            c: firestoreProgress.completed,
+            cc: firestoreProgress.completionsCount,
+            d: firestoreProgress.date,
+          },
+          g: firestoreGarden,
+        });
+
         // Save to state and local cache immediately
         setSettings(firestoreSettings);
         setStats(firestoreStats);
@@ -524,7 +551,6 @@ export function useNexoraData(
 
     // 1-second debounce for faster background sync (Ensures no data loss on immediate exits)
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    if (document.hidden) return; // Don't sync if tab is backgrounded
 
     syncTimeoutRef.current = setTimeout(syncData, 1000);
 
@@ -608,7 +634,7 @@ export function useNexoraData(
     });
   };
 
-  const forceSyncData = async () => {
+  const forceSyncData = useCallback(async () => {
     if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     if (quotaExceededRef.current) return;
@@ -654,7 +680,27 @@ export function useNexoraData(
     } catch (e: any) {
       console.error("Hooks: Force sync failed", e);
     }
-  };
+  }, [user, isDataReady, settings, stats, dailyProgress, gardenState]);
+
+  // Synchronize immediately when the tab is backgrounded, minimized, or when the phone screen is locked.
+  // This is critical for mobile devices where immediate teardown or backgrounding is the primary exit vector.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "hidden" &&
+        user &&
+        isDataReady &&
+        dataLoadedFromFirestore.current
+      ) {
+        console.log("Hooks: Tab backgrounded, flushing pending state to Firestore...");
+        forceSyncData();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [user, isDataReady, forceSyncData]);
 
   return {
     user,
