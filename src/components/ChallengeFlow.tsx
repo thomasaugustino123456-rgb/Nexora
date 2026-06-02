@@ -130,7 +130,13 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
             {step === 'pushups' && (
               <PushupsStep 
                 key="pushups-step"
-                goal={settings.pushupsGoal} 
+                goal={
+                  settings.commitmentLevel === 'casual' 
+                    ? Math.max(3, Math.floor((settings.pushupsGoal || 5) * 0.6)) 
+                    : settings.commitmentLevel === 'intense' 
+                      ? Math.floor((settings.pushupsGoal || 5) * 1.6) 
+                      : (settings.pushupsGoal || 5)
+                } 
                 onDone={nextStep} 
                 onSkip={() => nextStep(null, true)}
                 activeSkin={settings.activeSkin}
@@ -141,7 +147,13 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
             {step === 'water' && (
               <WaterStep 
                 key="water-step"
-                goal={settings.waterGoal || 8} 
+                goal={
+                  settings.commitmentLevel === 'casual' 
+                    ? Math.max(4, Math.floor((settings.waterGoal || 8) * 0.5)) 
+                    : settings.commitmentLevel === 'intense' 
+                      ? Math.floor((settings.waterGoal || 8) * 1.5) 
+                      : (settings.waterGoal || 8)
+                } 
                 progress={sessionWaterCount}
                 onUpdate={(val) => {
                   setSessionWaterCount(val);
@@ -450,7 +462,8 @@ export const BreathingStep = React.memo(({ onDone, activeSkin = 'none', settings
   const [phase, setPhase] = useState<'In' | 'Out'>('In');
   const [timer, setTimer] = useState(5);
   const [cycles, setCycles] = useState(0);
-  const isFinished = cycles >= 5;
+  const targetCycles = settings.commitmentLevel === 'casual' ? 3 : settings.commitmentLevel === 'intense' ? 8 : 5;
+  const isFinished = cycles >= targetCycles;
 
   useEffect(() => {
     if (isFinished) return;
@@ -468,7 +481,7 @@ export const BreathingStep = React.memo(({ onDone, activeSkin = 'none', settings
         const next = p === 'In' ? 'Out' : 'In';
         if (next === 'In') {
           const nextCycles = cycles + 1;
-          if (nextCycles >= 5 && settings.soundEnabled) {
+          if (nextCycles >= targetCycles && settings.soundEnabled) {
             play('challenge_unlock');
           }
           setCycles(nextCycles);
@@ -476,7 +489,7 @@ export const BreathingStep = React.memo(({ onDone, activeSkin = 'none', settings
         return next;
       });
     }
-  }, [timer, settings.soundEnabled, play, cycles]);
+  }, [timer, settings.soundEnabled, play, cycles, targetCycles]);
 
   return (
     <motion.div 
@@ -497,7 +510,7 @@ export const BreathingStep = React.memo(({ onDone, activeSkin = 'none', settings
           </p>
           
           <div className="flex justify-center gap-2">
-            {[...Array(5)].map((_, i) => (
+            {[...Array(targetCycles)].map((_, i) => (
               <div 
                 key={i} 
                 className={`h-2 w-8 rounded-full transition-colors duration-500 ${i < cycles ? 'bg-blue-500' : 'bg-blue-100'}`}
@@ -835,8 +848,10 @@ export const CompletionStep = React.memo(({ onFinish, streak, points, xp, coins,
 
 export const FootballStep = React.memo(({ onFinish, activeSkin = 'none', settings, play }: { onFinish: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
   const svgRef = useRef<SVGSVGElement>(null);
+  const targetScore = settings.commitmentLevel === 'casual' ? 2 : settings.commitmentLevel === 'intense' ? 5 : 3;
+  const initialBalls = settings.commitmentLevel === 'casual' ? 6 : settings.commitmentLevel === 'intense' ? 5 : 5;
   const [score, setScore] = useState(0);
-  const [ballsLeft, setBallsLeft] = useState(5);
+  const [ballsLeft, setBallsLeft] = useState(initialBalls);
   const [isFlying, setIsFlying] = useState(false);
   const [ballPos, setBallPos] = useState({ x: 400, y: 520 });
   const [isDragging, setIsDragging] = useState(false);
@@ -847,11 +862,11 @@ export const FootballStep = React.memo(({ onFinish, activeSkin = 'none', setting
   const [hasPlayedFinishSound, setHasPlayedFinishSound] = useState(false);
 
   useEffect(() => {
-    if (score >= 5 && !hasPlayedFinishSound && settings.soundEnabled) {
+    if (score >= targetScore && !hasPlayedFinishSound && settings.soundEnabled) {
       play('challenge_unlock');
       setHasPlayedFinishSound(true);
     }
-  }, [score, hasPlayedFinishSound, settings.soundEnabled, play]);
+  }, [score, hasPlayedFinishSound, settings.soundEnabled, play, targetScore]);
 
   const getCoord = (e: any) => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -933,7 +948,7 @@ export const FootballStep = React.memo(({ onFinish, activeSkin = 'none', setting
             vibrate([20, 50, 20]);
             setScore(s => {
               const nextScore = s + 1;
-              if (nextScore >= 5) {
+              if (nextScore >= targetScore) {
                  vibrate(VIBRATION_PATTERNS.SUCCESS);
                  setTimeout(onFinish, 400);
               }
@@ -942,7 +957,7 @@ export const FootballStep = React.memo(({ onFinish, activeSkin = 'none', setting
             setScoredBalls(prev => [...prev, { x: targetX, y: targetY }]);
           } else {
             vibrate(15);
-            if ((ballsLeft > 1 || score >= 4) && settings.soundEnabled) {
+            if ((ballsLeft > 1 || score >= targetScore - 1) && settings.soundEnabled) {
                play('losing');
             }
           }
@@ -955,10 +970,10 @@ export const FootballStep = React.memo(({ onFinish, activeSkin = 'none', setting
     };
 
   useEffect(() => {
-    if (ballsLeft === 0 && !isFlying && score < 5 && settings.soundEnabled) {
+    if (ballsLeft === 0 && !isFlying && score < targetScore && settings.soundEnabled) {
       play('losing');
     }
-  }, [ballsLeft, isFlying, score, play, settings.soundEnabled]);
+  }, [ballsLeft, isFlying, score, play, settings.soundEnabled, targetScore]);
 
   const reset = () => {
     setBallPos({ x: 400, y: 520 });
@@ -977,11 +992,11 @@ export const FootballStep = React.memo(({ onFinish, activeSkin = 'none', setting
         <div className="flex items-center justify-between px-4">
           <div className="flex flex-col">
             <h2 className="text-2xl font-bold text-blue-900/80">Football Challenge</h2>
-            <p className="text-sm text-blue-900/40">Score 5 goals to continue!</p>
+            <p className="text-sm text-blue-900/40">Score {targetScore} goals to continue!</p>
           </div>
           <div className="flex gap-4">
             <div className="bg-blue-500 text-white px-4 py-2 rounded-xl font-bold shadow-lg">
-              Score: {score}/5
+              Score: {score}/{targetScore}
             </div>
             <div className="bg-orange-500 text-white px-4 py-2 rounded-xl font-bold shadow-lg">
               Balls: {ballsLeft}
@@ -989,7 +1004,7 @@ export const FootballStep = React.memo(({ onFinish, activeSkin = 'none', setting
           </div>
         </div>
 
-        {score >= 5 ? null : (
+        {score >= targetScore ? null : (
           <div className="relative w-full aspect-[3/2] bg-[#2f855a] rounded-xl sm:rounded-2xl border-4 sm:border-8 border-[#22543d] overflow-hidden shadow-2xl touch-none">
           <svg
             ref={svgRef}
@@ -1144,13 +1159,14 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
   const [poppedCount, setPoppedCount] = useState(0);
   const [hasPlayedFinishSound, setHasPlayedFinishSound] = useState(false);
   const audioContext = useRef<AudioContext | null>(null);
+  const bubbleTarget = settings.commitmentLevel === 'casual' ? 10 : settings.commitmentLevel === 'intense' ? 35 : 20;
 
   useEffect(() => {
-    if (poppedCount >= 20 && !hasPlayedFinishSound && settings.soundEnabled) {
+    if (poppedCount >= bubbleTarget && !hasPlayedFinishSound && settings.soundEnabled) {
       play('challenge_unlock');
       setHasPlayedFinishSound(true);
     }
-  }, [poppedCount, hasPlayedFinishSound, settings.soundEnabled, play]);
+  }, [poppedCount, hasPlayedFinishSound, settings.soundEnabled, play, bubbleTarget]);
 
   const playPopSound = () => {
     try {
@@ -1180,7 +1196,7 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (bubbles.length < 12 && poppedCount < 20) {
+      if (bubbles.length < 12 && poppedCount < bubbleTarget) {
         const id = Math.random();
         const size = Math.random() * 60 + 40;
         const x = Math.random() * 80 + 10;
@@ -1190,7 +1206,7 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
       }
     }, 800);
     return () => clearInterval(interval);
-  }, [bubbles.length, poppedCount]);
+  }, [bubbles.length, poppedCount, bubbleTarget]);
 
   useEffect(() => {
     const moveInterval = setInterval(() => {
@@ -1207,11 +1223,11 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
   };
 
   useEffect(() => {
-    if (poppedCount >= 20) {
+    if (poppedCount >= bubbleTarget) {
       vibrate(VIBRATION_PATTERNS.SUCCESS);
       playPopSound();
     }
-  }, [poppedCount]);
+  }, [poppedCount, bubbleTarget]);
 
   return (
     <motion.div 
@@ -1222,11 +1238,11 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
     >
       <div className="absolute top-8 left-8 z-10">
         <h2 className="text-2xl font-bold text-blue-900/80">Bubble Pop!</h2>
-        <p className="text-sm text-blue-900/40">Pop 20 bubbles to relax ✨</p>
+        <p className="text-sm text-blue-900/40">Pop {bubbleTarget} bubbles to relax ✨</p>
       </div>
 
       <div className="absolute top-8 right-8 z-10 bg-blue-500 text-white px-4 py-2 rounded-xl font-bold shadow-lg">
-        {poppedCount}/20
+        {poppedCount}/{bubbleTarget}
       </div>
 
       <div className="relative w-full h-full">
@@ -1255,7 +1271,7 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
         </AnimatePresence>
       </div>
 
-      {poppedCount >= 20 && (
+      {poppedCount >= bubbleTarget && (
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -1278,7 +1294,16 @@ export const MemoryStep = React.memo(({ onComplete, activeSkin = 'none', setting
   const [cards, setCards] = useState<{ id: number, emoji: string, flipped: boolean, matched: boolean }[]>([]);
   const [flipped, setFlipped] = useState<number[]>([]);
   const [hasPlayedFinishSound, setHasPlayedFinishSound] = useState(false);
-  const emojis = ['💧', '🍎', '🏃', '🧘', '⚽', '🎨'];
+
+  const emojis = useMemo(() => {
+    if (settings.commitmentLevel === 'casual') {
+      return ['💧', '🍎', '🏃', '🧘'];
+    } else if (settings.commitmentLevel === 'intense') {
+      return ['💧', '🍎', '🏃', '🧘', '⚽', '🎨', '🚀', '🔥'];
+    } else {
+      return ['💧', '🍎', '🏃', '🧘', '⚽', '🎨'];
+    }
+  }, [settings.commitmentLevel]);
 
   useEffect(() => {
     if (cards.length > 0 && cards.every(c => c.matched) && !hasPlayedFinishSound && settings.soundEnabled) {
@@ -1292,7 +1317,7 @@ export const MemoryStep = React.memo(({ onComplete, activeSkin = 'none', setting
       .sort(() => Math.random() - 0.5)
       .map((emoji, i) => ({ id: i, emoji, flipped: false, matched: false }));
     setCards(initialCards);
-  }, []);
+  }, [emojis]);
 
   const handleFlip = (id: number) => {
     if (flipped.length === 2 || cards[id].matched || cards[id].flipped) return;
@@ -1515,11 +1540,20 @@ export const ReactionStep = React.memo(({ onComplete, activeSkin = 'none', setti
 });
 
 export const MeditationStep = React.memo(({ onDone, activeSkin = 'none', settings, play }: { onDone: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
-  const duration = settings.isPro ? 60 : 30;
+  const duration = useMemo(() => {
+    const base = settings.isPro ? 60 : 30;
+    if (settings.commitmentLevel === 'casual') return 15;
+    if (settings.commitmentLevel === 'intense') return settings.isPro ? 120 : 90;
+    return base;
+  }, [settings.commitmentLevel, settings.isPro]);
   const [timer, setTimer] = useState(duration);
   const [isActive, setIsActive] = useState(false);
   const [hasPlayedMascotSound, setHasPlayedMascotSound] = useState(false);
   const isFinished = timer <= 0;
+
+  useEffect(() => {
+    setTimer(duration);
+  }, [duration]);
 
   useEffect(() => {
     if (isFinished && !hasPlayedMascotSound && settings.soundEnabled) {
@@ -1594,6 +1628,12 @@ export const WritingStep = React.memo(({ onDone, activeSkin = 'none', settings, 
   const [text, setText] = useState('');
   const [prompt, setPrompt] = useState('');
   const [isFinished, setIsFinished] = useState(false);
+  const minLength = useMemo(() => {
+    if (settings.commitmentLevel === 'casual') return 5;
+    if (settings.commitmentLevel === 'intense') return 45;
+    return 15;
+  }, [settings.commitmentLevel]);
+
   const prompts = [
     "What's one thing you're proud of today?",
     "Describe your perfect morning routine.",
@@ -1644,10 +1684,12 @@ export const WritingStep = React.memo(({ onDone, activeSkin = 'none', settings, 
               if (settings.soundEnabled) play('challenge_unlock');
               onDone();
             }} 
-            disabled={text.trim().length < 10}
+            disabled={text.trim().length < minLength}
             className="btn-primary w-full bg-blue-500 hover:bg-blue-600 border-none disabled:opacity-50 shadow-lg"
           >
-            Finish Writing ✨
+            {text.trim().length < minLength 
+              ? `Write more... (${text.trim().length}/${minLength})` 
+              : "Finish Writing ✨"}
           </button>
         )}
       </div>

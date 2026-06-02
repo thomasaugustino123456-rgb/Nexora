@@ -678,6 +678,17 @@ export function SettingsScreen({
              <button onClick={onClearCache} className="p-4 bg-white border border-neutral-100 rounded-2xl text-[10px] font-black text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-all flex flex-col items-center gap-2 active:scale-95">
                 <RefreshCw size={16} /> Clear Static
              </button>
+             {/*
+                <button 
+                  onClick={() => {}} 
+                  className="p-4 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 hover:border-rose-300 rounded-2xl text-[10px] font-black text-rose-600 uppercase tracking-widest hover:from-rose-100 hover:to-pink-100 transition-all flex flex-col items-center gap-2 col-span-2 active:scale-95"
+                >
+                   <div className="flex items-center gap-2">
+                     <Sparkles size={16} className="text-rose-500 animate-pulse" />
+                     <span>Re-Run Onboarding Flow 🚀</span>
+                   </div>
+                </button>
+             */}
           </div>
         </div>
 

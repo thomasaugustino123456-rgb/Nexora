@@ -1,7 +1,6 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import { fileURLToPath } from "url";
 import bodyParser from "body-parser";
 import crypto from "crypto";
 import admin from "firebase-admin";
@@ -11,8 +10,10 @@ import { Resend } from "resend";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GoogleGenAI } from "@google/genai";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = typeof __filename !== 'undefined' 
+  ? path.dirname(__filename) 
+  : process.cwd();
+
 
 // Initialize Firebase Admin
 let db: admin.firestore.Firestore;

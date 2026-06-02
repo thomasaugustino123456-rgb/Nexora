@@ -406,14 +406,12 @@ export function useNexoraData(
           const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
           
           if (!hasCache) {
-             console.error("Critical: User has no local cache and Firestore failed. Halting app to prevent data overwrite.");
-             setLoadError("A network or server error occurred while retrieving your profile. Please check your connection and try again later.");
-             setIsDataReady(false);
-             setLoading(false);
-             return;
+             console.warn("Hooks: User has no local cache and Firestore failed. Initializing with defaults (sync disabled to prevent overwrite).");
+             setNeedsOnboarding(true);
+          } else {
+             setNeedsOnboarding(!onboardingComp);
           }
 
-          setNeedsOnboarding(!onboardingComp);
           setIsDataReady(true);
           setLoading(false);
         }
@@ -610,6 +608,54 @@ export function useNexoraData(
     });
   };
 
+  const forceSyncData = async () => {
+    if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    if (quotaExceededRef.current) return;
+    try {
+      const userRef = doc(db, "users", user.uid);
+      await setDoc(
+        userRef,
+        {
+          displayName: settings.displayName || user.displayName || 'Champion',
+          ...settings,
+          uid: user.uid,
+          email: user.email || `${user.uid}@nexora.app`,
+          role: 'user',
+          stats: stats,
+          garden: gardenState,
+          isTodayCompleted: dailyProgress.completed,
+          updatedAt: serverTimestamp(),
+          onboardingCompleted: true,
+        },
+        { merge: true },
+      );
+      await setDoc(
+        doc(db, "users", user.uid, "progress", today),
+        dailyProgress,
+        { merge: true },
+      );
+      await setDoc(
+        doc(db, "leaderboard", user.uid),
+        {
+          uid: user.uid,
+          displayName: settings.displayName || "Anonymous",
+          photoURL: settings.profilePic || user.photoURL || "",
+          streak: stats.streak || 0,
+          totalPoints: stats.totalPoints || 0,
+          weeklyXP: stats.weeklyXP || 0,
+          weeklyPoints: stats.weeklyPoints || 0,
+          level: stats.level || Math.floor((stats.totalPoints || 0) / 100) + 1,
+          league: settings.league || "Bronze",
+        },
+        { merge: true },
+      );
+      console.log("Hooks: Manual/Force Sync complete ✅");
+    } catch (e: any) {
+      console.error("Hooks: Force sync failed", e);
+    }
+  };
+
   return {
     user,
     loading,
@@ -626,5 +672,6 @@ export function useNexoraData(
     setNeedsOnboarding,
     dataLoadedFromFirestore,
     loadError,
+    forceSyncData,
   };
 }

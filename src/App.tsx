@@ -335,6 +335,7 @@ export default function App() {
     setNeedsOnboarding,
     dataLoadedFromFirestore,
     loadError,
+    forceSyncData,
   } = useNexoraData(DEFAULT_SETTINGS, DEFAULT_STATS, showToast);
 
   useEffect(() => {
@@ -2464,39 +2465,133 @@ export default function App() {
       const currentTimeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
       const todayStr = now.toISOString().split("T")[0];
 
-      // Morning Reminder
-      if (currentTimeStr === "08:00") {
-        const lastMorningKey = `nexora_morning_${todayStr}`;
-        if (!localStorage.getItem(lastMorningKey)) {
-          sendNotification("Good Morning bro! 🌅", {
-            body: "Hey 👋 Ready to crush today’s challenges?",
-            icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
-          });
-          localStorage.setItem(lastMorningKey, "true");
-        }
-      }
+      // Dynamic Daily Reminders based on Typical Day (workType)
+      const workType = settings.workType || "desk";
 
-      // Afternoon Reminder
-      if (currentTimeStr === "14:00") {
-        const lastAfternoonKey = `nexora_afternoon_${todayStr}`;
-        if (!localStorage.getItem(lastAfternoonKey)) {
-          sendNotification("Afternoon Check-in ☀️", {
-            body: "Keep the momentum going, bro! Don't forget your challenges!",
-            icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
-          });
-          localStorage.setItem(lastAfternoonKey, "true");
+      if (workType === "desk") {
+        // Morning Desk Reminder
+        if (currentTimeStr === "09:00") {
+          const lastMorningKey = `nexora_morning_${todayStr}`;
+          if (!localStorage.getItem(lastMorningKey)) {
+            sendNotification("Morning Desk check-in! 🖥️", {
+              body: "Desk Bound Focus session: Ready to build incredible habits at your workspace today, bro?",
+              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            });
+            localStorage.setItem(lastMorningKey, "true");
+          }
         }
-      }
-
-      // Evening Reminder
-      if (currentTimeStr === "19:00") {
-        const lastEveningKey = `nexora_evening_${todayStr}`;
-        if (!localStorage.getItem(lastEveningKey)) {
-          sendNotification("Evening Wrap-up 🌙", {
-            body: "Time to finish strong, bro! Complete any remaining goals.",
-            icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
-          });
-          localStorage.setItem(lastEveningKey, "true");
+        // Afternoon Desk Reminder
+        if (currentTimeStr === "14:00") {
+          const lastAfternoonKey = `nexora_afternoon_${todayStr}`;
+          if (!localStorage.getItem(lastAfternoonKey)) {
+            sendNotification("Afternoon Desk stretch! ☀️", {
+              body: "Hey desk warrior, stretch those legs! Ready for your afternoon habit boost?",
+              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            });
+            localStorage.setItem(lastAfternoonKey, "true");
+          }
+        }
+        // Evening Desk Reminder
+        if (currentTimeStr === "19:00") {
+          const lastEveningKey = `nexora_evening_${todayStr}`;
+          if (!localStorage.getItem(lastEveningKey)) {
+            sendNotification("Evening Desk Wrap-up! 🌙", {
+              body: "End your sedentary session with a finish of strength, bro. Let's lock in!",
+              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            });
+            localStorage.setItem(lastEveningKey, "true");
+          }
+        }
+      } else if (workType === "active") {
+        // Morning Active Reminder
+        if (currentTimeStr === "08:00") {
+          const lastMorningKey = `nexora_morning_${todayStr}`;
+          if (!localStorage.getItem(lastMorningKey)) {
+            sendNotification("On the Move Morning! 🏃", {
+              body: "Start your active journey powerful, bro! Complete a quick morning habit.",
+              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            });
+            localStorage.setItem(lastMorningKey, "true");
+          }
+        }
+        // Afternoon Active Reminder
+        if (currentTimeStr === "13:00") {
+          const lastAfternoonKey = `nexora_afternoon_${todayStr}`;
+          if (!localStorage.getItem(lastAfternoonKey)) {
+            sendNotification("Midday On-transit Check! ☀️", {
+              body: "Keep moving and stay hydrated, active champion! Take a quick challenge break.",
+              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            });
+            localStorage.setItem(lastAfternoonKey, "true");
+          }
+        }
+        // Evening Active Reminder
+        if (currentTimeStr === "18:00") {
+          const lastEveningKey = `nexora_evening_${todayStr}`;
+          if (!localStorage.getItem(lastEveningKey)) {
+            sendNotification("Sunset Active Check-in! 🌙", {
+              body: "You have been on the move all day! Let's complete your remaining goals.",
+              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            });
+            localStorage.setItem(lastEveningKey, "true");
+          }
+        }
+      } else if (workType === "student") {
+        // Morning Student Reminder
+        if (currentTimeStr === "07:30") {
+          const lastMorningKey = `nexora_morning_${todayStr}`;
+          if (!localStorage.getItem(lastMorningKey)) {
+            sendNotification("Student Morning Preparation! 📚", {
+              body: "Rise and shine student! Prep for school with a quick training routine!",
+              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            });
+            localStorage.setItem(lastMorningKey, "true");
+          }
+        }
+        // Evening Student Reminder (Overskip Afternoon since students are in school session)
+        if (currentTimeStr === "18:00" || currentTimeStr === "18:30") {
+          const lastEveningKey = `nexora_evening_${todayStr}`;
+          if (!localStorage.getItem(lastEveningKey)) {
+            sendNotification("Student School Wrap-up! 🌙", {
+              body: "Welcome back from school, bro! Let's complete your daily study and habits loop!",
+              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            });
+            localStorage.setItem(lastEveningKey, "true");
+          }
+        }
+      } else if (workType === "night") {
+        // Late Night Start Reminder
+        if (currentTimeStr === "21:00") {
+          const lastMorningKey = `nexora_morning_${todayStr}`;
+          if (!localStorage.getItem(lastMorningKey)) {
+            sendNotification("Night Shift Activation! 🌙", {
+              body: "The night is young for reverse schedule champions! Ready to flow, bro?",
+              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            });
+            localStorage.setItem(lastMorningKey, "true");
+          }
+        }
+        // Midnight Peak Reminder
+        if (currentTimeStr === "23:30") {
+          const lastAfternoonKey = `nexora_afternoon_${todayStr}`;
+          if (!localStorage.getItem(lastAfternoonKey)) {
+            sendNotification("Midnight Peak Focus! ⚡", {
+              body: "Midnight focus hour starts now. Let's smash our physical and mental limits!",
+              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            });
+            localStorage.setItem(lastAfternoonKey, "true");
+          }
+        }
+        // Overnight Dawn Wrap-up Reminder
+        if (currentTimeStr === "02:00") {
+          const lastEveningKey = `nexora_evening_${todayStr}`;
+          if (!localStorage.getItem(lastEveningKey)) {
+            sendNotification("Overnight Check-in! 🌌", {
+              body: "Keep going strong overnight! Hydrate and check in on your habits.",
+              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            });
+            localStorage.setItem(lastEveningKey, "true");
+          }
         }
       }
 
@@ -2635,17 +2730,18 @@ export default function App() {
         showToast(`Pro Daily Gift: +50 Coins! 🎁`, "success");
       }
 
-      // Leaderboard Listener
+      // Leaderboard Listener - Query collection cleanly to bypass composite index constraints, then filter in memory
       const q = query(
         collection(db, "leaderboard"),
-        where("league", "==", settings.league || "Bronze"),
-        orderBy("weeklyXP", "desc"),
-        limit(50),
+        limit(150),
       );
       const unsubscribe = onSnapshot(
         q,
         (snapshot) => {
-          let data = snapshot.docs.map((doc) => doc.data() as any);
+          const rawDocs = snapshot.docs.map((doc) => doc.data() as any);
+          const currentLeagueName = settings.league || "Bronze";
+          // Filter by league in memory
+          let data = rawDocs.filter((d) => d.league === currentLeagueName);
 
           // BOT SYSTEM: Always add some competitive AI players to make it feel alive!
           const bots = [
@@ -2701,19 +2797,19 @@ export default function App() {
 
           // Only keep real users who have at least > 0 in streak, weeklyXP, or weeklyPoints
           data.forEach((d) => {
-            if (
-              d.weeklyXP > 0 ||
-              d.streak > 0 ||
-              d.weeklyPoints > 0 ||
-              (d.totalPoints && d.totalPoints > 0)
-            ) {
+            if (!d || !d.uid) return;
+            const hasXp = (d.weeklyXP || 0) > 0;
+            const hasStreak = (d.streak || 0) > 0;
+            const hasPts = (d.weeklyPoints || 0) > 0;
+            const hasTotal = (d.totalPoints || 0) > 0;
+            if (hasXp || hasStreak || hasPts || hasTotal) {
               allDataMap.set(d.uid, d);
             }
           });
 
           // Add Bots
           bots.forEach((b) => {
-            if (!allDataMap.has(b.uid)) {
+            if (b && b.uid && !allDataMap.has(b.uid)) {
               allDataMap.set(b.uid, b);
             }
           });
@@ -2742,9 +2838,11 @@ export default function App() {
             // Force local settings to be used for the current user's entry
             // (fixes bug where Firestore latency ignores recent photo uploads in leaderboard)
             const localEntry = allDataMap.get(user.uid);
-            localEntry.displayName =
-              settings.displayName || localEntry.displayName;
-            localEntry.photoURL = settings.profilePic || localEntry.photoURL;
+            if (localEntry) {
+              localEntry.displayName =
+                settings.displayName || localEntry.displayName || "Anonymous";
+              localEntry.photoURL = settings.profilePic || localEntry.photoURL || "";
+            }
           }
           setLeaderboard(
             data.sort((a, b) => {
@@ -2783,6 +2881,9 @@ export default function App() {
     today,
     settings.isPro,
     stats.weeklyXP,
+    stats.weeklyPoints,
+    stats.totalPoints,
+    stats.streak,
     settings.displayName,
     settings.profilePic,
   ]);
@@ -3409,6 +3510,8 @@ export default function App() {
   const handleLogout = async () => {
     vibrate(VIBRATION_PATTERNS.CLICK);
     try {
+      showToast("Syncing data with server...", "info");
+      await forceSyncData();
       await signOut(auth);
       // Hook handles state cleanup via onAuthStateChanged
       showToast("Logout successful.", "success");
@@ -4307,6 +4410,7 @@ export default function App() {
                       onSendMotivation={sendMotivation}
                       onSendTestEmail={sendTestEmail}
                       onClearCache={onClearCache}
+                      
                       onExportData={onExportData}
                       onSubmitFeedback={onSubmitFeedback}
                       onShowManifesto={onShowManifesto}

@@ -134,7 +134,7 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
                 scale: isDragging ? 0.75 : [1, 1.25, 1], 
                 opacity: isDragging ? 0.15 : [0.45, 0.2, 0.45]
              }}
-             transition={{ duration: 3.2, repeat: Infinity }}
+             transition={{ type: "tween", duration: 3.2, repeat: Infinity }}
              className="pointer-events-none"
           />
 
@@ -149,13 +149,13 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
                 skewX: [-8, 8, -8]
               }}
               style={{ originX: '55px', originY: '95px' }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              transition={{ type: "tween", duration: 2, repeat: Infinity, ease: "easeInOut" }}
               className="pointer-events-none"
             />
           )}
 
           {/* Cybernetic Landing Struts */}
-          <motion.g animate={{ scaleY: [1, 0.85, 1.15, 1] }} transition={{ duration: 3.2, repeat: Infinity }}>
+          <motion.g animate={{ scaleY: [1, 0.85, 1.15, 1] }} transition={{ type: "tween", duration: 3.2, repeat: Infinity }}>
             <path d="M 33,95 L 22,112 M 77,95 L 88,112" stroke="#1e293b" strokeWidth="4.5" strokeLinecap="round" />
             <circle cx="22" cy="112" r="3" fill="#475569" />
             <circle cx="88" cy="112" r="3" fill="#475569" />
@@ -168,7 +168,7 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
               d="M 12,85 Q 5,108 12,118 Q 19,108 12,85"
               fill="url(#armorOrange)" 
               animate={{ scaleY: [1, 1.4, 0.9, 1.2, 1] }}
-              transition={{ duration: 0.25, repeat: Infinity }}
+              transition={{ type: "tween", duration: 0.25, repeat: Infinity }}
               style={{ originY: '85px', originX: '12px' }}
             />
             {/* Right Engine Fire */}
@@ -176,7 +176,7 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
               d="M 98,85 Q 91,108 98,118 Q 105,108 98,85"
               fill="url(#armorOrange)" 
               animate={{ scaleY: [1.1, 0.95, 1.45, 1, 1.1] }}
-              transition={{ duration: 0.22, repeat: Infinity }}
+              transition={{ type: "tween", duration: 0.22, repeat: Infinity }}
               style={{ originY: '85px', originX: '98px' }}
             />
           </g>
@@ -217,6 +217,7 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
                 scale: [1, 1.45, 1]
               }} 
               transition={{ 
+                type: "tween",
                 duration: mood === 'working' ? 0.8 : 1.6, 
                 repeat: Infinity,
                 ease: "easeInOut"
@@ -229,7 +230,7 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
               stroke={mood === 'working' ? '#22d3ee' : mood === 'happy' ? '#4ade80' : '#f43f5e'} 
               strokeWidth="1.5"
               animate={{ scale: [1, 2.7], opacity: [0.6, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
+              transition={{ type: "tween", duration: 2, repeat: Infinity }}
             />
           </motion.g>
 

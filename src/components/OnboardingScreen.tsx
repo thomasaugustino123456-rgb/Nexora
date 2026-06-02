@@ -63,11 +63,13 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
       if (priorityFocus === 'physical') {
         archivedChallenges = ['breathing', 'drawing', 'bubbles', 'memory', 'meditation', 'gratitude', 'writing'];
       } else if (priorityFocus === 'mental') {
-        archivedChallenges = ['pushups', 'water', 'football', 'reaction', 'meditation', 'gratitude'];
+        archivedChallenges = ['pushups', 'water', 'breathing', 'football', 'bubbles', 'reaction', 'gratitude'];
       } else if (priorityFocus === 'stress') {
-        archivedChallenges = ['pushups', 'drawing', 'football', 'reaction', 'memory'];
+        archivedChallenges = ['pushups', 'water', 'drawing', 'football', 'memory', 'reaction', 'writing'];
       } else if (priorityFocus === 'habit') {
-        archivedChallenges = ['drawing', 'football', 'bubbles', 'reaction', 'meditation'];
+        archivedChallenges = ['drawing', 'football', 'bubbles', 'reaction', 'memory', 'meditation', 'writing'];
+      } else {
+        archivedChallenges = [];
       }
       updates.archivedOfficialChallenges = archivedChallenges;
 
@@ -88,7 +90,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
         pushupsGoal: pushups || 5,
         priorityFocus: priorityFocus || prev.priorityFocus,
         archivedOfficialChallenges: archivedChallenges,
-        onboardingCompleted: true
+        onboardingCompleted: true,
+        workType: workType || prev.workType,
+        energyPeak: energyPeak || prev.energyPeak,
+        commitmentLevel: commitmentLevel || prev.commitmentLevel
       }));
 
     } catch (error) {
@@ -525,13 +530,23 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                 ))}
               </div>
 
-              <div className="w-full mt-4">
+              <div className="w-full mt-4 flex flex-col gap-3">
                 <button 
                   onClick={nextStep} 
                   disabled={!priorityFocus}
                   className="bg-purple-600 text-white font-black py-4 px-8 rounded-2xl w-full flex justify-center items-center gap-2 hover:bg-purple-700 transition-all shadow-lg shadow-purple-200 disabled:opacity-50"
                 >
                   Finalize Target <ChevronRight size={20} />
+                </button>
+                <button 
+                  onClick={() => {
+                    vibrate(10);
+                    setPriorityFocus('');
+                    nextStep();
+                  }}
+                  className="w-full py-2 bg-transparent text-purple-600 font-bold hover:text-purple-700 hover:underline transition-all text-sm uppercase tracking-wider"
+                >
+                  Skip and play all challenges
                 </button>
               </div>
             </motion.div>

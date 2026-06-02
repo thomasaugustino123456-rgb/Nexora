@@ -175,10 +175,10 @@ function BookIllustration({ bookId }: { bookId: string }) {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,255,255,0.2),transparent_70%)]" />
           
           {/* Heart symbols glowing */}
-          <motion.div animate={{ scale: [1, 1.25, 1], opacity: [0.4, 0.8, 0.4] }} transition={{ repeat: Infinity, duration: 3.5 }} className="absolute top-8 left-12 text-white/40">
+          <motion.div animate={{ scale: [1, 1.25, 1], opacity: [0.4, 0.8, 0.4] }} transition={{ type: "tween", repeat: Infinity, duration: 3.5 }} className="absolute top-8 left-12 text-white/40">
             <Heart size={20} fill="currentColor" />
           </motion.div>
-          <motion.div animate={{ scale: [1.2, 0.9, 1.2], opacity: [0.3, 0.6, 0.3] }} transition={{ repeat: Infinity, duration: 4, delay: 1 }} className="absolute bottom-8 right-12 text-white/30">
+          <motion.div animate={{ scale: [1.2, 0.9, 1.2], opacity: [0.3, 0.6, 0.3] }} transition={{ type: "tween", repeat: Infinity, duration: 4, delay: 1 }} className="absolute bottom-8 right-12 text-white/30">
             <Heart size={16} fill="currentColor" />
           </motion.div>
 
@@ -688,7 +688,7 @@ function BookIllustration({ bookId }: { bookId: string }) {
               <path d="M 30,42 Q 32,45 34,42" fill="#EF4444" />
               <motion.path 
                 animate={{ scale: [1, 1.25, 1] }}
-                transition={{ repeat: Infinity, duration: 1.5 }}
+                transition={{ type: "tween", repeat: Infinity, duration: 1.5 }}
                 d="M 52,20 C 50,16 56,12 56,18 L 52,20" fill="#EF4444" 
               />
             </g>

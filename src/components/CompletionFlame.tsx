@@ -116,7 +116,10 @@ export function CompletionFlame({
                 scale: isBouncing ? [1, 1.25, 1] : 1,
                 y: 0,
               }}
-              transition={{ type: "spring", damping: 10, stiffness: 200 }}
+              transition={{
+                y: { type: "spring", damping: 10, stiffness: 200 },
+                scale: { type: "tween", duration: 0.6, ease: "easeOut" }
+              }}
               className="relative w-64 h-64 mb-6 flex items-center justify-center"
             >
               <svg
@@ -149,6 +152,7 @@ export function CompletionFlame({
                       : {}
                   }
                   transition={{
+                    type: "tween",
                     duration: 0.7,
                     repeat: Infinity,
                     ease: "easeInOut",
@@ -167,6 +171,7 @@ export function CompletionFlame({
                       : {}
                   }
                   transition={{
+                    type: "tween",
                     duration: 0.9,
                     repeat: Infinity,
                     ease: "easeInOut",

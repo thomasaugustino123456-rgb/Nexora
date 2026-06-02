@@ -81,7 +81,7 @@ service cloud.firestore {
              (!('savedChallengeIds' in data) || (data.savedChallengeIds is list && data.savedChallengeIds.size() <= 100)) &&
              (!('fcmToken' in data) || (data.fcmToken is string && data.fcmToken.size() <= 500)) &&
              (!('stats' in data) || data.stats is map) &&
-             (!('league' in data) || (data.league is string && data.league in ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'])) &&
+             (!('league' in data) || (data.league is string && data.league in ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Champion', 'Divine', 'Nexus'])) &&
              (!('isPro' in data) || data.isPro is bool) &&
              (!('proTestActive' in data) || data.proTestActive is bool) &&
              (!('proTestStartedAt' in data) || (data.proTestStartedAt is string || data.proTestStartedAt == null)) &&
@@ -166,8 +166,10 @@ service cloud.firestore {
              (!('streak' in data) || (data.streak is number && data.streak >= 0)) &&
              (!('totalPoints' in data) || (data.totalPoints is number && data.totalPoints >= 0 && data.totalPoints < 1000000)) &&
              (!('weeklyPoints' in data) || (data.weeklyPoints is number && data.weeklyPoints >= 0)) &&
+             (!('weeklyXP' in data) || (data.weeklyXP is number && data.weeklyXP >= 0)) &&
+             (!('xp' in data) || (data.xp is number && data.xp >= 0)) &&
              (!('level' in data) || (data.level is number && data.level >= 1)) &&
-             (!('league' in data) || (data.league is string && data.league in ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond']));
+             (!('league' in data) || (data.league is string && data.league in ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Champion', 'Divine', 'Nexus']));
     }
 
     function isValidLeaderboardEntryCreate(data) {
@@ -195,7 +197,8 @@ service cloud.firestore {
              data.challenges is list && data.challenges.size() > 0 && data.challenges.size() <= 20 &&
              data.days is list && data.days.size() > 0 && data.days.size() <= 7 &&
              data.createdAt is string && data.createdAt.size() <= 40 &&
-             (!('reminderTime' in data) || (data.reminderTime is string && data.reminderTime.size() <= 10)) &&
+             (!('reminderTime' in data) || (data.reminderTime is string && data.reminderTime.size() <= 10) || data.reminderTime == null) &&
+             (!('reminderTime2' in data) || (data.reminderTime2 is string && data.reminderTime2.size() <= 10) || data.reminderTime2 == null) &&
              (!('icon' in data) || (data.icon is string && data.icon.size() <= 50)) &&
              (!('color' in data) || (data.color is string && data.color.size() <= 50));
     }
@@ -313,6 +316,10 @@ service cloud.firestore {
       }
 
       match /settings/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /custom_progress/{docId} {
         allow read, write: if isOwner(userId);
       }
       
