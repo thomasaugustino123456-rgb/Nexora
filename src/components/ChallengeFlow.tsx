@@ -115,8 +115,22 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   };
 
   return (
-    <div className="fixed inset-0 challenge-flow-bg z-[100] flex flex-col items-center overflow-y-auto">
-      <div className="w-full max-w-4xl flex flex-col min-h-screen">
+    <div className="fixed inset-0 challenge-flow-bg z-[100] flex flex-col items-center overflow-y-auto relative">
+      {step === 'water' && (
+        <ScreenWater 
+          progress={Math.min(
+            sessionWaterCount / (
+              settings.commitmentLevel === 'casual' 
+                ? Math.max(4, Math.floor((settings.waterGoal || 8) * 0.5)) 
+                : settings.commitmentLevel === 'intense' 
+                  ? Math.floor((settings.waterGoal || 8) * 1.5) 
+                  : (settings.waterGoal || 8)
+            ), 
+            1
+          )} 
+        />
+      )}
+      <div className="w-full max-w-4xl flex flex-col min-h-screen relative z-10">
         <header className="p-6 flex items-center justify-between">
           <button onClick={handleBackClick} className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors">
             <ChevronRight className="rotate-180" size={28} />
@@ -403,9 +417,6 @@ export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUp
     <div 
       className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full animate-in fade-in zoom-in duration-500 relative z-10"
     >
-      {/* Full screen interactive rising water and mascot */}
-      <ScreenWater progress={Math.min(localProgress / goal, 1)} />
-
       <div className="w-full max-w-[300px] lg:max-w-[400px] relative z-20">
         <WaterMascot progress={Math.min(localProgress / goal, 1)} className="drop-shadow-2xl" />
       </div>

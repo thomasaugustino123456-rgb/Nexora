@@ -327,7 +327,7 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
   const isVisible = true;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-10 select-none overflow-hidden">
+    <div className="absolute inset-0 pointer-events-none z-0 select-none overflow-hidden w-full h-full">
       <AnimatePresence>
         {isVisible && (
           <motion.div
