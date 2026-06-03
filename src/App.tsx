@@ -200,6 +200,7 @@ import { DeepChecklist } from "./components/DeepChecklist";
 import { CompletionFlame } from "./components/CompletionFlame";
 import { TrophyRewardsScreen } from "./components/TrophyRewardsScreen";
 import { AdminPanel } from "./components/AdminPanel";
+import { HydrationDetailPage } from "./components/HydrationDetailPage";
 
 const SOCIAL_LOCKED = false;
 
@@ -4051,6 +4052,7 @@ export default function App() {
             (activeScreen as string) !== "archives" &&
             (activeScreen as string) !== "leaderboard" &&
             (activeScreen as string) !== "admin" &&
+            (activeScreen as string) !== "hydration-detail" &&
             !showArchitectLab && (
               <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl">
                 <div className="flex items-center gap-4">
@@ -5214,6 +5216,27 @@ export default function App() {
                 </motion.div>
               )}
 
+              {activeScreen === "hydration-detail" && (
+                <motion.div
+                  key="hydration-detail"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="w-full h-full"
+                >
+                  <HydrationDetailPage
+                    stats={stats}
+                    setStats={setStats}
+                    dailyProgress={dailyProgress}
+                    setDailyProgress={setDailyProgress}
+                    onBack={() => setActiveScreen("progress")}
+                    play={play}
+                    showToast={showToast}
+                    settings={settings}
+                  />
+                </motion.div>
+              )}
+
               {activeScreen === "admin" && isDataReady && user && (
                 <motion.div
                   key="admin"
@@ -5331,6 +5354,7 @@ export default function App() {
             (activeScreen as string) !== "archives" &&
             (activeScreen as string) !== "leaderboard" &&
             (activeScreen as string) !== "admin" &&
+            (activeScreen as string) !== "hydration-detail" &&
             !showArchitectLab && (
               <motion.div
                 initial={false}

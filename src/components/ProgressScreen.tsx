@@ -159,268 +159,96 @@ export function ProgressScreen({
       {/* Hydration Analytics Box Card */}
       <motion.div
         variants={item}
-        className="bg-white border border-[#E9E4D4] rounded-[2rem] shadow-sm relative overflow-hidden transition-all duration-300"
+        onClick={() => {
+          if (play) play("click");
+          onScreenChange('hydration-detail');
+        }}
+        className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 flex items-center justify-between group transition-all duration-300 hover:scale-[1.01] active:scale-98 cursor-pointer shadow-sm relative overflow-hidden"
       >
-        {/* Main Header / Collapsed view */}
-        <div 
-          onClick={() => {
-            if (play) play("click");
-            setIsHydrationExpanded(!isHydrationExpanded);
-          }}
-          className="p-6 flex items-center justify-between cursor-pointer hover:bg-stone-50/40 select-none"
-        >
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#69C496]">Hydration Suite</span>
-              <span className="bg-sky-50 text-sky-500 font-extrabold text-[8px] px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
-                Interactive Logs
-              </span>
-            </div>
-            <h3 className="text-xl font-black text-[#4F3F34] mt-1 flex items-center gap-2">
-              Hydration Analytics
-              {isHydrationExpanded ? <ChevronUp size={16} className="text-[#4F3F34]/50" /> : <ChevronDown size={16} className="text-[#4F3F34]/50" />}
-            </h3>
-            <p className="text-xs font-semibold text-[#4F3F34]/60 uppercase">
-              Today: <span className="text-sky-500 font-black">{(dailyProgress?.waterDrank || 0).toFixed(1)}</span> of <span className="text-[#4F3F34] font-black">{waterGoal.toFixed(1)}</span> Cups
-            </p>
+        <div className="space-y-1 z-10">
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#69C496]">Hydration Suite</span>
+            <span className="bg-sky-50 text-sky-500 font-extrabold text-[8px] px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
+              Interactive Arena
+            </span>
           </div>
+          <h3 className="text-xl font-black text-[#4F3F34] mt-1 flex items-center gap-1.5">
+            Hydration Analytics
+          </h3>
+          <p className="text-xs font-semibold text-[#4F3F34]/70 uppercase tracking-widest">
+            Challenge Streak: <span className="text-sky-500 font-black">{parseInt(localStorage.getItem('hydration_consecutive_days') || '0', 10)}</span> Days
+          </p>
+          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+            Bottle Water Level: <span className="text-[#4F3F34]">{(parseFloat(localStorage.getItem('hydration_water_level') || '0.0') * 100).toFixed(0)}%</span>
+          </p>
+        </div>
 
-          {/* Looping liquid progress ring */}
-          <div className="relative w-16 h-16 flex items-center justify-center bg-sky-50/50 rounded-2xl p-1 shrink-0">
-            <svg width="48" height="48" viewBox="0 0 64 64" className="overflow-visible">
+        {/* Counter and Small Beautiful Water Bottle */}
+        <div className="flex items-center gap-4 shrink-0 z-10">
+          <div className="text-right flex flex-col justify-center">
+            <div className="text-[9px] font-black text-[#69C496] uppercase tracking-wider">STREAK</div>
+            <div className="text-2xl font-black text-[#4F3F34] leading-none">
+              {parseInt(localStorage.getItem('hydration_consecutive_days') || '0', 10)}
+            </div>
+            <div className="text-[8px] font-bold text-stone-400 uppercase tracking-widest">DAYS</div>
+          </div>
+          
+          {/* Small Beautiful Water Bottle */}
+          <div className="relative w-12 h-20 flex items-center justify-center bg-sky-50/50 rounded-2xl p-1.5 border border-sky-100/50 overflow-hidden">
+            <svg width="28" height="56" viewBox="0 0 100 200" className="overflow-visible">
               <defs>
-                <clipPath id="droplet-mask-progress">
-                  <path d="M 32,8 C 32,8 14,28 14,38 A 18,18 0 0,0 50,38 C 50,28 32,8 32,8 Z" />
+                <clipPath id="bottle-shape-progress">
+                  <path d="M 38,10 Q 50,8 62,10 L 62,35 C 72,40 82,50 82,65 L 82,185 Q 82,195 72,195 L 28,195 Q 18,195 18,185 L 18,65 C 18,50 28,40 38,35 Z" />
                 </clipPath>
               </defs>
-              
-              {/* Outer Progress track */}
-              <circle cx="32" cy="32" r="28" fill="none" stroke="#E0F2FE" strokeWidth="4.5" />
-              <circle 
-                cx="32" 
-                cy="32" 
-                r="28" 
-                fill="none" 
-                stroke="#0EA5E9" 
-                strokeWidth="4.5" 
-                strokeDasharray={2 * Math.PI * 28}
-                strokeDashoffset={2 * Math.PI * 28 * (1 - Math.min(1, (dailyProgress?.waterDrank || 0) / waterGoal))}
-                strokeLinecap="round"
-                transform="rotate(-90 32 32)"
-                className="transition-all duration-300"
+
+              {/* Bottle Outline */}
+              <path 
+                d="M 38,10 Q 50,8 62,10 L 62,35 C 72,40 82,50 82,65 L 82,185 Q 82,195 72,195 L 28,195 Q 18,195 18,185 L 18,65 C 18,50 28,40 38,35 Z" 
+                fill="#F0F9FF" 
+                stroke="#0E5A8E" 
+                strokeWidth="7" 
+                strokeLinejoin="round" 
               />
-              
-              {/* Liquid wave inside the drop */}
-              <g clipPath="url(#droplet-mask-progress)">
-                <path d="M 32,8 C 32,8 14,28 14,38 A 18,18 0 0,0 50,38 C 50,28 32,8 32,8 Z" fill="#BAE6FD" />
+
+              {/* Clipped liquid body inside the bottle */}
+              <g clipPath="url(#bottle-shape-progress)">
+                <rect x="0" y="0" width="100" height="200" fill="#BAE6FD" opacity="0.32" />
                 
-                {/* Animated wave */}
-                <path 
-                  d={`M -20,${44 - Math.min(1, (dailyProgress?.waterDrank || 0) / waterGoal) * 28} 
-                     q 10,${Math.sin((waveOffset * Math.PI) / 180) * 3} 20,0 
-                     t 20,0 20,0 20,0 20,0
-                     L 60,60 L -20,60 Z`} 
+                {/* Waving rising water */}
+                {/* Math scale Y goes from bottom of bottle (195) to neck (55) */}
+                <rect 
+                  x="0" 
+                  y={195 - (parseFloat(localStorage.getItem('hydration_water_level') || '0.0') * 140)} 
+                  width="100" 
+                  height="200" 
                   fill="#0EA5E9" 
+                  className="transition-all duration-300"
                 />
+
+                {/* Wave surface motion */}
                 <path 
-                  d={`M -20,${46 - Math.min(1, (dailyProgress?.waterDrank || 0) / waterGoal) * 28} 
-                     q 10,${Math.cos((waveOffset * Math.PI) / 180) * 3} 20,0 
-                     t 20,0 20,0 20,0 20,0
-                     L 60,60 L -20,60 Z`} 
+                  d={`M -20,${195 - (parseFloat(localStorage.getItem('hydration_water_level') || '0.0') * 140)} 
+                     q 15,${Math.sin((waveOffset * Math.PI) / 180) * 4} 30,0 
+                     t 30,0 30,0 30,0 30,0
+                     L 120,200 L -20,200 Z`} 
                   fill="#38BDF8" 
-                  opacity="0.6"
+                  opacity="0.9"
                 />
               </g>
-              
-              {/* Dark droplet stroke outline */}
-              <path d="M 32,8 C 32,8 14,28 14,38 A 18,18 0 0,0 50,38 C 50,28 32,8 32,8 Z" fill="none" stroke="#0E5A8E" strokeWidth="2.5" />
+
+              {/* Highlight glass glare reflex */}
+              <path 
+                d="M 28,70 L 28,175" 
+                fill="none" 
+                stroke="#FFFFFF" 
+                strokeWidth="4" 
+                strokeLinecap="round" 
+                opacity="0.45" 
+              />
             </svg>
           </div>
         </div>
-
-        {/* Expandable Interactive Console Deck */}
-        <AnimatePresence>
-          {isHydrationExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.35, ease: "easeInOut" }}
-              className="border-t border-[#E9E4D4]/60 bg-[#FCFAF6]/40 overflow-hidden"
-            >
-              <div className="p-6 space-y-6">
-                
-                {/* Dynamic Metrics Row */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-4 bg-white border border-[#E9E4D4] rounded-2.5xl flex flex-col justify-center">
-                    <span className="text-[8px] font-black tracking-widest text-[#69C496] uppercase">LIFETIME REWARD</span>
-                    <span className="text-xl font-black text-[#4F3F34] mt-1">
-                      {stats.lifetimeWaterCompletions || 0} Completions
-                    </span>
-                    <span className="text-[9px] text-[#4F3F34]/50 font-bold uppercase mt-1">Long-term Improvements</span>
-                  </div>
-
-                  <div className="p-4 bg-white border border-[#E9E4D4] rounded-2.5xl flex flex-col justify-center">
-                    <span className="text-[8px] font-black tracking-widest text-sky-500 uppercase">CAPACITY YIELD</span>
-                    <span className="text-xl font-black text-[#4F3F34] mt-1">
-                      {(((dailyProgress?.waterDrank || 0) / waterGoal) * 100).toFixed(0)}% Utilized
-                    </span>
-                    <span className="text-[9px] text-[#4F3F34]/50 font-bold uppercase mt-1">Daily Target Status</span>
-                  </div>
-                </div>
-
-                {/* Logging scale buttons segment */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center px-1">
-                    <span className="text-[10px] font-black text-[#4F3F34]/70 uppercase tracking-widest">Select Quantity</span>
-                    <span className="text-[10px] font-black text-[#69C496] uppercase tracking-widest">Interactive Log</span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { label: '0.5 Cup', val: 0.5 },
-                      { label: '1.0 Cup', val: 1.0 },
-                      { label: '2.0 Cups', val: 2.0 },
-                    ].map((opt) => (
-                      <button
-                        key={opt.val}
-                        type="button"
-                        onClick={() => {
-                          setSelectedQuantity(opt.val);
-                          if (play) play("click");
-                        }}
-                        className={`py-2.5 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
-                          selectedQuantity === opt.val
-                            ? 'bg-sky-50 border-sky-400 text-sky-600 font-extrabold scale-[1.03] shadow-sm'
-                            : 'bg-white border-[#E9E4D4] hover:bg-stone-50'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Immediate Addition Trigger Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (play) play("pop");
-                      const q = selectedQuantity;
-                      const nextDrank = Math.min(waterGoal, (dailyProgress?.waterDrank || 0) + q);
-                      const now = new Date();
-                      const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                      const newLog = {
-                        id: Math.random().toString(36).substring(2, 9),
-                        time: formattedTime,
-                        amount: q
-                      };
-
-                      const currentLogs = dailyProgress?.waterLogs || [];
-                      const nextLogs = [newLog, ...currentLogs];
-
-                      if (nextDrank >= waterGoal) {
-                        if (play) play("success");
-                        setDailyProgress((prev) => ({
-                          ...prev,
-                          waterDrank: 0,
-                          waterLogs: []
-                        }));
-                        setStats((prev) => ({
-                          ...prev,
-                          lifetimeWaterCompletions: (prev.lifetimeWaterCompletions || 0) + 1,
-                          coins: (prev.coins || 0) + 10
-                        }));
-                        if (showToast) showToast("⭐ BOTTLE FULL! 100% capacity accomplished! +10 Coins added back to Shop Wallet! 🪙", "success");
-                      } else {
-                        setDailyProgress((prev) => ({
-                          ...prev,
-                          waterDrank: nextDrank,
-                          waterLogs: nextLogs
-                        }));
-                        if (showToast) showToast(`Logged +${q.toFixed(1)} Cup! (${nextDrank.toFixed(1)} / ${waterGoal.toFixed(1)}) 💧`, "info");
-                      }
-                    }}
-                    className="w-full bg-sky-500 hover:bg-sky-600 active:scale-[0.99] text-white py-3.5 px-6 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-md shadow-sky-500/10 transition-all cursor-pointer"
-                  >
-                    <Plus size={14} />
-                    <span>Log +{selectedQuantity.toFixed(1)} Cup</span>
-                  </button>
-                </div>
-
-                {/* Today's Activities Feed */}
-                <div className="space-y-2.5">
-                  <div className="flex justify-between items-center px-1">
-                    <span className="text-[10px] font-black text-[#4F3F34]/70 uppercase tracking-widest">Today's Activity Stream</span>
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Live Logs</span>
-                  </div>
-
-                  <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1 no-scrollbar">
-                    {!dailyProgress?.waterLogs || dailyProgress.waterLogs.length === 0 ? (
-                      <div className="text-center py-5 text-stone-400 font-bold uppercase italic text-[10px]">
-                        No hydration logs collected today
-                      </div>
-                    ) : (
-                      dailyProgress.waterLogs.map((log) => (
-                        <div key={log.id} className="flex items-center justify-between p-2.5 bg-white border border-[#E9E4D4] rounded-xl">
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-sm">💧</span>
-                            <div>
-                              <p className="text-xs font-black text-[#4F3F34]">+{log.amount.toFixed(1)} Cup logged</p>
-                              <p className="text-[9px] font-semibold text-gray-400">{log.time}</p>
-                            </div>
-                          </div>
-                          
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (play) play("pop");
-                              const updatedLogs = (dailyProgress.waterLogs || []).filter(l => l.id !== log.id);
-                              const updatedDrank = Math.max(0, (dailyProgress.waterDrank || 0) * 10 - log.amount * 10) / 10;
-                              setDailyProgress((prev) => ({
-                                ...prev,
-                                waterDrank: updatedDrank,
-                                waterLogs: updatedLogs
-                              }));
-                              if (showToast) showToast("Log entry deleted.", "info");
-                            }}
-                            className="p-1 px-2.5 text-[8px] font-black text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors uppercase tracking-wider"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Advanced Quick Reset Trigger */}
-                <div className="flex justify-between items-center pt-2 border-t border-[#E9E4D4]/50">
-                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">Hydration IQ Synchronizer</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm("Drain today's water counts to 0%? Cumulative lifetime completions are not affected.")) {
-                        setDailyProgress((prev) => ({
-                          ...prev,
-                          waterDrank: 0,
-                          waterLogs: []
-                        }));
-                        if (play) play("click");
-                        if (showToast) showToast("Water stats drained back to 0% 💧", "info");
-                      }
-                    }}
-                    className="flex items-center gap-1.5 text-[9px] font-black text-red-400 bg-red-50 hover:bg-red-100/60 px-2.5 py-1.5 rounded-lg uppercase tracking-wider transition-colors cursor-pointer"
-                  >
-                    <RotateCcw size={10} />
-                    <span>Reset Daily</span>
-                  </button>
-                </div>
-
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
 
       {/* Category Breakdown */}

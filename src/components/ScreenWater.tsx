@@ -39,25 +39,18 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
   // When progress = 1: currentY is 80 (fully filling the screen)
   const currentY = 1000 - (progress * 920);
 
-  // Initialize 10 cartoon ice cubes distributed across 3 depth levels as requested:
-  // - 3 in 'top' layer (surface floater bobs, partially submerged)
-  // - 3 in 'middle' layer (neutrals, suspended/drifting mid-water)
-  // - 4 in 'bottom' layer (heavy sinkers sliding on screen floor)
+  // Initialize 5 cartoon ice cubes distributed across 3 depth levels as requested:
+  // Clustered around the center (400-600) to move freely and stack nicely
   const [iceCubes, setIceCubes] = useState<CartoonIceCube[]>(() => {
     const layers: { layer: 'top' | 'middle' | 'bottom'; homeX: number; size: number }[] = [
-      // Top floaters (evenly spaced near the surface)
-      { layer: 'top', homeX: 200, size: 70 },
-      { layer: 'top', homeX: 500, size: 85 },
-      { layer: 'top', homeX: 800, size: 75 },
+      // Top floaters
+      { layer: 'top', homeX: 450, size: 68 },
+      { layer: 'top', homeX: 540, size: 72 },
       // Mid drifters (suspended inside water depth)
-      { layer: 'middle', homeX: 180, size: 65 },
-      { layer: 'middle', homeX: 520, size: 75 },
-      { layer: 'middle', homeX: 820, size: 68 },
+      { layer: 'middle', homeX: 420, size: 62 },
+      { layer: 'middle', homeX: 560, size: 65 },
       // Bottom sinkers (heavy glass slide/clatter on screen bottom floor)
-      { layer: 'bottom', homeX: 150, size: 80 },
-      { layer: 'bottom', homeX: 380, size: 70 },
-      { layer: 'bottom', homeX: 620, size: 85 },
-      { layer: 'bottom', homeX: 850, size: 75 }
+      { layer: 'bottom', homeX: 490, size: 78 }
     ];
 
     return layers.map((item, idx) => ({
@@ -67,11 +60,11 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
       x: item.homeX,
       vx: 0,
       size: item.size,
-      baseRotation: (Math.random() - 0.5) * 50,
-      rot: (Math.random() - 0.5) * 30,
+      baseRotation: (Math.random() - 0.5) * 40,
+      rot: (Math.random() - 0.5) * 20,
       vrot: 0,
       floatPhase: Math.random() * Math.PI * 2,
-      floatSpeed: 0.02 + Math.random() * 0.02,
+      floatSpeed: 0.015 + Math.random() * 0.015,
     }));
   });
 
@@ -82,8 +75,8 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (!active) return;
       if (e.gamma !== null) {
-        // gamma holds left-to-right tilt in degrees [-90, 90]
-        const clamped = Math.max(-28, Math.min(28, e.gamma));
+        // Subtle tilt clamp - max 5 degrees left/right
+        const clamped = Math.max(-5, Math.min(5, e.gamma));
         setTilt(clamped);
       }
     };
@@ -92,7 +85,7 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
       if (!active) return;
       // desktop cursor fallback translates coordinate ratio beautifully
       const ratio = (e.clientX / window.innerWidth) - 0.5; // [-0.5, 0.5]
-      setTilt(ratio * 35); // tilt by up to [-17.5, 17.5] degrees
+      setTilt(ratio * 9); // tilt by up to [-4.5, 4.5] degrees
     };
 
     window.addEventListener('deviceorientation', handleOrientation);
@@ -121,7 +114,7 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
       // 2. Smoothly interpolate physical tilt values using Spring Inertia (avoids quick shifts/paper feel)
       setSmoothTilt(prev => {
         const diff = tilt - prev;
-        return prev + diff * 0.12; // High inertia drag lag
+        return prev + diff * 0.025; // Massive liquid inertia for hyper-smooth slosh
       });
 
       // 3. Solve 3-layer Ice Cube sliding physics, collisions, and screen-edge constraint formulas
