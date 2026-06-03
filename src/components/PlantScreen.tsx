@@ -143,19 +143,33 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
 
   useEffect(() => {
     if (onboardingCompleted && stats) {
-      const userLevel = stats.level || Math.floor((stats.xp || 0) / 1000) + 1;
-      const maxUnlockedIdx = Math.min(ECOSYSTEM_PATH.length - 1, Math.floor(userLevel / 5));
-      
-      const currentUnlocked = plantState?.unlockedTypes || ['sprout'];
+      const currentUnlocked = plantState?.unlockedTypes || (['sprout'] as PlantType[]);
       let needsUpdate = false;
-      const newUnlocked = [...currentUnlocked];
-      
-      for (let i = 0; i <= maxUnlockedIdx; i++) {
-        const typeToUnlock = ECOSYSTEM_PATH[i];
-        if (!newUnlocked.includes(typeToUnlock)) {
-          newUnlocked.push(typeToUnlock);
-          needsUpdate = true;
+      const newUnlocked: PlantType[] = ['sprout'];
+
+      // Dynamically calculate which plants are unlocked based on previous completion stages
+      for (let i = 0; i < ECOSYSTEM_PATH.length - 1; i++) {
+        const currentType = ECOSYSTEM_PATH[i];
+        const progress = settings.plantsProgress?.[currentType];
+        if (progress && progress.stage >= 5) {
+          const nextType = ECOSYSTEM_PATH[i + 1];
+          if (!newUnlocked.includes(nextType)) {
+            newUnlocked.push(nextType);
+          }
+        } else {
+          break;
         }
+      }
+
+      // Merge with already unlocked types to avoid any data loss
+      currentUnlocked.forEach(type => {
+        if (!newUnlocked.includes(type)) {
+          newUnlocked.push(type);
+        }
+      });
+
+      if (newUnlocked.length !== currentUnlocked.length || !newUnlocked.every((v, i) => v === currentUnlocked[i])) {
+        needsUpdate = true;
       }
       
       if (needsUpdate) {
@@ -167,7 +181,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
         });
       }
     }
-  }, [stats?.level, stats?.xp, onboardingCompleted, plantState?.unlockedTypes?.length]);
+  }, [onboardingCompleted, plantState?.unlockedTypes?.length, settings.plantsProgress]);
 
   const handleNext = () => {
     vibrate(10);

@@ -1360,18 +1360,680 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
     );
   };
 
+  const renderSlimeBerry = () => {
+    return (
+      <g>
+        {/* Pot */}
+        {renderPotWrapper(
+          <g>
+            <path d="M 60,140 Q 60,185 75,195 L 125,195 Q 140,185 140,140 Z" fill="#334155" stroke="black" strokeWidth="5" />
+            <path d="M 50,135 Q 50,125 100,125 Q 150,125 150,135 Q 150,145 100,145 Q 50,145 50,135" fill="#475569" stroke="black" strokeWidth="3" />
+            <ellipse cx="100" cy="135" rx="40" ry="8" fill="#1e293b" />
+          </g>
+        )}
+        {!isDead && (
+          <g>
+            {/* Glowing Slime Stem */}
+            {stage >= 1 && (
+              <motion.path
+                d="M 100,135 Q 90,110 110,85 T 100,50"
+                stroke={colors.primary}
+                strokeWidth={5 + stage}
+                strokeLinecap="round"
+                fill="none"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+              />
+            )}
+            {/* Swirling Slime Leaves */}
+            {stage >= 2 && (
+              <motion.g initial={{ scale: 0 }} animate={{ scale: 1 }} transform="translate(100, 105)">
+                <circle cx="-15" cy="-5" r="10" fill={colors.accent} opacity="0.8" />
+                <path d="M 0,0 C -5,-15 -20,-15 -15,-5 Z" fill={colors.primary} stroke="black" strokeWidth="2" />
+              </motion.g>
+            )}
+            {stage >= 3 && (
+              <motion.g initial={{ scale: 0 }} animate={{ scale: 1 }} transform="translate(100, 85)">
+                <circle cx="15" cy="-5" r="12" fill={colors.accent} opacity="0.8" />
+                <path d="M 0,0 C 5,-15 20,-15 15,-5 Z" fill={colors.primary} stroke="black" strokeWidth="2" />
+              </motion.g>
+            )}
+            {/* Giant Squishy Slimeberry Character on Top! */}
+            {stage >= 4 && (
+              <motion.g
+                initial={{ scale: 0, y: 15 }}
+                animate={{ scale: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                transform="translate(100, 50)"
+              >
+                {/* Slime Berry Main Sphere */}
+                <ellipse cx="0" cy="-10" rx="22" ry="18" fill="url(#slimeGrad)" stroke="black" strokeWidth="3" />
+                {/* Face feature */}
+                <circle cx="-8" cy="-12" r="2.5" fill="black" />
+                <circle cx="8" cy="-12" r="2.5" fill="black" />
+                <circle cx="-9" cy="-14" r="1" fill="white" />
+                <circle cx="7" cy="-14" r="1" fill="white" />
+                <path d="M -4,-6 Q 0,-2 4,-6" fill="none" stroke="black" strokeWidth="2.5" strokeLinecap="round" />
+                {/* Blushing */}
+                <ellipse cx="-13" cy="-8" rx="3.5" ry="1.5" fill="#f43f5e" opacity="0.4" />
+                <ellipse cx="13" cy="-8" rx="3.5" ry="1.5" fill="#f43f5e" opacity="0.4" />
+                
+                {stage >= 5 && (
+                  <motion.path
+                    d="M 0,-28 L -5,-35 L 0,-42 L 5,-35 Z"
+                    fill="#fbbf24"
+                    stroke="#d97706"
+                    strokeWidth="1.5"
+                    animate={{ y: [-2, 2, -2] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                  />
+                )}
+              </motion.g>
+            )}
+            <defs>
+              <radialGradient id="slimeGrad" cx="50%" cy="40%" r="50%">
+                <stop offset="0%" stopColor={colors.accent} />
+                <stop offset="100%" stopColor={colors.secondary} />
+              </radialGradient>
+            </defs>
+          </g>
+        )}
+      </g>
+    );
+  };
+
+  const renderSolarFlarePea = () => {
+    return (
+      <g>
+        {/* Pot */}
+        {renderPotWrapper(
+          <g>
+            <path d="M 65,140 L 75,195 L 125,195 L 135,140 Z" fill="#2d0f02" stroke="black" strokeWidth="5" />
+            <rect x="50" y="130" width="100" height="12" rx="4" fill="#3c1401" stroke="black" strokeWidth="3" />
+            <ellipse cx="100" cy="135" rx="35" ry="6" fill="#120400" />
+          </g>
+        )}
+        {!isDead && (
+          <g>
+            {/* Fiery Solar Vines */}
+            {stage >= 1 && (
+              <motion.path
+                d="M 100,135 C 120,110 80,85 100,45"
+                stroke={colors.primary}
+                strokeWidth={6}
+                strokeLinecap="round"
+                fill="none"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+              />
+            )}
+            {/* Flame-like leaves */}
+            {stage >= 2 && (
+              <g transform="translate(100, 100)">
+                <path d="M 0,0 Q -25,-10 -20,-25 Q -10,-15 0,0" fill={colors.secondary} stroke="black" strokeWidth="2" />
+              </g>
+            )}
+            {stage >= 3 && (
+              <g transform="translate(100, 75)">
+                <path d="M 0,0 Q 25,-10 20,-25 Q 10,-15 0,0" fill={colors.primary} stroke="black" strokeWidth="2" />
+              </g>
+            )}
+            {/* Lava Flare Pea Pod */}
+            {stage >= 4 && (
+              <motion.g
+                initial={{ scale: 0, rotate: -45 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring" }}
+                transform="translate(100, 45)"
+              >
+                {/* Outer Pod */}
+                <path d="M -15,-5 C -40,-35 40,-35 15,-5 C 5,5 -5,5 -15,-5 Z" fill={colors.secondary} stroke="black" strokeWidth="2.5" />
+                {/* Golden glowing peas inside */}
+                <circle cx="-8" cy="-14" r="7.5" fill={colors.accent} stroke="black" strokeWidth="1.5" />
+                <circle cx="8" cy="-14" r="7.5" fill={colors.accent} stroke="black" strokeWidth="1.5" />
+                {stage >= 5 && (
+                  <motion.g animate={{ opacity: [0.3, 1, 0.3], scale: [0.95, 1.05, 0.95] }} transition={{ repeat: Infinity, duration: 1.8 }}>
+                    <circle cx="0" cy="-14" r="28" fill="none" stroke={colors.accent} strokeWidth="2.5" strokeDasharray="4 6" />
+                  </motion.g>
+                )}
+              </motion.g>
+            )}
+          </g>
+        )}
+      </g>
+    );
+  };
+
+  const renderMoonSprout = () => {
+    return (
+      <g>
+        {/* Pot */}
+        {renderPotWrapper(
+          <g>
+            <rect x="55" y="140" width="90" height="55" rx="10" fill="#1e1e38" stroke="black" strokeWidth="5" />
+            <ellipse cx="100" cy="140" rx="45" ry="8" fill="#111126" stroke="black" strokeWidth="3" />
+          </g>
+        )}
+        {!isDead && (
+          <g>
+            {/* Cosmic Stem */}
+            {stage >= 1 && (
+              <motion.path
+                d="M 100,135 Q 115,100 90,70 T 100,35"
+                stroke={colors.primary}
+                strokeWidth={5}
+                strokeLinecap="round"
+                fill="none"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+              />
+            )}
+            {/* Crescent Moon Leaves */}
+            {stage >= 2 && (
+              <g transform="translate(90, 95) rotate(-35)">
+                <path d="M 0,-15 A 15,15 0 0,0 0,15 A 10,12 0 0,1 0,-15" fill={colors.accent} stroke="black" strokeWidth="1.5" />
+              </g>
+            )}
+            {stage >= 3 && (
+              <g transform="translate(110, 75) rotate(35)">
+                <path d="M 0,-15 A 15,15 0 0,1 0,15 A 10,12 0 0,0 0,-15" fill={colors.primary} stroke="black" strokeWidth="1.5" />
+              </g>
+            )}
+            {/* Magical Glowing Moon on Top */}
+            {stage >= 4 && (
+              <motion.g
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transform="translate(100, 35)"
+              >
+                <circle cx="0" cy="-12" r="20" fill="url(#moonGrad)" stroke="black" strokeWidth="2.5" />
+                {/* Crates and texture details */}
+                <circle cx="-6" cy="-18" r="4.5" fill={colors.primary} opacity="0.3" />
+                <circle cx="8" cy="-8" r="3" fill={colors.primary} opacity="0.3" />
+                <circle cx="-5" cy="-4" r="3.5" fill={colors.primary} opacity="0.3" />
+                
+                {stage >= 5 && (
+                  <motion.g animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.4, 0.1] }} transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}>
+                    <circle cx="0" cy="-12" r="35" fill={colors.accent} opacity="0.15" />
+                  </motion.g>
+                )}
+              </motion.g>
+            )}
+            <defs>
+              <radialGradient id="moonGrad" cx="30%" cy="30%" r="70%">
+                <stop offset="0%" stopColor="#ffffff" />
+                <stop offset="50%" stopColor={colors.accent} />
+                <stop offset="100%" stopColor={colors.secondary} />
+              </radialGradient>
+            </defs>
+          </g>
+        )}
+      </g>
+    );
+  };
+
+  const renderStarSilkLeaf = () => {
+    return (
+      <g>
+        {/* Pot */}
+        {renderPotWrapper(
+          <g>
+            <path d="M 52,142 C 55,190 70,195 100,195 C 130,195 145,190 148,142 Z" fill="#311042" stroke="black" strokeWidth="5" />
+            <ellipse cx="100" cy="142" rx="48" ry="10" fill="#1c0528" stroke="black" strokeWidth="3" />
+          </g>
+        )}
+        {!isDead && (
+          <g>
+            {/* Streaming Star Grass Vines */}
+            {stage >= 1 && (
+              <g>
+                <motion.path d="M 100,140 Q 75,90 40,75" stroke={colors.primary} strokeWidth={4} strokeLinecap="round" fill="none" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />
+                <motion.path d="M 100,140 Q 125,90 160,75" stroke={colors.primary} strokeWidth={4} strokeLinecap="round" fill="none" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />
+              </g>
+            )}
+            {stage >= 2 && (
+              <g>
+                <motion.path d="M 100,140 Q 82,75 70,50" stroke={colors.secondary} strokeWidth={4} strokeLinecap="round" fill="none" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />
+                <motion.path d="M 100,140 Q 118,75 130,50" stroke={colors.secondary} strokeWidth={4} strokeLinecap="round" fill="none" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />
+              </g>
+            )}
+            {stage >= 3 && (
+              <motion.path d="M 100,140 Q 100,65 100,30" stroke={colors.accent} strokeWidth={5} strokeLinecap="round" fill="none" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />
+            )}
+            {/* Shimmering Stars on Leaf Tips */}
+            {stage >= 4 && (
+              <g>
+                <motion.polygon points="40,75 43,80 49,81 44,86 46,92 40,88 34,92 36,86 31,81 37,80" fill={colors.accent} stroke="black" strokeWidth="1" animate={{ scale: [0.8, 1.2, 0.8] }} transition={{ repeat: Infinity, duration: 2 }} />
+                <motion.polygon points="160,75 163,80 169,81 164,86 166,92 160,88 154,92 156,86 151,81 157,80" fill={colors.accent} stroke="black" strokeWidth="1" animate={{ scale: [1.2, 0.8, 1.2] }} transition={{ repeat: Infinity, duration: 2.2 }} />
+                
+                {stage >= 5 && (
+                  <motion.g transform="translate(100, 30)" animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 15, ease: "linear" }}>
+                    <polygon points="0,-18 5,-5 18,0 5,5 0,18 -5,5 -18,0 -5,-5" fill="#fef08a" stroke="black" strokeWidth="2.5" />
+                  </motion.g>
+                )}
+              </g>
+            )}
+          </g>
+        )}
+      </g>
+    );
+  };
+
+  const renderDreamShroom = () => {
+    return (
+      <g>
+        {/* Pot */}
+        {renderPotWrapper(
+          <g>
+            <path d="M 50,150 Q 80,205 100,205 Q 120,205 150,150 Z" fill="#1f2937" stroke="black" strokeWidth="5" />
+            <rect x="40" y="140" width="120" height="12" rx="6" fill="#374151" stroke="black" strokeWidth="3.5" />
+          </g>
+        )}
+        {!isDead && (
+          <g>
+            {/* Magic Mushroom Stem */}
+            {stage >= 1 && (
+              <motion.path
+                d="M 100,145 Q 98,110 100,80"
+                stroke="#ffedd5"
+                strokeWidth={14 + stage * 2}
+                strokeLinecap="round"
+                fill="none"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+              />
+            )}
+            {/* Mini sub-mushrooms */}
+            {stage >= 2 && (
+              <g transform="translate(85, 135) scale(0.65)">
+                <path d="M 0,0 L 0,-25" stroke="#ffedd5" strokeWidth="8" strokeLinecap="round" />
+                <path d="M -15,-20 Q 0,-38 15,-20 Z" fill={colors.primary} stroke="black" strokeWidth="2" />
+              </g>
+            )}
+            {stage >= 3 && (
+              <g transform="translate(115, 135) scale(0.55) rotate(15)">
+                <path d="M 0,0 L 0,-25" stroke="#ffedd5" strokeWidth="8" strokeLinecap="round" />
+                <path d="M -15,-20 Q 0,-38 15,-20 Z" fill={colors.secondary} stroke="black" strokeWidth="2" />
+              </g>
+            )}
+            {/* Magical Glowing Giant Cap */}
+            {stage >= 4 && (
+              <motion.g
+                initial={{ scale: 0, y: -10 }}
+                animate={{ scale: 1, y: 0 }}
+                transition={{ type: "spring" }}
+                transform="translate(100, 80)"
+              >
+                {/* Cap Back Outline */}
+                <path d="M -35,-5 Q 0,-45 35,-5 C 25,-2 15,0 0,0 C -15,0 -25,-2 -35,-5 Z" fill={colors.primary} stroke="black" strokeWidth="3" />
+                {/* Cap spots */}
+                <circle cx="-15" cy="-22" r="5" fill="white" opacity="0.9" />
+                <circle cx="15" cy="-18" r="4" fill="white" opacity="0.9" />
+                <circle cx="0" cy="-30" r="3.5" fill="white" opacity="0.9" />
+                
+                {stage >= 5 && (
+                  <motion.g animate={{ y: [-3, 3, -3] }} transition={{ repeat: Infinity, duration: 2.2 }}>
+                    <path d="M -42,3 Q 0,8 42,3" stroke={colors.accent} strokeWidth="3" strokeLinecap="round" fill="none" opacity="0.75" />
+                    {/* Glowing Sparkles */}
+                    <circle cx="-25" cy="15" r="2" fill={colors.accent} />
+                    <circle cx="0" cy="22" r="2.5" fill="white" />
+                    <circle cx="28" cy="13" r="1.8" fill={colors.accent} />
+                  </motion.g>
+                )}
+              </motion.g>
+            )}
+          </g>
+        )}
+      </g>
+    );
+  };
+
+  const renderLuckLotus = () => {
+    return (
+      <g>
+        {/* Pot */}
+        {renderPotWrapper(
+          <g>
+            <rect x="45" y="160" width="110" height="30" rx="6" fill="#0f172a" stroke="black" strokeWidth="5" />
+            <rect x="40" y="155" width="120" height="5" rx="2.5" fill="#1e293b" stroke="black" strokeWidth="2.5" />
+            <ellipse cx="100" cy="155" rx="55" ry="5" fill="#020617" />
+          </g>
+        )}
+        {!isDead && (
+          <g>
+            {/* Emerald Lotus Pad base */}
+            {stage >= 1 && (
+              <motion.ellipse
+                cx="100" cy="150" rx="45" ry="9"
+                fill="#047857"
+                stroke="black"
+                strokeWidth="2.5"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+              />
+            )}
+            {/* Glowing Lotus stalk */}
+            {stage >= 2 && (
+              <motion.line
+                x1="100" y1="150" x2="100" y2="105"
+                stroke="#10b981"
+                strokeWidth="6"
+                strokeLinecap="round"
+                initial={{ y2: 150 }}
+                animate={{ y2: 105 }}
+              />
+            )}
+            {/* First level Petals */}
+            {stage >= 3 && (
+              <g transform="translate(100, 105)">
+                <path d="M -25,0 C -38,-25 -10,-35 0,-15 C 10,-35 38,-25 25,0 Z" fill={colors.secondary} stroke="black" strokeWidth="2" />
+              </g>
+            )}
+            {/* Gorgeous multilayered blossomed lotus */}
+            {stage >= 4 && (
+              <motion.g
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transform="translate(100, 105)"
+              >
+                {/* Foreground bright petals */}
+                <path d="M -18,0 C -30,-20 -5,-30 0,-10 C 5,-30 30,-20 18,0 Z" fill={colors.primary} stroke="black" strokeWidth="2" />
+                {/* Lotus Core */}
+                <circle cx="0" cy="-5" r="6" fill="#fbbf24" stroke="black" strokeWidth="1.5" />
+                <circle cx="0" cy="-5" r="3" fill="#f59e0b" />
+                
+                {stage >= 5 && (
+                  <motion.g animate={{ scale: [1, 1.12, 1] }} transition={{ repeat: Infinity, duration: 2.8 }}>
+                    <path d="M -30,-5 Q 0,-40 30,-5" fill="none" stroke={colors.accent} strokeWidth="2" opacity="0.65" />
+                  </motion.g>
+                )}
+              </motion.g>
+            )}
+          </g>
+        )}
+      </g>
+    );
+  };
+
+  const renderLuckFern = () => {
+    return (
+      <g>
+        {/* Pot */}
+        {renderPotWrapper(
+          <g>
+            <path d="M 60,140 Q 55,185 75,195 L 125,195 Q 145,185 140,140 Z" fill="#201c18" stroke="black" strokeWidth="5" />
+            <ellipse cx="100" cy="140" rx="42" ry="7" fill="#151210" stroke="#201c18" strokeWidth="3" />
+          </g>
+        )}
+        {!isDead && (
+          <g>
+            {/* Arching Frond Stem */}
+            {stage >= 1 && (
+              <motion.path
+                d="M 100,140 Q 65,95 85,40"
+                stroke={colors.secondary}
+                strokeWidth={5}
+                strokeLinecap="round"
+                fill="none"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+              />
+            )}
+            {/* pinnate frond leaves */}
+            {stage >= 2 && (
+              <g>
+                <path d="M 85,120 Q 55,115 72,105 Q 85,112 85,120" fill={colors.primary} stroke="black" strokeWidth="1.5" />
+                <path d="M 82,100 Q 52,95 69,85 Q 80,92 82,100" fill={colors.primary} stroke="black" strokeWidth="1.5" />
+              </g>
+            )}
+            {stage >= 3 && (
+              <g>
+                <path d="M 80,80 Q 50,72 67,62 Q 78,72 80,80" fill={colors.accent} stroke="black" strokeWidth="1.5" />
+                <path d="M 81,62 Q 55,52 70,45 Q 80,52 81,62" fill={colors.accent} stroke="black" strokeWidth="1.5" />
+              </g>
+            )}
+            {/* Gorgeous full symmetrical secondary frond */}
+            {stage >= 4 && (
+              <motion.path
+                d="M 100,140 Q 135,95 115,40"
+                stroke={colors.primary}
+                strokeWidth={4.5}
+                strokeLinecap="round"
+                fill="none"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+              />
+            )}
+            {stage >= 4 && (
+              <g>
+                <path d="M 115,120 Q 145,115 128,105 Q 115,112 115,120" fill={colors.secondary} stroke="black" strokeWidth="1.5" />
+                <path d="M 118,100 Q 148,95 131,85 Q 120,92 118,100" fill={colors.secondary} stroke="black" strokeWidth="1.5" />
+                <path d="M 120,80 Q 150,72 133,62 Q 122,72 120,80" fill={colors.accent} stroke="black" strokeWidth="1.5" />
+              </g>
+            )}
+            {stage >= 5 && (
+              <g>
+                <circle cx="85" cy="40" r="4.5" fill="#fef08a" className="animate-ping" style={{ animationDuration: '3s' }} />
+                <circle cx="115" cy="40" r="4.5" fill="#fef08a" className="animate-ping" style={{ animationDuration: '3.5s' }} />
+              </g>
+            )}
+          </g>
+        )}
+      </g>
+    );
+  };
+
+  const renderLuckClover = () => {
+    return (
+      <g>
+        {/* Pot */}
+        {renderPotWrapper(
+          <g>
+            <path d="M 60,140 Q 60,185 75,195 L 125,195 Q 140,185 140,140 Z" fill="#92400e" stroke="black" strokeWidth="5" />
+            <ellipse cx="100" cy="140" rx="42" ry="7" fill="#78350f" stroke="black" strokeWidth="3" />
+          </g>
+        )}
+        {!isDead && (
+          <g>
+            {/* Golden spiraling stalk */}
+            {stage >= 1 && (
+              <motion.path
+                d="M 100,140 Q 112,110 88,92 T 100,55"
+                stroke={colors.primary}
+                strokeWidth={5}
+                strokeLinecap="round"
+                fill="none"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+              />
+            )}
+            {/* Symmetrical heart leaf 1 & 2 */}
+            {stage >= 2 && (
+              <g transform="translate(100, 55)">
+                <path d="M 0,0 C -25,-10 -25,-30 0,-15" fill={colors.secondary} stroke="black" strokeWidth="2" />
+                <path d="M 0,0 C 25,-10 25,-30 0,-15" fill={colors.secondary} stroke="black" strokeWidth="2" />
+              </g>
+            )}
+            {/* Third leaf */}
+            {stage >= 3 && (
+              <g transform="translate(100, 55)">
+                <path d="M 0,0 C -10,-25 -30,-25 -15,0" fill={colors.primary} stroke="black" strokeWidth="2" />
+              </g>
+            )}
+            {/* Legendary Fourth gold Leaf! */}
+            {stage >= 4 && (
+              <g transform="translate(100, 55)">
+                <path d="M 0,0 C 10,-25 30,-25 15,0" fill={colors.accent} stroke="black" strokeWidth="2" />
+              </g>
+            )}
+            {stage >= 5 && (
+              <motion.g animate={{ y: [-2, 2, -2], opacity: [0.7, 1, 0.7] }} transition={{ repeat: Infinity, duration: 2 }} transform="translate(100, 30)">
+                {/* Gold sparkle halos */}
+                <polygon points="0,-12 3,-3 12,0 3,3 0,12 -3,3 -12,0 -3,-3" fill="#fbbf24" stroke="black" strokeWidth="1" />
+              </motion.g>
+            )}
+          </g>
+        )}
+      </g>
+    );
+  };
+
+  const renderLuckOrchid = () => {
+    return (
+      <g>
+        {/* Pot */}
+        {renderPotWrapper(
+          <g>
+            <path d="M 55,145 Q 60,195 80,195 L 120,195 Q 140,195 145,145 Z" fill="#1e1e24" stroke="black" strokeWidth="5" />
+            <ellipse cx="100" cy="145" rx="45" ry="8" fill="#0c0c0e" stroke="black" strokeWidth="3" />
+          </g>
+        )}
+        {!isDead && (
+          <g>
+            {/* Glass-like violet vine */}
+            {stage >= 1 && (
+              <motion.path
+                d="M 100,140 Q 115,105 85,80 T 105,40"
+                stroke={colors.secondary}
+                strokeWidth={5}
+                strokeLinecap="round"
+                fill="none"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+              />
+            )}
+            {/* Orchid leaves */}
+            {stage >= 2 && (
+              <g transform="translate(90, 110) rotate(-15)">
+                <ellipse cx="0" cy="0" rx="18" ry="6" fill={colors.primary} stroke="black" strokeWidth="1.5" />
+              </g>
+            )}
+            {stage >= 3 && (
+              <g transform="translate(110, 95) rotate(15)">
+                <ellipse cx="0" cy="0" rx="18" ry="6" fill={colors.primary} stroke="black" strokeWidth="1.5" />
+              </g>
+            )}
+            {/* Intricate Celestial Lavender Orchid Flower bloom */}
+            {stage >= 4 && (
+              <motion.g
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transform="translate(105, 40)"
+              >
+                {/* Five Petals */}
+                <path d="M 0,0 C -15,-25 -30,-5 0,-5" fill={colors.accent} stroke="black" strokeWidth="1.5" />
+                <path d="M 0,0 C 15,-25 30,-5 0,-5" fill={colors.accent} stroke="black" strokeWidth="1.5" />
+                <path d="M 0,0 C -25,12 0,28 0,0" fill={colors.primary} stroke="black" strokeWidth="1.5" />
+                <path d="M 0,0 C 25,12 0,28 0,0" fill={colors.primary} stroke="black" strokeWidth="1.5" />
+                {/* Lip/Center */}
+                <circle cx="0" cy="-2" r="5.5" fill="#f472b6" stroke="black" strokeWidth="1.5" />
+                <circle cx="0" cy="-2" r="2.5" fill="#e11d48" />
+                
+                {stage >= 5 && (
+                  <motion.g animate={{ scale: [0.9, 1.1, 0.9], opacity: [0.3, 0.8, 0.3] }} transition={{ repeat: Infinity, duration: 2.5 }}>
+                    <circle cx="0" cy="-2" r="20" fill="none" stroke={colors.accent} strokeWidth="2.5" strokeDasharray="3 5" />
+                  </motion.g>
+                )}
+              </motion.g>
+            )}
+          </g>
+        )}
+      </g>
+    );
+  };
+
+  const renderLuckCactus = () => {
+    return (
+      <g>
+        {/* Pot */}
+        {renderPotWrapper(
+          <g>
+            <rect x="52" y="145" width="96" height="50" rx="12" fill="#7f1d1d" stroke="black" strokeWidth="5" />
+            <ellipse cx="100" cy="145" rx="48" ry="7" fill="#450a0a" stroke="black" strokeWidth="3" />
+          </g>
+        )}
+        {!isDead && (
+          <g>
+            {/* Neon Green Cactus Base */}
+            {stage >= 1 && (
+              <motion.rect
+                x="88" y="70" width="24" height="75" rx="12"
+                fill={colors.primary}
+                stroke="black"
+                strokeWidth={3}
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+                style={{ transformOrigin: "bottom" }}
+              />
+            )}
+            {/* Glowing Pink Needles & Details */}
+            {stage >= 1 && (
+              <g stroke={colors.accent} strokeWidth="1.5">
+                <line x1="88" y1="120" x2="80" y2="120" />
+                <line x1="112" y1="110" x2="120" y2="110" />
+                <line x1="88" y1="90" x2="80" y2="85" />
+                <line x1="112" y1="85" x2="120" y2="90" />
+              </g>
+            )}
+            {/* Left branch arm */}
+            {stage >= 2 && (
+              <motion.path
+                d="M 88,100 H 70 V 80"
+                stroke={colors.secondary}
+                strokeWidth="11"
+                strokeLinecap="round"
+                fill="none"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+              />
+            )}
+            {/* Right branch arm */}
+            {stage >= 3 && (
+              <motion.path
+                d="M 112,90 H 130 V 70"
+                stroke={colors.secondary}
+                strokeWidth="11"
+                strokeLinecap="round"
+                fill="none"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+              />
+            )}
+            {/* Retro wave giant bloom on top */}
+            {stage >= 4 && (
+              <motion.g
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transform="translate(100, 68)"
+              >
+                {/* Hot pink starburst bloom */}
+                <polygon points="0,-15 4,-5 14,-10 8,0 15,10 5,6 0,15 -5,6 -15,10 -8,0 -14,-10 -4,-5" fill={colors.accent} stroke="black" strokeWidth="1.5" />
+                <circle cx="0" cy="0" r="3.5" fill="#fef08a" stroke="black" strokeWidth="1" />
+              </motion.g>
+            )}
+            {stage >= 5 && (
+              <motion.g animate={{ opacity: [0.1, 0.4, 0.1] }} transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}>
+                <rect x="40" y="50" width="120" height="2" fill={colors.accent} />
+              </motion.g>
+            )}
+          </g>
+        )}
+      </g>
+    );
+  };
+
   const getEcosystemRenderer = () => {
     switch (type) {
-      case 'slime-berry': return renderSprout();
-      case 'solar-flare-pea': return renderVolcano();
-      case 'moon-sprout': return renderCrystal();
-      case 'star-silk-leaf': return renderMeadow();
-      case 'dream-shroom': return renderForest();
-      case 'luck-lotus': return renderSprout();
-      case 'luck-fern': return renderMeadow();
-      case 'luck-clover': return renderZen();
-      case 'luck-orchid': return renderCrystal();
-      case 'luck-cactus': return renderDesert();
+      case 'slime-berry': return renderSlimeBerry();
+      case 'solar-flare-pea': return renderSolarFlarePea();
+      case 'moon-sprout': return renderMoonSprout();
+      case 'star-silk-leaf': return renderStarSilkLeaf();
+      case 'dream-shroom': return renderDreamShroom();
+      case 'luck-lotus': return renderLuckLotus();
+      case 'luck-fern': return renderLuckFern();
+      case 'luck-clover': return renderLuckClover();
+      case 'luck-orchid': return renderLuckOrchid();
+      case 'luck-cactus': return renderLuckCactus();
       case 'zen': return renderZen();
       case 'desert': return renderDesert();
       case 'tropical': return renderTropical();
@@ -1422,12 +2084,29 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
 
         {getEcosystemRenderer()}
 
-      {stage === 0 && !isDead && type !== 'sprout' && (
-        <motion.ellipse 
-          cx="100" cy="145" rx="6" ry="4"
-          fill="#D7CCC8" stroke="black" strokeWidth="2"
-          initial={{ scale: 0 }} animate={{ scale: 1 }}
-        />
+      {stage === 0 && !isDead && (
+        <g id="animated-seed" className="pointer-events-none">
+          {/* Ambient Outer Energy Halo */}
+          <motion.circle 
+            cx="100" cy="142" r="16"
+            fill="none" stroke={colors.accent || '#38bdf8'} strokeWidth="1.5" strokeDasharray="3 4"
+            animate={{ rotate: 360, scale: [0.9, 1.1, 0.9] }}
+            transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+          />
+          {/* Level 0 Magic Seed */}
+          <motion.g
+            initial={{ scale: 0, y: 10 }}
+            animate={{ scale: 1, y: [0, -4, 0] }}
+            transition={{
+              scale: { type: 'spring', stiffness: 200 },
+              y: { repeat: Infinity, duration: 1.8, ease: "easeInOut" }
+            }}
+          >
+            {/* Pulsing Core */}
+            <ellipse cx="100" cy="142" rx="8" ry="12" fill={colors.primary || '#D7CCC8'} stroke="black" strokeWidth="2.5" />
+            <ellipse cx="98" cy="138" rx="2.5" ry="4" fill={colors.accent || '#FFFFFF'} opacity="0.6" />
+          </motion.g>
+        </g>
       )}
 
       {/* Dead State Marker */}

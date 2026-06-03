@@ -21,6 +21,7 @@ interface HydrationDetailPageProps {
 }
 
 export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
+  stats,
   onBack,
   play,
   consecutiveDays,
@@ -78,27 +79,33 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
         <ScreenWater progress={0.06} />
       </div>
 
-      {/* Top Header - Back Button Only, absolute to top so it stays in place */}
+      {/* Top Header - Back Button & Coin Counter */}
       <header className="px-6 pt-12 flex items-center justify-between relative z-50">
         <button
           onClick={() => {
             if (play) play('click');
             onBack();
           }}
-          className="p-3.5 bg-white/80 backdrop-blur-md rounded-2xl border border-[#E9E4D4] hover:bg-white active:scale-95 transition-all shadow-md cursor-pointer flex items-center justify-center text-[#4F3F34]"
+          className="p-3 bg-white/80 backdrop-blur-md rounded-2xl border border-[#E9E4D4] hover:bg-white active:scale-95 transition-all shadow-md cursor-pointer flex items-center justify-center text-[#4F3F34]"
         >
           <ArrowLeft size={22} className="text-[#0ea5e9]" />
         </button>
+
+        {/* Small coin icon counter positioned on top of the screen */}
+        <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-amber-200 shadow-md">
+          <span className="text-xl animate-bounce" style={{ animationDuration: '3s' }}>🪙</span>
+          <span className="font-sans font-black text-amber-600 text-sm">{stats.coins || 0}</span>
+        </div>
       </header>
 
-      {/* Main Container - Side-by-Side Large Bottle & Counter (Sits perfectly above background water) */}
-      <div className="flex-1 w-full max-w-4xl mx-auto px-6 flex items-center justify-center relative z-40 pb-20">
+      {/* Main Container - Large Bottle & Counter brought close together and positioned upright */}
+      <div className="flex-1 w-full max-w-lg mx-auto px-6 flex flex-col items-center justify-center relative z-40 -mt-6 sm:-mt-12 pb-24">
         
-        <div className="flex flex-row items-center justify-center gap-6 md:gap-14 w-full">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-10 w-full max-w-sm">
           
-          {/* Left Portion: Tall, Beautiful, Highly Realistic Glass Water Bottle (Size 512px height) */}
+          {/* Left Portion: Tall, Beautiful, Glass Water Bottle */}
           <div className="flex items-center justify-center">
-            <div className="relative w-[215px] h-[512px] drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)]">
+            <div className="relative w-[170px] h-[390px] sm:w-[215px] sm:h-[480px] drop-shadow-[0_22px_50px_rgba(14,165,233,0.22)]">
               
               <svg
                 viewBox="0 0 200 500"
@@ -232,7 +239,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
 
               {/* Water level digital percentage label inside the bottle */}
               <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none text-center">
-                <span className="text-xs font-black text-white/70 tracking-widest block uppercase drop-shadow-md">
+                <span className="text-xs font-black text-white/80 tracking-widest block uppercase drop-shadow-md bg-blue-950/20 px-2 py-0.5 rounded-full">
                   {(activeProgress * 100).toFixed(0)}%
                 </span>
               </div>
@@ -240,9 +247,12 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
           </div>
 
           {/* Right Portion: Huge Minimalist Counter Number adjacent to the bottle (Vibrant Water-Blue Color) */}
-          <div className="flex items-center justify-start pl-2">
-            <span className="text-[10rem] md:text-[14rem] font-sans font-black tracking-tighter text-[#0ea5e9] leading-none drop-shadow-[0_8px_24px_rgba(14,165,233,0.22)] animate-fade-in select-none">
+          <div className="flex flex-col items-center justify-center sm:items-start pl-0 sm:pl-3 mt-1 sm:mt-0">
+            <span className="text-[6rem] sm:text-[8rem] md:text-[9.5rem] font-sans font-black tracking-tighter text-[#0ea5e9] leading-none drop-shadow-[0_6px_20px_rgba(14,165,233,0.22)] animate-fade-in select-none">
               {consecutiveDays}
+            </span>
+            <span className="text-xs font-black text-[#0ea5e9]/70 tracking-widest uppercase mt-0 sm:mt-1">
+              DAYS STREAK
             </span>
           </div>
 

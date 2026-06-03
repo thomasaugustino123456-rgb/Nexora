@@ -1515,16 +1515,15 @@ export default function App() {
             "success",
           );
 
-          // Plant unlock logic based on User Level (as requested: every 5 levels)
-          const userLevel = Math.floor((stats.totalPoints || 0) / 100) + 1;
-          if (userLevel >= 5 && userLevel % 5 === 0) {
+          // Unlock logic when ANY plant reaches Stage (Level) 5
+          if (newStage === 5) {
             const currentIdx = ECOSYSTEM_PATH.indexOf(type);
             if (currentIdx !== -1 && currentIdx < ECOSYSTEM_PATH.length - 1) {
               const nextType = ECOSYSTEM_PATH[currentIdx + 1];
               if (!newUnlocked.includes(nextType)) {
                 newUnlocked.push(nextType);
                 showToast(
-                  `Level ${userLevel} Legend! New Ecosystem Unlocked: ${nextType.toUpperCase()}! 🏆`,
+                  `Congratulations! NEW ECOSYSTEM UNLOCKED: ${nextType.toUpperCase()}! 🌿🏆`,
                   "success",
                 );
                 // Set flag for golden glow notification
@@ -3534,6 +3533,7 @@ export default function App() {
       // Calculate growth: +25% per full completion
       let newPoints = currentPoints + 25;
       let newStage = currentStage;
+      let newUnlocked = [...(settings.plantState?.unlockedTypes || ["sprout"])];
 
       if (newPoints >= 100) {
         if (currentStage < 5) {
@@ -3543,6 +3543,21 @@ export default function App() {
             `LEVEL UP: Your ${type} reached Stage ${newStage}! 🌿✨`,
             "success",
           );
+
+          if (newStage === 5) {
+            const currentIdx = ECOSYSTEM_PATH.indexOf(type);
+            if (currentIdx !== -1 && currentIdx < ECOSYSTEM_PATH.length - 1) {
+              const nextType = ECOSYSTEM_PATH[currentIdx + 1];
+              if (!newUnlocked.includes(nextType)) {
+                newUnlocked.push(nextType);
+                showToast(
+                  `Congratulations! NEW ECOSYSTEM UNLOCKED: ${nextType.toUpperCase()}! 🌿🏆`,
+                  "success",
+                );
+                localStorage.setItem("nexora_new_plant_unlocked", "true");
+              }
+            }
+          }
         } else {
           newPoints = 100; // Cap at Legendary Stage 5
         }
@@ -3552,6 +3567,7 @@ export default function App() {
         ...settings.plantState,
         stage: newStage,
         growthPoints: newPoints,
+        unlockedTypes: newUnlocked,
         health: 100,
         isDead: false,
         isThirsty: false,

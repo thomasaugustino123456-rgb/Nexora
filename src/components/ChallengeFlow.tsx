@@ -412,21 +412,177 @@ export const PushupsStep = React.memo(({ goal, onDone, onSkip, activeSkin = 'non
 export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUpdate, onContinue, activeSkin = 'none', settings, play, onCompleteWaterChallenge }: { goal: number, progress?: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void, onCompleteWaterChallenge?: () => void }) => {
   const [localProgress, setLocalProgress] = useState(initialProgress);
   const isFinished = localProgress >= goal;
+  const [time, setTime] = useState(0);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    const updateTime = () => {
+      setTime(prev => prev + 1);
+      animationFrameId = requestAnimationFrame(updateTime);
+    };
+    animationFrameId = requestAnimationFrame(updateTime);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
+
+  const activeProgress = Math.min(Math.max(localProgress / goal, 0), 1);
+  const fillY = 468 - (activeProgress * 333);
+
+  // Surface waving animations
+  const wave1 = Math.sin(time * 0.05) * 5;
+  const wave2 = Math.cos(time * 0.06) * 4;
+
+  const foregroundWaterPath = `
+    M 50,${fillY + wave1}
+    Q 100,${fillY + wave1 + wave2} 150,${fillY + wave2}
+    L 150,470
+    L 50,470
+    Z
+  `;
+
+  const backgroundWaterPath = `
+    M 50,${fillY - 8 + wave2}
+    Q 100,${fillY - 8 + wave1} 150,${fillY - 8 + wave1 + wave2}
+    L 150,470
+    L 50,470
+    Z
+  `;
 
   return (
     <div 
-      className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full animate-in fade-in zoom-in duration-500 relative z-10"
+      className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-md mx-auto w-full animate-in fade-in zoom-in duration-500 relative z-10"
     >
-      <div className="w-full max-w-[300px] lg:max-w-[400px] relative z-20">
-        <WaterMascot progress={Math.min(localProgress / goal, 1)} className="drop-shadow-2xl" />
+      {/* Tall, Beautiful, Glass Water Bottle standing completely free, NO BOX behind it */}
+      <div className="relative w-[150px] h-[340px] drop-shadow-[0_22px_50px_rgba(14,165,233,0.22)] z-20">
+        <svg
+          viewBox="0 0 200 500"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full h-full overflow-visible"
+        >
+          <defs>
+            <clipPath id="challenge-bottle-inner-mask">
+              <path
+                d="
+                  M 84,130
+                  L 84,82
+                  L 116,82
+                  L 116,130
+                  C 116,130 126,155 148,175
+                  L 148,452
+                  Q 148,468 132,468
+                  L 68,468
+                  Q 52,468 52,452
+                  L 52,175
+                  C 52,175 74,155 84,130
+                  Z
+                "
+              />
+            </clipPath>
+
+            <linearGradient id="challenge-glass-specular" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
+              <stop offset="50%" stopColor="#ffffff" stopOpacity="0.08" />
+              <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.25" />
+            </linearGradient>
+
+            <linearGradient id="challenge-water-body-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.9" />
+              <stop offset="40%" stopColor="#0ea5e9" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#1e3a8a" stopOpacity="0.98" />
+            </linearGradient>
+          </defs>
+
+          {/* Ground Shadow underneath the bottle */}
+          <ellipse cx="100" cy="482" rx="60" ry="8" fill="#000000" fillOpacity="0.18" filter="blur(3px)" />
+
+          {/* LIQUID CONTENTS */}
+          <g clipPath="url(#challenge-bottle-inner-mask)">
+            <rect x="30" y="30" width="140" height="440" fill="#e0f2fe" fillOpacity="0.3" />
+            <ellipse cx="100" cy="300" rx="46" ry="164" fill="#0ea5e9" fillOpacity="0.06" />
+
+            <motion.path
+              d={backgroundWaterPath}
+              fill="#0284c7"
+              opacity="0.4"
+              animate={{ y: [0, -1, 0] }}
+              transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
+            />
+
+            <motion.path
+              d={foregroundWaterPath}
+              fill="url(#challenge-water-body-grad)"
+              animate={{ y: [0, 1.5, 0] }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+            />
+
+            {activeProgress > 0 && (
+              <g fill="#ffffff" fillOpacity="0.7">
+                <circle cx="82" cy="350" r="2.5" className="animate-bounce" style={{ animationDuration: "3s" }} />
+                <circle cx="120" cy="410" r="3" className="animate-bounce" style={{ animationDuration: "4s" }} />
+                <circle cx="68" cy="280" r="2" className="animate-bounce" style={{ animationDuration: "2.5s" }} />
+                <circle cx="110" cy="310" r="3.5" className="animate-bounce" style={{ animationDuration: "3.5s" }} />
+              </g>
+            )}
+          </g>
+
+          {/* GLASS SHELL */}
+          <path
+            d="
+              M 80,130
+              L 80,82
+              L 120,82
+              L 120,130
+              C 120,130 132,155 154,175
+              L 154,452
+              Q 154,472 132,472
+              L 68,472
+              Q 46,472 46,452
+              L 46,175
+              C 46,175 68,155 80,130
+              Z
+            "
+            fill="url(#challenge-glass-specular)"
+            fillOpacity="0.3"
+            stroke="#0ea5e9"
+            strokeWidth="3.5"
+            strokeLinejoin="round"
+          />
+
+          <rect x="74" y="44" width="52" height="38" rx="8" fill="#1e40af" stroke="#0ea5e9" strokeWidth="3" />
+          <line x1="84" y1="48" x2="84" y2="78" stroke="#38bdf8" strokeWidth="2.5" opacity="0.7" />
+          <line x1="92" y1="48" x2="92" y2="78" stroke="#38bdf8" strokeWidth="2.5" opacity="0.7" />
+          <line x1="100" y1="48" x2="100" y2="78" stroke="#38bdf8" strokeWidth="2.5" opacity="0.7" />
+          <line x1="108" y1="48" x2="108" y2="78" stroke="#38bdf8" strokeWidth="2.5" opacity="0.7" />
+          <line x1="116" y1="48" x2="116" y2="78" stroke="#38bdf8" strokeWidth="2.5" opacity="0.7" />
+
+          <path d="M 52,190 Q 51,320 51,440" fill="none" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" opacity="0.6" />
+          <path d="M 148,190 Q 149,320 149,440" fill="none" stroke="#0ea5e9" strokeWidth="3.5" strokeLinecap="round" opacity="0.4" />
+
+          {/* Glowing Digital Label inside the bottle */}
+          <g transform="translate(100, 310)" className="pointer-events-none select-none">
+            <text
+              textAnchor="middle"
+              className="font-sans font-black text-2xl tracking-tighter"
+              fill="#1e3a8a"
+              opacity="0.85"
+            >
+              {Math.round(activeProgress * 100)}%
+            </text>
+          </g>
+
+          <g fill="#ffffff">
+            <polygon points="35,160 38,163 41,160 38,157" className="animate-pulse" style={{ animationDuration: "2.5s" }} />
+            <polygon points="165,145 168,148 171,145 168,142" className="animate-pulse" style={{ animationDuration: "3.5s" }} />
+          </g>
+        </svg>
       </div>
       
-      <div className="glass-card w-full p-10 text-center space-y-8 relative z-20 bg-white/70 backdrop-blur-md shadow-xl border border-white/40">
-        <div className="space-y-4">
-          <h2 className="text-3xl font-bold text-blue-900/80">Drink Water</h2>
+      {/* Box Card stays exactly as requested for holding text, progress, buttons */}
+      <div className="glass-card w-full p-8 text-center space-y-6 relative z-20 bg-white/70 backdrop-blur-md shadow-xl border border-white/40">
+        <div className="space-y-3">
+          <h2 className="text-2xl font-bold text-blue-900/80">Drink Water</h2>
           <p className="text-blue-900/50 font-medium">{localProgress} / {goal} glasses</p>
           
-          <div className="h-3 bg-blue-100 rounded-full overflow-hidden">
+          <div className="h-2.5 bg-blue-100 rounded-full overflow-hidden">
             <motion.div 
               animate={{ width: `${Math.min((localProgress / goal) * 100, 100)}%` }}
               className="h-full bg-blue-400 rounded-full"
@@ -434,45 +590,43 @@ export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUp
           </div>
         </div>
 
-            {/* Next Button / Continue */}
-            <div className="flex-1" />
-            <div className="space-y-4">
-              {!isFinished ? (
-                <button 
-                  onClick={() => {
-                    // Play sound instantly at the very start of click
-                    if (settings.soundEnabled) play('water');
-                    
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    const newProgress = localProgress + 1;
-                    setLocalProgress(newProgress);
-                    onUpdate(newProgress);
-                    
-                    if (newProgress >= goal) {
-                       if (settings.soundEnabled) play('challenge_unlock');
-                       vibrate(VIBRATION_PATTERNS.SUCCESS);
-                       if (onCompleteWaterChallenge) {
-                         onCompleteWaterChallenge();
-                       }
-                       setTimeout(() => onContinue(), 800);
-                    }
-                  }} 
-                  className="btn-primary w-full flex items-center justify-center gap-2 py-6 text-xl active:scale-[0.98] active:brightness-90 transition-all font-black"
-                >
-                  Drink +1 Water 💧
-                </button>
-              ) : (
-                <button 
-                  onClick={() => {
-                    if (settings.soundEnabled) play('continue');
-                    onContinue();
-                  }}
-                  className="btn-primary w-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center gap-2 py-6 text-xl"
-                >
-                  Proceed to Next Challenge <ChevronRight size={20} />
-                </button>
-              )}
-            </div>
+        <div className="space-y-4">
+          {!isFinished ? (
+            <button 
+              onClick={() => {
+                // Play sound instantly at the very start of click
+                if (settings.soundEnabled) play('water');
+                
+                vibrate(VIBRATION_PATTERNS.CLICK);
+                const newProgress = localProgress + 1;
+                setLocalProgress(newProgress);
+                onUpdate(newProgress);
+                
+                if (newProgress >= goal) {
+                   if (settings.soundEnabled) play('challenge_unlock');
+                   vibrate(VIBRATION_PATTERNS.SUCCESS);
+                   if (onCompleteWaterChallenge) {
+                     onCompleteWaterChallenge();
+                   }
+                   setTimeout(() => onContinue(), 800);
+                }
+              }} 
+              className="btn-primary w-full flex items-center justify-center gap-2 py-4 text-lg active:scale-[0.98] active:brightness-90 transition-all font-black"
+            >
+              Drink +1 Water 💧
+            </button>
+          ) : (
+            <button 
+              onClick={() => {
+                if (settings.soundEnabled) play('continue');
+                onContinue();
+              }}
+              className="btn-primary w-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center gap-2 py-4 text-lg"
+            >
+              Proceed to Next Challenge <ChevronRight size={20} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
