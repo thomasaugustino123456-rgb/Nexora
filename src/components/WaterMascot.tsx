@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import mascotSwimsuitImg from '../assets/images/mascot_swimsuit_1780494337310.png';
 
 interface WaterMascotProps {
   className?: string;
@@ -23,7 +22,6 @@ export const WaterMascot = React.memo(({ className, progress }: WaterMascotProps
   // 480 is the dry bottom of the mascot-bottle container
   // 170 is near the top neck of the container
   const fillY = 485 - (progress * 300);
-  const mascotY = fillY - 85; // Float on top of water surface
 
   // Gyroscope / Accel & Desktop Hover Tilt Interaction
   useEffect(() => {
@@ -33,7 +31,6 @@ export const WaterMascot = React.memo(({ className, progress }: WaterMascotProps
       if (!active) return;
       if (e.gamma !== null) {
         // Gamma representation is left-to-right phone tilt in degrees [-90, 90]
-        // Smoothly scale down to a safe [-14, 14] tilt for subtle aesthetic sloshing
         const clamped = Math.max(-28, Math.min(28, e.gamma));
         setTilt(clamped * 0.5);
       }
@@ -216,55 +213,23 @@ export const WaterMascot = React.memo(({ className, progress }: WaterMascotProps
           </AnimatePresence>
         </g>
 
-        {/* FLOATING SWIMSUIT MASCOT & SWIM RING DONUT DESIGN (Perfect sandwich alignment) */}
-        <motion.g 
-          animate={{ 
-            y: mascotY,
-            rotate: tilt
-          }}
-          transition={{ 
-            type: "spring", 
-            stiffness: 85, 
-            damping: 17 
-          }}
-          style={{ transformOrigin: `250px 0px` }}
-        >
-          {/* Inner float bubble motion group */}
-          <g className={progress > 0 ? "anim-mascot-float" : ""}>
-            
-            {/* 1. SWIM RING DONUT BACK LAYER */}
-            {progress > 0 && (
-              <g>
-                <path d="M 185,10 A 65,26 0 0,1 315,10" fill="none" stroke="#FF5C8A" strokeWidth="24" strokeLinecap="round" opacity="0.9" />
-                <path d="M 205,10 A 45,16 0 0,1 295,10" fill="none" stroke="#FFF7ED" strokeWidth="8" strokeLinecap="round" opacity="0.65" />
-              </g>
-            )}
-
-            {/* 2. CUTE SWIMSUIT MASCOT PNG IMAGE (Centered & floating) */}
-            <image
-              href={mascotSwimsuitImg}
-              x="175"
-              y={progress > 0 ? "-75" : "-55"} // sits snug on surface when floating or rests gracefully on floor when dry
-              width="150"
-              height="150"
-            />
-
-            {/* 3. SWIM RING DONUT FRONT LAYER (Sits on top to clamp the mascot inside!) */}
-            {progress > 0 && (
-              <g>
-                <path d="M 315,10 A 65,26 0 0,1 185,10" fill="none" stroke="#FF5C8A" strokeWidth="24" strokeLinecap="round" />
-                
-                {/* Cute tropical white stripes decoration on swim ring */}
-                <path d="M 202,19 C 205,17 203,13 201,8" fill="none" stroke="#FFF" strokeWidth="6" strokeLinecap="round" />
-                <path d="M 250,22 C 250,17 250,13 250,8" fill="none" stroke="#FFF" strokeWidth="6" strokeLinecap="round" />
-                <path d="M 298,19 C 295,17 297,13 299,8" fill="none" stroke="#FFF" strokeWidth="6" strokeLinecap="round" />
-                
-                <path d="M 222,21 C 223,17 221,13 220,9" fill="none" stroke="#FFA6C9" strokeWidth="6" strokeLinecap="round" />
-                <path d="M 275,21 C 274,17 276,13 277,9" fill="none" stroke="#FFA6C9" strokeWidth="6" strokeLinecap="round" />
-              </g>
-            )}
-          </g>
-        </motion.g>
+        {/* RESTORED VECTOR MASCOT FACIAL FEATURES */}
+        <g transform={`translate(${tilt * 0.3}, -10)`}>
+          {/* EYES */}
+          <circle cx="210" cy="290" r="15" fill="#001845" />
+          <circle cx="290" cy="290" r="15" fill="#001845" />
+          {/* Pupils */}
+          <circle cx="213" cy="285" r="5.5" fill="#fff" />
+          <circle cx="293" cy="285" r="5.5" fill="#fff" />
+          {/* Blush */}
+          <ellipse cx="178" cy="312" rx="14" ry="7" fill="#FF4D6D" fillOpacity="0.25" />
+          <ellipse cx="322" cy="312" rx="14" ry="7" fill="#FF4D6D" fillOpacity="0.25" />
+          {/* Smiling Mouth */}
+          <path 
+            d="M 233 308 Q 250 328 267 308" 
+            fill="none" stroke="#001845" strokeWidth="4" strokeLinecap="round"
+          />
+        </g>
 
         {/* CONTAINER GLASS SHELL & OUTLINES (Kept on top to maintain outer depth refraction) */}
         {/* Rim Opening */}

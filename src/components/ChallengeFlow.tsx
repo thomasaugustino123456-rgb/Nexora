@@ -10,6 +10,7 @@ import { VIBRATION_PATTERNS, vibrate } from '../lib/vibrate';
 import { playTrophySound, GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
 import { PushupMascot } from './PushupMascot';
 import { WaterMascot } from './WaterMascot';
+import { ScreenWater } from './ScreenWater';
 import { BreathingMascot } from './BreathingMascot';
 import { ArtistMascot } from './ArtistMascot';
 import { WritingMascot } from './WritingMascot';
@@ -398,13 +399,16 @@ export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUp
 
   return (
     <div 
-      className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full animate-in fade-in zoom-in duration-500"
+      className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full animate-in fade-in zoom-in duration-500 relative z-10"
     >
-      <div className="w-full max-w-[300px] lg:max-w-[400px]">
+      {/* Full screen interactive rising water and mascot */}
+      <ScreenWater progress={Math.min(localProgress / goal, 1)} />
+
+      <div className="w-full max-w-[300px] lg:max-w-[400px] relative z-20">
         <WaterMascot progress={Math.min(localProgress / goal, 1)} className="drop-shadow-2xl" />
       </div>
       
-      <div className="glass-card w-full p-10 text-center space-y-8">
+      <div className="glass-card w-full p-10 text-center space-y-8 relative z-20 bg-white/70 backdrop-blur-md shadow-xl border border-white/40">
         <div className="space-y-4">
           <h2 className="text-3xl font-bold text-blue-900/80">Drink Water</h2>
           <p className="text-blue-900/50 font-medium">{localProgress} / {goal} glasses</p>
