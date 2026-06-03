@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar as CalendarIcon, Award, Target, Trophy, 
@@ -7,7 +7,7 @@ import {
   Palette, Dumbbell, Coins, Crown, BarChart2,
   X, ShieldAlert, Sparkles
 } from 'lucide-react';
-import { UserStats, DailyProgress, UserSettings, Trophy as TrophyType } from '../types';
+import { UserStats, DailyProgress, UserSettings, Trophy as TrophyType, Screen } from '../types';
 import { Calendar } from './Calendar';
 import { StatsCharts } from './StatsCharts';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
@@ -17,15 +17,37 @@ export function ProgressScreen({
   history, 
   settings, 
   setSettings, 
-  userRank 
+  userRank,
+  onScreenChange,
+  dailyProgress
 }: { 
   stats: UserStats, 
   history: DailyProgress[], 
   settings: UserSettings, 
   setSettings: (s: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void, 
-  userRank: number 
+  userRank: number,
+  onScreenChange: (screen: Screen) => void,
+  dailyProgress: DailyProgress
 }) {
   const [selectedTrophy, setSelectedTrophy] = useState<TrophyType | null>(null);
+  const [waveOffset, setWaveOffset] = useState(0);
+
+  // continuous fluid loop
+  useEffect(() => {
+    let frame: number;
+    const tick = () => {
+      setWaveOffset(prev => (prev + 2.5) % 360);
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const waterGoal = settings.commitmentLevel === 'casual' 
+    ? Math.max(4, Math.floor((settings.waterGoal || 8) * 0.5)) 
+    : settings.commitmentLevel === 'intense' 
+      ? Math.floor((settings.waterGoal || 8) * 1.5) 
+      : (settings.waterGoal || 8);
 
   const totalCompletedDays = history.filter(h => h.completed).length;
   const xpToNextLevel = ((stats.level || 1) * 1000) - stats.xp;
@@ -122,6 +144,78 @@ export function ProgressScreen({
             <p className="text-[9px] text-[#4F3F34]/60 font-bold uppercase mt-2 opacity-75">{stat.sub}</p>
           </div>
         ))}
+      </motion.div>
+
+      {/* Hydration Analytics Box Card */}
+      <motion.div
+        variants={item}
+        onClick={() => onScreenChange('hydration-detail')}
+        className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 flex items-center justify-between group transition-all duration-300 hover:scale-[1.01] active:scale-98 cursor-pointer shadow-sm relative overflow-hidden"
+      >
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#69C496]">Hydration Suite</span>
+            <span className="bg-sky-50 text-sky-500 font-extrabold text-[8px] px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
+              Analytics
+            </span>
+          </div>
+          <h3 className="text-xl font-black text-[#4F3F34] mt-1">Hydration Analytics</h3>
+          <p className="text-xs font-semibold text-[#4F3F34]/60 uppercase">
+            Today: <span className="text-sky-500 font-black">{(dailyProgress?.waterDrank || 0).toFixed(1)}</span> of <span className="text-[#4F3F34] font-black">{waterGoal.toFixed(1)}</span> Cups
+          </p>
+        </div>
+
+        {/* Looping liquid progress ring */}
+        <div className="relative w-16 h-16 flex items-center justify-center bg-sky-50/50 rounded-2xl p-1 shrink-0">
+          <svg width="48" height="48" viewBox="0 0 64 64" className="overflow-visible">
+            <defs>
+              <clipPath id="droplet-mask-progress">
+                <path d="M 32,8 C 32,8 14,28 14,38 A 18,18 0 0,0 50,38 C 50,28 32,8 32,8 Z" />
+              </clipPath>
+            </defs>
+            
+            {/* Outer Progress track */}
+            <circle cx="32" cy="32" r="28" fill="none" stroke="#E0F2FE" strokeWidth="4.5" />
+            <circle 
+              cx="32" 
+              cy="32" 
+              r="28" 
+              fill="none" 
+              stroke="#0EA5E9" 
+              strokeWidth="4.5" 
+              strokeDasharray={2 * Math.PI * 28}
+              strokeDashoffset={2 * Math.PI * 28 * (1 - Math.min(1, (dailyProgress?.waterDrank || 0) / waterGoal))}
+              strokeLinecap="round"
+              transform="rotate(-90 32 32)"
+              className="transition-all duration-300"
+            />
+            
+            {/* Liquid wave inside the drop */}
+            <g clipPath="url(#droplet-mask-progress)">
+              <path d="M 32,8 C 32,8 14,28 14,38 A 18,18 0 0,0 50,38 C 50,28 32,8 32,8 Z" fill="#BAE6FD" />
+              
+              {/* Animated wave */}
+              <path 
+                d={`M -20,${44 - Math.min(1, (dailyProgress?.waterDrank || 0) / waterGoal) * 28} 
+                   q 10,${Math.sin((waveOffset * Math.PI) / 180) * 3} 20,0 
+                   t 20,0 20,0 20,0 20,0
+                   L 60,60 L -20,60 Z`} 
+                fill="#0EA5E9" 
+              />
+              <path 
+                d={`M -20,${46 - Math.min(1, (dailyProgress?.waterDrank || 0) / waterGoal) * 28} 
+                   q 10,${Math.cos((waveOffset * Math.PI) / 180) * 3} 20,0 
+                   t 20,0 20,0 20,0 20,0
+                   L 60,60 L -20,60 Z`} 
+                fill="#38BDF8" 
+                opacity="0.6"
+              />
+            </g>
+            
+            {/* Dark droplet stroke outline */}
+            <path d="M 32,8 C 32,8 14,28 14,38 A 18,18 0 0,0 50,38 C 50,28 32,8 32,8 Z" fill="none" stroke="#0E5A8E" strokeWidth="2.5" />
+          </svg>
+        </div>
       </motion.div>
 
       {/* Category Breakdown */}

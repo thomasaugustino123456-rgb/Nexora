@@ -164,6 +164,7 @@ export interface DailyProgress {
   meditationDone?: boolean;
   writingDone?: boolean;
   waterChallengeCount?: number;
+  waterLogs?: { id: string; time: string; amount: number }[];
 }
 
 export type TrophyType = 'golden' | 'ice' | 'broken';
@@ -205,6 +206,7 @@ export interface UserStats {
   unlockedHats?: string[];
   gratitudeEntries?: GratitudeEntry[];
   waterDrank?: number;
+  lifetimeWaterCompletions?: number;
 }
 
 export interface LeaderboardEntry {
@@ -232,7 +234,7 @@ export interface CustomPlan {
   createdAt: string;
 }
 
-export type Screen = 'home' | 'progress' | 'profile' | 'social' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant' | 'nexus-video' | 'trophy-rewards' | 'nexus-vision' | 'archives' | 'garden' | 'admin';
+export type Screen = 'home' | 'progress' | 'profile' | 'social' | 'challenge' | 'settings' | 'shop' | 'library' | 'gallery' | 'notebook' | 'leaderboard' | 'subscription' | 'plan-builder' | 'house' | 'plant' | 'nexus-video' | 'trophy-rewards' | 'nexus-vision' | 'archives' | 'garden' | 'admin' | 'hydration-detail';
 
 export interface UserReport {
   id: string;
