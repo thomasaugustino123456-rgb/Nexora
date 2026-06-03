@@ -16,7 +16,7 @@ import { ArtistMascot } from './ArtistMascot';
 import { WritingMascot } from './WritingMascot';
 import { HappyMascot } from './FeedbackUI';
 
-export function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest, isCustomPlan, gardenState, setGardenState, onLootFound }: { 
+export function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest, isCustomPlan, gardenState, setGardenState, onLootFound, onCompleteWaterChallenge }: { 
   step: ChallengeStep, 
   setStep: (s: ChallengeStep) => void, 
   customSteps?: ChallengeStep[],
@@ -35,7 +35,8 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   isCustomPlan?: boolean,
   gardenState: GardenState,
   setGardenState: (g: GardenState) => void,
-  onLootFound: (loot: any) => void
+  onLootFound: (loot: any) => void,
+  onCompleteWaterChallenge?: () => void;
 }) {
   const baseSteps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'gratitude', 'reaction'];
   const archived = settings.archivedOfficialChallenges || [];
@@ -166,6 +167,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 activeSkin={settings.activeSkin}
                 settings={settings}
                 play={play}
+                onCompleteWaterChallenge={onCompleteWaterChallenge}
               />
             )}
             {step === 'breathing' && (
@@ -393,7 +395,7 @@ export const PushupsStep = React.memo(({ goal, onDone, onSkip, activeSkin = 'non
   );
 });
 
-export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUpdate, onContinue, activeSkin = 'none', settings, play }: { goal: number, progress?: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
+export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUpdate, onContinue, activeSkin = 'none', settings, play, onCompleteWaterChallenge }: { goal: number, progress?: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void, onCompleteWaterChallenge?: () => void }) => {
   const [localProgress, setLocalProgress] = useState(initialProgress);
   const isFinished = localProgress >= goal;
 
@@ -438,6 +440,9 @@ export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUp
                     if (newProgress >= goal) {
                        if (settings.soundEnabled) play('challenge_unlock');
                        vibrate(VIBRATION_PATTERNS.SUCCESS);
+                       if (onCompleteWaterChallenge) {
+                         onCompleteWaterChallenge();
+                       }
                        setTimeout(() => onContinue(), 800);
                     }
                   }} 

@@ -22,7 +22,8 @@ export function HouseScreen({
   onUpdateSettings,
   onUpdateStats,
   showToast,
-  play
+  play,
+  onCompleteWaterChallenge
 }: { 
   onBack: () => void;
   stats: UserStats;
@@ -37,6 +38,7 @@ export function HouseScreen({
   onUpdateStats: (stats: Partial<UserStats>) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
   play: (s: string) => void;
+  onCompleteWaterChallenge?: () => void;
 }) {
   const [resetKey, setResetKey] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -93,6 +95,10 @@ export function HouseScreen({
       waterChallengeCount: currentCount + 1,
       waterDrank: (dailyProgress.waterDrank || 0) + 1
     });
+
+    if (onCompleteWaterChallenge) {
+      onCompleteWaterChallenge();
+    }
 
     showToast(`Epic! Reward: +${coinsToAdd} Coins, +${xpToAdd} XP, +${streakToAdd} Streak! 🌊 (${currentCount + 1}/4)`, "success");
     

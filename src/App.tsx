@@ -339,6 +339,80 @@ export default function App() {
     forceSyncData,
   } = useNexoraData(DEFAULT_SETTINGS, DEFAULT_STATS, showToast);
 
+  // Global hydration-detail states synced with localStorage
+  const [hydrationConsecutiveDays, setHydrationConsecutiveDays] = useState<number>(() => {
+    return parseInt(localStorage.getItem('hydration_consecutive_days') || '0', 10);
+  });
+  const [hydrationWaterLevel, setHydrationWaterLevel] = useState<number>(() => {
+    return parseFloat(localStorage.getItem('hydration_water_level') || '0.0');
+  });
+  const [hydrationLastCompletedDate, setHydrationLastCompletedDate] = useState<string>(() => {
+    return localStorage.getItem('hydration_last_completed_date') || '';
+  });
+  const [pendingHydrationCoinsAdded, setPendingHydrationCoinsAdded] = useState<boolean>(false);
+
+  // 2-Day Inactivity Check & Reset
+  useEffect(() => {
+    const lastCompleted = localStorage.getItem('hydration_last_completed_date');
+    if (lastCompleted) {
+      const lastDate = new Date(lastCompleted);
+      const todayDate = new Date();
+      lastDate.setHours(0, 0, 0, 0);
+      todayDate.setHours(0, 0, 0, 0);
+      
+      const diffTime = todayDate.getTime() - lastDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays >= 2) {
+        localStorage.setItem('hydration_consecutive_days', '0');
+        localStorage.setItem('hydration_water_level', '0.0');
+        localStorage.removeItem('hydration_last_completed_date');
+        setHydrationConsecutiveDays(0);
+        setHydrationWaterLevel(0.0);
+        setHydrationLastCompletedDate('');
+        showToast("⚠️ Inactivity detected! High-water challenge streak & bottle level reset to 0.", "error");
+      }
+    }
+  }, []);
+
+  const triggerWaterChallengeCompletion = () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // Increment consecutive days
+    const nextDays = hydrationConsecutiveDays + 1;
+    // Increment bottle water level by 20%
+    let nextLevel = hydrationWaterLevel + 0.20; 
+    let awardedCoins = 0;
+
+    if (nextLevel >= 0.999) {
+      nextLevel = 0.0; // resets back to 0 so they can fill it again!
+      awardedCoins = 10;
+    }
+
+    localStorage.setItem('hydration_consecutive_days', nextDays.toString());
+    localStorage.setItem('hydration_water_level', nextLevel.toFixed(3));
+    localStorage.setItem('hydration_last_completed_date', todayStr);
+
+    setHydrationConsecutiveDays(nextDays);
+    setHydrationWaterLevel(nextLevel);
+    setHydrationLastCompletedDate(todayStr);
+
+    if (awardedCoins > 0) {
+      // Award +10 coins!
+      onUpdateStats((prev) => ({
+        ...prev,
+        coins: (prev.coins || 0) + awardedCoins
+      }));
+      setPendingHydrationCoinsAdded(true);
+      setTimeout(() => {
+        setPendingHydrationCoinsAdded(false);
+      }, 4000);
+      showToast("🪙 Epic! Big Water Bottle is totally full! +10 Coins Added! 🏆💧", "success");
+    } else {
+      showToast(`💧 Water Challenge Complete! Streak: ${nextDays} (+20% Bottle Water) 🏆`, "success");
+    }
+  };
+
   useEffect(() => {
     const skin = settings.activeSkin || 'none';
     const themeClass = skin === 'obsidian' 
@@ -5111,6 +5185,7 @@ export default function App() {
                       onUpdateStats={onUpdateStats}
                       showToast={showToast}
                       play={play}
+                      onCompleteWaterChallenge={triggerWaterChallengeCompletion}
                     />
                   </Suspense>
                 </motion.div>
@@ -5233,6 +5308,11 @@ export default function App() {
                     play={play}
                     showToast={showToast}
                     settings={settings}
+                    consecutiveDays={hydrationConsecutiveDays}
+                    setConsecutiveDays={setHydrationConsecutiveDays}
+                    waterLevel={hydrationWaterLevel}
+                    setWaterLevel={setHydrationWaterLevel}
+                    pendingCoinsAdded={pendingHydrationCoinsAdded}
                   />
                 </motion.div>
               )}
@@ -5292,6 +5372,7 @@ export default function App() {
                       gardenState={gardenState}
                       setGardenState={setGardenState}
                       onLootFound={setFoundLoot}
+                      onCompleteWaterChallenge={triggerWaterChallengeCompletion}
                     />
                   </Suspense>
                 </motion.div>

@@ -34,10 +34,10 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
   const [splashes, setSplashes] = useState<SplashParticle[]>([]);
   const lastProgressRef = useRef(progress);
 
-  // We start the water level from the absolute bottom edge of the device screen (1000 in SVG space)
-  // When progress = 0: currentY is 1000 (meaning water is sloshing at the absolute bottom edge, visible and responsive)
+  // We map progress 0 to 880 (instead of 1000) so there is always a visible sloshing level of water and ice cubes at the bottom!
+  // When progress = 0: currentY is 880 (leaving a pleasant footer base of sloshing blue water)
   // When progress = 1: currentY is 80 (fully filling the screen)
-  const currentY = 1000 - (progress * 920);
+  const currentY = 880 - (progress * 800);
 
   // Initialize 5 cartoon ice cubes distributed across 3 depth levels as requested:
   // Clustered around the center (400-600) to move freely and stack nicely
@@ -75,8 +75,8 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (!active) return;
       if (e.gamma !== null) {
-        // Subtle tilt clamp - max 5 degrees left/right
-        const clamped = Math.max(-5, Math.min(5, e.gamma));
+        // Hyper-subtle tilt clamp - max 3 degrees left/right for an organic vibe
+        const clamped = Math.max(-3, Math.min(3, e.gamma));
         setTilt(clamped);
       }
     };
@@ -85,7 +85,7 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
       if (!active) return;
       // desktop cursor fallback translates coordinate ratio beautifully
       const ratio = (e.clientX / window.innerWidth) - 0.5; // [-0.5, 0.5]
-      setTilt(ratio * 9); // tilt by up to [-4.5, 4.5] degrees
+      setTilt(ratio * 5); // tilt by up to [-2.5, 2.5] degrees for a premium stable look
     };
 
     window.addEventListener('deviceorientation', handleOrientation);
@@ -114,7 +114,7 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
       // 2. Smoothly interpolate physical tilt values using Spring Inertia (avoids quick shifts/paper feel)
       setSmoothTilt(prev => {
         const diff = tilt - prev;
-        return prev + diff * 0.025; // Massive liquid inertia for hyper-smooth slosh
+        return prev + diff * 0.04; // Custom liquid sloshing wave factor for hyper-smooth realism
       });
 
       // 3. Solve 3-layer Ice Cube sliding physics, collisions, and screen-edge constraint formulas
@@ -303,8 +303,8 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
     C 250,${leftY + (rightY - leftY) * 0.25 + waveCycle1 + 8}
       750,${rightY - (rightY - leftY) * 0.25 + waveCycle2 - 8}
       1000,${rightY + waveCycle2}
-    L 1000,1230
-    L 0,1230
+    L 1000,2000
+    L 0,2000
     Z
   `;
 
@@ -318,8 +318,8 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
     C 280,${leftYBack + (rightYBack - leftYBack) * 0.28 + waveCycleBack + 4}
       720,${rightYBack - (rightYBack - leftYBack) * 0.28 + waveCycleBack - 4}
       1000,${rightYBack - waveCycleBack}
-    L 1000,1230
-    L 0,1230
+    L 1000,2000
+    L 0,2000
     Z
   `;
 
