@@ -1,202 +1,308 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import mascotSwimsuitImg from '../assets/images/mascot_swimsuit_1780494337310.png';
 
 interface WaterMascotProps {
   className?: string;
   progress: number; // 0 to 1 (0% to 100%)
 }
 
+interface Ripple {
+  id: number;
+  cx: number;
+  cy: number;
+  scaleMax: number;
+}
+
 export const WaterMascot = React.memo(({ className, progress }: WaterMascotProps) => {
-  // Map progress (0-1) to Y translation (490 to 150)
-  // 0% -> 490 (bottom)
-  // 100% -> 150 (top)
-  const fillY = 490 - (progress * 340);
+  const [tilt, setTilt] = useState(0); // target tilt in degrees (-15 to 15)
+  const [ripples, setRipples] = useState<Ripple[]>([]);
+  const lastProgressRef = useRef(progress);
+
+  // Compute the current water level height (fillY)
+  // 480 is the dry bottom of the mascot-bottle container
+  // 170 is near the top neck of the container
+  const fillY = 485 - (progress * 300);
+  const mascotY = fillY - 85; // Float on top of water surface
+
+  // Gyroscope / Accel & Desktop Hover Tilt Interaction
+  useEffect(() => {
+    let active = true;
+
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      if (!active) return;
+      if (e.gamma !== null) {
+        // Gamma representation is left-to-right phone tilt in degrees [-90, 90]
+        // Smoothly scale down to a safe [-14, 14] tilt for subtle aesthetic sloshing
+        const clamped = Math.max(-28, Math.min(28, e.gamma));
+        setTilt(clamped * 0.5);
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!active) return;
+      // Elegant desktop fallback: use cursor position relative to window width
+      const ratio = (e.clientX / window.innerWidth) - 0.5; // [-0.5, 0.5]
+      setTilt(ratio * 20); // Tilt by up to [-10, 10] degrees
+    };
+
+    window.addEventListener('deviceorientation', handleOrientation);
+    window.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      active = false;
+      window.removeEventListener('deviceorientation', handleOrientation);
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
+
+  // Ripple Generation Logic: Monitor progress increases (+1 water click!)
+  useEffect(() => {
+    if (progress > lastProgressRef.current) {
+      // Create a series of staggered ripples for extra premium haptic/visual feel
+      const newRipples: Ripple[] = [
+        { id: Date.now(), cx: 250, cy: fillY, scaleMax: 4 },
+        { id: Date.now() + 1, cx: 250, cy: fillY, scaleMax: 2.5 }
+      ];
+
+      setRipples(prev => [...prev, ...newRipples]);
+
+      // Prune ripples after animation finishes
+      setTimeout(() => {
+        setRipples(prev => prev.filter(r => !newRipples.some(n => n.id === r.id)));
+      }, 1200);
+    }
+    lastProgressRef.current = progress;
+  }, [progress, fillY]);
 
   return (
-    <div className={`bottle-container ${className || ''}`}>
-      <svg viewBox="0 0 500 600" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+    <div className={`relative w-full aspect-[4/5] max-w-[320px] md:max-w-[380px] mx-auto select-none ${className || ''}`}>
+      
+      {/* Self-contained CSS for high-performance responsive animations (Zero CPU drain on low-end devices) */}
+      <style>{`
+        @keyframes waveTranslation {
+          0% { transform: translateX(0px); }
+          100% { transform: translateX(-300px); }
+        }
+        @keyframes waveTranslationDouble {
+          0% { transform: translateX(-150px); }
+          100% { transform: translateX(150px); }
+        }
+        @keyframes floatIdle {
+          0%, 100% { transform: translateY(-3px) rotate(-1.5deg); }
+          50% { transform: translateY(4px) rotate(1.5deg); }
+        }
+        @keyframes riseBubble {
+          0% { transform: translateY(50px) scale(0.7); opacity: 0; }
+          20% { opacity: 0.8; }
+          80% { opacity: 0.5; }
+          100% { transform: translateY(-160px) scale(1.1); opacity: 0; }
+        }
+        .anim-wave-1 {
+          animation: waveTranslation 4.5s linear infinite;
+        }
+        .anim-wave-2 {
+          animation: waveTranslationDouble 6.5s linear infinite;
+        }
+        .anim-mascot-float {
+          animation: floatIdle 3.2s ease-in-out infinite;
+          transform-origin: center bottom;
+        }
+        .anim-bubble-bg {
+          animation: riseBubble 4s ease-in-out infinite;
+          transform-origin: center;
+        }
+      `}</style>
+
+      <svg viewBox="0 0 500 600" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-[0_10px_25px_rgba(0,122,255,0.15)]">
         <defs>
-          {/* Filters - removed for performance */}
-
-          {/* Gradients */}
-          <linearGradient id="water-grad-fill" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#5CD6FF" />
-            <stop offset="30%" stopColor="#0095FF" />
-            <stop offset="100%" stopColor="#0047FF" />
+          {/* Main seamless glass reflections gradient */}
+          <linearGradient id="glass-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.8" />
+            <stop offset="35%" stopColor="#E2F5FF" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="#B3E5FF" stopOpacity="0.45" />
           </linearGradient>
 
-          <linearGradient id="glass-edge-water" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.8" />
-            <stop offset="50%" stopColor="#C2EFFF" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.6" />
+          {/* Smooth custom blue water gradient */}
+          <linearGradient id="water-gradient-blue" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#38BDF8" /> {/* Electric sky blue */}
+            <stop offset="35%" stopColor="#0EA5E9" stopOpacity="0.95" /> {/* Ocean blue */}
+            <stop offset="100%" stopColor="#1E40AF" stopOpacity="0.99" /> {/* Deep blue */}
           </linearGradient>
 
-          {/* Clip Path to mask the liquid to the bottle shape (Mascot body + Ears) */}
-          <clipPath id="bottle-mask-water">
-            {/* Main Body */}
+          {/* Mask matching the iconic Mascot Jar Shell Shape (Ears + Rounded Body) */}
+          <clipPath id="mascot-shell-mask">
             <ellipse cx="250" cy="330" rx="190" ry="160" />
-            {/* Left Ear */}
             <path d="M 120,210 C 100,150 110,120 120,110 C 140,110 160,150 180,180 Z" />
-            {/* Right Ear */}
             <path d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" />
-          </clipPath>
-
-          {/* Clip Path for the mouth */}
-          <clipPath id="mouth-mask-water">
-            <path d="M 225 300 Q 250 310 275 300 C 275 340 225 340 225 300 Z" />
           </clipPath>
         </defs>
 
-        {/* Background Drop Shadow - Simplified */}
-        <ellipse cx="250" cy="500" rx="150" ry="15" fill="#0066FF" fillOpacity="0.05" />
+        {/* Ambient Pool Shadow underneath Beaker */}
+        <ellipse cx="250" cy="510" rx="140" ry="14" fill="#0284C7" fillOpacity="0.08" />
 
-        {/* BOTTLE BACK GLASS */}
-        <g id="bottle-back" stroke="#99DFFF" strokeWidth="4" fill="none">
-          {/* Back of the neck/rim */}
-          <path d="M 220 160 L 220 140 A 10 10 0 0 1 230 130 L 270 130 A 10 10 0 0 1 280 140 L 280 160" />
-          {/* Back lip of the opening */}
-          <ellipse cx="250" cy="130" rx="30" ry="8" strokeOpacity="0.5" />
+        {/* CONTAINER BACK GLASS LAYERS */}
+        <g id="aquarium-shell-back" stroke="#A7F3D0" strokeWidth="1" fill="none">
+          {/* Rim cap backing */}
+          <ellipse cx="250" cy="130" rx="30" ry="8" stroke="#7DD3FC" strokeOpacity="0.4" strokeWidth="2" />
+          <path d="M 220 160 L 220 140 A 10 10 0 0 1 230 130 L 270 130 A 10 10 0 0 1 280 140 L 280 160" stroke="#7DD3FC" strokeOpacity="0.3" strokeWidth="3" />
         </g>
 
-        {/* LIQUID LAYER (Clipped to Mascot Shape) */}
-        <g clipPath="url(#bottle-mask-water)">
-          
-          {/* Empty Glass Tint (Background inside bottle) */}
-          <rect x="0" y="0" width="500" height="600" fill="#F0FAFF" fillOpacity="0.3" />
+        {/* WATER & LIQUID (Bounded cleanly to the Mascot Inner Shell) */}
+        <g clipPath="url(#mascot-shell-mask)">
+          {/* Clear Glass Empty Backing Tint */}
+          <rect x="0" y="0" width="500" height="600" fill="#F0F9FF" fillOpacity="0.45" />
+          <ellipse cx="250" cy="330" rx="175" ry="145" fill="#E0F2FE" fillOpacity="0.25" />
 
-          {/* The Water System */}
-          <g id="water-system">
-             {/* Using standard Framer Motion for the filling animation for better stability than CSS on re-renders */}
-            <motion.g 
-              animate={{ y: fillY }}
-              transition={{ type: "spring", stiffness: 100, damping: 20 }}
+          {/* PHYSICAL WATER LAYER (Moves vertically as progress rises) */}
+          <motion.g 
+            animate={{ y: fillY }}
+            transition={{ type: "spring", stiffness: 90, damping: 18 }}
+          >
+            {/* ROTATING SLOSH GROUP (Reacts dynamically to phone tilt physics) */}
+            <motion.g
+              animate={{ rotate: tilt }}
+              style={{ transformOrigin: `250px 0px` }}
+              transition={{ type: "spring", stiffness: 120, damping: 20 }}
             >
-              
-              {/* Efficient Seamless Wave Animation using CSS */}
-              <g className="animate-wave">
+              {/* Secondary Background Waver (Adds parallax depth to active water) */}
+              <g className="anim-wave-2" opacity="0.45">
                 <path 
-                  d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 L 900,600 L 0,600 Z" 
-                  fill="url(#water-grad-fill)" 
-                  fillOpacity="0.9"
-                />
-                
-                {/* Surface Highlight Wave */}
-                <path 
-                  d="M 0,25 Q 50,15 100,25 T 200,25 T 300,25 T 400,25 T 500,25 T 600,25 T 700,25 T 800,25 T 900,25 L 900,35 L 0,35 Z" 
-                  fill="#ffffff" 
-                  fillOpacity="0.15"
+                  d="M -300,10 Q -225,-5 -150,10 T 0,10 T 150,10 T 300,10 T 450,10 T 600,10 T 750,10 T 900,10 L 900,600 L -300,600 Z" 
+                  fill="#7DD3FC" 
                 />
               </g>
 
-              {/* Rising Bubbles */}
-              <g fill="#ffffff" fillOpacity="0">
-                <circle cx="150" cy="250" r="4" className="animate-bubble-1" />
-                <circle cx="200" cy="250" r="7" className="animate-bubble-2" />
-                <circle cx="350" cy="250" r="3" className="animate-bubble-3" />
+              {/* Main Foreground Waving Body */}
+              <g className="anim-wave-1">
+                <path 
+                  d="M -300,20 Q -225,5 -150,20 T 0,20 T 150,20 T 300,20 T 450,20 T 600,20 T 750,20 T 900,20 L 900,600 L -300,600 Z" 
+                  fill="url(#water-gradient-blue)" 
+                />
               </g>
+
+              {/* Seamless Water Bubble Emitters (Hardware Accelerated CPU/Low-end friendliness) */}
+              {progress > 0 && (
+                <g fill="#FFFFFF" fillOpacity="0.6">
+                  <circle cx="160" cy="200" r="5" className="anim-bubble-bg" style={{ animationDelay: '0s', animationDuration: '4.5s' }} />
+                  <circle cx="210" cy="280" r="3.5" className="anim-bubble-bg" style={{ animationDelay: '1.2s', animationDuration: '3.8s' }} />
+                  <circle cx="340" cy="240" r="4.5" className="anim-bubble-bg" style={{ animationDelay: '0.6s', animationDuration: '4.2s' }} />
+                  <circle cx="280" cy="320" r="3" className="anim-bubble-bg" style={{ animationDelay: '2.1s', animationDuration: '3.5s' }} />
+                </g>
+              )}
             </motion.g>
-          </g>
+          </motion.g>
         </g>
 
-        {/* WATER DROPS (Falling from the opening to create the "filling" effect) */}
-        {progress < 1 && (
-          <g fill="#5CD6FF">
-            <path 
-              d="M 250 140 C 250 140 245 155 245 160 A 5 5 0 0 0 255 160 C 255 155 250 140 250 140 Z"
-              className="animate-water-drop opacity-0"
-            />
-            {/* Splash ripples on the surface */}
-            <ellipse 
-              cx="250" cy={fillY} rx="5" ry="5" 
-              fill="none" stroke="#FFFFFF" strokeWidth="2"
-              className="animate-water-ripple opacity-0"
-            />
-          </g>
-        )}
+        {/* INTERACTIVE TAP RIPPLES (Super Immersive Visual Feedback!) */}
+        <g id="water-ripples">
+          <AnimatePresence>
+            {ripples.map(r => (
+              <motion.ellipse
+                key={r.id}
+                cx={r.cx}
+                cy={r.cy}
+                rx={12}
+                ry={6}
+                fill="none"
+                stroke="#E0F2FE"
+                strokeWidth="4"
+                initial={{ scale: 0.1, opacity: 0.9 }}
+                animate={{ scale: r.scaleMax, opacity: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.9, ease: "easeOut" }}
+              />
+            ))}
+          </AnimatePresence>
+        </g>
 
-        {/* BOTTLE FRONT GLASS & OUTLINES */}
-        {/* Front Rim */}
-        <ellipse cx="250" cy="130" rx="30" ry="8" fill="rgba(255,255,255,0.2)" stroke="#88D4FF" strokeWidth="4" />
-        <path d="M 220 130 L 220 160 A 10 10 0 0 0 230 170 L 270 170 A 10 10 0 0 0 280 160 L 280 130" fill="none" stroke="#88D4FF" strokeWidth="4" />
-        
-        {/* Main Mascot Bottle Body Outline */}
-        <g stroke="#88D4FF" strokeWidth="4" fill="url(#glass-edge-water)">
-          {/* Main Ellipse */}
+        {/* FLOATING SWIMSUIT MASCOT & SWIM RING DONUT DESIGN (Perfect sandwich alignment) */}
+        <motion.g 
+          animate={{ 
+            y: mascotY,
+            rotate: tilt
+          }}
+          transition={{ 
+            type: "spring", 
+            stiffness: 85, 
+            damping: 17 
+          }}
+          style={{ transformOrigin: `250px 0px` }}
+        >
+          {/* Inner float bubble motion group */}
+          <g className={progress > 0 ? "anim-mascot-float" : ""}>
+            
+            {/* 1. SWIM RING DONUT BACK LAYER */}
+            {progress > 0 && (
+              <g>
+                <path d="M 185,10 A 65,26 0 0,1 315,10" fill="none" stroke="#FF5C8A" strokeWidth="24" strokeLinecap="round" opacity="0.9" />
+                <path d="M 205,10 A 45,16 0 0,1 295,10" fill="none" stroke="#FFF7ED" strokeWidth="8" strokeLinecap="round" opacity="0.65" />
+              </g>
+            )}
+
+            {/* 2. CUTE SWIMSUIT MASCOT PNG IMAGE (Centered & floating) */}
+            <image
+              href={mascotSwimsuitImg}
+              x="175"
+              y={progress > 0 ? "-75" : "-55"} // sits snug on surface when floating or rests gracefully on floor when dry
+              width="150"
+              height="150"
+            />
+
+            {/* 3. SWIM RING DONUT FRONT LAYER (Sits on top to clamp the mascot inside!) */}
+            {progress > 0 && (
+              <g>
+                <path d="M 315,10 A 65,26 0 0,1 185,10" fill="none" stroke="#FF5C8A" strokeWidth="24" strokeLinecap="round" />
+                
+                {/* Cute tropical white stripes decoration on swim ring */}
+                <path d="M 202,19 C 205,17 203,13 201,8" fill="none" stroke="#FFF" strokeWidth="6" strokeLinecap="round" />
+                <path d="M 250,22 C 250,17 250,13 250,8" fill="none" stroke="#FFF" strokeWidth="6" strokeLinecap="round" />
+                <path d="M 298,19 C 295,17 297,13 299,8" fill="none" stroke="#FFF" strokeWidth="6" strokeLinecap="round" />
+                
+                <path d="M 222,21 C 223,17 221,13 220,9" fill="none" stroke="#FFA6C9" strokeWidth="6" strokeLinecap="round" />
+                <path d="M 275,21 C 274,17 276,13 277,9" fill="none" stroke="#FFA6C9" strokeWidth="6" strokeLinecap="round" />
+              </g>
+            )}
+          </g>
+        </motion.g>
+
+        {/* CONTAINER GLASS SHELL & OUTLINES (Kept on top to maintain outer depth refraction) */}
+        {/* Rim Opening */}
+        <ellipse cx="250" cy="130" rx="30" ry="8" fill="rgba(255,255,255,0.25)" stroke="#38BDF8" strokeWidth="4" />
+        <path d="M 220 130 L 220 160 A 10 10 0 0 0 230 170 L 270 170 A 10 10 0 0 0 280 160 L 280 130" fill="none" stroke="#38BDF8" strokeWidth="4" />
+
+        {/* Main Beaker Jar Outlines */}
+        <g stroke="#38BDF8" strokeWidth="4" fill="url(#glass-grad)" fillOpacity="0.25">
           <ellipse cx="250" cy="330" rx="190" ry="160" />
-          {/* Left Ear */}
           <path d="M 120,210 C 100,150 110,120 120,110 C 140,110 160,150 180,180 Z" strokeLinejoin="round" />
-          {/* Right Ear */}
           <path d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" strokeLinejoin="round" />
         </g>
 
-        {/* Floating Glass Arms / Nubs */}
-        <g stroke="#88D4FF" strokeWidth="4" fill="url(#glass-edge-water)">
-          {/* Left Arm */}
+        {/* Side Floating Refinement Handles */}
+        <g stroke="#38BDF8" strokeWidth="4" fill="url(#glass-grad)">
           <ellipse cx="60" cy="310" rx="15" ry="30" transform="rotate(-15, 60, 310)" />
-          {/* Right Arm */}
           <ellipse cx="440" cy="310" rx="15" ry="30" transform="rotate(15, 440, 310)" />
         </g>
 
-        {/* Glass Specular Highlights (To make it shiny!) */}
-        {/* Big top-left highlight */}
-        <path d="M 90,300 A 160,130 0 0,1 200,190 A 150,120 0 0,0 110,310 Z" fill="#ffffff" fillOpacity="0.6" />
-        {/* Soft right edge glow */}
-        <path d="M 425,300 A 170,140 0 0,1 350,460" fill="none" stroke="#ffffff" strokeWidth="12" strokeLinecap="round" opacity="0.4" />
-        {/* Bottom bounce light */}
-        <path d="M 150,470 A 170,140 0 0,0 350,470" fill="none" stroke="#ffffff" strokeWidth="8" strokeLinecap="round" opacity="0.5" />
-        {/* Ear highlights */}
-        <path d="M 120,130 C 120,130 140,140 150,160" fill="none" stroke="#ffffff" strokeWidth="6" strokeLinecap="round" opacity="0.7" />
-        <path d="M 380,130 C 380,130 360,140 350,160" fill="none" stroke="#ffffff" strokeWidth="6" strokeLinecap="round" opacity="0.7" />
+        {/* Specular Shiny Glass Highlights */}
+        {/* Main top left gloss curve */}
+        <path d="M 92,290 A 160,130 0 0,1 210,195 A 150,120 0 0,0 112,305 Z" fill="#FFFFFF" fillOpacity="0.75" />
+        {/* Side reflective highlight */}
+        <path d="M 425,300 A 170,140 0 0,1 350,460" fill="none" stroke="#FFFFFF" strokeWidth="10" strokeLinecap="round" opacity="0.35" />
+        {/* Bottom shine bounce reflection */}
+        <path d="M 150,470 A 170,140 0 0,0 350,470" fill="none" stroke="#FFFFFF" strokeWidth="7" strokeLinecap="round" opacity="0.45" />
 
-        {/* MASCOT FACE & FEATURES */}
-        <g id="face">
-          {/* Left Eye */}
-          <ellipse cx="180" cy="270" rx="20" ry="28" fill="#001845" />
-          <circle cx="173" cy="255" r="8" fill="#ffffff" />
-          <circle cx="185" cy="275" r="3" fill="#ffffff" />
+        {/* Ear Shiny Glass Lines */}
+        <path d="M 120,135 C 120,135 138,143 148,162" fill="none" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" opacity="0.6" />
+        <path d="M 380,135 C 380,135 362,143 352,162" fill="none" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" opacity="0.6" />
 
-          {/* Right Eye */}
-          <ellipse cx="320" cy="270" rx="20" ry="28" fill="#001845" />
-          <circle cx="313" cy="255" r="8" fill="#ffffff" />
-          <circle cx="325" cy="275" r="3" fill="#ffffff" />
-
-          {/* Mouth */}
-          <path d="M 225 300 Q 250 310 275 300 C 275 340 225 340 225 300 Z" fill="#52001A" stroke="#001845" strokeWidth="4" strokeLinejoin="round" />
-          <g clipPath="url(#mouth-mask-water)">
-            <ellipse cx="250" cy="330" rx="18" ry="12" fill="#FF4D6D" />
-          </g>
+        {/* Sparkly Ambient Stars around Beaker (Adding extra magic!) */}
+        <g fill="#FFFFFF">
+          <polygon points="100,105 104,108 108,105 104,102" className="animate-pulse" style={{ animationDuration: '2.5s' }} />
+          <polygon points="405,125 408,128 411,125 408,122" className="animate-pulse" style={{ animationDuration: '3.5s' }} />
+          <polygon points="85,380 91,385 97,380 91,375" fill="#38BDF8" className="animate-pulse" style={{ animationDuration: '2.8s' }} />
+          <polygon points="415,395 420,399 425,395 420,391" fill="#38BDF8" className="animate-pulse" style={{ animationDuration: '3.1s' }} />
         </g>
-
-        {/* The Glowing "N" on the belly - Simplified */}
-        <g>
-          <path d="M 220 360 L 235 360 L 260 400 L 260 360 L 275 360 L 275 420 L 260 420 L 235 380 L 235 420 L 220 420 Z" fill="#ffffff" stroke="#ffffff" strokeWidth="1" strokeLinejoin="round" />
-        </g>
-
-        {/* HALO - Simplified */}
-        <g id="halo" className="animate-mascot-breathe">
-          <ellipse cx="250" cy="60" rx="90" ry="15" fill="none" stroke="#52D1FF" strokeWidth="6" opacity="0.6" />
-          <ellipse cx="250" cy="60" rx="90" ry="15" fill="none" stroke="#ffffff" strokeWidth="2" />
-        </g>
-
-        {/* SPARKLES / STARS - Removed filter */}
-        <defs>
-          <path id="star-water" d="M 0,-15 Q 0,0 15,0 Q 0,0 0,15 Q 0,0 -15,0 Q 0,0 0,-15 Z" fill="#ffffff" />
-        </defs>
-
-        <use href="#star-water" x="80" y="150" className="sparkle sparkle-1" />
-        <use href="#star-water" x="420" y="200" className="sparkle sparkle-2" transform="scale(0.8)" />
-        <use href="#star-water" x="120" y="450" className="sparkle sparkle-3" transform="scale(0.6)" />
-        <use href="#star-water" x="380" y="420" className="sparkle sparkle-4" transform="scale(0.9)" />
-        
-        <polygon 
-          points="100,100 105,105 110,100 105,95" fill="#5CD6FF"
-          className="animate-pulse"
-        />
-        <polygon 
-          points="400,120 403,123 406,120 403,117" fill="#5CD6FF"
-          className="animate-pulse" style={{ animationDuration: '3s' }}
-        />
-
       </svg>
     </div>
   );
