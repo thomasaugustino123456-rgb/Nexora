@@ -14,62 +14,85 @@ interface SplashParticle {
   radius: number;
 }
 
-interface SimulatedIceCube {
+interface CartoonIceCube {
   id: number;
+  layer: 'top' | 'middle' | 'bottom';
   homeX: number;
   x: number;
   vx: number;
   size: number;
   baseRotation: number;
+  rot: number;
+  vrot: number;
   floatPhase: number;
   floatSpeed: number;
 }
 
 export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress }) => {
   const [tilt, setTilt] = useState(0);
+  const [smoothTilt, setSmoothTilt] = useState(0); // smooth lagging tilt for fluid physics inertia
   const [splashes, setSplashes] = useState<SplashParticle[]>([]);
   const lastProgressRef = useRef(progress);
 
   // We start the water level from the absolute bottom edge of the device screen (1000 in SVG space)
-  // When progress = 0: currentY is 1000 (meaning water is gently sloshing at the absolute bottom edge, visible and interactive)
-  // When progress = 1: currentY is 100 (near the top of the screen)
-  const currentY = 1000 - (progress * 900);
+  // When progress = 0: currentY is 1000 (meaning water is sloshing at the absolute bottom edge, visible and responsive)
+  // When progress = 1: currentY is 80 (fully filling the screen)
+  const currentY = 1000 - (progress * 920);
 
-  // Initialize 10 ice cubes spaced evenly across the screen width (from x = 100 to 900)
-  const [iceCubes, setIceCubes] = useState<SimulatedIceCube[]>(() => {
-    return Array.from({ length: 10 }).map((_, i) => {
-      const homeX = 90 + i * 90; // Distributed beautifully
-      return {
-        id: i,
-        homeX,
-        x: homeX,
-        vx: 0,
-        size: 40 + Math.random() * 20, // Variation in chunkiness
-        baseRotation: (Math.random() - 0.5) * 60,
-        floatPhase: Math.random() * Math.PI * 2,
-        floatSpeed: 0.015 + Math.random() * 0.015,
-      };
-    });
+  // Initialize 10 cartoon ice cubes distributed across 3 depth levels as requested:
+  // - 3 in 'top' layer (surface floater bobs, partially submerged)
+  // - 3 in 'middle' layer (neutrals, suspended/drifting mid-water)
+  // - 4 in 'bottom' layer (heavy sinkers sliding on screen floor)
+  const [iceCubes, setIceCubes] = useState<CartoonIceCube[]>(() => {
+    const layers: { layer: 'top' | 'middle' | 'bottom'; homeX: number; size: number }[] = [
+      // Top floaters (evenly spaced near the surface)
+      { layer: 'top', homeX: 200, size: 70 },
+      { layer: 'top', homeX: 500, size: 85 },
+      { layer: 'top', homeX: 800, size: 75 },
+      // Mid drifters (suspended inside water depth)
+      { layer: 'middle', homeX: 180, size: 65 },
+      { layer: 'middle', homeX: 520, size: 75 },
+      { layer: 'middle', homeX: 820, size: 68 },
+      // Bottom sinkers (heavy glass slide/clatter on screen bottom floor)
+      { layer: 'bottom', homeX: 150, size: 80 },
+      { layer: 'bottom', homeX: 380, size: 70 },
+      { layer: 'bottom', homeX: 620, size: 85 },
+      { layer: 'bottom', homeX: 850, size: 75 }
+    ];
+
+    return layers.map((item, idx) => ({
+      id: idx,
+      layer: item.layer,
+      homeX: item.homeX,
+      x: item.homeX,
+      vx: 0,
+      size: item.size,
+      baseRotation: (Math.random() - 0.5) * 50,
+      rot: (Math.random() - 0.5) * 30,
+      vrot: 0,
+      floatPhase: Math.random() * Math.PI * 2,
+      floatSpeed: 0.02 + Math.random() * 0.02,
+    }));
   });
 
-  // Track orientation of the device with a desktop cursor fallback
+  // Device orientation capture (with desktop hover cursor fallback)
   useEffect(() => {
     let active = true;
 
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (!active) return;
       if (e.gamma !== null) {
-        // gamma is left-to-right tilt in degrees [-90, 90]
-        const clamped = Math.max(-30, Math.min(30, e.gamma));
-        setTilt(clamped * 0.7); // smooth responsiveness scaling factor
+        // gamma holds left-to-right tilt in degrees [-90, 90]
+        const clamped = Math.max(-28, Math.min(28, e.gamma));
+        setTilt(clamped);
       }
     };
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!active) return;
-      // desktop cursor fallback with smooth transition
+      // desktop cursor fallback translates coordinate ratio beautifully
       const ratio = (e.clientX / window.innerWidth) - 0.5; // [-0.5, 0.5]
-      setTilt(ratio * 25);
+      setTilt(ratio * 35); // tilt by up to [-17.5, 17.5] degrees
     };
 
     window.addEventListener('deviceorientation', handleOrientation);
@@ -82,103 +105,151 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
     };
   }, []);
 
-  // Frame-by-frame high performance physics simulation for the ice cubes
+  // Central Animation and Simulation Frame loop
+  // Handles floating water lag, splash particles, and the 3-layer ice cube physics
+  const [time, setTime] = useState(0);
   useEffect(() => {
     let active = true;
     let frameId: number;
-    let time = 0;
 
-    const simulatePhysics = () => {
+    const runSimulationLoop = () => {
       if (!active) return;
-      time += 1;
+      
+      // 1. Update global physics render clock
+      setTime(prev => prev + 1);
 
+      // 2. Smoothly interpolate physical tilt values using Spring Inertia (avoids quick shifts/paper feel)
+      setSmoothTilt(prev => {
+        const diff = tilt - prev;
+        return prev + diff * 0.12; // High inertia drag lag
+      });
+
+      // 3. Solve 3-layer Ice Cube sliding physics, collisions, and screen-edge constraint formulas
       setIceCubes(prevCubes => {
-        // Step 1: Apply physics forces (gravity/tilt force & subtle home restoring force)
+        // Step A: Apply sliding friction & gravitational forces based on the current smooth ocean slope
         let updated = prevCubes.map(cube => {
-          // Tilt force acts as horizontal gravity
-          const gravityForce = tilt * 0.28; 
+          // Slide acceleration multiplier dependent on depth characteristics:
+          // - Bottom sliding sinkers move rapidly & slip easily
+          // - Top surface floating cubes drift responsively with waves
+          // - Middle dense water-suspended cubes slide slower with drag resistance
+          let gravityMult = 0.45;
+          if (cube.layer === 'bottom') gravityMult = 0.72;
+          if (cube.layer === 'middle') gravityMult = 0.22;
+
+          const gravityAcc = smoothTilt * gravityMult;
+
+          // Spring returns cubes smoothly back toward "homeX" when device returns portrait flat
+          // Decreases force during high tilts to let ice cubes pile and stack fully together
+          const tiltFactor = Math.max(0, 1 - Math.abs(smoothTilt) / 12);
+          const springFactor = cube.layer === 'middle' ? 0.008 : 0.015;
+          const springRestor = (cube.homeX - cube.x) * springFactor * (0.15 + tiltFactor * 0.85);
+
+          const netForce = gravityAcc + springRestor;
+
+          // Calculate next velocity
+          let nextVx = cube.vx + netForce;
           
-          // Home restoring spring force: stronger when tilt feels closer to 0
-          const tiltFactor = Math.max(0, 1 - Math.abs(tilt) / 10);
-          const springForce = (cube.homeX - cube.x) * (0.012 + tiltFactor * 0.022);
-          
-          const totalForce = gravityForce + springForce;
-          
-          let nextVx = cube.vx + totalForce;
-          nextVx *= 0.86; // drag/friction friction
-          
+          // Apply friction coefficient mimicking viscous liquid resistance
+          let friction = 0.88;
+          if (cube.layer === 'middle') friction = 0.78; // heavy fluid dampening
+          if (cube.layer === 'bottom') friction = 0.92; // smooth bottom slipping glass
+          nextVx *= friction;
+
+          // Align rotation inertia to sliding velocity
+          let nextVrot = cube.vrot + (nextVx * 0.15) - (cube.rot - cube.baseRotation) * 0.03;
+          nextVrot *= 0.9;
+
           return {
             ...cube,
             x: cube.x + nextVx,
             vx: nextVx,
+            rot: cube.rot + nextVrot,
+            vrot: nextVrot
           };
         });
 
-        // Sort dynamically from left to right to resolve overlaps cleanly
-        updated.sort((a, b) => a.x - b.x);
+        // Step B: Resolve collision stacking overlays INDEPENDENTLY inside each depth layer segment
+        // This stops top floating cubes from colliding with bottom sinkers, creating awesome depth stacks!
+        const layers: ('top' | 'middle' | 'bottom')[] = ['top', 'middle', 'bottom'];
+        
+        layers.forEach(lyr => {
+          // Extract indices for this layer
+          const layerIndices = updated
+            .map((c, i) => ({ cube: c, idx: i }))
+            .filter(item => item.cube.layer === lyr);
 
-        // Limit boundaries and resolve overlap collisions
-        // minSeparation incorporates the sizes of the ice cubes
-        for (let iteration = 0; iteration < 4; iteration++) {
-          // Boundaries [60, 940]
-          for (let i = 0; i < updated.length; i++) {
-            const minBoundary = 60 + updated[i].size / 2;
-            const maxBoundary = 940 - updated[i].size / 2;
-            if (updated[i].x < minBoundary) {
-              updated[i].x = minBoundary;
-              updated[i].vx = Math.max(0, updated[i].vx);
+          // Sort index elements from Left to Right position
+          layerIndices.sort((a, b) => a.cube.x - b.cube.x);
+
+          // Iterate to solve overlap collisions beautifully to stack on themselves
+          for (let pass = 0; pass < 5; pass++) {
+            // Apply bounds first
+            for (let i = 0; i < layerIndices.length; i++) {
+              const item = layerIndices[i];
+              const minB = 65 + item.cube.size / 2;
+              const maxB = 935 - item.cube.size / 2;
+              if (updated[item.idx].x < minB) {
+                updated[item.idx].x = minB;
+                updated[item.idx].vx = Math.max(0, updated[item.idx].vx);
+              }
+              if (updated[item.idx].x > maxB) {
+                updated[item.idx].x = maxB;
+                updated[item.idx].vx = Math.min(0, updated[item.idx].vx);
+              }
             }
-            if (updated[i].x > maxBoundary) {
-              updated[i].x = maxBoundary;
-              updated[i].vx = Math.min(0, updated[i].vx);
+
+            // Resolve mutual overlap pushes
+            for (let i = 0; i < layerIndices.length - 1; i++) {
+              const item1 = layerIndices[i];
+              const item2 = layerIndices[i + 1];
+              const c1 = updated[item1.idx];
+              const c2 = updated[item2.idx];
+
+              // Stack boundary separation scale
+              const minGap = (c1.size + c2.size) * 0.48;
+              const dist = c2.x - c1.x;
+
+              if (dist < minGap) {
+                const overlap = minGap - dist;
+                // Move apart symmetrically
+                updated[item1.idx].x -= overlap * 0.52;
+                updated[item2.idx].x += overlap * 0.52;
+
+                // Transfer velocity bounce momentum
+                const tempVx = updated[item1.idx].vx;
+                updated[item1.idx].vx = updated[item1.idx].vx * 0.2 - overlap * 0.05;
+                updated[item2.idx].vx = tempVx * 0.2 + overlap * 0.05;
+                
+                // Add animated tilt rolling clatter rotation
+                updated[item1.idx].vrot -= overlap * 0.3;
+                updated[item2.idx].vrot += overlap * 0.3;
+              }
             }
           }
-
-          // Push apart overlaps (colliding circles/boxes physics)
-          for (let i = 0; i < updated.length - 1; i++) {
-            const c1 = updated[i];
-            const c2 = updated[i + 1];
-            // Minimum distance between the centers of two cubes
-            const minSeparation = (c1.size + c2.size) * 0.55; 
-            const dist = c2.x - c1.x;
-            
-            if (dist < minSeparation) {
-              const overlap = minSeparation - dist;
-              // Push them apart
-              updated[i].x -= overlap * 0.5;
-              updated[i + 1].x += overlap * 0.5;
-              
-              // Bounce velocities
-              const bounce = 0.15;
-              const tempVx = updated[i].vx;
-              updated[i].vx = updated[i].vx * bounce - overlap * 0.05;
-              updated[i + 1].vx = tempVx * bounce + overlap * 0.05;
-            }
-          }
-        }
+        });
 
         return updated;
       });
 
-      frameId = requestAnimationFrame(simulatePhysics);
+      frameId = requestAnimationFrame(runSimulationLoop);
     };
 
-    frameId = requestAnimationFrame(simulatePhysics);
+    frameId = requestAnimationFrame(runSimulationLoop);
     return () => {
       active = false;
       cancelAnimationFrame(frameId);
     };
-  }, [tilt]);
+  }, [tilt, smoothTilt]);
 
-  // Spawn visual splash bubble/droplets when the water rises (clicked "+1")
+  // Spawn visual splash bubble/droplets when the water level rises (clicked "+1")
   useEffect(() => {
     if (progress > lastProgressRef.current) {
       const newParticles: SplashParticle[] = Array.from({ length: 8 }).map((_, i) => ({
         id: Date.now() + i,
-        x: 200 + Math.random() * 600, // disperse across user screen width
+        x: 200 + Math.random() * 600, // beautiful even screen distribution
         y: currentY,
-        vx: (Math.random() - 0.5) * 12,
-        vy: -6 - Math.random() * 10, // upward splash force
+        vx: (Math.random() - 0.5) * 14,
+        vy: -7 - Math.random() * 11, // Upward splash propulsion
         radius: 4 + Math.random() * 6,
       }));
 
@@ -202,7 +273,7 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
                 ...p,
                 x: p.x + p.vx,
                 y: p.y + p.vy,
-                vy: p.vy + 0.45, // gravity downward acceleration
+                vy: p.vy + 0.48, // Gravity force pulling down
               };
             }
             return p;
@@ -220,46 +291,50 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
     lastProgressRef.current = progress;
   }, [progress, currentY]);
 
-  // Water is always rendered so that sloshing is displayed at the absolute bottom.
-  const isVisible = true;
+  // Calculations for organic sloshing waves keeping borders clean & locked (No Paper tilting!)
+  const angleRad = (smoothTilt * Math.PI) / 180;
+  
+  // Left and right fluid height levels in viewport coordinates
+  // Width of container is 1000. Left edge is X=0, right edge is X=1000. Center is 500.
+  const leftY = currentY + 500 * Math.sin(angleRad);
+  const rightY = currentY - 500 * Math.sin(angleRad);
 
-  // Track time inside Render Cycle for independent float bobbing
-  const [time, setTime] = useState(0);
-  useEffect(() => {
-    let active = true;
-    let frameId: number;
-    const tick = () => {
-      if (!active) return;
-      setTime(prev => prev + 1);
-      frameId = requestAnimationFrame(tick);
-    };
-    frameId = requestAnimationFrame(tick);
-    return () => {
-      active = false;
-      cancelAnimationFrame(frameId);
-    };
-  }, []);
+  // Dynamic wave bobbing patterns over time
+  const waveCycle1 = Math.sin(time * 0.04) * 8;
+  const waveCycle2 = Math.cos(time * 0.05) * 7;
+
+  // Foreground liquid surface path with responsive bezier waves matching the container boundaries
+  // Locked perfectly to the vertical left & right margins (0 and 1000), preventing paper rotating boundaries
+  const foregroundWaterPath = `
+    M 0,${leftY + waveCycle1}
+    C 250,${leftY + (rightY - leftY) * 0.25 + waveCycle1 + 8}
+      750,${rightY - (rightY - leftY) * 0.25 + waveCycle2 - 8}
+      1000,${rightY + waveCycle2}
+    L 1000,1230
+    L 0,1230
+    Z
+  `;
+
+  // Secondary volumetric background parallax slosh curve
+  const leftYBack = (currentY - 18) + 500 * Math.sin(angleRad * 0.88);
+  const rightYBack = (currentY - 18) - 500 * Math.sin(angleRad * 0.88);
+  const waveCycleBack = Math.cos(time * 0.03) * 9;
+
+  const backgroundWaterPath = `
+    M 0,${leftYBack + waveCycleBack}
+    C 280,${leftYBack + (rightYBack - leftYBack) * 0.28 + waveCycleBack + 4}
+      720,${rightYBack - (rightYBack - leftYBack) * 0.28 + waveCycleBack - 4}
+      1000,${rightYBack - waveCycleBack}
+    L 1000,1230
+    L 0,1230
+    Z
+  `;
+
+  // Determine whether to display the sloshing liquid
+  const isVisible = true;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-10 select-none overflow-hidden">
-      {/* Wave styles & animations */}
-      <style>{`
-        @keyframes fullWaveScroll1 {
-          0% { transform: translateX(0px); }
-          100% { transform: translateX(-500px); }
-        }
-        @keyframes fullWaveScroll2 {
-          0% { transform: translateX(-250px); }
-          100% { transform: translateX(250px); }
-        }
-        .anim-screen-wave-1 {
-          animation: fullWaveScroll1 6.5s linear infinite;
-        }
-        .anim-screen-wave-2 {
-          animation: fullWaveScroll2 9.5s linear infinite;
-        }
-      `}</style>
-
       <AnimatePresence>
         {isVisible && (
           <motion.div
@@ -275,148 +350,137 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
               className="absolute inset-0 w-full h-full"
             >
               <defs>
-                {/* Immersive responsive glowing gradients */}
+                {/* Immersive high-end glass and water linear gradients */}
                 <linearGradient id="screen-water-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.85" /> {/* Vivid sky blue water top */}
-                  <stop offset="25%" stopColor="#0EA5E9" stopOpacity="0.9" />
-                  <stop offset="100%" stopColor="#1E3A8A" stopOpacity="0.97" /> {/* Luxury navy deep ocean */}
+                  <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.88" /> {/* Electric cyan surface */}
+                  <stop offset="35%" stopColor="#0EA5E9" stopOpacity="0.94" />
+                  <stop offset="100%" stopColor="#1E3A8A" stopOpacity="0.98" /> {/* Deep ocean navy bottom */}
                 </linearGradient>
 
                 <linearGradient id="screen-water-back-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#0284C7" stopOpacity="0.4" />
-                  <stop offset="100%" stopColor="#1E40AF" stopOpacity="0.6" />
+                  <stop offset="0%" stopColor="#0284C7" stopOpacity="0.45" />
+                  <stop offset="100%" stopColor="#1D4ED8" stopOpacity="0.65" />
                 </linearGradient>
 
                 {/* Ambient glow highlight gradient for the liquid surface */}
                 <linearGradient id="screen-surface-glow" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.35" />
+                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.45" />
                   <stop offset="100%" stopColor="#7DD3FC" stopOpacity="0.0" />
                 </linearGradient>
 
-                {/* Ultimate crisp refractive Ice Cube Gradient */}
-                <linearGradient id="ice-cube-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
-                  <stop offset="30%" stopColor="#E0F2FE" stopOpacity="0.8" />
-                  <stop offset="70%" stopColor="#BAE6FD" stopOpacity="0.75" />
-                  <stop offset="100%" stopColor="#38BDF8" stopOpacity="0.9" />
+                {/* Vibrant cartoon style refractive ice cube gradient */}
+                <linearGradient id="ice-cube-cartoon" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#FFFFFF" /> {/* Crisp ice peak */}
+                  <stop offset="25%" stopColor="#E0F2FE" />
+                  <stop offset="75%" stopColor="#93C5FD" />
+                  <stop offset="100%" stopColor="#38BDF8" /> {/* Cartoon blue shading */}
                 </linearGradient>
               </defs>
 
-              {/* ROTATING MAIN LIQUID ASSEMBLY (Responds instantly to Gyro / Accelerator Tilt) */}
-              <motion.g
-                animate={{ rotate: tilt }}
-                style={{ transformOrigin: `500px ${currentY}px` }}
-                transition={{ type: "spring", stiffness: 100, damping: 18 }}
-              >
-                {/* 1. LAYER 1: Parallax Ambient Waves Backing */}
-                <g className="anim-screen-wave-2">
-                  <path
-                    d={`M -500,${currentY - 12} Q -250,${currentY - 32} 0,${currentY - 12} T 500,${currentY - 12} T 1000,${currentY - 12} T 1500,${currentY - 12} Q 1750,${currentY - 32} 2000,${currentY - 12} L 2000,1200 L -500,1200 Z`}
-                    fill="url(#screen-water-back-grad)"
-                  />
-                </g>
+              {/* 1. LOWER PARALLAX BACKGROUND WATER LAYER */}
+              <path
+                d={backgroundWaterPath}
+                fill="url(#screen-water-back-grad)"
+              />
 
-                {/* 2. LAYER 2: Front Water Waves Body */}
-                <g className="anim-screen-wave-1">
-                  <path
-                    d={`M -500,${currentY} Q -250,${currentY + 22} 0,${currentY} T 500,${currentY} T 1000,${currentY} T 1500,${currentY} Q 1750,${currentY + 22} 2000,${currentY} L 2000,1200 L -500,1200 Z`}
-                    fill="url(#screen-water-gradient)"
-                  />
-                </g>
+              {/* 2. CHUNKY SPLASH PARTICLES SPLATERED DURING CLICKS */}
+              {splashes.map(p => (
+                <circle
+                  key={p.id}
+                  cx={p.x}
+                  cy={p.y}
+                  r={p.radius}
+                  fill="#E0F2FE"
+                  fillOpacity="0.85"
+                  stroke="#FFFFFF"
+                  strokeWidth="1.5"
+                  strokeOpacity="0.8"
+                />
+              ))}
 
-                {/* 3. LAYER 3: Surface Glow Accent */}
-                <g className="anim-screen-wave-1">
-                  <path
-                    d={`M -500,${currentY} Q -250,${currentY + 22} 0,${currentY} T 500,${currentY} T 1000,${currentY} T 1500,${currentY} Q 1750,${currentY + 22} 2000,${currentY} L 2000,${currentY + 45} L -500,${currentY + 45} Z`}
-                    fill="url(#screen-surface-glow)"
-                  />
-                </g>
+              {/* 3. DYNAMIC FOREGROUND WATER BODY LAYER */}
+              <path
+                d={foregroundWaterPath}
+                fill="url(#screen-water-gradient)"
+              />
 
-                {/* DYNAMIC COLLIDING FLOATING ICE CUBES (Float SNUGLY on top of the sloshing surface level) */}
-                {iceCubes.map(cube => {
-                  // Precise trigonometric vertical height representation on the tilted water surface line
-                  const tiltRad = (tilt * Math.PI) / 180;
-                  const surfaceY = currentY + (cube.x - 500) * Math.sin(tiltRad);
+              {/* 4. SURFACE GLOW AMBIENT HIGHLIGHT */}
+              <path
+                d={foregroundWaterPath}
+                fill="url(#screen-surface-glow)"
+                opacity="0.3"
+              />
 
-                  // Gentle decoupling harmonic water bobbing for this specific cube
-                  const bobbing = Math.sin(time * cube.floatSpeed + cube.floatPhase) * 10;
-                  // Rest fully partially submerged
-                  const finalY = surfaceY + bobbing - 5;
+              {/* 5. GORGEOUSLY CONFIGURED CARTOON ICE CUBES WITH PHYSICS TILT STACKING */}
+              {iceCubes.map(cube => {
+                // Determine raw surface Y coordinate at our exact X coordinate
+                const surfaceYAtX = currentY + (cube.x - 500) * Math.sin(angleRad);
+                
+                // Bobbing effects specific to each cube to increase playful organic movement
+                const bobbing = Math.sin(time * cube.floatSpeed + cube.floatPhase) * 6;
+                
+                let renderY = currentY;
 
-                  // Rotate dynamically depending on the sliding velocity and physical tilt of water
-                  const dynamicRotation = cube.baseRotation + (cube.vx * 3.2) + (tilt * 0.4);
+                if (cube.layer === 'top') {
+                  // Floats on the moving wave surface, partially submerged
+                  renderY = surfaceYAtX + bobbing - (cube.size * 0.28);
+                } else if (cube.layer === 'middle') {
+                  // Neutral buoyancy drifters midway inside water volume
+                  const spaceBelowSurface = 1000 - surfaceYAtX;
+                  renderY = surfaceYAtX + (spaceBelowSurface * 0.38) + bobbing;
+                } else {
+                  // Heavy sinkers resting at the floor level of the screen
+                  renderY = 938 + (bobbing * 0.2);
+                }
 
-                  return (
-                    <g 
-                      key={cube.id} 
-                      transform={`translate(${cube.x}, ${finalY}) rotate(${dynamicRotation})`}
-                      className="drop-shadow-[0_8px_16px_rgba(14,165,233,0.25)]"
-                    >
-                      {/* Outer Frosty Cube Rim */}
-                      <rect 
-                        x={-cube.size / 2} 
-                        y={-cube.size / 2} 
-                        width={cube.size} 
-                        height={cube.size} 
-                        rx={cube.size * 0.22} 
-                        fill="url(#ice-cube-grad)" 
-                        stroke="#F0F9FF" 
-                        strokeWidth="2.5"
-                        strokeOpacity="0.85"
-                      />
-                      
-                      {/* Frozen Air Core Accent */}
-                      <rect 
-                        x={-cube.size * 0.3} 
-                        y={-cube.size * 0.3} 
-                        width={cube.size * 0.6} 
-                        height={cube.size * 0.6} 
-                        rx={cube.size * 0.12} 
-                        fill="#BAE6FD" 
-                        fillOpacity="0.45" 
-                        stroke="#FFFFFF" 
-                        strokeWidth="1.2" 
-                        strokeOpacity="0.5"
-                      />
+                // Make sure we clamp renderY so cubes don't float completely out of screen top water boundary
+                renderY = Math.max(renderY, currentY - cube.size * 0.4);
 
-                      {/* Glossy Top-Left Reflection Lines */}
-                      <path 
-                        d={`M ${-cube.size * 0.34} ${-cube.size * 0.34} L ${-cube.size * 0.1} ${-cube.size * 0.34}`} 
-                        stroke="#FFFFFF" 
-                        strokeWidth="3" 
-                        strokeLinecap="round" 
-                        strokeOpacity="0.9"
-                      />
-                      <path 
-                        d={`M ${-cube.size * 0.34} ${-cube.size * 0.34} L ${-cube.size * 0.34} ${-cube.size * 0.1}`} 
-                        stroke="#FFFFFF" 
-                        strokeWidth="3" 
-                        strokeLinecap="round" 
-                        strokeOpacity="0.9"
-                      />
+                return (
+                  <g
+                    key={cube.id}
+                    transform={`translate(${cube.x}, ${renderY}) rotate(${cube.rot})`}
+                  >
+                    {/* CARTOON BLOCK FRAME: Bold, thick physical outline for hand-drawn cartoon aesthetic */}
+                    <rect
+                      x={-cube.size / 2}
+                      y={-cube.size / 2}
+                      width={cube.size}
+                      height={cube.size}
+                      rx={cube.size * 0.22}
+                      ry={cube.size * 0.22}
+                      fill="url(#ice-cube-cartoon)"
+                      stroke="#0F2A4A" // Solid cartoon dark navy ink stroke
+                      strokeWidth="5"
+                      strokeLinejoin="round"
+                    />
 
-                      {/* Sparkly Ambient Tiny Frozen Air Bubbles */}
-                      <circle cx={cube.size * 0.16} cy={cube.size * 0.16} r={cube.size * 0.05} fill="#FFFFFF" fillOpacity="0.7" />
-                      <circle cx={-cube.size * 0.14} cy={cube.size * 0.2} r={cube.size * 0.03} fill="#FFFFFF" fillOpacity="0.55" />
-                    </g>
-                  );
-                })}
+                    {/* Cute cartoon frost cross-section facets and facets (for depth block appearance) */}
+                    <path
+                      d={`M ${-cube.size * 0.3} ${cube.size * 0.2} L ${cube.size * 0.25} ${cube.size * 0.25} L ${cube.size * 0.25} ${-cube.size * 0.3}`}
+                      fill="none"
+                      stroke="#38BDF8"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      opacity="0.65"
+                    />
 
-                {/* SPLASH PARTICLES (Spawned on tap progress changes) */}
-                {splashes.map(p => (
-                  <circle
-                    key={p.id}
-                    cx={p.x}
-                    cy={p.y}
-                    r={p.radius}
-                    fill="#E0F2FE"
-                    fillOpacity="0.75"
-                    stroke="#FFFFFF"
-                    strokeWidth="1.2"
-                    strokeOpacity="0.6"
-                  />
-                ))}
-              </motion.g>
+                    {/* Bold, bright glistening glossy highlight stroke in upper left corner */}
+                    <path
+                      d={`M ${-cube.size * 0.34} ${-cube.size * 0.12} A ${cube.size * 0.22} ${cube.size * 0.22} 0 0 1 ${-cube.size * 0.12} ${-cube.size * 0.34}`}
+                      fill="none"
+                      stroke="#FFFFFF"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                    />
+
+                    {/* Cute tiny frozen air bubble sparkles inside the clear ice */}
+                    <circle cx={-cube.size * 0.18} cy={cube.size * 0.08} r={cube.size * 0.07} fill="#FFFFFF" fillOpacity="0.6" />
+                    <circle cx={cube.size * 0.15} cy={-cube.size * 0.15} r={cube.size * 0.05} fill="#FFFFFF" fillOpacity="0.85" />
+                    <circle cx={cube.size * 0.1} cy={cube.size * 0.12} r={cube.size * 0.03} fill="#FFFFFF" fillOpacity="0.5" />
+                  </g>
+                );
+              })}
             </svg>
           </motion.div>
         )}
