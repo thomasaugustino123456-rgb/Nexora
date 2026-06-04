@@ -740,6 +740,13 @@ export default function App() {
     "nexora_active_screen",
     "home",
   );
+  const [decayAlert, setDecayAlert] = useState<{
+    days: number;
+    decayedPoints: number;
+    decayedXP: number;
+    resetAll: boolean;
+    message: string;
+  } | null>(null);
   const [foundLoot, setFoundLoot] = useState<LootDropResult | null>(null);
 
   // SMART FEEDBACK TRIGGER
@@ -2778,6 +2785,33 @@ export default function App() {
     }
   };
 
+  const handleClaimRankReward = async (rank: number, rewardCoins: number) => {
+    if (!user) return;
+    const startOfWeekStr = new Date(
+      new Date().setDate(new Date().getDate() - new Date().getDay())
+    )
+      .toISOString()
+      .split("T")[0];
+
+    setStats((prev) => {
+      const nextCoins = (prev.coins || 0) + rewardCoins;
+      const next = {
+        ...prev,
+        coins: nextCoins,
+        lastRankRewardClaimWeek: startOfWeekStr
+      };
+      try {
+        localStorage.setItem("nexora_stats", JSON.stringify(next));
+      } catch (err) {
+        console.warn("Storage write failed:", err);
+      }
+      return next;
+    });
+
+    showToast(`Weekly Reward Claimed! +${rewardCoins} Coins! 🎁`, "success");
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
+  };
+
   useEffect(() => {
     if (user && isDataReady) {
       // Weekly Reset Logic
@@ -2792,6 +2826,95 @@ export default function App() {
           weeklyXP: 0,
           lastWeeklyReset: startOfWeek,
         }));
+      }
+
+      // League Synchronization (Bronze, Silver, Gold, Platinum, Diamond, Master, Champion, Divine, Nexus)
+      const currentLvl = stats.level || Math.floor((stats.totalPoints || 0) / 100) + 1;
+      const getLeagueForLevel = (lvl: number) => {
+        if (lvl >= 40) return 'Nexus';
+        if (lvl >= 35) return 'Divine';
+        if (lvl >= 30) return 'Champion';
+        if (lvl >= 25) return 'Master';
+        if (lvl >= 20) return 'Diamond';
+        if (lvl >= 15) return 'Platinum';
+        if (lvl >= 10) return 'Gold';
+        if (lvl >= 5) return 'Silver';
+        return 'Bronze';
+      };
+      const expectedLeague = getLeagueForLevel(currentLvl);
+      if (settings.league !== expectedLeague) {
+        setSettings((prev) => ({
+          ...prev,
+          league: expectedLeague
+        }));
+      }
+
+      // Absence Decay (Point decay if away for 2 days, complete reset if away for 4+ days)
+      const lastActiveStr = stats.lastActiveDate;
+      if (!lastActiveStr) {
+        setStats((prev) => ({ ...prev, lastActiveDate: today }));
+      } else if (lastActiveStr !== today) {
+        const activeDate = new Date(lastActiveStr + "T00:00:00");
+        const currentDate = new Date(today + "T00:00:00");
+        const diffTime = currentDate.getTime() - activeDate.getTime();
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays >= 2) {
+          let decayMsg = "";
+          let nextWeeklyXP = stats.weeklyXP || 0;
+          let nextWeeklyPoints = stats.weeklyPoints || 0;
+          let nextTotalPoints = stats.totalPoints || 0;
+          let nextXP = stats.xp || 0;
+          let resetAll = false;
+
+          if (diffDays === 2) {
+            decayMsg = "You were away for 2 days! Cosmic Energy decayed 25% of your Weekly Rank score.";
+            nextWeeklyXP = Math.round(nextWeeklyXP * 0.75);
+            nextWeeklyPoints = Math.round(nextWeeklyPoints * 0.75);
+            nextTotalPoints = Math.max(0, Math.round(nextTotalPoints * 0.9));
+            nextXP = Math.max(0, Math.round(nextXP * 0.9));
+          } else if (diffDays === 3) {
+            decayMsg = "You were away for 3 days! Major Entropy decayed 50% of your Weekly Rank score.";
+            nextWeeklyXP = Math.round(nextWeeklyXP * 0.50);
+            nextWeeklyPoints = Math.round(nextWeeklyPoints * 0.50);
+            nextTotalPoints = Math.max(0, Math.round(nextTotalPoints * 0.8));
+            nextXP = Math.max(0, Math.round(nextXP * 0.8));
+          } else {
+            resetAll = true;
+            decayMsg = `You were away for ${diffDays} days! Your Arena XP faded entirely. You must restart from 0 at the lower position!`;
+            nextWeeklyXP = 0;
+            nextWeeklyPoints = 0;
+            nextTotalPoints = Math.max(0, Math.round(nextTotalPoints * 0.6));
+            nextXP = Math.max(0, Math.round(nextXP * 0.6));
+          }
+
+          const lostWeeklyXP = (stats.weeklyXP || 0) - nextWeeklyXP;
+          const lostWeeklyPoints = (stats.weeklyPoints || 0) - nextWeeklyPoints;
+
+          if (lostWeeklyXP > 0 || lostWeeklyPoints > 0 || resetAll) {
+            setStats((prev) => ({
+              ...prev,
+              weeklyXP: nextWeeklyXP,
+              weeklyPoints: nextWeeklyPoints,
+              totalPoints: nextTotalPoints,
+              xp: nextXP,
+              lastActiveDate: today,
+            }));
+
+            setDecayAlert({
+              days: diffDays,
+              decayedPoints: lostWeeklyPoints,
+              decayedXP: lostWeeklyXP,
+              resetAll,
+              message: decayMsg,
+            });
+            showToast("⚠️ Arena Decay Penalization Triggered!", "error");
+          } else {
+            setStats((prev) => ({ ...prev, lastActiveDate: today }));
+          }
+        } else {
+          setStats((prev) => ({ ...prev, lastActiveDate: today }));
+        }
       }
 
       // Pro Daily Gift Logic
@@ -5167,6 +5290,7 @@ export default function App() {
                         vibrate(VIBRATION_PATTERNS.CLICK);
                         setActiveScreen("home");
                       }}
+                      onClaimRankReward={handleClaimRankReward}
                     />
                   </Suspense>
                 </motion.div>
@@ -5430,6 +5554,60 @@ export default function App() {
 
           {foundLoot && (
             <LootCard loot={foundLoot} onCollect={() => setFoundLoot(null)} />
+          )}
+
+          {decayAlert && (
+            <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-red-950/60 backdrop-blur-md">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-[40px] shadow-2xl w-full max-w-sm overflow-hidden border-4 border-red-500 relative"
+              >
+                {/* Background Rays */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-10">
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[conic-gradient(from_0deg,transparent_0deg,rgba(239,68,68,0.3)_10deg,transparent_20deg)] animate-spin" style={{ animationDuration: '15s' }} />
+                </div>
+
+                <div className="p-8 text-center relative z-10 flex flex-col items-center">
+                  <div className="w-24 h-24 bg-red-50 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-red-500/10 border-2 border-white animate-bounce">
+                    <span className="text-5xl">⚠️</span>
+                  </div>
+
+                  <h3 className="text-xl font-black text-red-650 uppercase tracking-tight mb-2">
+                    ENERGY DECAY DETECTED
+                  </h3>
+                  
+                  <div className="text-[10px] bg-red-50 hover:bg-red-100 border border-red-100 font-black tracking-widest text-red-800 uppercase px-3 py-1.5 rounded-full mb-4">
+                    ABSENT FOR {decayAlert.days} DAYS
+                  </div>
+
+                  <p className="text-slate-600 text-xs font-semibold leading-relaxed mb-6">
+                    {decayAlert.message}
+                  </p>
+
+                  <div className="w-full bg-slate-50 border border-slate-100 rounded-3xl p-4 mb-6 space-y-2">
+                    <div className="flex justify-between text-xs font-black uppercase text-slate-500">
+                      <span>Weekly XP lost:</span>
+                      <span className="text-red-600">-{decayAlert.decayedXP} XP</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-black uppercase text-slate-500">
+                      <span>Weekly score lost:</span>
+                      <span className="text-red-600">-{decayAlert.decayedPoints} pts</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                      setDecayAlert(null);
+                    }}
+                    className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-red-200 transition-all active:scale-95 text-center block"
+                  >
+                    Restabilize Energy Now 🔥
+                  </button>
+                </div>
+              </motion.div>
+            </div>
           )}
 
           {activeScreen === "trophy-rewards" && (

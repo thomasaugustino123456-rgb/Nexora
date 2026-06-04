@@ -32,7 +32,7 @@ const LEAGUES = [
 ];
 
 // Beautiful custom vector SVG component for each specific League to give a high-prestige feel
-function LeagueIcon({ league, active, className = "w-14 h-14" }: { league: string; active: boolean; className?: string }) {
+export function LeagueIcon({ league, active, className = "w-14 h-14" }: { league: string; active: boolean; className?: string }) {
   const activeShadow = active ? "drop-shadow-[0_0_12px_rgba(251,191,36,0.6)] animate-pulse" : "opacity-45 grayscale-[40%]";
   
   switch (league) {
@@ -189,17 +189,28 @@ export function LeaderboardScreen({
   user, 
   settings, 
   stats, 
-  onBack 
+  onBack,
+  onClaimRankReward
 }: { 
   leaderboard: LeaderboardEntry[]; 
   user: FirebaseUser | null; 
   settings: UserSettings; 
   stats: UserStats; 
   onBack: () => void;
+  onClaimRankReward: (rank: number, coins: number) => void;
 }) {
   const userRank = leaderboard.findIndex(l => l.uid === user?.uid) + 1;
   const currentLeague = settings.league || 'Bronze';
   const leagueIndex = LEAGUES.indexOf(currentLeague);
+
+  const startOfWeek = useMemo(() => {
+    const today = new Date();
+    return new Date(today.setDate(today.getDate() - today.getDay()))
+      .toISOString()
+      .split("T")[0];
+  }, []);
+
+  const hasClaimedThisWeek = stats.lastRankRewardClaimWeek === startOfWeek;
 
   // Filter or format the countdown statement
   const daysString = useMemo(() => {
@@ -296,6 +307,83 @@ export function LeaderboardScreen({
           </div>
           <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-blue-50 border border-blue-100 rounded-2xl text-blue-600">
             <TrophyIcon size={24} className="fill-blue-50 text-blue-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Prize Chest and Claim Panel */}
+      <div className="px-6 py-2">
+        <div className="bg-gradient-to-r from-blue-950 via-indigo-950 to-slate-900 text-white rounded-[2rem] p-5 shadow-2xl relative overflow-hidden border-2 border-indigo-500/30">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <TrophyIcon size={120} className="text-yellow-400 rotate-12" />
+          </div>
+
+          <div className="relative z-10 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">
+                Weekly Prize Chest
+              </span>
+              <span className="text-[10px] bg-indigo-500/20 text-indigo-200 border border-indigo-400/20 px-2.5 py-1 rounded-full font-black uppercase">
+                Reset Weekly
+              </span>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-4xl shadow-inner shadow-black/40 animate-pulse">
+                {userRank > 0 && userRank <= 3 ? "🎁" : userRank >= 4 && userRank <= 6 ? "📦" : "🔒"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-black uppercase tracking-tight truncate">
+                  {userRank > 0 && userRank <= 6 
+                    ? `Congratulations, bro!` 
+                    : `Unranked / Outside Top 6`}
+                </h4>
+                <p className="text-[11px] text-slate-300 font-medium leading-tight">
+                  {userRank > 0 && userRank <= 6 
+                    ? `You are Rank #${userRank} this week and eligible for special coins reward, bro!` 
+                    : `Reach Rank 1-6 this week to unlock gorgeous chests and earn raw coin items!`}
+                </p>
+              </div>
+            </div>
+
+            {/* Reward Claim Parameters */}
+            {userRank > 0 && userRank <= 6 ? (
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Calculated Reward</p>
+                  <p className="text-md font-black text-yellow-400 flex items-center gap-1">
+                    🪙 +{userRank === 1 ? 500 : userRank === 2 ? 300 : userRank === 3 ? 200 : 50} Coins
+                  </p>
+                </div>
+                {hasClaimedThisWeek ? (
+                  <div className="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 px-4 py-2 rounded-xl text-xs font-black uppercase shadow-lg">
+                    <CheckCircle2 size={14} className="text-emerald-400" />
+                    <span>Claimed</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      const coins = userRank === 1 ? 500 : userRank === 2 ? 300 : userRank === 3 ? 200 : 50;
+                      onClaimRankReward(userRank, coins);
+                    }}
+                    className="bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-yellow-950 font-black text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl shadow-lg ring-2 ring-yellow-400/30 border border-yellow-200/50 transition-all active:scale-95 duration-200"
+                  >
+                    Claim Coins
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="pt-2 border-t border-white/10 grid grid-cols-2 gap-2 text-center">
+                <div className="bg-white/5 border border-white/10 rounded-xl p-2">
+                  <p className="text-[8px] font-black text-yellow-400 uppercase">Top 1 - 3 Rewards</p>
+                  <p className="text-xs font-black text-white">Up to 500 🪙</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-2">
+                  <p className="text-[8px] font-black text-indigo-300 uppercase">Top 4 - 6 Rewards</p>
+                  <p className="text-xs font-black text-white font-black">50 🪙</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

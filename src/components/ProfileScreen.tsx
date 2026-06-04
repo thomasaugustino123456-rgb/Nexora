@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { User as FirebaseUser } from "firebase/auth";
 import { UserSettings, UserStats, SocialCircle, Screen } from "../types";
+import { LeagueIcon } from "./LeaderboardScreen";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { ArchitectLab } from "./ArchitectLab";
@@ -234,6 +235,107 @@ export function ProfileScreen({
             transition={{ duration: 1, ease: "easeOut" }}
             className="h-full bg-blue-600 rounded-full shadow-[0_0_10px_#3b82f6]"
           />
+        </div>
+      </div>
+
+      {/* Upgraded Arena League Tier progression grid */}
+      <div className="glass-card p-8 space-y-6">
+        <div className="flex items-center justify-between border-b border-blue-50 pb-4">
+          <div>
+            <h3 className="text-xs font-black text-blue-900/30 uppercase tracking-[0.25em] mb-1">
+              Arena Standing & Ranks
+            </h3>
+            <p className="text-[10px] uppercase font-black text-blue-500 tracking-wider">
+              {settings.league || 'Bronze'} League Tier
+            </p>
+          </div>
+          <div className="w-16 h-16 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center p-1 shadow-inner">
+            <LeagueIcon
+              league={settings.league || 'Bronze'}
+              active={true}
+              className="w-14 h-14"
+            />
+          </div>
+        </div>
+
+        {/* List of leagues arrangement with requirements */}
+        <div className="space-y-3">
+          {[
+            { name: 'Bronze', levels: 'Levels 1 - 4', minLvl: 1 },
+            { name: 'Silver', levels: 'Levels 5 - 9', minLvl: 5 },
+            { name: 'Gold', levels: 'Levels 10 - 14', minLvl: 10 },
+            { name: 'Platinum', levels: 'Levels 15 - 19', minLvl: 15 },
+            { name: 'Diamond', levels: 'Levels 20 - 24', minLvl: 20 },
+            { name: 'Master', levels: 'Levels 25 - 29', minLvl: 25 },
+            { name: 'Champion', levels: 'Levels 30 - 34', minLvl: 30 },
+            { name: 'Divine', levels: 'Levels 35 - 39', minLvl: 35 },
+            { name: 'Nexus', levels: 'Levels 40+', minLvl: 40 },
+          ].map((lg) => {
+            const userLvl = stats.level || Math.floor((stats.totalPoints || 0) / 100) + 1;
+            const isUnlocked = userLvl >= lg.minLvl;
+            const isCurrent = settings.league === lg.name;
+
+            return (
+              <div
+                key={lg.name}
+                className={`flex items-center gap-4 p-3 rounded-2xl border transition-all duration-200 ${
+                  isCurrent
+                    ? 'bg-blue-50/70 border-blue-400/50 shadow-md shadow-blue-500/5 relative py-4 scale-[1.02]'
+                    : isUnlocked
+                    ? 'bg-slate-50/50 border-slate-100/50'
+                    : 'bg-slate-100/30 border-dashed border-slate-200/50 opacity-60'
+                }`}
+              >
+                {/* Check / Lock Indicators */}
+                <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center relative">
+                  <LeagueIcon
+                    league={lg.name}
+                    active={isCurrent || isUnlocked}
+                    className="w-9 h-9"
+                  />
+                  {isCurrent && (
+                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-[6px] font-black uppercase text-yellow-950 px-1 py-0.5 rounded shadow">
+                      ACTIVE
+                    </span>
+                  )}
+                </div>
+
+                {/* Rank Details */}
+                <span className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h4
+                      className={`text-xs font-black uppercase tracking-wider ${
+                        isCurrent ? 'text-blue-900 font-extrabold' : 'text-slate-700'
+                      }`}
+                    >
+                      {lg.name} League
+                    </h4>
+                    {isCurrent && (
+                      <span className="text-[7px] font-black text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded uppercase">
+                        Current Rank
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight">
+                    {lg.levels}
+                  </p>
+                </span>
+
+                {/* Right Action Side */}
+                <div className="text-right flex-shrink-0">
+                  {isUnlocked ? (
+                    <span className="text-[10.5px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100/10 uppercase">
+                      UNLOCKED
+                    </span>
+                  ) : (
+                    <span className="text-[10.5px] font-black text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-200/10 uppercase tracking-tight">
+                      Lvl {lg.minLvl} REQUIRED
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

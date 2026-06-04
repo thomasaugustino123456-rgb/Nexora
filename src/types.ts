@@ -196,6 +196,8 @@ export interface UserStats {
   weeklyPoints: number;
   weeklyXP: number;
   lastWeeklyReset?: string; // ISO date
+  lastRankRewardClaimWeek?: string; // ISO date of startOfWeek when they claimed
+  lastActiveDate?: string; // YYYY-MM-DD
   trophies: Trophy[];
   pointsByCategory: {
     physical: number;
