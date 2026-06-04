@@ -759,6 +759,85 @@ export default function App() {
   } | null>(null);
   const [foundLoot, setFoundLoot] = useState<LootDropResult | null>(null);
 
+  // --- VERSION ROLLBACK & RECOVERY ENGINE STATES & HANDLERS ---
+  const [rollbackCountdown, setRollbackCountdown] = useState<number | null>(null);
+  const [rollbackBackupData, setRollbackBackupData] = useState<any>(null);
+
+  const handleRollbackRestore = useCallback(() => {
+    try {
+      const rawBackup = localStorage.getItem("nexora_version_rollback_backup");
+      if (!rawBackup) {
+        showToast("No rollback recovery backup available!", "error");
+        return;
+      }
+      
+      const backup = JSON.parse(rawBackup);
+      
+      // Revert Settings
+      if (backup.settings) {
+        onUpdateSettings(backup.settings);
+      }
+      // Revert Stats
+      if (backup.stats) {
+        onUpdateStats(backup.stats);
+      }
+      // Revert dailyProgress
+      if (backup.dailyProgress) {
+        setDailyProgress(backup.dailyProgress);
+        localStorage.setItem('nexora_progress', JSON.stringify(backup.dailyProgress));
+      }
+      // Revert gardenState
+      if (backup.gardenState) {
+        setGardenState(backup.gardenState);
+        localStorage.setItem('nexora_garden', JSON.stringify(backup.gardenState));
+      }
+      
+      // Revert active run version
+      const oldVersion = backup.version || "2.1.0";
+      localStorage.setItem("nexora_version", oldVersion);
+      // Clean timer seen tag so it can mismatch again
+      localStorage.removeItem("nexora_rollback_timer_seen_for_version");
+      
+      // Close the timer
+      setRollbackCountdown(null);
+      
+      vibrate(VIBRATION_PATTERNS.NOTIFY);
+      showToast(`Rollback complete! Rolled back to version v${oldVersion} configuration because of emergency.`, "success");
+    } catch (e) {
+      console.error("Rollback restore failed:", e);
+      showToast("Rollback failed. Profile data corrupt.", "error");
+    }
+  }, [onUpdateSettings, onUpdateStats, setDailyProgress, setGardenState, showToast]);
+
+  const handleSimulateNewUpdate = useCallback(() => {
+    try {
+      // Create backup with version mismatching current
+      const backup = {
+        version: "2.1.0",
+        settings: { ...settings },
+        stats: { ...stats },
+        dailyProgress: { ...dailyProgress },
+        gardenState: { ...gardenState },
+        backupTime: new Date().toISOString()
+      };
+      
+      localStorage.setItem("nexora_version_rollback_backup", JSON.stringify(backup));
+      localStorage.setItem("nexora_version", "2.1.0"); // Set previous version to trigger mismatch
+      localStorage.removeItem("nexora_rollback_timer_seen_for_version"); // Clear timer seen
+      
+      setRollbackBackupData(backup);
+      
+      // Force trigger the timer
+      setRollbackCountdown(10);
+      
+      vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+      showToast("Simulated update! 10s Countdown activated with backup of active state.", "success");
+    } catch (e) {
+      console.error("Simulation failed:", e);
+      showToast("Simulation failed.", "error");
+    }
+  }, [settings, stats, dailyProgress, gardenState, showToast]);
+
   // SMART FEEDBACK TRIGGER
   useEffect(() => {
     if (
@@ -857,18 +936,76 @@ export default function App() {
     }
   }, []);
 
-  // Persistence and Version Sync
+  // Persistence, Version Sync, & Rollback Detection
   useEffect(() => {
     if (!isDataReady) return;
+
     const storedVersion = localStorage.getItem("nexora_version");
+    const lastTimerSeenVersion = localStorage.getItem("nexora_rollback_timer_seen_for_version");
+
     if (storedVersion && storedVersion !== currentAppVersion) {
       console.log(
         `PWA: New version detected: ${currentAppVersion}. Clearing stale caches.`,
       );
       setShowUpdatePopup(true);
+
+      // Create configuration safety backup of ALL active user states!
+      const backup = {
+        version: storedVersion,
+        settings: { ...settings },
+        stats: { ...stats },
+        hydrationConsecutiveDays,
+        hydrationWaterLevel,
+        dailyProgress: { ...dailyProgress },
+        backupTime: new Date().toISOString()
+      };
+      
+      localStorage.setItem("nexora_version_rollback_backup", JSON.stringify(backup));
+      setRollbackBackupData(backup);
+
+      // If we haven't shown or dismissed the 10-second countdown for this specific version yet, start it!
+      if (lastTimerSeenVersion !== currentAppVersion) {
+        setRollbackCountdown(10);
+      }
+    } else {
+      // If there's no stored version, write this version immediately
+      if (!storedVersion) {
+        localStorage.setItem("nexora_version", currentAppVersion);
+      }
+      // Load current rollback backup details if found in localStorage
+      const existingBackup = localStorage.getItem("nexora_version_rollback_backup");
+      if (existingBackup) {
+        try {
+          setRollbackBackupData(JSON.parse(existingBackup));
+        } catch (e) {
+          console.warn("NEXORA: Failed parse for rollback backup cache:", e);
+        }
+      }
     }
+
+    // Save running version
     localStorage.setItem("nexora_version", currentAppVersion);
   }, [isDataReady]);
+
+  // Version countdown ticker clock
+  useEffect(() => {
+    if (rollbackCountdown === null) return;
+
+    if (rollbackCountdown <= 0) {
+      // Completed/Dismissed! Save tag so timer is completely eliminated and never prompts again for this update
+      localStorage.setItem("nexora_rollback_timer_seen_for_version", currentAppVersion);
+      localStorage.setItem("nexora_version", currentAppVersion);
+      setRollbackCountdown(null);
+      showToast(`Welcome to v${currentAppVersion}! System stable.`, "info");
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setRollbackCountdown(prev => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [rollbackCountdown]);
 
   // FIXED NOTIFICATION SCHEDULE
   const NOTIFICATION_SLOTS = useMemo(
@@ -4594,7 +4731,6 @@ export default function App() {
                       onSendMotivation={sendMotivation}
                       onSendTestEmail={sendTestEmail}
                       onClearCache={onClearCache}
-                      
                       onExportData={onExportData}
                       onSubmitFeedback={onSubmitFeedback}
                       onShowManifesto={onShowManifesto}
@@ -4603,6 +4739,10 @@ export default function App() {
                       sendNotification={(title, body) =>
                         sendNotification(title, { body })
                       }
+                      rollbackBackupData={rollbackBackupData}
+                      onRollbackRestore={handleRollbackRestore}
+                      onSimulateUpdate={handleSimulateNewUpdate}
+                      currentAppVersion={currentAppVersion}
                     />
                   </Suspense>
                 </motion.div>

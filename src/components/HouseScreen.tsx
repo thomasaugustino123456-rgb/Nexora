@@ -93,7 +93,6 @@ export function HouseScreen({
 
     onUpdateDailyProgress({
       waterChallengeCount: currentCount + 1,
-      waterDrank: (dailyProgress.waterDrank || 0) + 1
     });
 
     if (onCompleteWaterChallenge) {

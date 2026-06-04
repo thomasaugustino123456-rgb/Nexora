@@ -32,6 +32,10 @@ interface SettingsScreenProps {
   showToast: (m: string, t?: 'success' | 'info' | 'error') => void;
   sendNotification: (title: string, body: string) => void;
   onOpenArchitectLab: () => void;
+  rollbackBackupData: any;
+  onRollbackRestore: () => void;
+  onSimulateUpdate: () => void;
+  currentAppVersion: string;
 }
 
 export function SettingsScreen({ 
@@ -39,7 +43,11 @@ export function SettingsScreen({
   fcmToken, fcmError, onRetryFCM, onSendTestNotification, 
   onSendMotivation, onSendTestEmail, onClearCache, onExportData,
   onSubmitFeedback, onShowManifesto, showToast, sendNotification,
-  onOpenArchitectLab
+  onOpenArchitectLab,
+  rollbackBackupData,
+  onRollbackRestore,
+  onSimulateUpdate,
+  currentAppVersion
 }: SettingsScreenProps) {
   const [showFeedbackModal, setShowFeedbackModal] = React.useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = React.useState(false);
@@ -655,6 +663,71 @@ export function SettingsScreen({
                 </div>
                 SEND SYSTEM FEEDBACK
              </button>
+          </div>
+        </div>
+
+        {/* Version Recovery & Rollback Section */}
+        <div className="glass-card p-6 space-y-4 border border-blue-100/60 relative overflow-hidden">
+          <div className="flex items-center justify-between pb-2 border-b border-blue-50">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl shadow-sm border border-blue-100">
+                <RefreshCw size={18} className="text-blue-500 animate-spin-slow" />
+              </div>
+              <div>
+                <h3 className="font-black text-blue-900 uppercase text-xs tracking-tight">System Version & Recovery</h3>
+                <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">Rollback Protection Engine</p>
+              </div>
+            </div>
+            <div className="px-2.5 py-1 bg-blue-50 rounded-lg border border-blue-100 text-[10px] font-black text-blue-800 animate-pulse">
+              Active: v{currentAppVersion}
+            </div>
+          </div>
+
+          <p className="text-xs font-bold text-blue-900/60 leading-relaxed">
+            Nexora features automatic client-side updates. If a new update breaks anything, you can immediately rollback to your previous configuration within 10 seconds of app load, or manually revert here.
+          </p>
+
+          {rollbackBackupData ? (
+            <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 text-left space-y-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest block">Available Rollback Snapshot</span>
+                  <span className="text-xs font-black text-emerald-900">Config: v{rollbackBackupData.version || '2.0.0'}</span>
+                </div>
+                <div className="text-[9px] font-bold text-emerald-800 bg-emerald-100/50 px-2 py-0.5 rounded-md">
+                  Saved: {rollbackBackupData.backupTime ? new Date(rollbackBackupData.backupTime).toLocaleString() : 'N/A'}
+                </div>
+              </div>
+              
+              <button
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.NOTIFY);
+                  onRollbackRestore();
+                }}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-black text-xs tracking-widest transition-all active:scale-95 shadow-md shadow-emerald-100 flex items-center justify-center gap-2"
+              >
+                <Check size={14} />
+                RESTORE PREVIOUS VERSION v{rollbackBackupData.version}
+              </button>
+            </div>
+          ) : (
+            <div className="p-4 bg-blue-50/30 rounded-2xl border border-blue-100/50 text-center">
+              <span className="text-[9px] font-black text-blue-900/40 uppercase tracking-widest block">No Previous Backup Detected</span>
+              <p className="text-[10px] font-medium text-blue-900/50 mt-1">A safety backup is formed automatically when updates are deployed.</p>
+            </div>
+          )}
+
+          <div className="pt-2">
+            <button
+              onClick={() => {
+                vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                onSimulateUpdate();
+              }}
+              className="w-full bg-blue-900 hover:bg-blue-950 text-white py-3.5 rounded-xl font-black text-xs tracking-widest shadow-lg shadow-blue-100 transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <Zap size={14} className="text-yellow-400 animate-pulse" />
+              SIMULATE NEW UPDATE & START 10s TIMER
+            </button>
           </div>
         </div>
 
