@@ -4008,26 +4008,27 @@ export default function App() {
     );
   }
 
-  if (loading) {
-    if (loadError) {
-      return (
-        <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white">
-          <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mb-6">
-            <AlertCircle size={32} />
+  try {
+    if (loading) {
+      if (loadError) {
+        return (
+          <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white">
+            <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mb-6">
+              <AlertCircle size={32} />
+            </div>
+            <h1 className="text-2xl font-black mb-4">Connection Failed</h1>
+            <p className="text-slate-400 max-w-sm mb-8">{loadError}</p>
+            <button 
+               onClick={() => window.location.reload()}
+               className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl transition-all"
+            >
+               Retry Connection
+            </button>
           </div>
-          <h1 className="text-2xl font-black mb-4">Connection Failed</h1>
-          <p className="text-slate-400 max-w-sm mb-8">{loadError}</p>
-          <button 
-             onClick={() => window.location.reload()}
-             className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl transition-all"
-          >
-             Retry Connection
-          </button>
-        </div>
-      );
+        );
+      }
+      return <SplashScreen />;
     }
-    return <SplashScreen />;
-  }
 
   if (!user) {
     if (showAuth) {
@@ -6376,8 +6377,78 @@ export default function App() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Rollback & Recovery Countdown System Overlay */}
+          <AnimatePresence>
+            {rollbackCountdown !== null && rollbackCountdown > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -50 }}
+                className="fixed top-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:max-w-md z-[9999] bg-gradient-to-r from-blue-900 to-indigo-950 text-white rounded-3xl shadow-2xl p-5 border border-white/10 backdrop-blur-md"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="relative w-12 h-12 flex items-center justify-center bg-white/10 rounded-2xl border border-white/10 shrink-0">
+                    <span className="text-xl font-black">{rollbackCountdown}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-black text-xs uppercase tracking-wider text-blue-300">System Upgrade in Progress</h4>
+                    <p className="text-[10px] font-bold text-slate-300">Nexora is optimizing cache files. Stable version rollback available.</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => {
+                      vibrate(VIBRATION_PATTERNS.NOTIFY);
+                      handleRollbackRestore();
+                    }}
+                    className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-md shadow-rose-900/40"
+                  >
+                    Emergency Rollback
+                  </button>
+                  <button
+                    onClick={() => {
+                      vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                      localStorage.setItem("nexora_rollback_timer_seen_for_version", currentAppVersion);
+                      localStorage.setItem("nexora_version", currentAppVersion);
+                      setRollbackCountdown(null);
+                      showToast(`Welcome to v${currentAppVersion}! System stable.`, "success");
+                    }}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
+                  >
+                    Keep Update
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </ErrorBoundary>
   );
+  } catch (e: any) {
+    console.error("Critical Render Error catch:", e);
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center font-sans">
+        <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mb-6">
+          <AlertCircle size={32} />
+        </div>
+        <h1 className="text-xl font-black text-red-500 mb-4 font-mono select-none uppercase">Render Exception Intercepted 🛡️</h1>
+        <p className="text-slate-400 mb-6 max-w-md font-mono text-xs leading-relaxed">{e?.message || String(e)}</p>
+        <pre className="text-left text-[10px] text-slate-500 bg-slate-950 p-4 rounded-xl border border-white/5 max-w-full overflow-auto max-h-60 font-mono">
+          {e?.stack || "No callstack details caught."}
+        </pre>
+        <button
+          onClick={() => {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.reload();
+          }}
+          className="mt-6 px-6 py-3 bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-red-500 transition-all active:scale-95 shadow-lg shadow-red-900/30"
+        >
+          FORCE CLEAR CACHE & REBOOT SYSTEM
+        </button>
+      </div>
+    );
+  }
 }
