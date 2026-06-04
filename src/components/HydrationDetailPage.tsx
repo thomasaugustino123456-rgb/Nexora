@@ -6,33 +6,28 @@ import { UserStats, DailyProgress, UserSettings } from '../types';
 
 interface HydrationDetailPageProps {
   stats: UserStats;
-  setStats: (s: Partial<UserStats> | ((prev: UserStats) => UserStats)) => void;
+  setStats?: (s: Partial<UserStats> | ((prev: UserStats) => UserStats)) => void;
   dailyProgress: DailyProgress;
-  setDailyProgress: (p: Partial<DailyProgress> | ((prev: DailyProgress) => DailyProgress)) => void;
+  setDailyProgress?: (p: Partial<DailyProgress> | ((prev: DailyProgress) => DailyProgress)) => void;
   onBack: () => void;
   play?: (sound: string) => void;
   showToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
   settings: UserSettings;
   consecutiveDays: number;
-  setConsecutiveDays: (d: number) => void;
+  setConsecutiveDays?: (d: number) => void;
   waterLevel: number;
-  setWaterLevel: (l: number) => void;
+  setWaterLevel?: (l: number) => void;
   pendingCoinsAdded: boolean;
 }
 
 export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
   stats,
-  setStats,
-  dailyProgress,
-  setDailyProgress,
   onBack,
   play,
-  showToast,
+  dailyProgress,
   settings,
   consecutiveDays,
-  setConsecutiveDays,
   waterLevel,
-  setWaterLevel,
   pendingCoinsAdded,
 }) => {
   const [time, setTime] = useState(0);
@@ -53,10 +48,9 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
     };
   }, []);
 
-  // Compute todays values for hydration progress
-  const finalGoal = settings?.waterGoal || 8;
-  const finalDrunk = dailyProgress?.waterDrank ?? Math.round(waterLevel * finalGoal) ?? 0;
-  const activeProgress = Math.min(Math.max(finalDrunk / finalGoal, 0), 1);
+  // Compute local coordinates for the water surface inside our Bottle SVG
+  // Cavity bottom is Y=468, maximum water line is Y=135
+  const activeProgress = Math.min(Math.max(waterLevel, 0), 1);
 
   // Surface waving animations inside bottle SVG
   const fillY = 468 - (activeProgress * 333);
@@ -79,45 +73,9 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
     Z
   `;
 
-  // Interactive drinking logger
-  const handleLogCup = () => {
-    if (play) play('water');
-
-    const nextDrunk = finalDrunk + 1;
-    
-    // 1. Update daily water consumed
-    setDailyProgress((prev) => ({
-      ...prev,
-      waterDrank: nextDrunk,
-    }));
-
-    // 2. Adjust visual water fill ratio (0 to 1)
-    const newRatio = Math.min(nextDrunk / finalGoal, 1);
-    setWaterLevel(newRatio);
-
-    if (showToast) {
-      showToast(`Glug glug! Logged 1 Cup of Water 💧`, "success");
-    }
-
-    // 3. Complete Water Challenge state if goal met
-    if (nextDrunk === finalGoal) {
-      if (play) play('challenge_unlock');
-      
-      // Reward the user with coins
-      setStats((prev) => ({
-        ...prev,
-        coins: (prev.coins || 0) + 10,
-        streak: prev.streak + 1
-      }));
-
-      // Increment streak days
-      setConsecutiveDays(consecutiveDays + 1);
-
-      if (showToast) {
-        showToast("Eco Hydration Bottle Filled! +10 Coins Added! 🏆🌱", "success");
-      }
-    }
-  };
+  // Compute today's values for the circular hydration widget
+  const finalDrunk = dailyProgress?.waterDrank ?? Math.round(activeProgress * (settings?.waterGoal ?? 8)) ?? 0;
+  const finalGoal = settings?.waterGoal ?? 8;
 
   return (
     <div className="fixed inset-0 h-screen w-full bg-gradient-to-b from-[#FAF7F2] to-[#F4F0E2] text-[#4F3F34] overflow-hidden select-none flex flex-col justify-between z-[200]">
@@ -141,24 +99,24 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
 
         {/* Small coin icon counter positioned on top of the screen */}
         <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-amber-200 shadow-md">
-          <span className="text-xl animate-bounce" style={{ animationDuration: '3s' }}>🪙</span>
+          <span className="text-xl animate-bounce" style={{ animationDuration: "3s" }}>🪙</span>
           <span className="font-sans font-black text-amber-600 text-sm">{stats.coins || 0}</span>
         </div>
       </header>
 
       {/* Main Container - Modern Dashboard featuring bottle on left, and ring widget + streak counter on right */}
-      <div className="flex-1 w-full max-w-5xl mx-auto px-6 flex flex-col items-center justify-center relative z-40 -mt-6 md:-mt-10 pb-20">
+      <div className="flex-1 w-full max-w-3xl mx-auto px-6 flex flex-col items-center justify-center relative z-40 -mt-6 md:-mt-10 pb-20">
         
-        <div className="flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-14 xl:gap-20 w-full">
+        <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-14 w-full">
           
-          {/* Left Column: Majestic 512px footprint containing the Water Bottle */}
-          <div className="flex items-center justify-center flex-shrink-0 animate-in fade-in duration-500 max-w-full">
-            <div className="relative w-[340px] h-[340px] sm:w-[420px] sm:h-[420px] md:w-[512px] md:h-[512px] flex items-center justify-center drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)] bg-white/20 p-6 rounded-[3rem] border border-white/30 backdrop-blur-sm">
+          {/* Left Column: Huge 512px Tall Water Bottle */}
+          <div className="flex items-center justify-center flex-shrink-0 animate-in fade-in duration-500">
+            <div className="relative w-[218px] h-[512px] drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)]">
               
               <svg
                 viewBox="0 0 200 500"
                 xmlns="http://www.w3.org/2000/svg"
-                className="w-[200px] h-full overflow-visible"
+                className="w-full h-full overflow-visible"
               >
                 <defs>
                   {/* Inner cavity mask to clip water inside the container perfectly */}
@@ -225,11 +183,11 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                   {/* Tiny rising oxygen bubbles inside the water */}
                   {activeProgress > 0 && (
                     <g fill="#ffffff" fillOpacity="0.7">
-                      <circle cx="82" cy="350" r="2.5" className="animate-bounce" style={{ animationDuration: '3s' }} />
-                      <circle cx="120" cy="410" r="3" className="animate-bounce" style={{ animationDuration: '4s' }} />
-                      <circle cx="68" cy="280" r="2" className="animate-bounce" style={{ animationDuration: '2.5s' }} />
-                      <circle cx="110" cy="310" r="3.5" className="animate-bounce" style={{ animationDuration: '3.5s' }} />
-                      <circle cx="95" cy="440" r="2" className="animate-bounce" style={{ animationDuration: '5s' }} />
+                      <circle cx="82" cy="350" r="2.5" className="animate-bounce" style={{ animationDuration: "3s" }} />
+                      <circle cx="120" cy="410" r="3" className="animate-bounce" style={{ animationDuration: "4s" }} />
+                      <circle cx="68" cy="280" r="2" className="animate-bounce" style={{ animationDuration: "2.5s" }} />
+                      <circle cx="110" cy="310" r="3.5" className="animate-bounce" style={{ animationDuration: "3.5s" }} />
+                      <circle cx="95" cy="440" r="2" className="animate-bounce" style={{ animationDuration: "5s" }} />
                     </g>
                   )}
                 </g>
@@ -274,89 +232,103 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                 <path d="M 52,190 Q 51,320 51,440" fill="none" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" opacity="0.6" />
                 <path d="M 148,190 Q 149,320 149,440" fill="none" stroke="#0ea5e9" strokeWidth="3.5" strokeLinecap="round" opacity="0.4" />
 
-                {/* Specular curved glare reflections */}
+                {/* Specular curved glass reflections */}
                 <path d="M 54,195 A 150,120 0 0,1 146,195" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.45" />
                 <path d="M 70,464 Q 100,466 130,464" fill="none" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" opacity="0.6" />
 
                 {/* Floating shiny stars for premium appearance */}
                 <g fill="#ffffff">
-                  <polygon points="35,160 38,163 41,160 38,157" className="animate-pulse" style={{ animationDuration: '2.5s' }} />
-                  <polygon points="165,145 168,148 171,145 168,142" className="animate-pulse" style={{ animationDuration: '3.5s' }} />
+                  <polygon points="35,160 38,163 41,160 38,157" className="animate-pulse" style={{ animationDuration: "2.5s" }} />
+                  <polygon points="165,145 168,148 171,145 168,142" className="animate-pulse" style={{ animationDuration: "3.5s" }} />
                 </g>
               </svg>
 
               {/* Water level digital percentage label inside the bottle */}
               <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none text-center">
-                <span className="text-sm font-black text-white tracking-widest block uppercase drop-shadow-md bg-blue-950/40 px-3 py-1 rounded-full border border-white/20">
+                <span className="text-xs font-black text-white/80 tracking-widest block uppercase drop-shadow-md bg-blue-950/20 px-2 py-0.5 rounded-full">
                   {(activeProgress * 100).toFixed(0)}%
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Interactive stats, Challenge logs, and Streak counters sitting next to the bottle */}
-          <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-6 max-w-sm w-full">
+          {/* Right Column: Interactive stats & layout mirroring the circular widget & streak counter on right */}
+          <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-8 max-w-sm w-full">
             
-            {/* Top Section Interactive Challenge Card - Fulfilling Red mark on Third Image */}
+            {/* Red Circle-inspired Custom Circular Hydration progress widget matching third image */}
             <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass-card bg-white border border-blue-200/50 shadow-xl rounded-[2.2rem] p-6 w-full relative overflow-hidden transition-all duration-300"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="glass-card bg-white/70 backdrop-blur-md rounded-[2.2rem] p-6 border border-[#E9E4D4] shadow-xl w-full flex items-center gap-5 relative overflow-hidden"
             >
-              {/* Backglow design effect */}
-              <div className="absolute -top-12 -right-12 w-28 h-28 bg-[#0ea5e9]/10 rounded-full blur-xl pointer-events-none" />
+              {/* Outer Decorative Glow */}
+              <div className="absolute -top-10 -right-10 w-24 h-24 bg-blue-400/10 rounded-full blur-xl pointer-events-none" />
               
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0ea5e9] shadow-inner font-extrabold text-2xl">
-                  💧
-                </div>
-                <div className="text-left">
-                  <h3 className="text-[#1e3a8a] font-black text-sm uppercase tracking-wider mb-0.5">Water Challenge Log</h3>
-                  <p className="text-[#0ea5e9] font-black text-xl tracking-tight">
-                    {finalDrunk} / {finalGoal} glasses
-                  </p>
+              {/* SVG Ring Progress */}
+              <div className="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90">
+                  {/* Background Circle */}
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    className="stroke-blue-100/50"
+                    strokeWidth="6"
+                    fill="transparent"
+                  />
+                  {/* Foreground Animated Circle */}
+                  <motion.circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    className="stroke-[#0ea5e9]"
+                    strokeWidth="6"
+                    fill="transparent"
+                    strokeDasharray={2 * Math.PI * 34}
+                    initial={{ strokeDashoffset: 2 * Math.PI * 34 }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 34 - (Math.min(finalDrunk / finalGoal, 1) * 2 * Math.PI * 34) }}
+                    transition={{ duration: 1.2, ease: "easeOut" }}
+                  />
+                </svg>
+                {/* Central Droplet Icon inside the ring */}
+                <div className="absolute inset-0 flex items-center justify-center pl-0.5 pt-0.5">
+                  <svg className="w-7 h-7 text-[#0ea5e9] drop-shadow-[0_2px_4px_rgba(14,165,233,0.3)]" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                  </svg>
                 </div>
               </div>
 
-              {/* Interactive Horizontal Progressive Wave Bar */}
-              <div className="relative w-full h-3.5 bg-blue-100/50 rounded-full overflow-hidden mb-5 border border-blue-150 shadow-inner">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${activeProgress * 100}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-[#0ea5e9] to-[#0284c7] rounded-full flex items-center justify-end"
-                >
-                  <div className="w-1.5 h-1.5 rounded-full bg-white mr-1.5 animate-ping" />
-                </motion.div>
+              {/* Text Information for today's drinks */}
+              <div className="flex flex-col text-left space-y-0.5">
+                <span className="text-blue-900/40 text-[10px] font-black tracking-widest uppercase">
+                  Today's Water
+                </span>
+                <span className="text-2xl font-black text-[#0ea5e9] tracking-tight">
+                  {finalDrunk.toFixed(1)} cups
+                </span>
+                <span className="text-[#0ea5e9]/60 font-semibold text-xs tracking-tight">
+                  {finalDrunk.toFixed(1)} of {finalGoal} cups
+                </span>
               </div>
-
-              {/* Functional Drinking log button that matches the other challenges */}
-              <button
-                onClick={handleLogCup}
-                className="w-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white py-4.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:shadow-lg active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 border-b-4 border-[#0369a1]"
-              >
-                LOG GLASS OF WATER 🥛
-              </button>
             </motion.div>
 
-            {/* Streak Counter Block positioned next to it (with beautiful ocean blue text format replacing the brown) */}
+            {/* Streak Counter Segment (Repositioned next to/below the circular gauge, colored in blue as requested) */}
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="glass-card bg-white/50 border border-[#E9E4D4] rounded-[2.2rem] p-6 w-full flex flex-col items-center lg:items-start"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex flex-col items-center md:items-start space-y-1 w-full pl-2"
             >
               <div className="flex items-baseline gap-2">
-                <span className="text-8xl md:text-[8rem] font-sans font-black tracking-tighter text-[#0ea5e9] leading-none drop-shadow-[0_10px_35px_rgba(14,165,233,0.22)] select-none">
+                <span className="text-8xl md:text-[8rem] font-sans font-black tracking-tighter text-[#0ea5e9] leading-none drop-shadow-[0_6px_25px_rgba(14,165,233,0.22)] select-none">
                   {consecutiveDays}
                 </span>
-                <span className="text-4xl text-[#0ea5e9] select-none animate-bounce" style={{ animationDuration: '4.5s' }}>🔥</span>
+                <span className="text-4xl text-[#0ea5e9] select-none animate-bounce" style={{ animationDuration: "4s" }}>🔥</span>
               </div>
-              <span className="text-[#0ea5e9] font-black text-[10px] tracking-[0.2em] uppercase mt-2">
-                Consecutive Hydration Streak
+              <span className="text-[#0ea5e9]/60 font-black text-xs tracking-[0.2em] uppercase">
+                CONSECUTIVE DAYS STREAK
               </span>
-              <p className="text-[#4F3F34]/60 text-[10px] font-bold mt-1 text-center lg:text-left">
-                Keep the sequence glowing, bro! Inactivity drains your leaderboard standing!
-              </p>
             </motion.div>
 
           </div>
@@ -372,7 +344,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
             initial={{ opacity: 0, scale: 0.8, y: 50 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: -50 }}
-            className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-md z-[210] p-6"
+            className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-md z-[215] p-6"
           >
             <div className="bg-white border-2 border-amber-400 rounded-[2rem] p-8 text-center shadow-2xl flex flex-col items-center justify-center max-w-sm space-y-4">
               <div className="w-20 h-20 bg-amber-400 rounded-full flex items-center justify-center shadow-lg shadow-amber-400/20 text-white text-5xl font-extrabold animate-bounce">
