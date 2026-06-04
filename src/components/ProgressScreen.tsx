@@ -5,7 +5,7 @@ import {
   TrendingUp, ChevronLeft, Droplets, Flame, 
   Clock, Zap, Star, Shield, BrainCircuit, 
   Palette, Dumbbell, Coins, Crown, BarChart2,
-  X, ShieldAlert, Sparkles, Plus, ChevronDown, ChevronUp, RotateCcw, Check
+  X, ShieldAlert, Sparkles, Plus, ChevronDown, ChevronUp, RotateCcw, Check, Trash2
 } from 'lucide-react';
 import { UserStats, DailyProgress, UserSettings, Trophy as TrophyType, Screen } from '../types';
 import { Calendar } from './Calendar';
@@ -337,14 +337,14 @@ export function ProgressScreen({
                   <button 
                     key={t.id} 
                     onClick={() => setSelectedTrophy(t)}
-                    className="px-4 py-3 bg-[#FCFAF6] hover:bg-white active:scale-95 transition-all rounded-2xl border border-[#E9E4D4] flex items-center gap-3 min-w-[150px] shadow-sm text-left group"
+                    className="px-4 py-3 bg-[#FCFAF6] hover:bg-white active:scale-95 transition-all rounded-2xl border border-[#E9E4D4] flex items-center gap-3 min-w-[155px] shadow-sm text-left group relative pr-10"
                   >
-                    <div className={`w-3 h-3 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.15)] ${
+                    <div className={`w-3 h-3 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.15)] flex-shrink-0 ${
                       t.type === 'golden' ? 'bg-amber-400 animate-pulse' : 
                       t.type === 'ice' ? 'bg-sky-300' : 'bg-rose-400'
                     }`} />
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest leading-none mb-1 text-[#4F3F34] group-hover:text-[#69C496] transition-colors">
+                    <div className="flex flex-col overflow-hidden">
+                      <span className="text-[10px] font-black uppercase tracking-widest leading-none mb-1 text-[#4F3F34] group-hover:text-[#69C496] transition-colors truncate">
                         {t.id.replace(/_/g, ' ').split(' ')[0]}
                       </span>
                       <span className={`text-[8px] font-bold uppercase tracking-tighter opacity-75 ${
@@ -354,6 +354,21 @@ export function ProgressScreen({
                         {t.type} Status
                       </span>
                     </div>
+                    {/* Hover Delete Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Do you want to delete the ${t.type.toUpperCase()} trophy, bro?`)) {
+                          const updated = (stats.trophies || []).filter(item => item.id !== t.id);
+                          setStats({ ...stats, trophies: updated });
+                          showToast("Trophy deleted successfully 🗑️", "success");
+                        }
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-rose-50 text-rose-500 hover:text-rose-600 rounded-lg transition-all md:opacity-0 group-hover:opacity-100 z-10"
+                      title="Delete trophy"
+                    >
+                      <Trash2 size={13} />
+                    </button>
                   </button>
                 ))}
              </div>
@@ -461,13 +476,28 @@ export function ProgressScreen({
                 </div>
               </div>
 
-              {/* Dismiss button */}
-              <button
-                onClick={() => setSelectedTrophy(null)}
-                className="w-full bg-[#69C496] hover:bg-[#51AF7E] text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
-              >
-                Close View
-              </button>
+              {/* Action buttons */}
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setSelectedTrophy(null)}
+                  className="flex-1 bg-white/10 hover:bg-white/20 text-white px-5 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-white/10 active:scale-95"
+                >
+                  Close View
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Are you sure you want to permanently delete this ${selectedTrophy.type.toUpperCase()} trophy, bro? This is irreversible!`)) {
+                      const updated = (stats.trophies || []).filter(item => item.id !== selectedTrophy.id);
+                      setStats({ ...stats, trophies: updated });
+                      showToast("Trophy permanently deleted 🗑️", "success");
+                      setSelectedTrophy(null);
+                    }
+                  }}
+                  className="flex-1 bg-rose-600/90 hover:bg-rose-700 text-white px-5 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 shadow-md shadow-rose-900/20 shadow-inner"
+                >
+                  Delete Trophy 🗑️
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

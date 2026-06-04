@@ -122,10 +122,10 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
 
   const renderSprout = () => (
     <motion.g
-      whileTap={{ scale: 0.9, rotate: [0, -5, 5, 0] }}
+      whileTap={{ scale: 0.9, rotate: [0, -4, 4, 0] }}
       transition={{ type: "spring", stiffness: 400, damping: 10 }}
     >
-      {/* Terracotta Pot */}
+      {/* Terracotta Pot with Adorable Anime Smiley Face */}
       {renderPotWrapper(
         <g id="pot">
           {/* Main Body */}
@@ -156,6 +156,15 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
           <circle cx="80" cy="170" r="2" fill="black" opacity="0.6" />
           <circle cx="110" cy="180" r="2" fill="black" opacity="0.6" />
           <circle cx="95" cy="165" r="1.5" fill="black" opacity="0.6" />
+
+          {/* Adorable cartoon eyes and smiling face on standard pot */}
+          <circle cx="90" cy="160" r="3.2" fill="black" />
+          <circle cx="89" cy="158.5" r="1" fill="white" />
+          <circle cx="110" cy="160" r="3.2" fill="black" />
+          <circle cx="109" cy="158.5" r="1" fill="white" />
+          <ellipse cx="83" cy="163.5" rx="3" ry="1.5" fill="#E57373" opacity="0.6" />
+          <ellipse cx="117" cy="163.5" rx="3" ry="1.5" fill="#E57373" opacity="0.6" />
+          <path d="M 97,162.5 Q 100,165.5 103,162.5" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" />
         </g>
       )}
 
@@ -163,65 +172,245 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
         <g id="plant-growth">
           {/* Seed State */}
           {stage === 0 && (
-            <motion.circle 
-              cx="100" cy="130" r="6" 
-              fill="#D7CCC8" stroke="black" strokeWidth="2"
-              initial={{ scale: 0 }} animate={{ scale: 1 }}
-            />
+            <g>
+              <motion.ellipse 
+                cx="100" cy="132" rx="7.5" ry="5.5" 
+                fill="#C4A484" stroke="black" strokeWidth="2.5"
+                initial={{ scale: 0 }} animate={{ scale: 1 }}
+              />
+              {/* Cozy closed sleeping baby eyes */}
+              <path d="M 96,131 Q 97.5,133 99,131 M 101,131 Q 102.5,133 104,131" stroke="black" strokeWidth="1.2" fill="none" />
+              {/* Slanted tiny baby green shoot leaf */}
+              <path d="M 100,128 Q 103,120 108,124 Q 105,127 100,128" fill="#81C784" stroke="black" strokeWidth="1.5" />
+            </g>
           )}
 
-          {/* Stem */}
-          {stage >= 1 && (
-            <motion.path 
-              d={`M 100,135 L 100,${135 - (stage * 15)}`} 
-              stroke="#A5D6A7" 
-              strokeWidth="6" 
-              strokeLinecap="round"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              className="plant-stem"
-            />
-          )}
-
-          {/* Leaves - The Classic Heart Style */}
-          {stage >= 2 && (
-            <g transform={`translate(100, ${135 - (stage * 15)})`}>
+          {/* Stage 1: Curved, chunky organic sprout shoot with baby leaf */}
+          {stage === 1 && (
+            <g>
+              <motion.path 
+                d="M 97,135 Q 92,120 95,110 Q 101,110 103,135 Z" 
+                fill="#81C784" 
+                stroke="black" 
+                strokeWidth="3" 
+                strokeLinejoin="round"
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+              />
               <motion.g 
-                initial={{ scale: 0, rotate: -20 }} 
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.2 }}
+                initial={{ scale: 0 }} 
+                animate={{ scale: 1 }} 
+                transition={{ delay: 0.15 }}
+                transform="translate(95, 110)"
               >
-                {/* Left Leaf */}
                 <path 
-                  d="M 0,0 C -15,-10 -25,-20 -20,-30 C -15,-35 -5,-30 0,-15 C 5,-30 15,-35 20,-30 C 25,-20 15,-10 0,0" 
-                  fill={colors.primary} 
+                  d="M 0,0 C -12,-3 -18,-12 -14,-15 C -10,-18 -3,-12 0,0" 
+                  fill="#4CAF50" 
                   stroke="black" 
-                  strokeWidth="3" 
-                  transform="scale(0.8) translate(-15, -5) rotate(-30)"
+                  strokeWidth="2.5" 
                 />
+                {/* Glossy highlight line on leaf */}
+                <path d="M -8,-9 Q -4,-12 0,-3" fill="none" stroke="white" strokeWidth="1.2" opacity="0.3" />
               </motion.g>
-              {stage >= 3 && (
-                <motion.g 
-                  initial={{ scale: 0, rotate: 20 }} 
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  {/* Right Leaf */}
+            </g>
+          )}
+
+          {/* Stage 2: Stronger stem branching with double hearts leaves */}
+          {stage === 2 && (
+            <g>
+              <motion.path 
+                d="M 96,135 Q 90,111 93,95 Q 101,95 104,135 Z" 
+                fill="#81C784" 
+                stroke="black" 
+                strokeWidth="3.5" 
+                strokeLinejoin="round"
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+              />
+              <g transform="translate(93, 100)">
+                <motion.g initial={{ scale: 0, rotate: -15 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.1 }}>
                   <path 
-                    d="M 0,0 C -15,-10 -25,-20 -20,-30 C -15,-35 -5,-30 0,-15 C 5,-30 15,-35 20,-30 C 25,-20 15,-10 0,0" 
-                    fill={colors.primary} 
+                    d="M 0,0 C -18,-5 -26,-22 -18,-26 C -10,-30 -3,-15 0,0" 
+                    fill="#4CAF50" 
                     stroke="black" 
-                    strokeWidth="3" 
-                    transform="scale(0.8) translate(15, -5) rotate(30)"
+                    strokeWidth="2.5" 
+                    strokeLinejoin="round"
                   />
+                  <path d="M -12,-16 Q -7,-20 0,-5" fill="none" stroke="white" strokeWidth="1.5" opacity="0.3" />
                 </motion.g>
-              )}
+                <motion.g initial={{ scale: 0, rotate: 15 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.2 }}>
+                  <path 
+                    d="M 0,0 C 18,-5 26,-22 18,-26 C 10,-30 3,-15 0,0" 
+                    fill="#388E3C" 
+                    stroke="black" 
+                    strokeWidth="2.5" 
+                    strokeLinejoin="round"
+                  />
+                  <path d="M 12,-16 Q 7,-20 0,-5" fill="none" stroke="white" strokeWidth="1.5" opacity="0.2" />
+                </motion.g>
+              </g>
+            </g>
+          )}
+
+          {/* Stage 3: Branched stem and multiple artist-vector cartoon leaves */}
+          {stage === 3 && (
+            <g>
+              <motion.path 
+                d="M 95,135 Q 85,100 90,80 Q 102,80 105,135 Z" 
+                fill="#81C784" 
+                stroke="black" 
+                strokeWidth="4" 
+                strokeLinejoin="round"
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+              />
+              <path d="M 90,111 Q 76,98 70,95" fill="none" stroke="black" strokeWidth="3.5" strokeLinecap="round" />
+              <path d="M 101,106 Q 116,94 122,90" fill="none" stroke="black" strokeWidth="3.5" strokeLinecap="round" />
+
+              {/* Side left leaf */}
+              <g transform="translate(70, 95)">
+                <motion.path 
+                  initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.1 }}
+                  d="M 0,0 C -15,-3 -22,-14 -15,-18 C -8,-21 -2,-10 0,0" 
+                  fill="#4CAF50" stroke="black" strokeWidth="2.5" 
+                />
+              </g>
+              {/* Side right leaf */}
+              <g transform="translate(122, 90)">
+                <motion.path 
+                  initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2 }}
+                  d="M 0,0 C 15,-3 22,-14 15,-18 C 8,-21 2,-10 0,0" 
+                  fill="#2E7D32" stroke="black" strokeWidth="2.5" 
+                />
+              </g>
+              {/* Center twin leaves on top of stem */}
+              <g transform="translate(90, 80)">
+                <motion.path 
+                  initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.25 }}
+                  d="M 0,0 C -18,-8 -25,-22 -17,-26 C -9,-29 -3,-14 0,0" 
+                  fill="#4CAF50" stroke="black" strokeWidth="2.5" 
+                />
+                <motion.path 
+                  initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3 }}
+                  d="M 0,0 C 18,-8 25,-22 17,-26 C 9,-29 3,-14 0,0" 
+                  fill="#388E3C" stroke="black" strokeWidth="2.5" 
+                />
+              </g>
+            </g>
+          )}
+
+          {/* Stage 4: Bushy cartoon layers of leaves and a beautiful pink blossom bud */}
+          {stage === 4 && (
+            <g>
+              <motion.path 
+                d="M 94,135 Q 82,90 88,65 Q 104,65 106,135 Z" 
+                fill="#81C784" 
+                stroke="black" 
+                strokeWidth="4" 
+                strokeLinejoin="round"
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+              />
+              <path d="M 88,105 Q 70,95 62,90" fill="none" stroke="black" strokeWidth="4" strokeLinecap="round" />
+              <path d="M 102,100 Q 120,90 126,85" fill="none" stroke="black" strokeWidth="4" strokeLinecap="round" />
+
+              {/* Bushy left cluster */}
+              <g transform="translate(62, 90)">
+                <path d="M 0,0 C -16,-5 -22,-16 -15,-20 C -8,-23 -2,-11 0,0" fill="#4CAF50" stroke="black" strokeWidth="2.5" />
+                <path d="M 0,0 C -6,-14 -14,-22 -7,-26 C 0,-28 3,-14 0,0" fill="#81C784" stroke="black" strokeWidth="2.2" />
+              </g>
+              {/* Bushy right cluster */}
+              <g transform="translate(126, 85)">
+                <path d="M 0,0 C 16,-5 22,-16 15,-20 C 8,-23 2,-11 0,0" fill="#2E7D32" stroke="black" strokeWidth="2.5" />
+                <path d="M 0,0 C 5,-14 12,-22 6,-26 C 0,-28 -3,-14 0,0" fill="#388E3C" stroke="black" strokeWidth="2.2" />
+              </g>
+              {/* Double top leaves */}
+              <g transform="translate(88, 65)">
+                <path d="M 0,0 C -20,-8 -28,-24 -19,-28 C -10,-31 -3,-15 0,0" fill="#4CAF50" stroke="black" strokeWidth="2.5" />
+                <path d="M 0,0 C 20,-8 28,-24 19,-28 C 10,-31 3,-15 0,0" fill="#388E3C" stroke="black" strokeWidth="2.5" />
+              </g>
+              {/* Shiny blooming bud at tip! */}
+              <g transform="translate(88, 65)">
+                <motion.circle 
+                  cx="0" cy="-2" r="9" 
+                  fill="#FF8A80" stroke="black" strokeWidth="2.5" 
+                  animate={{ scale: [1, 1.08, 1] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                />
+                <path d="-6,-1 Q 0,-7 6,-1" stroke="black" strokeWidth="1.5" fill="none" />
+                <path d="-4,3 Q 0,-2 4,3" stroke="black" strokeWidth="1.2" fill="none" />
+              </g>
+            </g>
+          )}
+
+          {/* Stage 5: Ultimate bloom - Smiling daisy cartoon flower head on top sways with wind */}
+          {stage >= 5 && (
+            <g>
+              <motion.path 
+                d="M 94,135 Q 82,90 88,58 Q 104,58 106,135 Z" 
+                fill="#81C784" 
+                stroke="black" 
+                strokeWidth="4.2" 
+                strokeLinejoin="round"
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+              />
+              <path d="M 88,105 Q 68,95 60,90" fill="none" stroke="black" strokeWidth="4" strokeLinecap="round" />
+              <path d="M 102,100 Q 122,90 130,85" fill="none" stroke="black" strokeWidth="4" strokeLinecap="round" />
+
+              {/* Shaded lower leaves */}
+              <g transform="translate(60, 90)">
+                <path d="M 0,0 C -15,-4 -20,-15 -14,-18 C -8,-21 -2,-10 0,0" fill="#4CAF50" stroke="black" strokeWidth="2.5" />
+                <path d="M 0,0 C -5,-12 -12,-20 -6,-24 C 0,-25 2,-12 0,0" fill="#81C784" stroke="black" strokeWidth="2.5" />
+              </g>
+              <g transform="translate(130, 85)">
+                <path d="M 0,0 C 15,-4 20,-15 14,-18 C 8,-21 2,-10 0,0" fill="#2E7D32" stroke="black" strokeWidth="2.5" />
+                <path d="M 0,0 C 5,-12 12,-20 6,-24 C 0,-25 -2,-12 0,0" fill="#388E3C" stroke="black" strokeWidth="2.5" />
+              </g>
+
+              {/* Glowing, swaying active flower head */}
+              <g transform="translate(88, 58)">
+                <motion.g
+                  animate={{ rotate: [-5, 5, -5] }}
+                  transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                  style={{ transformOrigin: "center bottom" }}
+                >
+                  {/* Thick, beautiful vector cartoon petals (Pink and Orange combo) */}
+                  <g fill="#F48FB1" stroke="black" strokeWidth="3" strokeLinejoin="round">
+                    <ellipse cx="0" cy="-24" rx="10" ry="18" />
+                    <ellipse cx="0" cy="22" rx="10" ry="18" />
+                    <ellipse cx="-24" cy="-1" rx="18" ry="10" />
+                    <ellipse cx="24" cy="-1" rx="18" ry="10" />
+                    
+                    <ellipse cx="-16" cy="-17" rx="13" ry="13" transform="rotate(45 -16 -17)" />
+                    <ellipse cx="16" cy="15" rx="13" ry="13" transform="rotate(45 16 15)" />
+                    <ellipse cx="-16" cy="15" rx="13" ry="13" transform="rotate(-45 -16 15)" />
+                    <ellipse cx="16" cy="-17" rx="13" ry="13" transform="rotate(-45 16 -17)" />
+                  </g>
+                  {/* Outer petal dark shadows for stunning cartoon contrast */}
+                  <circle cx="0" cy="-1" r="19" fill="none" stroke="black" strokeWidth="1" opacity="0.1" />
+
+                  {/* Bright yellow flower face core */}
+                  <circle cx="0" cy="-1" r="17.5" fill="#FFF176" stroke="black" strokeWidth="3" />
+
+                  {/* Adorable shiny smiley anime face */}
+                  <circle cx="-6" cy="-4" r="2.2" fill="black" />
+                  <circle cx="6" cy="-4" r="2.2" fill="black" />
+                  {/* Tiny reflective sparkles in eyes */}
+                  <circle cx="-5.5" cy="-4.8" r="0.6" fill="white" />
+                  <circle cx="6.5" cy="-4.8" r="0.6" fill="white" />
+                  <ellipse cx="-11" cy="-1" rx="2.5" ry="1.2" fill="#E57373" />
+                  <ellipse cx="11" cy="-1" rx="2.5" ry="1.2" fill="#E57373" />
+                  {/* Sweet open smiley vector mouth */}
+                  <path d="M -3,2 Q 0,4.5 3,2" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" />
+                </motion.g>
+              </g>
             </g>
           )}
 
           {/* Growth Energy Sparks */}
           {stage >= 5 && (
-            <motion.g animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: 0 /* performance */, duration: 2 }}>
+            <motion.g animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }}>
               <Sparkles className="text-yellow-400 absolute top-0 left-0" style={{ transform: 'translate(40px, 40px)' }} />
               <Sparkles className="text-yellow-400 absolute top-0 right-0" style={{ transform: 'translate(140px, 60px)' }} />
             </motion.g>

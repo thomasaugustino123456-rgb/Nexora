@@ -1371,102 +1371,6 @@ export default function App() {
     setDailyQuest(available[dayOfYear % available.length]);
   }, [settings.archivedOfficialChallenges]);
 
-  // Zen Mode Audio
-  useEffect(() => {
-    let audio: HTMLAudioElement | null = null;
-    let isPlaying = false;
-
-    const hasLibraryMusicActive = !!(settings.inventory?.some(
-      (item) => item.type === "music" && item.activated
-    ));
-
-    if (
-      settings.zenModeEnabled &&
-      !hasLibraryMusicActive &&
-      (activeScreen === "challenge" || activeScreen === "home")
-    ) {
-      audio = new Audio(
-        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-      ); // Placeholder lo-fi
-      audio.loop = true;
-      audio.volume = 0.2;
-      audio.play()
-        .then(() => { isPlaying = true; })
-        .catch(() => console.log("Audio play blocked by browser"));
-    }
-
-    const resumeAudio = () => {
-      if (audio && !isPlaying) {
-        audio.play()
-          .then(() => { isPlaying = true; })
-          .catch(() => {});
-      }
-    };
-
-    document.addEventListener("visibilitychange", resumeAudio);
-    window.addEventListener("focus", resumeAudio);
-
-    return () => {
-      document.removeEventListener("visibilitychange", resumeAudio);
-      window.removeEventListener("focus", resumeAudio);
-      if (audio) {
-        audio.pause();
-        audio = null;
-      }
-    };
-  }, [settings.zenModeEnabled, activeScreen, settings.inventory?.map(i => `${i.id}-${i.activated}`).join(",")]);
-
-  // Library Active Ambient Audio Player
-  useEffect(() => {
-    let audio: HTMLAudioElement | null = null;
-    let isPlaying = false;
-    const activeMusicItem = settings.inventory?.find(
-      (item) => item.type === "music" && item.activated
-    );
-
-    if (activeMusicItem) {
-      const SHOP_MUSIC_URLS: Record<string, string> = {
-        "music-fanfare": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        "music-funkee": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-        "music-triplets": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-        "music-forest": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
-        "music-cbpd": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
-        "music-nba": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
-        "music-complicated": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3",
-      };
-      
-      const url = SHOP_MUSIC_URLS[activeMusicItem.itemId] || "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
-      audio = new Audio(url);
-      audio.loop = true;
-      audio.volume = 0.25;
-      audio.play()
-        .then(() => { isPlaying = true; })
-        .catch((err) =>
-          console.log("Library music play blocked by browser/gesture:", err)
-        );
-    }
-
-    const resumeAudio = () => {
-      if (audio && !isPlaying) {
-        audio.play()
-          .then(() => { isPlaying = true; })
-          .catch(() => {});
-      }
-    };
-
-    document.addEventListener("visibilitychange", resumeAudio);
-    window.addEventListener("focus", resumeAudio);
-
-    return () => {
-      document.removeEventListener("visibilitychange", resumeAudio);
-      window.removeEventListener("focus", resumeAudio);
-      if (audio) {
-        audio.pause();
-        audio = null;
-      }
-    };
-  }, [settings.inventory?.map(i => `${i.id}-${i.activated}`).join(",")]);
-
   // PLANT LOGIC: GROWTH & HEALTH CHECKER
   const ECOSYSTEM_PATH: PlantType[] = [
     "sprout",
@@ -1648,6 +1552,20 @@ export default function App() {
             [type]: updatedProgress,
           },
         });
+
+        // Inactivity Penalty: Reduce weekly leaderboard points & XP by 250!
+        onUpdateStats((prev) => {
+          const updatedPoints = Math.max(0, (prev.weeklyPoints || 0) - 250);
+          const updatedXP = Math.max(0, (prev.weeklyXP || 0) - 250);
+          return {
+            ...prev,
+            weeklyPoints: updatedPoints,
+            weeklyXP: updatedXP,
+          };
+        });
+
+        showToast("INACTIVITY PENALTY: You left for 2 days. Leaderboard progress reduced! ⚠️📉", "error");
+
         sendNotification("Your Nexora Ecosystem has died... 🥀", {
           body: "Bro, your plants need discipline! Restore the room and try again.",
         });
@@ -1839,10 +1757,22 @@ export default function App() {
     );
     if (activeMusicItem) {
       playMusic(activeMusicItem.itemId);
+    } else if (
+      settings.zenModeEnabled &&
+      (activeScreen === "challenge" || activeScreen === "home")
+    ) {
+      playMusic("music-forest");
     } else {
       stopAllMusic();
     }
-  }, [settings.inventory, settings.soundEnabled]);
+  }, [
+    settings.inventory, 
+    settings.soundEnabled, 
+    settings.zenModeEnabled, 
+    activeScreen, 
+    playMusic, 
+    stopAllMusic
+  ]);
 
   // App Badge Logic
   useEffect(() => {
@@ -3277,8 +3207,31 @@ export default function App() {
         return t;
       });
 
+      // 5-day Auto-Removal Cleanup: Delete old trophies (e.g., golden, ice, broken) older than 5 days.
+      let cleanedTrophies = updatedTrophies;
+      if (updatedTrophies.length > 3) {
+        const oldTrophies = updatedTrophies.filter((t) => {
+          const earnedTime = new Date(t.earnedDate).getTime();
+          const daysSince = (now - earnedTime) / (1000 * 60 * 60 * 24);
+          return daysSince >= 5;
+        });
+
+        if (oldTrophies.length > 0) {
+          // Sort oldest first to remove
+          oldTrophies.sort((a, b) => new Date(a.earnedDate).getTime() - new Date(b.earnedDate).getTime());
+          
+          // Delete up to 20 of them but leave at least 3 trophies as a buffer so we don't wipe out everything!
+          const maxToDelete = Math.min(oldTrophies.length, 20, updatedTrophies.length - 3);
+          if (maxToDelete > 0) {
+            const idsToDelete = oldTrophies.slice(0, maxToDelete).map(t => t.id);
+            cleanedTrophies = updatedTrophies.filter(t => !idsToDelete.includes(t.id));
+            changed = true;
+          }
+        }
+      }
+
       if (changed) {
-        return { ...prevStats, trophies: updatedTrophies };
+        return { ...prevStats, trophies: cleanedTrophies };
       }
       return prevStats;
     });
@@ -5363,13 +5316,51 @@ export default function App() {
                       }}
                       onSwitchType={(type) => {
                         vibrate(10);
-                        onUpdateSettings((prev) => ({
-                          ...prev,
-                          plantState: {
-                            ...prev.plantState!,
-                            type,
-                          },
-                        }));
+                        onUpdateSettings((prev) => {
+                          const currentType = prev.plantState?.type || "sprout";
+                          const plants = prev.plantsProgress || {};
+                          
+                          // Save current plant state to plantsProgress
+                          const updatedPlants = {
+                            ...plants,
+                            [currentType]: {
+                              stage: prev.plantState?.stage ?? 0,
+                              growthPoints: prev.plantState?.growthPoints ?? 0,
+                              lastGrowthDate: prev.plantState?.lastGrowthDate ?? null,
+                              lastCheckDate: prev.plantState?.lastCheckDate ?? new Date().toISOString(),
+                              health: prev.plantState?.health ?? 100,
+                              isDead: prev.plantState?.isDead ?? false,
+                              isThirsty: prev.plantState?.isThirsty ?? false,
+                            }
+                          };
+
+                          // Get the progress of the switched-to type, or default to starting template
+                          const rawProgress = updatedPlants[type];
+                          const nextPlantProgress = {
+                            stage: rawProgress?.stage ?? 0,
+                            growthPoints: rawProgress?.growthPoints ?? 0,
+                            lastGrowthDate: rawProgress?.lastGrowthDate ?? null,
+                            health: rawProgress?.health ?? 100,
+                            isDead: rawProgress?.isDead ?? false,
+                            isThirsty: rawProgress?.isThirsty ?? false,
+                          };
+
+                          return {
+                            ...prev,
+                            plantsProgress: updatedPlants,
+                            plantState: {
+                              ...prev.plantState!,
+                              type,
+                              stage: nextPlantProgress.stage,
+                              growthPoints: nextPlantProgress.growthPoints,
+                              lastGrowthDate: nextPlantProgress.lastGrowthDate,
+                              lastCheckDate: new Date().toISOString(),
+                              health: nextPlantProgress.health,
+                              isDead: nextPlantProgress.isDead,
+                              isThirsty: nextPlantProgress.isThirsty,
+                            },
+                          };
+                        });
                       }}
                       onRecover={() => {
                         onUpdateSettings({
