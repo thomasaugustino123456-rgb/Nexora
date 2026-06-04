@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Package, Video, Trash2, CheckCircle2, Play, Pause,
   Palette, StickyNote, Zap, Heart, Disc, Eye, Sparkles, AlertCircle,

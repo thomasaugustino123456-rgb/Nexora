@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { useSound } from '../hooks/useSound';
 
 interface TreeProps {

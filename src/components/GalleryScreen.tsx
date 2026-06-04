@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { ArrowLeft, Video, Bookmark, History, Search, Image as ImageIcon, Sparkles, Download } from 'lucide-react';
 import { UserStats } from '../types';
 

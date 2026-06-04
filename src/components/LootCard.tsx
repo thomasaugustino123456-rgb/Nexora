@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Download, Info, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { LootDropResult, PLANT_ARCHETYPES } from '../types/garden';
 import { VIBRATION_PATTERNS, vibrate } from '../lib/vibrate';

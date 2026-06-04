@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowLeft, Flower2, Droplet, Sprout, Sparkles, AlertCircle, 
   HelpCircle, Trash2, Heart, RefreshCw, Trophy, Gift, Star 

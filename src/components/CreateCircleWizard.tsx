@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, Image as ImageIcon, Check } from 'lucide-react';
 import { SocialCircle } from '../types';
 

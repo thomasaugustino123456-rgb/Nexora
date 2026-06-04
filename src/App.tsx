@@ -75,7 +75,7 @@ import {
   WifiOff,
   Shield,
 } from "lucide-react";
-import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
+import { motion, AnimatePresence, useAnimationControls } from "motion/react";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { useSound } from "./hooks/useSound";
 import {
@@ -4008,8 +4008,7 @@ export default function App() {
     );
   }
 
-  try {
-    if (loading) {
+  if (loading) {
       if (loadError) {
         return (
           <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white">
@@ -6426,29 +6425,4 @@ export default function App() {
       </div>
     </ErrorBoundary>
   );
-  } catch (e: any) {
-    console.error("Critical Render Error catch:", e);
-    return (
-      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center font-sans">
-        <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mb-6">
-          <AlertCircle size={32} />
-        </div>
-        <h1 className="text-xl font-black text-red-500 mb-4 font-mono select-none uppercase">Render Exception Intercepted 🛡️</h1>
-        <p className="text-slate-400 mb-6 max-w-md font-mono text-xs leading-relaxed">{e?.message || String(e)}</p>
-        <pre className="text-left text-[10px] text-slate-500 bg-slate-950 p-4 rounded-xl border border-white/5 max-w-full overflow-auto max-h-60 font-mono">
-          {e?.stack || "No callstack details caught."}
-        </pre>
-        <button
-          onClick={() => {
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.reload();
-          }}
-          className="mt-6 px-6 py-3 bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-red-500 transition-all active:scale-95 shadow-lg shadow-red-900/30"
-        >
-          FORCE CLEAR CACHE & REBOOT SYSTEM
-        </button>
-      </div>
-    );
-  }
 }

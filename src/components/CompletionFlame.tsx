@@ -5,7 +5,7 @@ import {
   useSpring,
   useTransform,
   animate,
-} from "framer-motion";
+} from "motion/react";
 import { ChevronRight, Flame, Sparkles } from "lucide-react";
 import { useSound } from "../hooks/useSound";
 

@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { ShieldAlert, RefreshCw, Home, MessageSquare } from 'lucide-react';
 
 interface Props {

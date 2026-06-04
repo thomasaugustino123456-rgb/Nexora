@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
+import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { ArrowLeft, Plus, Video, MoreHorizontal, Trash2, Bookmark, Flag, EyeOff, Share2, MessageSquare, Heart, RefreshCw, Send, X, Search, Award, User, Flame, ChevronRight, Bell, Info } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { User as FirebaseUser } from 'firebase/auth';

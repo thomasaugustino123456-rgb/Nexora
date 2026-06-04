@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Settings, LogOut, Bell, Shield, User, Globe, Mail, MessageSquare, 
   Trash2, ChevronLeft, RefreshCw, Smartphone, Zap, Flame, 

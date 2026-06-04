@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 
 // NEON HIGH-FIDELITY FUTURE BEE SWARM COMPANION
 export const NanoBees: React.FC<{ isForestActive?: boolean }> = ({ isForestActive }) => {

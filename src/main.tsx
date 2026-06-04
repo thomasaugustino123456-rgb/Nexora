@@ -34,6 +34,20 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
+window.addEventListener('error', (event) => {
+  const errDiv = document.createElement('div');
+  errDiv.style.position = 'fixed';
+  errDiv.style.top = '0';
+  errDiv.style.left = '0';
+  errDiv.style.zIndex = '999999';
+  errDiv.style.background = 'red';
+  errDiv.style.color = 'white';
+  errDiv.style.padding = '20px';
+  errDiv.style.overflow = 'auto';
+  errDiv.textContent = 'Global Error: ' + event.message + ' at ' + event.filename + ':' + event.lineno;
+  document.body.appendChild(errDiv);
+});
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
