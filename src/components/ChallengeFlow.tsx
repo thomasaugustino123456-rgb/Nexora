@@ -160,9 +160,6 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 progress={sessionWaterCount}
                 onUpdate={(val) => {
                   setSessionWaterCount(val);
-                  if (!isCustomPlan) {
-                    setDailyProgress(prev => ({ ...prev, waterDrank: (prev.waterDrank || 0) + 1 }));
-                  }
                 }}
                 onContinue={nextStep} 
                 activeSkin={settings.activeSkin}

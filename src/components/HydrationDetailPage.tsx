@@ -77,6 +77,20 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
   const finalDrunk = dailyProgress?.waterDrank ?? Math.round(activeProgress * (settings?.waterGoal ?? 8)) ?? 0;
   const finalGoal = settings?.waterGoal ?? 8;
 
+  const [prevDrunk, setPrevDrunk] = useState(finalDrunk);
+  const [isDrinkingAnimate, setIsDrinkingAnimate] = useState(false);
+
+  useEffect(() => {
+    if (finalDrunk > prevDrunk) {
+      setIsDrinkingAnimate(true);
+      const timer = setTimeout(() => setIsDrinkingAnimate(false), 2200);
+      setPrevDrunk(finalDrunk);
+      return () => clearTimeout(timer);
+    } else if (finalDrunk < prevDrunk) {
+      setPrevDrunk(finalDrunk);
+    }
+  }, [finalDrunk, prevDrunk]);
+
   return (
     <div className="fixed inset-0 h-screen w-full bg-gradient-to-b from-[#FAF7F2] to-[#F4F0E2] text-[#4F3F34] overflow-hidden select-none flex flex-col justify-between z-[200]">
       
@@ -258,13 +272,59 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
             {/* Red Circle-inspired Custom Circular Hydration progress widget matching third image */}
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
+              animate={{ 
+                opacity: 1, 
+                x: 0,
+                borderColor: isDrinkingAnimate ? "#38bdf8" : "#E9E4D4",
+                boxShadow: isDrinkingAnimate ? "0 25px 50px -12px rgba(14,165,233,0.35)" : "0 10px 25px -10px rgba(0,0,0,0.05)",
+                scale: isDrinkingAnimate ? 1.04 : 1
+              }}
+              transition={{ 
+                borderColor: { duration: 0.2 },
+                boxShadow: { duration: 0.2 },
+                scale: { type: "spring", stiffness: 350, damping: 15 },
+                default: { delay: 0.1 }
+              }}
               className="glass-card bg-white/70 backdrop-blur-md rounded-[2.2rem] p-6 border border-[#E9E4D4] shadow-xl w-full flex items-center gap-5 relative overflow-hidden"
             >
               {/* Outer Decorative Glow */}
               <div className="absolute -top-10 -right-10 w-24 h-24 bg-blue-400/10 rounded-full blur-xl pointer-events-none" />
               
+              {/* Absolute floating droplets animation when clicked/completed */}
+              <AnimatePresence>
+                {isDrinkingAnimate && (
+                  <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+                    {[...Array(6)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ 
+                          opacity: 0, 
+                          y: 80, 
+                          x: 60 + Math.random() * 160, 
+                          scale: 0.5 + Math.random() * 0.5 
+                        }}
+                        animate={{ 
+                          opacity: [0, 1, 1, 0], 
+                          y: -30, 
+                          scale: [0.5, 1.3, 0.9, 0] 
+                        }}
+                        exit={{ opacity: 0 }}
+                        transition={{ 
+                          duration: 1.4 + Math.random() * 0.6, 
+                          ease: "easeOut",
+                          delay: i * 0.12 
+                        }}
+                        className="absolute"
+                      >
+                        <svg className="w-5 h-5 text-[#38bdf8] drop-shadow-[0_2px_8px_rgba(56,189,248,0.5)]" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                        </svg>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </AnimatePresence>
+
               {/* SVG Ring Progress */}
               <div className="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90">
@@ -293,23 +353,80 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                 </svg>
                 {/* Central Droplet Icon inside the ring */}
                 <div className="absolute inset-0 flex items-center justify-center pl-0.5 pt-0.5">
-                  <svg className="w-7 h-7 text-[#0ea5e9] drop-shadow-[0_2px_4px_rgba(14,165,233,0.3)]" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-                  </svg>
+                  {/* Glowing pulses behind the droplet */}
+                  <AnimatePresence>
+                    {isDrinkingAnimate && (
+                      <>
+                        <motion.div
+                          key="pulse-1"
+                          initial={{ scale: 0.8, opacity: 0.8 }}
+                          animate={{ scale: 2.4, opacity: 0 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 1.5, ease: "easeOut" }}
+                          className="absolute w-8 h-8 bg-[#0ea5e9]/20 rounded-full"
+                        />
+                        <motion.div
+                          key="pulse-2"
+                          initial={{ scale: 0.7, opacity: 0.6 }}
+                          animate={{ scale: 3.2, opacity: 0 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 2.0, ease: "easeOut", delay: 0.2 }}
+                          className="absolute w-8 h-8 bg-[#38bdf8]/15 rounded-full"
+                        />
+                      </>
+                    )}
+                  </AnimatePresence>
+                  
+                  <motion.div
+                    animate={isDrinkingAnimate ? {
+                      scale: [1, 1.4, 0.9, 1.2, 1],
+                      rotate: [0, 15, -15, 5, 0],
+                    } : {}}
+                    transition={{ duration: 1.2, ease: "easeInOut" }}
+                    className="relative z-10"
+                  >
+                    <svg className="w-7 h-7 text-[#0ea5e9] drop-shadow-[0_2px_4px_rgba(14,165,233,0.3)]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                    </svg>
+                  </motion.div>
                 </div>
               </div>
 
               {/* Text Information for today's drinks */}
-              <div className="flex flex-col text-left space-y-0.5">
+              <div className="flex flex-col text-left space-y-0.5 select-none">
                 <span className="text-blue-900/40 text-[10px] font-black tracking-widest uppercase">
                   Today's Water
                 </span>
-                <span className="text-2xl font-black text-[#0ea5e9] tracking-tight">
-                  {finalDrunk.toFixed(1)} cups
-                </span>
-                <span className="text-[#0ea5e9]/60 font-semibold text-xs tracking-tight">
-                  {finalDrunk.toFixed(1)} of {finalGoal} cups
-                </span>
+                
+                <div className="h-8 flex items-center">
+                  <AnimatePresence mode="popLayout">
+                    <motion.span
+                      key={finalDrunk}
+                      initial={{ y: 15, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -15, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 350, damping: 18 }}
+                      className="text-2xl font-black text-[#0ea5e9] tracking-tight block"
+                    >
+                      {finalDrunk.toFixed(1)} cups
+                    </motion.span>
+                  </AnimatePresence>
+                </div>
+
+                <div className="h-4 flex items-center">
+                  <AnimatePresence mode="popLayout">
+                    <motion.span
+                      key={finalDrunk}
+                      initial={{ y: 8, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -8, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 350, damping: 20 }}
+                      className="text-[#0ea5e9]/60 font-semibold text-xs tracking-tight block"
+                    >
+                      {finalDrunk.toFixed(1)} of {finalGoal} cups
+                    </motion.span>
+                  </AnimatePresence>
+                </div>
               </div>
             </motion.div>
 

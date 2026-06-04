@@ -397,6 +397,16 @@ export default function App() {
     setHydrationWaterLevel(nextLevel);
     setHydrationLastCompletedDate(todayStr);
 
+    // Increment daily progress counter when fully completing the Water Challenge!
+    onUpdateDailyProgress((prev) => {
+      const updatedCount = (prev.waterDrank || 0) + 1;
+      return {
+        ...prev,
+        waterDrank: updatedCount,
+        waterDone: updatedCount >= (settings.waterGoal || 2),
+      };
+    });
+
     if (awardedCoins > 0) {
       // Award +10 coins!
       onUpdateStats((prev) => ({
