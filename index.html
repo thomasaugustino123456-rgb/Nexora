@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nexora - Your Personal Flow Companion</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nexora">
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png">
+  </head>
+  <body>
+    <div id="root">
+      <div id="pre-loader" style="position: fixed; inset: 0; background: #eff6ff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; font-family: system-ui, -apple-system, sans-serif;">
+        <img src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" alt="Nexora" style="width: 120px; height: 120px; border-radius: 50%;" />
+        <div style="margin-top: 24px; font-weight: 900; font-style: italic; color: #1e3a8a; letter-spacing: -0.05em; font-size: 24px;">NEXORA</div>
+        <div style="margin-top: 12px; width: 40px; height: 4px; background: #3b82f6; border-radius: 2px; animation: pulse 1.5s infinite ease-in-out;"></div>
+        <style>
+          @keyframes pulse {
+            0% { opacity: 0.3; width: 20px; }
+            50% { opacity: 1; width: 60px; }
+            100% { opacity: 0.3; width: 20px; }
+          }
+        </style>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Remove loader once React mounts
+      window.addEventListener('load', () => {
+        const loader = document.getElementById('pre-loader');
+        if (loader) {
+          loader.style.opacity = '0';
+          loader.style.transition = 'opacity 0.5s ease';
+          setTimeout(() => loader.remove(), 500);
+        }
+      });
+    </script>
+  </body>
+</html>
+

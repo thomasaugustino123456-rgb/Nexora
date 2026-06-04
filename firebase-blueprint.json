@@ -1,0 +1,416 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and settings information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User ID" },
+        "displayName": { "type": "string", "description": "Display name" },
+        "email": { "type": "string", "description": "Email address" },
+        "role": { "type": "string", "description": "User role", "enum": ["user", "admin"] },
+        "pushupsGoal": { "type": "number" },
+        "waterGoal": { "type": "number" },
+        "reminderTime": { "type": "string" },
+        "themeColor": { "type": "string" },
+        "soundEnabled": { "type": "boolean" },
+        "notificationsEnabled": { "type": "boolean" },
+        "showQuotes": { "type": "boolean" },
+        "unitSystem": { "type": "string" },
+        "profilePic": { "type": "string" },
+        "gender": { "type": "string" },
+        "source": { "type": "string" },
+        "onboardingCompleted": { "type": "boolean" },
+        "activeSkin": { "type": "string", "description": "Currently active mascot skin" },
+        "activeHat": { "type": "string", "description": "Currently active mascot hat" },
+        "isPro": { "type": "boolean", "description": "Pro subscription status" },
+        "league": { "type": "string", "description": "Current league (e.g., Bronze, Silver)", "enum": ["Bronze", "Silver", "Gold", "Platinum", "Diamond"] },
+        "zenModeEnabled": { "type": "boolean" },
+        "challengeCountGoal": { "type": "number" },
+        "purchasedItems": { "type": "array", "items": { "type": "string" } },
+        "savedChallengeIds": { "type": "array", "items": { "type": "string" } },
+        "savedTrophyIds": { "type": "array", "items": { "type": "string" } },
+        "inventory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "itemId": { "type": "string" },
+              "name": { "type": "string" },
+              "icon": { "type": "string" },
+              "activated": { "type": "boolean" },
+              "type": { "type": "string" },
+              "purchasedAt": { "type": "string" }
+            }
+          }
+        },
+        "trophies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string" },
+              "earnedDate": { "type": "string" },
+              "lastUpdated": { "type": "string" }
+            }
+          }
+        },
+        "plantOnboardingCompleted": { "type": "boolean" },
+        "spaceOnboardingCompleted": { "type": "boolean" },
+        "plantState": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "stage": { "type": "number" },
+            "growthPoints": { "type": "number" },
+            "lastGrowthDate": { "type": "string" },
+            "lastCheckDate": { "type": "string" },
+            "health": { "type": "number" },
+            "isDead": { "type": "boolean" },
+            "isThirsty": { "type": "boolean" },
+            "unlockedTypes": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      },
+      "required": ["uid", "displayName", "email", "role"]
+    },
+    "UserStats": {
+      "title": "UserStats",
+      "description": "User streak, XP, and points",
+      "type": "object",
+      "properties": {
+        "streak": { "type": "number" },
+        "bestStreak": { "type": "number" },
+        "totalPoints": { "type": "number" },
+        "level": { "type": "number", "description": "User level" },
+        "totalCompletedDays": { "type": "number" },
+        "lastCompletedDate": { "type": "string" },
+        "currentChallengeIndex": { "type": "number" },
+        "pointsByCategory": {
+          "type": "object",
+          "properties": {
+            "physical": { "type": "number" },
+            "mental": { "type": "number" },
+            "creative": { "type": "number" }
+          }
+        },
+        "drawings": { "type": "array", "items": { "type": "string" } },
+        "unlockedHats": { "type": "array", "items": { "type": "string" } },
+        "gratitudeEntries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "text": { "type": "string" },
+              "date": { "type": "string" }
+            }
+          }
+        },
+        "trophies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string" },
+              "earnedDate": { "type": "string" },
+              "lastUpdated": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "DailyProgress": {
+      "title": "DailyProgress",
+      "description": "Daily challenges progress",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "pushupsDone": { "type": "boolean" },
+        "waterDrank": { "type": "number" },
+        "breathingDone": { "type": "boolean" },
+        "drawingDone": { "type": "boolean" },
+        "footballDone": { "type": "boolean" },
+        "bubblesDone": { "type": "boolean" },
+        "dailyQuestDone": { "type": "boolean" }
+      },
+      "required": ["date"]
+    },
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Public leaderboard entry",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "streak": { "type": "number" },
+        "totalPoints": { "type": "number" },
+        "weeklyPoints": { "type": "number", "description": "Points earned in the current week" },
+        "level": { "type": "number" },
+        "league": { "type": "string" }
+      },
+      "required": ["uid", "displayName", "streak", "totalPoints", "level", "league"]
+    },
+    "ShopPurchases": {
+      "title": "ShopPurchases",
+      "description": "Items purchased from the shop",
+      "type": "object",
+      "properties": {
+        "purchasedItems": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "LibraryTrophies": {
+      "title": "LibraryTrophies",
+      "description": "Trophies earned by the user",
+      "type": "object",
+      "properties": {
+        "trophies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string" },
+              "earnedDate": { "type": "string" },
+              "lastUpdated": { "type": "string" }
+            }
+          }
+        },
+        "savedTrophyIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback messages",
+      "type": "object",
+      "properties": {
+        "rating": { "type": "number", "minimum": 1, "maximum": 5 },
+        "category": { "type": "string" },
+        "message": { "type": "string" },
+        "userName": { "type": "string" },
+        "userLocation": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "required": ["rating", "category", "message", "userName", "userLocation", "userEmail", "createdAt", "userId"]
+    },
+    "CustomPlan": {
+      "title": "CustomPlan",
+      "description": "User created custom workout plans",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string", "description": "The ID of the user who owns this plan" },
+        "name": { "type": "string" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "challenges": { "type": "array", "items": { "type": "string" } },
+        "days": { "type": "array", "items": { "type": "number" } },
+        "reminderTime": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "name", "challenges", "days", "createdAt"]
+    },
+    "SocialCircle": {
+      "title": "SocialCircle",
+      "description": "A group dedicated to a specific habit or interest",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "category": { "type": "string" },
+        "memberCount": { "type": "number" },
+        "ownerId": { "type": "string" },
+        "rules": { "type": "array", "items": { "type": "string" } },
+        "followerIds": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "icon", "memberCount", "category", "ownerId", "createdAt"]
+    },
+    "CommunityPost": {
+      "title": "CommunityPost",
+      "description": "A post shared in the feed or a circle",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "circleId": { "type": "string" },
+        "circleName": { "type": "string" },
+        "content": { "type": "string" },
+        "image": { "type": "string" },
+        "flames": { "type": "number" },
+        "shields": { "type": "number" },
+        "commentCount": { "type": "number" },
+        "type": { "type": "string", "enum": ["text", "image", "milestone"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "userName", "circleId", "circleName", "content", "type", "createdAt"]
+    },
+    "NexusVideo": {
+      "title": "NexusVideo",
+      "description": "A short-form video shared in the Nexus Reel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "caption": { "type": "string" },
+        "likes": { "type": "number" },
+        "likedBy": { "type": "array", "items": { "type": "string" } },
+        "commentCount": { "type": "number" },
+        "saves": { "type": "number" },
+        "savedBy": { "type": "array", "items": { "type": "string" } },
+        "repostCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "isAuthorized": { "type": "boolean" },
+        "platform": { "type": "string", "enum": ["youtube", "tiktok", "nexora"] },
+        "type": { "type": "string", "enum": ["video", "photo"] }
+      },
+      "required": ["userId", "userName", "videoUrl", "createdAt"]
+    },
+    "UserReport": {
+      "title": "UserReport",
+      "description": "User feedback or content reports",
+      "type": "object",
+      "properties": {
+        "reporterId": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "reportedUserId": { "type": "string" },
+        "reportedUserName": { "type": "string" },
+        "contentId": { "type": "string" },
+        "contentType": { "type": "string", "enum": ["video", "post"] },
+        "reason": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["reporterId", "reportedUserId", "contentId", "reason", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "UserProfile" },
+      "description": "User profile and settings documents"
+    },
+    "/users/{userId}/stats/main": {
+      "schema": { "$ref": "UserStats" },
+      "description": "User stats, XP, and streaks"
+    },
+    "/users/{userId}/progress/{date}": {
+      "schema": { "$ref": "DailyProgress" },
+      "description": "Daily progress for challenges"
+    },
+    "/users/{userId}/settings/{docId}": {
+      "schema": { "type": "object", "properties": { "completed": { "type": "boolean" } } },
+      "description": "Sub-settings for specific app areas like 'space'"
+    },
+    "/users/{userId}/shop/purchases": {
+      "schema": { "$ref": "ShopPurchases" },
+      "description": "User shop purchases"
+    },
+    "/users/{userId}/library/trophies": {
+      "schema": { "$ref": "LibraryTrophies" },
+      "description": "User earned trophies"
+    },
+    "/users/{userId}/music/purchased": {
+      "schema": { "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "UserProfile/properties/inventory/items" } } } },
+      "description": "User purchased music and sound packs"
+    },
+    "/users/{userId}/eco_shop/{itemId}": {
+      "schema": { "type": "object", "properties": { "purchasedAt": { "type": "string" } } },
+      "description": "User purchased ecosystem items for the plant section"
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "message": { "type": "string" },
+          "type": { "type": "string", "enum": ["system", "reward", "alert", "mascot"] },
+          "read": { "type": "boolean" },
+          "createdAt": { "type": "string" },
+          "expiresAt": { "type": "string" }
+        }
+      },
+      "description": "System or automated notifications for the user"
+    },
+    "/customPlans/{planId}": {
+      "schema": { "$ref": "CustomPlan" },
+      "description": "User created custom workout plans stored at root level"
+    },
+    "/users/{userId}/private/data": {
+      "schema": { "type": "object", "properties": { "logs": { "type": "array", "items": { "type": "string" } }, "goals": { "type": "array", "items": { "type": "string" } } } },
+      "description": "Sensitive user data like workout logs and personal goals"
+    },
+    "/leaderboard/{userId}": {
+      "schema": { "$ref": "LeaderboardEntry" },
+      "description": "Public leaderboard entries"
+    },
+    "/feedback/{feedbackId}": {
+      "schema": { "$ref": "Feedback" },
+      "description": "User feedback messages"
+    },
+    "/circles/{circleId}": {
+      "schema": { "$ref": "SocialCircle" },
+      "description": "Information about social circles"
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "CommunityPost" },
+      "description": "User shared posts in the community"
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "postId": { "type": "string" },
+          "userId": { "type": "string" },
+          "userName": { "type": "string" },
+          "userPhoto": { "type": "string" },
+          "content": { "type": "string" },
+          "createdAt": { "type": "string" }
+        }
+      },
+      "description": "Comments on community posts"
+    },
+    "/social_videos/{videoId}/comments/{commentId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "videoId": { "type": "string" },
+          "userId": { "type": "string" },
+          "userName": { "type": "string" },
+          "userPhoto": { "type": "string" },
+          "content": { "type": "string" },
+          "createdAt": { "type": "string" },
+          "parentId": { "type": "string" }
+        }
+      },
+      "description": "Comments on shared videos"
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "UserReport" },
+      "description": "User feedback and reports"
+    }
+  }
+}

@@ -1,0 +1,544 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --chart-grid: rgba(255, 255, 255, 0.12);
+  --chart-text: #E2F1FF;
+}
+
+@layer base {
+  body {
+    @apply bg-[#FAF7F2] text-[#4F3F34] antialiased font-sans transition-colors duration-500;
+    overflow-x: hidden;
+    background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body.theme-standard {
+    background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+    background-color: #FAF7F2 !important;
+    color: #4F3F34 !important;
+    --surface-bg: rgba(255, 255, 255, 0.95);
+    --input-bg: #FFFDF9;
+    --border-color: #E9E4D4;
+    --text-primary: #4F3F34;
+    --text-secondary: #7D6B58;
+    --accent-glow: rgba(105, 196, 150, 0.15);
+    --accent-color: #69C496 !important;
+  }
+
+  body.theme-oceanic_midnight {
+    background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+    background-color: #FAF7F2 !important;
+    color: #4F3F34 !important;
+    --surface-bg: rgba(255, 255, 255, 0.95);
+    --input-bg: #FFFDF9;
+    --border-color: #E9E4D4;
+    --text-primary: #4F3F34;
+    --text-secondary: #7D6B58;
+    --accent-glow: rgba(105, 196, 150, 0.15);
+    --accent-color: #69C496 !important;
+  }
+
+  body.theme-obsidian {
+    background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+    background-color: #FAF7F2 !important;
+    color: #4F3F34 !important;
+    --surface-bg: rgba(255, 255, 255, 0.95);
+    --input-bg: #FFFDF9;
+    --border-color: #E9E4D4;
+    --text-primary: #4F3F34;
+    --text-secondary: #7D6B58;
+    --accent-glow: rgba(105, 196, 150, 0.15);
+    --accent-color: #69C496 !important;
+  }
+
+  body.theme-neural_bio {
+    background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+    background-color: #FAF7F2 !important;
+    color: #4F3F34 !important;
+    --surface-bg: rgba(255, 255, 255, 0.95);
+    --input-bg: #FFFDF9;
+    --border-color: #E9E4D4;
+    --text-primary: #4F3F34;
+    --text-secondary: #7D6B58;
+    --accent-glow: rgba(105, 196, 150, 0.15);
+    --accent-color: #69C496 !important;
+  }
+
+  body.theme-sunset {
+    background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+    background-color: #FAF7F2 !important;
+    color: #4F3F34 !important;
+    --surface-bg: rgba(255, 255, 255, 0.95);
+    --input-bg: #FFFDF9;
+    --border-color: #E9E4D4;
+    --text-primary: #4F3F34;
+    --text-secondary: #7D6B58;
+    --accent-glow: rgba(105, 196, 150, 0.15);
+    --accent-color: #69C496 !important;
+  }
+}
+
+/* Root theme layout wrappers overrides */
+.theme-standard {
+  background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+  color: #4F3F34 !important;
+  --accent-color: #69C496 !important;
+}
+
+.theme-oceanic_midnight {
+  background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+  color: #4F3F34 !important;
+  --accent-color: #69C496 !important;
+}
+
+.theme-obsidian {
+  background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+  color: #4F3F34 !important;
+  --accent-color: #69C496 !important;
+}
+
+.theme-neural_bio {
+  background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+  color: #4F3F34 !important;
+  --accent-color: #69C496 !important;
+}
+
+.theme-sunset {
+  background: linear-gradient(180deg, #FAF7F2 0%, #F4F0E2 100%) !important;
+  color: #4F3F34 !important;
+  --accent-color: #69C496 !important;
+}
+
+/* Theme specific overrides for internal glass structure and typography */
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .glass-card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: #E9E4D4 !important;
+  color: #4F3F34 !important;
+  box-shadow: 0 10px 30px rgba(79, 63, 52, 0.05), 0 2px 10px rgba(79, 63, 52, 0.02) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .safe-glass {
+  background: #FFFDF9 !important;
+  border-color: #E9E4D4 !important;
+  color: #4F3F34 !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) h1,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) h2,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) h3,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) h4 {
+  color: #4F3F34 !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) p {
+  color: #7D6B58 !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) span {
+  color: inherit;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) div:not(.btn-primary) {
+  border-color: #E9E4D4 !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) input, 
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) textarea, 
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) select {
+  background-color: #FFFDF9 !important;
+  border-color: #E9E4D4 !important;
+  color: #4F3F34 !important;
+}
+
+.theme-sunset .glass-card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: #E9E4D4 !important;
+  color: #4F3F34 !important;
+  box-shadow: 0 10px 30px rgba(79, 63, 52, 0.05), 0 2px 10px rgba(79, 63, 52, 0.02) !important;
+}
+.theme-sunset .safe-glass {
+  background: #FFFDF9 !important;
+  border-color: #E9E4D4 !important;
+  color: #4F3F34 !important;
+}
+.theme-sunset h1,
+.theme-sunset h2,
+.theme-sunset h3,
+.theme-sunset h4 {
+  color: #4F3F34 !important;
+}
+.theme-sunset p {
+  color: #7D6B58 !important;
+}
+.theme-sunset span {
+  color: inherit;
+}
+.theme-sunset div:not(.btn-primary) {
+  border-color: #E9E4D4 !important;
+}
+.theme-sunset input, 
+.theme-sunset textarea,
+.theme-sunset select {
+  background-color: #FFFDF9 !important;
+  border-color: #E9E4D4 !important;
+  color: #4F3F34 !important;
+}
+
+/* Universal Overrides for text-blue-900 utility typography in any dark skin */
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900 {
+  color: #FFFFFF !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/80 {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/60 {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/40 {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/30 {
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/20 {
+  color: rgba(255, 255, 255, 0.2) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/10 {
+  color: rgba(255, 255, 255, 0.1) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900\/5 {
+  color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Universal Dark Variant Adaptation Filters to automatically match ANY active premium skin */
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-white {
+  background-color: var(--surface-bg, rgba(13, 17, 26, 0.85)) !important;
+  color: var(--text-primary, #F8FAFC) !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-white\/80 {
+  background-color: var(--surface-bg, rgba(13, 17, 26, 0.8)) !important;
+  color: var(--text-primary, #F8FAFC) !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-blue-50\/50,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-blue-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-blue-50,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-blue-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-purple-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-orange-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-emerald-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-yellow-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-purple-50\/50,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .bg-red-50\/50 {
+  background-color: var(--input-bg, rgba(8, 11, 18, 0.75)) !important;
+  color: var(--text-primary, #F8FAFC) !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-blue-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-blue-200,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-emerald-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-orange-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-yellow-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-purple-200,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .border-white\/50 {
+  border-color: var(--border-color, rgba(255, 255, 255, 0.12)) !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio) .text-blue-900 {
+  color: var(--text-primary, #F8FAFC) !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900 {
+  color: #4F3F34 !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/80 {
+  color: rgba(79, 63, 52, 0.8) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/60 {
+  color: rgba(79, 63, 52, 0.6) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/40 {
+  color: rgba(79, 63, 52, 0.4) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/30 {
+  color: rgba(79, 63, 52, 0.3) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/20 {
+  color: rgba(79, 63, 52, 0.2) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/10 {
+  color: rgba(79, 63, 52, 0.1) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-900\/5 {
+  color: rgba(79, 63, 52, 0.05) !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-white {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #4F3F34 !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-white\/80 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  color: #4F3F34 !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50\/50,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-purple-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-orange-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-emerald-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-yellow-50\/30,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-purple-50\/50,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-red-50\/50 {
+  background-color: #FFFDF9 !important;
+  color: #4F3F34 !important;
+  border-color: #E9E4D4 !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-blue-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-blue-200,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-emerald-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-orange-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-yellow-100,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-purple-200,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-white\/50 {
+  border-color: #E9E4D4 !important;
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-600,
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .text-blue-500 {
+  color: #69C496 !important; /* Elegant leaf green match */
+}
+
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-900\/10 {
+  background-color: rgba(105, 196, 150, 0.1) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-900\/5 {
+  background-color: rgba(105, 196, 150, 0.05) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .border-blue-900\/10 {
+  border-color: #E9E4D4 !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .bg-blue-50 {
+  background-color: rgba(255, 253, 249, 0.8) !important;
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/90 backdrop-blur-md border border-white/60 rounded-[32px] shadow-lg shadow-blue-900/5 transition-[background-color,border-color,box-shadow,transform] duration-500;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  .safe-glass {
+    @apply bg-white border border-blue-50 rounded-[32px] shadow-md;
+  }
+
+  .gpu {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+  
+  .btn-primary {
+    background: var(--accent-color, #3B82F6);
+    @apply text-white font-bold py-4 px-8 rounded-full shadow-lg active:scale-95 transition-[background-color,box-shadow,transform] duration-300;
+    box-shadow: 0 10px 20px -5px var(--accent-color, #3B82F6);
+  }
+
+  .btn-secondary {
+    @apply bg-white/[0.8] font-bold py-4 px-8 rounded-full border border-white/60 active:scale-95 transition-[background-color,border-color,transform] duration-300;
+    color: var(--accent-color, #3B82F6);
+  }
+}
+
+.sparkle {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.2) rotate(45deg); }
+}
+
+.sparkle-mascot {
+  animation: twinkle 3s infinite ease-in-out;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+@keyframes bodyPush {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(22deg); }
+}
+.main-body-pivot {
+  animation: bodyPush 2s infinite ease-in-out;
+  transform-origin: 160px 480px;
+  will-change: transform;
+}
+
+@keyframes elbowBend {
+  0%, 100% { d: path("M 440,380 L 450,430 L 460,480"); }
+  50% { d: path("M 440,380 L 510,400 L 460,480"); }
+}
+.arm-muscle {
+  animation: elbowBend 2s infinite ease-in-out;
+}
+
+@keyframes drip {
+  0% { transform: translate(0,0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(-30px, 80px); opacity: 0; }
+}
+.sweat {
+  animation: drip 1.5s infinite linear;
+  will-change: transform, opacity;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 8s infinite linear;
+}
+
+@keyframes waveFlow {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-400px); }
+}
+.animate-wave {
+  animation: waveFlow 4s infinite linear;
+  will-change: transform;
+}
+
+@keyframes waveFlowMascot {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-500px); }
+}
+.animate-wave-mascot {
+  animation: waveFlowMascot 4s infinite linear;
+  will-change: transform;
+}
+
+@keyframes bubbleRise {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 0.4; }
+  90% { opacity: 0.4; }
+  100% { transform: translateY(-270px); opacity: 0; }
+}
+.animate-bubble-1 { animation: bubbleRise 2.5s infinite linear; will-change: transform, opacity; }
+.animate-bubble-2 { animation: bubbleRise 3.5s infinite linear 1s; will-change: transform, opacity; }
+.animate-bubble-3 { animation: bubbleRise 2s infinite linear 0.5s; will-change: transform, opacity; }
+
+@keyframes bubbleAngry {
+  0% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 0.5; }
+  100% { transform: translateY(-150px); opacity: 0; }
+}
+.animate-bubble-angry-1 { animation: bubbleAngry 1.2s infinite linear; will-change: transform, opacity; }
+.animate-bubble-angry-2 { animation: bubbleAngry 1.4s infinite linear; will-change: transform, opacity; }
+.animate-bubble-angry-3 { animation: bubbleAngry 1.6s infinite linear; will-change: transform, opacity; }
+
+@keyframes waterDrop {
+  0% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(80px); opacity: 0; }
+}
+.animate-water-drop {
+  animation: waterDrop 0.8s infinite linear;
+  will-change: transform, opacity;
+}
+
+@keyframes waterRipple {
+  0% { rx: 5px; opacity: 0; }
+  10% { opacity: 0.8; }
+  100% { rx: 35px; opacity: 0; }
+}
+.animate-water-ripple {
+  animation: waterRipple 0.8s infinite linear;
+}
+
+@keyframes mascotBreathe {
+  0% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(-4px) scaleY(1.02); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+.animate-mascot-breathe {
+  animation: mascotBreathe 3s infinite ease-in-out;
+  transform-origin: bottom center;
+  will-change: transform;
+}
+
+@keyframes mascotAura {
+  0% { opacity: 0.1; }
+  50% { opacity: 0.2; }
+  100% { opacity: 0.1; }
+}
+.animate-mascot-aura {
+  animation: mascotAura 4s infinite ease-in-out;
+}
+
+@keyframes mascotShadow {
+  0% { rx: 145px; opacity: 0.06; }
+  50% { rx: 155px; opacity: 0.1; }
+  100% { rx: 145px; opacity: 0.06; }
+}
+.animate-mascot-shadow {
+  animation: mascotShadow 4s infinite ease-in-out;
+}
+
+@keyframes mascotEarLeft {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(3deg); }
+  100% { transform: rotate(0deg); }
+}
+.animate-mascot-ear-left {
+  animation: mascotEarLeft 3.5s infinite ease-in-out;
+  transform-origin: 120px 210px;
+  will-change: transform;
+}
+
+@keyframes mascotEarRight {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(-3deg); }
+  100% { transform: rotate(0deg); }
+}
+.animate-mascot-ear-right {
+  animation: mascotEarRight 3.5s infinite ease-in-out;
+  transform-origin: 380px 210px;
+  will-change: transform;
+}
+
+/* Theme Adaptive Layouts for overlays and dialogs */
+.challenge-flow-bg {
+  background: linear-gradient(180deg, #FCFAF6 0%, #FAF7F2 100%) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .challenge-flow-bg {
+  background: linear-gradient(180deg, #FCFAF6 0%, #FAF7F2 100%) !important;
+}
+
+.settings-header-bg {
+  background-color: rgba(250, 247, 242, 0.95) !important;
+}
+:is(.theme-standard, .theme-oceanic_midnight, .theme-obsidian, .theme-neural_bio, .theme-sunset) .settings-header-bg {
+  background-color: rgba(250, 247, 242, 0.95) !important;
+}
+
+
