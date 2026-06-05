@@ -158,7 +158,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     setIsResettingPassword(true);
     try {
       await sendPasswordResetEmail(auth, email);
-      setResetSuccessMessage('Secure link sent! Check your email inbox to set/change your password and connect your Google login. 🚀');
+      setResetSuccessMessage("Reset request submitted! ✉️ If you set a password before, please check your email inbox (including spam folder) for the reset link! • IF YOU JOINED VIA GOOGLE and never set a password, Firebase will not actually send an email (for security reasons). In this case, log in with Google once (e.g., on your laptop), go to Settings ⚙️ and set an Email Password. After that, you can log in on any phone or device with your email + password instantly! 🚀");
       triggerJump();
     } catch (err: any) {
       console.warn("Forgot password request failed:", err);
