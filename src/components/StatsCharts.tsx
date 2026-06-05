@@ -38,6 +38,32 @@ export function StatsCharts({
   dailyProgress?: DailyProgress; 
   settings?: UserSettings; 
 }) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    // Wait for the slide/fade anims of progress screen components to settle completely
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="space-y-6 w-full">
+        {/* Skeleton loaders of identical height to avoid layout shift */}
+        <div className="bg-white border border-[#E9E4D4] rounded-3xl p-6 h-64 animate-pulse flex flex-col justify-center items-center text-stone-400">
+          <TrendingUp className="text-[#69C496] animate-bounce mb-2" size={24} />
+          <p className="text-[10px] font-black uppercase tracking-[0.2em]">Synchronizing Analytics Database...</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white border border-[#E9E4D4] rounded-3xl p-6 h-56 animate-pulse" />
+          <div className="bg-white border border-[#E9E4D4] rounded-3xl p-6 h-56 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
   // Gracefully generate high-fidelity, dual-source trendline for the last 7 days
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const date = subDays(new Date(), 6 - i);

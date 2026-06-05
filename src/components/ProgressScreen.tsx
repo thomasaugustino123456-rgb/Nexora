@@ -330,7 +330,7 @@ export function ProgressScreen({
                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden border border-[#E9E4D4]">
                       <motion.div 
                         initial={{ width: 0 }}
-                        animate={{ width: `${Math.min(100, (cat.points / maxCategoryPoints) * 100)}%` }}
+                        animate={{ width: maxCategoryPoints > 0 ? `${Math.min(100, Math.round((cat.points / maxCategoryPoints) * 100))}%` : '0%' }}
                         className={`h-full ${cat.color} rounded-full`}
                       />
                    </div>

@@ -242,8 +242,8 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
         <div className="flex flex-row items-center justify-center gap-4 xs:gap-6 sm:gap-12 md:gap-16 w-full max-w-4xl mx-auto">
           
           {/* Left Column: Adaptive/Responsive Elegant Water Bottle (User's request to place on the left) */}
-          <div className="flex items-center justify-center flex-shrink-0 animate-in fade-in duration-500 w-[42%] xs:w-[45%] max-w-[260px]">
-            <div className="relative w-[130px] h-[325px] xs:w-[155px] xs:h-[388px] sm:w-[220px] sm:h-[550px] md:w-[240px] md:h-[600px] lg:w-[260px] lg:h-[650px] drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)] animate-in zoom-in duration-500 flex items-center justify-center">
+          <div className="flex items-center justify-center flex-shrink-0 animate-in fade-in duration-500 w-[42%] xs:w-[45%] md:w-[50%] md:max-w-[512px]">
+            <div className="relative w-[130px] h-[325px] xs:w-[155px] xs:h-[388px] sm:w-[220px] sm:h-[450px] md:w-[512px] md:h-[512px] drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)] animate-in zoom-in duration-500 flex items-center justify-center">
               
               <svg
                 viewBox="0 0 200 500"
