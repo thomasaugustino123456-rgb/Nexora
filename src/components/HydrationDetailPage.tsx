@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
 import { ScreenWater } from './ScreenWater';
 import { UserStats, DailyProgress, UserSettings } from '../types';
+import { vibrate } from '../lib/vibrate';
 
 interface HydrationDetailPageProps {
   stats: UserStats;
@@ -22,12 +23,17 @@ interface HydrationDetailPageProps {
 
 export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
   stats,
+  setStats,
+  dailyProgress,
+  setDailyProgress,
   onBack,
   play,
-  dailyProgress,
+  showToast,
   settings,
   consecutiveDays,
+  setConsecutiveDays,
   waterLevel,
+  setWaterLevel,
   pendingCoinsAdded,
 }) => {
   const [time, setTime] = useState(0);
@@ -91,6 +97,69 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
     }
   }, [finalDrunk, prevDrunk]);
 
+  // Handle addition of water via clicking the card box!
+  const handleAddWater = () => {
+    // Play splash sound
+    if (play) play('water');
+    vibrate(15);
+
+    const nextDrunk = finalDrunk + 1;
+    const isCompletedNow = nextDrunk >= finalGoal;
+
+    // Trigger drinking wave explosion animations!
+    setIsDrinkingAnimate(true);
+    setTimeout(() => setIsDrinkingAnimate(false), 2200);
+
+    if (setDailyProgress) {
+      setDailyProgress((prev) => ({
+        ...prev,
+        waterDrank: nextDrunk,
+        waterDone: isCompletedNow
+      }));
+    }
+
+    // Since a cup is logged, increase the water level on the fly in proportion to goal
+    const fractionalAddition = 1 / finalGoal;
+    let nextLevel = waterLevel + fractionalAddition;
+    let awardCoins = 0;
+
+    if (nextLevel >= 0.999) {
+      // Bottle filled up completely! Reset level to 0 and grant 10 epic coins!
+      nextLevel = 0.0;
+      awardCoins = 10;
+    }
+
+    if (setWaterLevel) {
+      setWaterLevel(nextLevel);
+      localStorage.setItem('hydration_water_level', nextLevel.toFixed(3));
+    }
+
+    // Update streak to keep everything working elegantly
+    const todayStr = new Date().toISOString().split('T')[0];
+    const nextDays = consecutiveDays + 1;
+    if (setConsecutiveDays) {
+      setConsecutiveDays(nextDays);
+      localStorage.setItem('hydration_consecutive_days', nextDays.toString());
+      localStorage.setItem('hydration_last_completed_date', todayStr);
+    }
+
+    if (awardCoins > 0) {
+      if (setStats) {
+        setStats((prev) => ({
+          ...prev,
+          coins: (prev.coins || 0) + awardCoins
+        }));
+      }
+      if (showToast) {
+        showToast("🪙 Epic! Big Water Bottle is totally full! +10 Coins Added! 🏆💧", "success");
+      }
+    } else {
+      if (showToast) {
+        showToast(`💧 Gulp! Logged 1 cup of water (${nextDrunk}/${finalGoal})! Streak: ${nextDays}`, "success");
+      }
+    }
+  };
+
   return (
     <div className="fixed inset-0 h-screen w-full bg-gradient-to-b from-[#FAF7F2] to-[#F4F0E2] text-[#4F3F34] overflow-hidden select-none flex flex-col justify-between z-[200]">
       
@@ -119,13 +188,13 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
       </header>
 
       {/* Main Container - Modern Dashboard featuring bottle on left, and ring widget + streak counter on right */}
-      <div className="flex-1 w-full max-w-3xl mx-auto px-4 xs:px-6 flex flex-col items-center justify-center relative z-40 -mt-8 min-[370px]:-mt-12 md:-mt-10 pb-12 md:pb-20">
+      <div className="flex-1 w-full max-w-5xl mx-auto px-4 xs:px-6 flex flex-col items-center justify-center relative z-40 -mt-8 min-[370px]:-mt-12 md:-mt-10 pb-12 md:pb-20">
         
-        <div className="flex flex-row items-center justify-center gap-4 sm:gap-8 md:gap-14 w-full scale-[0.68] min-[350px]:scale-[0.74] min-[395px]:scale-[0.84] sm:scale-100 origin-center transition-all duration-300">
+        <div className="flex flex-row items-center justify-center gap-6 sm:gap-12 md:gap-16 w-full scale-[0.68] min-[350px]:scale-[0.74] min-[395px]:scale-[0.84] sm:scale-100 origin-center transition-all duration-300">
           
           {/* Left Column: Adaptive/Responsive Elegant Water Bottle (User's request to place on the left) */}
           <div className="flex items-center justify-center flex-shrink-0 animate-in fade-in duration-500">
-            <div className="relative w-[218px] h-[512px] drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)]">
+            <div className="relative w-[512px] h-[512px] drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)]">
               
               <svg
                 viewBox="0 0 200 500"
@@ -227,6 +296,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                   stroke="#0ea5e9"
                   strokeWidth="3.5"
                   strokeLinejoin="round"
+                  strokeLinecap="round"
                 />
 
                 {/* Thread details near the neck */}
@@ -259,7 +329,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
 
               {/* Water level digital percentage label inside the bottle */}
               <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none text-center">
-                <span className="text-xs font-black text-white/90 tracking-widest block uppercase drop-shadow-md bg-blue-950/20 px-2 py-0.5 rounded-full">
+                <span className="text-sm font-black text-white/95 tracking-widest block uppercase drop-shadow-md bg-blue-950/40 px-3 py-1 rounded-full border border-blue-400">
                   {(activeProgress * 100).toFixed(0)}%
                 </span>
               </div>
@@ -267,17 +337,20 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
           </div>
 
           {/* Right Column: Interactive stats & layout (User's request to place on the right next to the bottle) */}
-          <div className="flex flex-col items-start text-left space-y-6 md:space-y-8 max-w-[240px] md:max-w-sm w-full text-[#4F3F34]">
+          <div className="flex flex-col items-start text-left space-y-8 md:space-y-10 max-w-[280px] md:max-w-md w-full text-[#4F3F34]">
             
             {/* Red Circle-inspired Custom Circular Hydration progress widget matching third image */}
             <motion.div 
+              onClick={handleAddWater}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               initial={{ opacity: 0, x: 20 }}
               animate={{ 
                 opacity: 1, 
                 x: 0,
                 borderColor: isDrinkingAnimate ? "#38bdf8" : "#E9E4D4",
-                boxShadow: isDrinkingAnimate ? "0 20px 40px -10px rgba(14,165,233,0.3)" : "0 8px 16px -8px rgba(0,0,0,0.04)",
-                scale: isDrinkingAnimate ? 1.04 : 1
+                boxShadow: isDrinkingAnimate ? "0 25px 50px -12px rgba(14,165,233,0.35)" : "0 8px 16px -8px rgba(0,0,0,0.04)",
+                scale: isDrinkingAnimate ? 1.05 : 1
               }}
               transition={{ 
                 borderColor: { duration: 0.2 },
@@ -285,7 +358,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                 scale: { type: "spring", stiffness: 350, damping: 15 },
                 default: { delay: 0.1 }
               }}
-              className="glass-card bg-white/70 backdrop-blur-md rounded-[2.2rem] p-6 border border-[#E9E4D4] shadow-xl w-full flex items-center gap-5 relative overflow-hidden"
+              className="glass-card bg-white/80 hover:bg-white backdrop-blur-md rounded-[2.5rem] p-8 border-2 border-[#E9E4D4]/80 shadow-2xl w-full flex items-center gap-6 relative overflow-hidden cursor-pointer hover:border-[#38bdf8]/40 transition-all active:ring-4 active:ring-blue-100"
             >
               {/* Outer Decorative Glow */}
               <div className="absolute -top-10 -right-10 w-24 h-24 bg-blue-400/10 rounded-full blur-xl pointer-events-none" />
@@ -326,7 +399,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
               </AnimatePresence>
 
               {/* SVG Ring Progress - Properly scaled with responsive viewBox */}
-              <div className="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
+              <div className="relative w-28 h-28 flex-shrink-0 flex items-center justify-center">
                 <svg viewBox="0 0 80 80" className="w-full h-full transform -rotate-90">
                   {/* Background Circle */}
                   <circle
@@ -334,7 +407,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                     cy="40"
                     r="34"
                     className="stroke-blue-100/50"
-                    strokeWidth="6"
+                    strokeWidth="6.5"
                     fill="transparent"
                   />
                   {/* Foreground Animated Circle */}
@@ -343,7 +416,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                     cy="40"
                     r="34"
                     className="stroke-[#0ea5e9]"
-                    strokeWidth="6"
+                    strokeWidth="6.5"
                     fill="transparent"
                     strokeDasharray={2 * Math.PI * 34}
                     initial={{ strokeDashoffset: 2 * Math.PI * 34 }}
@@ -360,18 +433,18 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                         <motion.div
                           key="pulse-1"
                           initial={{ scale: 0.8, opacity: 0.8 }}
-                          animate={{ scale: 2.4, opacity: 0 }}
+                          animate={{ scale: 2.8, opacity: 0 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 1.5, ease: "easeOut" }}
-                          className="absolute w-8 h-8 bg-[#0ea5e9]/20 rounded-full"
+                          className="absolute w-12 h-12 bg-[#0ea5e9]/20 rounded-full"
                         />
                         <motion.div
                           key="pulse-2"
                           initial={{ scale: 0.7, opacity: 0.6 }}
-                          animate={{ scale: 3.2, opacity: 0 }}
+                          animate={{ scale: 3.5, opacity: 0 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 2.0, ease: "easeOut", delay: 0.2 }}
-                          className="absolute w-8 h-8 bg-[#38bdf8]/15 rounded-full"
+                          className="absolute w-12 h-12 bg-[#38bdf8]/15 rounded-full"
                         />
                       </>
                     )}
@@ -385,7 +458,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                     transition={{ duration: 1.2, ease: "easeInOut" }}
                     className="relative z-10"
                   >
-                    <svg className="w-7 h-7 text-[#0ea5e9] drop-shadow-[0_2px_4px_rgba(14,165,233,0.3)]" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-10 h-10 text-[#0ea5e9] drop-shadow-[0_2px_6px_rgba(14,165,233,0.35)]" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
                     </svg>
                   </motion.div>
@@ -393,12 +466,12 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
               </div>
 
               {/* Text Information for today's drinks */}
-              <div className="flex flex-col text-left space-y-0.5 select-none min-w-0 flex-1">
-                <span className="text-blue-900/40 text-[10px] font-black tracking-widest uppercase truncate">
+              <div className="flex flex-col text-left space-y-1 select-none min-w-0 flex-1">
+                <span className="text-blue-900/50 text-xs font-black tracking-widest uppercase truncate">
                   Today's Water
                 </span>
                 
-                <div className="h-8 flex items-center">
+                <div className="h-10 flex items-center">
                   <AnimatePresence mode="popLayout">
                     <motion.span
                       key={finalDrunk}
@@ -406,14 +479,14 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: -15, opacity: 0 }}
                       transition={{ type: "spring", stiffness: 350, damping: 18 }}
-                      className="text-2xl font-black text-[#0ea5e9] tracking-tight block truncate"
+                      className="text-3xl font-black text-[#0ea5e9] tracking-tight block truncate animate-pulse"
                     >
                       {finalDrunk.toFixed(1)} cups
                     </motion.span>
                   </AnimatePresence>
                 </div>
 
-                <div className="h-4 flex items-center">
+                <div className="h-5 flex items-center">
                   <AnimatePresence mode="popLayout">
                     <motion.span
                       key={finalDrunk}
@@ -421,7 +494,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: -8, opacity: 0 }}
                       transition={{ type: "spring", stiffness: 350, damping: 20 }}
-                      className="text-[#0ea5e9]/60 font-semibold text-xs tracking-tight block truncate"
+                      className="text-[#0ea5e9]/70 font-semibold text-sm tracking-tight block truncate"
                     >
                       {finalDrunk.toFixed(1)} of {finalGoal} cups
                     </motion.span>

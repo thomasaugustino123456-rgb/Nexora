@@ -48,6 +48,27 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   const steps = customSteps || defaultSteps;
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [sessionWaterCount, setSessionWaterCount] = useState(0);
+
+  useEffect(() => {
+    // Lock background/body scrolling completely while Challenge Flow is active
+    const originalOverflow = document.body.style.overflow;
+    const originalTouchAction = document.body.style.touchAction;
+    const originalPosition = document.body.style.position;
+    
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100vw';
+    document.body.style.height = '100vh';
+    
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction;
+      document.body.style.position = originalPosition;
+      document.body.style.width = '';
+      document.body.style.height = '';
+    };
+  }, []);
   
   const currentIdx = steps.indexOf(step as any);
   const progressLabel = step === 'completion' ? 'Done!' : `Challenge ${currentIdx + 1}/${steps.length}`;
@@ -106,7 +127,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
     if (currentIdx < steps.length - 1) {
       setStep(steps[currentIdx + 1]);
     } else {
-      onFinish(isCustomPlan ? undefined : finalProgress, isCustomPlan);
+      onFinish(finalProgress, isCustomPlan);
     }
   }, [step, settings.soundEnabled, play, showToast, dailyQuest, dailyProgress, isCustomPlan, setDailyProgress, currentIdx, steps, setStep, onFinish]);
 
@@ -120,7 +141,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   };
 
   return (
-    <div className="fixed inset-0 challenge-flow-bg z-[100] flex flex-col items-center overflow-hidden relative h-screen max-h-screen select-none">
+    <div className="fixed inset-0 challenge-flow-bg z-[100] flex flex-col items-center overflow-hidden h-screen max-h-screen select-none">
 
       <div className="w-full max-w-4xl flex flex-col h-screen max-h-screen relative z-10 overflow-hidden">
         <header className="p-6 flex items-center justify-between">
@@ -440,77 +461,86 @@ export const BreathingStep = React.memo(({ onDone, activeSkin = 'none', settings
 
   useEffect(() => {
     if (isFinished) return;
+    
     const interval = setInterval(() => {
-      setTimer((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isFinished]);
-
-  useEffect(() => {
-    if (timer < 0) {
-      vibrate(10);
-      setTimer(5);
-      setPhase((p) => {
-        const next = p === 'In' ? 'Out' : 'In';
-        if (next === 'In') {
-          const nextCycles = cycles + 1;
-          if (nextCycles >= targetCycles && settings.soundEnabled) {
-            play('challenge_unlock');
-          }
-          setCycles(nextCycles);
+      setTimer((prevTimer) => {
+        if (prevTimer <= 1) {
+          vibrate(15);
+          setPhase((prevPhase) => {
+            const nextPhase = prevPhase === 'In' ? 'Out' : 'In';
+            if (nextPhase === 'In') {
+              setCycles((prevCycles) => {
+                const nextCycles = prevCycles + 1;
+                if (nextCycles >= targetCycles) {
+                  if (settings.soundEnabled) {
+                    play('challenge_unlock');
+                  }
+                  vibrate(VIBRATION_PATTERNS.SUCCESS);
+                }
+                return nextCycles;
+              });
+            }
+            return nextPhase;
+          });
+          return 5;
         }
-        return next;
+        return prevTimer - 1;
       });
-    }
-  }, [timer, settings.soundEnabled, play, cycles, targetCycles]);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isFinished, targetCycles, settings.soundEnabled, play]);
 
   return (
     <motion.div 
-      initial={{ opacity: 0, scale: 0.9 }}
+      initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 1.1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md mx-auto w-full"
+      exit={{ opacity: 0, scale: 1.05 }}
+      className="flex-1 flex flex-col items-center justify-center space-y-4 max-w-sm mx-auto w-full max-h-full overflow-hidden"
     >
-      <div className="w-full max-w-[240px] lg:max-w-[320px]">
-        <BreathingMascot phase={phase} className="drop-shadow-2xl" />
+      <div className="w-28 h-28 sm:w-36 sm:h-36 flex items-center justify-center">
+        <BreathingMascot phase={phase} className="w-full h-full drop-shadow-2xl" />
       </div>
       
-      <div className="w-full text-center space-y-6">
-        <div className="space-y-3">
-          <h2 className="text-3xl font-black text-blue-900">Breathing</h2>
-          <p className="text-blue-950/60 font-medium text-lg">
-            {isFinished ? 'Exercise Complete!' : `Breathe ${phase === 'In' ? 'In' : 'Out'}...`}
+      <div className="w-full text-center space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-black text-blue-900 leading-tight">Breathing Challenge</h2>
+          <p className="text-blue-950/70 font-bold text-base">
+            {isFinished ? 'Well Done, Bro! ⭐' : `Breathe ${phase === 'In' ? 'In' : 'Out'}...`}
+          </p>
+          <p className="text-xs font-semibold text-blue-900/40 uppercase tracking-wider">
+            Cycle {Math.min(cycles + 1, targetCycles)} of {targetCycles}
           </p>
           
-          <div className="flex justify-center gap-2">
+          <div className="flex justify-center gap-1.5 pt-1.5">
             {[...Array(targetCycles)].map((_, i) => (
               <div 
                 key={i} 
-                className={`h-2.5 w-8 rounded-full transition-colors duration-500 ${i < cycles ? 'bg-blue-500' : 'bg-blue-100'}`}
+                className={`h-2 w-6 rounded-full transition-colors duration-500 ${i < cycles ? 'bg-blue-500' : 'bg-blue-100'}`}
               />
             ))}
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-4">
-          {isFinished && <HappyMascot size={40} hat={activeSkin} settings={settings} />}
+        <div className="flex flex-col items-center justify-center gap-3">
+          {isFinished && <HappyMascot size={32} hat={activeSkin} settings={settings} />}
           {!isFinished ? (
-            <div className="relative w-28 h-28 flex items-center justify-center">
+            <div className="relative w-20 h-20 flex items-center justify-center">
               <svg className="absolute inset-0 w-full h-full -rotate-90">
-                <circle cx="56" cy="56" r="50" fill="none" stroke="currentColor" strokeWidth="8" className="text-blue-50" />
+                <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeWidth="6" className="text-blue-50" />
                 <motion.circle
-                  cx="56"
-                  cy="56"
-                  r="50"
+                  cx="40"
+                  cy="40"
+                  r="34"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="8"
-                  strokeDasharray="314.16"
-                  animate={{ strokeDashoffset: 314.16 * (1 - Math.max(0, timer) / 5) }}
+                  strokeWidth="6"
+                  strokeDasharray="213.63"
+                  animate={{ strokeDashoffset: 213.63 * (1 - Math.max(0, timer) / 5) }}
                   className="text-blue-500"
                 />
               </svg>
-              <div className="text-4xl font-bold text-blue-600">{Math.max(0, timer)}</div>
+              <div className="text-3xl font-black text-blue-600">{Math.max(0, timer)}</div>
             </div>
           ) : (
             <button 
@@ -518,7 +548,7 @@ export const BreathingStep = React.memo(({ onDone, activeSkin = 'none', settings
                 vibrate(VIBRATION_PATTERNS.SUCCESS);
                 onDone();
               }} 
-              className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600"
+              className="btn-primary w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 shadow-lg py-3.5 text-base font-black animate-pulse"
             >
               Continue <ChevronRight size={20} />
             </button>
@@ -542,7 +572,11 @@ export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin 
   const lastPoint = useRef<{ x: number, y: number } | null>(null);
   const lastMidPoint = useRef<{ x: number, y: number } | null>(null);
 
-  const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#000000', '#FFFFFF'];
+  const colors = [
+    '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', 
+    '#EC4899', '#06B6D4', '#22C55E', '#14B8A6', '#F43F5E', 
+    '#FF6B6B', '#4D96FF', '#000000', '#64748B', '#FFFFFF'
+  ];
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -667,8 +701,8 @@ export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin 
       {/* 1. Artist Mascot & Controls (Tools on Left, Mascot Center, Colors on Right) */}
       <div className="w-full flex items-center justify-between px-2 sm:px-6 py-2 relative z-30">
         
-        {/* DRAWING TOOLS (Left side of Mascot, no Box Background) */}
-        <div className="flex items-center min-w-[70px]">
+        {/* DRAWING TOOLS (Left side of Mascot, Floating Menu beneath) */}
+        <div className="flex items-center min-w-[70px] relative">
           <AnimatePresence mode="wait">
             {!showTools ? (
               <motion.button
@@ -676,7 +710,7 @@ export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin 
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
-                onClick={() => { vibrate(10); setShowTools(true); }}
+                onClick={() => { vibrate(10); setShowTools(true); setShowColors(false); }}
                 className="w-14 h-14 rounded-full bg-white/90 shadow-md flex items-center justify-center text-blue-600 hover:bg-blue-50 border border-blue-100/50"
                 title="Select Tool"
               >
@@ -688,29 +722,44 @@ export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin 
             ) : (
               <motion.div
                 key="expanded-tools"
-                initial={{ width: 60, opacity: 0, scale: 0.8 }}
-                animate={{ width: 'auto', opacity: 1, scale: 1 }}
-                exit={{ width: 60, opacity: 0, scale: 0.8 }}
-                className="flex items-center gap-2 bg-white/95 p-1.5 rounded-full shadow-lg border border-blue-100"
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+                onTouchEnd={(e) => e.stopPropagation()}
+                initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                className="absolute top-20 left-0 bg-white/95 backdrop-blur-md p-1.5 rounded-2xl shadow-xl z-50 border-4 border-blue-100 flex items-center gap-1.5"
               >
-                {(['pencil', 'pen', 'brush', 'bucket'] as const).map(t => (
-                  <button 
-                    key={t} 
-                    onClick={() => { vibrate(10); setTool(t); }} 
-                    className={`p-2.5 rounded-full transition-all ${tool === t ? 'bg-blue-500 text-white shadow-md' : 'text-blue-400 hover:bg-blue-50'}`}
-                  >
-                    {t === 'pencil' && <Pencil size={20} />} 
-                    {t === 'pen' && <Pen size={20} />} 
-                    {t === 'brush' && <Palette size={20} />} 
-                    {t === 'bucket' && <PaintBucket size={20} />}
-                  </button>
-                ))}
+                {/* Scrollable list inside tools */}
+                <div 
+                  className="flex items-center gap-1 overflow-x-auto max-w-[140px] sm:max-w-[200px] py-1 px-0.5 scrollbar-thin scrollbar-thumb-blue-200 touch-pan-x"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
+                  onTouchEnd={(e) => e.stopPropagation()}
+                >
+                  {(['pencil', 'pen', 'brush', 'bucket'] as const).map(t => (
+                    <button 
+                      key={t} 
+                      onClick={() => { vibrate(10); setTool(t); setShowTools(false); }} 
+                      className={`p-2.5 rounded-xl transition-all shrink-0 ${tool === t ? 'bg-blue-500 text-white shadow-md' : 'text-blue-400 hover:bg-blue-50'}`}
+                      title={t}
+                    >
+                      {t === 'pencil' && <Pencil size={18} />} 
+                      {t === 'pen' && <Pen size={18} />} 
+                      {t === 'brush' && <Palette size={18} />} 
+                      {t === 'bucket' && <PaintBucket size={18} />}
+                    </button>
+                  ))}
+                </div>
+                {/* Independent Close Button */}
                 <button 
                   onClick={() => { vibrate(10); setShowTools(false); }}
-                  className="p-1 rounded-full text-blue-400 hover:bg-red-50 hover:text-red-500"
-                  title="Close"
+                  className="p-1 rounded-lg text-blue-400 hover:bg-red-50 hover:text-red-500 shrink-0 ml-1 border border-blue-100"
+                  title="Close Tools"
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </motion.div>
             )}
@@ -722,8 +771,8 @@ export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin 
           <ArtistMascot className="w-full h-full drop-shadow-xl" />
         </div>
 
-        {/* COLORS (Right side of Mascot, no Box Background) */}
-        <div className="flex items-center min-w-[70px] justify-end">
+        {/* COLORS (Right side of Mascot, Floating Menu beneath) */}
+        <div className="flex items-center min-w-[70px] justify-end relative">
           <AnimatePresence mode="wait">
             {!showColors ? (
               <motion.button
@@ -731,7 +780,7 @@ export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin 
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
-                onClick={() => { vibrate(10); setShowColors(true); }}
+                onClick={() => { vibrate(10); setShowColors(true); setShowTools(false); }}
                 className="w-14 h-14 rounded-full bg-white/90 shadow-md flex items-center justify-center border border-blue-100/50"
                 style={{ borderLeftColor: color, borderLeftWidth: 6 }}
                 title="Select Color"
@@ -741,25 +790,39 @@ export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin 
             ) : (
               <motion.div
                 key="expanded-colors"
-                initial={{ width: 60, opacity: 0, scale: 0.8 }}
-                animate={{ width: 'auto', opacity: 1, scale: 1 }}
-                exit={{ width: 60, opacity: 0, scale: 0.8 }}
-                className="flex items-center gap-1.5 bg-white/95 p-1.5 rounded-full shadow-lg border border-blue-100"
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+                onTouchEnd={(e) => e.stopPropagation()}
+                initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                className="absolute top-20 right-0 bg-white/95 backdrop-blur-md p-1.5 rounded-2xl shadow-xl z-50 border-4 border-blue-100 flex items-center gap-1.5"
               >
-                {colors.map(c => (
-                  <button 
-                    key={c} 
-                    onClick={() => { vibrate(10); setColor(c); }} 
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${color === c ? 'border-blue-500 scale-110 shadow-md' : 'border-transparent hover:scale-105'}`} 
-                    style={{ backgroundColor: c }} 
-                  />
-                ))}
+                {/* Scrollable list inside colors */}
+                <div 
+                  className="flex items-center gap-1 overflow-x-auto max-w-[140px] sm:max-w-[200px] py-1 px-0.5 scrollbar-thin scrollbar-thumb-blue-200 touch-pan-x"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
+                  onTouchEnd={(e) => e.stopPropagation()}
+                >
+                  {colors.map(c => (
+                    <button 
+                      key={c} 
+                      onClick={() => { vibrate(10); setColor(c); setShowColors(false); }} 
+                      className={`w-7 h-7 rounded-full border-2 shrink-0 transition-all ${color === c ? 'border-blue-500 scale-110 shadow-md' : 'border-transparent hover:scale-105'}`} 
+                      style={{ backgroundColor: c }} 
+                    />
+                  ))}
+                </div>
+                {/* Independent Close Button */}
                 <button 
                   onClick={() => { vibrate(10); setShowColors(false); }}
-                  className="p-1.5 rounded-full text-blue-400 hover:bg-red-50 hover:text-red-500"
-                  title="Close"
+                  className="p-1 rounded-lg text-blue-400 hover:bg-red-50 hover:text-red-500 shrink-0 ml-1 border border-blue-100"
+                  title="Close Colors"
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </motion.div>
             )}

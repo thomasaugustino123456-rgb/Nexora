@@ -63,6 +63,59 @@ export function ProgressScreen({
   const xpToNextLevel = ((stats.level || 1) * 1000) - stats.xp;
   const progressPercent = Math.min(100, (stats.xp / ((stats.level || 1) * 1000)) * 100);
 
+  // Dynamically calculate actual category points based on historical database and today's live progress
+  const physicalVolts = (() => {
+    let pts = stats.pointsByCategory?.physical || 0;
+    (history || []).forEach(day => {
+      if (day.pushupsDone) pts += 40;
+      if (day.footballDone) pts += 40;
+      if (day.waterDrank > 0) pts += Math.min(8, day.waterDrank) * 15;
+    });
+    if (dailyProgress) {
+      if (dailyProgress.pushupsDone) pts += 40;
+      if (dailyProgress.footballDone) pts += 40;
+      if (dailyProgress.waterDrank > 0) pts += Math.min(8, dailyProgress.waterDrank) * 15;
+    }
+    return Math.max(0, Math.round(pts));
+  })();
+
+  const mentalVolts = (() => {
+    let pts = stats.pointsByCategory?.mental || 0;
+    (history || []).forEach(day => {
+      if (day.breathingDone) pts += 45;
+      if (day.bubblesDone) pts += 35;
+      if (day.memoryDone) pts += 45;
+      if (day.reactionDone) pts += 45;
+      if (day.gratitudeDone) pts += 35;
+      if (day.meditationDone) pts += 50;
+    });
+    if (dailyProgress) {
+      if (dailyProgress.breathingDone) pts += 45;
+      if (dailyProgress.bubblesDone) pts += 35;
+      if (dailyProgress.memoryDone) pts += 45;
+      if (dailyProgress.reactionDone) pts += 45;
+      if (dailyProgress.gratitudeDone) pts += 35;
+      if (dailyProgress.meditationDone) pts += 50;
+    }
+    return Math.max(0, Math.round(pts));
+  })();
+
+  const creativeVolts = (() => {
+    let pts = stats.pointsByCategory?.creative || 0;
+    (history || []).forEach(day => {
+      if (day.drawingDone) pts += 50;
+      if (day.writingDone) pts += 50;
+    });
+    if (dailyProgress) {
+      if (dailyProgress.drawingDone) pts += 50;
+      if (dailyProgress.writingDone) pts += 50;
+    }
+    return Math.max(0, Math.round(pts));
+  })();
+
+  // Use a beautifully adaptive max categories target based on level
+  const maxCategoryPoints = Math.max(500, (stats.level || 1) * 350);
+
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -260,9 +313,9 @@ export function ProgressScreen({
 
         <div className="grid grid-cols-1 gap-6">
            {[
-             { label: 'Physical Rigor', points: stats.pointsByCategory?.physical || 0, icon: <Dumbbell size={14} />, color: 'bg-[#69C496]' },
-             { label: 'Mental Clarity', points: stats.pointsByCategory?.mental || 0, icon: <BrainCircuit size={14} />, color: 'bg-[#7D6B58]' },
-             { label: 'Creative Flow', points: stats.pointsByCategory?.creative || 0, icon: <Palette size={14} />, color: 'bg-[#BACBBF]' }
+             { label: 'Physical Rigor', points: physicalVolts, icon: <Dumbbell size={14} />, color: 'bg-[#69C496]' },
+             { label: 'Mental Clarity', points: mentalVolts, icon: <BrainCircuit size={14} />, color: 'bg-[#7D6B58]' },
+             { label: 'Creative Flow', points: creativeVolts, icon: <Palette size={14} />, color: 'bg-[#BACBBF]' }
            ].map((cat, i) => (
              <div key={i} className="space-y-3">
                <div className="flex justify-between items-center px-1">
@@ -275,7 +328,7 @@ export function ProgressScreen({
                <div className="h-2 bg-slate-100 rounded-full overflow-hidden border border-[#E9E4D4]">
                   <motion.div 
                     initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(100, (cat.points / 5000) * 100)}%` }}
+                    animate={{ width: `${Math.min(100, (cat.points / maxCategoryPoints) * 100)}%` }}
                     className={`h-full ${cat.color} rounded-full`}
                   />
                </div>
@@ -286,7 +339,12 @@ export function ProgressScreen({
 
       {/* Visual Analytics */}
       <motion.div variants={item}>
-        <StatsCharts history={history} stats={stats} />
+        <StatsCharts 
+          history={history} 
+          stats={stats} 
+          dailyProgress={dailyProgress} 
+          settings={settings} 
+        />
       </motion.div>
       
       {/* Trophies & Badges */}
