@@ -76,7 +76,7 @@ export function ProgressScreen({
       if (dailyProgress.footballDone) pts += 40;
       if (dailyProgress.waterDrank > 0) pts += Math.min(8, dailyProgress.waterDrank) * 15;
     }
-    return Math.max(0, Math.round(pts));
+    return Math.max(45, Math.round(pts)); // Guarantee visual fill
   })();
 
   const mentalVolts = (() => {
@@ -97,7 +97,7 @@ export function ProgressScreen({
       if (dailyProgress.gratitudeDone) pts += 35;
       if (dailyProgress.meditationDone) pts += 50;
     }
-    return Math.max(0, Math.round(pts));
+    return Math.max(35, Math.round(pts)); // Guarantee visual fill
   })();
 
   const creativeVolts = (() => {
@@ -110,7 +110,7 @@ export function ProgressScreen({
       if (dailyProgress.drawingDone) pts += 50;
       if (dailyProgress.writingDone) pts += 50;
     }
-    return Math.max(0, Math.round(pts));
+    return Math.max(25, Math.round(pts)); // Guarantee visual fill
   })();
 
   // Use a beautifully adaptive max categories target based on level

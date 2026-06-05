@@ -44,7 +44,7 @@ export function StatsCharts({
     // Wait for the slide/fade anims of progress screen components to settle completely
     const timer = setTimeout(() => {
       setMounted(true);
-    }, 250);
+    }, 550);
     return () => clearTimeout(timer);
   }, []);
 
