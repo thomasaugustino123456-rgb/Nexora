@@ -119,13 +119,13 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
       </header>
 
       {/* Main Container - Modern Dashboard featuring bottle on left, and ring widget + streak counter on right */}
-      <div className="flex-1 w-full max-w-3xl mx-auto px-4 xs:px-6 flex flex-col items-center justify-center relative z-40 -mt-3 min-[370px]:-mt-6 md:-mt-10 pb-12 md:pb-20">
+      <div className="flex-1 w-full max-w-3xl mx-auto px-4 xs:px-6 flex flex-col items-center justify-center relative z-40 -mt-8 min-[370px]:-mt-12 md:-mt-10 pb-12 md:pb-20">
         
-        <div className="flex flex-row items-center justify-center gap-3.5 sm:gap-8 md:gap-14 w-full">
+        <div className="flex flex-row items-center justify-center gap-4 sm:gap-8 md:gap-14 w-full scale-[0.68] min-[350px]:scale-[0.74] min-[395px]:scale-[0.84] sm:scale-100 origin-center transition-all duration-300">
           
           {/* Left Column: Adaptive/Responsive Elegant Water Bottle (User's request to place on the left) */}
           <div className="flex items-center justify-center flex-shrink-0 animate-in fade-in duration-500">
-            <div className="relative w-[150px] h-[350px] min-[370px]:w-[175px] min-[370px]:h-[410px] xs:w-[195px] xs:h-[455px] sm:w-[218px] sm:h-[512px] md:w-[245px] md:h-[575px] drop-shadow-[0_15px_35px_rgba(14,165,233,0.18)] md:drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)]">
+            <div className="relative w-[218px] h-[512px] drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)]">
               
               <svg
                 viewBox="0 0 200 500"
@@ -259,7 +259,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
 
               {/* Water level digital percentage label inside the bottle */}
               <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none text-center">
-                <span className="text-[9px] min-[370px]:text-[10px] sm:text-xs font-black text-white/90 tracking-wider xs:tracking-widest block uppercase drop-shadow-md bg-blue-950/20 px-1.5 md:px-2 py-0.5 rounded-full">
+                <span className="text-xs font-black text-white/90 tracking-widest block uppercase drop-shadow-md bg-blue-950/20 px-2 py-0.5 rounded-full">
                   {(activeProgress * 100).toFixed(0)}%
                 </span>
               </div>
@@ -267,7 +267,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
           </div>
 
           {/* Right Column: Interactive stats & layout (User's request to place on the right next to the bottle) */}
-          <div className="flex flex-col items-start text-left space-y-4 xs:space-y-6 md:space-y-8 max-w-[195px] min-[370px]:max-w-[215px] xs:max-w-[240px] sm:max-w-[280px] md:max-w-[340px] w-full text-[#4F3F34]">
+          <div className="flex flex-col items-start text-left space-y-6 md:space-y-8 max-w-[240px] md:max-w-sm w-full text-[#4F3F34]">
             
             {/* Red Circle-inspired Custom Circular Hydration progress widget matching third image */}
             <motion.div 
@@ -285,7 +285,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                 scale: { type: "spring", stiffness: 350, damping: 15 },
                 default: { delay: 0.1 }
               }}
-              className="glass-card bg-white/70 backdrop-blur-md rounded-[1.6rem] min-[370px]:rounded-[1.8rem] md:rounded-[2.2rem] p-3.5 min-[370px]:p-4.5 md:p-6 border border-[#E9E4D4] shadow-xl w-full flex items-center gap-3.5 md:gap-5 relative overflow-hidden"
+              className="glass-card bg-white/70 backdrop-blur-md rounded-[2.2rem] p-6 border border-[#E9E4D4] shadow-xl w-full flex items-center gap-5 relative overflow-hidden"
             >
               {/* Outer Decorative Glow */}
               <div className="absolute -top-10 -right-10 w-24 h-24 bg-blue-400/10 rounded-full blur-xl pointer-events-none" />
@@ -326,7 +326,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
               </AnimatePresence>
 
               {/* SVG Ring Progress - Properly scaled with responsive viewBox */}
-              <div className="relative w-[52px] h-[52px] min-[370px]:w-[60px] min-[370px]:h-[60px] xs:w-[68px] xs:h-[68px] sm:w-[72px] sm:h-[72px] md:w-[80px] md:h-[80px] flex-shrink-0 flex items-center justify-center">
+              <div className="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
                 <svg viewBox="0 0 80 80" className="w-full h-full transform -rotate-90">
                   {/* Background Circle */}
                   <circle
@@ -385,7 +385,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                     transition={{ duration: 1.2, ease: "easeInOut" }}
                     className="relative z-10"
                   >
-                    <svg className="w-[18px] h-[18px] min-[370px]:w-[22px] min-[370px]:h-[22px] xs:w-[26px] xs:h-[26px] md:w-[30px] md:h-[30px] text-[#0ea5e9] drop-shadow-[0_2px_4px_rgba(14,165,233,0.3)]" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-7 h-7 text-[#0ea5e9] drop-shadow-[0_2px_4px_rgba(14,165,233,0.3)]" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
                     </svg>
                   </motion.div>
@@ -394,11 +394,11 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
 
               {/* Text Information for today's drinks */}
               <div className="flex flex-col text-left space-y-0.5 select-none min-w-0 flex-1">
-                <span className="text-blue-900/40 text-[9px] min-[370px]:text-[10px] md:text-[11px] font-black tracking-wider xs:tracking-widest uppercase truncate">
+                <span className="text-blue-900/40 text-[10px] font-black tracking-widest uppercase truncate">
                   Today's Water
                 </span>
                 
-                <div className="h-6 md:h-8 flex items-center">
+                <div className="h-8 flex items-center">
                   <AnimatePresence mode="popLayout">
                     <motion.span
                       key={finalDrunk}
@@ -406,7 +406,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: -15, opacity: 0 }}
                       transition={{ type: "spring", stiffness: 350, damping: 18 }}
-                      className="text-sm min-[370px]:text-base sm:text-lg md:text-2xl font-black text-[#0ea5e9] tracking-tight block truncate"
+                      className="text-2xl font-black text-[#0ea5e9] tracking-tight block truncate"
                     >
                       {finalDrunk.toFixed(1)} cups
                     </motion.span>
@@ -421,7 +421,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: -8, opacity: 0 }}
                       transition={{ type: "spring", stiffness: 350, damping: 20 }}
-                      className="text-[#0ea5e9]/60 font-bold text-[9px] min-[370px]:text-[11px] sm:text-xs tracking-tight block truncate"
+                      className="text-[#0ea5e9]/60 font-semibold text-xs tracking-tight block truncate"
                     >
                       {finalDrunk.toFixed(1)} of {finalGoal} cups
                     </motion.span>
@@ -435,15 +435,15 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="flex flex-col items-start space-y-0.5 w-full pl-1.5 min-[370px]:pl-2.5"
+              className="flex flex-col items-start space-y-1 w-full pl-2"
             >
-              <div className="flex items-baseline gap-1.5 xs:gap-2.5">
-                <span className="text-6xl min-[370px]:text-7xl xs:text-8xl sm:text-9xl md:text-[8.5rem] font-sans font-black tracking-tighter text-[#0ea5e9] leading-none drop-shadow-[0_4px_15px_rgba(14,165,233,0.18)] md:drop-shadow-[0_6px_25px_rgba(14,165,233,0.22)] select-none">
+              <div className="flex items-baseline gap-2">
+                <span className="text-6xl md:text-[8rem] font-sans font-black tracking-tighter text-[#0ea5e9] leading-none drop-shadow-[0_4px_15px_rgba(14,165,233,0.18)] md:drop-shadow-[0_6px_25px_rgba(14,165,233,0.22)] select-none">
                   {consecutiveDays}
                 </span>
-                <span className="text-3xl min-[370px]:text-4xl sm:text-5xl text-[#0ea5e9] select-none animate-bounce" style={{ animationDuration: "4s" }}>🔥</span>
+                <span className="text-3xl text-[#0ea5e9] select-none animate-bounce" style={{ animationDuration: "4s" }}>🔥</span>
               </div>
-              <span className="text-[#0ea5e9]/60 font-black text-[9px] min-[370px]:text-[10px] sm:text-xs tracking-[0.1em] xs:tracking-[0.2em] uppercase">
+              <span className="text-[#0ea5e9]/60 font-black text-xs tracking-[0.2em] uppercase">
                 CONSECUTIVE DAYS STREAK
               </span>
             </motion.div>

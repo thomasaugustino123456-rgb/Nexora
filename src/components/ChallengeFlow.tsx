@@ -80,7 +80,12 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
       }
     }
     const updates: Partial<DailyProgress> = {};
-    if (step === 'pushups') updates.pushupsDone = !skipped;
+    if (step === 'pushups') {
+      updates.pushupsDone = !skipped;
+      if (skipped) {
+        updates.skippedPushups = true;
+      }
+    }
     if (step === dailyQuest) updates.dailyQuestDone = !skipped;
     if (step === 'breathing') updates.breathingDone = true;
     if (step === 'drawing') updates.drawingDone = true;
@@ -115,7 +120,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   };
 
   return (
-    <div className="fixed inset-0 challenge-flow-bg z-[100] flex flex-col items-center overflow-y-auto relative">
+    <div className="fixed inset-0 challenge-flow-bg z-[100] flex flex-col items-center overflow-hidden relative">
 
       <div className="w-full max-w-4xl flex flex-col min-h-screen relative z-10">
         <header className="p-6 flex items-center justify-between">
@@ -320,19 +325,19 @@ export const PushupsStep = React.memo(({ goal, onDone, onSkip, activeSkin = 'non
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 1.1 }}
-        className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full"
+        className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-md mx-auto w-full"
       >
-        <div className="w-full max-w-[300px]">
+        <div className="w-full max-w-[280px]">
           <PushupMascot className="drop-shadow-2xl grayscale opacity-60" />
         </div>
         
-        <div className="glass-card w-full p-10 text-center space-y-8 border-red-200 bg-red-50/50">
+        <div className="w-full text-center space-y-6">
           <div className="space-y-2">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-red-100/50 rounded-full flex items-center justify-center mx-auto mb-2">
               <X className="text-red-500" size={32} />
             </div>
-            <h2 className="text-3xl font-bold text-red-900/80">Challenge Failed</h2>
-            <p className="text-red-900/50 font-medium">You skipped the push-ups. No trophy will be awarded for this session.</p>
+            <h2 className="text-3xl font-bold text-red-600">Challenge Failed</h2>
+            <p className="text-red-900/60 font-medium">You skipped the push-ups. No trophy will be awarded for this session.</p>
           </div>
 
           <button 
@@ -351,19 +356,19 @@ export const PushupsStep = React.memo(({ goal, onDone, onSkip, activeSkin = 'non
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full"
+      className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-md mx-auto w-full"
     >
-      <div className="w-full max-w-[400px] lg:max-w-[600px]">
+      <div className="w-full max-w-[320px]">
         <PushupMascot className="drop-shadow-2xl" />
       </div>
       
-      <div className="glass-card w-full p-10 text-center space-y-8">
+      <div className="w-full text-center space-y-6">
         <div className="space-y-2">
-          <h2 className="text-3xl font-bold text-blue-900/80">Push-ups</h2>
-          <p className="text-blue-900/50 font-medium">Do {goal} push-ups</p>
+          <h2 className="text-3xl font-bold text-blue-900">Push-ups</h2>
+          <p className="text-blue-900/60 font-medium text-lg">Do {goal} push-ups</p>
         </div>
 
-        <div className="space-y-4 flex flex-col items-center">
+        <div className="space-y-4 flex flex-col items-center w-full">
           {isReady && <HappyMascot size={32} hat={activeSkin} settings={settings} />}
           {!isReady ? (
             <button 
@@ -396,57 +401,21 @@ export const PushupsStep = React.memo(({ goal, onDone, onSkip, activeSkin = 'non
 export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUpdate, onContinue, activeSkin = 'none', settings, play, onCompleteWaterChallenge }: { goal: number, progress?: number, onUpdate: (v: number) => void, onContinue: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void, onCompleteWaterChallenge?: () => void }) => {
   const [localProgress, setLocalProgress] = useState(initialProgress);
   const isFinished = localProgress >= goal;
-  const [time, setTime] = useState(0);
-
-  useEffect(() => {
-    let animationFrameId: number;
-    const updateTime = () => {
-      setTime(prev => prev + 1);
-      animationFrameId = requestAnimationFrame(updateTime);
-    };
-    animationFrameId = requestAnimationFrame(updateTime);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, []);
-
-  const activeProgress = Math.min(Math.max(localProgress / goal, 0), 1);
-  const fillY = 468 - (activeProgress * 333);
-
-  // Surface waving animations
-  const wave1 = Math.sin(time * 0.05) * 5;
-  const wave2 = Math.cos(time * 0.06) * 4;
-
-  const foregroundWaterPath = `
-    M 50,${fillY + wave1}
-    Q 100,${fillY + wave1 + wave2} 150,${fillY + wave2}
-    L 150,470
-    L 50,470
-    Z
-  `;
-
-  const backgroundWaterPath = `
-    M 50,${fillY - 8 + wave2}
-    Q 100,${fillY - 8 + wave1} 150,${fillY - 8 + wave1 + wave2}
-    L 150,470
-    L 50,470
-    Z
-  `;
 
   return (
     <div 
-      className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-md mx-auto w-full animate-in fade-in zoom-in duration-500 relative z-10"
+      className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md mx-auto w-full animate-in fade-in zoom-in duration-500 relative z-10"
     >
-      {/* Replaced bottle with original App Water Challenge Mascot wrapper as requested */}
-      <div className="w-full max-w-[300px] lg:max-w-[400px] relative z-20">
+      <div className="w-full max-w-[260px] relative z-20">
         <WaterMascot progress={Math.min(localProgress / goal, 1)} className="drop-shadow-2xl" />
       </div>
       
-      {/* Box Card stays exactly as requested for holding text, progress, buttons */}
-      <div className="glass-card w-full p-8 text-center space-y-6 relative z-20 bg-white/70 backdrop-blur-md shadow-xl border border-white/40">
-        <div className="space-y-3">
-          <h2 className="text-2xl font-bold text-blue-900/80">Drink Water</h2>
-          <p className="text-blue-900/50 font-medium">{localProgress} / {goal} glasses</p>
+      <div className="w-full text-center space-y-6 relative z-20">
+        <div className="space-y-2">
+          <h2 className="text-3xl font-black text-blue-900">Drink Water</h2>
+          <p className="text-blue-950/60 font-medium text-lg">{localProgress} / {goal} glasses</p>
           
-          <div className="h-2.5 bg-blue-100 rounded-full overflow-hidden">
+          <div className="h-3 bg-blue-100 rounded-full overflow-hidden w-4/5 mx-auto">
             <motion.div 
               animate={{ width: `${Math.min((localProgress / goal) * 100, 100)}%` }}
               className="h-full bg-blue-400 rounded-full"
@@ -454,11 +423,10 @@ export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUp
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 w-full">
           {!isFinished ? (
             <button 
               onClick={() => {
-                // Play sound instantly at the very start of click
                 if (settings.soundEnabled) play('water');
                 
                 vibrate(VIBRATION_PATTERNS.CLICK);
@@ -534,16 +502,16 @@ export const BreathingStep = React.memo(({ onDone, activeSkin = 'none', settings
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full"
+      className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md mx-auto w-full"
     >
-      <div className="w-full max-w-[300px] lg:max-w-[400px]">
+      <div className="w-full max-w-[240px] lg:max-w-[320px]">
         <BreathingMascot phase={phase} className="drop-shadow-2xl" />
       </div>
       
-      <div className="glass-card w-full p-10 text-center space-y-8">
-        <div className="space-y-4">
-          <h2 className="text-3xl font-bold text-blue-900/80">Breathing</h2>
-          <p className="text-blue-900/50 font-medium text-xl">
+      <div className="w-full text-center space-y-6">
+        <div className="space-y-3">
+          <h2 className="text-3xl font-black text-blue-900">Breathing</h2>
+          <p className="text-blue-950/60 font-medium text-lg">
             {isFinished ? 'Exercise Complete!' : `Breathe ${phase === 'In' ? 'In' : 'Out'}...`}
           </p>
           
@@ -551,7 +519,7 @@ export const BreathingStep = React.memo(({ onDone, activeSkin = 'none', settings
             {[...Array(targetCycles)].map((_, i) => (
               <div 
                 key={i} 
-                className={`h-2 w-8 rounded-full transition-colors duration-500 ${i < cycles ? 'bg-blue-500' : 'bg-blue-100'}`}
+                className={`h-2.5 w-8 rounded-full transition-colors duration-500 ${i < cycles ? 'bg-blue-500' : 'bg-blue-100'}`}
               />
             ))}
           </div>
@@ -560,13 +528,18 @@ export const BreathingStep = React.memo(({ onDone, activeSkin = 'none', settings
         <div className="flex flex-col items-center gap-4">
           {isFinished && <HappyMascot size={40} hat={activeSkin} settings={settings} />}
           {!isFinished ? (
-            <div className="relative w-32 h-32 flex items-center justify-center">
+            <div className="relative w-28 h-28 flex items-center justify-center">
               <svg className="absolute inset-0 w-full h-full -rotate-90">
-                <circle cx="64" cy="64" r="58" fill="none" stroke="currentColor" strokeWidth="8" className="text-blue-50" />
+                <circle cx="56" cy="56" r="50" fill="none" stroke="currentColor" strokeWidth="8" className="text-blue-50" />
                 <motion.circle
-                  cx="64" cy="64" r="58" fill="none" stroke="currentColor" strokeWidth="8"
-                  strokeDasharray="364.4"
-                  animate={{ strokeDashoffset: 364.4 * (1 - Math.max(0, timer) / 5) }}
+                  cx="56"
+                  cy="56"
+                  r="50"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  strokeDasharray="314.16"
+                  animate={{ strokeDashoffset: 314.16 * (1 - Math.max(0, timer) / 5) }}
                   className="text-blue-500"
                 />
               </svg>
@@ -594,6 +567,8 @@ export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin 
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#3B82F6');
   const [tool, setTool] = useState<'pencil' | 'pen' | 'brush' | 'bucket'>('pen');
+  const [showTools, setShowTools] = useState(false);
+  const [showColors, setShowColors] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
@@ -716,57 +691,173 @@ export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin 
   const saveDrawing = () => { const canvas = canvasRef.current; return canvas ? canvas.toDataURL('image/png') : ''; };
 
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }} className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-2xl mx-auto w-full">
-      <div className="w-full max-w-[400px]"><ArtistMascot className="drop-shadow-2xl" /></div>
-      <div className="glass-card w-full p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-blue-900/80">Creativity</h2>
-          <button onClick={clearCanvas} className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">Clear Canvas</button>
-        </div>
-        <div className="flex flex-wrap gap-4 items-center justify-center bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-          <div className="flex gap-2 p-1 bg-white rounded-lg shadow-sm border border-blue-100">
-            {(['pencil', 'pen', 'brush', 'bucket'] as const).map(t => (
-              <button key={t} onClick={() => { vibrate(10); setTool(t); }} className={`p-2 rounded-md transition-all ${tool === t ? 'bg-blue-500 text-white shadow-md' : 'text-blue-400 hover:bg-blue-50'}`}>
-                {t === 'pencil' && <Pencil size={20} />} {t === 'pen' && <Pen size={20} />} {t === 'brush' && <Palette size={20} />} {t === 'bucket' && <PaintBucket size={20} />}
-              </button>
-            ))}
-          </div>
-          <div className="h-8 w-px bg-blue-200 mx-2" />
-          <div className="flex gap-2">
-            {colors.map(c => <button key={c} onClick={() => { vibrate(10); setColor(c); }} className={`w-8 h-8 rounded-full border-2 transition-all ${color === c ? 'border-blue-500 scale-110 shadow-md' : 'border-transparent hover:scale-105'}`} style={{ backgroundColor: c }} />)}
-          </div>
-        </div>
-        <div className="h-80 bg-white rounded-2xl border-2 border-blue-100 overflow-hidden touch-none shadow-inner relative">
-          <canvas ref={canvasRef} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} className="w-full h-full cursor-crosshair" />
-        </div>
-        <div className="flex flex-col items-center gap-4">
-          {!isFinished ? (
-            <div className="flex gap-2 w-full">
-              <button 
-                onClick={() => { 
-                  vibrate(VIBRATION_PATTERNS.CLICK); 
-                  onSave(saveDrawing()); 
-                  setIsSaved(true); 
-                }} 
-                disabled={!hasDrawn || isSaved} 
-                className={`flex-1 py-3 bg-white border-2 border-blue-100 text-blue-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-all ${(!hasDrawn || isSaved) ? 'opacity-50 cursor-not-allowed' : ''}`}
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      exit={{ opacity: 0 }} 
+      className="flex-1 flex flex-col items-center justify-between space-y-4 max-w-3xl mx-auto w-full h-[82vh]"
+    >
+      {/* 1. Artist Mascot & Controls (Tools on Left, Mascot Center, Colors on Right) */}
+      <div className="w-full flex items-center justify-between px-2 sm:px-6 py-2 relative z-30">
+        
+        {/* DRAWING TOOLS (Left side of Mascot, no Box Background) */}
+        <div className="flex items-center min-w-[70px]">
+          <AnimatePresence mode="wait">
+            {!showTools ? (
+              <motion.button
+                key="collapsed-tools"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                onClick={() => { vibrate(10); setShowTools(true); }}
+                className="w-14 h-14 rounded-full bg-white/90 shadow-md flex items-center justify-center text-blue-600 hover:bg-blue-50 border border-blue-100/50"
+                title="Select Tool"
               >
-                {isSaved ? 'Saved! ✨' : 'Save'} <Save size={18} />
-              </button>
-              <button 
-                onClick={() => { 
-                  vibrate(VIBRATION_PATTERNS.SUCCESS); 
-                  if (settings.soundEnabled) play('challenge_unlock');
-                  onFinish(saveDrawing());
-                }} 
-                disabled={!hasDrawn} 
-                className={`flex-[2] btn-primary flex items-center justify-center gap-2 ${!hasDrawn ? 'opacity-50 cursor-not-allowed' : ''}`}
+                {tool === 'pencil' && <Pencil size={24} />}
+                {tool === 'pen' && <Pen size={24} />}
+                {tool === 'brush' && <Palette size={24} />}
+                {tool === 'bucket' && <PaintBucket size={24} />}
+              </motion.button>
+            ) : (
+              <motion.div
+                key="expanded-tools"
+                initial={{ width: 60, opacity: 0, scale: 0.8 }}
+                animate={{ width: 'auto', opacity: 1, scale: 1 }}
+                exit={{ width: 60, opacity: 0, scale: 0.8 }}
+                className="flex items-center gap-2 bg-white/95 p-1.5 rounded-full shadow-lg border border-blue-100"
               >
-                Finish <CheckCircle2 size={20} />
-              </button>
-            </div>
-          ) : null}
+                {(['pencil', 'pen', 'brush', 'bucket'] as const).map(t => (
+                  <button 
+                    key={t} 
+                    onClick={() => { vibrate(10); setTool(t); }} 
+                    className={`p-2.5 rounded-full transition-all ${tool === t ? 'bg-blue-500 text-white shadow-md' : 'text-blue-400 hover:bg-blue-50'}`}
+                  >
+                    {t === 'pencil' && <Pencil size={20} />} 
+                    {t === 'pen' && <Pen size={20} />} 
+                    {t === 'brush' && <Palette size={20} />} 
+                    {t === 'bucket' && <PaintBucket size={20} />}
+                  </button>
+                ))}
+                <button 
+                  onClick={() => { vibrate(10); setShowTools(false); }}
+                  className="p-1 rounded-full text-blue-400 hover:bg-red-50 hover:text-red-500"
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
+
+        {/* ARTIST MASCOT (Center, no Box background) */}
+        <div className="w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
+          <ArtistMascot className="w-full h-full drop-shadow-xl" />
+        </div>
+
+        {/* COLORS (Right side of Mascot, no Box Background) */}
+        <div className="flex items-center min-w-[70px] justify-end">
+          <AnimatePresence mode="wait">
+            {!showColors ? (
+              <motion.button
+                key="collapsed-colors"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                onClick={() => { vibrate(10); setShowColors(true); }}
+                className="w-14 h-14 rounded-full bg-white/90 shadow-md flex items-center justify-center border border-blue-100/50"
+                style={{ borderLeftColor: color, borderLeftWidth: 6 }}
+                title="Select Color"
+              >
+                <div className="w-6 h-6 rounded-full shadow-inner" style={{ backgroundColor: color }} />
+              </motion.button>
+            ) : (
+              <motion.div
+                key="expanded-colors"
+                initial={{ width: 60, opacity: 0, scale: 0.8 }}
+                animate={{ width: 'auto', opacity: 1, scale: 1 }}
+                exit={{ width: 60, opacity: 0, scale: 0.8 }}
+                className="flex items-center gap-1.5 bg-white/95 p-1.5 rounded-full shadow-lg border border-blue-100"
+              >
+                {colors.map(c => (
+                  <button 
+                    key={c} 
+                    onClick={() => { vibrate(10); setColor(c); }} 
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${color === c ? 'border-blue-500 scale-110 shadow-md' : 'border-transparent hover:scale-105'}`} 
+                    style={{ backgroundColor: c }} 
+                  />
+                ))}
+                <button 
+                  onClick={() => { vibrate(10); setShowColors(false); }}
+                  className="p-1.5 rounded-full text-blue-400 hover:bg-red-50 hover:text-red-500"
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+      </div>
+
+      {/* 2. Top-side controls for Canvas */}
+      <div className="w-full flex items-center justify-between px-4 sm:px-6">
+        <span className="text-xl font-black text-blue-900">Creativity Challenge</span>
+        <button 
+          onClick={clearCanvas} 
+          className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-full font-bold text-sm transition-all flex items-center gap-1"
+        >
+          <X size={16} /> Clear Canvas
+        </button>
+      </div>
+
+      {/* 3. Drawing Canvas Space - Big dimensions to fill all devices */}
+      <div className="flex-1 w-full bg-white rounded-3xl border-4 border-blue-200/50 shadow-inner overflow-hidden relative touch-none">
+        <canvas 
+          ref={canvasRef} 
+          onMouseDown={startDrawing} 
+          onMouseMove={draw} 
+          onMouseUp={stopDrawing} 
+          onMouseLeave={stopDrawing} 
+          onTouchStart={startDrawing} 
+          onTouchMove={draw} 
+          onTouchEnd={stopDrawing} 
+          className="absolute inset-0 w-full h-full cursor-crosshair pb-2 bg-gradient-to-b from-white to-sky-50/10" 
+        />
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none text-[10px] font-bold text-blue-900/30 tracking-widest uppercase">
+          Pro Skech Space
+        </div>
+      </div>
+
+      {/* 4. Action Buttons (Save/Finish) */}
+      <div className="w-full px-4 transform translate-y-[-4px]">
+        {!isFinished ? (
+          <div className="flex gap-3 w-full">
+            <button 
+              onClick={() => { 
+                vibrate(VIBRATION_PATTERNS.CLICK); 
+                onSave(saveDrawing()); 
+                setIsSaved(true); 
+              }} 
+              disabled={!hasDrawn || isSaved} 
+              className={`flex-1 py-4 bg-white border-2 border-blue-200 text-blue-600 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-blue-50 transition-all ${(!hasDrawn || isSaved) ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`}
+            >
+              {isSaved ? 'Saved! ✨' : 'Save'} <Save size={20} />
+            </button>
+            <button 
+              onClick={() => { 
+                vibrate(VIBRATION_PATTERNS.SUCCESS); 
+                if (settings.soundEnabled) play('challenge_unlock');
+                onFinish(saveDrawing());
+              }} 
+              disabled={!hasDrawn} 
+              className={`flex-[2] btn-primary py-4 text-base flex items-center justify-center gap-2 ${!hasDrawn ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`}
+            >
+              Finish Challenge <CheckCircle2 size={22} />
+            </button>
+          </div>
+        ) : null}
       </div>
     </motion.div>
   );
@@ -1024,146 +1115,147 @@ export const FootballStep = React.memo(({ onFinish, activeSkin = 'none', setting
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-4 sm:space-y-8 max-w-4xl mx-auto w-full"
+      className="flex-1 flex flex-col items-center justify-center space-y-4 max-w-3xl mx-auto w-full relative z-10"
     >
-      <div className="glass-card w-full p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-hidden">
-        <div className="flex items-center justify-between px-4">
-          <div className="flex flex-col">
-            <h2 className="text-2xl font-bold text-blue-900/80">Football Challenge</h2>
-            <p className="text-sm text-blue-900/40">Score {targetScore} goals to continue!</p>
-          </div>
-          <div className="flex gap-4">
-            <div className="bg-blue-500 text-white px-4 py-2 rounded-xl font-bold shadow-lg">
-              Score: {score}/{targetScore}
+      <div className="w-full space-y-4 overflow-hidden">
+        
+        {/* TEXT IN THE MIDDLE OF THE SCREEN & COUNTERS BELOW TEXT */}
+        <div className="text-center space-y-2 py-2">
+          <h2 className="text-3xl font-black text-blue-900">Football Challenge</h2>
+          <p className="text-blue-950/60 font-medium text-lg">Score {targetScore} goals to continue!</p>
+          
+          <div className="flex justify-between items-center w-full max-w-md mx-auto px-6 pt-2">
+            <div className="bg-orange-500 text-white px-5 py-2.5 rounded-2xl font-black shadow-md border border-orange-400 text-sm">
+              Balls Left: {ballsLeft}
             </div>
-            <div className="bg-orange-500 text-white px-4 py-2 rounded-xl font-bold shadow-lg">
-              Balls: {ballsLeft}
+            <div className="bg-blue-500 text-white px-5 py-2.5 rounded-2xl font-black shadow-md border border-blue-400 text-sm">
+              Goals: {score}/{targetScore}
             </div>
           </div>
         </div>
 
         {score >= targetScore ? null : (
-          <div className="relative w-full aspect-[3/2] bg-[#2f855a] rounded-xl sm:rounded-2xl border-4 sm:border-8 border-[#22543d] overflow-hidden shadow-2xl touch-none">
-          <svg
-            ref={svgRef}
-            viewBox="0 0 800 600"
-            className="w-full h-full cursor-crosshair"
-            onMouseDown={onStart}
-            onMouseMove={onMove}
-            onMouseUp={onEnd}
-            onTouchStart={onStart}
-            onTouchMove={onMove}
-            onTouchEnd={onEnd}
-          >
-            <defs>
-              <radialGradient id="ballGlass" cx="30%" cy="30%" r="70%">
-                <stop offset="0%" stopColor="#7dd3fc" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.2" />
-              </radialGradient>
-              <linearGradient id="innerLiquid" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#38bdf8" />
-                <stop offset="100%" stopColor="#0284c7" />
-              </linearGradient>
-              <pattern id="net-grid" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
-                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" opacity="0.4" />
-              </pattern>
-              <linearGradient id="grass-pitch" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#4ade80" />
-                <stop offset="100%" stopColor="#166534" />
-              </linearGradient>
-              <filter id="shadowBlur">
-                <feGaussianBlur stdDeviation="4" />
-              </filter>
-              <clipPath id="ballClip">
-                <circle cx="0" cy="-50" r="50" />
-              </clipPath>
-            </defs>
+          <div className="relative w-full h-80 sm:h-[420px] bg-[#2f855a] rounded-3xl border-8 border-[#22543d]/70 overflow-hidden shadow-2xl touch-none">
+            <svg
+              ref={svgRef}
+              viewBox="0 0 800 600"
+              className="w-full h-full cursor-crosshair"
+              onMouseDown={onStart}
+              onMouseMove={onMove}
+              onMouseUp={onEnd}
+              onTouchStart={onStart}
+              onTouchMove={onMove}
+              onTouchEnd={onEnd}
+            >
+              <defs>
+                <radialGradient id="ballGlass" cx="30%" cy="30%" r="70%">
+                  <stop offset="0%" stopColor="#7dd3fc" stopOpacity="0.4" />
+                  <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.2" />
+                </radialGradient>
+                <linearGradient id="innerLiquid" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#38bdf8" />
+                  <stop offset="100%" stopColor="#0284c7" />
+                </linearGradient>
+                <pattern id="net-grid" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" opacity="0.4" />
+                </pattern>
+                <linearGradient id="grass-pitch" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#4ade80" />
+                  <stop offset="100%" stopColor="#166534" />
+                </linearGradient>
+                <filter id="shadowBlur">
+                  <feGaussianBlur stdDeviation="4" />
+                </filter>
+                <clipPath id="ballClip">
+                  <circle cx="0" cy="-50" r="50" />
+                </clipPath>
+              </defs>
 
-            <rect x="0" y="0" width="800" height="250" fill="#a0aec0" opacity="0.2" />
-            <g opacity="0.2">
-              {Array.from({ length: 17 }).map((_, i) => (
-                <path key={`v-${i}`} d={`M ${i * 50},0 V 220`} stroke="white" strokeWidth="1" />
-              ))}
-              {Array.from({ length: 6 }).map((_, i) => (
-                <path key={`h-${i}`} d={`M 0,${i * 40} H 800`} stroke="white" strokeWidth="1" />
-              ))}
-            </g>
-            <rect x="0" y="210" width="800" height="40" fill="#14532d" />
-            <rect x="0" y="250" width="800" height="350" fill="url(#grass-pitch)" />
-            <rect x="0" y="520" width="800" height="10" fill="white" opacity="0.8" />
-
-            <g transform="translate(150, 120) scale(1.1)">
-              <path d="M 0,150 L -30,170 L -30,20 L 0,0 Z" fill="#fff" opacity="0.1" />
-              <path d="M 450,150 L 480,170 L 480,20 L 450,0 Z" fill="#fff" opacity="0.1" />
-              <rect x="0" y="0" width="450" height="150" fill="url(#net-grid)" stroke="white" strokeWidth="1" />
-              <path d="M 0,150 V 0 H 450 V 150" fill="none" stroke="white" strokeWidth="12" strokeLinecap="round" />
-            </g>
-
-            <g transform="translate(330, 120)">
-              <rect x="0" y="0" width="140" height="165" fill="#7c2d12" stroke="#451a03" strokeWidth="4" rx="8" />
-              <path d="M 0,0 L 140,165 M 140,0 L 0,165" stroke="#451a03" strokeWidth="2" opacity="0.5" />
-              <text x="70" y="85" textAnchor="middle" fill="white" className="font-bold" style={{ fontSize: '24px' }}>BLOCK</text>
-            </g>
-
-            {scoredBalls.map((b, i) => (
-              <g key={i} transform={`translate(${b.x}, ${b.y}) scale(0.3)`}>
-                <circle cx="0" cy="-50" r="50" fill="url(#ballGlass)" stroke="#7dd3fc" strokeWidth="2" />
-                <g clipPath="url(#ballClip)">
-                  <rect x="-50" y="-35" width="100" height="100" fill="url(#innerLiquid)" />
-                </g>
+              <rect x="0" y="0" width="800" height="250" fill="#a0aec0" opacity="0.2" />
+              <g opacity="0.2">
+                {Array.from({ length: 17 }).map((_, i) => (
+                  <path key={`v-${i}`} d={`M ${i * 50},0 V 220`} stroke="white" strokeWidth="1" />
+                ))}
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <path key={`h-${i}`} d={`M 0,${i * 40} H 800`} stroke="white" strokeWidth="1" />
+                ))}
               </g>
-            ))}
+              <rect x="0" y="210" width="800" height="40" fill="#14532d" />
+              <rect x="0" y="250" width="800" height="350" fill="url(#grass-pitch)" />
+              <rect x="0" y="520" width="800" height="10" fill="white" opacity="0.8" />
 
-            {!isFlying && ballsLeft > 0 && (
-              <ellipse cx={ballPos.x} cy={ballPos.y + 10} rx={60 * (ballPos.y / 520)} ry={15 * (ballPos.y / 520)} fill="black" opacity="0.4" filter="url(#shadowBlur)" />
-            )}
+              <g transform="translate(150, 120) scale(1.1)">
+                <path d="M 0,150 L -30,170 L -30,20 L 0,0 Z" fill="#fff" opacity="0.1" />
+                <path d="M 450,150 L 480,170 L 480,20 L 450,0 Z" fill="#fff" opacity="0.1" />
+                <rect x="0" y="0" width="450" height="150" fill="url(#net-grid)" stroke="white" strokeWidth="1" />
+                <path d="M 0,150 V 0 H 450 V 150" fill="none" stroke="white" strokeWidth="12" strokeLinecap="round" />
+              </g>
 
-            {(isFlying || ballsLeft > 0) && (
-              <g transform={`translate(${ballPos.x}, ${ballPos.y}) scale(${ballScale})`}>
-                <g className={!isFlying && !isDragging ? "idle-anim" : ""}>
+              <g transform="translate(330, 120)">
+                <rect x="0" y="0" width="140" height="165" fill="#7c2d12" stroke="#451a03" strokeWidth="4" rx="8" />
+                <path d="M 0,0 L 140,165 M 140,0 L 0,165" stroke="#451a03" strokeWidth="2" opacity="0.5" />
+                <text x="70" y="85" textAnchor="middle" fill="white" className="font-bold" style={{ fontSize: '24px' }}>BLOCK</text>
+              </g>
+
+              {scoredBalls.map((b, i) => (
+                <g key={i} transform={`translate(${b.x}, ${b.y}) scale(0.3)`}>
                   <circle cx="0" cy="-50" r="50" fill="url(#ballGlass)" stroke="#7dd3fc" strokeWidth="2" />
                   <g clipPath="url(#ballClip)">
                     <rect x="-50" y="-35" width="100" height="100" fill="url(#innerLiquid)" />
                   </g>
-                  <ellipse cx="-18" cy="-75" rx="15" ry="8" fill="white" opacity="0.3" transform="rotate(-30, -18, -75)" />
-                  <g transform="translate(-15, -75) scale(0.65)">
-                    <path d="M 0 0 L 10 0 L 30 40 L 30 0 L 45 0 L 45 60 L 30 60 L 10 20 L 10 60 L 0 60 Z" fill="white" opacity="0.9" />
-                  </g>
-                  <g transform="translate(0, -45)">
-                    <circle cx="-18" cy="0" r="5" fill="#001845" />
-                    <circle cx="18" cy="0" r="5" fill="#001845" />
-                    <path d="M -10,12 Q 0,22 10,12" fill="none" stroke="#001845" strokeWidth="4" strokeLinecap="round" />
+                </g>
+              ))}
+
+              {!isFlying && ballsLeft > 0 && (
+                <ellipse cx={ballPos.x} cy={ballPos.y + 10} rx={60 * (ballPos.y / 520)} ry={15 * (ballPos.y / 520)} fill="black" opacity="0.4" filter="url(#shadowBlur)" />
+              )}
+
+              {(isFlying || ballsLeft > 0) && (
+                <g transform={`translate(${ballPos.x}, ${ballPos.y}) scale(${ballScale})`}>
+                  <g className={!isFlying && !isDragging ? "idle-anim" : ""}>
+                    <circle cx="0" cy="-50" r="50" fill="url(#ballGlass)" stroke="#7dd3fc" strokeWidth="2" />
+                    <g clipPath="url(#ballClip)">
+                      <rect x="-50" y="-35" width="100" height="100" fill="url(#innerLiquid)" />
+                    </g>
+                    <ellipse cx="-18" cy="-75" rx="15" ry="8" fill="white" opacity="0.3" transform="rotate(-30, -18, -75)" />
+                    <g transform="translate(-15, -75) scale(0.65)">
+                      <path d="M 0 0 L 10 0 L 30 40 L 30 0 L 45 0 L 45 60 L 30 60 L 10 20 L 10 60 L 0 60 Z" fill="white" opacity="0.9" />
+                    </g>
+                    <g transform="translate(0, -45)">
+                      <circle cx="-18" cy="0" r="5" fill="#001845" />
+                      <circle cx="18" cy="0" r="5" fill="#001845" />
+                      <path d="M -10,12 Q 0,22 10,12" fill="none" stroke="#001845" strokeWidth="4" strokeLinecap="round" />
+                    </g>
                   </g>
                 </g>
-              </g>
+              )}
+
+              {isDragging && (
+                <line x1={startPoint.x} y1={startPoint.y - 40} x2={aimLine.x2} y2={aimLine.y2} stroke="white" strokeWidth="4" strokeDasharray="10,6" opacity={aimLine.opacity} />
+              )}
+            </svg>
+
+            {ballsLeft === 0 && !isFlying && score < targetScore && (
+              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white space-y-4 text-center p-6">
+                <h3 className="text-3xl font-bold">Game Over!</h3>
+                <p>You need {targetScore} goals.</p>
+                <button
+                  onClick={() => {
+                    setBallsLeft(initialBalls);
+                    setScore(0);
+                    setScoredBalls([]);
+                  }}
+                  className="btn-primary"
+                >
+                  Try Again
+                </button>
+              </div>
             )}
+          </div>
+        )}
 
-            {isDragging && (
-              <line x1={startPoint.x} y1={startPoint.y - 40} x2={aimLine.x2} y2={aimLine.y2} stroke="white" strokeWidth="4" strokeDasharray="10,6" opacity={aimLine.opacity} />
-            )}
-          </svg>
-
-          {ballsLeft === 0 && !isFlying && score < 5 && (
-            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white space-y-4 text-center">
-              <h3 className="text-3xl font-bold">Game Over!</h3>
-              <p>You need at least 5 goals.</p>
-              <button
-                onClick={() => {
-                  setBallsLeft(5);
-                  setScore(0);
-                  setScoredBalls([]);
-                }}
-                className="btn-primary"
-              >
-                Try Again
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-        {score >= 5 && (
-          <div className="flex flex-col items-center w-full">
+        {score >= targetScore && (
+          <div className="flex flex-col items-center w-full pt-6 space-y-4">
             <HappyMascot size={40} hat={activeSkin} settings={settings} />
             <button
               onClick={() => {
@@ -1206,27 +1298,60 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
     }
   }, [poppedCount, hasPlayedFinishSound, settings.soundEnabled, play, bubbleTarget]);
 
+  const initAudio = () => {
+    if (!audioContext.current) {
+      audioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (audioContext.current.state === 'suspended') {
+      audioContext.current.resume();
+    }
+  };
+
   const playPopSound = () => {
     try {
-      if (!audioContext.current) {
-        audioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const ctx = audioContext.current;
+      initAudio();
+      const ctx = audioContext.current!;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(400 + Math.random() * 200, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.1);
+      osc.frequency.setValueAtTime(500 + Math.random() * 250, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.12);
 
-      gain.gain.setValueAtTime(0.1, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+      // Increased volume as requested
+      gain.gain.setValueAtTime(0.5, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
       osc.start();
-      osc.stop(ctx.currentTime + 0.1);
+      osc.stop(ctx.currentTime + 0.12);
+    } catch (e) {
+      console.error('Audio error:', e);
+    }
+  };
+
+  const playAppearSound = () => {
+    try {
+      initAudio();
+      const ctx = audioContext.current!;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(150 + Math.random() * 100, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(350, ctx.currentTime + 0.15);
+
+      // Increased spawn audio volume as requested
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
     } catch (e) {
       console.error('Audio error:', e);
     }
@@ -1234,21 +1359,27 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (bubbles.length < 12 && poppedCount < bubbleTarget) {
+      if (bubbles.length < 15 && poppedCount < bubbleTarget) {
         const id = Math.random();
-        const size = Math.random() * 60 + 40;
-        const x = Math.random() * 80 + 10;
+        const size = Math.random() * 50 + 50; // slightly bigger, easier to touch
+        const x = Math.random() * 85 + 5;
         const y = 110;
-        const color = `hsla(${Math.random() * 360}, 70%, 70%, 0.4)`;
+        // vibrant colors
+        const color = `hsla(${Math.random() * 360}, 90%, 75%, 0.55)`;
         setBubbles(prev => [...prev, { id, x, y, size, color }]);
+        
+        if (settings.soundEnabled) {
+          playAppearSound();
+        }
       }
-    }, 800);
+    }, 600);
     return () => clearInterval(interval);
   }, [bubbles.length, poppedCount, bubbleTarget]);
 
   useEffect(() => {
     const moveInterval = setInterval(() => {
-      setBubbles(prev => prev.map(b => ({ ...b, y: b.y - 0.3 })).filter(b => b.y > -20));
+      // smooth medium upward movement speeds
+      setBubbles(prev => prev.map(b => ({ ...b, y: b.y - 0.4 })).filter(b => b.y > -20));
     }, 16);
     return () => clearInterval(moveInterval);
   }, []);
@@ -1272,38 +1403,49 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-4xl mx-auto w-full relative overflow-hidden h-[600px] bg-blue-50/30 rounded-3xl border-4 border-white/50 shadow-2xl"
+      className="absolute inset-0 w-full h-full overflow-hidden z-20 pointer-events-none"
     >
-      <div className="absolute top-8 left-8 z-10">
-        <h2 className="text-2xl font-bold text-blue-900/80">Bubble Pop!</h2>
-        <p className="text-sm text-blue-900/40">Pop {bubbleTarget} bubbles to relax ✨</p>
+      {/* SCORE HEADER (Fixed at top, no move, pointer-events enabled) */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 flex items-center justify-between w-full max-w-md px-6 pointer-events-none">
+        <div className="flex flex-col text-left">
+          <h2 className="text-2xl font-black text-blue-900 drop-shadow-sm select-none">Bubble Pop!</h2>
+          <p className="text-xs text-blue-950/60 font-black select-none">Pop bubbles to relaxation ✨</p>
+        </div>
+        <div className="bg-blue-600/90 backdrop-blur-sm text-white px-5 py-2.5 rounded-2xl font-black shadow-lg border border-blue-400/30 pointer-events-auto select-none">
+          Pop: {poppedCount}/{bubbleTarget}
+        </div>
       </div>
 
-      <div className="absolute top-8 right-8 z-10 bg-blue-500 text-white px-4 py-2 rounded-xl font-bold shadow-lg">
-        {poppedCount}/{bubbleTarget}
-      </div>
-
-      <div className="relative w-full h-full">
+      {/* FULL SCREEN BUBBLE INTERACTIVE GAME AREA */}
+      <div className="absolute inset-0 w-full h-full pointer-events-auto">
         <AnimatePresence>
           {bubbles.map(bubble => (
             <motion.div
               key={bubble.id}
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 2, opacity: 0 }}
+              exit={{ 
+                scale: 1.8, 
+                opacity: 0,
+                filter: "blur(4px)",
+                transition: { duration: 0.15 } 
+              }}
               onClick={() => popBubble(bubble.id)}
-              className="absolute cursor-pointer rounded-full border-2 border-white/80 shadow-inner backdrop-blur-[2px]"
+              className="absolute cursor-pointer rounded-full border-2 border-white/80 shadow-md backdrop-blur-[1px] flex items-center justify-center"
               style={{
                 left: `${bubble.x}%`,
                 top: `${bubble.y}%`,
                 width: bubble.size,
                 height: bubble.size,
                 backgroundColor: bubble.color,
+                boxShadow: "inset -8px -8px 20px rgba(0,0,0,0.05), inset 8px 8px 12px rgba(255,255,255,0.6)"
               }}
               whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.8 }}
+              whileTap={{ scale: 0.85 }}
             >
-              <div className="absolute top-1/4 left-1/4 w-1/4 h-1/4 bg-white/40 rounded-full blur-[1px]" />
+              {/* Spherical specular highlights to look highly professional */}
+              <div className="absolute top-[15%] left-[20%] w-[30%] h-[15%] bg-white/70 rounded-full rotate-[-30deg]" />
+              <div className="absolute bottom-[20%] right-[20%] w-[15%] h-[15%] bg-white/30 rounded-full" />
             </motion.div>
           ))}
         </AnimatePresence>
@@ -1313,13 +1455,17 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute inset-0 flex items-center justify-center bg-white/20 backdrop-blur-sm z-20"
+          className="absolute inset-0 flex items-center justify-center bg-sky-950/40 backdrop-blur-sm z-40 pointer-events-auto"
         >
-          <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-4 flex flex-col items-center">
-            <h3 className="text-3xl font-bold text-blue-900">Amazing!</h3>
-            <p className="text-blue-900/60">You're so focused! 🫧</p>
-            <button onClick={() => { vibrate(VIBRATION_PATTERNS.SUCCESS); onFinish(); }} className="btn-primary w-full mt-4">
-              Finish Today's Flow! ✨
+          <div className="bg-white/95 p-8 rounded-3xl shadow-2xl text-center space-y-4 flex flex-col items-center max-w-sm mx-4">
+            <div className="text-5xl">🫧</div>
+            <h3 className="text-3xl font-black text-blue-900">Flow Cleared!</h3>
+            <p className="text-blue-950/60 font-medium">Your breathing is perfectly calm & steady.</p>
+            <button 
+              onClick={() => { vibrate(VIBRATION_PATTERNS.SUCCESS); onFinish(); }} 
+              className="btn-primary w-full mt-4"
+            >
+              Done! Challenge Over ✨
             </button>
           </div>
         </motion.div>
@@ -1389,20 +1535,22 @@ export const MemoryStep = React.memo(({ onComplete, activeSkin = 'none', setting
   };
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-black text-blue-900 mb-2">Memory Match</h2>
-        <p className="text-blue-600 font-medium">Keep your brain sharp!</p>
+    <div className="flex flex-col items-center justify-center gap-6 select-none max-w-sm mx-auto">
+      <div className="text-center space-y-2">
+        <h2 className="text-3xl font-black text-blue-900">Memory Match</h2>
+        <p className="text-blue-950/60 font-medium text-lg">Keep your brain sharp!</p>
       </div>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 gap-3.5 pt-3">
         {cards.map(card => (
           <motion.button
             key={card.id}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => handleFlip(card.id)}
-            className={`w-16 h-16 rounded-xl flex items-center justify-center text-2xl shadow-md transition-all ${
-              card.flipped || card.matched ? 'bg-white' : 'bg-blue-500 text-transparent'
+            className={`w-20 h-20 rounded-2xl flex items-center justify-center text-3xl shadow-lg border-2 transition-all duration-300 ${
+              card.flipped || card.matched 
+                ? 'bg-white border-blue-200 text-blue-900' 
+                : 'bg-blue-500 border-white text-transparent hover:bg-blue-600'
             }`}
           >
             {card.flipped || card.matched ? card.emoji : '?'}
@@ -1432,48 +1580,66 @@ export const GratitudeStep = React.memo(({ onComplete, onSave, showToast, settin
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-xs mx-auto">
-      <div className="text-center">
-        <h2 className="text-2xl font-black text-blue-900 mb-2">Gratitude Jar</h2>
-        <p className="text-blue-600 font-medium">What's one good thing today?</p>
+    <div className="flex flex-col items-center justify-center space-y-4 w-full max-w-md mx-auto p-4 relative z-10">
+      {/* Centered Instructions, positioned closely above the input box */}
+      <div className="text-center space-y-1 select-none">
+        <h2 className="text-3xl font-black text-blue-900">Gratitude Jar</h2>
+        <p className="text-blue-950/60 font-medium text-lg">What's one good thing today?</p>
       </div>
-      <div className="relative w-full aspect-square bg-blue-50 rounded-3xl border-4 border-blue-200 flex items-center justify-center p-6 overflow-hidden">
-        <AnimatePresence>
+
+      <div className="w-full relative">
+        <AnimatePresence mode="wait">
           {!submitted ? (
-            <div className="w-full">
+            <motion.div 
+              key="typing-form"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="w-full"
+            >
+              {/* Ultra spacious typing box */}
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="I am grateful for..."
-                className="w-full h-32 bg-white rounded-xl p-4 text-blue-900 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-medium"
+                className="w-full h-48 sm:h-56 bg-white rounded-3xl border-4 border-blue-100 p-5 text-blue-900 placeholder-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-100/50 resize-none font-semibold text-lg leading-relaxed shadow-inner transition-all"
               />
-              <div className="flex gap-2 mt-4">
+              <div className="flex gap-3 mt-4">
                 <button
                   onClick={handleSave}
                   disabled={text.trim().length < 3}
-                  className="p-3 bg-amber-100 text-amber-600 rounded-xl font-bold shadow-sm disabled:opacity-50"
+                  className="p-4 bg-amber-100 text-amber-600 hover:bg-amber-200 transition-all rounded-2xl font-bold shadow-md disabled:opacity-40"
+                  title="Save draft"
                 >
-                  <Save size={24} />
+                  <Save size={26} />
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={text.trim().length < 3}
-                  className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
+                  className="flex-1 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-black shadow-lg disabled:opacity-40 transition-all flex items-center justify-center gap-2 text-lg active:scale-95"
                 >
                   Drop in Jar ✨
                 </button>
               </div>
-            </div>
+            </motion.div>
           ) : (
-            <div className="text-center space-y-4">
-               <HappyMascot size={40} hat={activeSkin} settings={settings} />
-               <div className="space-y-1">
-                 <p className="text-blue-900 font-black uppercase tracking-widest text-sm">Grateful!</p>
-                 <button onClick={onComplete} className="text-blue-500 font-bold flex items-center gap-1 mx-auto group">
-                   Continue <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+            <motion.div 
+              key="finished-success"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center py-8 space-y-6 flex flex-col items-center w-full"
+            >
+               <HappyMascot size={64} hat={activeSkin} settings={settings} />
+               <div className="space-y-4 w-full">
+                 <p className="text-blue-900 font-black uppercase tracking-widest text-base">Jar Filled!</p>
+                 <button 
+                   onClick={onComplete} 
+                   className="btn-primary w-full py-4 font-black flex items-center justify-center gap-2 group text-base"
+                 >
+                   Continue <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                  </button>
                </div>
-            </div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
@@ -1489,7 +1655,8 @@ export const ReactionStep = React.memo(({ onComplete, activeSkin = 'none', setti
 
   const startTest = () => {
     setState('waiting');
-    const delay = 2000 + Math.random() * 3000;
+    // Exact 15-20 seconds delay in the background as requested
+    const delay = 15000 + Math.random() * 5000;
     timerRef.current = setTimeout(() => {
       setState('ready');
       setStartTime(Date.now());
@@ -1520,55 +1687,61 @@ export const ReactionStep = React.memo(({ onComplete, activeSkin = 'none', setti
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 w-full">
-      <div className="text-center">
-        <h2 className="text-2xl font-black text-blue-900 mb-2">Reaction Test</h2>
-        <p className="text-blue-600 font-medium">Tap when it turns GREEN!</p>
+    <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto p-2 relative z-10 select-none">
+      {/* Labels placed close above the Reaction box */}
+      <div className="text-center space-y-1">
+        <h2 className="text-3xl font-black text-blue-900">Reaction Test</h2>
+        <p className="text-blue-950/60 font-medium text-base">Tap instantly when it turns GREEN!</p>
       </div>
 
       {state === 'finished' ? (
-        <div className="glass-card w-full p-10 flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300">
-           <HappyMascot size={48} hat={activeSkin} settings={settings} />
+        <div className="w-full py-6 flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300">
+           <HappyMascot size={64} hat={activeSkin} settings={settings} />
            <div className="text-center space-y-1">
-             <p className="text-3xl font-black text-blue-600">{reactionTime}ms</p>
-             <p className="text-blue-900/60 font-bold uppercase tracking-widest text-[10px]">Elite Reflexes!</p>
+             <p className="text-4xl font-black text-blue-600">{reactionTime}ms</p>
+             <p className="text-blue-900/60 font-bold uppercase tracking-widest text-xs">Elite Reflexes!</p>
            </div>
            <button 
              onClick={onComplete} 
-             className="btn-primary w-full bg-blue-600 hover:bg-blue-700 shadow-xl"
+             className="btn-primary w-full bg-blue-600 hover:bg-blue-700 shadow-xl py-4 font-black text-lg text-white"
            >
-             Continue <ChevronRight size={20} />
+             Continue <ChevronRight size={22} />
            </button>
         </div>
       ) : (
         <button
           onClick={handleClick}
-          className={`w-full aspect-square rounded-3xl flex flex-col items-center justify-center transition-colors duration-75 shadow-xl ${
-            state === 'waiting' ? 'bg-blue-100' :
-            state === 'ready' ? 'bg-green-500' :
-            state === 'too-soon' ? 'bg-red-500' : 'bg-blue-500'
+          className={`w-full aspect-square rounded-full flex flex-col items-center justify-center transition-all duration-75 shadow-lg border-4 border-white/60 ${
+            state === 'waiting' ? 'bg-[#1e293b]' :
+            state === 'ready' ? 'bg-emerald-500' :
+            state === 'too-soon' ? 'bg-red-500' : 'bg-blue-600'
           }`}
         >
-          {state === 'waiting' && <p className="text-blue-400 font-bold text-xl">Wait...</p>}
-          {state === 'ready' && <p className="text-white font-black text-4xl animate-pulse">TAP!</p>}
+          {state === 'waiting' && (
+            <div className="text-center space-y-2">
+              <p className="text-blue-300/80 font-black text-2xl animate-pulse">Wait for green...</p>
+              <p className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Background timer active</p>
+            </div>
+          )}
+          {state === 'ready' && <p className="text-white font-black text-6xl tracking-wide animate-ping duration-150">TAP NOW!</p>}
           {state === 'too-soon' && (
-            <div className="text-center text-white">
-              <p className="font-black text-2xl mb-2">Too soon!</p>
+            <div className="text-center text-white space-y-4">
+              <p className="font-black text-3xl">Too soon!</p>
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
                   startTest();
                 }} 
-                className="px-4 py-2 bg-white/20 rounded-lg font-bold"
+                className="px-6 py-2.5 bg-white/20 hover:bg-white/30 transition-all rounded-full font-bold shadow-md text-sm cursor-pointer"
               >
                 Try Again
               </button>
             </div>
           )}
           {state === 'clicked' && (
-            <div className="text-center text-white">
-              <p className="font-black text-4xl mb-2">{reactionTime}ms</p>
-              <p className="font-bold">Great reflexes!</p>
+            <div className="text-center text-white space-y-2">
+              <p className="font-black text-5xl">{reactionTime}ms</p>
+              <p className="font-bold text-lg">Great! Loading results...</p>
             </div>
           )}
         </button>
@@ -1619,21 +1792,21 @@ export const MeditationStep = React.memo(({ onDone, activeSkin = 'none', setting
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-12 max-w-md mx-auto w-full"
+      className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md mx-auto w-full relative z-10"
     >
-      <div className="w-full max-w-[300px]">
+      <div className="w-full max-w-[240px] lg:max-w-[300px]">
         <BreathingMascot phase={isActive ? 'In' : 'Out'} className={`drop-shadow-2xl transition-all duration-1000 ${isActive ? 'scale-110' : 'scale-100'}`} />
       </div>
       
-      <div className="glass-card w-full p-10 text-center space-y-8 border-purple-200 bg-purple-50/30">
-        <div className="space-y-4">
+      <div className="w-full text-center space-y-6">
+        <div className="space-y-2">
           {settings.isPro && (
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full mb-2">
               <Crown size={12} /> Pro Challenge
             </div>
           )}
-          <h2 className="text-3xl font-bold text-purple-900/80">Deep Meditation</h2>
-          <p className="text-purple-900/50 font-medium">Clear your mind for {duration} seconds</p>
+          <h2 className="text-3xl font-black text-purple-900">Deep Meditation</h2>
+          <p className="text-purple-950/60 font-medium text-lg">Clear your mind for {duration} seconds</p>
         </div>
 
         <div className="flex flex-col items-center gap-6">

@@ -163,6 +163,7 @@ export interface DailyProgress {
   reactionDone?: boolean;
   meditationDone?: boolean;
   writingDone?: boolean;
+  skippedPushups?: boolean;
   waterChallengeCount?: number;
   waterLogs?: { id: string; time: string; amount: number }[];
 }

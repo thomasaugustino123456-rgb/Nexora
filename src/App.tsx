@@ -3489,7 +3489,7 @@ export default function App() {
     const nextCompletionsCount = isCustomPlan
       ? dailyProgress.completionsCount || 0
       : (dailyProgress.completionsCount || 0) + 1;
-    const canAwardTrophy = completedTasks > 0 || isCustomPlan;
+    const canAwardTrophy = (completedTasks > 0 || isCustomPlan) && !progress.skippedPushups;
     setSessionTrophy("golden");
 
     if (canAwardTrophy) {
