@@ -85,6 +85,55 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
 
   const [prevDrunk, setPrevDrunk] = useState(finalDrunk);
   const [isDrinkingAnimate, setIsDrinkingAnimate] = useState(false);
+  const [isDropping, setIsDropping] = useState(false);
+  const [dropAnimateKey, setDropAnimateKey] = useState(0);
+
+  const playCoolWaterDropSound = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) {
+        if (play) play('water');
+        return;
+      }
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      // 1. Drip tone (rising frequency fast)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(150, now);
+      osc1.frequency.exponentialRampToValueAtTime(650, now + 0.155);
+      gain1.gain.setValueAtTime(0.18, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.155);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.155);
+
+      // 2. Secondary tiny ripple sound (slightly delayed higher pitch drop)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(800, now + 0.08);
+      osc2.frequency.exponentialRampToValueAtTime(1250, now + 0.165);
+      gain2.gain.setValueAtTime(0.06, now + 0.08);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.08);
+      osc2.stop(now + 0.2);
+    } catch (e) {
+      console.warn("Dripping audio synthesis failed:", e);
+      if (play) play('water');
+    }
+  };
+
+  const handleCardBoxClick = () => {
+    vibrate(10);
+    setIsDropping(true);
+    setDropAnimateKey(prev => prev + 1);
+  };
 
   useEffect(() => {
     if (finalDrunk > prevDrunk) {
@@ -161,7 +210,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 min-h-screen h-full w-full bg-gradient-to-b from-[#FAF7F2] to-[#F4F0E2] text-[#4F3F34] overflow-y-auto select-none flex flex-col justify-between z-[200]">
+    <div className="fixed inset-0 h-screen w-full bg-gradient-to-b from-[#FAF7F2] to-[#F4F0E2] text-[#4F3F34] overflow-hidden select-none flex flex-col justify-between z-[200]">
       
       {/* Background sloshing liquid - fixed very low at the bottom of the screen */}
       <div className="absolute inset-0 pointer-events-none z-0">
@@ -188,13 +237,13 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
       </header>
 
       {/* Main Container - Modern Dashboard featuring bottle on left, and ring widget + streak counter on right */}
-      <div className="flex-1 w-full max-w-5xl mx-auto px-4 xs:px-6 flex flex-col items-center justify-center relative z-40 -mt-8 min-[370px]:-mt-12 md:-mt-10 pb-12 md:pb-20">
+      <div className="flex-1 w-full max-w-5xl mx-auto px-4 xs:px-6 flex items-center justify-center relative z-40 -mt-6">
         
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-12 md:gap-16 w-full transition-all duration-300">
+        <div className="flex flex-row items-center justify-center gap-4 xs:gap-6 sm:gap-12 md:gap-16 w-full max-w-4xl mx-auto">
           
           {/* Left Column: Adaptive/Responsive Elegant Water Bottle (User's request to place on the left) */}
-          <div className="flex items-center justify-center flex-shrink-0 animate-in fade-in duration-500">
-            <div className="relative w-[232px] h-[580px] sm:w-[260px] sm:h-[650px] drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)] animate-in zoom-in duration-500">
+          <div className="flex items-center justify-center flex-shrink-0 animate-in fade-in duration-500 w-[42%] xs:w-[45%] max-w-[260px]">
+            <div className="relative w-[130px] h-[325px] xs:w-[155px] xs:h-[388px] sm:w-[220px] sm:h-[550px] md:w-[240px] md:h-[600px] lg:w-[260px] lg:h-[650px] drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)] animate-in zoom-in duration-500 flex items-center justify-center">
               
               <svg
                 viewBox="0 0 200 500"
@@ -329,7 +378,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
 
               {/* Water level digital percentage label inside the bottle */}
               <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none text-center">
-                <span className="text-sm font-black text-white/95 tracking-widest block uppercase drop-shadow-md bg-blue-950/40 px-3 py-1 rounded-full border border-blue-400">
+                <span className="text-xs xs:text-sm font-black text-white/95 tracking-widest block uppercase drop-shadow-md bg-blue-950/40 px-3 py-1 rounded-full border border-blue-400">
                   {(activeProgress * 100).toFixed(0)}%
                 </span>
               </div>
@@ -337,11 +386,11 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
           </div>
 
           {/* Right Column: Interactive stats & layout (User's request to place on the right next to the bottle) */}
-          <div className="flex flex-col items-center sm:items-start text-center sm:text-left space-y-8 md:space-y-10 max-w-[290px] xs:max-w-xs sm:max-w-md w-full text-[#4F3F34]">
+          <div className="flex flex-col items-center sm:items-start text-center sm:text-left space-y-4 xs:space-y-6 sm:space-y-8 md:space-y-10 w-[55%] xs:w-[50%] sm:w-[50%] max-w-[280px] sm:max-w-md text-[#4F3F34]">
             
             {/* Red Circle-inspired Custom Circular Hydration progress widget matching third image */}
             <motion.div 
-              onClick={handleAddWater}
+              onClick={handleCardBoxClick}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               initial={{ opacity: 0, x: 20 }}
@@ -350,7 +399,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                 x: 0,
                 borderColor: isDrinkingAnimate ? "#38bdf8" : "#E9E4D4",
                 boxShadow: isDrinkingAnimate ? "0 25px 50px -12px rgba(14,165,233,0.35)" : "0 8px 16px -8px rgba(0,0,0,0.04)",
-                scale: isDrinkingAnimate ? 1.05 : 1
+                scale: isDrinkingAnimate ? 1.04 : 1
               }}
               transition={{ 
                 borderColor: { duration: 0.2 },
@@ -358,48 +407,43 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                 scale: { type: "spring", stiffness: 350, damping: 15 },
                 default: { delay: 0.1 }
               }}
-              className="glass-card bg-white/80 hover:bg-white backdrop-blur-md rounded-[2.5rem] p-6 xs:p-8 border-2 border-[#E9E4D4]/80 shadow-2xl w-full flex items-center gap-4 xs:gap-6 relative overflow-hidden cursor-pointer hover:border-[#38bdf8]/40 transition-all active:ring-4 active:ring-blue-100"
+              className="glass-card bg-white/80 hover:bg-white backdrop-blur-md rounded-[1.5rem] xs:rounded-[2.2rem] p-3 xs:p-4 sm:p-6 md:p-8 border-2 border-[#E9E4D4]/80 shadow-xl w-full flex flex-col sm:flex-row items-center gap-3 sm:gap-6 relative overflow-hidden cursor-pointer hover:border-[#38bdf8]/40 transition-all active:ring-4 active:ring-blue-100"
             >
               {/* Outer Decorative Glow */}
               <div className="absolute -top-10 -right-10 w-24 h-24 bg-blue-400/10 rounded-full blur-xl pointer-events-none" />
-              
-              {/* Absolute floating droplets animation when clicked/completed */}
+
+              {/* Falling Droplet Layer relative on top of the phone screen landing directly into the container */}
               <AnimatePresence>
-                {isDrinkingAnimate && (
-                  <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
-                    {[...Array(6)].map((_, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ 
-                          opacity: 0, 
-                          y: 80, 
-                          x: 60 + Math.random() * 120, 
-                          scale: 0.5 + Math.random() * 0.5 
-                        }}
-                        animate={{ 
-                          opacity: [0, 1, 1, 0], 
-                          y: -30, 
-                          scale: [0.5, 1.3, 0.9, 0] 
-                        }}
-                        exit={{ opacity: 0 }}
-                        transition={{ 
-                          duration: 1.4 + Math.random() * 0.6, 
-                          ease: "easeOut",
-                          delay: i * 0.12 
-                        }}
-                        className="absolute"
-                      >
-                        <svg className="w-5 h-5 text-[#38bdf8] drop-shadow-[0_2px_8px_rgba(56,189,248,0.5)]" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-                        </svg>
-                      </motion.div>
-                    ))}
+                {isDropping && (
+                  <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+                    <motion.div
+                      key={dropAnimateKey}
+                      initial={{ y: -800, opacity: 0.2, scale: 1.3 }}
+                      animate={{ y: 0, opacity: [0.3, 1, 1], scale: [1.3, 1, 0.95] }}
+                      exit={{ scale: [0.95, 2.2], opacity: [1, 0] }}
+                      transition={{ 
+                        y: { duration: 0.62, ease: [0.47, 0, 0.745, 0.715] }, // gravity acceleration curve
+                        opacity: { duration: 0.15 },
+                        scale: { duration: 0.25 }
+                      }}
+                      onAnimationComplete={() => {
+                        setIsDropping(false);
+                        playCoolWaterDropSound();
+                        setIsDrinkingAnimate(true);
+                        setTimeout(() => setIsDrinkingAnimate(false), 1200);
+                      }}
+                      className="absolute pl-0.5 pt-0.5"
+                    >
+                      <svg className="w-10 h-10 xs:w-12 xs:h-12 text-[#0ea5e9] drop-shadow-[0_4px_15px_rgba(14,165,233,0.75)]" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                      </svg>
+                    </motion.div>
                   </div>
                 )}
               </AnimatePresence>
-
+              
               {/* SVG Ring Progress - Properly scaled with responsive viewBox */}
-              <div className="relative w-28 h-28 flex-shrink-0 flex items-center justify-center">
+              <div className="relative w-16 h-16 xs:w-20 xs:h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 flex-shrink-0 flex items-center justify-center">
                 <svg viewBox="0 0 80 80" className="w-full h-full transform -rotate-90">
                   {/* Background Circle */}
                   <circle
@@ -458,7 +502,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                     transition={{ duration: 1.2, ease: "easeInOut" }}
                     className="relative z-10"
                   >
-                    <svg className="w-10 h-10 text-[#0ea5e9] drop-shadow-[0_2px_6px_rgba(14,165,233,0.35)]" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 xs:w-8 xs:h-8 sm:w-10 sm:h-10 text-[#0ea5e9] drop-shadow-[0_2px_6px_rgba(14,165,233,0.35)]" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
                     </svg>
                   </motion.div>
@@ -466,12 +510,12 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
               </div>
 
               {/* Text Information for today's drinks */}
-              <div className="flex flex-col text-left space-y-1 select-none min-w-0 flex-1">
-                <span className="text-blue-900/50 text-xs font-black tracking-widest uppercase truncate">
+              <div className="flex flex-col text-center sm:text-left space-y-0.5 select-none min-w-0 flex-1">
+                <span className="text-blue-900/50 text-[10px] sm:text-xs font-black tracking-widest uppercase truncate">
                   Today's Water
                 </span>
                 
-                <div className="h-10 flex items-center">
+                <div className="h-6 sm:h-10 flex items-center justify-center sm:justify-start">
                   <AnimatePresence mode="popLayout">
                     <motion.span
                       key={finalDrunk}
@@ -479,14 +523,14 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: -15, opacity: 0 }}
                       transition={{ type: "spring", stiffness: 350, damping: 18 }}
-                      className="text-3xl font-black text-[#0ea5e9] tracking-tight block truncate animate-pulse"
+                      className="text-base xs:text-lg sm:text-xl md:text-2xl font-black text-[#0ea5e9] tracking-tight block truncate"
                     >
                       {finalDrunk.toFixed(1)} cups
                     </motion.span>
                   </AnimatePresence>
                 </div>
 
-                <div className="h-5 flex items-center">
+                <div className="h-4 sm:h-5 flex items-center justify-center sm:justify-start">
                   <AnimatePresence mode="popLayout">
                     <motion.span
                       key={finalDrunk}
@@ -494,7 +538,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: -8, opacity: 0 }}
                       transition={{ type: "spring", stiffness: 350, damping: 20 }}
-                      className="text-[#0ea5e9]/70 font-semibold text-sm tracking-tight block truncate"
+                      className="text-[#0ea5e9]/70 font-semibold text-[10px] xs:text-xs sm:text-sm tracking-tight block truncate"
                     >
                       {finalDrunk.toFixed(1)} of {finalGoal} cups
                     </motion.span>
@@ -508,15 +552,15 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="flex flex-col items-center sm:items-start space-y-1 w-full pl-0 sm:pl-2"
+              className="flex flex-col items-center sm:items-start space-y-0.5 w-full pl-0 sm:pl-2"
             >
-              <div className="flex items-baseline gap-2">
-                <span className="text-6xl md:text-[8rem] font-sans font-black tracking-tighter text-[#0ea5e9] leading-none drop-shadow-[0_4px_15px_rgba(14,165,233,0.18)] md:drop-shadow-[0_6px_25px_rgba(14,165,233,0.22)] select-none">
+              <div className="flex items-baseline gap-1 xs:gap-2 justify-center sm:justify-start">
+                <span className="text-4xl xs:text-5xl sm:text-6xl md:text-[8rem] font-sans font-black tracking-tighter text-[#0ea5e9] leading-none drop-shadow-[0_4px_15px_rgba(14,165,233,0.18)] select-none">
                   {consecutiveDays}
                 </span>
-                <span className="text-3xl text-[#0ea5e9] select-none animate-bounce" style={{ animationDuration: "4s" }}>🔥</span>
+                <span className="text-xl sm:text-3xl text-[#0ea5e9] select-none animate-bounce" style={{ animationDuration: "4s" }}>🔥</span>
               </div>
-              <span className="text-[#0ea5e9]/60 font-black text-xs tracking-[0.2em] uppercase">
+              <span className="text-[#0ea5e9]/60 font-black text-[9px] xs:text-[10px] sm:text-xs tracking-[0.15em] sm:tracking-[0.2em] uppercase text-center sm:text-left">
                 CONSECUTIVE DAYS STREAK
               </span>
             </motion.div>
