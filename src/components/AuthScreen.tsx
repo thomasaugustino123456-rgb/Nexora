@@ -133,9 +133,9 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     } catch (err: any) {
       console.warn("Handled email auth error info:", err.code, err.message);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        setError('Invalid email or password.');
+        setError('Invalid email or password, bro. (Hint: If you originally signed in with Google, click the Google button below first, then visit System Settings to set an Email Password!)');
       } else if (err.code === 'auth/email-already-in-use') {
-        setError('An account with this email already exists.');
+        setError('An account with this email already exists, bro. (If you originally used Google, please sign in using Google and set your password in System Settings!)');
       } else if (err.code === 'auth/weak-password') {
         setError('Password should be at least 6 characters.');
       } else {
@@ -163,7 +163,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     } catch (err: any) {
       console.warn("Forgot password request failed:", err);
       if (err.code === 'auth/user-not-found') {
-        setError('No account found under this email. Try typing it again, or use Google below!');
+        setError("No direct email/password account was found for this email, bro. If you signed up using Google, log in with Google first, then visit System Settings to set your direct Email password! ⚡");
       } else if (err.code === 'auth/invalid-email') {
         setError('Please enter a valid email address.');
       } else {

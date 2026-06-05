@@ -5,9 +5,10 @@ import {
   Trash2, ChevronLeft, RefreshCw, Smartphone, Zap, Flame, 
   Droplets, Target, Clock, Volume2, Palette, Sparkles, 
   ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle, Video,
-  Layout, BoxSelect
+  Layout, BoxSelect, Lock, Key
 } from 'lucide-react';
-import { User as FirebaseUser } from 'firebase/auth';
+import { User as FirebaseUser, EmailAuthProvider, linkWithCredential, updatePassword, sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../firebase';
 import { UserSettings } from '../types';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 
@@ -53,6 +54,67 @@ export function SettingsScreen({
   const [showPrivacyModal, setShowPrivacyModal] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [feedback, setFeedback] = React.useState({ rating: 5, message: '', category: 'General' });
+
+  // Password / Link state and actions
+  const [passwordInput, setPasswordInput] = React.useState('');
+  const [isPasswordActionLoading, setIsPasswordActionLoading] = React.useState(false);
+
+  const hasPasswordProvider = user?.providerData?.some(
+    (provider) => provider.providerId === 'password'
+  );
+
+  const handleSavePassword = async () => {
+    vibrate(15);
+    if (!passwordInput || passwordInput.length < 6) {
+      showToast('Password should be at least 6 characters, bro!', 'error');
+      return;
+    }
+    
+    if (!user) {
+      showToast('No active user session detected, bro.', 'error');
+      return;
+    }
+
+    setIsPasswordActionLoading(true);
+    try {
+      if (hasPasswordProvider) {
+        // Update existing password
+        await updatePassword(user, passwordInput);
+        showToast('Password updated successfully! 🔥', 'success');
+      } else {
+        // Link new password credential
+        const credential = EmailAuthProvider.credential(user.email!, passwordInput);
+        await linkWithCredential(user, credential);
+        showToast('Email & Password Login connected successfully! 🚀 Log in anytime with email + password.', 'success');
+      }
+      setPasswordInput('');
+    } catch (err: any) {
+      console.error("Password action failed:", err);
+      if (err.code === 'auth/requires-recent-login') {
+        showToast('Requires recent login, bro! Logout and log in with Google, then set your password.', 'error');
+      } else if (err.code === 'auth/credential-already-in-use') {
+        showToast('This email is already linked or in use by another account, bro.', 'error');
+      } else {
+        showToast(`Failed: ${err.message}`, 'error');
+      }
+    } finally {
+      setIsPasswordActionLoading(false);
+    }
+  };
+
+  const handleSendResetEmail = async () => {
+    vibrate(15);
+    if (!user || !user.email) return;
+    setIsPasswordActionLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, user.email);
+       showToast('Password reset link sent to your email inbox! ✉️ Check your mail to set your password.', 'success');
+    } catch (err: any) {
+       showToast(`Could not send reset email: ${err.message}`, 'error');
+    } finally {
+       setIsPasswordActionLoading(false);
+    }
+  };
   
   const COLORS = [
     { name: 'Classic Blue', value: '#3b82f6' },
@@ -316,6 +378,69 @@ export function SettingsScreen({
               <div className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${isPro ? 'bg-yellow-400 text-white shadow-lg shadow-yellow-200' : 'bg-gray-100 text-gray-400'}`}>
                 {isPro ? <><Crown size={10} /> Nexus Pro</> : 'Free Tier'}
               </div>
+          </div>
+        </div>
+
+        {/* Security & Password Sync Center */}
+        <div className="safe-glass gpu p-6 space-y-4">
+          <div className="flex items-center gap-3 mb-2">
+            <Lock size={18} className="text-blue-500" />
+            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Security & Password Credentials</h3>
+          </div>
+          
+          <div className="p-4 bg-blue-50/40 rounded-2xl border border-blue-100/30 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                <Key size={18} />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-black text-blue-900 text-sm">
+                  {hasPasswordProvider ? 'Email Login is Connected ⚡' : 'Connect direct Email Log in'}
+                </h4>
+                <p className="text-[11px] text-blue-900/60 font-medium leading-relaxed mt-1">
+                  {hasPasswordProvider 
+                    ? 'Your Google account has a connected Email Password. You can log in with either Google or Email/Password, bro.'
+                    : 'Setting an email password lets you sign in directly using your email address and password, alongside your secure Google login!'
+                  }
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-dashed border-blue-100/50 pt-3 space-y-3">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">
+                  {hasPasswordProvider ? 'Update Current Password' : 'Set New Account Password (min 6 characters)'}
+                </label>
+                <div className="flex gap-2">
+                  <input 
+                    type="password" 
+                    placeholder={hasPasswordProvider ? "Type a new password" : "Min 6 characters password"}
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    disabled={isPasswordActionLoading}
+                    className="flex-1 bg-white hover:bg-white text-blue-900 placeholder-blue-900/30 rounded-xl px-4 py-2.5 text-xs font-semibold border border-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  />
+                  <button
+                    onClick={handleSavePassword}
+                    disabled={isPasswordActionLoading}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-md shadow-blue-100 whitespace-nowrap shrink-0"
+                  >
+                    {isPasswordActionLoading ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-dashed border-blue-100/50 pt-3">
+                <span className="text-[10px] text-blue-900/40 font-black uppercase tracking-widest">Alternative Reset Option</span>
+                <button
+                  onClick={handleSendResetEmail}
+                  disabled={isPasswordActionLoading}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline transition-all"
+                >
+                  ✉️ Send Password Reset to Gmail
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
