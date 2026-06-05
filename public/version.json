@@ -1,11 +1,11 @@
 {
-  "version": "2.0.1",
+  "version": "1.5.2",
   "releaseNotes": [
-    "Nexora V2.0.1: Cache-Busting Protocol Active! ⚡",
-    "Stability Update: Fixed a critical issue where the app would stay on old versions.",
-    "Nuclear Sync: Improved Service Worker lifecycle for instant updates.",
-    "Memory Optimization: Cleared legacy session artifacts for a smoother experience."
+    "Nexora v1.5.2: Stable restoration active! ⚡",
+    "Firestore Hybrid Sync: Improved connection reliability.",
+    "Gemini 1.5 Integration: Mascot AI is now fully operational.",
+    "Stability Enhancements: Reverted back to the standard stable previous release."
   ],
-  "imageUrl": "https://api.dicebear.com/7.x/bottts/svg?seed=Nexora&backgroundColor=b6e3f4",
-  "forceUpdate": true
+  "imageUrl": "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+  "forceUpdate": false
 }

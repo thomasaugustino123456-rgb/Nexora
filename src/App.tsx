@@ -745,7 +745,7 @@ export default function App() {
 
   const isPro = settings?.isPro || (settings?.proTestActive ? true : false);
 
-  const currentAppVersion = "2.0.1"; // V2.0.1 Upgrade: Force Cache Reset
+  const currentAppVersion = "1.5.2"; // Stable v1.5.2 Standard Version
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>(
     "nexora_active_screen",
     "home",
