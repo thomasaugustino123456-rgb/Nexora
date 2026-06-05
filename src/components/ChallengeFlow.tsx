@@ -120,9 +120,9 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   };
 
   return (
-    <div className="fixed inset-0 challenge-flow-bg z-[100] flex flex-col items-center overflow-hidden relative">
+    <div className="fixed inset-0 challenge-flow-bg z-[100] flex flex-col items-center overflow-hidden relative h-screen max-h-screen select-none">
 
-      <div className="w-full max-w-4xl flex flex-col min-h-screen relative z-10">
+      <div className="w-full max-w-4xl flex flex-col h-screen max-h-screen relative z-10 overflow-hidden">
         <header className="p-6 flex items-center justify-between">
           <button onClick={handleBackClick} className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors">
             <ChevronRight className="rotate-180" size={28} />
@@ -317,55 +317,22 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
 
 export const PushupsStep = React.memo(({ goal, onDone, onSkip, activeSkin = 'none', settings, play }: { goal: number, onDone: () => void, onSkip: () => void, activeSkin?: string, settings: UserSettings, play: (s: string) => void }) => {
   const [isReady, setIsReady] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return (
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 1.1 }}
-        className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-md mx-auto w-full"
-      >
-        <div className="w-full max-w-[280px]">
-          <PushupMascot className="drop-shadow-2xl grayscale opacity-60" />
-        </div>
-        
-        <div className="w-full text-center space-y-6">
-          <div className="space-y-2">
-            <div className="w-16 h-16 bg-red-100/50 rounded-full flex items-center justify-center mx-auto mb-2">
-              <X className="text-red-500" size={32} />
-            </div>
-            <h2 className="text-3xl font-bold text-red-600">Challenge Failed</h2>
-            <p className="text-red-900/60 font-medium">You skipped the push-ups. No trophy will be awarded for this session.</p>
-          </div>
-
-          <button 
-            onClick={() => onSkip()} 
-            className="btn-primary w-full bg-red-500 hover:bg-red-600 border-none shadow-red-200"
-          >
-            Continue Anyway
-          </button>
-        </div>
-      </motion.div>
-    );
-  }
 
   return (
     <motion.div 
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-md mx-auto w-full"
+      className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-sm mx-auto w-full"
     >
-      <div className="w-full max-w-[320px]">
+      <div className="w-full max-w-[280px]">
         <PushupMascot className="drop-shadow-2xl" />
       </div>
       
       <div className="w-full text-center space-y-6">
-        <div className="space-y-2">
-          <h2 className="text-3xl font-bold text-blue-900">Push-ups</h2>
-          <p className="text-blue-900/60 font-medium text-lg">Do {goal} push-ups</p>
+        <div className="space-y-1">
+          <h2 className="text-3xl font-black text-blue-900">Push-ups Challenge</h2>
+          <p className="text-blue-950/60 font-medium text-lg">Complete {goal} push-ups</p>
         </div>
 
         <div className="space-y-4 flex flex-col items-center w-full">
@@ -377,7 +344,7 @@ export const PushupsStep = React.memo(({ goal, onDone, onSkip, activeSkin = 'non
                 if (settings.soundEnabled) play('challenge_unlock');
                 onDone();
               }} 
-              className="btn-primary w-full flex items-center justify-center gap-2"
+              className="btn-primary w-full flex items-center justify-center gap-2 font-black py-4 text-base shadow-xl"
             >
               I'm Done! 💪
             </button>
@@ -386,11 +353,11 @@ export const PushupsStep = React.memo(({ goal, onDone, onSkip, activeSkin = 'non
             onClick={() => { 
               vibrate(VIBRATION_PATTERNS.CLICK); 
               if (settings.soundEnabled) play('losing'); 
-              setFailed(true);
+              onSkip();
             }} 
-            className="btn-secondary w-full"
+            className="btn-secondary w-full py-4 text-base pointer-events-auto border-2 border-red-200 text-red-500 hover:bg-red-50/50"
           >
-            Skip
+            Skip Challenge
           </button>
         </div>
       </div>
@@ -1535,22 +1502,22 @@ export const MemoryStep = React.memo(({ onComplete, activeSkin = 'none', setting
   };
 
   return (
-    <div className="flex flex-col items-center justify-center gap-6 select-none max-w-sm mx-auto">
-      <div className="text-center space-y-2">
+    <div className="flex flex-col items-center justify-center gap-6 select-none max-w-sm mx-auto w-full">
+      <div className="text-center space-y-1">
         <h2 className="text-3xl font-black text-blue-900">Memory Match</h2>
-        <p className="text-blue-950/60 font-medium text-lg">Keep your brain sharp!</p>
+        <p className="text-blue-950/60 font-medium text-base">Train your cognitive speed!</p>
       </div>
-      <div className="grid grid-cols-4 gap-3.5 pt-3">
+      <div className="grid grid-cols-4 gap-4 pt-2">
         {cards.map(card => (
           <motion.button
             key={card.id}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
             onClick={() => handleFlip(card.id)}
-            className={`w-20 h-20 rounded-2xl flex items-center justify-center text-3xl shadow-lg border-2 transition-all duration-300 ${
+            className={`w-20 sm:w-24 h-20 sm:h-24 rounded-3xl flex items-center justify-center text-4xl shadow-xl border-4 transition-all duration-300 ${
               card.flipped || card.matched 
                 ? 'bg-white border-blue-200 text-blue-900' 
-                : 'bg-blue-500 border-white text-transparent hover:bg-blue-600'
+                : 'bg-gradient-to-br from-blue-500 to-blue-600 border-white text-transparent hover:brightness-105'
             }`}
           >
             {card.flipped || card.matched ? card.emoji : '?'}
@@ -1580,9 +1547,9 @@ export const GratitudeStep = React.memo(({ onComplete, onSave, showToast, settin
   };
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-4 w-full max-w-md mx-auto p-4 relative z-10">
-      {/* Centered Instructions, positioned closely above the input box */}
-      <div className="text-center space-y-1 select-none">
+    <div className="flex flex-col items-center justify-center space-y-6 w-full max-w-md mx-auto p-2 relative z-10">
+      {/* Centered Instructions, positioned cleanly and highly above the input box */}
+      <div className="text-center space-y-1 select-none pb-2 mt-[-20px]">
         <h2 className="text-3xl font-black text-blue-900">Gratitude Jar</h2>
         <p className="text-blue-950/60 font-medium text-lg">What's one good thing today?</p>
       </div>
@@ -1597,18 +1564,18 @@ export const GratitudeStep = React.memo(({ onComplete, onSave, showToast, settin
               exit={{ opacity: 0, y: -10 }}
               className="w-full"
             >
-              {/* Ultra spacious typing box */}
+              {/* Pro Ultra spacious typing box */}
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="I am grateful for..."
-                className="w-full h-48 sm:h-56 bg-white rounded-3xl border-4 border-blue-100 p-5 text-blue-900 placeholder-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-100/50 resize-none font-semibold text-lg leading-relaxed shadow-inner transition-all"
+                placeholder="Today, I am extremely grateful for..."
+                className="w-full h-56 sm:h-64 bg-white rounded-[32px] border-4 border-blue-100 p-6 text-blue-900 placeholder-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-100/50 resize-none font-semibold text-lg leading-relaxed shadow-lg transition-all"
               />
-              <div className="flex gap-3 mt-4">
+              <div className="flex gap-4 mt-4">
                 <button
                   onClick={handleSave}
                   disabled={text.trim().length < 3}
-                  className="p-4 bg-amber-100 text-amber-600 hover:bg-amber-200 transition-all rounded-2xl font-bold shadow-md disabled:opacity-40"
+                  className="p-4 bg-amber-100 text-amber-600 hover:bg-amber-200 transition-all rounded-3xl font-bold shadow-md disabled:opacity-40"
                   title="Save draft"
                 >
                   <Save size={26} />
@@ -1616,7 +1583,7 @@ export const GratitudeStep = React.memo(({ onComplete, onSave, showToast, settin
                 <button
                   onClick={handleSubmit}
                   disabled={text.trim().length < 3}
-                  className="flex-1 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-black shadow-lg disabled:opacity-40 transition-all flex items-center justify-center gap-2 text-lg active:scale-95"
+                  className="flex-1 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-3xl font-black shadow-lg disabled:opacity-40 transition-all flex items-center justify-center gap-2 text-lg active:scale-95"
                 >
                   Drop in Jar ✨
                 </button>
@@ -1627,7 +1594,7 @@ export const GratitudeStep = React.memo(({ onComplete, onSave, showToast, settin
               key="finished-success"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="text-center py-8 space-y-6 flex flex-col items-center w-full"
+              className="text-center py-6 space-y-6 flex flex-col items-center w-full"
             >
                <HappyMascot size={64} hat={activeSkin} settings={settings} />
                <div className="space-y-4 w-full">
@@ -1655,7 +1622,7 @@ export const ReactionStep = React.memo(({ onComplete, activeSkin = 'none', setti
 
   const startTest = () => {
     setState('waiting');
-    // Exact 15-20 seconds delay in the background as requested
+    // Exact 15-20 seconds delay in the background as requested by user
     const delay = 15000 + Math.random() * 5000;
     timerRef.current = setTimeout(() => {
       setState('ready');
@@ -1687,9 +1654,9 @@ export const ReactionStep = React.memo(({ onComplete, activeSkin = 'none', setti
   };
 
   return (
-    <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto p-2 relative z-10 select-none">
-      {/* Labels placed close above the Reaction box */}
-      <div className="text-center space-y-1">
+    <div className="flex flex-col items-center gap-6 w-full max-w-sm mx-auto p-2 relative z-10 select-none">
+      {/* Labels placed cleanly and highly above the Reaction circle */}
+      <div className="text-center space-y-1 mt-[-20px] pb-2">
         <h2 className="text-3xl font-black text-blue-900">Reaction Test</h2>
         <p className="text-blue-950/60 font-medium text-base">Tap instantly when it turns GREEN!</p>
       </div>
@@ -1698,7 +1665,7 @@ export const ReactionStep = React.memo(({ onComplete, activeSkin = 'none', setti
         <div className="w-full py-6 flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300">
            <HappyMascot size={64} hat={activeSkin} settings={settings} />
            <div className="text-center space-y-1">
-             <p className="text-4xl font-black text-blue-600">{reactionTime}ms</p>
+             <p className="text-5xl font-black text-blue-600 animate-bounce">{reactionTime}ms</p>
              <p className="text-blue-900/60 font-bold uppercase tracking-widest text-xs">Elite Reflexes!</p>
            </div>
            <button 
@@ -1707,26 +1674,26 @@ export const ReactionStep = React.memo(({ onComplete, activeSkin = 'none', setti
            >
              Continue <ChevronRight size={22} />
            </button>
-        </div>
+         </div>
       ) : (
         <button
           onClick={handleClick}
-          className={`w-full aspect-square rounded-full flex flex-col items-center justify-center transition-all duration-75 shadow-lg border-4 border-white/60 ${
+          className={`w-72 h-72 sm:w-80 sm:h-80 rounded-full flex flex-col items-center justify-center transition-all duration-75 shadow-2xl border-8 border-white/80 active:scale-[0.97] cursor-pointer ${
             state === 'waiting' ? 'bg-[#1e293b]' :
             state === 'ready' ? 'bg-emerald-500' :
             state === 'too-soon' ? 'bg-red-500' : 'bg-blue-600'
           }`}
         >
           {state === 'waiting' && (
-            <div className="text-center space-y-2">
-              <p className="text-blue-300/80 font-black text-2xl animate-pulse">Wait for green...</p>
-              <p className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Background timer active</p>
+            <div className="text-center space-y-2 px-6">
+              <p className="text-blue-200 font-extrabold text-2xl animate-pulse">Waiting...</p>
+              <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">Hold focus</p>
             </div>
           )}
-          {state === 'ready' && <p className="text-white font-black text-6xl tracking-wide animate-ping duration-150">TAP NOW!</p>}
+          {state === 'ready' && <p className="text-white font-black text-6xl tracking-wide animate-ping duration-150">TAP!</p>}
           {state === 'too-soon' && (
-            <div className="text-center text-white space-y-4">
-              <p className="font-black text-3xl">Too soon!</p>
+            <div className="text-center text-white space-y-4 px-6">
+              <p className="font-black text-4xl">Early!</p>
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1739,9 +1706,9 @@ export const ReactionStep = React.memo(({ onComplete, activeSkin = 'none', setti
             </div>
           )}
           {state === 'clicked' && (
-            <div className="text-center text-white space-y-2">
+            <div className="text-center text-white space-y-2 px-6">
               <p className="font-black text-5xl">{reactionTime}ms</p>
-              <p className="font-bold text-lg">Great! Loading results...</p>
+              <p className="font-bold text-lg">Loading...</p>
             </div>
           )}
         </button>
@@ -1862,26 +1829,26 @@ export const WritingStep = React.memo(({ onDone, activeSkin = 'none', settings, 
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-md mx-auto w-full"
+      className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md mx-auto w-full relative z-10"
     >
-      <div className="w-full max-w-[250px]">
+      <div className="w-full max-w-[200px]">
         <WritingMascot className="drop-shadow-2xl" />
       </div>
       
-      <div className="glass-card w-full p-8 space-y-6 border-blue-200 bg-blue-50/30">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full mb-2">
+      <div className="w-full space-y-4 text-center mt-[-10px]">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full mb-1">
             <Crown size={12} /> Pro Challenge
           </div>
-          <h2 className="text-2xl font-bold text-blue-900/80">Creative Writing</h2>
-          <p className="text-blue-900/60 font-medium italic">"{prompt}"</p>
+          <h2 className="text-2xl font-black text-blue-900">Creative Writing</h2>
+          <p className="text-blue-950/60 font-medium italic">"{prompt}"</p>
         </div>
 
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Start writing..."
-          className="w-full h-40 bg-white/80 rounded-xl p-4 text-blue-900 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-medium border border-blue-100 shadow-sm"
+          placeholder="Start writing your thoughts..."
+          className="w-full h-40 bg-white rounded-3xl p-5 text-blue-900 placeholder-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-100/50 resize-none font-semibold border-4 border-blue-100 shadow-lg transition-all"
         />
 
         {isFinished ? (
