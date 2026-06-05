@@ -532,8 +532,18 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
 
       <MascotAIWrapper stats={stats} settings={settings} showToast={showToast} />
       
-      <div className="w-full max-w-4xl mx-auto space-y-6">
-        {sectionOrder.map(id => renderSection(id))}
+      <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        {sectionOrder.map(id => {
+          const content = renderSection(id);
+          if (!content) return null;
+          // Span certain wide elements across two columns on desktop to maximize clarity
+          const isFullWidth = id === 'protocol' || id === 'plans';
+          return (
+            <div key={id} className={`${isFullWidth ? 'md:col-span-2' : ''} w-full`}>
+              {content}
+            </div>
+          );
+        })}
       </div>
 
       {settings.showQuotes && (

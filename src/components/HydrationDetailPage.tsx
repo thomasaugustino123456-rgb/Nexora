@@ -161,7 +161,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 h-screen w-full bg-gradient-to-b from-[#FAF7F2] to-[#F4F0E2] text-[#4F3F34] overflow-hidden select-none flex flex-col justify-between z-[200]">
+    <div className="fixed inset-0 min-h-screen h-full w-full bg-gradient-to-b from-[#FAF7F2] to-[#F4F0E2] text-[#4F3F34] overflow-y-auto select-none flex flex-col justify-between z-[200]">
       
       {/* Background sloshing liquid - fixed very low at the bottom of the screen */}
       <div className="absolute inset-0 pointer-events-none z-0">
@@ -190,11 +190,11 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
       {/* Main Container - Modern Dashboard featuring bottle on left, and ring widget + streak counter on right */}
       <div className="flex-1 w-full max-w-5xl mx-auto px-4 xs:px-6 flex flex-col items-center justify-center relative z-40 -mt-8 min-[370px]:-mt-12 md:-mt-10 pb-12 md:pb-20">
         
-        <div className="flex flex-row items-center justify-center gap-6 sm:gap-12 md:gap-16 w-full scale-[0.68] min-[350px]:scale-[0.74] min-[395px]:scale-[0.84] sm:scale-100 origin-center transition-all duration-300">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-12 md:gap-16 w-full transition-all duration-300">
           
           {/* Left Column: Adaptive/Responsive Elegant Water Bottle (User's request to place on the left) */}
           <div className="flex items-center justify-center flex-shrink-0 animate-in fade-in duration-500">
-            <div className="relative w-[512px] h-[512px] drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)]">
+            <div className="relative w-[232px] h-[580px] sm:w-[260px] sm:h-[650px] drop-shadow-[0_25px_60px_rgba(14,165,233,0.22)] animate-in zoom-in duration-500">
               
               <svg
                 viewBox="0 0 200 500"
@@ -337,7 +337,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
           </div>
 
           {/* Right Column: Interactive stats & layout (User's request to place on the right next to the bottle) */}
-          <div className="flex flex-col items-start text-left space-y-8 md:space-y-10 max-w-[280px] md:max-w-md w-full text-[#4F3F34]">
+          <div className="flex flex-col items-center sm:items-start text-center sm:text-left space-y-8 md:space-y-10 max-w-[290px] xs:max-w-xs sm:max-w-md w-full text-[#4F3F34]">
             
             {/* Red Circle-inspired Custom Circular Hydration progress widget matching third image */}
             <motion.div 
@@ -358,7 +358,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                 scale: { type: "spring", stiffness: 350, damping: 15 },
                 default: { delay: 0.1 }
               }}
-              className="glass-card bg-white/80 hover:bg-white backdrop-blur-md rounded-[2.5rem] p-8 border-2 border-[#E9E4D4]/80 shadow-2xl w-full flex items-center gap-6 relative overflow-hidden cursor-pointer hover:border-[#38bdf8]/40 transition-all active:ring-4 active:ring-blue-100"
+              className="glass-card bg-white/80 hover:bg-white backdrop-blur-md rounded-[2.5rem] p-6 xs:p-8 border-2 border-[#E9E4D4]/80 shadow-2xl w-full flex items-center gap-4 xs:gap-6 relative overflow-hidden cursor-pointer hover:border-[#38bdf8]/40 transition-all active:ring-4 active:ring-blue-100"
             >
               {/* Outer Decorative Glow */}
               <div className="absolute -top-10 -right-10 w-24 h-24 bg-blue-400/10 rounded-full blur-xl pointer-events-none" />
@@ -508,7 +508,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="flex flex-col items-start space-y-1 w-full pl-2"
+              className="flex flex-col items-center sm:items-start space-y-1 w-full pl-0 sm:pl-2"
             >
               <div className="flex items-baseline gap-2">
                 <span className="text-6xl md:text-[8rem] font-sans font-black tracking-tighter text-[#0ea5e9] leading-none drop-shadow-[0_4px_15px_rgba(14,165,233,0.18)] md:drop-shadow-[0_6px_25px_rgba(14,165,233,0.22)] select-none">

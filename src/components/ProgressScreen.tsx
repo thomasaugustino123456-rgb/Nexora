@@ -136,219 +136,224 @@ export function ProgressScreen({
       variants={container}
       initial="hidden"
       animate="show"
-      className="space-y-6 pb-40 w-full max-w-2xl mx-auto px-4"
+      className="space-y-6 pb-40 w-full max-w-5xl mx-auto px-4"
     >
-      {/* Header with Level Card */}
-      <motion.div variants={item} className="flex flex-col gap-6">
-        <div className="flex items-center gap-4">
-          <div className="p-4 bg-[#69C496] rounded-3xl text-white shadow-lg shadow-[#69C496]/20">
-            <TrendingUp size={24} />
-          </div>
-          <div>
-            <h2 className="text-3xl font-black text-[#4F3F34] tracking-tight uppercase">Nexora Analytics</h2>
-            <p className="text-[10px] font-black text-[#69C496] uppercase tracking-[0.3em]">Growth Synchronizer Protocol</p>
-          </div>
-        </div>
-
-        {/* Level card aligned to retention design palette */}
-        <div className="bg-gradient-to-br from-[#7D6B58] to-[#4F3F34] text-white relative overflow-hidden shadow-xl border-none rounded-[2rem] p-8">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#69C496]/10 rounded-full -ml-12 -mb-12 blur-xl" />
-          
-          <div className="relative z-10 flex flex-col gap-6">
-            <div className="flex items-center justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start space-y-6 lg:space-y-0">
+        {/* Left Column: Level Tracker, Core Stats, Hydration Widget, & Skill Breakdown */}
+        <div className="lg:col-span-12 xl:col-span-7 space-y-6 flex flex-col">
+          {/* Header with Level Card */}
+          <motion.div variants={item} className="flex flex-col gap-6">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-[#69C496] rounded-3xl text-white shadow-lg shadow-[#69C496]/20">
+                <TrendingUp size={24} />
+              </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80">Current Status</p>
-                <h3 className="text-3xl font-black flex items-center gap-3 mt-1">
-                  Level {stats.level || 1} 
-                  <span className="text-[9px] bg-[#69C496]/30 text-[#E8F5EE] px-3 py-1 rounded-full uppercase tracking-widest font-black">
-                    {stats.level && stats.level > 10 ? 'Elite Architect' : 'Guardian Novice'}
-                  </span>
-                </h3>
-              </div>
-              <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
-                <Crown size={28} className="text-[#69C496]" />
+                <h2 className="text-3xl font-black text-[#4F3F34] tracking-tight uppercase">Nexora Analytics</h2>
+                <p className="text-[10px] font-black text-[#69C496] uppercase tracking-[0.3em]">Growth Synchronizer Protocol</p>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex justify-between items-end">
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Experience Points</p>
-                <p className="text-xs font-black tracking-tight">{stats.xp} / {(stats.level || 1) * 1000}</p>
+            {/* Level card aligned to retention design palette */}
+            <div className="bg-gradient-to-br from-[#7D6B58] to-[#4F3F34] text-white relative overflow-hidden shadow-xl border-none rounded-[2rem] p-8">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#69C496]/10 rounded-full -ml-12 -mb-12 blur-xl" />
+              
+              <div className="relative z-10 flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80">Current Status</p>
+                    <h3 className="text-3xl font-black flex items-center gap-3 mt-1">
+                      Level {stats.level || 1} 
+                      <span className="text-[9px] bg-[#69C496]/30 text-[#E8F5EE] px-3 py-1 rounded-full uppercase tracking-widest font-black">
+                        {stats.level && stats.level > 10 ? 'Elite Architect' : 'Guardian Novice'}
+                      </span>
+                    </h3>
+                  </div>
+                  <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
+                    <Crown size={28} className="text-[#69C496]" />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Experience Points</p>
+                    <p className="text-xs font-black tracking-tight">{stats.xp} / {(stats.level || 1) * 1000}</p>
+                  </div>
+                  <div className="h-4 bg-black/25 rounded-full overflow-hidden border border-white/10 p-0.5">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progressPercent}%` }}
+                      transition={{ duration: 1, ease: "circOut" }}
+                      className="h-full bg-gradient-to-r from-[#69C496] to-[#51AF7E] rounded-full shadow-[0_0_12px_rgba(105,196,150,0.5)]"
+                    />
+                  </div>
+                  <p className="text-[9px] font-black text-right uppercase tracking-[0.2em] italic text-[#E9E4D4]">{xpToNextLevel} XP to Next Evolution</p>
+                </div>
               </div>
-              <div className="h-4 bg-black/25 rounded-full overflow-hidden border border-white/10 p-0.5">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressPercent}%` }}
-                  transition={{ duration: 1, ease: "circOut" }}
-                  className="h-full bg-gradient-to-r from-[#69C496] to-[#51AF7E] rounded-full shadow-[0_0_12px_rgba(105,196,150,0.5)]"
-                />
+            </div>
+          </motion.div>
+
+          {/* Stats Grid */}
+          <motion.div variants={item} className="grid grid-cols-2 gap-4">
+            {[
+              { label: 'Hyper Streak', value: stats.streak || 0, sub: 'Daily Frequency', icon: <Flame className="text-amber-600 animate-pulse" />, bg: 'bg-amber-100/40' },
+              { label: 'Neural Score', value: stats.totalPoints || 0, sub: 'Lifetime Volts', icon: <Zap className="text-[#69C496]" />, bg: 'bg-emerald-100/40' },
+              { label: 'Nexus Rank', value: `#${userRank || '--'}`, sub: 'Global Standing', icon: <Star className="text-purple-600 animate-spin" style={{ animationDuration: '3s' }} />, bg: 'bg-purple-100/40' },
+              { label: 'Wallet', value: `${stats.coins || 0}N`, sub: 'Nexora Currency', icon: <Coins className="text-amber-500" />, bg: 'bg-amber-50' }
+            ].map((stat, i) => (
+              <div key={i} className="bg-white border border-[#E9E4D4] rounded-3xl p-6 flex flex-col items-center text-center group transition-all duration-300 hover:scale-[1.02] shadow-sm">
+                <div className={`w-14 h-14 ${stat.bg} rounded-2xl flex items-center justify-center mb-4 shadow-sm transition-transform`}>
+                  {stat.icon}
+                </div>
+                <p className="text-[10px] font-black text-[#4F3F34]/50 uppercase tracking-widest mb-1">{stat.label}</p>
+                <p className="text-2xl font-black text-[#4F3F34] leading-none">{stat.value}</p>
+                <p className="text-[9px] text-[#4F3F34]/60 font-bold uppercase mt-2 opacity-75">{stat.sub}</p>
               </div>
-              <p className="text-[9px] font-black text-right uppercase tracking-[0.2em] italic text-[#E9E4D4]">{xpToNextLevel} XP to Next Evolution</p>
+            ))}
+          </motion.div>
+
+          {/* Hydration Analytics Box Card */}
+          <motion.div
+            variants={item}
+            onClick={() => {
+              if (play) play("click");
+              onScreenChange('hydration-detail');
+            }}
+            className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 flex items-center justify-between group transition-all duration-300 hover:scale-[1.01] active:scale-98 cursor-pointer shadow-sm relative overflow-hidden"
+          >
+            <div className="space-y-1 z-10">
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#69C496]">Hydration Suite</span>
+                <span className="bg-sky-50 text-sky-500 font-extrabold text-[8px] px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
+                  Interactive Arena
+                </span>
+              </div>
+              <h3 className="text-xl font-black text-[#4F3F34] mt-1 flex items-center gap-1.5">
+                Hydration Analytics
+              </h3>
+              <p className="text-xs font-semibold text-[#4F3F34]/70 uppercase tracking-widest">
+                Challenge Streak: <span className="text-sky-500 font-black">{parseInt(localStorage.getItem('hydration_consecutive_days') || '0', 10)}</span> Days
+              </p>
+              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                Bottle Water Level: <span className="text-[#4F3F34]">{(parseFloat(localStorage.getItem('hydration_water_level') || '0.0') * 100).toFixed(0)}%</span>
+              </p>
             </div>
-          </div>
-        </div>
-      </motion.div>
 
-      {/* Stats Grid */}
-      <motion.div variants={item} className="grid grid-cols-2 gap-4">
-        {[
-          { label: 'Hyper Streak', value: stats.streak || 0, sub: 'Daily Frequency', icon: <Flame className="text-amber-600 animate-pulse" />, bg: 'bg-amber-100/40' },
-          { label: 'Neural Score', value: stats.totalPoints || 0, sub: 'Lifetime Volts', icon: <Zap className="text-[#69C496]" />, bg: 'bg-emerald-100/40' },
-          { label: 'Nexus Rank', value: `#${userRank || '--'}`, sub: 'Global Standing', icon: <Star className="text-purple-600 animate-spin" style={{ animationDuration: '3s' }} />, bg: 'bg-purple-100/40' },
-          { label: 'Wallet', value: `${stats.coins || 0}N`, sub: 'Nexora Currency', icon: <Coins className="text-amber-500" />, bg: 'bg-amber-50' }
-        ].map((stat, i) => (
-          <div key={i} className="bg-white border border-[#E9E4D4] rounded-3xl p-6 flex flex-col items-center text-center group transition-all duration-300 hover:scale-[1.02] shadow-sm">
-            <div className={`w-14 h-14 ${stat.bg} rounded-2xl flex items-center justify-center mb-4 shadow-sm transition-transform`}>
-              {stat.icon}
-            </div>
-            <p className="text-[10px] font-black text-[#4F3F34]/50 uppercase tracking-widest mb-1">{stat.label}</p>
-            <p className="text-2xl font-black text-[#4F3F34] leading-none">{stat.value}</p>
-            <p className="text-[9px] text-[#4F3F34]/60 font-bold uppercase mt-2 opacity-75">{stat.sub}</p>
-          </div>
-        ))}
-      </motion.div>
+            {/* Counter and Small Beautiful Water Bottle */}
+            <div className="flex items-center gap-4 shrink-0 z-10">
+              <div className="text-right flex flex-col justify-center">
+                <div className="text-[9px] font-black text-[#69C496] uppercase tracking-wider">STREAK</div>
+                <div className="text-2xl font-black text-[#4F3F34] leading-none">
+                  {parseInt(localStorage.getItem('hydration_consecutive_days') || '0', 10)}
+                </div>
+                <div className="text-[8px] font-bold text-stone-400 uppercase tracking-widest">DAYS</div>
+              </div>
+              
+              {/* Small Beautiful Water Bottle */}
+              <div className="relative w-12 h-20 flex items-center justify-center bg-sky-50/50 rounded-2xl p-1.5 border border-sky-100/50 overflow-hidden">
+                <svg width="28" height="56" viewBox="0 0 100 200" className="overflow-visible">
+                  <defs>
+                    <clipPath id="bottle-shape-progress">
+                      <path d="M 38,10 Q 50,8 62,10 L 62,35 C 72,40 82,50 82,65 L 82,185 Q 82,195 72,195 L 28,195 Q 18,195 18,185 L 18,65 C 18,50 28,40 38,35 Z" />
+                    </clipPath>
+                  </defs>
 
-      {/* Hydration Analytics Box Card */}
-      <motion.div
-        variants={item}
-        onClick={() => {
-          if (play) play("click");
-          onScreenChange('hydration-detail');
-        }}
-        className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 flex items-center justify-between group transition-all duration-300 hover:scale-[1.01] active:scale-98 cursor-pointer shadow-sm relative overflow-hidden"
-      >
-        <div className="space-y-1 z-10">
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#69C496]">Hydration Suite</span>
-            <span className="bg-sky-50 text-sky-500 font-extrabold text-[8px] px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
-              Interactive Arena
-            </span>
-          </div>
-          <h3 className="text-xl font-black text-[#4F3F34] mt-1 flex items-center gap-1.5">
-            Hydration Analytics
-          </h3>
-          <p className="text-xs font-semibold text-[#4F3F34]/70 uppercase tracking-widest">
-            Challenge Streak: <span className="text-sky-500 font-black">{parseInt(localStorage.getItem('hydration_consecutive_days') || '0', 10)}</span> Days
-          </p>
-          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-            Bottle Water Level: <span className="text-[#4F3F34]">{(parseFloat(localStorage.getItem('hydration_water_level') || '0.0') * 100).toFixed(0)}%</span>
-          </p>
-        </div>
-
-        {/* Counter and Small Beautiful Water Bottle */}
-        <div className="flex items-center gap-4 shrink-0 z-10">
-          <div className="text-right flex flex-col justify-center">
-            <div className="text-[9px] font-black text-[#69C496] uppercase tracking-wider">STREAK</div>
-            <div className="text-2xl font-black text-[#4F3F34] leading-none">
-              {parseInt(localStorage.getItem('hydration_consecutive_days') || '0', 10)}
-            </div>
-            <div className="text-[8px] font-bold text-stone-400 uppercase tracking-widest">DAYS</div>
-          </div>
-          
-          {/* Small Beautiful Water Bottle */}
-          <div className="relative w-12 h-20 flex items-center justify-center bg-sky-50/50 rounded-2xl p-1.5 border border-sky-100/50 overflow-hidden">
-            <svg width="28" height="56" viewBox="0 0 100 200" className="overflow-visible">
-              <defs>
-                <clipPath id="bottle-shape-progress">
-                  <path d="M 38,10 Q 50,8 62,10 L 62,35 C 72,40 82,50 82,65 L 82,185 Q 82,195 72,195 L 28,195 Q 18,195 18,185 L 18,65 C 18,50 28,40 38,35 Z" />
-                </clipPath>
-              </defs>
-
-              {/* Bottle Outline */}
-              <path 
-                d="M 38,10 Q 50,8 62,10 L 62,35 C 72,40 82,50 82,65 L 82,185 Q 82,195 72,195 L 28,195 Q 18,195 18,185 L 18,65 C 18,50 28,40 38,35 Z" 
-                fill="#F0F9FF" 
-                stroke="#0E5A8E" 
-                strokeWidth="7" 
-                strokeLinejoin="round" 
-              />
-
-              {/* Clipped liquid body inside the bottle */}
-              <g clipPath="url(#bottle-shape-progress)">
-                <rect x="0" y="0" width="100" height="200" fill="#BAE6FD" opacity="0.32" />
-                
-                {/* Waving rising water */}
-                {/* Math scale Y goes from bottom of bottle (195) to neck (55) */}
-                <rect 
-                  x="0" 
-                  y={195 - (parseFloat(localStorage.getItem('hydration_water_level') || '0.0') * 140)} 
-                  width="100" 
-                  height="200" 
-                  fill="#0EA5E9" 
-                  className="transition-all duration-300"
-                />
-
-                {/* Wave surface motion */}
-                <path 
-                  d={`M -20,${195 - (parseFloat(localStorage.getItem('hydration_water_level') || '0.0') * 140)} 
-                     q 15,${Math.sin((waveOffset * Math.PI) / 180) * 4} 30,0 
-                     t 30,0 30,0 30,0 30,0
-                     L 120,200 L -20,200 Z`} 
-                  fill="#38BDF8" 
-                  opacity="0.9"
-                />
-              </g>
-
-              {/* Highlight glass glare reflex */}
-              <path 
-                d="M 28,70 L 28,175" 
-                fill="none" 
-                stroke="#FFFFFF" 
-                strokeWidth="4" 
-                strokeLinecap="round" 
-                opacity="0.45" 
-              />
-            </svg>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Category Breakdown */}
-      <motion.div variants={item} className="bg-white border border-[#E9E4D4] rounded-[2rem] p-8 space-y-6 shadow-sm">
-        <div className="flex items-center justify-between">
-           <h3 className="text-sm font-black text-[#4F3F34] uppercase tracking-wider">Skill Architecture</h3>
-           <BarChart2 size={16} className="text-[#69C496]" />
-        </div>
-
-        <div className="grid grid-cols-1 gap-6">
-           {[
-             { label: 'Physical Rigor', points: physicalVolts, icon: <Dumbbell size={14} />, color: 'bg-[#69C496]' },
-             { label: 'Mental Clarity', points: mentalVolts, icon: <BrainCircuit size={14} />, color: 'bg-[#7D6B58]' },
-             { label: 'Creative Flow', points: creativeVolts, icon: <Palette size={14} />, color: 'bg-[#BACBBF]' }
-           ].map((cat, i) => (
-             <div key={i} className="space-y-3">
-               <div className="flex justify-between items-center px-1">
-                 <div className="flex items-center gap-2">
-                   <div className={`w-2.5 h-2.5 rounded-full ${cat.color}`} />
-                   <span className="text-[10px] font-black text-[#4F3F34] uppercase tracking-widest">{cat.label}</span>
-                 </div>
-                 <span className="text-xs font-black text-[#4F3F34]">{cat.points} <span className="opacity-40 text-[9px]">VOLTS</span></span>
-               </div>
-               <div className="h-2 bg-slate-100 rounded-full overflow-hidden border border-[#E9E4D4]">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(100, (cat.points / maxCategoryPoints) * 100)}%` }}
-                    className={`h-full ${cat.color} rounded-full`}
+                  {/* Bottle Outline */}
+                  <path 
+                    d="M 38,10 Q 50,8 62,10 L 62,35 C 72,40 82,50 82,65 L 82,185 Q 82,195 72,195 L 28,195 Q 18,195 18,185 L 18,65 C 18,50 28,40 38,35 Z" 
+                    fill="#F0F9FF" 
+                    stroke="#0E5A8E" 
+                    strokeWidth="7" 
+                    strokeLinejoin="round" 
                   />
-               </div>
-             </div>
-           ))}
-        </div>
-      </motion.div>
 
-      {/* Visual Analytics */}
-      <motion.div variants={item}>
-        <StatsCharts 
-          history={history} 
-          stats={stats} 
-          dailyProgress={dailyProgress} 
-          settings={settings} 
-        />
-      </motion.div>
-      
-      {/* Trophies & Badges */}
-      <motion.div variants={item} className="bg-white border border-[#E9E4D4] rounded-[2rem] p-8 shadow-sm">
+                  {/* Clipped liquid body inside the bottle */}
+                  <g clipPath="url(#bottle-shape-progress)">
+                    <rect x="0" y="0" width="100" height="200" fill="#BAE6FD" opacity="0.32" />
+                    
+                    {/* Waving rising water */}
+                    <rect 
+                      x="0" 
+                      y={195 - (parseFloat(localStorage.getItem('hydration_water_level') || '0.0') * 140)} 
+                      width="100" 
+                      height="200" 
+                      fill="#0EA5E9" 
+                      className="transition-all duration-300"
+                    />
+
+                    {/* Wave surface motion */}
+                    <path 
+                      d={`M -20,${195 - (parseFloat(localStorage.getItem('hydration_water_level') || '0.0') * 140)} 
+                         q 15,${Math.sin((waveOffset * Math.PI) / 180) * 4} 30,0 
+                         t 30,0 30,0 30,0 30,0
+                         L 120,200 L -20,200 Z`} 
+                      fill="#38BDF8" 
+                      opacity="0.9"
+                    />
+                  </g>
+
+                  {/* Highlight glass glare reflex */}
+                  <path 
+                    d="M 28,70 L 28,175" 
+                    fill="none" 
+                    stroke="#FFFFFF" 
+                    strokeWidth="4" 
+                    strokeLinecap="round" 
+                    opacity="0.45" 
+                  />
+                </svg>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Category Breakdown */}
+          <motion.div variants={item} className="bg-white border border-[#E9E4D4] rounded-[2rem] p-8 space-y-6 shadow-sm">
+            <div className="flex items-center justify-between">
+               <h3 className="text-sm font-black text-[#4F3F34] uppercase tracking-wider">Skill Architecture</h3>
+               <BarChart2 size={16} className="text-[#69C496]" />
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+               {[
+                 { label: 'Physical Rigor', points: physicalVolts, icon: <Dumbbell size={14} />, color: 'bg-[#69C496]' },
+                 { label: 'Mental Clarity', points: mentalVolts, icon: <BrainCircuit size={14} />, color: 'bg-[#7D6B58]' },
+                 { label: 'Creative Flow', points: creativeVolts, icon: <Palette size={14} />, color: 'bg-[#BACBBF]' }
+               ].map((cat, i) => (
+                 <div key={i} className="space-y-3">
+                   <div className="flex justify-between items-center px-1">
+                     <div className="flex items-center gap-2">
+                       <div className={`w-2.5 h-2.5 rounded-full ${cat.color}`} />
+                       <span className="text-[10px] font-black text-[#4F3F34] uppercase tracking-widest">{cat.label}</span>
+                     </div>
+                     <span className="text-xs font-black text-[#4F3F34]">{cat.points} <span className="opacity-40 text-[9px]">VOLTS</span></span>
+                   </div>
+                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden border border-[#E9E4D4]">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(100, (cat.points / maxCategoryPoints) * 100)}%` }}
+                        className={`h-full ${cat.color} rounded-full`}
+                      />
+                   </div>
+                 </div>
+               ))}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Right Column: Interactive Graphs, Trends, & Achievements Catalog */}
+        <div className="lg:col-span-12 xl:col-span-5 space-y-6 flex flex-col pt-0 lg:pt-0">
+          {/* Visual Analytics */}
+          <motion.div variants={item} className="w-full">
+            <StatsCharts 
+              history={history} 
+              stats={stats} 
+              dailyProgress={dailyProgress} 
+              settings={settings} 
+            />
+          </motion.div>
+          
+          {/* Trophies & Badges */}
+          <motion.div variants={item} className="bg-white border border-[#E9E4D4] rounded-[2rem] p-8 shadow-sm">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h3 className="text-sm font-black uppercase tracking-wider text-[#4F3F34]">Achievement Vault</h3>
@@ -433,6 +438,8 @@ export function ProgressScreen({
           </div>
         )}
       </motion.div>
+    </div> {/* End Right Column */}
+  </div> {/* End Grid Container */}
 
       {/* History Calendar */}
       <motion.div variants={item}>

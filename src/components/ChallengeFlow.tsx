@@ -141,9 +141,9 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   };
 
   return (
-    <div className="fixed inset-0 challenge-flow-bg z-[100] flex flex-col items-center overflow-hidden h-screen max-h-screen select-none">
+    <div className="fixed inset-0 challenge-flow-bg z-[100] flex flex-col items-center overflow-y-auto h-full min-h-screen select-none">
 
-      <div className="w-full max-w-4xl flex flex-col h-screen max-h-screen relative z-10 overflow-hidden">
+      <div className="w-full max-w-4xl flex flex-col min-h-screen relative z-10">
         <header className="p-6 flex items-center justify-between">
           <button onClick={handleBackClick} className="p-2 text-blue-900/40 hover:text-blue-900/60 transition-colors">
             <ChevronRight className="rotate-180" size={28} />
@@ -498,7 +498,7 @@ export const BreathingStep = React.memo(({ onDone, activeSkin = 'none', settings
       exit={{ opacity: 0, scale: 1.05 }}
       className="flex-1 flex flex-col items-center justify-center space-y-4 max-w-sm mx-auto w-full max-h-full overflow-hidden"
     >
-      <div className="w-28 h-28 sm:w-36 sm:h-36 flex items-center justify-center">
+      <div className="w-full max-w-[240px] sm:max-w-[280px] lg:max-w-[320px] flex items-center justify-center">
         <BreathingMascot phase={phase} className="w-full h-full drop-shadow-2xl" />
       </div>
       
@@ -696,7 +696,7 @@ export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin 
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }} 
-      className="flex-1 flex flex-col items-center justify-between space-y-4 max-w-3xl mx-auto w-full h-[82vh]"
+      className="flex-1 flex flex-col items-center justify-between space-y-4 max-w-3xl mx-auto w-full min-h-[74vh] h-full pb-4"
     >
       {/* 1. Artist Mascot & Controls (Tools on Left, Mascot Center, Colors on Right) */}
       <div className="w-full flex items-center justify-between px-2 sm:px-6 py-2 relative z-30">
