@@ -2,8 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   onAuthStateChanged,
   User as FirebaseUser,
-  setPersistence,
-  browserLocalPersistence,
 } from "firebase/auth";
 import {
   doc,
@@ -102,15 +100,6 @@ export function useNexoraData(
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    async function initAuth() {
-      try {
-        await setPersistence(auth, browserLocalPersistence);
-      } catch (e) {
-        console.error("Auth persistence failed:", e);
-      }
-    }
-    initAuth();
-
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       const prevUserId = localStorage.getItem("nexora_cached_user");
 

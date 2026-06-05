@@ -26,8 +26,8 @@ export function Calendar({ history }: { history: DailyProgress[] }) {
         </div>
       </div>
       <div className="grid grid-cols-7 gap-1">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-          <div key={d} className="text-[11px] font-black text-blue-900/40 text-center py-2">{d}</div>
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, index) => (
+          <div key={`${d}-${index}`} className="text-[11px] font-black text-blue-900/40 text-center py-2">{d}</div>
         ))}
         {Array.from({ length: monthStart.getDay() }).map((_, i) => (
           <div key={`empty-${i}`} />

@@ -7,7 +7,7 @@ import {
   ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle, Video,
   Layout, BoxSelect, Lock, Key
 } from 'lucide-react';
-import { User as FirebaseUser, EmailAuthProvider, linkWithCredential, updatePassword, sendPasswordResetEmail } from 'firebase/auth';
+import { User as FirebaseUser, EmailAuthProvider, linkWithCredential, updatePassword, sendPasswordResetEmail, GoogleAuthProvider, reauthenticateWithPopup } from 'firebase/auth';
 import { auth } from '../firebase';
 import { UserSettings } from '../types';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
@@ -91,7 +91,24 @@ export function SettingsScreen({
     } catch (err: any) {
       console.error("Password action failed:", err);
       if (err.code === 'auth/requires-recent-login') {
-        showToast('Requires recent login, bro! Logout and log in with Google, then set your password.', 'error');
+        showToast('Requires recent login! Autocompleting security protocol via Google...', 'info');
+        try {
+          const provider = new GoogleAuthProvider();
+          await reauthenticateWithPopup(user, provider);
+          showToast('Security authorized! Retrying password setup...', 'info');
+          if (hasPasswordProvider) {
+            await updatePassword(user, passwordInput);
+            showToast('Password updated successfully! 🔥', 'success');
+          } else {
+            const credential = EmailAuthProvider.credential(user.email!, passwordInput);
+            await linkWithCredential(user, credential);
+            showToast('Email & Password Login connected successfully! 🚀 Log in anytime with email + password.', 'success');
+          }
+          setPasswordInput('');
+        } catch (reauthErr: any) {
+          console.error("Re-authentication fail:", reauthErr);
+          showToast(`Requires fresh login, bro! If popup was blocked or failed, please log out and log in with Google and set password instantly.`, 'error');
+        }
       } else if (err.code === 'auth/credential-already-in-use') {
         showToast('This email is already linked or in use by another account, bro.', 'error');
       } else {
