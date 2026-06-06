@@ -74,6 +74,7 @@ import {
   Lock,
   WifiOff,
   Shield,
+  Smartphone,
 } from "lucide-react";
 import { motion, AnimatePresence, useAnimationControls } from "motion/react";
 import { useLocalStorage } from "./hooks/useLocalStorage";
@@ -1825,6 +1826,51 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showIOSInstallGuide, setShowIOSInstallGuide] = useState(false);
+
+  // Advanced PWA Master Installation Prompter States
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showPwaBanner, setShowPwaBanner] = useState(false);
+  const [pwaDismissedLanding, setPwaDismissedLanding] = useState(false);
+  const [pwaDismissedAuth, setPwaDismissedAuth] = useState(false);
+  const [pwaDismissedMain, setPwaDismissedMain] = useState(false);
+
+  useEffect(() => {
+    const checkStandalone = () => {
+      const standalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as any).standalone === true ||
+        // Safari fallback detection
+        (window.navigator.userAgent.includes("Safari") && !window.navigator.userAgent.includes("Chrome") && (window.navigator as any).standalone) ||
+        document.referrer.includes("android-app://");
+      setIsStandalone(standalone);
+    };
+    checkStandalone();
+    const mediaQuery = window.matchMedia("(display-mode: standalone)");
+    if (mediaQuery && typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", checkStandalone);
+      return () => mediaQuery.removeEventListener("change", checkStandalone);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isStandalone) {
+      setShowPwaBanner(false);
+      return;
+    }
+    if (!user) {
+      if (showAuth) {
+        setShowPwaBanner(!pwaDismissedAuth);
+      } else {
+        setShowPwaBanner(!pwaDismissedLanding);
+      }
+    } else {
+      if (!needsOnboarding) {
+        setShowPwaBanner(!pwaDismissedMain);
+      } else {
+        setShowPwaBanner(false);
+      }
+    }
+  }, [user, showAuth, needsOnboarding, isStandalone, pwaDismissedLanding, pwaDismissedAuth, pwaDismissedMain]);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
@@ -2551,18 +2597,23 @@ export default function App() {
   // Daily Reminder Timer removed from here and moved after customPlans definition
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-
-    // Show the install prompt
-    deferredPrompt.prompt();
-
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`PWA: User response to the install prompt: ${outcome}`);
-
-    // We've used the prompt, and can't use it again, throw it away
-    setDeferredPrompt(null);
-    setShowInstallButton(false);
+    if (deferredPrompt) {
+      try {
+        console.log("PWA: Triggering native deferred prompt");
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`PWA: User response to the install prompt: ${outcome}`);
+        setDeferredPrompt(null);
+        setShowInstallButton(false);
+      } catch (err) {
+        console.error("Error showing PWA install prompt:", err);
+        setShowIOSInstallGuide(true);
+      }
+    } else {
+      // Show custom user guide if native is unavailable (e.g. iOS or dismissed)
+      console.log("PWA: Native prompt unavailable. Triggering custom step guide.");
+      setShowIOSInstallGuide(true);
+    }
   };
 
   useEffect(() => {
@@ -4155,109 +4206,199 @@ export default function App() {
       </div>
       */}
 
-        {/* PWA Install Button (Android/Chrome) */}
+        {/* Advanced Multi-Stage PWA Install Banner */}
         <AnimatePresence>
-          {showInstallButton && (
+          {showPwaBanner && (
             <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 50 }}
-              className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] w-full max-w-xs px-4"
+              initial={{ opacity: 0, y: 100, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 100, scale: 0.95 }}
+              className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[250] w-full max-w-sm px-4"
             >
-              <div className="bg-white p-4 rounded-3xl shadow-2xl border-2 border-indigo-100 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-                    <Download size={24} />
+              <div className="bg-slate-900/95 border-2 border-[#69C496]/50 rounded-[32px] p-5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] shadow-[#69C496]/10 backdrop-blur-xl text-white space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 bg-slate-800 rounded-2xl border border-slate-700/60 p-1 flex items-center justify-center shadow-xl shrink-0">
+                    <img
+                      src="/nexora_app_icon.png"
+                      alt="Nexora Mascot Logo"
+                      className="w-14 h-14 rounded-xl object-cover shadow-inner"
+                      referrerPolicy="no-referrer"
+                    />
                   </div>
-                  <div>
-                    <h4 className="font-black text-blue-900 leading-tight text-sm">
-                      Install Nexora App
-                    </h4>
-                    <p className="text-[10px] text-blue-900/40 font-bold">
-                      Get the full experience on your home screen!
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 text-[8px] font-black bg-[#69C496] text-slate-900 uppercase tracking-widest rounded-full animate-pulse">
+                        INSTALL
+                      </span>
+                      <h4 className="font-extrabold text-white text-sm tracking-tight leading-none">
+                        Add Nexora to Phone Home Screen
+                      </h4>
+                    </div>
+                    <p className="text-[10px] text-slate-300 font-semibold leading-normal">
+                      Get the premium 4K mascot launcher, 1-click access, and smooth offline performance! Looks stunning on your home screen.
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={handleInstallClick}
-                  className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black shadow-lg hover:bg-indigo-700 transition-all active:scale-95"
-                >
-                  INSTALL NOW
-                </button>
-                <button
-                  onClick={() => setShowInstallButton(false)}
-                  className="w-full text-[10px] font-black text-blue-900/40 hover:text-blue-900/60"
-                >
-                  NOT NOW
-                </button>
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <button
+                    onClick={() => {
+                      if (settings.soundEnabled) play("nav_switch");
+                      // Dismiss for the current phase segment
+                      if (!user) {
+                        if (showAuth) {
+                          setPwaDismissedAuth(true);
+                        } else {
+                          setPwaDismissedLanding(true);
+                        }
+                      } else {
+                        setPwaDismissedMain(true);
+                      }
+                    }}
+                    className="py-3 px-4 bg-slate-800 hover:bg-slate-750 text-slate-300 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all border border-slate-700/50 active:scale-95 text-center"
+                  >
+                    NOT NOW, BRO
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (settings.soundEnabled) play("challenge_unlock");
+                      handleInstallClick();
+                    }}
+                    className="py-3 px-4 bg-[#69C496] hover:bg-[#5bb586] text-slate-900 text-[10px] font-black uppercase tracking-wider rounded-xl shadow-lg shadow-[#69C496]/20 transition-all active:scale-95 text-center"
+                  >
+                    INSTALL NOW
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* iOS Install Guide */}
+        {/* Universal PWA Step-by-Step Assistant Guide */}
         <AnimatePresence>
           {showIOSInstallGuide && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[300] flex items-end justify-center">
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[500] flex items-end sm:items-center justify-center p-4">
               <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                className="bg-white w-full max-w-md rounded-t-[40px] p-8 pb-12 space-y-6"
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: "100%", opacity: 0 }}
+                className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-[32px] p-6 pb-8 space-y-6 text-white shadow-2xl"
               >
-                <div className="flex justify-center">
-                  <div className="w-16 h-1.5 bg-blue-900/10 rounded-full" />
+                <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                  <span className="text-[10px] font-black text-[#69C496] uppercase tracking-widest">
+                    NEXORA HYBRID APP
+                  </span>
+                  <button
+                    onClick={() => setShowIOSInstallGuide(false)}
+                    className="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
 
-                <div className="text-center space-y-2">
-                  <div className="w-20 h-20 bg-indigo-50 rounded-[28px] flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-xl">
+                <div className="text-center space-y-3">
+                  <div className="w-24 h-24 bg-gradient-to-tr from-slate-800 to-slate-900 rounded-[28px] flex items-center justify-center mx-auto mb-2 border-2 border-[#69C496]/30 shadow-2xl relative">
                     <img
-                      src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png"
+                      src="/nexora_app_icon.png"
                       alt="Logo"
-                      className="w-14 h-14 object-contain"
+                      className="w-20 h-20 rounded-2xl object-cover"
                       referrerPolicy="no-referrer"
                     />
+                    <div className="absolute -bottom-1 -right-1 bg-[#69C496] text-slate-900 rounded-full p-1.5 shadow-lg shadow-[#69C496]/20">
+                      <Smartphone size={16} />
+                    </div>
                   </div>
-                  <h3 className="text-2xl font-black text-blue-900">
-                    Add to Home Screen
+                  <h3 className="text-xl font-black text-white tracking-tight">
+                    Add Nexora to your Home Screen
                   </h3>
-                  <p className="text-blue-900/60 font-medium">
-                    Install Nexora on your iPhone for the best experience.
+                  <p className="text-slate-400 text-xs font-semibold leading-relaxed max-w-xs mx-auto">
+                    Enjoy the ultimate full-screen distraction-free companion experience. Complete consistency starts now!
                   </p>
                 </div>
 
-                <div className="space-y-4 bg-blue-50/50 p-6 rounded-3xl border border-blue-100">
-                  <div className="flex items-center gap-4">
-                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm text-blue-900 font-black text-sm">
-                      1
+                {/* Platform-Specific Interactive Instructions */}
+                <div className="space-y-4 bg-slate-950 p-5 rounded-2xl border border-slate-800">
+                  {/iPad|iPhone|iPod/.test(navigator.userAgent) ? (
+                    // iOS Instruction Set
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
+                          1
+                        </div>
+                        <p className="text-xs font-bold text-slate-200">
+                          Tap the <span className="text-indigo-400 font-extrabold underline">Share</span> button in your Safari browser navigation bar.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
+                          2
+                        </div>
+                        <p className="text-xs font-bold text-slate-200">
+                          Scroll down the sharing menu and select <span className="text-[#69C496] font-extrabold bg-[#69C496]/10 px-2 py-0.5 rounded-md">"Add to Home Screen"</span>.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
+                          3
+                        </div>
+                        <p className="text-xs font-bold text-slate-200">
+                          Tap <span className="text-indigo-400 font-extrabold">Add</span> in the top-right corner, and you're good to go!
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm font-bold text-blue-900/80">
-                      Tap the <span className="text-blue-600">Share</span>{" "}
-                      button in Safari
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm text-blue-900 font-black text-sm">
-                      2
+                  ) : /Android/i.test(navigator.userAgent) ? (
+                    // Android Chrome Instruction Set
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
+                          1
+                        </div>
+                        <p className="text-xs font-bold text-slate-200">
+                          Tap the <span className="text-indigo-400 font-extrabold">three dot options menu</span> in the top right corner of Chrome.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
+                          2
+                        </div>
+                        <p className="text-xs font-bold text-slate-200">
+                          Select the <span className="text-[#69C496] font-extrabold bg-[#69C496]/10 px-2 py-0.5 rounded-md">"Install App"</span> or <span className="text-indigo-400 font-extrabold">"Add to Home screen"</span> option.
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm font-bold text-blue-900/80">
-                      Scroll down and tap{" "}
-                      <span className="text-blue-600">
-                        "Add to Home Screen"
-                      </span>
-                    </p>
-                  </div>
+                  ) : (
+                    // Desktop instructions fallback
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
+                          1
+                        </div>
+                        <p className="text-xs font-bold text-slate-200">
+                          Look at your address bar next to the bookmarks star icon at the top right.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
+                          2
+                        </div>
+                        <p className="text-xs font-bold text-slate-200">
+                          Click the <span className="text-indigo-400 font-extrabold">Install App 🖥️</span> icon or find "Install App" under browser settings.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <button
-                  onClick={() => {
-                    setShowIOSInstallGuide(false);
-                    localStorage.setItem("nexora_ios_guide_seen", "true");
-                  }}
-                  className="w-full bg-blue-900 text-white py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-transform"
-                >
-                  GOT IT!
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowIOSInstallGuide(false);
+                      localStorage.setItem("nexora_ios_guide_seen", "true");
+                    }}
+                    className="w-full bg-[#69C496] text-slate-900 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-[#69C496]/20 active:scale-95 transition-transform text-center"
+                  >
+                    GOT IT, LET'S DO IT!
+                  </button>
+                </div>
               </motion.div>
             </div>
           )}
@@ -4376,9 +4517,9 @@ export default function App() {
               <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl">
                 <div className="flex items-center gap-4">
                   <img
-                    src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png"
+                    src="/nexora_app_icon.png"
                     alt="Nexora Logo"
-                    className="w-20 h-20 object-contain"
+                    className="w-16 h-16 object-cover rounded-2xl shadow-md border border-white/20"
                     referrerPolicy="no-referrer"
                   />
                   <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">
@@ -5874,10 +6015,10 @@ export default function App() {
                       <img
                         src={
                           updateInfo.imageUrl ||
-                          "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png"
+                          "/nexora_app_icon.png"
                         }
                         alt="Mascot"
-                        className="w-12 h-12 object-contain"
+                        className="w-12 h-12 object-cover rounded-xl"
                         referrerPolicy="no-referrer"
                       />
                     </div>

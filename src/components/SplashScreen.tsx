@@ -32,9 +32,9 @@ export function SplashScreen() {
           className="relative w-48 h-48 drop-shadow-[0_20px_50px_rgba(59,130,246,0.5)]"
         >
           <img 
-            src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
+            src="/nexora_app_icon.png" 
             alt="Nexora Mascot" 
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover rounded-[48px] shadow-2xl border-4 border-white/50"
             referrerPolicy="no-referrer"
           />
           

@@ -95,9 +95,9 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               className="absolute -inset-3 bg-gradient-to-tr from-blue-400 via-indigo-300 to-cyan-400 rounded-full opacity-30 group-hover:opacity-60 transition-opacity blur-xl"
             />
             <img 
-              src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
+              src="/nexora_app_icon.png" 
               alt="Nexora Logo" 
-              className="w-16 h-16 md:w-20 md:h-20 object-contain relative z-10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500"
+              className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-2xl relative z-10 shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 border border-white/20"
               referrerPolicy="no-referrer"
               loading="lazy"
             />
@@ -609,9 +609,9 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-4">
             <img 
-              src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
+              src="/nexora_app_icon.png" 
               alt="Nexora Logo" 
-              className="w-20 h-20 object-contain"
+              className="w-14 h-14 md:w-16 md:h-16 object-cover rounded-xl border border-white/20 shadow-md"
               referrerPolicy="no-referrer"
               loading="lazy"
             />

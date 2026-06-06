@@ -302,9 +302,9 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
         <div className="space-y-2 mt-2 flex flex-col items-center">
           <div className="flex flex-col items-center gap-6">
             <img
-              src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png"
+              src="/nexora_app_icon.png"
               alt="Nexora Logo"
-              className="w-64 h-64 object-contain"
+              className="w-48 h-48 object-cover rounded-[36px] shadow-2xl border-4 border-white/50"
               referrerPolicy="no-referrer"
               loading="lazy"
             />

@@ -198,9 +198,9 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
               className="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center bg-white border border-[#E9E4D4] rounded-full shadow-md overflow-hidden p-2 bg-gradient-to-tr from-white to-[#FAF7F2]"
             >
               <img 
-                src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
+                src="/nexora_app_icon.png" 
                 alt="Nexora Mascot" 
-                className="w-full h-full object-contain drop-shadow-lg"
+                className="w-full h-full object-cover rounded-full shadow-inner"
                 referrerPolicy="no-referrer"
                 loading="lazy"
               />
