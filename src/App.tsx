@@ -1829,6 +1829,12 @@ export default function App() {
 
   // Advanced PWA Master Installation Prompter States
   const [isStandalone, setIsStandalone] = useState(false);
+  const [pwaInstalled, setPwaInstalled] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("nexora_pwa_installed") === "true";
+    }
+    return false;
+  });
   const [showPwaBanner, setShowPwaBanner] = useState(false);
   const [pwaDismissedLanding, setPwaDismissedLanding] = useState(false);
   const [pwaDismissedAuth, setPwaDismissedAuth] = useState(false);
@@ -1843,6 +1849,10 @@ export default function App() {
         (window.navigator.userAgent.includes("Safari") && !window.navigator.userAgent.includes("Chrome") && (window.navigator as any).standalone) ||
         document.referrer.includes("android-app://");
       setIsStandalone(standalone);
+      if (standalone) {
+        localStorage.setItem("nexora_pwa_installed", "true");
+        setPwaInstalled(true);
+      }
     };
     checkStandalone();
     const mediaQuery = window.matchMedia("(display-mode: standalone)");
@@ -1853,7 +1863,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isStandalone) {
+    if (isStandalone || pwaInstalled) {
+      setShowPwaBanner(false);
+      return;
+    }
+    // "but when the user is on taking the Challenges bro the message don't have to be shown bro"
+    if (activeScreen === "challenge" || challengeStep !== null) {
       setShowPwaBanner(false);
       return;
     }
@@ -1870,7 +1885,15 @@ export default function App() {
         setShowPwaBanner(false);
       }
     }
-  }, [user, showAuth, needsOnboarding, isStandalone, pwaDismissedLanding, pwaDismissedAuth, pwaDismissedMain]);
+  }, [user, showAuth, needsOnboarding, isStandalone, pwaInstalled, activeScreen, challengeStep, pwaDismissedLanding, pwaDismissedAuth, pwaDismissedMain]);
+
+  // "when I click the Cancel button supposed it have to appear again when the user go to another section of the app"
+  // Reset dismiss states on screen transition so the banner can appear again in other sections
+  useEffect(() => {
+    setPwaDismissedLanding(false);
+    setPwaDismissedAuth(false);
+    setPwaDismissedMain(false);
+  }, [activeScreen, showAuth]);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
@@ -2536,7 +2559,15 @@ export default function App() {
       console.log("PWA: beforeinstallprompt event fired");
     };
 
+    const handleAppInstalled = () => {
+      console.log("PWA: appinstalled event fired");
+      localStorage.setItem("nexora_pwa_installed", "true");
+      setPwaInstalled(true);
+      setShowPwaBanner(false);
+    };
+
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
 
     // Check if already installed
     const isStandalone =
@@ -2585,6 +2616,7 @@ export default function App() {
         "beforeinstallprompt",
         handleBeforeInstallPrompt,
       );
+      window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
 
@@ -2605,6 +2637,11 @@ export default function App() {
         console.log(`PWA: User response to the install prompt: ${outcome}`);
         setDeferredPrompt(null);
         setShowInstallButton(false);
+        if (outcome === "accepted") {
+          localStorage.setItem("nexora_pwa_installed", "true");
+          setPwaInstalled(true);
+          setShowPwaBanner(false);
+        }
       } catch (err) {
         console.error("Error showing PWA install prompt:", err);
         setShowIOSInstallGuide(true);
