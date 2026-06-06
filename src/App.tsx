@@ -215,6 +215,7 @@ import {
 import { NavButton } from "./components/NavButton";
 import { SplashScreen } from "./components/SplashScreen";
 import { useNexoraData } from "./hooks/useNexoraData";
+import nexoraAppIcon from "./assets/images/nexora_app_icon.png";
 
 const DEFAULT_SETTINGS: UserSettings = {
   pushupsGoal: 5,
@@ -4256,7 +4257,7 @@ export default function App() {
                 <div className="flex items-start gap-4">
                   <div className="w-16 h-16 bg-slate-800 rounded-2xl border border-slate-700/60 p-1 flex items-center justify-center shadow-xl shrink-0">
                     <img
-                      src="/nexora_app_icon.png"
+                      src={nexoraAppIcon}
                       alt="Nexora Mascot Logo"
                       className="w-14 h-14 rounded-xl object-cover shadow-inner"
                       referrerPolicy="no-referrer"
@@ -4335,7 +4336,7 @@ export default function App() {
                 <div className="text-center space-y-3">
                   <div className="w-24 h-24 bg-gradient-to-tr from-slate-800 to-slate-900 rounded-[28px] flex items-center justify-center mx-auto mb-2 border-2 border-[#69C496]/30 shadow-2xl relative">
                     <img
-                      src="/nexora_app_icon.png"
+                      src={nexoraAppIcon}
                       alt="Logo"
                       className="w-20 h-20 rounded-2xl object-cover"
                       referrerPolicy="no-referrer"
@@ -4554,7 +4555,7 @@ export default function App() {
               <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl">
                 <div className="flex items-center gap-4">
                   <img
-                    src="/nexora_app_icon.png"
+                    src={nexoraAppIcon}
                     alt="Nexora Logo"
                     className="w-16 h-16 object-cover rounded-2xl shadow-md border border-white/20"
                     referrerPolicy="no-referrer"
@@ -6052,7 +6053,7 @@ export default function App() {
                       <img
                         src={
                           updateInfo.imageUrl ||
-                          "/nexora_app_icon.png"
+                          nexoraAppIcon
                         }
                         alt="Mascot"
                         className="w-12 h-12 object-cover rounded-xl"

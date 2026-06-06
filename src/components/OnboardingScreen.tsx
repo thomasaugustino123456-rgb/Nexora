@@ -26,6 +26,7 @@ import { signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';
+import nexoraAppIcon from '../assets/images/nexora_app_icon.png';
 
 import { AnimatedBell } from './AnimatedBell';
 
@@ -198,7 +199,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
               className="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center bg-white border border-[#E9E4D4] rounded-full shadow-md overflow-hidden p-2 bg-gradient-to-tr from-white to-[#FAF7F2]"
             >
               <img 
-                src="/nexora_app_icon.png" 
+                src={nexoraAppIcon} 
                 alt="Nexora Mascot" 
                 className="w-full h-full object-cover rounded-full shadow-inner"
                 referrerPolicy="no-referrer"

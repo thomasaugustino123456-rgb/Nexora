@@ -12,6 +12,7 @@ import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Mascot, MascotMood } from "./Mascot";
 import { ArrowLeft } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
+import nexoraAppIcon from "../assets/images/nexora_app_icon.png";
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -302,7 +303,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
         <div className="space-y-2 mt-2 flex flex-col items-center">
           <div className="flex flex-col items-center gap-6">
             <img
-              src="/nexora_app_icon.png"
+              src={nexoraAppIcon}
               alt="Nexora Logo"
               className="w-48 h-48 object-cover rounded-[36px] shadow-2xl border-4 border-white/50"
               referrerPolicy="no-referrer"

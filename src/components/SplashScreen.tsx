@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import nexoraAppIcon from '../assets/images/nexora_app_icon.png';
 
 export function SplashScreen() {
   return (
@@ -32,7 +33,7 @@ export function SplashScreen() {
           className="relative w-48 h-48 drop-shadow-[0_20px_50px_rgba(59,130,246,0.5)]"
         >
           <img 
-            src="/nexora_app_icon.png" 
+            src={nexoraAppIcon} 
             alt="Nexora Mascot" 
             className="w-full h-full object-cover rounded-[48px] shadow-2xl border-4 border-white/50"
             referrerPolicy="no-referrer"
