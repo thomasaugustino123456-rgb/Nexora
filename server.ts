@@ -627,7 +627,7 @@ async function startServer() {
         },
         webpush: {
           notification: {
-            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png',
+            icon: '/nexora_app_icon.png',
             tag: 'motivation-sync',
             renotify: true
           },
@@ -697,8 +697,8 @@ async function startServer() {
         },
         webpush: {
           notification: {
-            icon: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png',
-            badge: 'https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png',
+            icon: '/nexora_app_icon.png',
+            badge: '/nexora_app_icon.png',
             vibrate: [200, 100, 200],
             tag: 'nexora-alert',
             renotify: true

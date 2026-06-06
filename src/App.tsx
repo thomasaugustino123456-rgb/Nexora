@@ -2684,7 +2684,7 @@ export default function App() {
           if (!localStorage.getItem(lastMorningKey)) {
             sendNotification("Morning Desk check-in! 🖥️", {
               body: "Desk Bound Focus session: Ready to build incredible habits at your workspace today, bro?",
-              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+              icon: "/nexora_app_icon.png",
             });
             localStorage.setItem(lastMorningKey, "true");
           }
@@ -2695,7 +2695,7 @@ export default function App() {
           if (!localStorage.getItem(lastAfternoonKey)) {
             sendNotification("Afternoon Desk stretch! ☀️", {
               body: "Hey desk warrior, stretch those legs! Ready for your afternoon habit boost?",
-              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+              icon: "/nexora_app_icon.png",
             });
             localStorage.setItem(lastAfternoonKey, "true");
           }
@@ -2706,7 +2706,7 @@ export default function App() {
           if (!localStorage.getItem(lastEveningKey)) {
             sendNotification("Evening Desk Wrap-up! 🌙", {
               body: "End your sedentary session with a finish of strength, bro. Let's lock in!",
-              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+              icon: "/nexora_app_icon.png",
             });
             localStorage.setItem(lastEveningKey, "true");
           }
@@ -2718,7 +2718,7 @@ export default function App() {
           if (!localStorage.getItem(lastMorningKey)) {
             sendNotification("On the Move Morning! 🏃", {
               body: "Start your active journey powerful, bro! Complete a quick morning habit.",
-              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+              icon: "/nexora_app_icon.png",
             });
             localStorage.setItem(lastMorningKey, "true");
           }
@@ -2729,7 +2729,7 @@ export default function App() {
           if (!localStorage.getItem(lastAfternoonKey)) {
             sendNotification("Midday On-transit Check! ☀️", {
               body: "Keep moving and stay hydrated, active champion! Take a quick challenge break.",
-              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+              icon: "/nexora_app_icon.png",
             });
             localStorage.setItem(lastAfternoonKey, "true");
           }
@@ -2740,7 +2740,7 @@ export default function App() {
           if (!localStorage.getItem(lastEveningKey)) {
             sendNotification("Sunset Active Check-in! 🌙", {
               body: "You have been on the move all day! Let's complete your remaining goals.",
-              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+              icon: "/nexora_app_icon.png",
             });
             localStorage.setItem(lastEveningKey, "true");
           }
@@ -2752,7 +2752,7 @@ export default function App() {
           if (!localStorage.getItem(lastMorningKey)) {
             sendNotification("Student Morning Preparation! 📚", {
               body: "Rise and shine student! Prep for school with a quick training routine!",
-              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+              icon: "/nexora_app_icon.png",
             });
             localStorage.setItem(lastMorningKey, "true");
           }
@@ -2763,7 +2763,7 @@ export default function App() {
           if (!localStorage.getItem(lastEveningKey)) {
             sendNotification("Student School Wrap-up! 🌙", {
               body: "Welcome back from school, bro! Let's complete your daily study and habits loop!",
-              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+              icon: "/nexora_app_icon.png",
             });
             localStorage.setItem(lastEveningKey, "true");
           }
@@ -2775,7 +2775,7 @@ export default function App() {
           if (!localStorage.getItem(lastMorningKey)) {
             sendNotification("Night Shift Activation! 🌙", {
               body: "The night is young for reverse schedule champions! Ready to flow, bro?",
-              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+              icon: "/nexora_app_icon.png",
             });
             localStorage.setItem(lastMorningKey, "true");
           }
@@ -2786,7 +2786,7 @@ export default function App() {
           if (!localStorage.getItem(lastAfternoonKey)) {
             sendNotification("Midnight Peak Focus! ⚡", {
               body: "Midnight focus hour starts now. Let's smash our physical and mental limits!",
-              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+              icon: "/nexora_app_icon.png",
             });
             localStorage.setItem(lastAfternoonKey, "true");
           }
@@ -2797,7 +2797,7 @@ export default function App() {
           if (!localStorage.getItem(lastEveningKey)) {
             sendNotification("Overnight Check-in! 🌌", {
               body: "Keep going strong overnight! Hydrate and check in on your habits.",
-              icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+              icon: "/nexora_app_icon.png",
             });
             localStorage.setItem(lastEveningKey, "true");
           }
@@ -2820,7 +2820,7 @@ export default function App() {
           const quote = quotes[Math.floor(Math.random() * quotes.length)];
           sendNotification("Daily Motivation! 💡", {
             body: quote,
-            icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            icon: "/nexora_app_icon.png",
           });
           localStorage.setItem(lastMotivationKey, "true");
         }
@@ -2832,7 +2832,7 @@ export default function App() {
         if (!localStorage.getItem(lastRestartKey)) {
           sendNotification("New Day, New Goals! 🌅", {
             body: "Challenges have been restarted! Let's crush it today, bro!",
-            icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            icon: "/nexora_app_icon.png",
           });
           localStorage.setItem(lastRestartKey, "true");
         }
@@ -2850,7 +2850,7 @@ export default function App() {
             if (!localStorage.getItem(lastPlanReminderKey)) {
               sendNotification(`${plan.name} 🚀`, {
                 body: `Time for your custom plan: ${plan.name}! Let's go!`,
-                icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+                icon: "/nexora_app_icon.png",
               });
               localStorage.setItem(lastPlanReminderKey, "true");
             }
@@ -3349,14 +3349,14 @@ export default function App() {
         if (curr.type === "ice") {
           sendNotification("Trophy Alert! 🧊", {
             body: "One of your trophies just turned to ICE! Complete a challenge now to save it!",
-            icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            icon: "/nexora_app_icon.png",
           });
           if (settings.soundEnabled) playTrophySound("ice");
           showToast("TROPHY ALERT: ICE DETECTED! 🧊", "info");
         } else if (curr.type === "broken") {
           sendNotification("Trophy Alert! 💔", {
             body: "Oh no! A trophy has BROKEN! Don't let more break, bro!",
-            icon: "https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png",
+            icon: "/nexora_app_icon.png",
           });
           if (settings.soundEnabled) playTrophySound("broken");
           showToast("TROPHY ALERT: SHATTERED! 💔", "error");
@@ -4198,7 +4198,7 @@ export default function App() {
         {/* Performance optimized: Background Mascot Watermark removed to prevent heating
       <div className="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0 opacity-[0.03]">
         <img 
-          src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
+          src="/nexora_app_icon.png" 
           alt="" 
           className="w-[150%] max-w-none"
           referrerPolicy="no-referrer"
