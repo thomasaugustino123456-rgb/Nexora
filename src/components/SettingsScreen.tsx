@@ -94,6 +94,11 @@ export function SettingsScreen({
         showToast('Requires recent login! Autocompleting security protocol via Google...', 'info');
         try {
           const provider = new GoogleAuthProvider();
+          provider.addScope('profile');
+          provider.addScope('email');
+          provider.setCustomParameters({
+            prompt: 'select_account'
+          });
           await reauthenticateWithPopup(user, provider);
           showToast('Security authorized! Retrying password setup...', 'info');
           if (hasPasswordProvider) {

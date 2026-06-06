@@ -3855,7 +3855,13 @@ export default function App() {
       const isGoogle = activeUser.providerData.some((p) => p.providerId === "google.com");
       if (isGoogle) {
           try {
-            const credential = await reauthenticateWithPopup(activeUser, new GoogleAuthProvider());
+            const provider = new GoogleAuthProvider();
+            provider.addScope('profile');
+            provider.addScope('email');
+            provider.setCustomParameters({
+              prompt: 'select_account'
+            });
+            const credential = await reauthenticateWithPopup(activeUser, provider);
             activeUser = credential.user;
           } catch (e: any) {
              console.warn("Re-auth failed or cancelled");
