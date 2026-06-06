@@ -4,7 +4,8 @@ import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activi
 import { Mascot } from './Mascot';
 import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
 import { vibrate } from '../lib/vibrate';
-import nexoraAppIcon from '../assets/images/nexora_app_icon.png';
+
+const nexoraAppIcon = '/nexora_app_icon.png';
 
 interface LandingPageProps {
   onGetStarted: () => void;

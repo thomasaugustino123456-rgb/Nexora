@@ -12,7 +12,8 @@ import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Mascot, MascotMood } from "./Mascot";
 import { ArrowLeft } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
-import nexoraAppIcon from "../assets/images/nexora_app_icon.png";
+
+const nexoraAppIcon = "/nexora_app_icon.png";
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">

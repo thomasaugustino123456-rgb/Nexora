@@ -215,7 +215,8 @@ import {
 import { NavButton } from "./components/NavButton";
 import { SplashScreen } from "./components/SplashScreen";
 import { useNexoraData } from "./hooks/useNexoraData";
-import nexoraAppIcon from "./assets/images/nexora_app_icon.png";
+
+const nexoraAppIcon = "/nexora_app_icon.png";
 
 const DEFAULT_SETTINGS: UserSettings = {
   pushupsGoal: 5,
