@@ -1,6 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, Droplets, Flame, User, Globe, Sparkles, Loader2, CheckCircle2, ArrowLeft, Briefcase, Zap, Brain } from 'lucide-react';
+import { 
+  ChevronRight, 
+  Droplets, 
+  Flame, 
+  User, 
+  Globe, 
+  Sparkles, 
+  Loader2, 
+  CheckCircle2, 
+  ArrowLeft, 
+  Briefcase, 
+  Zap, 
+  Brain,
+  ShieldCheck,
+  Heart,
+  Dumbbell,
+  Compass,
+  Award,
+  Lock,
+  FlameKindling
+} from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
@@ -30,13 +50,13 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   const [isHoveringContinue, setIsHoveringContinue] = useState(false);
   const [buttonPulse, setButtonPulse] = useState(false);
 
-  const totalSteps = 13;
+  const totalSteps = 16;
 
   useEffect(() => {
-    if (step === 12) {
+    if (step === 15) {
       // Simulate plan creation
       const timer = setTimeout(() => {
-        setStep(13);
+        setStep(16);
       }, 3000);
       return () => clearTimeout(timer);
     }
@@ -105,7 +125,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   };
 
   const handleContinueClick = (action: () => void) => {
-    // vibrate(15);
+    vibrate(12);
     action();
   };
 
@@ -116,7 +136,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
       setButtonPulse(true);
       setTimeout(() => {
         setButtonPulse(false);
-      }, 400);
+      }, 450);
     }
   };
 
@@ -124,7 +144,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
 
   const handleBack = async () => {
     vibrate(10);
-    if (step > 1 && step < 12) {
+    if (step > 1 && step < 15) {
       setStep(prev => prev - 1);
     } else if (step === 1) {
       try {
@@ -135,98 +155,122 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
     }
   };
 
+  // Helper to determine active background or border effects
+  const accentColor = "#69C496";
+
   return (
-    <div className="min-h-screen bg-blue-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-[#FAF7F2] text-[#4F3F34] flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 relative overflow-hidden transition-colors duration-500">
+      
+      {/* Decorative Warm Ambient Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-[#69C496]/8 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-[#BACBBF]/15 rounded-full blur-[120px]" />
+        <div className="absolute top-[40%] left-[60%] w-[200px] h-[200px] bg-[#7D6B58]/4 rounded-full blur-[80px]" />
+      </div>
+
       {/* Back Button */}
-      {step < 12 && (
+      {step < 15 && (
         <button 
           onClick={handleBack}
-          className="absolute top-6 left-6 p-3 rounded-full bg-white/50 text-blue-900/60 hover:bg-white/80 hover:text-blue-900 transition-all z-20 shadow-sm"
+          className="absolute top-6 left-6 p-3 rounded-full bg-white border border-[#E9E4D4] text-[#7D6B58] hover:bg-[#FAF7F2] hover:text-[#4F3F34] hover:scale-105 active:scale-95 transition-all z-20 shadow-sm flex items-center justify-center cursor-pointer"
           aria-label="Go back"
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft size={18} />
         </button>
       )}
 
-      {/* Background elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-400/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-indigo-400/20 rounded-full blur-3xl" />
-      </div>
+      {/* Progress Floating Header */}
+      <div className="w-full max-w-lg z-10 space-y-4 mb-4">
+        {/* Mascot Frame */}
+        {step < 15 && (
+          <div className="flex justify-center">
+            <motion.div 
+              initial={{ y: -25, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 280, 
+                damping: 20
+              }}
+              className="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center bg-white border border-[#E9E4D4] rounded-full shadow-md overflow-hidden p-2 bg-gradient-to-tr from-white to-[#FAF7F2]"
+            >
+              <img 
+                src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
+                alt="Nexora Mascot" 
+                className="w-full h-full object-contain drop-shadow-lg"
+                referrerPolicy="no-referrer"
+                loading="lazy"
+              />
+              <div className="absolute -bottom-1.5 px-3 py-0.5 rounded-full bg-[#69C496] border border-white text-white text-[9px] font-black uppercase tracking-wider shadow-sm animate-pulse">
+                Nexy Ally
+              </div>
+            </motion.div>
+          </div>
+        )}
 
-      <div className="w-full max-w-md z-10">
-        {/* Mascot */}
-        <div className="flex justify-center mb-6">
-          <motion.div 
-            initial={{ y: -50, opacity: 0, scale: 0.8 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 300, 
-              damping: 15,
-              delay: 0.2 
-            }}
-            className="w-64 h-64 md:w-[512px] md:h-[512px] max-w-full flex items-center justify-center"
-          >
-            <img 
-              src="https://i.postimg.cc/qv3DJHS5/Chat-GPT-Image-Mar-23-2026-05-09-17-PM-removebg-preview.png" 
-              alt="Nexora Mascot" 
-              className="w-full h-full object-contain drop-shadow-2xl"
-              referrerPolicy="no-referrer"
-              loading="lazy"
-            />
-          </motion.div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mb-8 space-y-2">
-          <div className="flex justify-between text-xs font-bold text-blue-900/40 uppercase tracking-widest">
-            <span>Step {step} of {totalSteps}</span>
+        {/* Progress Bar with modern bento feel */}
+        <div className="space-y-1.5 px-1 sm:px-4">
+          <div className="flex justify-between text-[10px] font-black text-[#7D6B58]/70 uppercase tracking-widest">
+            <span>Rhythm Step {step} of {totalSteps}</span>
             <span>{Math.round((step / totalSteps) * 100)}%</span>
           </div>
-          <div className="h-2 w-full bg-blue-100 rounded-full overflow-hidden">
+          <div className="h-2.5 w-full bg-white border border-[#E9E4D4] rounded-full overflow-hidden p-[2px] shadow-sm">
             <motion.div 
-              className="h-full bg-blue-500"
+              className="h-full bg-[#69C496] rounded-full"
               initial={{ width: 0 }}
               animate={{ width: `${(step / totalSteps) * 100}%` }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
             />
           </div>
         </div>
+      </div>
 
+      <div className="w-full max-w-lg z-10 px-1 sm:px-4">
         <AnimatePresence mode="wait">
-          {/* STEP 1: Welcome & Importance */}
+          
+          {/* STEP 1: Welcome & Significance (Polished Redesign) */}
           {step === 1 && (
             <motion.div 
               key="step1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-8"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl shadow-[#4F3F34]/3"
             >
-              <div className="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-2">
-                <Sparkles size={32} />
+              <div className="w-16 h-16 bg-[#69C496]/10 text-[#69C496] rounded-full flex items-center justify-center border border-[#69C496]/20">
+                <Sparkles size={28} className="animate-pulse" />
               </div>
-              <div className="space-y-4">
-                <h2 className="text-3xl font-black text-blue-900 leading-tight">Welcome to Nexora, bro!</h2>
-                <div className="space-y-3 text-left">
-                  <p className="text-blue-900/70 text-sm font-medium">
-                    Creating an account is the first step to a better you. Here's why it's important:
-                  </p>
-                  <ul className="space-y-2">
-                    <li className="flex gap-2 text-xs text-blue-900/60">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 shrink-0" />
-                      <span><strong>Save Your Progress:</strong> Never lose your streaks or trophies. Your data is safely synced to the cloud.</span>
-                    </li>
-                    <li className="flex gap-2 text-xs text-blue-900/60">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 shrink-0" />
-                      <span><strong>Personalized Flow:</strong> We tailor your daily challenges to your specific goals and lifestyle.</span>
-                    </li>
-                    <li className="flex gap-2 text-xs text-blue-900/60">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 shrink-0" />
-                      <span><strong>Multi-Device Sync:</strong> Access your flow companion from any device, anywhere, anytime.</span>
-                    </li>
-                  </ul>
+
+              <div className="space-y-3">
+                <h2 className="text-3xl font-black text-[#4F3F34] leading-tight tracking-tight">
+                  Welcome to <span className="text-[#69C496] bg-[#69C496]/5 px-2.5 py-0.5 rounded-xl border border-[#69C496]/15">Nexora</span>, bro!
+                </h2>
+                <p className="text-[#7D6B58] text-sm font-medium px-4">
+                  Let's design your day and sync your rhythm. Creating an account is the ultimate step to stay locked in:
+                </p>
+              </div>
+
+              <div className="w-full bg-[#FFFDF9]/60 border border-[#E9E4D4]/80 rounded-2xl p-5 text-left space-y-4 shadow-inner">
+                <div className="flex gap-3.5 items-start">
+                  <div className="w-6 h-6 rounded-full bg-[#69C496]/20 text-[#69C496] flex items-center justify-center shrink-0 text-xs font-black">1</div>
+                  <div>
+                    <h4 className="text-xs font-black text-[#4F3F34] uppercase tracking-wider">Save Your Progress</h4>
+                    <p className="text-xs text-[#7D6B58] font-medium">Never lose streak multiplier milestones or custom achievements. Backed up safely.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3.5 items-start border-t border-[#E9E4D4]/50 pt-3">
+                  <div className="w-6 h-6 rounded-full bg-[#69C496]/20 text-[#69C496] flex items-center justify-center shrink-0 text-xs font-black">2</div>
+                  <div>
+                    <h4 className="text-xs font-black text-[#4F3F34] uppercase tracking-wider">Personalized Energy Target</h4>
+                    <p className="text-xs text-[#7D6B58] font-medium">Tailors daily micro-quests directly to your natural biorhythms and schedule constraints.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3.5 items-start border-t border-[#E9E4D4]/50 pt-3">
+                  <div className="w-6 h-6 rounded-full bg-[#69C496]/20 text-[#69C496] flex items-center justify-center shrink-0 text-xs font-black">3</div>
+                  <div>
+                    <h4 className="text-xs font-black text-[#4F3F34] uppercase tracking-wider">Passive Mascot Synthesis</h4>
+                    <p className="text-xs text-[#7D6B58] font-medium">Your interactive buddy acts as an accountability partner, reacting dynamically to consistency.</p>
+                  </div>
                 </div>
               </div>
 
@@ -234,56 +278,230 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                 onClick={nextStep} 
                 onMouseEnter={() => handleButtonHover(true)}
                 onMouseLeave={() => handleButtonHover(false)}
-                className={`btn-primary w-full flex justify-center items-center gap-2 transition-all duration-300 ${buttonPulse ? 'scale-105 shadow-blue-500/50' : ''}`}
+                className="btn-primary w-full flex justify-center items-center gap-2 cursor-pointer bg-[#69C496] hover:bg-[#5bb385] text-white py-4 rounded-2xl shadow-lg shadow-[#69C496]/20 transition-all font-black text-sm uppercase tracking-widest mt-2"
               >
-                Continue <ChevronRight size={20} />
+                Let's Formulate <ChevronRight size={18} />
               </button>
             </motion.div>
           )}
 
-          {/* STEP 2: Name */}
+          {/* STEP 2: How Nexora Helps (NEW) */}
           {step === 2 && (
             <motion.div 
               key="step2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-8"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl shadow-[#4F3F34]/3"
             >
-              <div className="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-2">
-                <User size={32} />
+              <div className="w-16 h-16 bg-[#BACBBF]/25 text-[#4F3F34] rounded-full flex items-center justify-center border border-[#E9E4D4]">
+                <Compass size={28} className="text-[#69C496]" />
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-[#4F3F34] leading-tight tracking-tight uppercase">
+                  How Nexora Helps You
+                </h2>
+                <p className="text-[#7D6B58] text-xs font-medium px-2">
+                  Building lasting habits requires systems, not just motivation. Here is how Nexora assists you every day:
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 w-full">
+                <div className="p-4 rounded-2xl border border-[#E9E4D4] bg-[#FFFDF9] text-left space-y-2">
+                  <div className="p-2 w-fit bg-[#BACBBF]/20 rounded-lg text-[#4F3F34]">
+                    <Zap size={16} />
+                  </div>
+                  <h4 className="text-[11px] font-black text-[#4F3F34] uppercase tracking-widest">Micro-Metrics</h4>
+                  <p className="text-[10px] text-[#7D6B58] leading-normal font-medium">Tracks hydration volume and physical power prompts throughout your busy work hours.</p>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-[#E9E4D4] bg-[#FFFDF9] text-left space-y-2">
+                  <div className="p-2 w-fit bg-[#69C496]/20 rounded-lg text-[#69C496]">
+                    <Brain size={16} />
+                  </div>
+                  <h4 className="text-[11px] font-black text-[#4F3F34] uppercase tracking-widest">Cognitive State</h4>
+                  <p className="text-[10px] text-[#7D6B58] leading-normal font-medium">Brings mental clarity with breathing cadences and short gratitude logging workflows.</p>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-[#E9E4D4] bg-[#FFFDF9] text-left space-y-2">
+                  <div className="p-2 w-fit bg-orange-100 rounded-lg text-orange-600">
+                    <Dumbbell size={16} />
+                  </div>
+                  <h4 className="text-[11px] font-black text-[#4F3F34] uppercase tracking-widest">Growth Loop</h4>
+                  <p className="text-[10px] text-[#7D6B58] leading-normal font-medium">Your activity translates into Volt power, fueling your garden flora and level evolution.</p>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-[#E9E4D4] bg-[#FFFDF9] text-left space-y-2">
+                  <div className="p-2 w-fit bg-red-100 rounded-lg text-red-600">
+                    <FlameKindling size={16} />
+                  </div>
+                  <h4 className="text-[11px] font-black text-[#4F3F34] uppercase tracking-widest">High Energy</h4>
+                  <p className="text-[10px] text-[#7D6B58] leading-normal font-medium">Dynamically syncs difficulty levels based on the rhythm goals you define next.</p>
+                </div>
+              </div>
+
+              <button 
+                onClick={nextStep}
+                className="btn-primary w-full flex justify-center items-center gap-2 cursor-pointer bg-[#69C496] hover:bg-[#5bb385] text-white py-4 rounded-2xl shadow-lg shadow-[#69C496]/15 transition-all font-black text-sm uppercase tracking-widest"
+              >
+                Learn More <ChevronRight size={18} />
+              </button>
+            </motion.div>
+          )}
+
+          {/* STEP 3: Ironclad Privacy (NEW) */}
+          {step === 3 && (
+            <motion.div 
+              key="step3"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl shadow-[#4F3F34]/3"
+            >
+              <div className="w-16 h-16 bg-[#69C496]/10 text-[#69C496] rounded-full flex items-center justify-center border border-[#69C496]/20">
+                <ShieldCheck size={28} className="animate-pulse" />
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-[#4F3F34] leading-tight tracking-tight uppercase">
+                  Ironclad Privacy Guarantee
+                </h2>
+                <p className="text-[#7D6B58] text-xs font-medium px-2">
+                  Your daily life is private. That’s why privacy is baked into the foundation of Nexora:
+                </p>
+              </div>
+
+              <div className="w-full space-y-3.5">
+                <div className="flex items-center gap-3 p-4 bg-[#FFFDF9] border border-[#E9E4D4] rounded-2xl text-left">
+                  <div className="p-2.5 bg-green-50 text-[#69C496] rounded-xl shrink-0">
+                    <Lock size={16} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-[#4F3F34] uppercase tracking-wider">Zero Scraping or Telemetry</h4>
+                    <p className="text-[10px] text-[#7D6B58] leading-tight mt-0.5 font-medium">None of your wellness tallies, personal thoughts, or routine structures are ever shared or monetized.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-4 bg-[#FFFDF9] border border-[#E9E4D4] rounded-2xl text-left">
+                  <div className="p-2.5 bg-indigo-50 text-indigo-500 rounded-xl shrink-0">
+                    <ShieldCheck size={16} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-[#4F3F34] uppercase tracking-wider">Secure Encrypted Key</h4>
+                    <p className="text-[10px] text-[#7D6B58] leading-tight mt-0.5 font-medium">Your logs are written on your sovereign Firestore profile instance, secured via military-grade client rules.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-4 bg-[#FFFDF9] border border-[#E9E4D4] rounded-2xl text-left">
+                  <div className="p-2.5 bg-amber-50 text-amber-500 rounded-xl shrink-0">
+                    <Globe size={16} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-[#4F3F34] uppercase tracking-wider">Offline State Synchronization</h4>
+                    <p className="text-[10px] text-[#7D6B58] leading-tight mt-0.5 font-medium">Sync with complete peace of mind. All active tracking metrics remain locally stored on your machine first.</p>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={nextStep}
+                className="btn-primary w-full flex justify-center items-center gap-2 cursor-pointer bg-[#69C496] hover:bg-[#5bb385] text-white py-4 rounded-2xl shadow-lg shadow-[#69C496]/15 transition-all font-black text-sm uppercase tracking-widest"
+              >
+                Sync Safely <ChevronRight size={18} />
+              </button>
+            </motion.div>
+          )}
+
+          {/* STEP 4: Mascot Partnership (NEW) */}
+          {step === 4 && (
+            <motion.div 
+              key="step4"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl shadow-[#4F3F34]/3"
+            >
+              <div className="w-16 h-16 bg-pink-100 text-[#4F3F34] rounded-full flex items-center justify-center border border-pink-200">
+                <Heart size={28} className="text-pink-500 animate-pulse" />
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-[#4F3F34] leading-tight tracking-tight uppercase">
+                  Meet Your Mascot Ally
+                </h2>
+                <p className="text-[#7D6B58] text-xs font-medium px-2">
+                  Nexy is not just an illustration. It is custom-linked to your personal daily frequency:
+                </p>
+              </div>
+
+              <div className="space-y-4 text-left bg-[#FFFDF9]/60 border border-[#E9E4D4] rounded-2xl p-5 shadow-inner">
+                <ul className="space-y-3">
+                  <li className="flex gap-2.5 text-xs text-[#7D6B58] font-semibold items-start">
+                    <div className="w-2 h-2 rounded-full bg-pink-400 mt-1.5 shrink-0" />
+                    <span><strong>Mood Reactivity:</strong> Nexy smiles when you check in early, but will start tapping its foot or looking anxious if you drift past your target hours.</span>
+                  </li>
+                  <li className="flex gap-2.5 text-xs text-[#7D6B58] font-semibold items-start border-t border-[#E9E4D4]/40 pt-2.5">
+                    <div className="w-2 h-2 rounded-full bg-pink-400 mt-1.5 shrink-0" />
+                    <span><strong>Evolution Growth:</strong> As you achieve streaks, Nexy helps feed your seedling tree in the background garden – watch it transform!</span>
+                  </li>
+                  <li className="flex gap-2.5 text-xs text-[#7D6B58] font-semibold items-start border-t border-[#E9E4D4]/40 pt-2.5">
+                    <div className="w-2 h-2 rounded-full bg-pink-400 mt-1.5 shrink-0" />
+                    <span><strong>Discipline Vault:</strong> Collect gold tokens and badges as you prove your daily focus.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <button 
+                onClick={nextStep}
+                className="btn-primary w-full flex justify-center items-center gap-2 cursor-pointer bg-[#69C496] hover:bg-[#5bb385] text-white py-4 rounded-2xl shadow-lg shadow-[#69C496]/15 transition-all font-black text-sm uppercase tracking-widest animate-bounce"
+              >
+                Let's Start Customizing! <ChevronRight size={18} />
+              </button>
+            </motion.div>
+          )}
+
+          {/* STEP 5: Name (original Step 2) */}
+          {step === 5 && (
+            <motion.div 
+              key="step5"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl shadow-[#4F3F34]/3"
+            >
+              <div className="w-16 h-16 bg-[#69C496]/10 text-[#69C496] rounded-full flex items-center justify-center border border-[#69C496]/20">
+                <User size={28} />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-black text-blue-900">What should we call you?</h2>
-                <p className="text-blue-900/60 text-sm">Enter your name or a nickname.</p>
-                <p className="text-blue-900/50 text-xs mt-2">We want to make your experience as personal as possible. Your mascot will use this name to cheer you on and celebrate your daily victories!</p>
+                <h2 className="text-2xl font-black text-[#4F3F34] uppercase tracking-tight">What should we call you?</h2>
+                <p className="text-[#7D6B58] text-xs font-semibold">Enter your name or a favorite moniker, bro.</p>
+                <p className="text-[#7D6B58]/60 text-[11px] mt-1 italic">Nexy will use this name to celebrate your victories and keep your daily streak stats personal!</p>
               </div>
               
               <input 
                 type="text" 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Your Name" 
-                className="w-full p-4 rounded-xl border-2 border-blue-100 focus:border-blue-500 outline-none text-xl text-center font-bold text-blue-900 bg-white/50"
+                placeholder="Ex. Thomas, Champ" 
+                className="w-full p-4 rounded-2xl border-2 border-[#E9E4D4] focus:border-[#69C496] focus:ring-1 focus:ring-[#69C496] outline-none text-xl text-center font-bold text-[#4F3F34] bg-[#FFFDF9]/60 placeholder-[#7D6B58]/40 transition-all font-sans"
                 autoFocus
               />
 
-              <div className="w-full flex flex-col gap-3">
+              <div className="w-full flex flex-col gap-2.5">
                 {name.trim() ? (
                   <button 
                     onClick={nextStep} 
                     onMouseEnter={() => handleButtonHover(true)}
                     onMouseLeave={() => handleButtonHover(false)}
-                    className={`btn-primary w-full flex justify-center items-center gap-2 transition-all duration-300 ${buttonPulse ? 'scale-105 shadow-blue-500/50' : ''}`}
+                    className="btn-primary w-full flex justify-center items-center gap-2 cursor-pointer bg-[#69C496] text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
                   >
-                    Continue <ChevronRight size={20} />
+                    Continue <ChevronRight size={18} />
                   </button>
                 ) : (
                   <button 
                     onClick={nextStep} 
-                    onMouseEnter={() => handleButtonHover(true)}
-                    onMouseLeave={() => handleButtonHover(false)}
-                    className={`w-full py-4 text-blue-900/40 font-bold hover:text-blue-900/60 transition-colors ${buttonPulse ? 'scale-105' : ''}`}
+                    className="w-full py-3.5 text-[#7D6B58]/60 hover:text-[#4F3F34] font-black text-xs uppercase tracking-wider transition-colors cursor-pointer"
                   >
                     Skip for now
                   </button>
@@ -292,52 +510,47 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 3: Gender */}
-          {step === 3 && (
+          {/* STEP 6: Gender (original Step 3) */}
+          {step === 6 && (
             <motion.div 
-              key="step3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-8"
+              key="step6"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl"
             >
               <div className="space-y-2">
-                <h2 className="text-2xl font-black text-blue-900">What is your gender?</h2>
-                <p className="text-blue-900/60 text-sm">This helps us personalize your experience.</p>
-                <p className="text-blue-900/50 text-xs mt-2">Knowing a bit more about you allows us to tailor your health and fitness baselines. Don't worry, you can always skip this step if you prefer not to say.</p>
+                <h2 className="text-2xl font-black text-[#4F3F34] uppercase tracking-tight">Your Identity</h2>
+                <p className="text-[#7D6B58] text-xs font-semibold">Helps calibrating metabolic hydration profiles.</p>
               </div>
               
               <div className="w-full flex flex-col gap-3">
-                {["Male", "Female", "Other", "I don't know or I don't want to talk about it"].map((option) => (
+                {["Male", "Female", "Other", "Prefer not to mention"].map((option) => (
                   <button 
                     key={option}
                     onClick={() => {
                       vibrate(10);
                       setGender(option);
                     }}
-                    className={`p-4 rounded-xl border-2 text-left font-bold transition-all ${gender === option ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-blue-100 bg-white/50 text-blue-900/70 hover:border-blue-300'}`}
+                    className={`p-4 rounded-2xl border-2 text-left font-black transition-all text-xs uppercase tracking-wider cursor-pointer ${gender === option ? 'border-[#69C496] bg-[#69C496]/5 text-[#4F3F34]' : 'border-[#E9E4D4] bg-[#FFFDF9]/60 text-[#7D6B58] hover:border-[#69C496]/40'}`}
                   >
                     {option}
                   </button>
                 ))}
               </div>
 
-              <div className="w-full flex flex-col gap-3 mt-4">
+              <div className="w-full flex flex-col gap-2 mt-2">
                 {gender ? (
                   <button 
                     onClick={nextStep} 
-                    onMouseEnter={() => handleButtonHover(true)}
-                    onMouseLeave={() => handleButtonHover(false)}
-                    className={`btn-primary w-full flex justify-center items-center gap-2 transition-all duration-300 ${buttonPulse ? 'scale-105 shadow-blue-500/50' : ''}`}
+                    className="btn-primary w-full flex justify-center items-center gap-2 cursor-pointer bg-[#69C496]"
                   >
-                    Continue <ChevronRight size={20} />
+                    Continue <ChevronRight size={18} />
                   </button>
                 ) : (
                   <button 
                     onClick={nextStep} 
-                    onMouseEnter={() => handleButtonHover(true)}
-                    onMouseLeave={() => handleButtonHover(false)}
-                    className={`w-full py-4 text-blue-900/40 font-bold hover:text-blue-900/60 transition-colors ${buttonPulse ? 'scale-105' : ''}`}
+                    className="w-full py-3 text-[#7D6B58]/40 hover:text-[#4F3F34] font-black text-xs uppercase tracking-widest cursor-pointer"
                   >
                     Skip
                   </button>
@@ -346,76 +559,76 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 4: Source */}
-          {step === 4 && (
+          {/* STEP 7: Source (original Step 4) */}
+          {step === 7 && (
             <motion.div 
-              key="step4"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-8"
+              key="step7"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl"
             >
-              <div className="w-16 h-16 bg-indigo-100 text-indigo-500 rounded-full flex items-center justify-center mb-2">
-                <Globe size={32} />
+              <div className="w-16 h-16 bg-[#BACBBF]/20 text-[#69C496] rounded-full flex items-center justify-center border border-[#E9E4D4]">
+                <Globe size={28} />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-black text-blue-900">Where did you hear about us?</h2>
-                <p className="text-blue-900/50 text-xs mt-2">Letting us know how you found Nexora helps us reach more people just like you!</p>
+                <h2 className="text-2xl font-black text-[#4F3F34] uppercase tracking-tight">How did you find us?</h2>
+                <p className="text-[#7D6B58]/60 text-[11px] font-semibold">Help Nexora grow and support its server maintenance, bro.</p>
               </div>
               
-              <div className="w-full flex flex-col gap-3">
-                {["YouTube", "Reddit", "Friends", "Google", "Others"].map((option) => (
+              <div className="w-full flex flex-col gap-2.5">
+                {["YouTube", "Reddit", "Friends & Word of Mouth", "Google Search", "Others / Social Media"].map((option) => (
                   <button 
                     key={option}
                     onClick={() => {
                       vibrate(10);
                       setSource(option);
                     }}
-                    className={`p-4 rounded-xl border-2 text-left font-bold transition-all ${source === option ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-blue-100 bg-white/50 text-blue-900/70 hover:border-indigo-300'}`}
+                    className={`p-4 rounded-2xl border-2 text-left font-black transition-all text-xs uppercase tracking-wider cursor-pointer ${source === option ? 'border-[#69C496] bg-[#69C496]/5 text-[#4F3F34]' : 'border-[#E9E4D4] bg-[#FFFDF9]/60 text-[#7D6B58] hover:border-[#69C496]/40'}`}
                   >
                     {option}
                   </button>
                 ))}
               </div>
 
-              <div className="w-full flex flex-col gap-3 mt-4">
+              <div className="w-full flex flex-col gap-2 mt-2">
                 {source ? (
                   <button 
                     onClick={nextStep} 
-                    className="btn-primary w-full flex justify-center items-center gap-2"
+                    className="btn-primary w-full flex justify-center items-center gap-2 cursor-pointer bg-[#69C496]"
                   >
-                    Continue <ChevronRight size={20} />
+                    Continue <ChevronRight size={18} />
                   </button>
                 ) : (
-                  <button onClick={nextStep} className="w-full py-4 text-blue-900/40 font-bold">Skip</button>
+                  <button onClick={nextStep} className="w-full py-3 text-[#7D6B58]/40 hover:text-[#4F3F34] font-black text-xs uppercase tracking-widest cursor-pointer">Skip</button>
                 )}
               </div>
             </motion.div>
           )}
 
-          {/* STEP 5: Work Type (NEW) */}
-          {step === 5 && (
+          {/* STEP 8: Work Type (original Step 5) */}
+          {step === 8 && (
             <motion.div 
-              key="step5"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-7"
+              key="step8"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-6 border border-[#E9E4D4] bg-white shadow-xl"
             >
-              <div className="w-16 h-16 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center mb-2">
-                <Briefcase size={32} />
+              <div className="w-16 h-16 bg-slate-100/80 text-[#7D6B58] rounded-full flex items-center justify-center border border-[#E9E4D4]">
+                <Briefcase size={28} />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-black text-blue-900">What's your typical day?</h2>
-                <p className="text-blue-900/50 text-xs">This helps us time your reminders perfectly, bro.</p>
+                <h2 className="text-2xl font-black text-[#4F3F34] uppercase tracking-tight">Your typical day?</h2>
+                <p className="text-[#7D6B58]/60 text-[11px] font-semibold">Tuning hydration reminders to fit perfectly without disruption.</p>
               </div>
               
-              <div className="w-full flex flex-col gap-3">
+              <div className="w-full flex flex-col gap-2.5">
                 {[
-                  { id: 'desk', label: 'Desk Bound (Office/Home)', desc: 'High focus sessions' },
-                  { id: 'active', label: 'On the Move (Active)', desc: 'Field work or physical' },
-                  { id: 'student', label: 'Student Life (Hybrid)', desc: 'Mix of sitting and movement' },
-                  { id: 'night', label: 'Night Shift (Late)', desc: 'Reverse schedule' }
+                  { id: 'desk', label: 'Desk Bound (Office/Home)', desc: 'Optimized for high focus and keyboard physical reminders' },
+                  { id: 'active', label: 'On the Move (Active)', desc: 'Optimized for dynamic high output hydration targets' },
+                  { id: 'student', label: 'Student / Hybrid life', desc: 'Bridges continuous sitting study phases with movement' },
+                  { id: 'night', label: 'Night Shift Focus Schedule', desc: 'Reverse circadian patterns, late-night companion logs' }
                 ].map((option) => (
                   <button 
                     key={option.id}
@@ -423,10 +636,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                       vibrate(10);
                       setWorkType(option.id);
                     }}
-                    className={`p-4 rounded-xl border-2 text-left transition-all ${workType === option.id ? 'border-slate-500 bg-slate-50' : 'border-blue-100 bg-white/50 hover:border-slate-300'}`}
+                    className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer ${workType === option.id ? 'border-[#69C496] bg-[#69C496]/5' : 'border-[#E9E4D4] bg-[#FFFDF9]/60 hover:border-[#69C496]/30'}`}
                   >
-                    <p className={`font-black uppercase text-[10px] tracking-widest ${workType === option.id ? 'text-slate-600' : 'text-blue-900/40'}`}>{option.label}</p>
-                    <p className="text-xs font-bold text-blue-900 mt-0.5">{option.desc}</p>
+                    <p className={`font-black uppercase text-[10px] tracking-widest ${workType === option.id ? 'text-[#4F3F34]' : 'text-[#7D6B58]/55'}`}>{option.label}</p>
+                    <p className="text-[11px] font-bold text-[#7D6B58] mt-0.5 leading-snug">{option.desc}</p>
                   </button>
                 ))}
               </div>
@@ -435,36 +648,36 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                 <button 
                   onClick={nextStep} 
                   disabled={!workType}
-                  className="btn-primary w-full flex justify-center items-center gap-2 disabled:opacity-50"
+                  className="btn-primary w-full flex justify-center items-center gap-2 cursor-pointer bg-[#69C496] disabled:opacity-40"
                 >
-                  Analyze Schedule <ChevronRight size={20} />
+                  Analyze My Habit Schedule <ChevronRight size={18} />
                 </button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 6: Peak Energy (NEW) */}
-          {step === 6 && (
+          {/* STEP 9: Peak Energy (original Step 6) */}
+          {step === 9 && (
             <motion.div 
-              key="step6"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-7"
+              key="step9"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-6 border border-[#E9E4D4] bg-white shadow-xl"
             >
-              <div className="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mb-2">
-                <Zap size={32} />
+              <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center border border-amber-150">
+                <Zap size={28} className="animate-pulse" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-black text-blue-900">Peak Energy Pulse?</h2>
-                <p className="text-blue-900/50 text-xs">When do you feel most unstoppable?</p>
+                <h2 className="text-2xl font-black text-[#4F3F34] uppercase tracking-tight">Peak Energy Pulse?</h2>
+                <p className="text-[#7D6B58] text-xs font-semibold">When do you feel most active and focused, bro?</p>
               </div>
               
-              <div className="grid grid-cols-1 gap-3 w-full">
+              <div className="grid grid-cols-1 gap-2.5 w-full">
                 {[
-                  { id: 'morning', label: 'Morning Lark', icon: '🌅' },
-                  { id: 'midday', label: 'Mid-day Warrior', icon: '☀️' },
-                  { id: 'night', label: 'Night Owl', icon: '🌙' }
+                  { id: 'morning', label: 'Morning Lark Peak', icon: '🌅', subtitle: '6:00 AM - 12:00 PM power zone' },
+                  { id: 'midday', label: 'Mid-day Warrior Output', icon: '☀️', subtitle: '12:00 PM - 5:00 PM peak state' },
+                  { id: 'night', label: 'Night Owl Focus', icon: '🌙', subtitle: '6:00 PM - Late night inspiration shift' }
                 ].map((option) => (
                   <button 
                     key={option.id}
@@ -472,10 +685,15 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                       vibrate(10);
                       setEnergyPeak(option.id);
                     }}
-                    className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all ${energyPeak === option.id ? 'border-yellow-500 bg-yellow-50 shadow-lg shadow-yellow-100' : 'border-blue-100 bg-white/50'}`}
+                    className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer ${energyPeak === option.id ? 'border-amber-500 bg-amber-50/40 shadow-sm' : 'border-[#E9E4D4] bg-[#FFFDF9]/60'}`}
                   >
-                    <span className="text-2xl">{option.icon}</span>
-                    <span className={`font-black uppercase tracking-widest text-sm ${energyPeak === option.id ? 'text-yellow-700' : 'text-blue-900/40'}`}>{option.label}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{option.icon}</span>
+                      <div className="text-left">
+                        <span className={`block font-black uppercase tracking-widest text-[11px] ${energyPeak === option.id ? 'text-amber-800' : 'text-[#4F3F34]'}`}>{option.label}</span>
+                        <span className="block text-[10px] text-[#7D6B58] leading-tight font-medium">{option.subtitle}</span>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -484,37 +702,37 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                 <button 
                   onClick={nextStep} 
                   disabled={!energyPeak}
-                  className="bg-yellow-500 text-white font-black py-4 px-8 rounded-2xl w-full flex justify-center items-center gap-2 hover:bg-yellow-600 transition-all disabled:opacity-50"
+                  className="bg-amber-500 text-white font-black py-4 px-8 rounded-2xl w-full flex justify-center items-center gap-2 hover:bg-amber-600 transition-all shadow-md shadow-amber-500/10 disabled:opacity-40 cursor-pointer text-xs uppercase tracking-widest"
                 >
-                  Log Pulse <ChevronRight size={20} />
+                  Log Energy Pulse <ChevronRight size={18} />
                 </button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 7: Priority Focus (NEW) */}
-          {step === 7 && (
+          {/* STEP 10: Priority Focus Focus (original Step 7) */}
+          {step === 10 && (
             <motion.div 
-              key="step7"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-7"
+              key="step10"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-6 border border-[#E9E4D4] bg-white shadow-xl"
             >
-              <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mb-2">
-                <Brain size={32} />
+              <div className="w-16 h-16 bg-purple-100/80 text-purple-600 rounded-full flex items-center justify-center border border-purple-200">
+                <Brain size={28} />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-black text-blue-900">Core Objective?</h2>
-                <p className="text-blue-900/50 text-xs">Choose your primary nexus for this month.</p>
+                <h2 className="text-2xl font-black text-[#4F3F34] uppercase tracking-tight">Core Objective focus?</h2>
+                <p className="text-[#7D6B58] text-xs font-semibold">Select your primary alignment for this month.</p>
               </div>
               
               <div className="grid grid-cols-2 gap-3 w-full">
                 {[
-                  { id: 'physical', label: 'Body Power', color: 'bg-orange-500' },
-                  { id: 'mental', label: 'Mind Flow', color: 'bg-blue-500' },
-                  { id: 'stress', label: 'Stress Armor', color: 'bg-emerald-500' },
-                  { id: 'habit', label: 'Habit Pure', color: 'bg-indigo-500' }
+                  { id: 'physical', label: 'Body Power', color: 'bg-orange-500', desc: 'Focus physical workout habits' },
+                  { id: 'mental', label: 'Mind Flow', color: 'bg-blue-500', desc: 'Boost cognitive concentration' },
+                  { id: 'stress', label: 'Stress Armor', color: 'bg-emerald-500', desc: 'Soothe mental burnout risks' },
+                  { id: 'habit', label: 'Habit Pure', color: 'bg-indigo-500', desc: 'Formulate raw daily consistency' }
                 ].map((option) => (
                   <button 
                     key={option.id}
@@ -522,21 +740,22 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                       vibrate(10);
                       setPriorityFocus(option.id);
                     }}
-                    className={`flex flex-col items-center justify-center p-6 rounded-[24px] border-4 transition-all aspect-square ${priorityFocus === option.id ? 'border-purple-500 bg-purple-50 scale-105 shadow-xl shadow-purple-100' : 'border-blue-50 bg-white/50 opacity-60'}`}
+                    className={`flex flex-col items-center justify-center p-5 rounded-[24px] border-4 transition-all aspect-square cursor-pointer ${priorityFocus === option.id ? 'border-purple-500 bg-purple-50/40 scale-[1.03] shadow-md shadow-purple-500/5' : 'border-[#E9E4D4] bg-[#FFFDF9]/60 opacity-70'}`}
                   >
-                    <div className={`w-3 h-3 rounded-full mb-3 ${option.color}`} />
-                    <span className="font-black uppercase tracking-tighter text-[11px] text-blue-900">{option.label}</span>
+                    <div className={`w-3 h-3 rounded-full mb-2 ${option.color}`} />
+                    <span className="font-black uppercase tracking-tighter text-[11px] text-[#4F3F34] text-center leading-none">{option.label}</span>
+                    <span className="text-[9px] text-[#7D6B58] text-center mt-1.5 leading-tight font-medium font-sans">{option.desc}</span>
                   </button>
                 ))}
               </div>
 
-              <div className="w-full mt-4 flex flex-col gap-3">
+              <div className="w-full mt-4 flex flex-col gap-2.5">
                 <button 
                   onClick={nextStep} 
                   disabled={!priorityFocus}
-                  className="bg-purple-600 text-white font-black py-4 px-8 rounded-2xl w-full flex justify-center items-center gap-2 hover:bg-purple-700 transition-all shadow-lg shadow-purple-200 disabled:opacity-50"
+                  className="bg-purple-600 text-white font-black py-4 px-8 rounded-2xl w-full flex justify-center items-center gap-2 hover:bg-purple-700 transition-all shadow-md shadow-purple-600/10 disabled:opacity-40 cursor-pointer text-xs uppercase tracking-widest"
                 >
-                  Finalize Target <ChevronRight size={20} />
+                  Finalize Focus Target <ChevronRight size={18} />
                 </button>
                 <button 
                   onClick={() => {
@@ -544,128 +763,133 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                     setPriorityFocus('');
                     nextStep();
                   }}
-                  className="w-full py-2 bg-transparent text-purple-600 font-bold hover:text-purple-700 hover:underline transition-all text-sm uppercase tracking-wider"
+                  className="w-full py-2 bg-transparent text-purple-600 font-bold hover:text-purple-700 hover:underline transition-all text-xs uppercase tracking-wider cursor-pointer"
                 >
-                  Skip and play all challenges
+                  Unlock All Challenges Together
                 </button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 8: Water Goal */}
-          {step === 8 && (
+          {/* STEP 11: Water Goal (original Step 8) */}
+          {step === 11 && (
             <motion.div 
-              key="step8"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-8"
+              key="step11"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl"
             >
-              <div className="w-16 h-16 bg-cyan-100 text-cyan-500 rounded-full flex items-center justify-center mb-2">
-                <Droplets size={32} />
+              <div className="w-16 h-16 bg-cyan-100 text-cyan-500 rounded-full flex items-center justify-center border border-cyan-200">
+                <Droplets size={28} className="animate-bounce" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-black text-blue-900">Daily Water Goal</h2>
-                <p className="text-blue-900/60 text-sm">How many liters of water do you want to drink daily? (You can change this later)</p>
-                <p className="text-blue-900/50 text-xs mt-2 bg-cyan-50 p-3 rounded-lg border border-cyan-100">Did you know? Staying properly hydrated improves your focus, boosts your energy levels, and keeps your skin healthy. We recommend starting with at least 2 liters a day!</p>
+                <h2 className="text-2xl font-black text-[#4F3F34] uppercase tracking-tight">Daily Water Goal</h2>
+                <p className="text-[#7D6B58] text-xs font-semibold">Choose your target liquid volume, bro.</p>
+                <p className="text-[10px] text-[#7D6B58] mt-1 bg-cyan-50/50 p-3.5 rounded-xl border border-cyan-100/50 leading-relaxed font-semibold">Staying hydrated keeps your brain running sharp, boosts metabolism, and eliminates afternoon energy drops. 2L is a great starting base!</p>
               </div>
               
-              <div className="flex items-center justify-center gap-4 w-full">
+              <div className="flex items-center justify-center gap-5 w-full bg-[#FFFDF9] border border-[#E9E4D4] py-4 rounded-2xl shadow-inner">
                 <button 
-                  onClick={() => setWater(Math.max(1, water - 1))}
-                  className="w-12 h-12 rounded-full bg-cyan-100 text-cyan-600 font-black text-xl flex items-center justify-center hover:bg-cyan-200"
+                  onClick={() => {
+                    vibrate(10);
+                    setWater(Math.max(1, water - 1));
+                  }}
+                  className="w-11 h-11 rounded-full bg-cyan-100 text-cyan-600 font-black text-xl flex items-center justify-center hover:bg-cyan-200 cursor-pointer"
                 >
                   -
                 </button>
-                <div className="text-5xl font-black text-cyan-600 w-24 text-center">
+                <div className="text-4xl font-black text-cyan-600 w-24 text-center">
                   {water}L
                 </div>
                 <button 
-                  onClick={() => setWater(water + 1)}
-                  className="w-12 h-12 rounded-full bg-cyan-100 text-cyan-600 font-black text-xl flex items-center justify-center hover:bg-cyan-200"
+                  onClick={() => {
+                    vibrate(10);
+                    setWater(water + 1);
+                  }}
+                  className="w-11 h-11 rounded-full bg-cyan-100 text-cyan-600 font-black text-xl flex items-center justify-center hover:bg-cyan-200 cursor-pointer"
                 >
                   +
                 </button>
               </div>
 
-              <div className="w-full flex flex-col gap-3 mt-4">
+              <div className="w-full mt-2">
                 <button 
                   onClick={nextStep} 
-                  onMouseEnter={() => handleButtonHover(true)}
-                  onMouseLeave={() => handleButtonHover(false)}
-                  className={`bg-cyan-500 text-white py-4 px-6 rounded-xl font-black shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2 ${buttonPulse ? 'scale-105 shadow-cyan-500/50' : ''}`}
+                  className="bg-cyan-500 text-white font-black py-4 px-6 rounded-2xl shadow-md hover:bg-cyan-600 hover:shadow-cyan-500/20 hover:-translate-y-0.5 transition-all w-full flex justify-center items-center gap-2 cursor-pointer text-xs uppercase tracking-widest"
                 >
-                  Continue <ChevronRight size={20} />
+                  Continue <ChevronRight size={18} />
                 </button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 9: Pushups Goal */}
-          {step === 9 && (
+          {/* STEP 12: Pushups Goal (original Step 9) */}
+          {step === 12 && (
             <motion.div 
-              key="step9"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-8"
+              key="step12"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl"
             >
-              <div className="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mb-2">
-                <Flame size={32} />
+              <div className="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center border border-orange-200 animate-pulse">
+                <Flame size={28} />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-black text-blue-900">Daily Push-up Goal</h2>
-                <p className="text-blue-900/60 text-sm">How many push-ups do you want to do daily? (You can change this later)</p>
-                <p className="text-blue-900/50 text-xs mt-2 bg-orange-50 p-3 rounded-lg border border-orange-100">Consistency is key! Even doing just 5 push-ups every single day builds incredible discipline and foundational strength over time. Start small and grow strong.</p>
+                <h2 className="text-2xl font-black text-[#4F3F34] uppercase tracking-tight">Push-up Objective</h2>
+                <p className="text-[#7D6B58] text-xs font-semibold">How many push-ups do you commit to each day?</p>
+                <p className="text-[10px] text-[#7D6B58] bg-orange-50/50 p-3.5 rounded-xl border border-orange-100/50 leading-relaxed font-semibold">Doing even a single digit amount of daily pushups establishes outstanding cognitive consistency. We recommend starting with 5 daily repetitions!</p>
               </div>
               
-              <div className="grid grid-cols-2 gap-3 w-full">
+              <div className="grid grid-cols-4 gap-2.5 w-full">
                 {[1, 5, 10, 20].map((num) => (
                   <button 
                     key={num}
-                    onClick={() => setPushups(num)}
-                    className={`p-4 rounded-xl border-2 font-black text-xl transition-all ${pushups === num ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-orange-100 bg-white/50 text-orange-900/40 hover:border-orange-300'}`}
+                    onClick={() => {
+                      vibrate(10);
+                      setPushups(num);
+                    }}
+                    className={`p-4 rounded-2xl border-2 font-black text-lg transition-all cursor-pointer ${pushups === num ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-[#E9E4D4] bg-[#FFFDF9]/60 text-[#7D6B58]/40 hover:border-orange-300'}`}
                   >
                     {num}
                   </button>
                 ))}
               </div>
 
-              <div className="w-full flex flex-col gap-3 mt-4">
+              <div className="w-full mt-2">
                 <button 
                   onClick={nextStep} 
-                  onMouseEnter={() => handleButtonHover(true)}
-                  onMouseLeave={() => handleButtonHover(false)}
-                  className={`bg-orange-500 text-white py-4 px-6 rounded-xl font-black shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2 ${buttonPulse ? 'scale-105 shadow-orange-500/50' : ''}`}
+                  className="bg-orange-500 text-white font-black py-4 px-6 rounded-2xl shadow-md hover:bg-orange-600 hover:shadow-orange-500/20 hover:-translate-y-0.5 transition-all w-full flex justify-center items-center gap-2 cursor-pointer text-xs uppercase tracking-widest"
                 >
-                  Continue <ChevronRight size={20} />
+                  Continue <ChevronRight size={18} />
                 </button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 10: Commitment Level (NEW) */}
-          {step === 10 && (
+          {/* STEP 13: Commitment Level (original Step 10) */}
+          {step === 13 && (
             <motion.div 
-              key="step10"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-7"
+              key="step13"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-6 border border-[#E9E4D4] bg-white shadow-xl"
             >
-              <div className="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mb-2">
-                <Flame size={32} />
+              <div className="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center border border-rose-200 animate-pulse">
+                <ArrowLeft size={18} className="rotate-135 text-rose-600" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-black text-blue-900">Your Commitment?</h2>
-                <p className="text-blue-900/50 text-xs">How hard do you want your mascot to push you?</p>
+                <h2 className="text-2xl font-black text-[#4F3F34] uppercase tracking-tight">Mascot Intensity?</h2>
+                <p className="text-[#7D6B58] text-xs font-semibold">How hard do you want your mascot to check you, bro?</p>
               </div>
               
-              <div className="w-full flex flex-col gap-3">
+              <div className="w-full flex flex-col gap-2.5">
                 {[
-                  { id: 'casual', label: 'Casual', desc: '1-2 challenges/day • Relaxed pace', color: 'bg-rose-400' },
-                  { id: 'consistent', label: 'Consistent', desc: '3-4 challenges/day • Solid progress', color: 'bg-rose-600' },
-                  { id: 'intense', label: 'Intense', desc: 'Expert flow • Maximum growth', color: 'bg-rose-800' }
+                  { id: 'casual', label: 'Casual', desc: '1-2 challenges/day • Laid back cadence', color: 'bg-rose-400' },
+                  { id: 'consistent', label: 'Consistent', desc: '3-4 challenges/day • Solid muscle progress', color: 'bg-rose-600' },
+                  { id: 'intense', label: 'Intense Grid', desc: 'Expert pacing • Heavy mascot nudges', color: 'bg-rose-800' }
                 ].map((option) => (
                   <button 
                     key={option.id}
@@ -673,13 +897,13 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                       vibrate(10);
                       setCommitmentLevel(option.id as any);
                     }}
-                    className={`p-5 rounded-2xl border-2 text-left transition-all ${commitmentLevel === option.id ? 'border-rose-500 bg-rose-50' : 'border-blue-100 bg-white/50 hover:border-rose-300'}`}
+                    className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer ${commitmentLevel === option.id ? 'border-rose-500 bg-rose-50/40 shadow-sm' : 'border-[#E9E4D4] bg-[#FFFDF9]/60 hover:border-rose-300'}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${option.color}`} />
+                      <div className={`w-2.5 h-2.5 rounded-full ${option.color} shrink-0`} />
                       <div>
-                        <p className={`font-black uppercase text-xs tracking-widest ${commitmentLevel === option.id ? 'text-rose-700' : 'text-blue-900/40'}`}>{option.label}</p>
-                        <p className="text-xs font-bold text-blue-900 mt-0.5">{option.desc}</p>
+                        <p className={`font-black uppercase text-[10px] tracking-widest ${commitmentLevel === option.id ? 'text-rose-700' : 'text-[#7D6B58]/40'}`}>{option.label}</p>
+                        <p className="text-[11px] font-bold text-[#7D6B58] mt-0.5 leading-tight">{option.desc}</p>
                       </div>
                     </div>
                   </button>
@@ -687,167 +911,145 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
               </div>
 
               <div className="w-full mt-2">
-                 <p className="text-[10px] text-blue-900/40 font-bold mb-4 italic">
-                  * This data allows your mascot to calculate the perfect difficulty level for your daily journey.
+                 <p className="text-[9px] text-[#7D6B58]/55 font-bold mb-3 italic">
+                  * This sets the daily evolution points math for gardening.
                 </p>
                 <button 
                   onClick={nextStep} 
-                  className="btn-primary w-full flex justify-center items-center gap-2"
+                  className="bg-rose-500 hover:bg-rose-600 text-white font-black py-4 px-8 rounded-2xl w-full flex justify-center items-center gap-2 transition-all cursor-pointer text-xs uppercase tracking-widest"
                 >
-                  Set Commitment <ChevronRight size={20} />
+                  Define My Intensity <ChevronRight size={18} />
                 </button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 11: Notifications */}
-          {step === 11 && (
+          {/* STEP 14: Notifications (original Step 11) */}
+          {step === 14 && (
             <motion.div 
-              key="step11"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center text-center space-y-6 p-4"
+              key="step14"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl"
             >
               <AnimatedBell />
               
-              <div className="space-y-6 text-blue-900 mt-8">
-                <motion.h2 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5, duration: 0.8 }}
-                  className="text-3xl font-black leading-tight"
-                >
-                  Stay Consistent with Smart Notifications
-                </motion.h2>
-                <motion.p 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7, duration: 0.8 }}
-                  className="text-lg font-medium text-blue-900/80"
-                >
-                  Nexora uses AI to nudge you at the exact moment you're most likely to take action.
-                </motion.p>
+              <div className="space-y-4 text-[#4F3F34] mt-5">
+                <h2 className="text-2xl font-black leading-tight tracking-tight uppercase">
+                  Smart Notifications Nudge
+                </h2>
+                <p className="text-xs font-semibold text-[#7D6B58]">
+                  Nexora uses smart offsets to alert you at your peak energy hours.
+                </p>
                 
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.9, duration: 0.8 }}
-                  className="space-y-4 text-left text-blue-900/70"
-                >
-                  <p>Your personalized notification system includes:</p>
-                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                    <li className="flex gap-2"><strong>🔔 Smart Reminders:</strong> timed to your energy peaks.</li>
-                    <li className="flex gap-2"><strong>🏆 Streak Shield:</strong> alerts when progress is at risk.</li>
-                    <li className="flex gap-2"><strong>💪 Mascot Nudges:</strong> personalized motivation messages.</li>
-                    <li className="flex gap-2"><strong>🚀 Adaptive Hub:</strong> notification frequency scales with your commitment.</li>
+                <div className="bg-[#FFFDF9]/60 border border-[#E9E4D4] rounded-2xl p-4 text-left space-y-3.5">
+                  <p className="text-[11px] text-[#7D6B58] font-bold">Smart alerts system delivers:</p>
+                  <ul className="grid grid-cols-2 gap-2 text-[10px] text-[#7D6B58] font-semibold">
+                    <li className="flex gap-1.5"><span className="text-[#69C496]">✔</span> Peak Energy reminders</li>
+                    <li className="flex gap-1.5"><span className="text-[#69C496]">✔</span> Streak saver protections</li>
+                    <li className="flex gap-1.5"><span className="text-[#69C496]">✔</span> Dynamic mascot calls</li>
+                    <li className="flex gap-1.5"><span className="text-[#69C496]">✔</span> Zero spam policy</li>
                   </ul>
-                </motion.div>
+                </div>
               </div>
 
-              <div className="w-full flex flex-col gap-3 mt-6">
-                <motion.button 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.1, duration: 0.8 }}
+              <div className="w-full flex flex-col gap-2 mt-2">
+                <button 
                   onClick={() => {
-                    // Fully robust and non-blocking background trigger
                     try {
-                      setupFCM().catch(err => console.warn("FCM error on background setup:", err));
+                      setupFCM().catch(err => console.warn("FCM error behind scenes:", err));
                     } catch (e) {
                       console.warn("FCM setup setupFCM error:", e);
                     }
                     nextStep();
                   }}
-                  className="btn-primary w-full py-4 text-lg font-bold cursor-pointer"
+                  className="btn-primary w-full py-4 text-xs font-black uppercase tracking-widest cursor-pointer bg-[#69C496]"
                 >
                   Enable Smart Alerts
-                </motion.button>
-                <motion.button 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.3, duration: 0.8 }}
+                </button>
+                <button 
                   onClick={nextStep}
-                  className="w-full py-4 text-blue-900/50 font-bold hover:text-blue-900/70 transition-colors cursor-pointer"
+                  className="w-full py-3 text-[#7D6B58]/40 font-black hover:text-[#4F3F34] transition-colors cursor-pointer text-xs uppercase tracking-widest"
                 >
                   Skip for now
-                </motion.button>
+                </button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 12: Creating Plan */}
-          {step === 12 && (
+          {/* STEP 15: Creating Plan (original Step 12) */}
+          {step === 15 && (
             <motion.div 
-              key="step12"
-              initial={{ opacity: 0, scale: 0.9 }}
+              key="step15"
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.1 }}
-              className="glass-card p-12 flex flex-col items-center text-center space-y-6"
+              exit={{ opacity: 0, scale: 1.04 }}
+              className="glass-card p-10 sm:p-14 rounded-[32px] flex flex-col items-center text-center space-y-6 border border-[#E9E4D4] bg-white shadow-xl"
             >
-              <Loader2 size={48} className="text-blue-500 animate-spin" />
+              <Loader2 size={44} className="text-[#69C496] animate-spin" />
               <div className="space-y-4">
-                <h2 className="text-2xl font-black text-blue-900">Synchronizing Nexus Intelligence...</h2>
-                <div className="space-y-2">
+                <h2 className="text-xl font-black text-[#4F3F34] uppercase tracking-wider">Formulating your daily sequence...</h2>
+                <div className="space-y-2 bg-[#FFFDF9] border border-[#E9E4D4] p-4 rounded-xl">
                   <motion.p 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: [0, 1, 0] }}
                     transition={{ duration: 1.5, repeat: Infinity, times: [0, 0.5, 1] }}
-                    className="text-xs font-black text-blue-500 uppercase tracking-widest"
+                    className="text-[9px] font-black text-[#69C496] uppercase tracking-widest"
                   >
-                    Calibrating {commitmentLevel || 'Consistent'} intensity...
+                    Locking in {commitmentLevel || 'Consistent'} pace...
                   </motion.p>
                   <motion.p 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: [0, 1, 0] }}
                     transition={{ duration: 1.5, repeat: Infinity, delay: 0.5, times: [0, 0.5, 1] }}
-                    className="text-xs font-black text-blue-500 uppercase tracking-widest"
+                    className="text-[9px] font-black text-[#69C496] uppercase tracking-widest"
                   >
-                    Mapping {energyPeak || 'Midday'} energy peaks to {water}L goal...
+                    Mapping hydration alerts to {water}L goal...
                   </motion.p>
                   <motion.p 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: [0, 1, 0] }}
                     transition={{ duration: 1.5, repeat: Infinity, delay: 1, times: [0, 0.5, 1] }}
-                    className="text-xs font-black text-blue-500 uppercase tracking-widest"
+                    className="text-[9px] font-black text-[#69C496] uppercase tracking-widest"
                   >
-                    Syncing {priorityFocus || 'Mind'} focus with mascot memory...
+                    Syncing {priorityFocus || 'Unified'} focus target with mascot AI...
                   </motion.p>
                 </div>
-                <p className="text-blue-900/50 text-[10px] mt-4 uppercase font-bold tracking-tight">Your data makes Nexora 4x more effective at building lasting habits.</p>
+                <p className="text-[#7D6B58]/50 text-[10px] uppercase font-bold tracking-tight">This creates a daily loop that is 4x more effective than standard alarms.</p>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 13: Thanks */}
-          {step === 13 && (
+          {/* STEP 16: Thanks (original Step 13) */}
+          {step === 16 && (
             <motion.div 
-              key="step13"
-              initial={{ opacity: 0, scale: 0.9 }}
+              key="step16"
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="glass-card p-12 flex flex-col items-center text-center space-y-8"
+              className="glass-card p-10 sm:p-14 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl"
             >
               <motion.div 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1, rotate: [0, -10, 10, -10, 10, 0] }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="w-24 h-24 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mb-2"
+                transition={{ duration: 0.6, delay: 0.15 }}
+                className="w-20 h-20 bg-[#69C496]/10 text-[#69C496] rounded-full flex items-center justify-center border border-[#69C496]/20 mb-1"
               >
-                <Sparkles size={48} />
+                <Sparkles size={38} className="animate-spin-slow" />
               </motion.div>
               <div className="space-y-2">
-                <h2 className="text-3xl font-black text-blue-900">Thanks for joining us!</h2>
-                <p className="text-blue-900/60">Your journey starts today. Let's crush those goals!</p>
-                <p className="text-blue-900/50 text-xs mt-2">Your mascot is excited to meet you. Remember, building habits takes time, so be kind to yourself and take it one day at a time. Let's go!</p>
+                <h2 className="text-3xl font-black text-[#4F3F34] leading-tight uppercase tracking-tight">Formulation Complete!</h2>
+                <p className="text-[#7D6B58] text-xs font-semibold px-2">Your bespoke daily routine loop is locked in and synced to Firestore.</p>
+                <p className="text-[#7D6B58]/60 text-[11px] mt-2 font-medium">Remember, discipline is a muscle built repetition by repetition, day by day. Be kind to yourself, follow Nexy’s cues, and let’s keep moving forward!</p>
               </div>
               
               <button 
                 onClick={handleComplete} 
                 onMouseEnter={() => handleButtonHover(true)}
                 onMouseLeave={() => handleButtonHover(false)}
-                className={`bg-emerald-500 text-white py-4 px-8 rounded-xl font-black shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:-translate-y-1 transition-all w-full flex justify-center items-center gap-2 text-lg ${buttonPulse ? 'scale-105 shadow-emerald-500/50' : ''}`}
+                className="bg-[#69C496] hover:bg-[#5bb385] text-white py-4 px-8 rounded-2xl font-black shadow-lg shadow-[#69C496]/20 transition-all w-full flex justify-center items-center gap-2 text-xs uppercase tracking-widest cursor-pointer leading-none"
               >
-                Let's Go! <CheckCircle2 size={24} />
+                Enter My Companion Portal <CheckCircle2 size={18} />
               </button>
             </motion.div>
           )}
