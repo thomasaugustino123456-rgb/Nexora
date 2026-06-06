@@ -55,6 +55,7 @@ export interface UserSettings {
   reminderTime2?: string;
   motivationTime?: string;
   displayName?: string;
+  age?: number;
   profilePic?: string; // base64
   themeColor?: string;
   soundEnabled?: boolean;

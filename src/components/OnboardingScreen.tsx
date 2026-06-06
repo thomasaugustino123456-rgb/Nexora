@@ -39,6 +39,7 @@ interface OnboardingProps {
 export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }: OnboardingProps) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
+  const [age, setAge] = useState<string>('');
   const [gender, setGender] = useState('');
   const [source, setSource] = useState('');
   const [workType, setWorkType] = useState('');
@@ -50,13 +51,13 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   const [isHoveringContinue, setIsHoveringContinue] = useState(false);
   const [buttonPulse, setButtonPulse] = useState(false);
 
-  const totalSteps = 16;
+  const totalSteps = 17;
 
   useEffect(() => {
-    if (step === 15) {
+    if (step === 16) {
       // Simulate plan creation
       const timer = setTimeout(() => {
-        setStep(16);
+        setStep(17);
       }, 3000);
       return () => clearTimeout(timer);
     }
@@ -69,6 +70,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
       
       const safeName = (name && typeof name === 'string') ? name.trim() : '';
       updates.displayName = safeName || 'Champion';
+      if (age) updates.age = parseInt(age, 10);
       if (gender) updates.gender = gender;
       if (source) updates.source = source;
       if (workType) updates.workType = workType;
@@ -106,6 +108,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
       setSettings(prev => ({
         ...prev,
         displayName: safeName || prev.displayName,
+        age: age ? parseInt(age, 10) : prev.age,
         waterGoal: water || 2,
         pushupsGoal: pushups || 5,
         priorityFocus: priorityFocus || prev.priorityFocus,
@@ -144,7 +147,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
 
   const handleBack = async () => {
     vibrate(10);
-    if (step > 1 && step < 15) {
+    if (step > 1 && step < 16) {
       setStep(prev => prev - 1);
     } else if (step === 1) {
       try {
@@ -169,7 +172,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
       </div>
 
       {/* Back Button */}
-      {step < 15 && (
+      {step < 16 && (
         <button 
           onClick={handleBack}
           className="absolute top-6 left-6 p-3 rounded-full bg-white border border-[#E9E4D4] text-[#7D6B58] hover:bg-[#FAF7F2] hover:text-[#4F3F34] hover:scale-105 active:scale-95 transition-all z-20 shadow-sm flex items-center justify-center cursor-pointer"
@@ -182,7 +185,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
       {/* Progress Floating Header */}
       <div className="w-full max-w-lg z-10 space-y-4 mb-4">
         {/* Mascot Frame */}
-        {step < 15 && (
+        {step < 16 && (
           <div className="flex justify-center">
             <motion.div 
               initial={{ y: -25, opacity: 0, scale: 0.95 }}
@@ -510,13 +513,107 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 6: Gender (original Step 3) */}
+          {/* STEP 6: Age choice and typing (NEW) */}
           {step === 6 && (
             <motion.div 
               key="step6"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -30, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 125, damping: 14 }}
+              className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl shadow-[#4F3F34]/3"
+            >
+              <div className="w-16 h-16 bg-[#69C496]/10 text-[#69C496] rounded-full flex items-center justify-center border border-[#69C496]/20 animate-pulse">
+                <Sparkles size={28} />
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-[#4F3F34] uppercase tracking-tight">How old are you, bro?</h2>
+                <p className="text-[#7D6B58] text-xs font-semibold">Choose your age group or type your exact age below.</p>
+                <p className="text-[#7D6B58]/60 text-[10px] mt-1 italic font-semibold leading-relaxed">
+                  * This customizes daily challenge workloads, metabolic baseline frequencies, and mascot interaction intensity!
+                </p>
+              </div>
+
+              {/* Age Predetermined Quick-Select Option Chips */}
+              <div className="w-full grid grid-cols-2 gap-2 mt-1">
+                {[
+                  { label: "Teen (13-19)", value: "17" },
+                  { label: "Young Adult (20-29)", value: "24" },
+                  { label: "Adult (30-44)", value: "33" },
+                  { label: "Senior/Elite (45+)", value: "50" }
+                ].map((chip) => {
+                  const isMatch = age !== "" && (
+                    (chip.label.includes("13-19") && Number(age) >= 13 && Number(age) <= 19) ||
+                    (chip.label.includes("20-29") && Number(age) >= 20 && Number(age) <= 29) ||
+                    (chip.label.includes("30-44") && Number(age) >= 30 && Number(age) <= 44) ||
+                    (chip.label.includes("45+") && Number(age) >= 45)
+                  );
+                  return (
+                    <button
+                      key={chip.label}
+                      onClick={() => {
+                        vibrate(10);
+                        setAge(chip.value);
+                      }}
+                      className={`p-3 rounded-2xl border-2 text-center font-black transition-all text-xs uppercase tracking-wider cursor-pointer ${isMatch ? 'border-[#69C496] bg-[#69C496]/5 text-[#4F3F34]' : 'border-[#E9E4D4] bg-[#FFFDF9]/60 text-[#7D6B58] hover:border-[#69C496]/40'}`}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Precise Typeable Age Section */}
+              <div className="w-full space-y-1.5 pt-1">
+                <span className="text-[10px] font-black uppercase text-[#7D6B58]/60 tracking-widest">Or type your exact age, bro:</span>
+                <input 
+                  type="number" 
+                  value={age}
+                  min="5"
+                  max="120"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAge(val);
+                  }}
+                  placeholder="25" 
+                  className="w-full p-4 rounded-2xl border-2 border-[#E9E4D4] focus:border-[#69C496] focus:ring-1 focus:ring-[#69C496] outline-none text-2xl text-center font-black text-[#4F3F34] bg-[#FFFDF9]/60 placeholder-[#7D6B58]/35 transition-all font-sans"
+                  autoFocus
+                />
+              </div>
+
+              {/* The "Continue" button appears ONLY when finished selecting or typing */}
+              <AnimatePresence>
+                {age.trim() !== "" && !isNaN(Number(age)) && Number(age) >= 5 && Number(age) <= 120 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                    className="w-full mt-2"
+                  >
+                    <button 
+                      onClick={nextStep} 
+                      onMouseEnter={() => handleButtonHover(true)}
+                      onMouseLeave={() => handleButtonHover(false)}
+                      className="btn-primary w-full flex justify-center items-center gap-2 cursor-pointer bg-[#69C496] hover:bg-[#5bb385] text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                    >
+                      Continue <ChevronRight size={18} />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+
+          {/* STEP 7: Gender (original Step 3) */}
+          {step === 7 && (
+            <motion.div 
+              key="step7"
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -30, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 125, damping: 14 }}
               className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl"
             >
               <div className="space-y-2">
@@ -559,13 +656,14 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 7: Source (original Step 4) */}
-          {step === 7 && (
+          {/* STEP 8: Source (original Step 4) */}
+          {step === 8 && (
             <motion.div 
-              key="step7"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
+              key="step8"
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -30, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 125, damping: 14 }}
               className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl"
             >
               <div className="w-16 h-16 bg-[#BACBBF]/20 text-[#69C496] rounded-full flex items-center justify-center border border-[#E9E4D4]">
@@ -606,13 +704,14 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 8: Work Type (original Step 5) */}
-          {step === 8 && (
+          {/* STEP 9: Work Type (original Step 5) */}
+          {step === 9 && (
             <motion.div 
-              key="step8"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
+              key="step9"
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -30, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 125, damping: 14 }}
               className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-6 border border-[#E9E4D4] bg-white shadow-xl"
             >
               <div className="w-16 h-16 bg-slate-100/80 text-[#7D6B58] rounded-full flex items-center justify-center border border-[#E9E4D4]">
@@ -656,13 +755,14 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 9: Peak Energy (original Step 6) */}
-          {step === 9 && (
+          {/* STEP 10: Peak Energy (original Step 6) */}
+          {step === 10 && (
             <motion.div 
-              key="step9"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
+              key="step10"
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -30, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 125, damping: 14 }}
               className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-6 border border-[#E9E4D4] bg-white shadow-xl"
             >
               <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center border border-amber-150">
@@ -710,13 +810,14 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 10: Priority Focus Focus (original Step 7) */}
-          {step === 10 && (
+          {/* STEP 11: Priority Focus Focus (original Step 7) */}
+          {step === 11 && (
             <motion.div 
-              key="step10"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
+              key="step11"
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -30, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 125, damping: 14 }}
               className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-6 border border-[#E9E4D4] bg-white shadow-xl"
             >
               <div className="w-16 h-16 bg-purple-100/80 text-purple-600 rounded-full flex items-center justify-center border border-purple-200">
@@ -771,13 +872,14 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 11: Water Goal (original Step 8) */}
-          {step === 11 && (
+          {/* STEP 12: Water Goal (original Step 8) */}
+          {step === 12 && (
             <motion.div 
-              key="step11"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
+              key="step12"
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -30, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 125, damping: 14 }}
               className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl"
             >
               <div className="w-16 h-16 bg-cyan-100 text-cyan-500 rounded-full flex items-center justify-center border border-cyan-200">
@@ -824,13 +926,14 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 12: Pushups Goal (original Step 9) */}
-          {step === 12 && (
+          {/* STEP 13: Pushups Goal (original Step 9) */}
+          {step === 13 && (
             <motion.div 
-              key="step12"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
+              key="step13"
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -30, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 125, damping: 14 }}
               className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl"
             >
               <div className="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center border border-orange-200 animate-pulse">
@@ -868,13 +971,14 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 13: Commitment Level (original Step 10) */}
-          {step === 13 && (
+          {/* STEP 14: Commitment Level (original Step 10) */}
+          {step === 14 && (
             <motion.div 
-              key="step13"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
+              key="step14"
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -30, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 125, damping: 14 }}
               className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-6 border border-[#E9E4D4] bg-white shadow-xl"
             >
               <div className="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center border border-rose-200 animate-pulse">
@@ -913,10 +1017,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
               <div className="w-full mt-2">
                  <p className="text-[9px] text-[#7D6B58]/55 font-bold mb-3 italic">
                   * This sets the daily evolution points math for gardening.
-                </p>
+                 </p>
                 <button 
-                  onClick={nextStep} 
-                  className="bg-rose-500 hover:bg-rose-600 text-white font-black py-4 px-8 rounded-2xl w-full flex justify-center items-center gap-2 transition-all cursor-pointer text-xs uppercase tracking-widest"
+                   onClick={nextStep} 
+                   className="bg-rose-500 hover:bg-rose-600 text-white font-black py-4 px-8 rounded-2xl w-full flex justify-center items-center gap-2 transition-all cursor-pointer text-xs uppercase tracking-widest"
                 >
                   Define My Intensity <ChevronRight size={18} />
                 </button>
@@ -924,13 +1028,14 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 14: Notifications (original Step 11) */}
-          {step === 14 && (
+          {/* STEP 15: Notifications (original Step 11) */}
+          {step === 15 && (
             <motion.div 
-              key="step14"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
+              key="step15"
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -30, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 125, damping: 14 }}
               className="glass-card p-6 sm:p-10 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl"
             >
               <AnimatedBell />
@@ -978,10 +1083,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 15: Creating Plan (original Step 12) */}
-          {step === 15 && (
+          {/* STEP 16: Creating Plan (original Step 12) */}
+          {step === 16 && (
             <motion.div 
-              key="step15"
+              key="step16"
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.04 }}
@@ -1021,10 +1126,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
             </motion.div>
           )}
 
-          {/* STEP 16: Thanks (original Step 13) */}
-          {step === 16 && (
+          {/* STEP 17: Thanks (original Step 13) */}
+          {step === 17 && (
             <motion.div 
-              key="step16"
+              key="step17"
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               className="glass-card p-10 sm:p-14 rounded-[32px] flex flex-col items-center text-center space-y-7 border border-[#E9E4D4] bg-white shadow-xl"
