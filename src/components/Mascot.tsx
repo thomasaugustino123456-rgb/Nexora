@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, useAnimation, AnimatePresence } from 'motion/react';
 import { useSound } from '../hooks/useSound';
+import nexoraAppIcon from '../assets/images/nexora_app_icon.png';
 
 export type MascotMood = 'happy' | 'angry' | 'boiling' | 'neutral' | 'surprised';
 
@@ -365,11 +366,22 @@ export const Mascot = React.memo(({
               </AnimatePresence>
             </g>
 
-            {/* Glowing N - Simplified for mobile */}
-            <g className="animate-pulse">
-              <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill={colors.nColor} />
-              {/* Using a second N with low opacity to simulate glow instead of filter */}
-              <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill={colors.nColor} opacity="0.3" transform="scale(1.1)" style={{ transformOrigin: 'center' }} />
+            {/* 3D Mascot Logo Badge - Embeds the official high-quality 3D droplet mascot inside the dynamic SVG */}
+            <g transform="translate(250, 400)" className="animate-pulse">
+              <circle cx="0" cy="0" r="45" fill={colors.nColor} opacity="0.25" />
+              <circle cx="0" cy="0" r="38" fill="#FFFFFF" stroke={colors.edge} strokeWidth="3" />
+              <clipPath id="logo-badge-clip">
+                <circle cx="0" cy="0" r="35" />
+              </clipPath>
+              <g clipPath="url(#logo-badge-clip)">
+                <image
+                  href={nexoraAppIcon}
+                  x="-35"
+                  y="-35"
+                  width="70"
+                  height="70"
+                />
+              </g>
             </g>
           </g>
         </motion.g>
