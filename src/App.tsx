@@ -2551,14 +2551,32 @@ export default function App() {
   }, [fcmToken, settings.soundEnabled]);
 
   useEffect(() => {
+    // If the prompt was captured early by main.tsx, use it immediately
+    if ((window as any).deferredPrompt) {
+      setDeferredPrompt((window as any).deferredPrompt);
+      setShowInstallButton(true);
+      console.log("PWA: Early captured deferredPrompt loaded into state");
+    }
+
     const handleBeforeInstallPrompt = (e: any) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
       // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
+      (window as any).deferredPrompt = e;
       // Update UI notify the user they can install the PWA
       setShowInstallButton(true);
       console.log("PWA: beforeinstallprompt event fired");
+    };
+
+    // Custom event dispatched from main.tsx if it fired before this useEffect but after rendering started
+    const handleCustomPromptEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        setDeferredPrompt(customEvent.detail);
+        setShowInstallButton(true);
+        console.log("PWA: Custom pre-load prompt event handled");
+      }
     };
 
     const handleAppInstalled = () => {
@@ -2569,6 +2587,7 @@ export default function App() {
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("pwa-deferred-prompt", handleCustomPromptEvent);
     window.addEventListener("appinstalled", handleAppInstalled);
 
     // Check if already installed
@@ -2618,6 +2637,7 @@ export default function App() {
         "beforeinstallprompt",
         handleBeforeInstallPrompt,
       );
+      window.removeEventListener("pwa-deferred-prompt", handleCustomPromptEvent);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
@@ -2631,13 +2651,15 @@ export default function App() {
   // Daily Reminder Timer removed from here and moved after customPlans definition
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
+    const activePrompt = deferredPrompt || (window as any).deferredPrompt;
+    if (activePrompt) {
       try {
         console.log("PWA: Triggering native deferred prompt");
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
+        activePrompt.prompt();
+        const { outcome } = await activePrompt.userChoice;
         console.log(`PWA: User response to the install prompt: ${outcome}`);
         setDeferredPrompt(null);
+        (window as any).deferredPrompt = null;
         setShowInstallButton(false);
         if (outcome === "accepted") {
           localStorage.setItem("nexora_pwa_installed", "true");

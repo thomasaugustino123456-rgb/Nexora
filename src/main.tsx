@@ -17,6 +17,15 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Early capture of beforeinstallprompt to prevent missing it before React loads
+(window as any).deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  (window as any).deferredPrompt = e;
+  // Dispatch custom event for React to listen to if it's already rendered
+  window.dispatchEvent(new CustomEvent('pwa-deferred-prompt', { detail: e }));
+});
+
 // Handle dynamic import failures (vite chunk loading errors on new deployments)
 window.addEventListener('vite:preloadError', (event) => {
   console.log('Vite preload error detected, reloading page to fetch new chunks...');
