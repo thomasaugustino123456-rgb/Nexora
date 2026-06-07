@@ -5,7 +5,7 @@ import { Mascot } from './Mascot';
 import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
 import { vibrate } from '../lib/vibrate';
 
-const nexoraAppIcon = "/nexora_app_icon.png?v=20260607";
+import nexoraAppIcon from '../assets/images/nexora_app_icon.png';
 
 interface LandingPageProps {
   onGetStarted: () => void;
