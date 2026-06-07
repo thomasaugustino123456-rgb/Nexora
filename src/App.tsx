@@ -160,7 +160,6 @@ import { HomeScreen } from "./components/HomeScreen";
 import { LootDropResult } from "./types/garden";
 import { LootCard } from "./components/LootCard";
 import { Mascot } from "./components/Mascot";
-import { AppStoreLogo } from "./components/AppStoreLogo";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import {
   GoldenTrophy,
@@ -4362,7 +4361,14 @@ export default function App() {
             >
               <div className="bg-slate-900/95 border-2 border-[#69C496]/50 rounded-[32px] p-5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] shadow-[#69C496]/10 backdrop-blur-xl text-white space-y-4">
                 <div className="flex items-start gap-4">
-                  <AppStoreLogo size="sm" />
+                  <div className="w-16 h-16 bg-slate-800 rounded-2xl border border-slate-700/60 p-1 flex items-center justify-center shadow-xl shrink-0">
+                    <img
+                      src={nexoraAppIcon}
+                      alt="Nexora Mascot Logo"
+                      className="w-14 h-14 rounded-xl object-cover shadow-inner"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-0.5 text-[8px] font-black bg-[#69C496] text-slate-900 uppercase tracking-widest rounded-full animate-pulse">

@@ -10,7 +10,6 @@ import {
 import { motion, useAnimationControls } from "motion/react";
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Mascot, MascotMood } from "./Mascot";
-import { AppStoreLogo } from "./AppStoreLogo";
 import { ArrowLeft } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
 
@@ -304,7 +303,13 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
 
         <div className="space-y-2 mt-2 flex flex-col items-center">
           <div className="flex flex-col items-center gap-6">
-            <AppStoreLogo size="xl" />
+            <img
+              src={nexoraAppIcon}
+              alt="Nexora Logo"
+              className="w-48 h-48 object-cover rounded-[36px] shadow-2xl border-4 border-white/50"
+              referrerPolicy="no-referrer"
+              loading="lazy"
+            />
             <h1 className="text-7xl md:text-8xl font-black text-blue-900 tracking-tighter">
               Nexora
             </h1>
