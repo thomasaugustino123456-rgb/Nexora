@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexora-v4.0.0'; // V4.0.0 Cache Busting for mascot updates
+const CACHE_NAME = 'nexora-v5.2.0'; // Updated to V5.2.0 for complete mascot cache busting
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
