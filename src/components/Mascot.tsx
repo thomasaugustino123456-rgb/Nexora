@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, useAnimation, AnimatePresence } from 'motion/react';
 import { useSound } from '../hooks/useSound';
-import nexoraAppIcon from '../assets/images/nexora_app_icon.png';
 
 export type MascotMood = 'happy' | 'angry' | 'boiling' | 'neutral' | 'surprised';
 
@@ -231,37 +230,146 @@ export const Mascot = React.memo(({
         {/* Body Group with Squash/Stretch - CSS classes for steady animation */}
         <motion.g animate={isSitting ? { y: 20, scaleY: 0.85 } : { y: 0, scaleY: 1 }}>
           <g className={(!isSitting && isVisible && !performanceMode) ? "animate-mascot-breathe" : ""}>
-            {/* RENDER THE ACTUAL HIGH-QUALITY PREMIUM 3D MASCOT IMAGE */}
-            <g className={isAngry ? "animate-shake" : ""}>
-              <image
-                href={nexoraAppIcon}
-                x="50"
-                y="110"
-                width="400"
-                height="400"
-                className={isAngry ? "brightness-100 contrast-125 saturate-150 hue-rotate-[340deg]" : ""}
+            {/* LIQUID LAYER */}
+            <g clipPath="url(#bottle-mask-main)">
+              <rect x="0" y="0" width="500" height="600" fill={theme === 'obsidian' ? '#0f172a' : '#F0FAFF'} fillOpacity="0.2" />
+              
+              {/* Liquid Group with Ambient Slosh */}
+              <g transform={`translate(0, ${isBoiling ? -5 : 230})`}>
+                {/* Seamless River Water Animation (CPU Optimized) */}
+                <g className={(isVisible && !performanceMode) ? "animate-wave-mascot" : ""}>
+                  <path 
+                    d="M 0,20 Q 50,0 100,20 T 200,20 T 300,20 T 400,20 T 500,20 T 600,20 T 700,20 T 800,20 T 900,20 T 1000,20 L 1000,600 L 0,600 Z" 
+                    fill="url(#water-grad-main)" 
+                    fillOpacity="0.95"
+                  />
+                  {/* Highlight layer */}
+                  <path 
+                    d="M 0,25 Q 50,15 100,25 T 200,25 T 300,25 T 400,25 T 500,25 T 600,25 T 700,25 T 800,25 T 900,25 T 1000,25 L 1000,40 L 0,40 Z" 
+                    fill="#ffffff" 
+                    fillOpacity="0.1"
+                  />
+                </g>
+              
+                {/* Boiling Bubbles - Optimized with pure SVG animations */}
+                {isBoiling && (
+                  <g fill="#fff" fillOpacity="0">
+                    <circle cx="230" cy="350" r="3" className="animate-bubble-angry-1" />
+                    <circle cx="260" cy="350" r="3" className="animate-bubble-angry-2" />
+                    <circle cx="290" cy="350" r="3" className="animate-bubble-angry-3" />
+                  </g>
+                )}
+              </g>
+            </g>
+
+            {/* GLASS BOTTLE HIGHLIGHTS & OUTLINES */}
+            <g stroke={colors.edge} strokeWidth="4" fill="none">
+              <ellipse cx="250" cy="330" rx="190" ry="160" strokeOpacity="0.4" />
+              
+              {/* Glossy Sheen - Dynamic based on mouse */}
+              <motion.path 
+                d="M 150,220 Q 250,180 350,220" 
+                fill="none" 
+                stroke="#fff" 
+                strokeWidth="15" 
+                strokeLinecap="round" 
+                strokeOpacity="0.1"
+                animate={{ 
+                  x: mousePos.x * 20,
+                  y: mousePos.y * 10
+                }}
               />
               
-              {/* High-quality responsive animations and emojis to keep the 3D mascot beautifully alive and interactive */}
-              {isAngry && (
-                <g transform="translate(250, 200)" fill="#ff3333">
-                  <text x="-120" y="-30" fontSize="28" fontWeight="bold" className="animate-bounce">💢</text>
-                  <text x="90" y="-10" fontSize="26" fontWeight="bold" className="animate-pulse">💢</text>
-                </g>
+              {/* Ears with Follow-through wobble */}
+              <path 
+                d="M 120,210 C 100,150 110,120 120,110 C 140,110 160,150 180,180 Z" 
+                fill="url(#glass-edge-main)" 
+                fillOpacity="0.8"
+                className={(isAngry || !isVisible) ? "" : "animate-mascot-ear-left"}
+              />
+              <path 
+                d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" 
+                fill="url(#glass-edge-main)" 
+                fillOpacity="0.8"
+                className={(isAngry || !isVisible) ? "" : "animate-mascot-ear-right"}
+              />
+            </g>
+
+            {/* Reflections */}
+            <path d="M 90,300 A 160,130 0 0,1 200,190 A 150,120 0 0,0 110,310 Z" fill="#ffffff" fillOpacity="0.4" />
+            <path d="M 425,300 A 170,140 0 0,1 350,460" fill="none" stroke="#ffffff" strokeWidth="12" strokeLinecap="round" opacity={theme === 'obsidian' ? 0.1 : 0.3} />
+
+            {/* ARMS */}
+            <motion.ellipse 
+              cx="60" cy="310" rx="15" ry="30" fill={theme === 'obsidian' ? '#1e293b' : '#B3E5FC'} stroke={colors.edge} strokeWidth="2"
+              animate={isVisible ? { rotate: isAngry ? -60 : -30, x: isAngry ? -5 : 0 } : {}} 
+            />
+            <motion.ellipse 
+              cx="440" cy="310" rx="15" ry="30" fill={theme === 'obsidian' ? '#1e293b' : '#B3E5FC'} stroke={colors.edge} strokeWidth="2"
+              animate={isVisible ? { rotate: isAngry ? 60 : 30, x: isAngry ? 5 : 0 } : {}} 
+            />
+
+            {/* FACIAL FEATURES */}
+            <g transform={`translate(${eyeX}, ${eyeY})`}>
+              {/* EYES */}
+              {!isAngry && !isSurprised ? (
+                <>
+                  <motion.g animate={{ scaleY: isBlinking ? 0.1 : 1 }} transition={{ duration: 0.1 }}>
+                    <circle cx="180" cy="260" r="16" fill={theme === 'obsidian' ? '#60a5fa' : '#001845'} />
+                    <circle cx="320" cy="260" r="16" fill={theme === 'obsidian' ? '#60a5fa' : '#001845'} />
+                    {/* High Quality Pupils */}
+                    <circle cx="185" cy="254" r="6" fill="#fff" />
+                    <circle cx="325" cy="254" r="6" fill="#fff" />
+                  </motion.g>
+                </>
+              ) : isSurprised ? (
+                <>
+                  <circle cx="180" cy="255" r="20" fill={theme === 'obsidian' ? '#60a5fa' : '#001845'} />
+                  <circle cx="320" cy="255" r="20" fill={theme === 'obsidian' ? '#60a5fa' : '#001845'} />
+                  <circle cx="180" cy="255" r="8" fill="#fff" />
+                  <circle cx="320" cy="255" r="8" fill="#fff" />
+                </>
+              ) : (
+                <>
+                  <path d="M 155,240 L 205,270" stroke={theme === 'obsidian' ? '#60a5fa' : '#001845'} strokeWidth="12" strokeLinecap="round" />
+                  <path d="M 295,270 L 345,240" stroke={theme === 'obsidian' ? '#60a5fa' : '#001845'} strokeWidth="12" strokeLinecap="round" />
+                </>
               )}
-              {isSurprised && (
-                <g transform="translate(250, 180)">
-                  <text x="-90" y="-40" fontSize="30">❗</text>
-                  <text x="70" y="-40" fontSize="30">❗</text>
-                </g>
-              )}
-              {isBoiling && (
-                <g fill="#ff3333" fillOpacity="0">
-                  <circle cx="210" cy="220" r="4" className="animate-bubble-angry-1" />
-                  <circle cx="250" cy="200" r="5" className="animate-bubble-angry-2" />
-                  <circle cx="290" cy="210" r="4" className="animate-bubble-angry-3" />
-                </g>
-              )}
+
+              {/* MOUTH & BLUSH */}
+              <AnimatePresence mode="wait">
+                {isAngry ? (
+                  <motion.path 
+                    key="angry-mouth"
+                    d="M 220 320 Q 250 290 280 320" 
+                    fill="none" stroke={theme === 'obsidian' ? '#60a5fa' : '#001845'} strokeWidth="10" strokeLinecap="round"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  />
+                ) : isSurprised ? (
+                  <motion.ellipse 
+                    key="surprised-mouth"
+                    cx="250" cy="320" rx="15" ry="20" 
+                    fill={theme === 'obsidian' ? '#60a5fa' : '#001845'}
+                    initial={{ scale: 0 }} animate={{ scale: 1 }}
+                  />
+                ) : (
+                  <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} key="happy-face">
+                    <path 
+                      d="M 210 295 Q 250 345 290 295" 
+                      fill={isNeutral && theme === 'obsidian' ? '#1e293b' : "#FF4D6D"} stroke={theme === 'obsidian' ? '#60a5fa' : '#001845'} strokeWidth="4"
+                    />
+                    <ellipse cx="145" cy="290" rx="18" ry="10" fill="#FF4D6D" fillOpacity={theme === 'obsidian' ? 0.05 : 0.2} />
+                    <ellipse cx="355" cy="290" rx="18" ry="10" fill="#FF4D6D" fillOpacity={theme === 'obsidian' ? 0.05 : 0.2} />
+                  </motion.g>
+                )}
+              </AnimatePresence>
+            </g>
+
+            {/* Glowing N - Simplified for mobile */}
+            <g className="animate-pulse">
+              <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill={colors.nColor} />
+              {/* Using a second N with low opacity to simulate glow instead of filter */}
+              <path d="M 235 380 L 250 380 L 265 410 L 265 380 L 275 380 L 275 425 L 265 425 L 250 395 L 250 425 L 235 425 Z" fill={colors.nColor} opacity="0.3" transform="scale(1.1)" style={{ transformOrigin: 'center' }} />
             </g>
           </g>
         </motion.g>
