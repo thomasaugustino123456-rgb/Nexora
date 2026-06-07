@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
 import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target, Crown, Sparkles } from 'lucide-react';
 import { Mascot } from './Mascot';
+import { AppStoreLogo } from './AppStoreLogo';
 import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
 import { vibrate } from '../lib/vibrate';
 
@@ -96,13 +97,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
               className="absolute -inset-3 bg-gradient-to-tr from-blue-400 via-indigo-300 to-cyan-400 rounded-full opacity-30 group-hover:opacity-60 transition-opacity blur-xl"
             />
-            <img 
-              src={nexoraAppIcon} 
-              alt="Nexora Logo" 
-              className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-2xl relative z-10 shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 border border-white/20"
-              referrerPolicy="no-referrer"
-              loading="lazy"
-            />
+            <AppStoreLogo className="w-16 h-16 md:w-20 md:h-20 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 relative z-10" />
           </div>
           <span className="text-3xl md:text-5xl font-black text-blue-950 tracking-tighter drop-shadow-sm">Nexora</span>
         </motion.div>
@@ -610,13 +605,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       <footer className="w-full bg-blue-950 text-blue-200 py-12 relative z-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-4">
-            <img 
-              src={nexoraAppIcon} 
-              alt="Nexora Logo" 
-              className="w-14 h-14 md:w-16 md:h-16 object-cover rounded-xl border border-white/20 shadow-md"
-              referrerPolicy="no-referrer"
-              loading="lazy"
-            />
+            <AppStoreLogo className="w-14 h-14 md:w-16 md:h-16" />
             <span className="text-3xl font-black text-white tracking-tighter">Nexora</span>
           </div>
           

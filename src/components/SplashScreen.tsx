@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-
-const nexoraAppIcon = "/nexora_app_icon.png?v=1.5.2";
+import { AppStoreLogo } from './AppStoreLogo';
 
 export function SplashScreen() {
   return (
@@ -31,14 +30,9 @@ export function SplashScreen() {
             damping: 20,
             duration: 0.8
           }}
-          className="relative w-48 h-48 drop-shadow-[0_20px_50px_rgba(59,130,246,0.5)]"
+          className="relative"
         >
-          <img 
-            src={nexoraAppIcon} 
-            alt="Nexora Mascot" 
-            className="w-full h-full object-cover rounded-[48px] shadow-2xl border-4 border-white/50"
-            referrerPolicy="no-referrer"
-          />
+          <AppStoreLogo className="w-48 h-48" />
           
           {/* Sparkles around mascot */}
           <motion.div 
