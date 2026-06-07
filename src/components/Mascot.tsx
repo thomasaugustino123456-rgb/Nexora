@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, useAnimation, AnimatePresence } from 'motion/react';
 import { useSound } from '../hooks/useSound';
-import nexoraAppIcon from '../assets/images/nexora_app_icon.png';
+const nexoraAppIcon = "/nexora_app_icon.png?v=20260607";
 
 export type MascotMood = 'happy' | 'angry' | 'boiling' | 'neutral' | 'surprised';
 
