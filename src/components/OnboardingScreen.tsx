@@ -27,7 +27,7 @@ import { db, auth } from '../firebase';
 import { UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';
 
-const nexoraAppIcon = '/nexora_app_icon.png';
+import nexoraAppIcon from '../assets/images/nexora_app_icon.png';
 
 import { AnimatedBell } from './AnimatedBell';
 
