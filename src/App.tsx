@@ -216,7 +216,7 @@ import { NavButton } from "./components/NavButton";
 import { SplashScreen } from "./components/SplashScreen";
 import { useNexoraData } from "./hooks/useNexoraData";
 
-import nexoraAppIcon from "./assets/images/nexora_app_icon.png";
+const nexoraAppIcon = "https://res.cloudinary.com/ddtfq9acc/image/upload/q_auto/f_auto/v1780831447/file_00000000659471f48492f78ba083fafc_wt3p7m.png";
 
 const DEFAULT_SETTINGS: UserSettings = {
   pushupsGoal: 5,
@@ -2745,7 +2745,7 @@ export default function App() {
           if (!localStorage.getItem(lastMorningKey)) {
             sendNotification("Morning Desk check-in! 🖥️", {
               body: "Desk Bound Focus session: Ready to build incredible habits at your workspace today, bro?",
-              icon: "/nexora_app_icon.png",
+              icon: nexoraAppIcon,
             });
             localStorage.setItem(lastMorningKey, "true");
           }
@@ -2756,7 +2756,7 @@ export default function App() {
           if (!localStorage.getItem(lastAfternoonKey)) {
             sendNotification("Afternoon Desk stretch! ☀️", {
               body: "Hey desk warrior, stretch those legs! Ready for your afternoon habit boost?",
-              icon: "/nexora_app_icon.png",
+              icon: nexoraAppIcon,
             });
             localStorage.setItem(lastAfternoonKey, "true");
           }
@@ -2767,7 +2767,7 @@ export default function App() {
           if (!localStorage.getItem(lastEveningKey)) {
             sendNotification("Evening Desk Wrap-up! 🌙", {
               body: "End your sedentary session with a finish of strength, bro. Let's lock in!",
-              icon: "/nexora_app_icon.png",
+              icon: nexoraAppIcon,
             });
             localStorage.setItem(lastEveningKey, "true");
           }
@@ -2779,7 +2779,7 @@ export default function App() {
           if (!localStorage.getItem(lastMorningKey)) {
             sendNotification("On the Move Morning! 🏃", {
               body: "Start your active journey powerful, bro! Complete a quick morning habit.",
-              icon: "/nexora_app_icon.png",
+              icon: nexoraAppIcon,
             });
             localStorage.setItem(lastMorningKey, "true");
           }
@@ -2790,7 +2790,7 @@ export default function App() {
           if (!localStorage.getItem(lastAfternoonKey)) {
             sendNotification("Midday On-transit Check! ☀️", {
               body: "Keep moving and stay hydrated, active champion! Take a quick challenge break.",
-              icon: "/nexora_app_icon.png",
+              icon: nexoraAppIcon,
             });
             localStorage.setItem(lastAfternoonKey, "true");
           }
@@ -2801,7 +2801,7 @@ export default function App() {
           if (!localStorage.getItem(lastEveningKey)) {
             sendNotification("Sunset Active Check-in! 🌙", {
               body: "You have been on the move all day! Let's complete your remaining goals.",
-              icon: "/nexora_app_icon.png",
+              icon: nexoraAppIcon,
             });
             localStorage.setItem(lastEveningKey, "true");
           }
@@ -2813,7 +2813,7 @@ export default function App() {
           if (!localStorage.getItem(lastMorningKey)) {
             sendNotification("Student Morning Preparation! 📚", {
               body: "Rise and shine student! Prep for school with a quick training routine!",
-              icon: "/nexora_app_icon.png",
+              icon: nexoraAppIcon,
             });
             localStorage.setItem(lastMorningKey, "true");
           }
@@ -2824,7 +2824,7 @@ export default function App() {
           if (!localStorage.getItem(lastEveningKey)) {
             sendNotification("Student School Wrap-up! 🌙", {
               body: "Welcome back from school, bro! Let's complete your daily study and habits loop!",
-              icon: "/nexora_app_icon.png",
+              icon: nexoraAppIcon,
             });
             localStorage.setItem(lastEveningKey, "true");
           }
@@ -2836,7 +2836,7 @@ export default function App() {
           if (!localStorage.getItem(lastMorningKey)) {
             sendNotification("Night Shift Activation! 🌙", {
               body: "The night is young for reverse schedule champions! Ready to flow, bro?",
-              icon: "/nexora_app_icon.png",
+              icon: nexoraAppIcon,
             });
             localStorage.setItem(lastMorningKey, "true");
           }
@@ -2847,7 +2847,7 @@ export default function App() {
           if (!localStorage.getItem(lastAfternoonKey)) {
             sendNotification("Midnight Peak Focus! ⚡", {
               body: "Midnight focus hour starts now. Let's smash our physical and mental limits!",
-              icon: "/nexora_app_icon.png",
+              icon: nexoraAppIcon,
             });
             localStorage.setItem(lastAfternoonKey, "true");
           }
@@ -2858,7 +2858,7 @@ export default function App() {
           if (!localStorage.getItem(lastEveningKey)) {
             sendNotification("Overnight Check-in! 🌌", {
               body: "Keep going strong overnight! Hydrate and check in on your habits.",
-              icon: "/nexora_app_icon.png",
+              icon: nexoraAppIcon,
             });
             localStorage.setItem(lastEveningKey, "true");
           }
@@ -2881,7 +2881,7 @@ export default function App() {
           const quote = quotes[Math.floor(Math.random() * quotes.length)];
           sendNotification("Daily Motivation! 💡", {
             body: quote,
-            icon: "/nexora_app_icon.png",
+            icon: nexoraAppIcon,
           });
           localStorage.setItem(lastMotivationKey, "true");
         }
@@ -2893,7 +2893,7 @@ export default function App() {
         if (!localStorage.getItem(lastRestartKey)) {
           sendNotification("New Day, New Goals! 🌅", {
             body: "Challenges have been restarted! Let's crush it today, bro!",
-            icon: "/nexora_app_icon.png",
+            icon: nexoraAppIcon,
           });
           localStorage.setItem(lastRestartKey, "true");
         }
@@ -2911,7 +2911,7 @@ export default function App() {
             if (!localStorage.getItem(lastPlanReminderKey)) {
               sendNotification(`${plan.name} 🚀`, {
                 body: `Time for your custom plan: ${plan.name}! Let's go!`,
-                icon: "/nexora_app_icon.png",
+                icon: nexoraAppIcon,
               });
               localStorage.setItem(lastPlanReminderKey, "true");
             }
@@ -3410,14 +3410,14 @@ export default function App() {
         if (curr.type === "ice") {
           sendNotification("Trophy Alert! 🧊", {
             body: "One of your trophies just turned to ICE! Complete a challenge now to save it!",
-            icon: "/nexora_app_icon.png",
+            icon: nexoraAppIcon,
           });
           if (settings.soundEnabled) playTrophySound("ice");
           showToast("TROPHY ALERT: ICE DETECTED! 🧊", "info");
         } else if (curr.type === "broken") {
           sendNotification("Trophy Alert! 💔", {
             body: "Oh no! A trophy has BROKEN! Don't let more break, bro!",
-            icon: "/nexora_app_icon.png",
+            icon: nexoraAppIcon,
           });
           if (settings.soundEnabled) playTrophySound("broken");
           showToast("TROPHY ALERT: SHATTERED! 💔", "error");
