@@ -1116,6 +1116,33 @@ export default function App() {
   );
   const [lastScrollY, setLastScrollY] = useState(0);
   const { play, stop, playMusic, stopAllMusic } = useSound();
+
+  const currentPlayingMusicTrack = useMemo(() => {
+    if (!settings.soundEnabled) return null;
+    const activeMusicItem = (settings.inventory || []).find(
+      (item) => item.type === "music" && item.activated,
+    );
+    if (activeMusicItem) {
+      return {
+        id: activeMusicItem.id,
+        itemId: activeMusicItem.itemId,
+        name: activeMusicItem.name || "Custom Beat Track",
+        isZen: false,
+      };
+    }
+    if (
+      settings.zenModeEnabled &&
+      (activeScreen === "challenge" || activeScreen === "home")
+    ) {
+      return {
+        id: "zen-forest",
+        itemId: "music-forest",
+        name: "Forest Treasure (Zen Mode)",
+        isZen: true,
+      };
+    }
+    return null;
+  }, [settings.inventory, settings.soundEnabled, settings.zenModeEnabled, activeScreen]);
   const [history, setHistory] = useState<DailyProgress[]>([]);
   const [earnedTrophyToday, setEarnedTrophyToday] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
@@ -6469,6 +6496,155 @@ export default function App() {
                         className="flex-[2] py-3 px-4 bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
                       >
                         SYNC FEEDBACK 🚀
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Dynamic Dancing Mascot Floating Music Player Card */}
+          <AnimatePresence>
+            {currentPlayingMusicTrack && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 50, x: 50 }}
+                animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 50, x: 50 }}
+                className="fixed bottom-28 right-4 md:right-10 md:bottom-28 z-[120] pointer-events-auto"
+              >
+                <style>{`
+                  @keyframes mascotSuperDance {
+                    0%, 100% {
+                      transform: translateY(0) rotate(0deg) scale(1);
+                    }
+                    15% {
+                      transform: translateY(-20px) rotate(-10deg) scaleX(0.88) scaleY(1.12);
+                    }
+                    30% {
+                      transform: translateY(0) rotate(10deg) scaleX(1.12) scaleY(0.88);
+                    }
+                    45% {
+                      transform: translateY(-12px) rotate(-6deg) scaleX(0.92) scaleY(1.08);
+                    }
+                    60% {
+                      transform: translateY(0) rotate(0deg) rotateY(180deg) scale(1);
+                    }
+                    75% {
+                      transform: translateY(-16px) rotate(8deg) rotateY(180deg) scaleX(0.92) scaleY(1.08);
+                    }
+                    90% {
+                      transform: translateY(0) rotate(-4deg) rotateY(360deg) scaleX(1.08) scaleY(0.92);
+                    }
+                  }
+                  .mascot-super-dance {
+                    animation: mascotSuperDance 1.8s infinite ease-in-out;
+                    transform-origin: bottom center;
+                    will-change: transform;
+                  }
+                  @keyframes floatParticle1 {
+                    0% { transform: translate(0, 0) scale(0.6) rotate(0deg); opacity: 0; }
+                    10% { opacity: 1; }
+                    90% { opacity: 0.8; }
+                    100% { transform: translate(-15px, -55px) scale(1.1) rotate(-15deg); opacity: 0; }
+                  }
+                  @keyframes floatParticle2 {
+                    0% { transform: translate(0, 0) scale(0.6) rotate(0deg); opacity: 0; }
+                    10% { opacity: 1; }
+                    90% { opacity: 0.8; }
+                    100% { transform: translate(20px, -60px) scale(1.1) rotate(30deg); opacity: 0; }
+                  }
+                  @keyframes floatParticle3 {
+                    0% { transform: translate(0, 0) scale(0.6) rotate(0deg); opacity: 0; }
+                    10% { opacity: 1; }
+                    90% { opacity: 0.8; }
+                    100% { transform: translate(-10px, -50px) scale(1.1) rotate(20deg); opacity: 0; }
+                  }
+                  .anim-particle-1 { animation: floatParticle1 2.5s infinite linear; }
+                  .anim-particle-2 { animation: floatParticle2 2.5s infinite linear; animation-delay: 0.8s; }
+                  .anim-particle-3 { animation: floatParticle3 2.5s infinite linear; animation-delay: 1.5s; }
+                `}</style>
+
+                {/* Main Glass Media Card Container */}
+                <div className="bg-[#0B0F19]/90 border-2 border-cyan-500/30 rounded-3xl p-4 shadow-[0_20px_50px_rgba(6,182,212,0.25)] backdrop-blur-md flex items-center gap-4 w-[290px] relative overflow-hidden">
+                  {/* Neon laser border sweep bar */}
+                  <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 animate-pulse" />
+
+                  {/* Music Emojis & Sparkle Particles Spray floating in background */}
+                  <div className="absolute top-0 right-4 left-4 h-12 overflow-hidden pointer-events-none">
+                    <div className="absolute left-[20%] text-xs anim-particle-1">🎵</div>
+                    <div className="absolute left-[50%] text-[10px] anim-particle-2">🎶</div>
+                    <div className="absolute left-[80%] text-xs anim-particle-3">✨</div>
+                  </div>
+
+                  {/* Mascot Container Frame */}
+                  <div className="relative group w-16 h-16 bg-gradient-to-tr from-cyan-950/40 to-sky-900/10 rounded-2xl border border-cyan-500/20 flex items-center justify-center p-1 overflow-visible">
+                    {/* Glowing Ring Backdrop */}
+                    <div className="absolute inset-0 rounded-2xl bg-cyan-400/10 animate-ping duration-[3s]" />
+                    
+                    <div className="mascot-super-dance w-full h-full">
+                      <Mascot
+                        mood="happy"
+                        theme={
+                          settings.activeSkin === "none"
+                            ? "standard"
+                            : settings.activeSkin
+                        }
+                        hat={settings.activeHat || "none"}
+                        performanceMode={settings.performanceMode}
+                        className="w-full h-full scale-125 select-none pointer-events-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Audio Details & Controls Panel */}
+                  <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                    <div className="overflow-hidden">
+                      <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5 leading-none">
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
+                        Now Vibing
+                      </span>
+                      <div className="text-white text-sm font-black truncate tracking-tight mt-1 max-w-[150px]">
+                        {currentPlayingMusicTrack.name}
+                      </div>
+                    </div>
+
+                    {/* Miniature Music Wave Visualizer Beams */}
+                    <div className="flex gap-0.5 items-end h-3 my-2 opacity-80">
+                      <span className="w-[3px] bg-cyan-400 rounded-t-full animate-[bounce_0.6s_infinite_alternate]" style={{ animationDelay: "0.1s" }} />
+                      <span className="w-[3px] bg-sky-400 rounded-t-full animate-[bounce_0.8s_infinite_alternate]" style={{ animationDelay: "0.3s" }} />
+                      <span className="w-[3px] bg-indigo-400 rounded-t-full animate-[bounce_0.5s_infinite_alternate]" style={{ animationDelay: "0.2s" }} />
+                      <span className="w-[3px] bg-cyan-400 rounded-t-full animate-[bounce_0.7s_infinite_alternate]" style={{ animationDelay: "0.4s" }} />
+                      <span className="w-[3px] bg-sky-400 rounded-t-full animate-[bounce_0.9s_infinite_alternate]" style={{ animationDelay: "0.15s" }} />
+                      <span className="w-[3px] bg-[#69C496] rounded-t-full animate-[bounce_0.6s_infinite_alternate]" style={{ animationDelay: "0.05s" }} />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+                        {currentPlayingMusicTrack.isZen ? "Zen Mode" : "Purchased Track"}
+                      </span>
+
+                      {/* Stop Music Button */}
+                      <button
+                        onClick={() => {
+                          vibrate(VIBRATION_PATTERNS.CLICK);
+                          if (currentPlayingMusicTrack.isZen) {
+                            onUpdateSettings({ soundEnabled: false });
+                            showToast("Sound Muted 🔇", "success");
+                          } else {
+                            const inventory = (settings.inventory || []).map((item) => {
+                              if (item.id === currentPlayingMusicTrack.id) {
+                                return { ...item, activated: false };
+                              }
+                              return item;
+                            });
+                            onUpdateSettings({ inventory });
+                            showToast("Music stopped! Mascot dismissed.", "success");
+                          }
+                        }}
+                        className="px-2.5 py-1 text-[9px] font-black tracking-widest text-white hover:text-white bg-rose-600/20 hover:bg-rose-600/40 border border-rose-500/30 rounded-xl transition-all uppercase whitespace-nowrap active:scale-95"
+                      >
+                        Stop ⏹️
                       </button>
                     </div>
                   </div>
