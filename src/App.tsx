@@ -2602,9 +2602,14 @@ export default function App() {
       // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
       (window as any).deferredPrompt = e;
+      
+      // Automatic uninstallation detection: if promptable, app is not installed
+      localStorage.setItem("nexora_pwa_installed", "false");
+      setPwaInstalled(false);
+
       // Update UI notify the user they can install the PWA
       setShowInstallButton(true);
-      console.log("PWA: beforeinstallprompt event fired");
+      console.log("PWA: beforeinstallprompt event fired, reset installation state");
     };
 
     // Custom event dispatched from main.tsx if it fired before this useEffect but after rendering started
@@ -2612,8 +2617,10 @@ export default function App() {
       const customEvent = e as CustomEvent;
       if (customEvent.detail) {
         setDeferredPrompt(customEvent.detail);
+        localStorage.setItem("nexora_pwa_installed", "false");
+        setPwaInstalled(false);
         setShowInstallButton(true);
-        console.log("PWA: Custom pre-load prompt event handled");
+        console.log("PWA: Custom pre-load prompt event handled, reset installation state");
       }
     };
 
@@ -2689,14 +2696,82 @@ export default function App() {
   // Daily Reminder Timer removed from here and moved after customPlans definition
 
   const handleInstallClick = async () => {
-    setIsDownloading(true);
-    setDownloadProgress(0);
-    setDownloadStatus("Connecting to secure App servers...");
-    
     if (settings.soundEnabled) {
       try { play("challenge_unlock"); } catch (e) {}
     }
 
+    const activePrompt = deferredPrompt || (window as any).deferredPrompt;
+    if (activePrompt) {
+      try {
+        console.log("PWA: Triggering native deferred prompt on click to satisfy user gesture limit immediately");
+        
+        // Show downloading container so user sees progress is active of the install
+        setIsDownloading(true);
+        setDownloadProgress(3);
+        setDownloadStatus("Initiating custom system installer handoff...");
+
+        // Trigger prompt synchronously inside user gesture!
+        activePrompt.prompt();
+        const { outcome } = await activePrompt.userChoice;
+        console.log(`PWA: User response to the install prompt: ${outcome}`);
+        
+        if (outcome === "accepted") {
+          // Play the ultra fast simulated download sequence
+          setDownloadProgress(15);
+          setDownloadStatus("Handshake secured! Registering application lifecycle hooks...");
+
+          let currentProgress = 15;
+          const statuses = [
+            "Syncing official offline app core assets...",
+            "Downloading high-speed vector interface packs...",
+            "Configuring smart local storage persistence engine...",
+            "Mascot launcher and homescreen shortcuts successfully deployed!"
+          ];
+
+          const interval = setInterval(() => {
+            currentProgress += Math.floor(Math.random() * 15) + 10;
+            if (currentProgress >= 100) {
+              clearInterval(interval);
+              setDownloadProgress(100);
+              setDownloadStatus("Deployment complete!");
+              setTimeout(() => {
+                setIsDownloading(false);
+                setDeferredPrompt(null);
+                (window as any).deferredPrompt = null;
+                setShowInstallButton(false);
+                localStorage.setItem("nexora_pwa_installed", "true");
+                setPwaInstalled(true);
+                setShowPwaBanner(false);
+                showToast("🎉 Nexora successfully installed to your Home Screen!", "success");
+              }, 500);
+            } else {
+              setDownloadProgress(currentProgress);
+              const idx = Math.min(
+                Math.floor(((currentProgress - 15) / 85) * statuses.length),
+                statuses.length - 1
+              );
+              setDownloadStatus(statuses[idx]);
+            }
+          }, 60);
+
+        } else {
+          // If the user cancelled/declined
+          setIsDownloading(false);
+          setDownloadProgress(0);
+          showToast("Nexora PWA installation cancelled.", "info");
+        }
+        return;
+      } catch (err) {
+        console.error("Error showing PWA install prompt:", err);
+      }
+    }
+
+    // Fallback: This is when activePrompt is null (e.g., iPhone/iPad Safari or browsers without beforeinstallprompt support).
+    // In this case, we run the beautiful downloading simulation and then show the step-by-step instructions (showIOSInstallGuide).
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    setDownloadStatus("Connecting to secure app servers...");
+    
     const statuses = [
       "Securing connection handshake with CDN repository...",
       "Connecting to official Google Play & Apple App payload servers...",
@@ -2704,61 +2779,32 @@ export default function App() {
       "Downloading high-speed vector interface assets (8.9 MB / 15.2 MB)...",
       "Downloading offline smart database cache (13.7 MB / 15.2 MB)...",
       "Decompressing device-optimized binary assets...",
-      "Analyzing smartphone environment security compliance...",
       "Injecting standalone sandboxed environment hooks...",
       "Generating high-resolution mascot desktop launcher shortcuts...",
-      "Packaging successful! Initiating secure local deployment..."
+      "Packaging successful! Preparing installation instructions..."
     ];
 
     let currentProgress = 0;
-    const interval = setInterval(async () => {
-      // Fast loading simulation speed
+    const interval = setInterval(() => {
       currentProgress += Math.floor(Math.random() * 8) + 5;
       if (currentProgress >= 100) {
         currentProgress = 100;
         clearInterval(interval);
         setDownloadProgress(100);
-        setDownloadStatus("Package verified! Opening device system installer...");
-
-        // Small immersive pause before launching native installer
-        setTimeout(async () => {
+        setDownloadStatus("Package verified! Opening device instructions... ✅");
+        setTimeout(() => {
           setIsDownloading(false);
-          const activePrompt = deferredPrompt || (window as any).deferredPrompt;
-          if (activePrompt) {
-            try {
-              console.log("PWA: Triggering native deferred prompt");
-              activePrompt.prompt();
-              const { outcome } = await activePrompt.userChoice;
-              console.log(`PWA: User response to the install prompt: ${outcome}`);
-              setDeferredPrompt(null);
-              (window as any).deferredPrompt = null;
-              setShowInstallButton(false);
-              if (outcome === "accepted") {
-                localStorage.setItem("nexora_pwa_installed", "true");
-                setPwaInstalled(true);
-                setShowPwaBanner(false);
-                showToast("🎉 Nexora hybrid app successfully installed to your Home Screen!", "success");
-              }
-            } catch (err) {
-              console.error("Error showing PWA install prompt:", err);
-              setShowIOSInstallGuide(true);
-            }
-          } else {
-            // Show custom user guide if native is unavailable (e.g. iOS)
-            console.log("PWA: Native prompt unavailable. Triggering custom step guide.");
-            setShowIOSInstallGuide(true);
-          }
-        }, 850);
+          setShowIOSInstallGuide(true);
+        }, 600);
       } else {
         setDownloadProgress(currentProgress);
-        // Change status message dynamically based on progress percent
         const msgIdx = Math.min(
           Math.floor((currentProgress / 100) * statuses.length),
           statuses.length - 1
         );
         setDownloadStatus(statuses[msgIdx]);
       }
-    }, 110);
+    }, 90);
   };
 
   useEffect(() => {

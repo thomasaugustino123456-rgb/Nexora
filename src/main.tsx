@@ -163,6 +163,11 @@ if ('serviceWorker' in navigator) {
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   (window as any).deferredPrompt = e;
+  try {
+    localStorage.setItem("nexora_pwa_installed", "false");
+  } catch (err) {
+    console.error("Failed to reset installation local storage:", err);
+  }
   // Dispatch custom event for React to listen to if it's already rendered
   window.dispatchEvent(new CustomEvent('pwa-deferred-prompt', { detail: e }));
 });
