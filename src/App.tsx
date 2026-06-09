@@ -216,7 +216,7 @@ import { NavButton } from "./components/NavButton";
 import { SplashScreen } from "./components/SplashScreen";
 import { useNexoraData } from "./hooks/useNexoraData";
 
-const nexoraAppIcon = "/nexora_app_icon.png?v=20260609b";
+const nexoraAppIcon = "/nexora_mascot_logo.png?v=20260609b";
 
 const DEFAULT_SETTINGS: UserSettings = {
   pushupsGoal: 5,
@@ -4342,7 +4342,7 @@ export default function App() {
         {/* Performance optimized: Background Mascot Watermark removed to prevent heating
       <div className="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0 opacity-[0.03]">
         <img 
-          src="/nexora_app_icon.png" 
+          src="/nexora_mascot_logo.png" 
           alt="" 
           className="w-[150%] max-w-none"
           referrerPolicy="no-referrer"

@@ -6,7 +6,7 @@ const ASSETS_TO_CACHE = [
   '/index.css',
   '/main.tsx',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap',
-  '/nexora_app_icon.png',
+  '/nexora_mascot_logo.png',
   'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js'
 ];
@@ -33,8 +33,8 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification.title || 'Nexora 🔥';
   const notificationOptions = {
     body: payload.notification.body || 'Ready for your next win, bro?',
-    icon: '/nexora_app_icon.png',
-    badge: '/nexora_app_icon.png',
+    icon: '/nexora_mascot_logo.png',
+    badge: '/nexora_mascot_logo.png',
     data: payload.data,
     vibrate: [200, 100, 200],
     tag: 'nexora-alert' // Groups notifications
@@ -116,8 +116,8 @@ self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
   const options = {
     body: data.body || 'Hey 👋 Ready for today’s challenge?',
-    icon: '/nexora_app_icon.png',
-    badge: '/nexora_app_icon.png',
+    icon: '/nexora_mascot_logo.png',
+    badge: '/nexora_mascot_logo.png',
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),

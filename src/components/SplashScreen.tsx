@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 
-const nexoraAppIcon = "/nexora_app_icon.png?v=20260609b";
+const nexoraAppIcon = "/nexora_mascot_logo.png?v=20260609b";
 
 export function SplashScreen() {
   return (
