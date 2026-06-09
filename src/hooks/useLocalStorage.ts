@@ -15,11 +15,15 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     try {
       setStoredValue((prevValue) => {
         const valueToStore = value instanceof Function ? value(prevValue) : value;
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+        try {
+          window.localStorage.setItem(key, JSON.stringify(valueToStore));
+        } catch (storageError) {
+          console.warn("useLocalStorage: Failed to write to localStorage due to quota or sandbox limits:", storageError);
+        }
         return valueToStore;
       });
     } catch (error) {
-      console.error(error);
+      console.error("useLocalStorage setter fatal error:", error);
     }
   };
 

@@ -215,6 +215,7 @@ import {
 import { NavButton } from "./components/NavButton";
 import { SplashScreen } from "./components/SplashScreen";
 import { useNexoraData } from "./hooks/useNexoraData";
+import { MascotImage } from "./components/MascotImage";
 
 const nexoraAppIcon = "https://res.cloudinary.com/ddtfq9acc/image/upload/q_auto/f_auto/v1780831447/file_00000000659471f48492f78ba083fafc_wt3p7m.png";
 
@@ -4362,11 +4363,9 @@ export default function App() {
               <div className="bg-slate-900/95 border-2 border-[#69C496]/50 rounded-[32px] p-5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] shadow-[#69C496]/10 backdrop-blur-xl text-white space-y-4">
                 <div className="flex items-start gap-4">
                   <div className="w-16 h-16 bg-slate-800 rounded-2xl border border-slate-700/60 p-1 flex items-center justify-center shadow-xl shrink-0">
-                    <img
-                      src={nexoraAppIcon}
+                    <MascotImage
                       alt="Nexora Mascot Logo"
                       className="w-14 h-14 rounded-xl object-cover shadow-inner"
-                      referrerPolicy="no-referrer"
                     />
                   </div>
                   <div className="flex-1 space-y-1">
@@ -4464,11 +4463,9 @@ export default function App() {
 
                 <div className="text-center space-y-3">
                   <div className="w-24 h-24 bg-gradient-to-tr from-slate-800 to-slate-900 rounded-[28px] flex items-center justify-center mx-auto mb-2 border-2 border-[#69C496]/30 shadow-2xl relative">
-                    <img
-                      src={nexoraAppIcon}
+                    <MascotImage
                       alt="Logo"
                       className="w-20 h-20 rounded-2xl object-cover"
-                      referrerPolicy="no-referrer"
                     />
                     <div className="absolute -bottom-1 -right-1 bg-[#69C496] text-slate-900 rounded-full p-1.5 shadow-lg shadow-[#69C496]/20">
                       <Smartphone size={16} />
@@ -4683,11 +4680,9 @@ export default function App() {
             !showArchitectLab && (
               <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl">
                 <div className="flex items-center gap-4">
-                  <img
-                    src={nexoraAppIcon}
+                  <MascotImage
                     alt="Nexora Logo"
                     className="w-16 h-16 object-cover rounded-2xl shadow-md border border-white/20"
-                    referrerPolicy="no-referrer"
                   />
                   <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">
                     Nexora

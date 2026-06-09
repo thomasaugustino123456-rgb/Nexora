@@ -24,8 +24,26 @@ const app = initializeApp(firebaseConfig);
 // Initialize Analytics lazily
 export const analytics = async () => {
   if (typeof window !== 'undefined') {
-    const supported = await isAnalyticsSupported();
-    return supported ? getAnalytics(app) : null;
+    // Disable Firebase Analytics in development, preview, or sandboxed iframe environments
+    // to prevent IndexedDB Transaction QuotaExceeded errors inside iframe sandboxes.
+    const isDevPreview = 
+      import.meta.env.DEV || 
+      window.location.hostname.includes("localhost") || 
+      window.location.hostname.includes("run.app") || 
+      window.self !== window.top;
+
+    if (isDevPreview) {
+      console.log("[Analytics] Disabled in dev/preview iframe sandbox to prevent quota issues.");
+      return null;
+    }
+
+    try {
+      const supported = await isAnalyticsSupported();
+      return supported ? getAnalytics(app) : null;
+    } catch (e) {
+      console.warn("Firebase Analytics support check failed:", e);
+      return null;
+    }
   }
   return null;
 };

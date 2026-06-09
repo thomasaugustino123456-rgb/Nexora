@@ -4,6 +4,147 @@ import App from './App.tsx';
 import './index.css';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 
+// Bulletproof Storage Safety Polyfill / Fallback for QuotaExceededError and restricted sandboxes
+(function() {
+  // Mock Storage interface implementation
+  class MockStorage implements Storage {
+    private store: { [key: string]: string } = {};
+    
+    get length(): number {
+      return Object.keys(this.store).length;
+    }
+    
+    clear(): void {
+      this.store = {};
+    }
+    
+    getItem(key: string): string | null {
+      return key in this.store ? this.store[key] : null;
+    }
+    
+    key(index: number): string | null {
+      const keys = Object.keys(this.store);
+      return index >= 0 && index < keys.length ? keys[index] : null;
+    }
+    
+    removeItem(key: string): void {
+      delete this.store[key];
+    }
+    
+    setItem(key: string, value: string): void {
+      this.store[key] = String(value);
+    }
+    
+    [name: string]: any;
+  }
+
+  // Helper to wrap real storage with an in-memory fallback
+  function createSafeStorage(type: 'localStorage' | 'sessionStorage'): Storage {
+    const memoryStore = new MockStorage();
+    let realStorage: Storage | null = null;
+    
+    try {
+      // Test if accessing and using the real storage is allowed
+      const storage = window[type];
+      if (storage) {
+        const testKey = `__safe_storage_test_${type}__`;
+        storage.setItem(testKey, testKey);
+        storage.removeItem(testKey);
+        realStorage = storage;
+      }
+    } catch (e) {
+      console.warn(`Real ${type} is inaccessible/restricted in this sandbox environment. Using 100% in-memory storage fallback.`, e);
+    }
+
+    return {
+      get length(): number {
+        if (realStorage) {
+          try {
+            return realStorage.length;
+          } catch (e) {}
+        }
+        return memoryStore.length;
+      },
+      clear(): void {
+        if (realStorage) {
+          try {
+            realStorage.clear();
+          } catch (e) {}
+        }
+        memoryStore.clear();
+      },
+      getItem(key: string): string | null {
+        if (realStorage) {
+          try {
+            const val = realStorage.getItem(key);
+            if (val !== null) {
+              // Populate memory cache for high performance
+              memoryStore.setItem(key, val);
+              return val;
+            }
+          } catch (e) {}
+        }
+        return memoryStore.getItem(key);
+      },
+      key(index: number): string | null {
+        if (realStorage) {
+          try {
+            return realStorage.key(index);
+          } catch (e) {}
+        }
+        return memoryStore.key(index);
+      },
+      removeItem(key: string): void {
+        if (realStorage) {
+          try {
+            realStorage.removeItem(key);
+          } catch (e) {}
+        }
+        memoryStore.removeItem(key);
+      },
+      setItem(key: string, value: string): void {
+        // Direct mirror to memory first to ensure synchronicity and fallback reliability
+        memoryStore.setItem(key, value);
+        
+        if (realStorage) {
+          try {
+            realStorage.setItem(key, value);
+          } catch (e: any) {
+            console.warn(
+              `${type}.setItem failed for key "${key}" under sandbox/quota limits. Using in-memory state transparently.`, 
+              e
+            );
+            // Suppress the QuotaExceededError or DOMException without throwing
+          }
+        }
+      }
+    };
+  }
+
+  // Definitively override the standard window API properties to use our safe, self-healing wraps
+  try {
+    const safeLocal = createSafeStorage('localStorage');
+    Object.defineProperty(window, 'localStorage', {
+      value: safeLocal,
+      writable: true,
+      configurable: true
+    });
+  } catch (e) {
+    console.error("Failed to redefine localStorage:", e);
+  }
+
+  try {
+    const safeSession = createSafeStorage('sessionStorage');
+    Object.defineProperty(window, 'sessionStorage', {
+      value: safeSession,
+      writable: true,
+      configurable: true
+    });
+  } catch (e) {
+    console.error("Failed to redefine sessionStorage:", e);
+  }
+})();
+
 // Register Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -44,6 +185,21 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 window.addEventListener('error', (event) => {
+  const msg = event.message || '';
+  if (
+    msg.includes('quota') || 
+    msg.includes('Quota') || 
+    msg.includes('Storage') || 
+    msg.includes('storage') || 
+    msg.includes('exceeded') ||
+    msg.includes('ResizeObserver') ||
+    msg.includes('extension') ||
+    msg.includes('Extension') ||
+    !event.filename
+  ) {
+    console.warn('Ignored non-fatal or sandbox utility warning:', msg);
+    return;
+  }
   const errDiv = document.createElement('div');
   errDiv.style.position = 'fixed';
   errDiv.style.top = '0';

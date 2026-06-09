@@ -19,20 +19,55 @@ export function PublicRankView({ userId, onClose }: PublicRankViewProps) {
   useEffect(() => {
     async function loadData() {
       try {
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        if (userDoc.exists()) {
-          const d = userDoc.data();
-          setData({
-            stats: d.stats || {},
-            settings: { 
-              displayName: d.displayName || 'Nexora User',
-              activeHat: d.activeSkin || 'none',
+        let stats: any = {};
+        let settings: any = {};
+        let hasData = false;
+
+        // Try leaderboard first (publicly readable for any authenticated user)
+        try {
+          const lbDoc = await getDoc(doc(db, 'leaderboard', userId));
+          if (lbDoc.exists()) {
+            const lbData = lbDoc.data();
+            stats = {
+              level: lbData.level || 1,
+              streak: lbData.streak || 0,
+              totalPoints: lbData.totalPoints || 0,
+              trophies: lbData.trophies || [],
+            };
+            settings = {
+              displayName: lbData.displayName || 'Nexora User',
+              activeHat: lbData.activeSkin || 'none',
+              profilePic: lbData.photoURL || '',
+            };
+            hasData = true;
+          }
+        } catch (lbErr) {
+          console.warn("PublicRankView: failed to fetch public leaderboard card", lbErr);
+        }
+
+        // If user is the owner or admin, they can query the full users doc
+        try {
+          const userDoc = await getDoc(doc(db, 'users', userId));
+          if (userDoc.exists()) {
+            const d = userDoc.data();
+            stats = d.stats || stats;
+            settings = {
+              displayName: d.displayName || settings.displayName || 'Nexora User',
+              activeHat: d.activeSkin || settings.activeHat || 'none',
+              profilePic: d.profilePic || settings.profilePic || '',
               ...d
-            } as any
-          });
+            };
+            hasData = true;
+          }
+        } catch (userDocErr) {
+          console.log("PublicRankView: Not authorized to fetch detailed profile. Displaying public leaderboard data.");
+        }
+
+        if (hasData) {
+          setData({ stats, settings });
         }
       } catch (e) {
-        console.error(e);
+        console.error("PublicRankView error:", e);
       } finally {
         setLoading(false);
       }

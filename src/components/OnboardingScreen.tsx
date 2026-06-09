@@ -26,6 +26,7 @@ import { signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';
+import { MascotImage } from './MascotImage';
 
 const nexoraAppIcon = "https://res.cloudinary.com/ddtfq9acc/image/upload/q_auto/f_auto/v1780831447/file_00000000659471f48492f78ba083fafc_wt3p7m.png";
 
@@ -199,12 +200,9 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
               }}
               className="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center bg-white border border-[#E9E4D4] rounded-full shadow-md overflow-hidden p-2 bg-gradient-to-tr from-white to-[#FAF7F2]"
             >
-              <img 
-                src={nexoraAppIcon} 
+              <MascotImage 
                 alt="Nexora Mascot" 
                 className="w-full h-full object-cover rounded-full shadow-inner"
-                referrerPolicy="no-referrer"
-                loading="lazy"
               />
               <div className="absolute -bottom-1.5 px-3 py-0.5 rounded-full bg-[#69C496] border border-white text-white text-[9px] font-black uppercase tracking-wider shadow-sm animate-pulse">
                 Nexy Ally

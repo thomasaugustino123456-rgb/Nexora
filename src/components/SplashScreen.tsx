@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { MascotImage } from './MascotImage';
 
 const nexoraAppIcon = "https://res.cloudinary.com/ddtfq9acc/image/upload/q_auto/f_auto/v1780831447/file_00000000659471f48492f78ba083fafc_wt3p7m.png";
 
@@ -33,11 +34,9 @@ export function SplashScreen() {
           }}
           className="relative w-48 h-48 drop-shadow-[0_20px_50px_rgba(59,130,246,0.5)]"
         >
-          <img 
-            src={nexoraAppIcon} 
+          <MascotImage 
             alt="Nexora Mascot" 
             className="w-full h-full object-cover rounded-[48px] shadow-2xl border-4 border-white/50"
-            referrerPolicy="no-referrer"
           />
           
           {/* Sparkles around mascot */}

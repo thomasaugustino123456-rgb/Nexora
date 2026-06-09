@@ -4,6 +4,7 @@ import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activi
 import { Mascot } from './Mascot';
 import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
 import { vibrate } from '../lib/vibrate';
+import { MascotImage } from './MascotImage';
 
 const nexoraAppIcon = "https://res.cloudinary.com/ddtfq9acc/image/upload/q_auto/f_auto/v1780831447/file_00000000659471f48492f78ba083fafc_wt3p7m.png";
 
@@ -96,12 +97,9 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
               className="absolute -inset-3 bg-gradient-to-tr from-blue-400 via-indigo-300 to-cyan-400 rounded-full opacity-30 group-hover:opacity-60 transition-opacity blur-xl"
             />
-            <img 
-              src={nexoraAppIcon} 
+            <MascotImage 
               alt="Nexora Logo" 
               className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-2xl relative z-10 shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 border border-white/20"
-              referrerPolicy="no-referrer"
-              loading="lazy"
             />
           </div>
           <span className="text-3xl md:text-5xl font-black text-blue-950 tracking-tighter drop-shadow-sm">Nexora</span>
@@ -610,12 +608,9 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       <footer className="w-full bg-blue-950 text-blue-200 py-12 relative z-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-4">
-            <img 
-              src={nexoraAppIcon} 
+            <MascotImage 
               alt="Nexora Logo" 
               className="w-14 h-14 md:w-16 md:h-16 object-cover rounded-xl border border-white/20 shadow-md"
-              referrerPolicy="no-referrer"
-              loading="lazy"
             />
             <span className="text-3xl font-black text-white tracking-tighter">Nexora</span>
           </div>

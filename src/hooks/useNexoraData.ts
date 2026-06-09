@@ -262,20 +262,29 @@ export function useNexoraData(
       };
 
       try {
+        const timeoutDuration = hasCache ? 6000 : 20000;
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Firebase network timed out (2.5s)")), 2500)
+          setTimeout(() => reject(new Error(`Firebase network timed out (${timeoutDuration / 1000}s)`)), timeoutDuration)
         );
 
-        const fetchPromise = Promise.all([
-          getDocWithCacheFallback(userDocRef),
-          getDocWithCacheFallback(progressDocRef),
-          getDocsWithCacheFallback(ecoShopRef),
-        ]);
+        let docSnap, progressSnap, ecoSnap;
+        try {
+          const fetchPromise = Promise.all([
+            getDocWithCacheFallback(userDocRef),
+            getDocWithCacheFallback(progressDocRef),
+            getDocsWithCacheFallback(ecoShopRef),
+          ]);
 
-        const [docSnap, progressSnap, ecoSnap] = (await Promise.race([
-          fetchPromise,
-          timeoutPromise,
-        ])) as [any, any, any];
+          [docSnap, progressSnap, ecoSnap] = (await Promise.race([
+            fetchPromise,
+            timeoutPromise,
+          ])) as [any, any, any];
+          
+          console.log("Hooks: Core Firestore data loaded successfully.");
+        } catch (fetchErr) {
+          console.error("Hooks: Failed fetching initial user collections:", fetchErr);
+          throw fetchErr;
+        }
 
         let firestoreSettings = DEFAULT_SETTINGS;
         let firestoreStats = DEFAULT_STATS;
@@ -327,8 +336,14 @@ export function useNexoraData(
             },
             tiles: data.garden?.tiles || initialGardenDb.tiles,
           };
-          setNeedsOnboarding(false);
-          localStorage.setItem("nexora_onboarding_completed", "true");
+
+          if (data.onboardingCompleted === true) {
+            setNeedsOnboarding(false);
+            localStorage.setItem("nexora_onboarding_completed", "true");
+          } else {
+            console.log("Hooks: User doc exists but onboarding is not completed. Showing onboarding.");
+            setNeedsOnboarding(true);
+          }
         } else {
           const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
           if (onboardingComp) {
@@ -409,27 +424,24 @@ export function useNexoraData(
       } catch (err: any) {
         const isOfflineReason = !navigator.onLine || err?.message?.includes("offline") || err?.message?.includes("timed out") || err?.code === "unavailable";
         if (isOfflineReason) {
-          console.warn("Hooks: Firestore backend unreachable. Gracefully initializing from local cache fallback.");
+          console.warn("Hooks: Firestore backend unreachable.");
         } else {
-          console.error("Hooks: Error loading initial user data, fallback to cache: ", err);
+          console.error("Hooks: Error loading initial user data: ", err);
         }
 
         if (!isLoaderResolved) {
           if (loadingTimeout) clearTimeout(loadingTimeout);
           isLoaderResolved = true;
 
-          // Check if local cache indicates onboarding is already completed
-          const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
-          
           if (!hasCache) {
-             console.warn("Hooks: User has no local cache and Firestore failed. Initializing with defaults (sync disabled to prevent overwrite).");
-             setNeedsOnboarding(true);
+            console.warn("Hooks: User has no local cache and Firestore failed. Showing Connection Failed screen to protect data.");
+            setLoadError("We couldn't connect to our servers to load your profile. Please check your internet connection and try again.");
           } else {
-             setNeedsOnboarding(!onboardingComp);
+            const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
+            setNeedsOnboarding(!onboardingComp);
+            setIsDataReady(true);
+            setLoading(false);
           }
-
-          setIsDataReady(true);
-          setLoading(false);
         }
       }
     };
