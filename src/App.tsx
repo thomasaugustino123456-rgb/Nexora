@@ -4782,6 +4782,7 @@ export default function App() {
             (activeScreen as string) !== "leaderboard" &&
             (activeScreen as string) !== "admin" &&
             (activeScreen as string) !== "hydration-detail" &&
+            (activeScreen as string) !== "social" &&
             !showArchitectLab && (
               <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl">
                 <div className="flex items-center gap-4">
@@ -6190,6 +6191,7 @@ export default function App() {
             (activeScreen as string) !== "leaderboard" &&
             (activeScreen as string) !== "admin" &&
             (activeScreen as string) !== "hydration-detail" &&
+            (activeScreen as string) !== "social" &&
             !showArchitectLab && (
               <motion.div
                 initial={false}

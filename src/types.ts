@@ -306,6 +306,8 @@ export interface Post {
   circleName: string;
   content: string;
   image?: string;
+  title?: string;
+  imageUrl?: string;
   flames: number; // likes
   shields: number; // verify/respect
   likedBy?: string[]; // Array of user IDs who flamed
