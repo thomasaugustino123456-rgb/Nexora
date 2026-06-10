@@ -104,6 +104,16 @@ export function useNexoraData(
       const prevUserId = localStorage.getItem("nexora_cached_user");
 
       if (currentUser) {
+        const hasCache = localStorage.getItem("nexora_onboarding_completed") === "true";
+        if (prevUserId !== currentUser.uid || !hasCache) {
+          // New / different user, or cache cleared (e.g. after explicit logout).
+          // Force safe transition loading state before fetching Firestore settings
+          // and prevent flashing onboarding screens or wiping user data!
+          setLoading(true);
+          setIsDataReady(false);
+          setNeedsOnboarding(false);
+        }
+
         if (prevUserId && prevUserId !== currentUser.uid) {
           console.log("Hooks: Different user detected, resetting caches in-memory and locally.");
           // Clear sync blockers and caches first

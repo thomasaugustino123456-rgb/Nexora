@@ -219,6 +219,28 @@ import { MascotImage } from "./components/MascotImage";
 
 const nexoraAppIcon = "https://res.cloudinary.com/ddtfq9acc/image/upload/q_auto/f_auto/v1780831447/file_00000000659471f48492f78ba083fafc_wt3p7m.png";
 
+const detectLowEndDevice = (): boolean => {
+  if (typeof navigator === "undefined") return false;
+  
+  // Low concurrency (CPUs with 4 or fewer cores)
+  const cores = navigator.hardwareConcurrency;
+  if (cores && cores <= 4) return true;
+  
+  // Weak memory (4 GB or less memory)
+  const memory = (navigator as any).deviceMemory;
+  if (memory && memory <= 4) return true;
+  
+  // Old Chrome version graphics bottlenecks
+  const ua = navigator.userAgent.toLowerCase();
+  const chromeMatch = ua.match(/chrome\/(\d+)/);
+  if (chromeMatch) {
+    const version = parseInt(chromeMatch[1], 10);
+    if (version && version < 90) return true; // Chrome 89 or older
+  }
+  
+  return false;
+};
+
 const DEFAULT_SETTINGS: UserSettings = {
   pushupsGoal: 5,
   waterGoal: 2,
@@ -252,8 +274,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   spaceOnboardingCompleted: false,
   plantOnboardingCompleted: false,
   isWalkthroughCompleted: false,
-  performanceMode: false,
-  lowPowerMode: false,
+  performanceMode: detectLowEndDevice(),
+  lowPowerMode: detectLowEndDevice(),
   plantState: {
     type: "sprout",
     stage: 0,
@@ -295,7 +317,7 @@ const NAV_ITEMS_MAP: Record<
   { label: string; icon: React.ReactNode; screen: Screen }
 > = {
   home: { label: "Home", icon: <Home size={24} />, screen: "home" },
-  social: { label: "Nexora", icon: <Zap size={24} />, screen: "social" },
+  social: { label: "Community", icon: <Users size={24} />, screen: "social" },
   progress: {
     label: "Stats",
     icon: <BarChart2 size={24} />,
@@ -342,6 +364,16 @@ export default function App() {
     loadError,
     forceSyncData,
   } = useNexoraData(DEFAULT_SETTINGS, DEFAULT_STATS, showToast);
+
+  // Performance-optimized animation configs for page transitions
+  const pageVariants = {
+    initial: settings.performanceMode ? { opacity: 0 } : { opacity: 0, x: 15 },
+    animate: { opacity: 1, x: 0 },
+    exit: settings.performanceMode ? { opacity: 0 } : { opacity: 0, x: -15 },
+  };
+  const pageTransition = settings.performanceMode 
+    ? { duration: 0.1 } 
+    : { type: "spring" as const, stiffness: 500, damping: 40 };
 
   // Global hydration-detail states synced with localStorage
   const [hydrationConsecutiveDays, setHydrationConsecutiveDays] = useState<number>(() => {
@@ -4871,10 +4903,11 @@ export default function App() {
                 activeScreen === "home" && (
                   <motion.div
                     key="home"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    variants={pageVariants}
+                    transition={pageTransition}
                     className="w-full"
                   >
                     <HomeScreen
@@ -4990,10 +5023,11 @@ export default function App() {
               {activeScreen === "progress" && (
                 <motion.div
                   key="progress"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  variants={pageVariants}
+                  transition={pageTransition}
                   className="w-full"
                 >
                   <Suspense
@@ -5022,10 +5056,11 @@ export default function App() {
               {activeScreen === "profile" && (
                 <motion.div
                   key="profile"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  variants={pageVariants}
+                  transition={pageTransition}
                   className="w-full"
                 >
                   <Suspense
@@ -5050,10 +5085,11 @@ export default function App() {
               {activeScreen === "social" && (
                 <motion.div
                   key="social"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  variants={pageVariants}
+                  transition={pageTransition}
                   className="w-full"
                 >
                   <Suspense
@@ -5082,10 +5118,11 @@ export default function App() {
               {activeScreen === "settings" && (
                 <motion.div
                   key="settings"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  variants={pageVariants}
+                  transition={pageTransition}
                   className="w-full"
                 >
                   <Suspense
@@ -6168,9 +6205,9 @@ export default function App() {
                     (id) => {
                       const item = NAV_ITEMS_MAP[id];
                       if (!item) return null;
+                      if (id === "social") return null; // Keep hidden in bottom menu to prevent crowded arrangement
                       const isHidden = settings.hiddenNavItems?.includes(id);
                       if (isHidden) return null;
-                      if (id === "social") return null; // FORCE HIDE SOCIAL AS REQUESTED
 
                       return (
                         <NavButton

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
-const nexoraAppIcon = "https://res.cloudinary.com/ddtfq9acc/image/upload/q_auto/f_auto/v1780831447/file_00000000659471f48492f78ba083fafc_wt3p7m.png";
+// Use q_100 instead of q_auto for absolute maximum clarity and zero compression artifacts!
+const nexoraAppIcon = "https://res.cloudinary.com/ddtfq9acc/image/upload/q_100,f_auto/v1780831447/file_00000000659471f48492f78ba083fafc_wt3p7m.png";
 
 interface MascotImageProps {
   className?: string;
@@ -11,71 +12,97 @@ interface MascotImageProps {
 export function MascotImage({ className = "w-16 h-16 rounded-2xl", alt = "Nexora Mascot Logo", style }: MascotImageProps) {
   const [hasError, setHasError] = useState(false);
 
-  if (hasError) {
-    // Elegant high-performance fallback representation of our digital companion/mascot!
-    return (
-      <div 
-        className={`relative bg-gradient-to-tr from-cyan-400 via-indigo-500 to-blue-600 shadow-md flex items-center justify-center overflow-hidden shrink-0 select-none ${className}`}
-        style={{ ...style, display: 'flex' }}
-      >
-        {/* Ambient Inner Glow */}
-        <div className="absolute inset-0 bg-radial-gradient from-white/20 to-transparent pointer-events-none opacity-40" />
+  // Fallback beautiful vector representation of our digital companion/slime mascot!
+  const renderFallbackSlime = () => (
+    <div 
+      className={`relative bg-gradient-to-tr from-[#3b82f6] via-[#1d4ed8] to-[#1e3a8a] shadow-md flex items-center justify-center overflow-hidden shrink-0 select-none ${className}`}
+      style={{ ...style, display: 'flex' }}
+    >
+      {/* Ambient Inner Glow */}
+      <div className="absolute inset-0 bg-radial-gradient from-white/20 to-transparent pointer-events-none opacity-40" />
+      
+      {/* Sleek Slime Companion Vector SVG */}
+      <svg viewBox="0 0 100 100" className="w-[85%] h-[85%] text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Soft floating shadow below */}
+        <ellipse cx="50" cy="85" rx="30" ry="6" fill="#000000" opacity="0.25" />
         
-        {/* Sleek Mascot SVG */}
-        <svg viewBox="0 0 100 100" className="w-[85%] h-[85%] text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Holographic Glowing Celestial Halo */}
-          <ellipse cx="50" cy="22" rx="22" ry="5.5" stroke="#A7F3D0" strokeWidth="4.5" strokeDasharray="4 2" />
+        {/* Core Slime Body */}
+        <path 
+          d="M 50 15 C 72 15, 88 35, 88 58 C 88 78, 71 84, 50 84 C 29 84, 12 78, 12 58 C 12 35, 28 15, 50 15 Z" 
+          fill="url(#slimeGradient)" 
+          stroke="#E0F2FE" 
+          strokeWidth="2.5" 
+        />
+        
+        {/* Slime Cute Shiny Highlight Accent */}
+        <path 
+          d="M 28 32 C 34 26, 42 24, 50 24" 
+          stroke="#FFFFFF" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          opacity="0.6" 
+        />
+
+        {/* Big sparkling eyes */}
+        <g>
+          {/* Left Eye */}
+          <circle cx="38" cy="52" r="6.5" fill="#000" />
+          <circle cx="40" cy="49" r="2.5" fill="#FFFFFF" />
+          <circle cx="36" cy="54" r="1.5" fill="#FFFFFF" />
           
-          {/* Subtle Antenna Flow */}
-          <path d="M 50 35 L 50 25" stroke="#A7F3D0" strokeWidth="4" strokeLinecap="round" />
-          <circle cx="50" cy="25" r="3" fill="#6EE7B7" />
+          {/* Right Eye */}
+          <circle cx="62" cy="52" r="6.5" fill="#000" />
+          <circle cx="64" cy="49" r="2.5" fill="#FFFFFF" />
+          <circle cx="60" cy="54" r="1.5" fill="#FFFFFF" />
+        </g>
 
-          {/* Core Rounded Robot Body */}
-          <rect x="25" y="34" width="50" height="50" rx="18" fill="url(#coreGradient)" stroke="#E0F2FE" strokeWidth="2.5" />
-          
-          {/* Screen Display Face Mask */}
-          <rect x="30" y="39" width="40" height="40" rx="14" fill="#0F172A" />
+        {/* Cute happy smiling mouth */}
+        <path d="M 46 64 Q 50 68 54 64" stroke="#000" strokeWidth="2.5" strokeLinecap="round" fill="none" />
 
-          {/* Cute Glowing LED Eyes */}
-          <g>
-            {/* Left Eye */}
-            <circle cx="43" cy="54" r="5" fill="#38BDF8" className="animate-pulse" />
-            <circle cx="45" cy="52" r="1.5" fill="#FFFFFF" />
-            {/* Right Eye */}
-            <circle cx="57" cy="54" r="5" fill="#38BDF8" className="animate-pulse" />
-            <circle cx="59" cy="52" r="1.5" fill="#FFFFFF" />
-          </g>
+        {/* Kawaii pink blush cheeks */}
+        <circle cx="28" cy="59" r="3.5" fill="#F472B6" opacity="0.65" />
+        <circle cx="72" cy="59" r="3.5" fill="#F472B6" opacity="0.65" />
 
-          {/* Smiling LED Arc */}
-          <path d="M 45 64 Q 50 68 55 64" stroke="#6EE7B7" strokeWidth="3.5" strokeLinecap="round" />
+        <defs>
+          <linearGradient id="slimeGradient" x1="50" y1="15" x2="50" y2="84" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#38bdf8" />
+            <stop offset="60%" stopColor="#2563eb" />
+            <stop offset="100%" stopColor="#1d4ed8" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  );
 
-          {/* Rosy Digital Blush */}
-          <circle cx="36" cy="62" r="2" fill="#F472B6" opacity="0.6" />
-          <circle cx="64" cy="62" r="2" fill="#F472B6" opacity="0.6" />
-
-          <defs>
-            <linearGradient id="coreGradient" x1="25" y1="34" x2="75" y2="84" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#2563EB" />
-              <stop offset="50%" stopColor="#4F46E5" />
-              <stop offset="100%" stopColor="#7C3AED" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-    );
+  if (hasError) {
+    return renderFallbackSlime();
   }
 
+  // We load the restored, high-resolution original slime mascot image from Cloudinary directly!
+  // To make it look incredibly sharp and clear, we set high-contrast rendering properties.
   return (
-    <img 
-      src={nexoraAppIcon} 
-      alt={alt}
-      className={className}
-      style={style}
-      referrerPolicy="no-referrer"
-      onError={() => {
-        console.warn("Cloudinary URL failed to load under sandbox, switching to gorgeous fallback SVG.");
-        setHasError(true);
+    <div 
+      className={`relative flex items-center justify-center shrink-0 ${className}`} 
+      style={{ 
+        ...style,
+        background: "transparent",
+        display: 'flex'
       }}
-    />
+    >
+      <img 
+        src={nexoraAppIcon} 
+        alt={alt}
+        className="w-full h-full object-contain filter drop-shadow-[0_4px_10px_rgba(59,130,246,0.2)] select-none"
+        style={{
+          imageRendering: "auto",
+          WebkitFontSmoothing: "antialiased"
+        }}
+        referrerPolicy="no-referrer"
+        onError={() => {
+          console.warn("MascotImage: Cloudinary URL failed to load under sandbox, switching to gorgeous fallback slime SVG.");
+          setHasError(true);
+        }}
+      />
+    </div>
   );
 }

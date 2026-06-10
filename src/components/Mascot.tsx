@@ -251,7 +251,7 @@ export const Mascot = React.memo(({
         {/* Floating body group with reactive tilt */}
         <motion.g 
           animate={isSitting ? { y: 20, scaleY: 0.88 } : { y: 0, scaleY: 1 }}
-          className="anim-mascot-float"
+          className={performanceMode ? "" : "anim-mascot-float"}
         >
           {/* Rotational pivot group */}
           <g transform={`rotate(${tilt}, 250, 330)`} className="transition-transform duration-200">
@@ -270,30 +270,37 @@ export const Mascot = React.memo(({
 
               {/* Physical Animated Liquid (Steady high standard 70% level) */}
               <g transform="translate(0, 235)">
-                {/* Parallax background wave */}
-                <g className="anim-wave-2" opacity="0.45">
-                  <path 
-                    d="M -300,10 Q -225,-5 -150,10 T 0,10 T 150,10 T 300,10 T 450,10 T 600,10 T 750,10 T 900,10 L 900,600 L -300,600 Z" 
-                    fill={colors.liquidTop} 
-                  />
-                </g>
+                {performanceMode ? (
+                  /* Static high-performance solid liquid rect representation */
+                  <rect x="-50" y="20" width="600" height="600" fill="url(#water-grad-mascot)" />
+                ) : (
+                  <>
+                    {/* Parallax background wave */}
+                    <g className="anim-wave-2" opacity="0.45">
+                      <path 
+                        d="M -300,10 Q -225,-5 -150,10 T 0,10 T 150,10 T 300,10 T 450,10 T 600,10 T 750,10 T 900,10 L 900,600 L -300,600 Z" 
+                        fill={colors.liquidTop} 
+                      />
+                    </g>
 
-                {/* Foreground wave */}
-                <g className="anim-wave-1">
-                  <path 
-                    d="M -300,20 Q -225,5 -150,20 T 0,20 T 150,20 T 300,20 T 450,20 T 600,20 T 750,20 T 900,20 L 900,600 L -300,600 Z" 
-                    fill="url(#water-grad-mascot)" 
-                  />
-                </g>
+                    {/* Foreground wave */}
+                    <g className="anim-wave-1">
+                      <path 
+                        d="M -300,20 Q -225,5 -150,20 T 0,20 T 150,20 T 300,20 T 450,20 T 600,20 T 750,20 T 900,20 L 900,600 L -300,600 Z" 
+                        fill="url(#water-grad-mascot)" 
+                      />
+                    </g>
 
-                {/* Bubbles float loop */}
-                {isVisible && !performanceMode && (
-                  <g fill="#FFFFFF" fillOpacity="0.5">
-                    <circle cx="160" cy="120" r="4.5" className="anim-bubble-bg" style={{ animationDelay: '0s', animationDuration: '4.2s' }} />
-                    <circle cx="210" cy="190" r="3" className="anim-bubble-bg" style={{ animationDelay: '1.5s', animationDuration: '3.6s' }} />
-                    <circle cx="330" cy="140" r="4" className="anim-bubble-bg" style={{ animationDelay: '0.8s', animationDuration: '4.0s' }} />
-                    <circle cx="280" cy="220" r="2.5" className="anim-bubble-bg" style={{ animationDelay: '2.5s', animationDuration: '3.2s' }} />
-                  </g>
+                    {/* Bubbles float loop */}
+                    {isVisible && (
+                      <g fill="#FFFFFF" fillOpacity="0.5">
+                        <circle cx="160" cy="120" r="4.5" className="anim-bubble-bg" style={{ animationDelay: '0s', animationDuration: '4.2s' }} />
+                        <circle cx="210" cy="190" r="3" className="anim-bubble-bg" style={{ animationDelay: '1.5s', animationDuration: '3.6s' }} />
+                        <circle cx="330" cy="140" r="4" className="anim-bubble-bg" style={{ animationDelay: '0.8s', animationDuration: '4.0s' }} />
+                        <circle cx="280" cy="220" r="2.5" className="anim-bubble-bg" style={{ animationDelay: '2.5s', animationDuration: '3.2s' }} />
+                      </g>
+                    )}
+                  </>
                 )}
               </g>
             </g>
@@ -378,12 +385,14 @@ export const Mascot = React.memo(({
             <path d="M 380,135 C 380,135 362,143 352,162" fill="none" stroke="#FFFFFF" strokeWidth="5.5" strokeLinecap="round" opacity="0.65" />
 
             {/* Star lights sparkles */}
-            <g fill="#FFFFFF" opacity="0.8">
-              <polygon points="100,105 104,108 108,105 104,102" className="animate-pulse" style={{ animationDuration: '2.5s' }} />
-              <polygon points="405,125 408,128 411,125 408,122" className="animate-pulse" style={{ animationDuration: '3.5s' }} />
-              <polygon points="85,380 91,385 97,380 91,375" fill={colors.stroke} className="animate-pulse" style={{ animationDuration: '2.8s' }} />
-              <polygon points="415,395 420,399 425,395 420,391" fill={colors.stroke} className="animate-pulse" style={{ animationDuration: '3.1s' }} />
-            </g>
+            {!performanceMode && (
+              <g fill="#FFFFFF" opacity="0.8">
+                <polygon points="100,105 104,108 108,105 104,102" className="animate-pulse" style={{ animationDuration: '2.5s' }} />
+                <polygon points="405,125 408,128 411,125 408,122" className="animate-pulse" style={{ animationDuration: '3.5s' }} />
+                <polygon points="85,380 91,385 97,380 91,375" fill={colors.stroke} className="animate-pulse" style={{ animationDuration: '2.8s' }} />
+                <polygon points="415,395 420,399 425,395 420,391" fill={colors.stroke} className="animate-pulse" style={{ animationDuration: '3.1s' }} />
+              </g>
+            )}
 
             {/* STACKED ACCESSORY HATS */}
             {hat !== 'none' && (
