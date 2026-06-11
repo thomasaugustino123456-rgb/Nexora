@@ -12,6 +12,31 @@ interface CreateGroupWizardProps {
 
 export function CreateGroupWizard({ onClose, onComplete, isSubmitting, initialData }: CreateGroupWizardProps) {
   const [step, setStep] = useState(1);
+  const iconInputRef = React.useRef<HTMLInputElement>(null);
+  const bgInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleIconLocalUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setData(prev => ({ ...prev, customIconUrl: event.target?.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleBgLocalUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setData(prev => ({ ...prev, customBgUrl: event.target?.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const [data, setData] = useState({
     name: initialData?.name || '',
     category: initialData?.category || 'General',
@@ -23,7 +48,9 @@ export function CreateGroupWizard({ onClose, onComplete, isSubmitting, initialDa
     groupPurpose: 'Sharing Progress',
     visibility: 'public',
     weeklyCommitment: 'Daily',
-    customCategory: ''
+    customCategory: '',
+    customIconUrl: initialData?.customIconUrl || null as string | null,
+    customBgUrl: initialData?.customBgUrl || null as string | null
   });
 
   const purposes = [
@@ -232,22 +259,83 @@ export function CreateGroupWizard({ onClose, onComplete, isSubmitting, initialDa
                    <p className="text-xs text-slate-400">Design the custom landing beacon for members to spot.</p>
                 </div>
 
-                {/* Preview Badge */}
-                <div className={`w-24 h-24 rounded-[2rem] bg-gradient-to-tr ${data.color} flex items-center justify-center text-4xl shadow-xl ring-4 ring-white relative overflow-hidden transition-all duration-300`}>
-                   <span className="relative z-10">{data.icon}</span>
-                   <div className="absolute inset-0 bg-white/20" />
+                {/* Preview Badge with Custom Background Preview */}
+                <div className="relative w-full max-w-sm h-32 rounded-3xl overflow-hidden border border-slate-200 shadow-lg bg-slate-50 flex items-center p-6">
+                   {data.customBgUrl ? (
+                      <img src={data.customBgUrl} className="absolute inset-0 w-full h-full object-cover" />
+                   ) : (
+                      <div className={`absolute inset-0 bg-gradient-to-tr ${data.color} opacity-90`} />
+                   )}
+                   <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px]" />
+                   
+                   <div className="relative z-10 flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-white/90 shadow-md flex items-center justify-center text-3xl overflow-hidden shrink-0">
+                         {data.customIconUrl ? (
+                            <img src={data.customIconUrl} className="w-full h-full object-cover" />
+                         ) : (
+                            <span>{data.icon}</span>
+                         )}
+                      </div>
+                      <div className="text-white drop-shadow-md">
+                         <h5 className="font-black text-base">n/{data.name || 'YourGroupName'}</h5>
+                         <p className="text-[10px] uppercase tracking-widest font-bold opacity-80">{data.category} Spectrum</p>
+                      </div>
+                   </div>
+                </div>
+
+                {/* Custom Image Uploaders (Icon & Theme Background) */}
+                <div className="grid grid-cols-2 gap-4 w-full pt-1">
+                   <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center text-center space-y-2">
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Device Group Icon</p>
+                      <button
+                        type="button"
+                        onClick={() => iconInputRef.current?.click()}
+                        className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${data.customIconUrl ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                      >
+                         <Users size={14} />
+                         <span>{data.customIconUrl ? 'Icon Uploaded!' : 'Choose Icon'}</span>
+                      </button>
+                      <input 
+                        type="file" 
+                        ref={iconInputRef} 
+                        onChange={handleIconLocalUpload} 
+                        accept="image/*" 
+                        className="hidden" 
+                      />
+                      <p className="text-[8px] text-slate-400 leading-normal">Replaces the emoji sticker badge with a custom PNG/JPG.</p>
+                   </div>
+
+                   <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center text-center space-y-2">
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Theme Background</p>
+                      <button
+                        type="button"
+                        onClick={() => bgInputRef.current?.click()}
+                        className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${data.customBgUrl ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                      >
+                         <Sparkles size={14} />
+                         <span>{data.customBgUrl ? 'Bg Uploaded!' : 'Choose Banner'}</span>
+                      </button>
+                      <input 
+                        type="file" 
+                        ref={bgInputRef} 
+                        onChange={handleBgLocalUpload} 
+                        accept="image/*" 
+                        className="hidden" 
+                      />
+                      <p className="text-[8px] text-slate-400 leading-normal">Replaces the solid color banner with a custom layout photo.</p>
+                   </div>
                 </div>
 
                 {/* Emojis Selector */}
-                <div className="space-y-2 w-full pt-2">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Node Sticker</p>
-                  <div className="grid grid-cols-8 gap-2 max-w-sm mx-auto">
+                <div className="space-y-2 w-full pt-1">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Or Select Node Sticker Sticker</p>
+                  <div className="grid grid-cols-8 gap-1.5 max-w-sm mx-auto">
                     {emojis.map(emoji => (
                        <button
                          type="button"
                          key={emoji}
-                         onClick={() => setData(prev => ({ ...prev, icon: emoji }))}
-                         className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg hover:scale-105 transition-all ${data.icon === emoji ? 'bg-blue-50 ring-2 ring-blue-500 shadow-sm scale-105' : 'bg-slate-50 text-slate-500'}`}
+                         onClick={() => setData(prev => ({ ...prev, icon: emoji, customIconUrl: null }))}
+                         className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center text-base hover:scale-105 transition-all ${data.icon === emoji && !data.customIconUrl ? 'bg-blue-50 ring-2 ring-blue-500 shadow-sm scale-105' : 'bg-slate-50 text-slate-500'}`}
                        >
                          {emoji}
                        </button>
@@ -256,8 +344,8 @@ export function CreateGroupWizard({ onClose, onComplete, isSubmitting, initialDa
                 </div>
 
                 {/* Gradients selection */}
-                <div className="space-y-2 w-full pt-2">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Spectrum Flare</p>
+                <div className="space-y-2 w-full pt-1">
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Or Select Spectrum Flare Base</p>
                    <div className="flex justify-center gap-3">
                      {colors.map(col => {
                         const bgClass = col.split(' ').slice(0, 2).join(' ');
@@ -265,8 +353,8 @@ export function CreateGroupWizard({ onClose, onComplete, isSubmitting, initialDa
                           <button
                             type="button"
                             key={col}
-                            onClick={() => setData(prev => ({ ...prev, color: col }))}
-                            className={`w-7 h-7 rounded-full border-2 transition-all bg-gradient-to-tr ${bgClass} ${data.color === col ? 'border-blue-600 scale-125 shadow' : 'border-white'}`}
+                            onClick={() => setData(prev => ({ ...prev, color: col, customBgUrl: null }))}
+                            className={`w-7 h-7 rounded-full border-2 transition-all bg-gradient-to-tr ${bgClass} ${data.color === col && !data.customBgUrl ? 'border-blue-600 scale-125 shadow' : 'border-white'}`}
                           />
                         );
                      })}

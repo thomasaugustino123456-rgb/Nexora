@@ -91,6 +91,7 @@ export const SocialScreen = React.memo(({
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [viewingCircle, setViewingCircle] = useState<SocialCircle | null>(null);
   const [selectedNotificationPost, setSelectedNotificationPost] = useState<Post | null>(null);
+  const [selectedNotification, setSelectedNotification] = useState<any | null>(null);
   
   // Circle editing/wizard
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
@@ -226,13 +227,9 @@ export const SocialScreen = React.memo(({
         if (progress >= 100) {
           clearInterval(interval);
           setStagedMediaProgress(100);
-          // Set beautiful sample based on kind
-          if (postUploadType === 'image') {
-            setStagedMediaUrl('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop&q=80');
-          } else {
-            setStagedMediaUrl('https://assets.mixkit.co/videos/preview/mixkit-flying-through-star-fields-in-outer-space-42617-large.mp4');
-          }
-          showToast('Media decompressed & preloaded cleanly.', 'success');
+          const localUrl = URL.createObjectURL(file);
+          setStagedMediaUrl(localUrl);
+          showToast('Media stage compression succeeded!', 'success');
         } else {
           setStagedMediaProgress(progress);
         }
@@ -267,8 +264,6 @@ export const SocialScreen = React.memo(({
         title: newPostHeadline.trim(),
         content: newPostContent.trim(),
         type: postUploadType,
-        imageUrl: postUploadType === 'image' ? (stagedMediaUrl || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop&q=80') : undefined,
-        videoUrl: postUploadType === 'video' ? (stagedMediaUrl || 'https://assets.mixkit.co/videos/preview/mixkit-flying-through-star-fields-in-outer-space-42617-large.mp4') : undefined,
         flames: 1,
         shields: 0,
         likedBy: [user.uid],
@@ -276,6 +271,12 @@ export const SocialScreen = React.memo(({
         commentCount: 0,
         createdAt: new Date().toISOString()
       };
+
+      if (postUploadType === 'image') {
+        postData.imageUrl = stagedMediaUrl || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop&q=80';
+      } else if (postUploadType === 'video') {
+        postData.videoUrl = stagedMediaUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+      }
 
       const docRef = await addDoc(collection(db, 'posts'), postData);
 
@@ -851,6 +852,14 @@ export const SocialScreen = React.memo(({
                         vibrate(VIBRATION_PATTERNS.CLICK);
                         if (associatedPost) {
                            setSelectedNotificationPost(associatedPost);
+                            if (user?.uid) {
+                               try {
+                                  updateDoc(doc(db, 'users', user.uid, 'notifications', n.id), { isRead: true });
+                               } catch (err) {
+                                  console.log("Trace error:", err);
+                               }
+                            }
+                            setSelectedNotification(n);
                         } else {
                            showToast('Associated signal broadcast has concluded.', 'info');
                         }
@@ -1076,7 +1085,28 @@ export const SocialScreen = React.memo(({
                              </div>
                            ) : stagedMediaUrl ? (
                              <div className="flex items-center gap-3 justify-center text-emerald-500 text-xs font-bold">
-                                <Check size={16} strokeWidth={3} /> Media Staged Successfully!
+                                <div className="space-y-2 w-full p-1">
+                                   <div className="flex items-center gap-1.5 justify-center text-emerald-600 text-[10px] font-black uppercase tracking-wider">
+                                      <Check size={14} strokeWidth={3} /> Media Staged 100%
+                                   </div>
+                                   <div className="relative max-h-40 rounded-xl overflow-hidden border border-slate-200 flex justify-center bg-zinc-950 p-1">
+                                      {postUploadType === 'image' ? (
+                                        <img src={stagedMediaUrl} className="max-h-36 object-contain rounded-lg" />
+                                      ) : (
+                                        <video src={stagedMediaUrl} className="max-h-36 object-contain rounded-lg shadow-inner" autoPlay loop muted playsInline />
+                                      )}
+                                      <button 
+                                        type="button"
+                                        onClick={(ev) => {
+                                           ev.stopPropagation();
+                                           setStagedMediaUrl('');
+                                        }}
+                                        className="absolute top-1.5 right-1.5 w-6 h-6 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center rounded-full text-xs font-bold shadow shadow-black/30 hover:scale-105 active:scale-95 transition-all"
+                                      >
+                                         ✕
+                                      </button>
+                                   </div>
+                                </div>
                              </div>
                            ) : (
                              <button
@@ -1265,6 +1295,63 @@ export const SocialScreen = React.memo(({
         )}
       </AnimatePresence>
 
+      {/* OVERLAY 2.5: Clean, distraction-free Notification detail viewport page */}
+      <AnimatePresence>
+        {selectedNotification && (
+          <div className="fixed inset-0 z-[2000] bg-zinc-950 flex flex-col p-6 items-center justify-center">
+             <motion.div
+               initial={{ scale: 0.95, opacity: 0 }}
+               animate={{ scale: 1, opacity: 1 }}
+               exit={{ scale: 0.95, opacity: 0 }}
+               className="w-full max-w-md bg-zinc-900 border border-zinc-800 p-8 rounded-[2rem] shadow-2xl space-y-6 text-center text-white"
+             >
+                <div className="w-16 h-16 rounded-3xl bg-zinc-800 text-amber-400 flex items-center justify-center text-2xl mx-auto border border-zinc-700 shadow-inner">
+                   🔔
+                </div>
+
+                <div className="space-y-1">
+                   <h3 className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Signal Transmission Received</h3>
+                   <p className="text-xl font-bold tracking-tight text-zinc-100">@{selectedNotification.senderName}</p>
+                   <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
+                     {selectedNotification.createdAt ? format(parseISO(selectedNotification.createdAt), 'MMMM d, yyyy · h:mm a') : 'Recent'}
+                   </p>
+                </div>
+
+                <div className="p-5 bg-zinc-950 border border-zinc-800 rounded-2xl text-left">
+                   <p className="text-sm font-semibold text-zinc-300 leading-relaxed font-sans whitespace-pre-wrap break-words">{selectedNotification.message}</p>
+                </div>
+
+                <div className="flex flex-col gap-2 pt-2">
+                   {posts.find(p => p.id === selectedNotification.targetId) && (
+                     <button
+                       onClick={() => {
+                          const assoc = posts.find(p => p.id === selectedNotification.targetId);
+                          if (assoc) {
+                             setSelectedPost(assoc);
+                          }
+                          setSelectedNotification(null);
+                          vibrate(VIBRATION_PATTERNS.CLICK);
+                       }}
+                       className="w-full py-3 bg-amber-400 hover:bg-amber-300 text-zinc-950 font-black text-[10px] uppercase tracking-widest rounded-xl shadow-lg transition-transform active:scale-95 cursor-pointer"
+                     >
+                        View Associated Post
+                     </button>
+                   )}
+                   <button
+                     onClick={() => {
+                        setSelectedNotification(null);
+                        vibrate(VIBRATION_PATTERNS.CLICK);
+                     }}
+                     className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 font-black text-[10px] uppercase tracking-widest rounded-xl transition-transform active:scale-95 cursor-pointer"
+                   >
+                      Back to Inbox
+                   </button>
+                </div>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* OVERLAY 3: Specific n/ Subreddit page view with membership rules and post limits */}
       <AnimatePresence>
         {viewingCircle && (
@@ -1277,10 +1364,10 @@ export const SocialScreen = React.memo(({
                    {/* Left Back button */}
                    <button 
                      onClick={() => setViewingCircle(null)} 
-                     className="absolute top-6 left-6 p-2 bg-white/20 hover:bg-white/30 text-white rounded-xl backdrop-blur-sm"
+                     className="absolute top-6 left-6 p-2 bg-white hover:bg-slate-100 text-slate-900 border border-slate-200/50 rounded-xl shadow-md z-10 transition-all cursor-pointer"
                      title="Close specific group view"
                    >
-                      <ArrowLeft size={18} />
+                      <ArrowLeft size={18} className="text-black font-black" />
                    </button>
 
                    {/* Right actions */}
@@ -1290,14 +1377,14 @@ export const SocialScreen = React.memo(({
                         className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-xl backdrop-blur-sm"
                         title="About Rules"
                       >
-                         <Info size={18} />
+                         <Info size={18} className="text-black font-black" />
                       </button>
                       <button 
                         onClick={() => handleToggleNotifyCircle(viewingCircle.id)} 
                         className={`p-2 rounded-xl backdrop-blur-sm transition-colors ${settings.notifEnabledCircleIds?.includes(viewingCircle.id) ? 'bg-orange-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}
                         title="Toggle Notification Bell"
                       >
-                         <Bell size={18} />
+                         <Bell size={18} className="text-black font-black" />
                       </button>
                    </div>
 

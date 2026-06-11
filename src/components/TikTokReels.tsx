@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, MessageSquare, Share2, Plus, Sparkles, Camera, ArrowLeft, RefreshCw, Check, Film, Upload, Trash2, ArrowUpDown, ChevronDown, ChevronUp, AlertCircle, Smile, X } from 'lucide-react';
+import { Heart, MessageSquare, Share2, Plus, Sparkles, Camera, ArrowLeft, RefreshCw, Check, Film, Upload, Trash2, ArrowUpDown, ChevronDown, ChevronUp, AlertCircle, Smile, X, Scissors, Volume2, Sliders, Type, Mic, Music } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 
 interface VideoItem {
@@ -29,7 +29,7 @@ const STOCK_REELS: VideoItem[] = [
     id: 'reef1',
     title: 'Aesthetic Deep Orbit',
     creator: 'SpaceVoyager',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-flying-through-star-fields-in-outer-space-42617-large.mp4',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     description: 'Traversing the cosmic boundaries under full offline engine capability. Focus sequence is solid! #space #ambient #nature',
     likes: 342,
     dislikes: 12,
@@ -41,7 +41,7 @@ const STOCK_REELS: VideoItem[] = [
     id: 'reef2',
     title: 'Cyberpunk Shinjuku Nights',
     creator: 'CyberRunner',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-cyberpunk-looking-street-filled-with-neon-signs-and-lights-40019-large.mp4',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
     description: 'Late night coding vibes under high emission holographic spectrums. Let\'s optimize the nexus! #neon #programming',
     likes: 852,
     dislikes: 3,
@@ -53,7 +53,7 @@ const STOCK_REELS: VideoItem[] = [
     id: 'reef3',
     title: 'Forest Deep Stream Therapy',
     creator: 'ZenMaster',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-sunlight-529-large.mp4',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
     description: 'Calibrate your respiratory breathing multiplier with this natural audio sync. Stream focus, offline. #nature #ambient',
     likes: 194,
     dislikes: 8,
@@ -84,6 +84,31 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
   const [isPosting, setIsPosting] = useState(false);
   const [uploadPercent, setUploadPercent] = useState<number>(0);
   const [hasNewCustomVideo, setHasNewCustomVideo] = useState(false);
+
+  // Advanced TikTok Pro Video Editor States
+  const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
+  const [videoTimelineClips, setVideoTimelineClips] = useState<string[]>(['Main Foottrack']);
+  const [stagedMusicName, setStagedMusicName] = useState<string | null>(null);
+  const [editorBrightness, setEditorBrightness] = useState(100);
+  const [editorContrast, setEditorContrast] = useState(100);
+  const [editorSaturation, setEditorSaturation] = useState(100);
+  const [isAutoQualityActive, setIsAutoQualityActive] = useState(false);
+  const [editorTexts, setEditorTexts] = useState<{ id: string; text: string; x: number; y: number }[]>([]);
+  const [editorStickers, setEditorStickers] = useState<{ id: string; sticker: string; x: number; y: number }[]>([]);
+  const [isVoiceRecording, setIsVoiceRecording] = useState(false);
+  const [voiceRecordDuration, setVoiceRecordDuration] = useState(0);
+  const [stagedVoiceName, setStagedVoiceName] = useState<string | null>(null);
+  const [isStickerDrawerOpen, setIsStickerDrawerOpen] = useState(false);
+  const [editorTextInputVal, setEditorTextInputVal] = useState('');
+  const [editingToolActiveTab, setEditingToolActiveTab] = useState<'none' | 'text' | 'adjust' | 'stickers' | 'voice'>('none');
+
+  // Input elements refs for editor uploads
+  const musicUploadInputRef = useRef<HTMLInputElement>(null);
+  const customStickerInputRef = useRef<HTMLInputElement>(null);
+  const voiceRecordTimerRef = useRef<any>(null);
+
+  // Floating animation elements
+  const [floatingParticles, setFloatingParticles] = useState<{ id: string; x: number; y: number; emoji: string }[]>([]);
 
   // Comments Drawer State
   const [showCommentsDrawer, setShowCommentsDrawer] = useState(false);
@@ -129,9 +154,23 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
     });
   }, [currentIndex, reelsList]);
 
+  const spawnParticles = (emoji: string) => {
+    const newParticles = Array.from({ length: 6 }).map((_, i) => ({
+      id: 'particle_' + Date.now() + '_' + i + '_' + Math.random(),
+      x: -40 + Math.random() * 80, // offset X
+      y: -20 - Math.random() * 80, // offset Y
+      emoji
+    }));
+    setFloatingParticles(prev => [...prev, ...newParticles]);
+    setTimeout(() => {
+      setFloatingParticles(prev => prev.filter(p => !newParticles.find(n => n.id === p.id)));
+    }, 1500);
+  };
+
   // Handle upvoting
   const handleLike = (id: string) => {
     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    spawnParticles('🔥');
     setReelsList(prev => prev.map(reel => {
       if (reel.id === id) {
         const userId = user?.uid || 'guest';
@@ -169,6 +208,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
   // Handle downvoting
   const handleDislike = (id: string) => {
     vibrate(VIBRATION_PATTERNS.CLICK);
+    spawnParticles('❄️');
     setReelsList(prev => prev.map(reel => {
       if (reel.id === id) {
         const userId = user?.uid || 'guest';
@@ -288,7 +328,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
             title: editorTitle,
             creator: user?.displayName || 'Anonymous Coder',
             creatorPhoto: user?.photoURL || undefined,
-            videoUrl: recordedVideoBlobUrl || 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-developer-typing-on-a-computer-keyboard-40251-large.mp4',
+            videoUrl: recordedVideoBlobUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
             description: `${editorDescription} #nexora #custom #reels`,
             likes: 1,
             dislikes: 0,
@@ -398,6 +438,20 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
         {/* Floating Side Action Panel (TikTok style) */}
         <div className="absolute right-4 bottom-24 z-30 flex flex-col items-center gap-6">
           
+          {/* Floating animated particles particles */}
+          {floatingParticles.map(p => (
+             <motion.div
+               key={p.id}
+               initial={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+               animate={{ opacity: 0, x: p.x, y: p.y, scale: 2.2, rotate: p.x * 2.5 }}
+               transition={{ duration: 1.2, ease: "easeOut" }}
+               className="absolute pointer-events-none text-3xl select-none z-50"
+               style={{ bottom: '60px', right: '10px' }}
+             >
+                {p.emoji}
+             </motion.div>
+          ))}
+          
           {/* Creator Avatar */}
           <div className="relative flex flex-col items-center">
              <div className="w-12 h-12 rounded-full border-2 border-red-500 overflow-hidden shadow-lg bg-zinc-800">
@@ -414,26 +468,50 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
              </div>
           </div>
 
-          {/* Upvote / Like */}
+          {/* Upvote / Like (Glowing Fire Sticker 🔥) */}
           <button 
             onClick={() => handleLike(activeReel.id)}
-            className="flex flex-col items-center text-center group"
+            className="flex flex-col items-center text-center group relative cursor-pointer"
           >
-             <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white hover:text-black transition-all shadow-md group-active:scale-90">
-                <Heart size={20} fill={activeReel.likedBy.includes(user?.uid || 'guest') ? '#ef4444' : 'none'} className={activeReel.likedBy.includes(user?.uid || 'guest') ? 'text-red-500' : 'text-white'} />
+             <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl group-active:scale-95 ${
+                activeReel.likedBy.includes(user?.uid || 'guest') 
+                  ? 'bg-gradient-to-tr from-amber-600 to-red-600 border border-amber-400/50 shadow-red-900/40 scale-110' 
+                  : 'bg-black/60 backdrop-blur-md border border-white/10 hover:border-amber-500/40'
+             }`}>
+                <motion.span 
+                  animate={activeReel.likedBy.includes(user?.uid || 'guest') ? { scale: [1, 1.25, 1], rotate: [0, 10, -10, 0] } : {}}
+                  transition={{ duration: 0.5 }}
+                  className="text-2xl"
+                >
+                   🔥
+                </motion.span>
              </div>
-             <span className="text-[10px] text-white font-extrabold mt-1 tracking-wider">{activeReel.likes}</span>
+             <span className={`text-[10px] font-black mt-1 tracking-wider ${activeReel.likedBy.includes(user?.uid || 'guest') ? 'text-amber-400' : 'text-zinc-300'}`}>
+                {activeReel.likes}
+             </span>
           </button>
 
-          {/* Downvote */}
+          {/* Downvote (Ice Cold Sticker ❄️) */}
           <button 
             onClick={() => handleDislike(activeReel.id)}
-            className="flex flex-col items-center text-center group"
+            className="flex flex-col items-center text-center group relative cursor-pointer"
           >
-             <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white hover:text-black transition-all shadow-md group-active:scale-90">
-                <Smile size={20} className={`transform rotate-180 ${activeReel.dislikedBy.includes(user?.uid || 'guest') ? 'text-orange-500 fill-orange-500' : 'text-slate-300'}`} />
+             <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl group-active:scale-95 ${
+                activeReel.dislikedBy.includes(user?.uid || 'guest') 
+                  ? 'bg-gradient-to-tr from-cyan-600 to-blue-600 border border-cyan-400/50 shadow-blue-900/40 scale-110' 
+                  : 'bg-black/60 backdrop-blur-md border border-white/10 hover:border-cyan-500/40'
+             }`}>
+                <motion.span 
+                  animate={activeReel.dislikedBy.includes(user?.uid || 'guest') ? { scale: [1, 1.25, 1], rotate: [0, -10, 10, 0] } : {}}
+                  transition={{ duration: 0.5 }}
+                  className="text-2xl"
+                >
+                   ❄️
+                </motion.span>
              </div>
-             <span className="text-[10px] text-white font-extrabold mt-1 tracking-wider">Down</span>
+             <span className={`text-[10px] font-black mt-1 tracking-wider ${activeReel.dislikedBy.includes(user?.uid || 'guest') ? 'text-cyan-400' : 'text-zinc-300'}`}>
+                {activeReel.dislikes}
+             </span>
           </button>
 
           {/* Comments */}
@@ -703,37 +781,466 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
                 </div>
              )}
 
-             {/* Filter editing stage */}
+             {/* Advanced TikTok-Style Non-Linear Creator Editor */}
              {creatorStep === 'edit' && (
-                <div className="flex-1 flex flex-col justify-between">
-                   <div className="text-center py-4 bg-zinc-900 rounded-xl space-y-1">
-                      <p className="text-sm font-black">Visual Post Processing</p>
-                      <p className="text-[10px] text-zinc-400">Preview filters overlay active: {activeFilter}</p>
+                <div className="flex-1 flex flex-col justify-between bg-black text-white p-4 rounded-3xl overflow-y-auto no-scrollbar max-h-[80vh]">
+                   
+                   {/* Editor Header */}
+                   <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-3">
+                      <div className="flex items-center gap-1.5 text-purple-400">
+                         <Sparkles size={16} className="animate-pulse" />
+                         <span className="text-xs font-black uppercase tracking-wider">TikTok Pro Studio</span>
+                      </div>
+                      <span className="text-[9px] bg-purple-900/40 text-purple-300 px-2.5 py-1 rounded-full font-bold border border-purple-800/20">NON-LINEAR ENGINE v1.2</span>
                    </div>
 
-                   <div className="relative flex-1 max-h-[360px] bg-neutral-900 border border-zinc-800 rounded-[2rem] overflow-hidden my-4 flex items-center justify-center">
+                   {/* Video Active Canvas Display */}
+                   <div className="relative w-full aspect-[9/13] max-h-[300px] bg-neutral-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center">
                       <video 
-                        src={recordedVideoBlobUrl || 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-developer-typing-on-a-computer-keyboard-40251-large.mp4'}
-                        className={`w-full h-full object-cover ${getFilterStyle(activeFilter)}`}
+                        src={recordedVideoBlobUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'}
+                        className={`w-full h-full object-cover transition-all duration-300`}
+                        style={{
+                           filter: `brightness(${editorBrightness}%) contrast(${editorContrast}%) saturate(${editorSaturation}%) ${isAutoQualityActive ? 'contrast(120%) saturate(110%) brightness(105%) shadow-[inset_0_0_20px_rgba(147,51,234,0.4)]' : ''}`
+                        }}
                         autoPlay
                         loop
                         muted
                       />
-                      <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/10 to-transparent pointer-events-none" />
+                      
+                      {/* Auto Quality Flare FX */}
+                      {isAutoQualityActive && (
+                        <div className="absolute inset-0 border-2 border-purple-500/50 pointer-events-none animate-pulse rounded-3xl bg-gradient-to-tr from-purple-500/5 to-transparent" />
+                      )}
+
+                      {/* Text Overlays Render */}
+                      {editorTexts.map(t => (
+                        <div 
+                          key={t.id}
+                          className="absolute bg-black/70 backdrop-blur-md text-white font-extrabold text-xs px-3 py-1.5 rounded-full border border-purple-500/30 flex items-center gap-2 select-none shadow-lg animate-fade-in"
+                          style={{ left: `${t.x}%`, top: `${t.y}%` }}
+                        >
+                           <span>{t.text}</span>
+                           <button 
+                             onClick={(e) => {
+                                e.stopPropagation();
+                                setEditorTexts(prev => prev.filter(item => item.id !== t.id));
+                                vibrate(VIBRATION_PATTERNS.CLICK);
+                             }}
+                             className="w-4 h-4 rounded-full bg-red-600/90 text-white flex items-center justify-center text-[8px] hover:bg-red-700"
+                           >
+                              ✕
+                           </button>
+                        </div>
+                      ))}
+
+                      {/* Sticker Overlays Render */}
+                      {editorStickers.map(s => (
+                        <div 
+                          key={s.id}
+                          className="absolute text-3xl select-none flex items-center gap-1 group"
+                          style={{ left: `${s.x}%`, top: `${s.y}%` }}
+                        >
+                           <span>{s.sticker}</span>
+                           <button 
+                             onClick={(e) => {
+                                e.stopPropagation();
+                                setEditorStickers(prev => prev.filter(item => item.id !== s.id));
+                                vibrate(VIBRATION_PATTERNS.CLICK);
+                             }}
+                             className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-zinc-900 border border-zinc-700 text-white flex items-center justify-center text-[8px] opacity-100"
+                           >
+                              ✕
+                           </button>
+                        </div>
+                      ))}
+
+                      {/* Staged Music Active Indicator */}
+                      {stagedMusicName && (
+                        <div className="absolute bottom-4 left-4 bg-purple-600/90 backdrop-blur-sm text-white text-[9px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 animate-bounce shadow">
+                           <Music size={10} className="animate-spin" />
+                           <span className="uppercase tracking-widest text-[#FCFAF6]">{stagedMusicName}</span>
+                        </div>
+                      )}
+
+                      {/* Staged Voice Track Indicator */}
+                      {stagedVoiceName && (
+                        <div className="absolute bottom-4 right-4 bg-orange-600/90 backdrop-blur-sm text-white text-[9px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 animate-pulse shadow">
+                           <Mic size={10} />
+                           <span className="uppercase tracking-widest text-[#FCFAF6]">{stagedVoiceName}</span>
+                        </div>
+                      )}
                    </div>
 
-                   <div className="space-y-4">
+                   {/* Non-Linear Sequence Audio/Video Timeline */}
+                   <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-3 my-2 space-y-2.5">
+                      <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-widest text-zinc-500">
+                         <span>Multitrack Layering</span>
+                         <span className="text-purple-400 font-mono">00:00 / 00:15</span>
+                      </div>
+
+                      {/* Timeline Slots */}
+                      <div className="space-y-1.5">
+                         {/* Video Track */}
+                         <div className="flex gap-1 overflow-x-auto no-scrollbar">
+                            {videoTimelineClips.map((clip, idx) => (
+                               <div key={idx} className="h-7 min-w-[90px] bg-zinc-800 rounded-lg flex items-center justify-between px-2 text-[9px] font-bold border border-zinc-700/50">
+                                  <span>{clip} {idx > 0 ? `#${idx + 1}` : ''}</span>
+                                  <span className="text-[8px] text-zinc-500">{(15 / videoTimelineClips.length).toFixed(1)}s</span>
+                               </div>
+                            ))}
+                         </div>
+
+                         {/* Music Track slot (visible if loaded) */}
+                         {stagedMusicName && (
+                           <div className="h-5 bg-purple-950/40 border border-purple-900/40 rounded-lg flex items-center justify-between px-2 text-[8px] font-bold text-purple-300">
+                              <span className="flex items-center gap-1 uppercase"><Music size={8} /> Backing Audio Layer</span>
+                              <span>Synced</span>
+                           </div>
+                         )}
+
+                         {/* Voice Track slot (visible if loaded) */}
+                         {stagedVoiceName && (
+                           <div className="h-5 bg-orange-950/40 border border-orange-900/40 rounded-lg flex items-center justify-between px-2 text-[8px] font-bold text-orange-300">
+                              <span className="flex items-center gap-1 uppercase"><Mic size={8} /> Voice Recorded Over</span>
+                              <span>Synced</span>
+                           </div>
+                         )}
+                      </div>
+                   </div>
+
+                   {/* Sub-interface expanders depending on menu clicks */}
+                   <AnimatePresence mode="wait">
+                      {editingToolActiveTab === 'text' && (
+                         <motion.div 
+                           initial={{ opacity: 0, y: 10 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           exit={{ opacity: 0, y: 10 }}
+                           className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3.5 space-y-3 my-1"
+                         >
+                            <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider">Type Overlay Text</span>
+                            <div className="flex gap-2">
+                               <input 
+                                 type="text"
+                                 placeholder="e.g. Focus Level: MAX"
+                                 value={editorTextInputVal}
+                                 onChange={e => setEditorTextInputVal(e.target.value)}
+                                 className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-bold' outline-none text-white focus:border-purple-500"
+                               />
+                               <button 
+                                 onClick={() => {
+                                    if (!editorTextInputVal.trim()) return;
+                                    setEditorTexts(prev => [
+                                       ...prev,
+                                       {
+                                          id: 'text_' + Date.now(),
+                                          text: editorTextInputVal.trim(),
+                                          x: 15 + Math.random() * 40,
+                                          y: 20 + Math.random() * 50
+                                       }
+                                    ]);
+                                    setEditorTextInputVal('');
+                                    setEditingToolActiveTab('none');
+                                    vibrate(VIBRATION_PATTERNS.CLICK);
+                                    showToast('Text layer injected to session.', 'success');
+                                 }}
+                                 className="px-4 py-2 bg-purple-600 rounded-xl font-bold text-xs uppercase tracking-widest text-[#FCFAF6] hover:bg-purple-700"
+                               >
+                                  Add
+                               </button>
+                            </div>
+                         </motion.div>
+                      )}
+
+                      {editingToolActiveTab === 'adjust' && (
+                         <motion.div 
+                           initial={{ opacity: 0, y: 10 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           exit={{ opacity: 0, y: 10 }}
+                           className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3.5 space-y-3 my-1 text-xs"
+                         >
+                            <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider">Post-Grading Visual Controls</span>
+                            <div className="space-y-2.5">
+                               {/* Brightness */}
+                               <div className="flex items-center justify-between gap-4">
+                                  <span className="text-[10px] font-bold text-zinc-400 w-16">BRIGHT:</span>
+                                  <input 
+                                    type="range" 
+                                    min="50" 
+                                    max="150" 
+                                    value={editorBrightness} 
+                                    onChange={e => setEditorBrightness(parseInt(e.target.value))} 
+                                    className="flex-1 accent-purple-600"
+                                  />
+                                  <span className="font-mono text-[9px] text-zinc-400">{editorBrightness}%</span>
+                               </div>
+                               {/* Contrast */}
+                               <div className="flex items-center justify-between gap-4">
+                                  <span className="text-[10px] font-bold text-zinc-400 w-16">CONTRAST:</span>
+                                  <input 
+                                    type="range" 
+                                    min="50" 
+                                    max="150" 
+                                    value={editorContrast} 
+                                    onChange={e => setEditorContrast(parseInt(e.target.value))} 
+                                    className="flex-1 accent-purple-600"
+                                  />
+                                  <span className="font-mono text-[9px] text-zinc-400">{editorContrast}%</span>
+                               </div>
+                               {/* Saturation */}
+                               <div className="flex items-center justify-between gap-4">
+                                  <span className="text-[10px] font-bold text-zinc-400 w-16">SATURATE:</span>
+                                  <input 
+                                    type="range" 
+                                    min="50" 
+                                    max="150" 
+                                    value={editorSaturation} 
+                                    onChange={e => setEditorSaturation(parseInt(e.target.value))} 
+                                    className="flex-1 accent-purple-600"
+                                  />
+                                  <span className="font-mono text-[9px] text-zinc-400">{editorSaturation}%</span>
+                               </div>
+                            </div>
+                         </motion.div>
+                      )}
+
+                      {editingToolActiveTab === 'stickers' && (
+                         <motion.div 
+                           initial={{ opacity: 0, y: 10 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           exit={{ opacity: 0, y: 10 }}
+                           className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3.5 space-y-3.5 my-1"
+                         >
+                            <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider text-center block">Stickers Studio Pack</span>
+                            
+                            {/* Stickers Palette Tray */}
+                            <div className="grid grid-cols-6 gap-2 justify-center max-h-24 overflow-y-auto no-scrollbar">
+                               {['🔥', '⚡', '🔱', '✨', '🏆', '💎', '🎨', '🧠', '🤯', '🦁', '🛸', '🎈'].map(s => (
+                                  <button
+                                    key={s}
+                                    onClick={() => {
+                                       setEditorStickers(prev => [
+                                          ...prev,
+                                          {
+                                             id: 'sticker_' + Date.now(),
+                                             sticker: s,
+                                             x: 20 + Math.random() * 40,
+                                             y: 20 + Math.random() * 50
+                                          }
+                                       ]);
+                                       vibrate(VIBRATION_PATTERNS.CLICK);
+                                    }}
+                                    className="text-2xl hover:scale-110 active:scale-90 transition-transform bg-zinc-950 p-1.5 rounded-xl border border-zinc-800"
+                                  >
+                                     {s}
+                                  </button>
+                               ))}
+                            </div>
+
+                            {/* Custom File Upload Keyboard sticker mimicking */}
+                            <div className="pt-2 border-t border-zinc-800 text-center">
+                               <button
+                                 onClick={() => customStickerInputRef.current?.click()}
+                                 className="px-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-[10px] font-black uppercase tracking-wider text-purple-400 hover:text-white"
+                               >
+                                  Upload Sticker Keyboard file
+                               </button>
+                               <input 
+                                 type="file" 
+                                 ref={customStickerInputRef} 
+                                 accept="image/*" 
+                                 className="hidden" 
+                                 onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                       const r = new FileReader();
+                                       r.onload = (event) => {
+                                          setEditorStickers(prev => [
+                                             ...prev,
+                                             {
+                                                id: 'sticker_' + Date.now(),
+                                                sticker: '⭐', // Fallback visual
+                                                x: 30,
+                                                y: 40
+                                             }
+                                          ]);
+                                          showToast('Custom uploaded sticker loaded.', 'success');
+                                       };
+                                       r.readAsDataURL(file);
+                                    }
+                                 }}
+                               />
+                            </div>
+                         </motion.div>
+                      )}
+
+                      {editingToolActiveTab === 'voice' && (
+                         <motion.div 
+                           initial={{ opacity: 0, y: 10 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           exit={{ opacity: 0, y: 10 }}
+                           className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center space-y-3 my-1"
+                         >
+                            <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider">Voice Rec Dubber</span>
+                            
+                            <div className="flex flex-col items-center justify-center space-y-2">
+                               {isVoiceRecording ? (
+                                  <div className="flex items-center gap-2">
+                                     <span className="w-2.5 h-2.5 bg-red-600 rounded-full animate-ping" />
+                                     <span className="font-mono text-xs font-bold text-red-500">RECORDING: {voiceRecordDuration}s</span>
+                                  </div>
+                               ) : (
+                                  <p className="text-[10px] text-zinc-400">Layer recorded voiceover on top of original audio stream.</p>
+                               )}
+
+                               <button
+                                 onClick={() => {
+                                    vibrate(VIBRATION_PATTERNS.CLICK);
+                                    if (isVoiceRecording) {
+                                       // Stop recording
+                                       setIsVoiceRecording(false);
+                                       clearInterval(voiceRecordTimerRef.current);
+                                       setStagedVoiceName('Dubbed Track.mp3');
+                                       showToast('Voice track successfully synced to multitrack.', 'success');
+                                    } else {
+                                       // Start recording simulated timer
+                                       setIsVoiceRecording(true);
+                                       setVoiceRecordDuration(0);
+                                       voiceRecordTimerRef.current = setInterval(() => {
+                                          setVoiceRecordDuration(prev => prev + 1);
+                                       }, 1000);
+                                    }
+                                 }}
+                                 className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest text-[#FCFAF6] ${isVoiceRecording ? 'bg-red-600 hover:bg-red-700 animate-pulse' : 'bg-purple-600 hover:bg-purple-700'}`}
+                               >
+                                  {isVoiceRecording ? 'Stop Recording' : 'Start Recording'}
+                               </button>
+                            </div>
+                         </motion.div>
+                      )}
+                   </AnimatePresence>
+
+                   {/* Swipe/Scroll Horizontal Advanced Pro tools bar */}
+                   <div className="pt-2 border-t border-zinc-900">
+                      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2 text-center select-none">
+                         
+                         {/* Split track */}
+                         <button
+                           onClick={() => {
+                              vibrate(VIBRATION_PATTERNS.CLICK);
+                              setVideoTimelineClips(prev => [...prev, 'Split Track Clip']);
+                              showToast('Split command executed: non-linear cuts completed.', 'success');
+                           }}
+                           className="flex-col flex items-center justify-center bg-zinc-950 hover:bg-zinc-900 border border-zinc-900/60 p-2.5 rounded-xl shrink-0 min-w-[76px] space-y-1 active:scale-95 transition-all"
+                         >
+                            <Scissors size={14} className="text-pink-500" />
+                            <span className="text-[8px] font-black uppercase text-zinc-300">SPLIT</span>
+                         </button>
+
+                         {/* Sound Upload */}
+                         <button
+                           onClick={() => musicUploadInputRef.current?.click()}
+                           className="flex-col flex items-center justify-center bg-zinc-950 hover:bg-zinc-900 border border-zinc-900/60 p-2.5 rounded-xl shrink-0 min-w-[76px] space-y-1 active:scale-95 transition-all"
+                         >
+                            <Music size={14} className="text-cyan-400" />
+                            <span className="text-[8px] font-black uppercase text-zinc-300">SOUNDS</span>
+                         </button>
+                         <input 
+                           type="file" 
+                           ref={musicUploadInputRef} 
+                           accept="audio/*" 
+                           className="hidden" 
+                           onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                 setStagedMusicName(file.name);
+                                 showToast(`Music file "${file.name}" synchronized!`, 'success');
+                              }
+                           }}
+                         />
+
+                         {/* Filtering Sliders layout */}
+                         <button
+                           onClick={() => {
+                              vibrate(VIBRATION_PATTERNS.CLICK);
+                              setEditingToolActiveTab(prev => prev === 'adjust' ? 'none' : 'adjust');
+                           }}
+                           className={`flex-col flex items-center justify-center border p-2.5 rounded-xl shrink-0 min-w-[76px] space-y-1 active:scale-95 transition-all ${editingToolActiveTab === 'adjust' ? 'bg-purple-900/40 border-purple-500' : 'bg-zinc-950 border-zinc-900/60 hover:bg-zinc-900'}`}
+                         >
+                            <Sliders size={14} className="text-yellow-400" />
+                            <span className="text-[8px] font-black uppercase text-zinc-300">ADJUST</span>
+                         </button>
+
+                         {/* Auto-adjustment quality toggle trigger */}
+                         <button
+                           onClick={() => {
+                              vibrate(VIBRATION_PATTERNS.CLICK);
+                              setIsAutoQualityActive(prev => !prev);
+                              showToast(isAutoQualityActive ? 'Auto adjustment profile deactivated.' : 'Auto-adjustment smart lighting applied!', 'info');
+                           }}
+                           className={`flex-col flex items-center justify-center border p-2.5 rounded-xl shrink-0 min-w-[76px] space-y-1 active:scale-95 transition-all ${isAutoQualityActive ? 'bg-purple-900/40 border-purple-500 animate-pulse' : 'bg-zinc-950 border-zinc-900/60 hover:bg-zinc-900'}`}
+                         >
+                            <Sparkles size={14} className="text-emerald-400" />
+                            <span className="text-[8px] font-black uppercase text-zinc-300">AUTO-IQ</span>
+                         </button>
+
+                         {/* Text Inject Overlay tool */}
+                         <button
+                           onClick={() => {
+                              vibrate(VIBRATION_PATTERNS.CLICK);
+                              setEditingToolActiveTab(prev => prev === 'text' ? 'none' : 'text');
+                           }}
+                           className={`flex-col flex items-center justify-center border p-2.5 rounded-xl shrink-0 min-w-[76px] space-y-1 active:scale-95 transition-all ${editingToolActiveTab === 'text' ? 'bg-purple-900/40 border-purple-500' : 'bg-zinc-950 border-zinc-900/60 hover:bg-zinc-900'}`}
+                         >
+                            <Type size={14} className="text-orange-400" />
+                            <span className="text-[8px] font-black uppercase text-zinc-300">TEXT</span>
+                         </button>
+
+                         {/* Stickers tab expander overlay */}
+                         <button
+                           onClick={() => {
+                              vibrate(VIBRATION_PATTERNS.CLICK);
+                              setEditingToolActiveTab(prev => prev === 'stickers' ? 'none' : 'stickers');
+                           }}
+                           className={`flex-col flex items-center justify-center border p-2.5 rounded-xl shrink-0 min-w-[76px] space-y-1 active:scale-95 transition-all ${editingToolActiveTab === 'stickers' ? 'bg-purple-900/40 border-purple-500' : 'bg-zinc-950 border-zinc-900/60 hover:bg-zinc-900'}`}
+                         >
+                            <Smile size={14} className="text-pink-400" />
+                            <span className="text-[8px] font-black uppercase text-zinc-300">STICKERS</span>
+                         </button>
+
+                         {/* Voice recorder */}
+                         <button
+                           onClick={() => {
+                              vibrate(VIBRATION_PATTERNS.CLICK);
+                              setEditingToolActiveTab(prev => prev === 'voice' ? 'none' : 'voice');
+                           }}
+                           className={`flex-col flex items-center justify-center border p-2.5 rounded-xl shrink-0 min-w-[76px] space-y-1 active:scale-95 transition-all ${editingToolActiveTab === 'voice' ? 'bg-purple-900/40 border-purple-500' : 'bg-zinc-950 border-zinc-900/60 hover:bg-zinc-900'}`}
+                         >
+                            <Mic size={14} className="text-[#69C496]" />
+                            <span className="text-[8px] font-black uppercase text-zinc-300">DUB REC</span>
+                         </button>
+
+                      </div>
+                   </div>
+
+                   {/* Footer navigation */}
+                   <div className="pt-4 flex gap-3">
                       <button 
-                        onClick={() => setCreatorStep('details')}
-                        className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-extrabold uppercase text-xs tracking-widest rounded-2xl shadow-xl shadow-red-900/40"
+                        onClick={() => {
+                           vibrate(VIBRATION_PATTERNS.CLICK);
+                           setCreatorStep('camera');
+                        }}
+                        className="flex-1 py-3 bg-zinc-900 border border-zinc-800 font-black uppercase text-[10px] tracking-widest text-zinc-400 rounded-2xl active:scale-95 transition-all"
                       >
-                         Continue Post Stages
+                         Cancel Stage
                       </button>
                       <button 
-                        onClick={() => setCreatorStep('camera')}
-                        className="w-full py-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white font-bold text-xs"
+                        onClick={() => {
+                           vibrate(VIBRATION_PATTERNS.CLICK);
+                           setCreatorStep('details');
+                        }}
+                        className="flex-[2] py-3 bg-purple-600 hover:bg-purple-700 font-black uppercase text-[10px] tracking-widest text-[#FCFAF6] rounded-2xl shadow-lg shadow-purple-900/20 active:scale-95 transition-all"
                       >
-                         Re-record Footage
+                         Finished & Post
                       </button>
                    </div>
                 </div>

@@ -294,6 +294,8 @@ export interface SocialCircle {
   followerIds: string[]; // UIDs for notifications
   createdAt: string;
   deleted?: boolean;
+  customIconUrl?: string;
+  customBgUrl?: string;
 }
 
 export interface Post {

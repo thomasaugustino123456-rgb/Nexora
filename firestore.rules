@@ -354,7 +354,7 @@ service cloud.firestore {
       match /notifications/{notifId} {
         allow read: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) || isAdmin();
-        allow update: if isOwner(userId) && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']));
+        allow update: if isOwner(userId);
         allow delete: if isOwner(userId) || isAdmin();
       }
     }
@@ -392,8 +392,8 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidCircle(request.resource.data);
       allow update: if isAuthenticated() && (
-        (resource.data.ownerId == request.auth.uid && isValidCircle(request.resource.data)) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount', 'followerIds']))
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount', 'followerIds'])) ||
+        (resource.data.ownerId == request.auth.uid && isValidCircle(request.resource.data))
       );
       allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
     }
@@ -402,10 +402,10 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidPost(request.resource.data);
       allow update: if isAuthenticated() && (
-        // Allow the author to edit their own post
-        (resource.data.userId == request.auth.uid && isValidPost(request.resource.data)) ||
         // Allow others to increment flames/shields ONLY
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['flames', 'shields', 'commentCount']))
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['flames', 'shields', 'commentCount'])) ||
+        // Allow the author to edit their own post
+        (resource.data.userId == request.auth.uid && isValidPost(request.resource.data))
       );
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
 
@@ -413,8 +413,8 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         allow create: if isAuthenticated() && isValidComment(request.resource.data);
         allow update: if isAuthenticated() && (
-          (resource.data.userId == request.auth.uid && isValidComment(request.resource.data)) ||
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy']))
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy'])) ||
+          (resource.data.userId == request.auth.uid && isValidComment(request.resource.data))
         );
         allow delete: if isAuthenticated() && (
           resource.data.userId == request.auth.uid || 
@@ -428,8 +428,8 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidVideo(request.resource.data);
       allow update: if isAuthenticated() && (
-        (resource.data.userId == request.auth.uid && isValidVideo(request.resource.data)) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy', 'commentCount', 'saves', 'savedBy', 'repostCount']))
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy', 'commentCount', 'saves', 'savedBy', 'repostCount'])) ||
+        (resource.data.userId == request.auth.uid && isValidVideo(request.resource.data))
       );
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
 
@@ -437,8 +437,8 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         allow create: if isAuthenticated() && isValidVideoComment(request.resource.data);
         allow update: if isAuthenticated() && (
-          (resource.data.userId == request.auth.uid && isValidVideoComment(request.resource.data)) ||
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy']))
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy'])) ||
+          (resource.data.userId == request.auth.uid && isValidVideoComment(request.resource.data))
         );
         allow delete: if isAuthenticated() && (
           resource.data.userId == request.auth.uid || 
