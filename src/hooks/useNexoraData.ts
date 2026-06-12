@@ -216,22 +216,27 @@ export function useNexoraData(
 
     let isLoaderResolved = false;
 
-    // Safety timeout: if Firestore takes too long (or user is offline), immediately open using local cached data!
-    // This stops the app from getting stuck on the SplashScreen indefinitely and makes loading immediate.
-    // ONLY apply timeout if we have local cache to fall back on. If we just logged in (no cache),
-    // we MUST wait for Firestore, otherwise returning users are forced into Onboarding!
+    // Safety timeout: if Firestore takes too long (or user is offline), immediately resolve with either the local cached data
+    // or a clean Connection Failed screen rather than hanging forever!
     let loadingTimeout: NodeJS.Timeout | null = null;
     
-    if (hasCache) {
-      const timeoutDuration = navigator.onLine ? 3000 : 300;
-      loadingTimeout = setTimeout(() => {
-        if (!isLoaderResolved) {
+    const timeoutDuration = hasCache 
+      ? (navigator.onLine ? 1500 : 200) 
+      : 4000; // 4 seconds max for new/uncached connections to prevent infinite splash hang
+      
+    loadingTimeout = setTimeout(() => {
+      if (!isLoaderResolved) {
+        if (hasCache) {
           console.warn("Hooks: Loading timeout reached, letting user open with cached local data.");
           setIsDataReady(true);
           setLoading(false);
+        } else {
+          console.warn("Hooks: Connection timeout on uncached session, setting loadError.");
+          setLoadError("We couldn't connect to our servers to load your profile. Please check your internet connection and try again.");
+          setLoading(false);
         }
-      }, timeoutDuration);
-    }
+      }
+    }, timeoutDuration);
 
     const loadData = async () => {
       // If offline and cache is present, bypass Firestore completely for instant rendering
@@ -272,7 +277,7 @@ export function useNexoraData(
       };
 
       try {
-        const timeoutDuration = hasCache ? 6000 : 20000;
+        const timeoutDuration = hasCache ? 2000 : 5000;
         const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error(`Firebase network timed out (${timeoutDuration / 1000}s)`)), timeoutDuration)
         );
