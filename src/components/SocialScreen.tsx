@@ -4,7 +4,7 @@ import {
   ArrowLeft, Plus, MoreHorizontal, Trash2, Bookmark, Flag, EyeOff, 
   Share2, MessageSquare, Heart, RefreshCw, Send, X, Search, Award, 
   User, Flame, ChevronRight, Bell, Info, Compass, Sparkles, 
-  ChevronUp, ChevronDown, Image as ImageIcon, Video, AlertCircle, Check, MapPin
+  ChevronUp, ChevronDown, Image as ImageIcon, Video, AlertCircle, Check, MapPin, Users
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { User as FirebaseUser } from 'firebase/auth';
@@ -365,6 +365,13 @@ export const SocialScreen = React.memo(({
   // Create Subcommunity integration
   const handleDeployNewCircle = async (data: any) => {
     if (!user) return;
+    const cleanName = data.name.trim().toLowerCase().replace(/\s+/g, '');
+    const alreadyExists = circles.some(c => c.name.trim().toLowerCase().replace(/\s+/g, '') === cleanName);
+    if (alreadyExists) {
+      showToast(`A subcommunity named n/${cleanName} already exists! Try a different name.`, 'error');
+      return;
+    }
+
     try {
       setIsPostingComment(true);
       const circleData: Omit<SocialCircle, 'id'> = {
@@ -480,7 +487,7 @@ export const SocialScreen = React.memo(({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-32 flex flex-col font-sans relative">
       
       {/* Absolute top dashboard header banner */}
       <header className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex items-center justify-between z-50">
@@ -501,42 +508,7 @@ export const SocialScreen = React.memo(({
           </div>
         </div>
 
-        {/* X and Reddit Top Switch Tabs */}
-        <nav className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-           <button 
-             onClick={() => { setActiveTab('home'); vibrate(VIBRATION_PATTERNS.CLICK); }}
-             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'home' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
-           >
-              Home
-           </button>
-           <button 
-             onClick={() => { setActiveTab('reels'); vibrate(VIBRATION_PATTERNS.CLICK); }}
-             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'reels' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
-           >
-              Reels
-           </button>
-           <button 
-             onClick={() => { setActiveTab('circles'); vibrate(VIBRATION_PATTERNS.CLICK); }}
-             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'circles' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
-           >
-              Groups
-           </button>
-           <button 
-             onClick={() => { setActiveTab('inbox'); vibrate(VIBRATION_PATTERNS.CLICK); }}
-             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all relative ${activeTab === 'inbox' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
-           >
-              Notifications
-              {notifications.some(n => !n.isRead) && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full animate-ping" />
-              )}
-           </button>
-           <button 
-             onClick={() => { setActiveTab('library'); vibrate(VIBRATION_PATTERNS.CLICK); }}
-             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'library' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
-           >
-              Library
-           </button>
-        </nav>
+
 
         {/* Global actions */}
         <div className="flex items-center gap-2">
@@ -850,18 +822,13 @@ export const SocialScreen = React.memo(({
                      animate={{ opacity: 1, y: 0 }}
                      onClick={() => {
                         vibrate(VIBRATION_PATTERNS.CLICK);
-                        if (associatedPost) {
-                           setSelectedNotificationPost(associatedPost);
-                            if (user?.uid) {
-                               try {
-                                  updateDoc(doc(db, 'users', user.uid, 'notifications', n.id), { isRead: true });
-                               } catch (err) {
-                                  console.log("Trace error:", err);
-                               }
-                            }
-                            setSelectedNotification(n);
-                        } else {
-                           showToast('Associated signal broadcast has concluded.', 'info');
+                        setSelectedNotification(n);
+                        if (user?.uid) {
+                           try {
+                              updateDoc(doc(db, 'users', user.uid, 'notifications', n.id), { isRead: true });
+                           } catch (err) {
+                              console.log("Trace error:", err);
+                           }
                         }
                      }}
                      className="bg-white p-4 rounded-2xl border border-slate-100 hover:border-slate-200 transition-all flex items-start gap-4 cursor-pointer"
@@ -1276,6 +1243,11 @@ export const SocialScreen = React.memo(({
                             placeholder="Connect and post response to timeline..."
                             value={newCommentInput}
                             onChange={e => setNewCommentInput(e.target.value)}
+                            onKeyDown={e => {
+                               if (e.key === 'Enter' && !isPostingComment && newCommentInput.trim()) {
+                                  handleAddComment();
+                               }
+                            }}
                             className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 outline-none"
                           />
                           <button 
@@ -1546,6 +1518,43 @@ export const SocialScreen = React.memo(({
            />
          )}
       </AnimatePresence>
+
+      {/* REDESIGNED BOTTOM TAB SECTIONS BAR TO MATCH MAIN NAV BAR STYLE */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 sm:p-5 flex justify-center pointer-events-none z-[450] bg-gradient-to-t from-slate-50/90 via-slate-50/40 to-transparent">
+         <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/80 shadow-2xl px-6 py-3.5 rounded-3xl flex items-center gap-8 sm:gap-14 pointer-events-auto max-w-[95vw] overflow-x-auto no-scrollbar">
+            {[
+               { id: 'home', label: 'Home', icon: <Compass size={21} /> },
+               { id: 'reels', label: 'Reels', icon: <Video size={21} /> },
+               { id: 'circles', label: 'Groups', icon: <Users size={21} /> },
+               { id: 'inbox', label: 'Inbox', icon: (
+                  <div className="relative">
+                     <Bell size={21} />
+                     {notifications.some(n => !n.isRead) && (
+                       <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white animate-pulse" />
+                     )}
+                  </div>
+               ) },
+               { id: 'library', label: 'Library', icon: <Bookmark size={21} /> }
+            ].map(tab => {
+               const isActive = activeTab === tab.id;
+               return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id as any);
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                    }}
+                    className={`flex flex-col items-center gap-1 transition-all text-[8px] sm:text-[9.5px] font-black uppercase tracking-widest ${isActive ? 'text-indigo-600 scale-105 font-black' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                     <div className={`transition-transform duration-200 ${isActive ? 'scale-110 drop-shadow-[0_2px_8px_rgba(79,70,229,0.3)]' : ''}`}>
+                        {tab.icon}
+                     </div>
+                     <span>{tab.label}</span>
+                  </button>
+               );
+            })}
+         </nav>
+      </div>
 
     </div>
   );

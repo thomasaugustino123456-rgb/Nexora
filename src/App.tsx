@@ -2850,11 +2850,112 @@ export default function App() {
         currentProgress = 100;
         clearInterval(interval);
         setDownloadProgress(100);
-        setDownloadStatus("Package verified! Opening device instructions... ✅");
+        setDownloadStatus("Package verified! Downloading stand-alone companion app... ✅");
+        
+        // Trigger actual direct launcher file download
+        try {
+          const launcherContent = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Nexora Standalone Companion</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            background: radial-gradient(circle at center, #131924, #0b0d13);
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            padding: 20px;
+        }
+        .card {
+            max-width: 440px;
+            padding: 40px 32px;
+            border-radius: 32px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+        .icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+            background: rgba(105, 196, 150, 0.1);
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        h1 {
+            font-size: 26px;
+            font-weight: 950;
+            margin: 0 0 12px 0;
+            color: #69C496;
+            letter-spacing: -0.02em;
+        }
+        p {
+            font-size: 14px;
+            color: #a0aec0;
+            line-height: 1.6;
+            margin: 0 0 32px 0;
+        }
+        .btn {
+            display: block;
+            background: linear-gradient(135deg, #69C496, #4fb080);
+            color: #0b0d13;
+            font-weight: 905;
+            text-decoration: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            box-shadow: 0 8px 24px rgba(105, 196, 150, 0.25);
+            transition: all 0.25s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(105, 196, 150, 0.4);
+            filter: brightness(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">🌿</div>
+        <h1>Nexora Standing Active</h1>
+        <p>Your premium, device-optimized launcher is successful. Click below to boot directly into your ultra-fast offline grid node.</p>
+        <a class="btn" href="${window.location.origin}">Launch Nexora App</a>
+    </div>
+</body>
+</html>`;
+          const blob = new Blob([launcherContent], { type: "text/html" });
+          const url = URL.createObjectURL(blob);
+          const tempLink = document.createElement("a");
+          tempLink.href = url;
+          tempLink.download = "Nexora_Launcher.html";
+          document.body.appendChild(tempLink);
+          tempLink.click();
+          document.body.removeChild(tempLink);
+          URL.revokeObjectURL(url);
+          showToast("Standalone launcher package downloaded! 📥", "success");
+        } catch (e) {
+          console.error("Local file download error:", e);
+        }
+
         setTimeout(() => {
           setIsDownloading(false);
           setShowIOSInstallGuide(true);
-        }, 600);
+        }, 1200);
       } else {
         setDownloadProgress(currentProgress);
         const msgIdx = Math.min(
