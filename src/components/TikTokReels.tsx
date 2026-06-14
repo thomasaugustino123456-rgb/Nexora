@@ -374,7 +374,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
   };
 
   return (
-    <div className="relative h-[92vh] max-h-[820px] rounded-[2.5rem] bg-black overflow-hidden flex flex-col shadow-2xl border border-slate-900">
+    <div className="relative w-full h-full min-h-screen bg-black overflow-hidden flex flex-col">
       
       {/* Top absolute header controls with back, creator triggers */}
       <div className="absolute top-6 left-6 right-6 z-40 flex items-center justify-between">

@@ -221,8 +221,8 @@ export function useNexoraData(
     let loadingTimeout: NodeJS.Timeout | null = null;
     
     const timeoutDuration = hasCache 
-      ? (navigator.onLine ? 1500 : 200) 
-      : 4000; // 4 seconds max for new/uncached connections to prevent infinite splash hang
+      ? (navigator.onLine ? 3000 : 500) 
+      : 12000; // 12 seconds max for new/uncached connections to prevent infinite splash hang
       
     loadingTimeout = setTimeout(() => {
       if (!isLoaderResolved) {
@@ -277,7 +277,7 @@ export function useNexoraData(
       };
 
       try {
-        const timeoutDuration = hasCache ? 2000 : 5000;
+        const timeoutDuration = hasCache ? 4000 : 15000;
         const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error(`Firebase network timed out (${timeoutDuration / 1000}s)`)), timeoutDuration)
         );

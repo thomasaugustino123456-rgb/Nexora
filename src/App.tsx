@@ -6297,8 +6297,8 @@ export default function App() {
               <motion.div
                 initial={false}
                 animate={{
-                  y: scrollDirection === "down" ? 100 : 0,
-                  opacity: scrollDirection === "down" ? 0 : 1,
+                  y: 0,
+                  opacity: 1,
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 flex justify-center pointer-events-none z-[80]"

@@ -486,6 +486,22 @@ export const SocialScreen = React.memo(({
     }
   };
 
+  if (activeTab === 'reels') {
+    return (
+      <div className="fixed inset-0 w-full h-full bg-black z-[1000] overflow-hidden flex flex-col">
+        <TikTokReels 
+          onBack={() => {
+            setActiveTab('home');
+            vibrate(VIBRATION_PATTERNS.CLICK);
+          }}
+          user={user}
+          showToast={showToast}
+          play={play}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-32 flex flex-col font-sans relative">
       
@@ -728,16 +744,6 @@ export const SocialScreen = React.memo(({
              </div>
 
           </div>
-        )}
-
-        {/* TAB 2: VERTICAL SWIPE TIKTOK REELS */}
-        {activeTab === 'reels' && (
-          <TikTokReels 
-            onBack={() => setActiveTab('home')}
-            user={user}
-            showToast={showToast}
-            play={play}
-          />
         )}
 
         {/* TAB 3: GROUPS LIST / SUBCOMMUNITIES */}
