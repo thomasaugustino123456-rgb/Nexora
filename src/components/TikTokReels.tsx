@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, MessageSquare, Share2, Plus, Sparkles, Camera, ArrowLeft, RefreshCw, Check, Film, Upload, Trash2, ArrowUpDown, ChevronDown, ChevronUp, AlertCircle, Smile, X, Scissors, Volume2, Sliders, Type, Mic, Music } from 'lucide-react';
+import { Heart, MessageSquare, Share2, Plus, Sparkles, Camera, ArrowLeft, RefreshCw, Check, Film, Upload, Trash2, ArrowUpDown, ChevronDown, ChevronUp, AlertCircle, Smile, X, Scissors, Volume2, Sliders, Type, Mic, Music, VolumeX, Volume1 } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
+import { db } from '../firebase';
+import { collection, onSnapshot, addDoc, updateDoc, doc, increment, query, orderBy, limit } from 'firebase/firestore';
 
 interface VideoItem {
   id: string;
@@ -15,6 +17,9 @@ interface VideoItem {
   commentsCount: number;
   likedBy: string[];
   dislikedBy: string[];
+  mediaSequence?: { url: string; type: 'video' | 'image' }[];
+  audioUrl?: string;
+  isAuthorized?: boolean;
 }
 
 interface TikTokReelsProps {
@@ -67,6 +72,34 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
   const [reelsList, setReelsList] = useState<VideoItem[]>(STOCK_REELS);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+
+  // Real Media Staging & Control States
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  // Multiple files slideshow state
+  const [stagedMediaList, setStagedMediaList] = useState<{ url: string; type: 'video' | 'image' }[]>([]);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [isEditorVideoPlaying, setIsEditorVideoPlaying] = useState(true);
+
+  // Audio backing states
+  const [stagedMusic, setStagedMusic] = useState<{ url: string; name: string; volume: number; splits: { id: string; start: number; end: number }[]; currentSplitIndex: number } | null>(null);
+  const [stagedVoice, setStagedVoice] = useState<{ url: string; name: string; volume: number; splits: { id: string; start: number; end: number }[]; currentSplitIndex: number } | null>(null);
+
+  const editorCanvasRef = useRef<HTMLDivElement>(null);
+  const editorVideoRef = useRef<HTMLVideoElement>(null);
+
+  const musicAudioRef = useRef<HTMLAudioElement>(null);
+  const voiceAudioRef = useRef<HTMLAudioElement>(null);
+
+  // Active Dragging State for Overlay Items
+  const [draggingItem, setDraggingItem] = useState<{ id: string; type: 'text' | 'sticker' } | null>(null);
+  
+  // Slideshow tracker for active viewing grid
+  const [currentSlideshowIndex, setCurrentSlideshowIndex] = useState(0);
   
   // Camera Simulation and Upload Steps states
   const [showCreatorEngine, setShowCreatorEngine] = useState(false);
@@ -139,12 +172,133 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
     }
   };
 
+  // Real-time Firestore document sync
+  useEffect(() => {
+    const qVideos = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(qVideos, (snapshot) => {
+      const dbVideos = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          title: data.caption?.split(':')[0]?.trim() || 'Custom Reel',
+          creator: data.userName || 'Anonymous Coder',
+          creatorPhoto: data.userPhoto || undefined,
+          videoUrl: data.videoUrl,
+          description: data.caption || '',
+          likes: data.likes || 0,
+          dislikes: 0,
+          commentsCount: data.commentCount || 0,
+          likedBy: data.likedBy || [],
+          dislikedBy: [],
+          mediaSequence: data.mediaSequence || [],
+          audioUrl: data.audioUrl || undefined,
+          isAuthorized: data.isAuthorized ?? true
+        };
+      });
+      setReelsList(dbVideos.length > 0 ? [...dbVideos, ...STOCK_REELS] : STOCK_REELS);
+    }, (err) => {
+      console.warn("Failed loading physical reels from Firestore:", err);
+    });
+    return () => unsub();
+  }, []);
+
+  // Sync comments in real-time for active reel
+  useEffect(() => {
+    const activeReel = reelsList[currentIndex];
+    if (!activeReel?.id || activeReel.id.startsWith('reef')) return;
+    
+    const qComments = query(collection(db, 'social_videos', activeReel.id, 'comments'), orderBy('createdAt', 'asc'));
+    const unsubComments = onSnapshot(qComments, (snapshot) => {
+      const dbComments = snapshot.docs.map(commDoc => {
+         const crData = commDoc.data();
+         return {
+            id: commDoc.id,
+            author: crData.userName || 'Anonymous Transponder',
+            photo: crData.userPhoto || undefined,
+            text: crData.content || '',
+            time: 'Recent'
+         };
+      });
+      setCommentsList(prev => ({
+         ...prev,
+         [activeReel.id]: dbComments
+      }));
+    }, (err) => {
+      console.warn("Failed loading comments dynamically:", err);
+    });
+    return () => unsubComments();
+  }, [currentIndex, reelsList]);
+
+  // Start webcam feed for the staging creator step
+  useEffect(() => {
+    let activeStream: MediaStream | null = null;
+    if (showCreatorEngine && creatorStep === 'camera') {
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: cameraFacing === 'front' ? 'user' : 'environment' },
+        audio: true
+      })
+      .then(stream => {
+        activeStream = stream;
+        setCameraStream(stream);
+        setCameraError(null);
+        if (cameraVideoRef.current) {
+          cameraVideoRef.current.srcObject = stream;
+        }
+      })
+      .catch(err => {
+        console.warn("Camera blocked or inaccessible:", err);
+        setCameraError("Camera permission blocked or unfulfilled. Using professional typing simulation loop.");
+        showToast("Simulation fallback started.", "info");
+      });
+    } else {
+      setCameraStream(null);
+    }
+    return () => {
+      if (activeStream) {
+        activeStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [showCreatorEngine, creatorStep, cameraFacing]);
+
+  // Slideshow intervals for published media slideshow
+  useEffect(() => {
+    setCurrentSlideshowIndex(0);
+    const activeItem = reelsList[currentIndex];
+    if (!activeItem || !activeItem.mediaSequence || activeItem.mediaSequence.length <= 1) {
+      return;
+    }
+    const interval = setInterval(() => {
+       setCurrentSlideshowIndex(prev => {
+          const nextVal = prev + 1;
+          if (nextVal >= (activeItem.mediaSequence?.length || 0)) {
+             return 0;
+          }
+          return nextVal;
+       });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [currentIndex, reelsList]);
+
+  // Slideshow intervals for staging slideshow editor
+  useEffect(() => {
+    setActiveMediaIndex(0);
+    if (creatorStep !== 'edit' || stagedMediaList.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveMediaIndex(prev => {
+        const nextVal = prev + 1;
+        if (nextVal >= stagedMediaList.length) return 0;
+        return nextVal;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [stagedMediaList, creatorStep]);
+
   // Pause others when currentIndex changes
   useEffect(() => {
     Object.keys(videoRefs.current).forEach((key) => {
       const vid = videoRefs.current[key];
       if (vid) {
-        if (key === reelsList[currentIndex].id) {
+        if (reelsList[currentIndex] && key === reelsList[currentIndex].id) {
           vid.play().catch(() => {});
         } else {
           vid.pause();
@@ -167,17 +321,57 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
     }, 1500);
   };
 
+  // Drag text/sticker systems setup
+  const handleItemDragStart = (e: React.MouseEvent | React.TouchEvent, id: string, type: 'text' | 'sticker') => {
+    setDraggingItem({ id, type });
+    vibrate(VIBRATION_PATTERNS.CLICK);
+  };
+
+  const handlePointerDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!draggingItem || !editorCanvasRef.current) return;
+    const rect = editorCanvasRef.current.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    
+    let clientX = 0;
+    let clientY = 0;
+    if ('touches' in e) {
+      if (e.touches.length === 0) return;
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
+    // Calculate percentage of bounds
+    const relativeX = Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
+    const relativeY = Math.min(100, Math.max(0, ((clientY - rect.top) / rect.height) * 100));
+    
+    if (draggingItem.type === 'text') {
+      setEditorTexts(prev => prev.map(t => t.id === draggingItem.id ? { ...t, x: relativeX, y: relativeY } : t));
+    } else {
+      setEditorStickers(prev => prev.map(s => s.id === draggingItem.id ? { ...s, x: relativeX, y: relativeY } : s));
+    }
+  };
+
+  const handlePointerDragEnd = () => {
+    setDraggingItem(null);
+  };
+
   // Handle upvoting
-  const handleLike = (id: string) => {
+  const handleLike = async (id: string) => {
     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
     spawnParticles('🔥');
+    const userId = user?.uid || 'guest';
+    let nextLikedBy: string[] = [];
+    let nextLikesVal = 0;
+
     setReelsList(prev => prev.map(reel => {
       if (reel.id === id) {
-        const userId = user?.uid || 'guest';
         const alreadyLiked = reel.likedBy.includes(userId);
-        const alreadyDisliked = reel.dislikedBy.includes(userId);
+        const alreadyDisliked = (reel.dislikedBy || []).includes(userId);
         let updatedLikedBy = [...reel.likedBy];
-        let updatedDislikedBy = [...reel.dislikedBy];
+        let updatedDislikedBy = [...(reel.dislikedBy || [])];
         let diffLike = 0;
         let diffDislike = 0;
 
@@ -192,16 +386,29 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
             diffDislike = -1;
           }
         }
+        nextLikedBy = updatedLikedBy;
+        nextLikesVal = Math.max(0, reel.likes + diffLike);
         return {
           ...reel,
           likedBy: updatedLikedBy,
           dislikedBy: updatedDislikedBy,
-          likes: Math.max(0, reel.likes + diffLike),
-          dislikes: Math.max(0, reel.dislikes + diffDislike)
+          likes: nextLikesVal,
+          dislikes: Math.max(0, (reel.dislikes || 0) + diffDislike)
         };
       }
       return reel;
     }));
+
+    if (!id.startsWith('reef')) {
+      try {
+        await updateDoc(doc(db, 'social_videos', id), {
+          likedBy: nextLikedBy,
+          likes: nextLikesVal
+        });
+      } catch (err) {
+        console.warn("Failed registering interactive like to db:", err);
+      }
+    }
     play('quest_complete');
   };
 
@@ -213,9 +420,9 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
       if (reel.id === id) {
         const userId = user?.uid || 'guest';
         const alreadyLiked = reel.likedBy.includes(userId);
-        const alreadyDisliked = reel.dislikedBy.includes(userId);
+        const alreadyDisliked = (reel.dislikedBy || []).includes(userId);
         let updatedLikedBy = [...reel.likedBy];
-        let updatedDislikedBy = [...reel.dislikedBy];
+        let updatedDislikedBy = [...(reel.dislikedBy || [])];
         let diffLike = 0;
         let diffDislike = 0;
 
@@ -235,7 +442,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
           likedBy: updatedLikedBy,
           dislikedBy: updatedDislikedBy,
           likes: Math.max(0, reel.likes + diffLike),
-          dislikes: Math.max(0, reel.dislikes + diffDislike)
+          dislikes: Math.max(0, (reel.dislikes || 0) + diffDislike)
         };
       }
       return reel;
@@ -243,14 +450,17 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
   };
 
   // Adding comment
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!newCommentInput.trim()) return;
     const activeReelId = reelsList[currentIndex].id;
+    const newCommentText = newCommentInput.trim();
+    setNewCommentInput('');
+
     const newComment = {
-      id: Math.random().toString(),
+      id: 'local-' + Date.now(),
       author: user?.displayName || 'Anonymous Transponder',
-      photo: user?.photoURL,
-      text: newCommentInput.trim(),
+      photo: user?.photoURL || undefined,
+      text: newCommentText,
       time: 'Just now'
     };
 
@@ -260,52 +470,111 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
     }));
 
     setReelsList(prev => prev.map(r => r.id === activeReelId ? { ...r, commentsCount: r.commentsCount + 1 } : r));
-    setNewCommentInput('');
     vibrate(VIBRATION_PATTERNS.CLICK);
+
+    if (!activeReelId.startsWith('reef')) {
+      try {
+        await addDoc(collection(db, 'social_videos', activeReelId, 'comments'), {
+          videoId: activeReelId,
+          userId: user?.uid || 'guest',
+          userName: user?.displayName || 'Anonymous Transponder',
+          userPhoto: user?.photoURL || '',
+          content: newCommentText,
+          createdAt: new Date().toISOString()
+        });
+        await updateDoc(doc(db, 'social_videos', activeReelId), {
+          commentCount: increment(1)
+        });
+      } catch (err) {
+        console.warn("Failed recording live comment to Firestore:", err);
+      }
+    }
   };
 
-  // Simulated Camera Recording triggers
+  // Real Camera Recording triggers
   const recordingTimerRef = useRef<any>(null);
   const handleToggleRecord = () => {
     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
     if (isRecording) {
-      clearInterval(recordingTimerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       setIsRecording(false);
-      // Finished simulation - lock mock video
-      setRecordedVideoBlobUrl('https://assets.mixkit.co/videos/preview/mixkit-flying-through-star-fields-in-outer-space-42617-large.mp4');
-      setCreatorStep('edit');
-      showToast('Recording processed successfully at extreme 4K resolution!', 'success');
     } else {
       setIsRecording(true);
       setRecordingSeconds(selectedSecondsLimit);
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingSeconds(prev => {
-          if (prev <= 1) {
-            clearInterval(recordingTimerRef.current);
-            setIsRecording(false);
-            setRecordedVideoBlobUrl('https://assets.mixkit.co/videos/preview/mixkit-flying-through-star-fields-in-outer-space-42617-large.mp4');
+      recordedChunksRef.current = [];
+
+      if (cameraStream) {
+        try {
+          const recorder = new MediaRecorder(cameraStream, { mimeType: 'video/webm' });
+          mediaRecorderRef.current = recorder;
+          recorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+              recordedChunksRef.current.push(event.data);
+            }
+          };
+          recorder.onstop = () => {
+            const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+            const localUrl = URL.createObjectURL(blob);
+            setRecordedVideoBlobUrl(localUrl);
+            setStagedMediaList([{ url: localUrl, type: 'video' }]);
             setCreatorStep('edit');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+            showToast('Recording processed successfully!', 'success');
+          };
+          recorder.start();
+        } catch (e) {
+          console.warn("Failed to start MediaRecorder:", e);
+          startSimulationFallback();
+        }
+      } else {
+        startSimulationFallback();
+      }
     }
   };
 
-  // Simulate File uploading
+  const startSimulationFallback = () => {
+    recordingTimerRef.current = setInterval(() => {
+      setRecordingSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(recordingTimerRef.current);
+          setIsRecording(false);
+          const mockUrl = 'https://assets.mixkit.co/videos/preview/mixkit-flying-through-star-fields-in-outer-space-42617-large.mp4';
+          setRecordedVideoBlobUrl(mockUrl);
+          setStagedMediaList([{ url: mockUrl, type: 'video' }]);
+          setCreatorStep('edit');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // Multi-Files Upload with dynamic Type mapping
   const handleLocalFileChoose = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = e.target.files;
+    if (files && files.length > 0) {
       vibrate(VIBRATION_PATTERNS.CLICK);
-      setRecordedVideoBlobUrl('https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-developer-typing-on-a-computer-keyboard-40251-large.mp4');
+      const tempMedia: { url: string; type: 'video' | 'image' }[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const localUrl = URL.createObjectURL(file);
+        const isImg = file.type.startsWith('image/');
+        tempMedia.push({
+          url: localUrl,
+          type: isImg ? 'image' : 'video'
+        });
+      }
+      setStagedMediaList(tempMedia);
+      setRecordedVideoBlobUrl(tempMedia[0].url);
       setCreatorStep('edit');
-      showToast('Preserved native visual quality. Media staging completed!', 'success');
+      showToast('Native files staged successfully!', 'success');
     }
   };
 
   // Publishing TikTok loop
-  const handlePublishReel = () => {
+  const handlePublishReel = async () => {
     if (!editorTitle.trim() || !editorDescription.trim()) {
       showToast('Headline Title and Description are required!', 'error');
       return;
@@ -315,40 +584,75 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
 
     // Smooth numerical upload counter
-    const uploaderInterval = setInterval(() => {
+    const uploaderInterval = setInterval(async () => {
       setUploadPercent(prev => {
         if (prev >= 100) {
           clearInterval(uploaderInterval);
-          setIsPosting(false);
-          setShowCreatorEngine(false);
-
-          // Add to reels state
-          const newReel: VideoItem = {
-            id: 'custom-' + Date.now(),
-            title: editorTitle,
-            creator: user?.displayName || 'Anonymous Coder',
-            creatorPhoto: user?.photoURL || undefined,
-            videoUrl: recordedVideoBlobUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-            description: `${editorDescription} #nexora #custom #reels`,
-            likes: 1,
-            dislikes: 0,
-            commentsCount: 0,
-            likedBy: [user?.uid || 'guest'],
-            dislikedBy: []
-          };
-
-          setReelsList(prev => [newReel, ...prev]);
-          setCurrentIndex(0);
-          setEditorTitle('');
-          setEditorDescription('');
-          setRecordedVideoBlobUrl(null);
-          setHasNewCustomVideo(true);
-          showToast('TikTok Loop broadcasted live to everyone!', 'success');
+          finishPublication();
           return 100;
         }
-        return prev + 10;
+        return prev + 20;
       });
     }, 150);
+  };
+
+  const finishPublication = async () => {
+    try {
+      const pTitle = editorTitle;
+      const pDesc = editorDescription;
+      const firstMedia = stagedMediaList[0];
+      const videoPath = firstMedia?.url || 'https://assets.mixkit.co/videos/preview/mixkit-flying-through-star-fields-in-outer-space-42617-large.mp4';
+      const mType = firstMedia?.type || 'video';
+
+      // Write to live database collection
+      await addDoc(collection(db, 'social_videos'), {
+        userId: user?.uid || 'guest',
+        userName: user?.displayName || 'Anonymous Transponder',
+        userPhoto: user?.photoURL || '',
+        videoUrl: videoPath,
+        caption: `${pTitle}: ${pDesc}`,
+        likes: 0,
+        likedBy: [],
+        commentCount: 0,
+        saves: 0,
+        savedBy: [],
+        repostCount: 0,
+        createdAt: new Date().toISOString(),
+        type: mType,
+        platform: 'nexora',
+        isAuthorized: true,
+        mediaSequence: stagedMediaList
+      });
+
+      setIsPosting(false);
+      setShowCreatorEngine(false);
+      setEditorTitle('');
+      setEditorDescription('');
+      setRecordedVideoBlobUrl(null);
+      setStagedMediaList([]);
+      setHasNewCustomVideo(true);
+      showToast('TikTok Loop broadcasted live to everyone!', 'success');
+    } catch (err) {
+      console.warn("Failed core publication database commit:", err);
+      setIsPosting(false);
+      showToast('Database publish failed, but loop stored locally!', 'info');
+      // Local fallback
+      const localReel: VideoItem = {
+        id: 'local-' + Date.now(),
+        title: editorTitle,
+        creator: user?.displayName || 'Anonymous Transponder',
+        creatorPhoto: user?.photoURL || undefined,
+        videoUrl: recordedVideoBlobUrl || 'https://assets.mixkit.co/videos/preview/mixkit-flying-through-star-fields-in-outer-space-42617-large.mp4',
+        description: `${editorDescription} #nexora`,
+        likes: 1,
+        dislikes: 0,
+        commentsCount: 0,
+        likedBy: [user?.uid || 'guest'],
+        dislikedBy: []
+      };
+      setReelsList(prev => [localReel, ...prev]);
+      setCurrentIndex(0);
+    }
   };
 
   // Cleanup timers
@@ -665,13 +969,19 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
                 <div className="flex-1 flex flex-col">
                    <div className="relative flex-1 bg-neutral-900 rounded-[2rem] border-2 border-zinc-800 overflow-hidden flex flex-col items-center justify-center">
                       <video 
-                        src="https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-developer-typing-on-a-computer-keyboard-40251-large.mp4"
-                        className={`absolute inset-0 w-full h-full object-cover opacity-45 cursor-none pointer-events-none transform ${cameraFacing === 'front' ? 'scale-x-[-1]' : ''}`}
+                        ref={cameraVideoRef}
+                        className={`absolute inset-0 w-full h-full object-cover transform ${cameraFacing === 'front' ? 'scale-x-[-1]' : ''}`}
                         autoPlay
-                        loop
+                        playsInline
                         muted
                       />
                       
+                      {cameraError && (
+                         <div className="absolute top-14 left-4 right-4 bg-red-950/80 border border-red-500/35 backdrop-blur-md p-3 rounded-2xl z-20 text-center text-[10px] text-red-300 font-bold select-none leading-relaxed">
+                            ⚠️ {cameraError}
+                         </div>
+                      )}
+
                       {/* Grid overlays */}
                       <div className="absolute inset-0 border border-white/5 pointer-events-none flex flex-col justify-between">
                          <div className="h-1/3 border-b border-white/5" />
@@ -685,8 +995,8 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
                       <div className="relative flex flex-col items-center justify-center space-y-4 p-8 text-center bg-black/60 rounded-[2rem] border border-white/10 z-10 m-4">
                          <Camera size={44} className={isRecording ? 'text-red-500 animate-pulse' : 'text-zinc-500'} />
                          <div>
-                            <p className="font-extrabold text-sm">Awaiting Record Command</p>
-                            <p className="text-[10px] text-zinc-400 mt-1 max-w-[200px]">Simulating ultra high-fidelity UHD camera encoder interface.</p>
+                            <p className="font-extrabold text-sm">{isRecording ? `Recording (${recordingSeconds}s)` : 'Awaiting Record Command'}</p>
+                            <p className="text-[10px] text-zinc-400 mt-1 max-w-[200px]">Recording uses your actual web camera and saves custom, high-fidelity media loops.</p>
                          </div>
                       </div>
 
@@ -712,6 +1022,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
                            ref={fileInputRef}
                            onChange={handleLocalFileChoose}
                            accept="image/*,video/*"
+                           multiple
                            className="hidden"
                          />
 
@@ -795,9 +1106,28 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
                    </div>
 
                    {/* Video Active Canvas Display */}
-                   <div className="relative w-full aspect-[9/13] max-h-[300px] bg-neutral-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center">
-                      <video 
-                        src={recordedVideoBlobUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'}
+                   <div 
+                     ref={editorCanvasRef}
+                     onMouseMove={handlePointerDragMove}
+                     onTouchMove={handlePointerDragMove}
+                     onMouseUp={handlePointerDragEnd}
+                     onTouchEnd={handlePointerDragEnd}
+                     onMouseLeave={handlePointerDragEnd}
+                     className="relative w-full aspect-[9/13] max-h-[300px] bg-neutral-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center cursor-crosshair select-none"
+                   >
+                     {stagedMediaList.length > 0 && stagedMediaList[activeMediaIndex]?.type === 'image' ? (
+                        <img 
+                          src={stagedMediaList[activeMediaIndex].url}
+                          alt="staged editor slide"
+                          className="w-full h-full object-contain transition-all duration-350"
+                          style={{
+                             filter: `brightness(${editorBrightness}%) contrast(${editorContrast}%) saturate(${editorSaturation}%) ${isAutoQualityActive ? 'contrast(120%) saturate(110%) brightness(105%)' : ''}`
+                          }}
+                        />
+                     ) : (
+                        <video 
+                          ref={editorVideoRef}
+                          src={recordedVideoBlobUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'}
                         className={`w-full h-full object-cover transition-all duration-300`}
                         style={{
                            filter: `brightness(${editorBrightness}%) contrast(${editorContrast}%) saturate(${editorSaturation}%) ${isAutoQualityActive ? 'contrast(120%) saturate(110%) brightness(105%) shadow-[inset_0_0_20px_rgba(147,51,234,0.4)]' : ''}`
@@ -806,18 +1136,57 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
                         loop
                         muted
                       />
-                      
-                      {/* Auto Quality Flare FX */}
-                      {isAutoQualityActive && (
-                        <div className="absolute inset-0 border-2 border-purple-500/50 pointer-events-none animate-pulse rounded-3xl bg-gradient-to-tr from-purple-500/5 to-transparent" />
-                      )}
+                     )}
+                     
+                     {/* Play/Pause stop-motion trigger for manual video playback */}
+                     {stagedMediaList.length > 0 && stagedMediaList[activeMediaIndex]?.type !== 'image' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                             vibrate(VIBRATION_PATTERNS.CLICK);
+                             if (editorVideoRef.current) {
+                                if (isEditorVideoPlaying) {
+                                   editorVideoRef.current.pause();
+                                   setIsEditorVideoPlaying(false);
+                                   showToast('Video paused', 'info');
+                                } else {
+                                   editorVideoRef.current.play().catch(() => {});
+                                   setIsEditorVideoPlaying(true);
+                                   showToast('Video playing', 'success');
+                                }
+                             }
+                          }}
+                          className="absolute right-4 top-4 w-9 h-9 rounded-full bg-black/75 border border-white/10 flex items-center justify-center text-white hover:bg-white hover:text-black transition-all z-35 shadow-lg"
+                        >
+                           {isEditorVideoPlaying ? '⏸️' : '▶️'}
+                        </button>
+                     )}
+
+                     {/* Staging Slider Indicators if slideshow exists */}
+                     {stagedMediaList.length > 1 && (
+                        <div className="absolute top-4 left-4 right-16 flex gap-1 z-35 bg-black/20 p-1 rounded-full">
+                           {stagedMediaList.map((_, sidx) => (
+                              <div 
+                                key={sidx}
+                                className={`h-1 flex-1 rounded-full transition-all duration-300 ${activeMediaIndex === sidx ? 'bg-purple-500 scale-y-110' : 'bg-white/20'}`}
+                              />
+                           ))}
+                        </div>
+                     )}
+
+                     {/* Auto Quality Flare FX */}
+                     {isAutoQualityActive && (
+                        <div className="absolute inset-0 border-2 border-purple-500/50 pointer-events-none animate-pulse rounded-3xl bg-gradient-to-tr from-purple-500/5 to-transparent shadow-[inset_0_0_20px_rgba(147,51,234,0.4)]" />
+                     )}
 
                       {/* Text Overlays Render */}
                       {editorTexts.map(t => (
                         <div 
                           key={t.id}
-                          className="absolute bg-black/70 backdrop-blur-md text-white font-extrabold text-xs px-3 py-1.5 rounded-full border border-purple-500/30 flex items-center gap-2 select-none shadow-lg animate-fade-in"
-                          style={{ left: `${t.x}%`, top: `${t.y}%` }}
+                          onMouseDown={(e) => handleItemDragStart(e, t.id, 'text')}
+                          onTouchStart={(e) => handleItemDragStart(e, t.id, 'text')}
+                          className="absolute bg-zinc-950/95 backdrop-blur-md text-white font-extrabold text-[11px] px-3 py-1.5 rounded-full border border-purple-500/40 flex items-center gap-2 select-none shadow-xl cursor-grab active:cursor-grabbing z-40 transition-shadow hover:shadow-purple-500/20"
+                          style={{ left: `${t.x}%`, top: `${t.y}%`, transform: 'translate(-50%, -50%)' }}
                         >
                            <span>{t.text}</span>
                            <button 
@@ -837,8 +1206,10 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
                       {editorStickers.map(s => (
                         <div 
                           key={s.id}
-                          className="absolute text-3xl select-none flex items-center gap-1 group"
-                          style={{ left: `${s.x}%`, top: `${s.y}%` }}
+                          onMouseDown={(e) => handleItemDragStart(e, s.id, 'sticker')}
+                          onTouchStart={(e) => handleItemDragStart(e, s.id, 'sticker')}
+                          className="absolute text-3xl select-none flex items-center gap-1 cursor-grab active:cursor-grabbing z-40"
+                          style={{ left: `${s.x}%`, top: `${s.y}%`, transform: 'translate(-50%, -50%)' }}
                         >
                            <span>{s.sticker}</span>
                            <button 
@@ -891,18 +1262,158 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
                          </div>
 
                          {/* Music Track slot (visible if loaded) */}
-                         {stagedMusicName && (
-                           <div className="h-5 bg-purple-950/40 border border-purple-900/40 rounded-lg flex items-center justify-between px-2 text-[8px] font-bold text-purple-300">
-                              <span className="flex items-center gap-1 uppercase"><Music size={8} /> Backing Audio Layer</span>
-                              <span>Synced</span>
+                         {stagedMusic && (
+                           <div className="bg-purple-950/40 border border-purple-900/40 rounded-xl p-2.5 text-[8px] font-bold text-purple-300 space-y-1.5 animate-fade-in">
+                              <div className="flex items-center justify-between uppercase">
+                                 <span className="flex items-center gap-1"><Music size={8} className="animate-spin" /> BACKING TRACK: {stagedMusic.name}</span>
+                                 <button 
+                                   onClick={() => {
+                                      vibrate(VIBRATION_PATTERNS.CLICK);
+                                      setStagedMusic(null);
+                                      setStagedMusicName(null);
+                                      showToast('Backing music removed', 'info');
+                                   }}
+                                   className="text-red-400 font-extrabold flex items-center gap-0.5 hover:text-red-300 font-sans"
+                                 >
+                                    🗑️ DEL
+                                 </button>
+                              </div>
+                              
+                              {/* Volume slider */}
+                              <div className="flex items-center gap-2">
+                                 <span>VOL: {stagedMusic.volume}%</span>
+                                 <input 
+                                   type="range"
+                                   min="0"
+                                   max="150"
+                                   value={stagedMusic.volume}
+                                   onChange={(e) => {
+                                      const nv = Number(e.target.value);
+                                      setStagedMusic(prev => prev ? { ...prev, volume: nv } : null);
+                                    }}
+                                   className="flex-1 h-1 bg-zinc-800 rounded accent-purple-500 cursor-pointer"
+                                 />
+                              </div>
+
+                              {/* Split controls */}
+                              <div className="flex gap-2 pt-0.5">
+                                 <button
+                                   onClick={() => {
+                                      vibrate(VIBRATION_PATTERNS.CLICK);
+                                      setStagedMusic(prev => {
+                                         if (!prev) return null;
+                                         const nextId = 'split-' + (prev.splits.length + 1);
+                                         return {
+                                            ...prev,
+                                            splits: [...prev.splits, { id: nextId, start: 5, end: 12 }],
+                                            currentSplitIndex: prev.splits.length
+                                         };
+                                      });
+                                      showToast('Music track split created!', 'success');
+                                   }}
+                                   className="bg-purple-900/60 px-2 py-0.5 rounded text-[8px] font-black uppercase text-purple-200"
+                                 >
+                                    ✂️ Split Segment
+                                 </button>
+                                 {stagedMusic.splits.length > 1 && (
+                                    <button
+                                      onClick={() => {
+                                         vibrate(VIBRATION_PATTERNS.CLICK);
+                                         setStagedMusic(prev => {
+                                            if (!prev) return null;
+                                            const updated = prev.splits.filter((_, k) => k !== prev.currentSplitIndex);
+                                            return {
+                                               ...prev,
+                                               splits: updated,
+                                               currentSplitIndex: Math.max(0, updated.length - 1)
+                                            };
+                                         });
+                                         showToast('Selected splits block removed', 'info');
+                                      }}
+                                      className="bg-red-950/40 text-red-300 border border-red-900/30 px-2 py-0.5 rounded text-[8px]"
+                                    >
+                                       🗑️ Delete segment ({stagedMusic.splits[stagedMusic.currentSplitIndex]?.id})
+                                    </button>
+                                 )}
+                              </div>
                            </div>
                          )}
 
                          {/* Voice Track slot (visible if loaded) */}
-                         {stagedVoiceName && (
-                           <div className="h-5 bg-orange-950/40 border border-orange-900/40 rounded-lg flex items-center justify-between px-2 text-[8px] font-bold text-orange-300">
-                              <span className="flex items-center gap-1 uppercase"><Mic size={8} /> Voice Recorded Over</span>
-                              <span>Synced</span>
+                         {stagedVoice && (
+                           <div className="bg-orange-950/40 border border-orange-900/40 rounded-xl p-2.5 text-[8px] font-bold text-orange-300 space-y-1.5 animate-fade-in">
+                              <div className="flex items-center justify-between uppercase">
+                                 <span className="flex items-center gap-1"><Mic size={8} /> VOICE DUB TRACK</span>
+                                 <button 
+                                   onClick={() => {
+                                      vibrate(VIBRATION_PATTERNS.CLICK);
+                                      setStagedVoice(null);
+                                      setStagedVoiceName(null);
+                                      showToast('Voice track deleted', 'info');
+                                   }}
+                                   className="text-red-400 font-extrabold flex items-center gap-0.5 hover:text-red-300 font-sans"
+                                 >
+                                    🗑️ DEL
+                                 </button>
+                              </div>
+
+                              {/* Volume slider */}
+                              <div className="flex items-center gap-2">
+                                 <span>VOL: {stagedVoice.volume}%</span>
+                                 <input 
+                                   type="range"
+                                   min="0"
+                                   max="150"
+                                   value={stagedVoice.volume}
+                                   onChange={(e) => {
+                                      const nv = Number(e.target.value);
+                                      setStagedVoice(prev => prev ? { ...prev, volume: nv } : null);
+                                    }}
+                                   className="flex-1 h-1 bg-zinc-805 rounded accent-orange-500 cursor-pointer"
+                                 />
+                              </div>
+
+                              {/* Split controls */}
+                              <div className="flex gap-2 pt-0.5">
+                                 <button
+                                   onClick={() => {
+                                      vibrate(VIBRATION_PATTERNS.CLICK);
+                                      setStagedVoice(prev => {
+                                         if (!prev) return null;
+                                         const nextId = 'voice-split-' + (prev.splits.length + 1);
+                                         return {
+                                            ...prev,
+                                            splits: [...prev.splits, { id: nextId, start: 4, end: 10 }],
+                                            currentSplitIndex: prev.splits.length
+                                         };
+                                      });
+                                      showToast('Voice split slice added!', 'success');
+                                   }}
+                                   className="bg-orange-900/60 px-2 py-0.5 rounded text-[8px] font-black uppercase text-orange-200"
+                                 >
+                                    ✂️ Split Voice
+                                 </button>
+                                 {stagedVoice.splits.length > 1 && (
+                                    <button
+                                      onClick={() => {
+                                         vibrate(VIBRATION_PATTERNS.CLICK);
+                                         setStagedVoice(prev => {
+                                            if (!prev) return null;
+                                            const updated = prev.splits.filter((_, k) => k !== prev.currentSplitIndex);
+                                            return {
+                                               ...prev,
+                                               splits: updated,
+                                               currentSplitIndex: Math.max(0, updated.length - 1)
+                                            };
+                                         });
+                                         showToast('Voice recording segment deleted', 'info');
+                                      }}
+                                      className="bg-red-950/40 text-red-300 border border-red-900/30 px-2 py-0.5 rounded text-[8px]"
+                                    >
+                                       🗑️ Delete segment ({stagedVoice.splits[stagedVoice.currentSplitIndex]?.id})
+                                    </button>
+                                 )}
+                              </div>
                            </div>
                          )}
                       </div>
