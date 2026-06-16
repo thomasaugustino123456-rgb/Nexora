@@ -1928,7 +1928,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isStandalone || pwaInstalled) {
+    if (isStandalone) {
       setShowPwaBanner(false);
       return;
     }
@@ -1944,13 +1944,9 @@ export default function App() {
         setShowPwaBanner(!pwaDismissedLanding);
       }
     } else {
-      if (!needsOnboarding) {
-        setShowPwaBanner(!pwaDismissedMain);
-      } else {
-        setShowPwaBanner(false);
-      }
+      setShowPwaBanner(!pwaDismissedMain);
     }
-  }, [user, showAuth, needsOnboarding, isStandalone, pwaInstalled, activeScreen, challengeStep, pwaDismissedLanding, pwaDismissedAuth, pwaDismissedMain]);
+  }, [user, showAuth, needsOnboarding, isStandalone, activeScreen, challengeStep, pwaDismissedLanding, pwaDismissedAuth, pwaDismissedMain]);
 
   // "when I click the Cancel button supposed it have to appear again when the user go to another section of the app"
   // Reset dismiss states on screen transition so the banner can appear again in other sections
@@ -5264,6 +5260,11 @@ export default function App() {
                       onRollbackRestore={handleRollbackRestore}
                       onSimulateUpdate={handleSimulateNewUpdate}
                       currentAppVersion={currentAppVersion}
+                      isStandalone={isStandalone}
+                      onTriggerPwaInstall={() => {
+                        setShowPwaBanner(true);
+                        showToast("Installer prompt launched at bottom! 📥", "success");
+                      }}
                     />
                   </Suspense>
                 </motion.div>
