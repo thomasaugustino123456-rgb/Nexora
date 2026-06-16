@@ -1,12 +1,12 @@
-const CACHE_NAME = 'nexora-v5.2.0'; // Updated to V5.2.0 for complete mascot cache busting
+const CACHE_NAME = 'nexora-v5.3.0'; // Updated to ensure fresh cache bust
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/index.css',
-  '/main.tsx',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap',
+  '/icon-192.png',
+  '/icon-512.png',
   '/nexora_mascot_logo.png',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap',
   'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js'
 ];
