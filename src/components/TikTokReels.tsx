@@ -242,27 +242,47 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
   // Start webcam feed for the staging creator step
   useEffect(() => {
     let activeStream: MediaStream | null = null;
-    if (showCreatorEngine && creatorStep === 'camera') {
-      navigator.mediaDevices.getUserMedia({
-        video: { facingMode: cameraFacing === 'front' ? 'user' : 'environment' },
-        audio: true
-      })
-      .then(stream => {
+    
+    const startCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: cameraFacing === 'front' ? 'user' : 'environment' },
+          audio: true
+        });
         activeStream = stream;
         setCameraStream(stream);
         setCameraError(null);
         if (cameraVideoRef.current) {
           cameraVideoRef.current.srcObject = stream;
         }
-      })
-      .catch(err => {
-        console.warn("Camera blocked or inaccessible:", err);
-        setCameraError("Camera permission blocked or unfulfilled. Using professional typing simulation loop.");
-        showToast("Simulation fallback started.", "info");
-      });
+      } catch (err) {
+        console.warn("Camera with audio failed. Attempting video-only feed...", err);
+        try {
+          const streamWithoutAudio = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: cameraFacing === 'front' ? 'user' : 'environment' },
+            audio: false
+          });
+          activeStream = streamWithoutAudio;
+          setCameraStream(streamWithoutAudio);
+          setCameraError(null);
+          if (cameraVideoRef.current) {
+            cameraVideoRef.current.srcObject = streamWithoutAudio;
+          }
+          showToast("Camera active (Audio muted for platform compatibility)", "info");
+        } catch (videoOnlyErr) {
+          console.error("Camera completely inaccessible:", videoOnlyErr);
+          setCameraError("Camera permission blocked or unavailable. Use 'Staging' to upload files directly!");
+          showToast("Simulating fallback loop.", "info");
+        }
+      }
+    };
+
+    if (showCreatorEngine && creatorStep === 'camera') {
+      startCamera();
     } else {
       setCameraStream(null);
     }
+
     return () => {
       if (activeStream) {
         activeStream.getTracks().forEach(track => track.stop());
@@ -309,7 +329,12 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
       const vid = videoRefs.current[key];
       if (vid) {
         if (reelsList[currentIndex] && key === reelsList[currentIndex].id) {
-          vid.play().catch(() => {});
+          vid.play().catch((err) => {
+            console.warn("Autoplay blocked. Attempting muted fallback...", err);
+            vid.muted = true;
+            setIsMuted(true);
+            vid.play().catch(e => console.error("Autoplay play fallback failed:", e));
+          });
         } else {
           vid.pause();
           vid.currentTime = 0;
@@ -518,7 +543,17 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
 
       if (cameraStream) {
         try {
-          const recorder = new MediaRecorder(cameraStream, { mimeType: 'video/webm' });
+          let options = {};
+          if (typeof MediaRecorder.isTypeSupported === 'function') {
+            if (MediaRecorder.isTypeSupported('video/webm')) {
+              options = { mimeType: 'video/webm' };
+            } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+              options = { mimeType: 'video/mp4' };
+            } else if (MediaRecorder.isTypeSupported('video/quicktime')) {
+              options = { mimeType: 'video/quicktime' };
+            }
+          }
+          const recorder = new MediaRecorder(cameraStream, options);
           mediaRecorderRef.current = recorder;
           recorder.ondataavailable = (event) => {
             if (event.data && event.data.size > 0) {
@@ -526,7 +561,8 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
             }
           };
           recorder.onstop = () => {
-            const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+            const mimeTypeUsed = recorder.mimeType || 'video/webm';
+            const blob = new Blob(recordedChunksRef.current, { type: mimeTypeUsed });
             const localUrl = URL.createObjectURL(blob);
             setRecordedVideoBlobUrl(localUrl);
             setStagedMediaList([{ url: localUrl, type: 'video' }]);
@@ -583,38 +619,80 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
     }
   };
 
-  // Publishing TikTok loop
+  // Publishing TikTok loop with real storage file upload
   const handlePublishReel = async () => {
     if (!editorTitle.trim() || !editorDescription.trim()) {
       showToast('Headline Title and Description are required!', 'error');
       return;
     }
     setIsPosting(true);
-    setUploadPercent(0);
+    setUploadPercent(5);
     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
 
-    // Smooth numerical upload counter
-    const uploaderInterval = setInterval(async () => {
-      setUploadPercent(prev => {
-        if (prev >= 100) {
-          clearInterval(uploaderInterval);
-          finishPublication();
-          return 100;
+    try {
+      const updatedMediaList: { url: string; type: 'video' | 'image' }[] = [];
+      const { getStorage, ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
+      const storage = getStorage();
+
+      for (let i = 0; i < stagedMediaList.length; i++) {
+        const item = stagedMediaList[i];
+        if (item.url.startsWith('blob:')) {
+          try {
+            const resp = await fetch(item.url);
+            const blob = await resp.blob();
+            const isVideo = item.type === 'video';
+            const ext = isVideo ? 'mp4' : 'jpg';
+            const contentTp = isVideo ? 'video/mp4' : 'image/jpeg';
+            
+            const path = `social_reels/${user?.uid || 'guest'}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
+            const fileRef = ref(storage, path);
+            
+            const uploadTask = uploadBytesResumable(fileRef, blob, { contentType: contentTp });
+            
+            const publicUrl = await new Promise<string>((resolve, reject) => {
+              uploadTask.on('state_changed',
+                (snapshot) => {
+                  const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                  const overallProgress = Math.round(
+                    ((i / stagedMediaList.length) * 100) + (progress / stagedMediaList.length)
+                  );
+                  setUploadPercent(overallProgress);
+                },
+                (err) => reject(err),
+                async () => {
+                  const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                  resolve(downloadURL);
+                }
+              );
+            });
+            updatedMediaList.push({ url: publicUrl, type: item.type });
+          } catch (uploadError) {
+            console.error("Single item upload failed:", uploadError);
+            updatedMediaList.push(item);
+          }
+        } else {
+          updatedMediaList.push(item);
         }
-        return prev + 20;
-      });
-    }, 150);
+      }
+
+      setUploadPercent(100);
+      await finishPublicationWithMedia(updatedMediaList);
+    } catch (err) {
+      console.error("Staging upload and publish failed:", err);
+      showToast('Media stabilization failed 🚫', 'error');
+      setIsPosting(false);
+    }
   };
 
-  const finishPublication = async () => {
+  const finishPublicationWithMedia = async (finalMediaList: { url: string; type: 'video' | 'image' }[]) => {
     try {
       const pTitle = editorTitle;
       const pDesc = editorDescription;
-      const firstMedia = stagedMediaList[0];
+      const firstMedia = finalMediaList[0];
       const videoPath = firstMedia?.url || 'https://assets.mixkit.co/videos/preview/mixkit-flying-through-star-fields-in-outer-space-42617-large.mp4';
       const mType = firstMedia?.type || 'video';
+      const detectedType = mType === 'image' ? 'photo' : 'video';
 
-      // Write to live database collection
       console.log("Firestore Audit: Writing new reel to collection 'social_videos'...");
       const docRef = await addDoc(collection(db, 'social_videos'), {
         userId: user?.uid || 'guest',
@@ -629,10 +707,10 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
         savedBy: [],
         repostCount: 0,
         createdAt: new Date().toISOString(),
-        type: mType,
+        type: detectedType,
         platform: 'nexora',
         isAuthorized: true,
-        mediaSequence: stagedMediaList
+        mediaSequence: finalMediaList
       });
       console.log(`Firestore Audit: Successful write. Collection: 'social_videos', Document ID: '${docRef.id}'`);
 
@@ -728,7 +806,14 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
       <div className="relative flex-1 bg-neutral-950 flex flex-col items-center justify-center overflow-hidden">
         
         {/* Dynamic loop video or image */}
-        <div className="relative w-full h-full flex items-center justify-center">
+        <div 
+          onClick={() => {
+            vibrate(VIBRATION_PATTERNS.CLICK);
+            setIsMuted(prev => !prev);
+            showToast(!isMuted ? 'Muted 🔇' : 'Unmuted 🔊', 'info');
+          }}
+          className="relative w-full h-full flex items-center justify-center cursor-pointer"
+        >
           {isImage ? (
             <img
               src={activeReel.videoUrl}
@@ -746,8 +831,18 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
               muted={isMuted}
               autoPlay
               playsInline
+              webkit-playsinline={"true" as any}
             />
           )}
+
+          {/* Audio State overlay HUD */}
+          {!isImage && (
+            <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-1.5 text-xs text-white z-20 pointer-events-none select-none">
+              {isMuted ? <VolumeX size={14} className="text-red-400" /> : <Volume2 size={14} className="text-green-400 animate-pulse" />}
+              <span className="font-extrabold text-[10px] tracking-wider uppercase">{isMuted ? "Sound Muted" : "Unmuted"}</span>
+            </div>
+          )}
+
           <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/80 pointer-events-none" />
         </div>
 
@@ -1157,7 +1252,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
                      ) : (
                         <video 
                           ref={editorVideoRef}
-                          src={recordedVideoBlobUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'}
+                          src={stagedMediaList[activeMediaIndex]?.url || recordedVideoBlobUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'} playsInline={true} webkit-playsinline={"true" as any}
                         className={`w-full h-full object-cover transition-all duration-300`}
                         style={{
                            filter: `brightness(${editorBrightness}%) contrast(${editorContrast}%) saturate(${editorSaturation}%) ${isAutoQualityActive ? 'contrast(120%) saturate(110%) brightness(105%) shadow-[inset_0_0_20px_rgba(147,51,234,0.4)]' : ''}`
