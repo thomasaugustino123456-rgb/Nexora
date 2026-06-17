@@ -62,7 +62,7 @@ export const trackEvent = async (eventName: string, params?: any) => {
 };
 
 export const db = initializeFirestore(app, {
-  // Use standard settings for better performance on most networks
+  experimentalForceLongPolling: true,
 }, databaseId === "(default)" ? undefined : databaseId);
 
 // Persistence is key for offline/slow networks

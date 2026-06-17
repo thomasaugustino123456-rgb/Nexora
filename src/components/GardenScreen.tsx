@@ -281,7 +281,7 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
         </button>
       </header>
 
-      <main className="flex-1 p-6 flex flex-col items-center justify-start overflow-y-auto max-w-md mx-auto w-full space-y-6">
+      <main className="flex-1 p-6 flex flex-col items-center justify-start overflow-y-auto max-w-md md:max-w-xl lg:max-w-2xl mx-auto w-full space-y-6">
         
         {/* Mascot / Mood Panel */}
         <div className="w-full bg-white border border-stone-200/50 p-5 rounded-[2rem] flex items-center gap-5 shadow-sm">

@@ -534,7 +534,26 @@ async function startServer() {
   const PORT = Number(process.env.PORT) || 3000;
 
   // Basic CORS and Body Parsing
-  app.use(express.json());
+  app.use(express.json({ limit: "150mb" }));
+  app.use(express.urlencoded({ limit: "150mb", extended: true }));
+
+  // Create stored files directory if it doesn't exist
+  const uploadDir = path.join(process.cwd(), "public", "stored_reels");
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    console.log("Created directory: ", uploadDir);
+  }
+
+  // Ensure 'dist/stored_reels' also exists for production static serving if built
+  const distUploadDir = path.join(process.cwd(), "dist", "stored_reels");
+  if (!fs.existsSync(distUploadDir)) {
+    fs.mkdirSync(distUploadDir, { recursive: true });
+    console.log("Created directory: ", distUploadDir);
+  }
+
+  // Static route to serve saved media
+  app.use("/stored_reels", express.static(uploadDir));
+  app.use("/stored_reels", express.static(distUploadDir));
   
   // Health Check & Diagnostics
   app.get("/api/health", async (req, res) => {
@@ -716,6 +735,40 @@ async function startServer() {
     } catch (error: any) {
       console.error("Error sending notification:", error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Server upload endpoint for permanent media (avoids temporary blob URLs)
+  app.post("/api/upload-media", (req, res) => {
+    try {
+      const { base64, mimeType, fileName } = req.body;
+      if (!base64) {
+        return res.status(400).json({ error: "Missing base64 payload" });
+      }
+
+      const buffer = Buffer.from(base64, "base64");
+      const safeName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${fileName || "file"}`;
+      
+      const uploadPath = path.join(uploadDir, safeName);
+      fs.writeFileSync(uploadPath, buffer);
+
+      // Copy to dist/stored_reels as well for high-availability prod static routing:
+      try {
+        const destPath = path.join(distUploadDir, safeName);
+        fs.writeFileSync(destPath, buffer);
+      } catch (distErr) {
+        // Safe to ignore if dist doesn't exist yet
+      }
+
+      const host = req.get("host") || "localhost:3000";
+      const protocol = req.secure || req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
+      const publicUrl = `${protocol}://${host}/stored_reels/${safeName}`;
+
+      console.log(`[Media Upload Success] Saved file to ${uploadPath}. Public URL: ${publicUrl}`);
+      res.json({ url: publicUrl });
+    } catch (err: any) {
+      console.error("[Media Upload Error] Failed to save file on server:", err);
+      res.status(500).json({ error: err.message || "Failed to save file on server" });
     }
   });
 

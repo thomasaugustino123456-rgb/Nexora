@@ -392,7 +392,7 @@ export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUp
 
   return (
     <div 
-      className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md mx-auto w-full animate-in fade-in zoom-in duration-500 relative z-10"
+      className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md md:max-w-xl lg:max-w-2xl mx-auto w-full animate-in fade-in zoom-in duration-500 relative z-10"
     >
       <div className="w-full max-w-[260px] relative z-20">
         <WaterMascot progress={Math.min(localProgress / goal, 1)} className="drop-shadow-2xl" />
@@ -916,7 +916,7 @@ export const CompletionStep = React.memo(({ onFinish, streak, points, xp, coins,
     <motion.div 
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-md mx-auto w-full"
+      className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-md md:max-w-xl lg:max-w-2xl mx-auto w-full"
     >
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0 overflow-hidden w-full h-full flex items-center justify-center">
         <motion.div 
@@ -1822,7 +1822,7 @@ export const MeditationStep = React.memo(({ onDone, activeSkin = 'none', setting
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md mx-auto w-full relative z-10"
+      className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md md:max-w-xl lg:max-w-2xl mx-auto w-full relative z-10"
     >
       <div className="w-full max-w-[240px] lg:max-w-[300px]">
         <BreathingMascot phase={isActive ? 'In' : 'Out'} className={`drop-shadow-2xl transition-all duration-1000 ${isActive ? 'scale-110' : 'scale-100'}`} />
@@ -1892,7 +1892,7 @@ export const WritingStep = React.memo(({ onDone, activeSkin = 'none', settings, 
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.1 }}
-      className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md mx-auto w-full relative z-10"
+      className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md md:max-w-xl lg:max-w-2xl mx-auto w-full relative z-10"
     >
       <div className="w-full max-w-[200px]">
         <WritingMascot className="drop-shadow-2xl" />

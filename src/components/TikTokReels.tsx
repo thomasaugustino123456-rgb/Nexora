@@ -270,7 +270,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
           }
           showToast("Camera active (Audio muted for platform compatibility)", "info");
         } catch (videoOnlyErr) {
-          console.error("Camera completely inaccessible:", videoOnlyErr);
+          console.log("Notice: Physical camera not found, falling back to upload-staging workflow:", videoOnlyErr);
           setCameraError("Camera permission blocked or unavailable. Use 'Staging' to upload files directly!");
           showToast("Simulating fallback loop.", "info");
         }
@@ -333,7 +333,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
             console.warn("Autoplay blocked. Attempting muted fallback...", err);
             vid.muted = true;
             setIsMuted(true);
-            vid.play().catch(e => console.error("Autoplay play fallback failed:", e));
+            vid.play().catch(e => console.warn("Autoplay play fallback failed:", e));
           });
         } else {
           vid.pause();
@@ -632,8 +632,18 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
 
     try {
       const updatedMediaList: { url: string; type: 'video' | 'image' }[] = [];
-      const { getStorage, ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
-      const storage = getStorage();
+
+      const convertBlobToBase64 = (b: Blob): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const res = reader.result as string;
+            resolve(res.split(',')[1] || res);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(b);
+        });
+      };
 
       for (let i = 0; i < stagedMediaList.length; i++) {
         const item = stagedMediaList[i];
@@ -662,35 +672,75 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
         const mimeType = blob.type || (isVideo ? 'video/mp4' : 'image/jpeg');
         const ext = isVideo ? 'mp4' : 'jpg';
 
-        const path = `social_reels/${user?.uid || 'guest'}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
-        const fileRef = ref(storage, path);
-        
-        console.log(`Starting media upload to path: ${path} [MIME: ${mimeType}]`);
-        const uploadTask = uploadBytesResumable(fileRef, blob, { contentType: mimeType });
-        
-        const publicUrl = await new Promise<string>((resolve, reject) => {
-          uploadTask.on('state_changed',
-            (snapshot) => {
-              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-              const overallProgress = Math.round(
-                ((i / stagedMediaList.length) * 100) + (progress / stagedMediaList.length)
-              );
-              setUploadPercent(Math.min(99, overallProgress));
-            },
-            (err) => {
-              console.error("Firebase Storage Upload Task failed:", err);
-              reject(err);
-            },
-            async () => {
-              try {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                resolve(downloadURL);
-              } catch (urlErr) {
-                reject(urlErr);
+        let publicUrl: string | null = null;
+
+        try {
+          // Attempt Firebase Storage First
+          const { getStorage, ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
+          const storage = getStorage();
+          const path = `social_reels/${user?.uid || 'guest'}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
+          const fileRef = ref(storage, path);
+          
+          console.log(`Starting media upload to path: ${path} [MIME: ${mimeType}]`);
+          const uploadTask = uploadBytesResumable(fileRef, blob, { contentType: mimeType });
+          
+          publicUrl = await new Promise<string>((resolve, reject) => {
+            uploadTask.on('state_changed',
+              (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                const overallProgress = Math.round(
+                  ((i / stagedMediaList.length) * 100) + (progress / stagedMediaList.length)
+                );
+                setUploadPercent(Math.min(99, overallProgress));
+              },
+              (err) => {
+                console.warn("Firebase Storage failed, triggering local fallback path...", err);
+                reject(err);
+              },
+              async () => {
+                try {
+                  const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                  resolve(downloadURL);
+                } catch (urlErr) {
+                  reject(urlErr);
+                }
               }
+            );
+          });
+        } catch (firebaseErr) {
+          console.log("Firebase storage unavailable or failed. Switching to custom high-availability API uploader...", firebaseErr);
+          
+          // Switch to API-based server upload
+          try {
+            const base64Str = await convertBlobToBase64(blob);
+            const uploadResponse = await fetch("/api/upload-media", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                base64: base64Str,
+                mimeType: mimeType,
+                fileName: `reel_clip.${ext}`
+              })
+            });
+
+            if (!uploadResponse.ok) {
+              const errBody = await uploadResponse.json().catch(() => ({}));
+              throw new Error(errBody.error || `Server returned ${uploadResponse.status} ${uploadResponse.statusText}`);
             }
-          );
-        });
+
+            const data = await uploadResponse.json();
+            if (!data.url) {
+              throw new Error("Server upload succeeded but did not return a media URL.");
+            }
+            publicUrl = data.url;
+            console.log("Custom High-Availability API upload succeeded. Permanent URL:", publicUrl);
+          } catch (apiErr: any) {
+            console.error("Custom API upload also failed:", apiErr);
+            throw new Error(`Media upload failed. Firebase & API both unavailable: ${apiErr.message || apiErr}`);
+          }
+        }
 
         if (!publicUrl || publicUrl.startsWith('blob:')) {
           throw new Error('Retrieved public URL is invalid or null.');
@@ -813,7 +863,8 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
   };
 
   return (
-    <div className="relative w-full h-full min-h-screen bg-black overflow-hidden flex flex-col">
+    <div className="relative w-full h-full min-h-screen bg-neutral-900 md:bg-zinc-950 flex items-center justify-center overflow-hidden p-0 md:p-6 select-none">
+      <div className="relative w-full md:max-w-[460px] h-full min-h-screen md:min-h-0 md:h-[88vh] md:aspect-[9/16] bg-black overflow-hidden flex flex-col md:rounded-3xl md:border md:border-zinc-800 md:shadow-2xl">
       
       {/* Top absolute header controls with back, creator triggers */}
       <div className="absolute top-6 left-6 right-6 z-40 flex items-center justify-between">
@@ -862,13 +913,24 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
           ) : (
             <video
               ref={el => { videoRefs.current[activeReel.id] = el; }}
-              src={activeReel.videoUrl}
+              src={activeReel.videoUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'}
               className={`w-full h-full object-cover select-none pointer-events-auto transition-all duration-300 ${getFilterStyle(activeFilter)}`}
               loop
               muted={isMuted}
               autoPlay
               playsInline
               webkit-playsinline={"true" as any}
+              onError={(e) => {
+                console.warn("Video source failed to load, attempting fallback to stable stream.");
+                const videoEl = e.currentTarget;
+                if (videoEl && videoEl.src !== 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4') {
+                  videoEl.src = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+                  videoEl.load();
+                  videoEl.play().catch(platErr => {
+                    console.warn("Autoplay fallback bypass blocked:", platErr);
+                  });
+                }
+              }}
             />
           )}
 
@@ -1965,6 +2027,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
         )}
       </AnimatePresence>
 
+      </div>
     </div>
   );
 }
