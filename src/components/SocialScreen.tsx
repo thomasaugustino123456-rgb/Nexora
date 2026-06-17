@@ -504,66 +504,72 @@ export const SocialScreen = React.memo(({
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-32 flex flex-col font-sans relative">
-      
-      {/* Absolute top dashboard header banner */}
+      {/* Top Header */}
       <header className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex items-center justify-between z-50">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={onBack}
-            className="p-2.5 hover:bg-slate-100 rounded-xl transition-all text-slate-500 active:scale-95"
-            title="Exit Community"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 leading-none">
-              <Compass className="text-indigo-600 w-5 h-5" /> 
-              <span>Nexus Pulse</span>
-            </h1>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Community Feed</p>
-          </div>
+        <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Community</h1>
+            <p className="text-slate-500 text-sm">Connect, share and grow together.</p>
         </div>
-
-
-
-        {/* Global actions */}
-        <div className="flex items-center gap-2">
-           <button 
-             onClick={() => setShowSearch(!showSearch)}
-             className={`p-2.5 rounded-xl border border-slate-100 transition-all ${showSearch ? 'bg-slate-100 text-slate-800' : 'bg-white text-slate-400 hover:text-slate-700'}`}
-             title="Search Signals"
-           >
-             <Search size={18} />
-           </button>
-        </div>
+        <button className="p-3 bg-white border border-slate-100 rounded-3xl shadow-sm">
+            <Bell size={20} className="text-slate-700" />
+            <span className="absolute top-4 right-6 w-3 h-3 bg-rose-500 rounded-full border-2 border-white" />
+        </button>
       </header>
+      
+      {/* Search Bar */}
+      <div className="px-6 py-4">
+        <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <input 
+              type="text"
+              placeholder="Search communities or topics..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-3xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-100 outline-none shadow-sm"
+            />
+            <button className="absolute right-3 top-3 p-2 bg-slate-50 rounded-2xl">
+                <Search size={18} className="text-slate-400" />
+            </button>
+        </div>
+      </div>
 
-      {/* Dynamic Main Body tabs */}
-      <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        
-        {/* Toggleable search bar wrapper */}
-        <AnimatePresence>
-          {showSearch && (
-             <motion.div 
-               initial={{ height: 0, opacity: 0 }}
-               animate={{ height: 'auto', opacity: 1 }}
-               exit={{ height: 0, opacity: 0 }}
-               className="overflow-hidden"
-             >
-                <div className="relative">
-                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                   <input 
-                     type="text"
-                     placeholder="Type n/Subreddit name, topics, or keywords..."
-                     value={searchQuery}
-                     onChange={e => setSearchQuery(e.target.value)}
-                     className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-100 outline-none"
-                     autoFocus
-                   />
+      {/* Categories */}
+      <section className="px-6 py-4">
+         <div className="flex items-center justify-between mb-4">
+             <h2 className="text-xl font-black text-slate-900">Categories</h2>
+             <button className="text-indigo-600 font-bold text-sm">See all</button>
+         </div>
+         <div className="grid grid-cols-6 gap-2">
+            {[ {name: 'Fitness', icon: '🏋️'}, {name: 'Productivity', icon: '✅'}, {name: 'Art', icon: '🎨'}, {name: 'Mindset', icon: '🧠'}, {name: 'Health', icon: '💧'}, {name: 'Learning', icon: '📚'} ].map(cat => (
+                <div key={cat.name} className="flex flex-col items-center gap-2">
+                    <div className="w-14 h-14 bg-white border border-slate-100 rounded-2xl flex items-center justify-center text-2xl shadow-sm">{cat.icon}</div>
+                    <span className="text-[10px] font-bold text-slate-700">{cat.name}</span>
                 </div>
-             </motion.div>
-          )}
-        </AnimatePresence>
+            ))}
+         </div>
+      </section>
+
+      {/* Popular Groups */}
+      <section className="px-6 py-4">
+         <div className="flex items-center justify-between mb-4">
+             <h2 className="text-xl font-black text-slate-900">Popular Groups</h2>
+             <button className="text-indigo-600 font-bold text-sm">See all</button>
+         </div>
+         <div className="flex gap-4 overflow-x-auto pb-4">
+            {circles.slice(0, 3).map(circle => (
+                <div key={circle.id} className="min-w-[200px] bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-3">
+                    <div className="text-4xl">{circle.icon || '🏮'}</div>
+                    <h3 className="font-black text-slate-900">{circle.name}</h3>
+                    <p className="text-xs text-slate-500">{circle.memberCount} members</p>
+                    <button className="w-full py-2 bg-emerald-500/10 text-emerald-600 font-black text-sm rounded-xl">Join</button>
+                </div>
+            ))}
+         </div>
+      </section>
+
+      {/* Filter and Feed */}
+      <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
 
         {/* TAB 1: HOME MIXED FEED */}
         {activeTab === 'home' && (
@@ -1527,38 +1533,31 @@ export const SocialScreen = React.memo(({
 
       {/* REDESIGNED BOTTOM TAB SECTIONS BAR TO MATCH MAIN NAV BAR STYLE */}
       <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[450] bg-gradient-to-t from-slate-50/90 via-slate-50/40 to-transparent">
-         <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/80 shadow-2xl px-2.5 py-1.5 rounded-3xl flex items-center justify-around gap-1 pointer-events-auto w-[92%] max-w-[395px] sm:max-w-[480px] h-[52px] sm:h-[60px] overflow-hidden select-none">
-            {[
-               { id: 'home', label: 'Home', icon: <Compass size={18} /> },
-               // { id: 'reels', label: 'Reels', icon: <Video size={18} /> },
-               { id: 'circles', label: 'Groups', icon: <Users size={18} /> },
-               { id: 'inbox', label: 'Inbox', icon: (
-                  <div className="relative">
-                     <Bell size={18} />
-                     {notifications.some(n => !n.isRead) && (
-                       <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full border border-white animate-pulse" />
-                     )}
-                  </div>
-               ) },
-               { id: 'library', label: 'Library', icon: <Bookmark size={18} /> }
-            ].map(tab => {
-               const isActive = activeTab === tab.id;
-               return (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      setActiveTab(tab.id as any);
-                      vibrate(VIBRATION_PATTERNS.CLICK);
-                    }}
-                    className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all text-[8px] sm:text-[9.5px] font-black uppercase tracking-wider ${isActive ? 'text-indigo-600 font-extrabold' : 'text-slate-400 hover:text-slate-600'}`}
-                  >
-                     <div className={`transition-transform duration-200 ${isActive ? 'scale-105 drop-shadow-[0_1px_4px_rgba(79,70,229,0.25)]' : ''}`}>
-                        {tab.icon}
-                     </div>
-                     <span className="leading-none scale-95 sm:scale-100">{tab.label}</span>
-                  </button>
-               );
-            })}
+         <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/80 shadow-2xl px-2.5 py-1.5 rounded-3xl flex items-center justify-around gap-1 pointer-events-auto w-[92%] max-w-[395px] sm:max-w-[480px] h-[64px] overflow-hidden select-none">
+            {/* Home */}
+            <button className="flex flex-col items-center gap-1">
+                <Compass size={24} className="text-slate-400" />
+                <span className="text-[10px] font-bold text-slate-400">Home</span>
+            </button>
+            {/* Challenges */}
+            <button className="flex flex-col items-center gap-1">
+                <Target size={24} className="text-slate-400" />
+                <span className="text-[10px] font-bold text-slate-400">Challenges</span>
+            </button>
+            {/* FAB (+) */}
+            <button className="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
+                <Plus size={32} />
+            </button>
+            {/* Community */}
+            <button className="flex flex-col items-center gap-1">
+                <Users size={24} className="text-indigo-600" />
+                <span className="text-[10px] font-bold text-indigo-600">Community</span>
+            </button>
+            {/* Profile */}
+            <button className="flex flex-col items-center gap-1">
+                <User size={24} className="text-slate-400" />
+                <span className="text-[10px] font-bold text-slate-400">Profile</span>
+            </button>
          </nav>
       </div>
 
