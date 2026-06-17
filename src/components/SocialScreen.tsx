@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowLeft, Plus, MoreHorizontal, Trash2, Bookmark, Flag, EyeOff, 
   Share2, MessageSquare, Heart, RefreshCw, Send, X, Search, Award, 
-  User, Flame, ChevronRight, Bell, Info, Compass, Sparkles, 
+  User, Flame, ChevronRight, Bell, Info, Compass, Sparkles, Target,
   ChevronUp, ChevronDown, Image as ImageIcon, Video, AlertCircle, Check, MapPin, Users
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
