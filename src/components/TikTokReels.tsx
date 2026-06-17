@@ -82,7 +82,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   // Multiple files slideshow state
-  const [stagedMediaList, setStagedMediaList] = useState<{ url: string; type: 'video' | 'image' }[]>([]);
+  const [stagedMediaList, setStagedMediaList] = useState<{ url: string; type: 'video' | 'image'; file?: File | Blob }[]>([]);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [isEditorVideoPlaying, setIsEditorVideoPlaying] = useState(true);
 
@@ -565,7 +565,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
             const blob = new Blob(recordedChunksRef.current, { type: mimeTypeUsed });
             const localUrl = URL.createObjectURL(blob);
             setRecordedVideoBlobUrl(localUrl);
-            setStagedMediaList([{ url: localUrl, type: 'video' }]);
+            setStagedMediaList([{ url: localUrl, type: 'video', file: blob }]);
             setCreatorStep('edit');
             showToast('Recording processed successfully!', 'success');
           };
@@ -602,14 +602,15 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
     const files = e.target.files;
     if (files && files.length > 0) {
       vibrate(VIBRATION_PATTERNS.CLICK);
-      const tempMedia: { url: string; type: 'video' | 'image' }[] = [];
+      const tempMedia: { url: string; type: 'video' | 'image'; file?: File | Blob }[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const localUrl = URL.createObjectURL(file);
         const isImg = file.type.startsWith('image/');
         tempMedia.push({
           url: localUrl,
-          type: isImg ? 'image' : 'video'
+          type: isImg ? 'image' : 'video',
+          file: file
         });
       }
       setStagedMediaList(tempMedia);
@@ -636,50 +637,79 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
 
       for (let i = 0; i < stagedMediaList.length; i++) {
         const item = stagedMediaList[i];
-        if (item.url.startsWith('blob:')) {
+        let blob: Blob;
+
+        if (item.file) {
+          blob = item.file;
+        } else if (item.url.startsWith('blob:')) {
           try {
             const resp = await fetch(item.url);
-            const blob = await resp.blob();
-            const isVideo = item.type === 'video';
-            const ext = isVideo ? 'mp4' : 'jpg';
-            const contentTp = isVideo ? 'video/mp4' : 'image/jpeg';
-            
-            const path = `social_reels/${user?.uid || 'guest'}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
-            const fileRef = ref(storage, path);
-            
-            const uploadTask = uploadBytesResumable(fileRef, blob, { contentType: contentTp });
-            
-            const publicUrl = await new Promise<string>((resolve, reject) => {
-              uploadTask.on('state_changed',
-                (snapshot) => {
-                  const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                  const overallProgress = Math.round(
-                    ((i / stagedMediaList.length) * 100) + (progress / stagedMediaList.length)
-                  );
-                  setUploadPercent(overallProgress);
-                },
-                (err) => reject(err),
-                async () => {
-                  const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                  resolve(downloadURL);
-                }
-              );
-            });
-            updatedMediaList.push({ url: publicUrl, type: item.type });
-          } catch (uploadError) {
-            console.error("Single item upload failed:", uploadError);
-            updatedMediaList.push(item);
+            if (!resp.ok) {
+              throw new Error(`Failed to fetch local blob url: ${resp.statusText}`);
+            }
+            blob = await resp.blob();
+          } catch (fetchErr: any) {
+            console.error("Fetch local blob URL failed:", fetchErr);
+            throw new Error(`Failed to stabilize media clip: ${fetchErr.message || fetchErr}`);
           }
         } else {
-          updatedMediaList.push(item);
+          // Already a permanent remote URL
+          updatedMediaList.push({ url: item.url, type: item.type });
+          continue;
         }
+
+        const isVideo = item.type === 'video';
+        const mimeType = blob.type || (isVideo ? 'video/mp4' : 'image/jpeg');
+        const ext = isVideo ? 'mp4' : 'jpg';
+
+        const path = `social_reels/${user?.uid || 'guest'}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
+        const fileRef = ref(storage, path);
+        
+        console.log(`Starting media upload to path: ${path} [MIME: ${mimeType}]`);
+        const uploadTask = uploadBytesResumable(fileRef, blob, { contentType: mimeType });
+        
+        const publicUrl = await new Promise<string>((resolve, reject) => {
+          uploadTask.on('state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              const overallProgress = Math.round(
+                ((i / stagedMediaList.length) * 100) + (progress / stagedMediaList.length)
+              );
+              setUploadPercent(Math.min(99, overallProgress));
+            },
+            (err) => {
+              console.error("Firebase Storage Upload Task failed:", err);
+              reject(err);
+            },
+            async () => {
+              try {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                resolve(downloadURL);
+              } catch (urlErr) {
+                reject(urlErr);
+              }
+            }
+          );
+        });
+
+        if (!publicUrl || publicUrl.startsWith('blob:')) {
+          throw new Error('Retrieved public URL is invalid or null.');
+        }
+
+        updatedMediaList.push({ url: publicUrl, type: item.type });
+      }
+
+      // Final verification to completely block saving blob URLs
+      const containsBlob = updatedMediaList.some(item => item.url.startsWith('blob:'));
+      if (containsBlob) {
+        throw new Error('Media upload check failed: Local blob URLs were detected after processing.');
       }
 
       setUploadPercent(100);
       await finishPublicationWithMedia(updatedMediaList);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Staging upload and publish failed:", err);
-      showToast('Media stabilization failed 🚫', 'error');
+      showToast(`Media stabilization failed: ${err.message || err}`, 'error');
       setIsPosting(false);
     }
   };
@@ -726,19 +756,26 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
       console.warn("Failed core publication database commit:", err);
       setIsPosting(false);
       showToast('Database publish failed, but loop stored locally!', 'info');
-      // Local fallback
+      
+      const pTitle = editorTitle;
+      const pDesc = editorDescription;
+      const firstMedia = finalMediaList[0];
+      const videoPath = firstMedia?.url || 'https://assets.mixkit.co/videos/preview/mixkit-flying-through-star-fields-in-outer-space-42617-large.mp4';
+
+      // Local fallback with permanent URLs
       const localReel: VideoItem = {
         id: 'local-' + Date.now(),
-        title: editorTitle,
+        title: pTitle,
         creator: user?.displayName || 'Anonymous Transponder',
         creatorPhoto: user?.photoURL || undefined,
-        videoUrl: recordedVideoBlobUrl || 'https://assets.mixkit.co/videos/preview/mixkit-flying-through-star-fields-in-outer-space-42617-large.mp4',
-        description: `${editorDescription} #nexora`,
+        videoUrl: videoPath,
+        description: `${pDesc} #nexora`,
         likes: 1,
         dislikes: 0,
         commentsCount: 0,
         likedBy: [user?.uid || 'guest'],
-        dislikedBy: []
+        dislikedBy: [],
+        mediaSequence: finalMediaList
       };
       setReelsList(prev => [localReel, ...prev]);
       setCurrentIndex(0);
