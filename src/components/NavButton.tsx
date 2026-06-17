@@ -1,5 +1,6 @@
 import React from 'react';
-import { vibrate } from '../lib/vibrate';
+import { motion } from 'motion/react';
+import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { useSound } from '../hooks/useSound';
 
 interface NavButtonProps {
@@ -13,7 +14,7 @@ export function NavButton({ active, onClick, icon, label }: NavButtonProps) {
   const { play } = useSound();
 
   const handleClick = () => {
-    vibrate(15);
+    vibrate(VIBRATION_PATTERNS.CLICK || 15);
     play('nav_switch');
     onClick();
   };
@@ -22,13 +23,43 @@ export function NavButton({ active, onClick, icon, label }: NavButtonProps) {
     <button 
       id={`nav-button-${label.toLowerCase()}`}
       onClick={handleClick}
-      className={`flex flex-col items-center gap-0.5 sm:gap-1 transition-all flex-shrink-0 ${active ? 'scale-105 sm:scale-110' : 'text-blue-900/30 hover:text-blue-900/50'}`}
-      style={active ? { color: 'var(--accent-color)' } : {}}
+      className={`flex flex-col items-center justify-center gap-1 sm:gap-1.5 transition-all flex-shrink-0 cursor-pointer p-1.5 min-w-[50px] relative rounded-xl outline-none select-none`}
     >
-      <div className="scale-90 sm:scale-100">
+      {/* Premium background indicator under active button */}
+      {active && (
+        <motion.div 
+          layoutId="bottom-nav-active-pill"
+          className="absolute inset-0 bg-[#69C496]/10 rounded-2xl border border-[#69C496]/20"
+          transition={{ type: "spring", stiffness: 380, damping: 26 }}
+        />
+      )}
+
+      {/* Icon Area */}
+      <div className={`relative z-10 transition-transform duration-300 ${
+        active 
+          ? 'text-[#69C496] scale-105' 
+          : 'text-[#7D6B58]/60 hover:text-[#4F3F34]'
+      }`}>
         {icon}
       </div>
-      <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider">{label}</span>
+
+      {/* Label Text */}
+      <span className={`relative z-10 text-[8.5px] font-black uppercase tracking-[0.08em] transition-colors duration-300 ${
+        active 
+          ? 'text-[#69C496]' 
+          : 'text-[#7D6B58]/60'
+      }`}>
+        {label}
+      </span>
+
+      {/* Extra-subtle indicator spot below */}
+      {active && (
+        <motion.span 
+          layoutId="bottom-nav-indicator-dot"
+          className="absolute bottom-1 w-1 h-1 rounded-full bg-[#69C496]"
+          transition={{ type: "spring", stiffness: 350, damping: 25 }}
+        />
+      )}
     </button>
   );
 }

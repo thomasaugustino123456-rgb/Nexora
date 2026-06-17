@@ -316,23 +316,23 @@ const NAV_ITEMS_MAP: Record<
   string,
   { label: string; icon: React.ReactNode; screen: Screen }
 > = {
-  home: { label: "Home", icon: <Home size={24} />, screen: "home" },
-  social: { label: "Community", icon: <Users size={24} />, screen: "social" },
+  home: { label: "Home", icon: <Home size={22} strokeWidth={2} />, screen: "home" },
+  social: { label: "Community", icon: <Users size={22} strokeWidth={2} />, screen: "social" },
   progress: {
     label: "Stats",
-    icon: <BarChart2 size={24} />,
+    icon: <BarChart2 size={22} strokeWidth={2} />,
     screen: "progress",
   },
-  shop: { label: "Shop", icon: <Star size={24} />, screen: "shop" },
+  shop: { label: "Shop", icon: <Star size={22} strokeWidth={2} />, screen: "shop" },
   library: {
     label: "Library",
-    icon: <TrophyIcon size={24} />,
+    icon: <TrophyIcon size={22} strokeWidth={2} />,
     screen: "library",
   },
-  notebook: { label: "Notebook", icon: <Book size={24} />, screen: "notebook" },
+  notebook: { label: "Notebook", icon: <Book size={22} strokeWidth={2} />, screen: "notebook" },
   leaderboard: {
     label: "Rank",
-    icon: <TrophyIcon size={24} />,
+    icon: <TrophyIcon size={22} strokeWidth={2} />,
     screen: "leaderboard",
   },
 };
@@ -4881,32 +4881,43 @@ export default function App() {
             (activeScreen as string) !== "hydration-detail" &&
             (activeScreen as string) !== "social" &&
             !showArchitectLab && (
-              <header className="px-6 pt-12 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl">
-                <div className="flex items-center gap-4">
-                  <MascotImage
-                    alt="Nexora Logo"
-                    className="w-16 h-16 object-cover rounded-2xl shadow-md border border-white/20"
-                  />
-                  <h1 className="text-4xl font-bold text-blue-900/80 tracking-tight">
-                    Nexora
-                  </h1>
+              <header className="px-6 pt-8 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl border-b border-[#E9E4D4]/50">
+                <div className="flex items-center gap-3 select-none">
+                  <div className="relative group p-0.5 rounded-2xl bg-[#69C496]/10 border border-[#69C496]/30 shadow-sm transition-all hover:scale-105 duration-300">
+                    <MascotImage
+                      alt="Nexora Logo"
+                      className="w-14 h-14 object-cover rounded-[15px]"
+                    />
+                    <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-[#69C496]"></span>
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <h1 className="text-2xl font-black tracking-tight text-blue-950 bg-gradient-to-r from-blue-950 via-[#4F3F34] to-[#4F3F34] bg-clip-text text-transparent">
+                      Nexora
+                    </h1>
+                    <span className="text-[9px] font-extrabold text-[#7D6B58] uppercase tracking-[0.15em] opacity-80 select-none">
+                      Flow Catalyst
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-end w-full gap-3 sm:gap-8 ml-auto">
+                <div className="flex items-center justify-end gap-2 sm:gap-3 ml-auto">
                   {isSpaceHouseUnlocked && (
                     <button
                       onClick={() => {
                         if (settings.soundEnabled) play("header_switch");
                         setActiveScreen("house");
                       }}
-                      className={`p-2.5 rounded-2xl transition-all relative ${
+                      className={`p-2.5 rounded-2xl transition-all relative shadow-sm border ${
                         (activeScreen as string) === "house"
-                          ? "bg-blue-600 text-white shadow-xl shadow-blue-200 scale-105"
+                          ? "bg-gradient-to-br from-[#69C496] to-[#58B383] text-white border-[#69C496]/50 scale-105"
                           : !settings.spaceOnboardingCompleted
-                            ? "bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-pulse border-2 border-white/50"
-                            : "text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm"
+                            ? "bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-pulse border-white/50"
+                            : "text-[#4F3F34]/70 bg-white hover:bg-slate-50 border-[#E9E4D4]"
                       }`}
                     >
-                      <Home size={20} />
+                      <Home size={18} strokeWidth={2} />
                       {!settings.spaceOnboardingCompleted && (
                         <div className="absolute -top-1 -right-1">
                           <Sparkles
@@ -4923,9 +4934,13 @@ export default function App() {
                       if (settings.soundEnabled) play("header_switch");
                       setActiveScreen("settings");
                     }}
-                    className={`p-2.5 rounded-2xl transition-all ${activeScreen === "settings" ? "bg-blue-600 text-white shadow-xl shadow-blue-200 scale-105" : "text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm"}`}
+                    className={`p-2.5 rounded-2xl transition-all shadow-sm border ${
+                      activeScreen === "settings" 
+                        ? "bg-gradient-to-br from-[#69C496] to-[#58B383] text-white border-[#69C496]/50 scale-105" 
+                        : "text-[#4F3F34]/70 bg-white hover:bg-slate-50 border-[#E9E4D4]"
+                    }`}
                   >
-                    <Settings size={20} />
+                    <Settings size={18} strokeWidth={2} />
                   </button>
 
                   <button
@@ -4933,17 +4948,21 @@ export default function App() {
                       if (settings.soundEnabled) play("header_switch");
                       setActiveScreen("profile");
                     }}
-                    className={`p-2.5 rounded-2xl transition-all ${activeScreen === "profile" ? "bg-blue-600 text-white shadow-xl shadow-blue-200 scale-105" : "text-blue-900/60 bg-white/70 hover:bg-white border border-white/50 backdrop-blur-sm"}`}
+                    className={`p-2.5 rounded-2xl transition-all shadow-sm border ${
+                      activeScreen === "profile" 
+                        ? "bg-gradient-to-br from-[#69C496] to-[#58B383] text-white border-[#69C496]/50 scale-105" 
+                        : "text-[#4F3F34]/70 bg-white hover:bg-slate-50 border-[#E9E4D4]"
+                    }`}
                   >
                     {settings.profilePic ? (
                       <img
                         src={settings.profilePic}
                         alt="Profile"
-                        className="w-5 h-5 rounded-full object-cover border border-white"
+                        className="w-[18px] h-[18px] rounded-full object-cover border border-[#E9E4D4]"
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <User size={20} />
+                      <User size={18} strokeWidth={2} />
                     )}
                   </button>
 
@@ -4953,11 +4972,15 @@ export default function App() {
                         if (settings.soundEnabled) play("header_switch");
                         setActiveScreen("admin");
                       }}
-                      className={`p-2.5 rounded-2xl transition-all hover:scale-105 text-white flex items-center justify-center`}
-                      style={{ backgroundColor: activeScreen === "admin" ? "#9f1239" : "#e11d48", boxShadow: "0 10px 15px -3px rgba(225, 29, 72, 0.3)" }}
+                      className={`p-2.5 rounded-2xl transition-all hover:scale-105 text-white flex items-center justify-center border`}
+                      style={{ 
+                        backgroundColor: activeScreen === "admin" ? "#9f1239" : "#e11d48", 
+                        borderColor: activeScreen === "admin" ? "#9f1239" : "#e11d48",
+                        boxShadow: "0 4px 12px rgba(225, 29, 72, 0.2)" 
+                      }}
                       title="Commander Control Deck"
                     >
-                      <Shield size={20} />
+                      <Shield size={18} strokeWidth={2} />
                     </button>
                   )}
 
@@ -4966,10 +4989,14 @@ export default function App() {
                       if (settings.soundEnabled) play("header_switch");
                       setActiveScreen("subscription");
                     }}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl transition-all ${(activeScreen as string) === "subscription" ? "bg-amber-500 text-white shadow-xl shadow-amber-200 scale-105" : "bg-amber-500/10 text-amber-600 border border-amber-200 backdrop-blur-sm hover:bg-amber-500/20"}`}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl transition-all border shadow-sm ${
+                      (activeScreen as string) === "subscription" 
+                        ? "bg-gradient-to-br from-amber-500 to-yellow-600 text-white border-amber-600/30 scale-105" 
+                        : "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20"
+                    }`}
                   >
-                    <Crown size={14} />
-                    <span className="font-black text-[10px] uppercase tracking-tight">
+                    <Crown size={14} strokeWidth={2.2} />
+                    <span className="font-extrabold text-[10px] uppercase tracking-wider">
                       Pro
                     </span>
                   </button>

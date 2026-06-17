@@ -176,52 +176,67 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
       case 'stats':
         if (layoutConfig.hideStats) return null;
         return (
-          <div key="stats" className="glass-card p-4 flex flex-col gap-4 border-white/50 shadow-blue-900/5 transition-colors">
-            {/* Stats Overview */}
-            <div className="flex flex-wrap items-center justify-between gap-4 w-full">
-              <div className="flex items-center gap-6 px-2">
-                <div className="flex flex-col">
-                  <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Discipline Streak</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500">
-                      <Flame size={20} />
+          <div key="stats" className="glass-card p-6 flex flex-col gap-6 border-[#E9E4D4]/50 shadow-[0_8px_30px_rgb(79,63,52,0.04)] rounded-[24px] transition-all">
+            {/* Bento Stats Grid */}
+            <div className="flex flex-col md:flex-row items-stretch justify-between gap-6 w-full">
+              <div className="grid grid-cols-3 gap-3 md:gap-6 flex-1">
+                {/* Streak Metric */}
+                <motion.div 
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  className="flex flex-col justify-between p-3.5 rounded-2xl bg-orange-500/[0.04] border border-orange-500/10 shadow-sm select-none cursor-pointer"
+                >
+                  <span className="text-[9px] font-black text-orange-600/60 uppercase tracking-widest block mb-2">Streak</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
+                      <Flame size={18} strokeWidth={2.2} />
                     </div>
-                    <span className="text-2xl font-black text-blue-900 tracking-tight">{stats.streak}</span>
+                    <span className="text-2xl font-black text-[#4F3F34] tracking-tight">{stats.streak}</span>
                   </div>
-                </div>
+                </motion.div>
                 
-                <div className="h-10 w-px bg-blue-900/10" />
-
-                <div className="flex flex-col">
-                  <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Growth XP</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                      <Star size={20} />
+                {/* XP Metric */}
+                <motion.div 
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  className="flex flex-col justify-between p-3.5 rounded-2xl bg-blue-500/[0.04] border border-blue-500/10 shadow-sm select-none cursor-pointer"
+                >
+                  <span className="text-[9px] font-black text-[#69C496]/80 uppercase tracking-widest block mb-2">XP</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#69C496] to-[#58B383] flex items-center justify-center text-white shadow-md shadow-[#69C496]/20">
+                      <Star size={18} strokeWidth={2.2} />
                     </div>
-                    <span className="text-2xl font-black text-blue-900 tracking-tight">{stats.xp || 0}</span>
+                    <span className="text-2xl font-black text-[#4F3F34] tracking-tight">{stats.xp || 0}</span>
                   </div>
-                </div>
+                </motion.div>
 
-                <div className="h-10 w-px bg-blue-900/10" />
-
-                <div className="flex flex-col">
-                  <span className="text-[8px] font-black text-blue-900/30 uppercase tracking-[0.2em] mb-1">Earned Coins</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                      <Coins size={20} />
+                {/* Coins Metric */}
+                <motion.div 
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  className="flex flex-col justify-between p-3.5 rounded-2xl bg-amber-500/[0.04] border border-amber-500/10 shadow-sm select-none cursor-pointer"
+                >
+                  <span className="text-[9px] font-black text-amber-600/60 uppercase tracking-widest block mb-2">Coins</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
+                      <Coins size={18} strokeWidth={2.2} />
                     </div>
-                    <span className="text-2xl font-black text-blue-900 tracking-tight">{stats.coins || 0}</span>
+                    <span className="text-2xl font-black text-[#4F3F34] tracking-tight">{stats.coins || 0}</span>
                   </div>
-                </div>
+                </motion.div>
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* Quick Actions Toolbar */}
+              <div className="flex items-center justify-start md:justify-end gap-3 px-1">
                 <button 
                   onClick={onOpenGarden}
-                  className="p-3 bg-gradient-to-br from-[#8D7D62] to-[#5A5040] text-white rounded-2xl shadow-xl shadow-[#8D7D62]/20 hover:scale-105 transition-all group relative overflow-hidden"
+                  className="p-3.5 bg-gradient-to-br from-[#8D7D62] to-[#5A5040] text-white rounded-2xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all group relative overflow-hidden flex items-center justify-center border border-[#8D7D62]/40"
                   title="My Garden"
                 >
-                  <Flower2 size={20} className="group-hover:rotate-12 transition-transform" />
+                  <Flower2 size={20} className="group-hover:rotate-12 transition-transform" strokeWidth={2} />
                 </button>
     
                 <button 
@@ -229,26 +244,26 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                     onOpenArchives();
                   }}
-                  className="p-3 bg-gradient-to-br from-[#69C496] to-[#58B383] text-white rounded-2xl shadow-xl shadow-[#69C496]/20 hover:scale-105 transition-all group relative overflow-hidden"
+                  className="p-3.5 bg-gradient-to-br from-[#69C496] to-[#58B383] text-white rounded-2xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all group relative overflow-hidden flex items-center justify-center border border-emerald-600/30"
                   title="Retention Academy"
                 >
-                  <BookOpen size={20} className="group-hover:rotate-12 transition-transform" />
+                  <BookOpen size={20} className="group-hover:rotate-12 transition-transform" strokeWidth={2} />
                   <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                 </button>
 
                 <button 
                   onClick={onOpenPlant}
-                  className={`p-3 rounded-2xl transition-all flex items-center justify-center group relative ${
+                  className={`p-3.5 rounded-2xl transition-all flex items-center justify-center group relative border ${
                     !settings.plantOnboardingCompleted
-                      ? 'bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-pulse border-2 border-white/50'
+                      ? 'bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.3)] animate-pulse border-white/40'
                       : gardenState?.pendingLootSeed
-                        ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-[0_0_35px_rgba(245,158,11,1.0)] border-3 border-yellow-200 animate-[bounce_1.5s_infinite] scale-110 z-10'
+                        ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-[0_0_25px_rgba(245,158,11,0.6)] border-yellow-200 animate-[bounce_1.5s_infinite] scale-110 z-10'
                         : settings.plantState?.isThirsty || localStorage.getItem('nexora_new_plant_unlocked') === 'true'
-                          ? 'bg-yellow-400 text-white shadow-xl shadow-yellow-200 animate-pulse' 
-                          : 'bg-emerald-500 text-white shadow-xl shadow-emerald-200'
+                          ? 'bg-yellow-400 text-white border-yellow-500/30 shadow-md shadow-yellow-200 hover:scale-105 active:scale-95 animate-pulse' 
+                          : 'bg-emerald-500 text-white border-emerald-600/30 shadow-md hover:scale-105 active:scale-95 shadow-emerald-200/50'
                   }`}
                 >
-                  <Sprout size={20} className="group-hover:rotate-12 transition-transform" />
+                  <Sprout size={20} className="group-hover:rotate-12 transition-transform" strokeWidth={2} />
                   {gardenState?.pendingLootSeed && (
                     <div className="absolute -top-1 -right-1">
                       <Sparkles size={14} className="text-amber-200 animate-spin" />
@@ -268,7 +283,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
 
             {/* Cozy Garden Promotional Card */}
             {!settings.hasEnteredGarden && (
-              <div className="w-full bg-gradient-to-br from-[#1E251C] via-[#2F3A2A] to-[#1E251C] border border-[#8D7D62]/30 p-5 rounded-3xl text-white relative overflow-hidden shadow-lg group">
+              <div className="w-full bg-gradient-to-br from-[#1E251C] via-[#2F3A2A] to-[#1E251C] border border-[#8D7D62]/30 p-5 rounded-3xl text-white relative overflow-hidden shadow-md group">
                 <div className="absolute top-1/2 -translate-y-1/2 right-6 opacity-[0.08] text-6xl select-none pointer-events-none group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">🌸</div>
                 <div className="flex items-center justify-between gap-5 flex-wrap relative z-10">
                   <div className="flex-1">
@@ -294,85 +309,146 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
 
       case 'protocol':
         if (layoutConfig.hideFlow) return null;
+        const progressPercent = Math.min(100, Math.floor(((dailyProgress.completionsCount || 0) / 3) * 100));
+        
         return (
-          <div key="protocol" className="glass-card p-8 border-2 border-blue-600/5 bg-gradient-to-br from-white/80 to-blue-50/20 shadow-2xl shadow-blue-900/10 relative overflow-hidden transition-colors">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              <Target size={120} />
+          <div key="protocol" className="glass-card p-6 border-2 border-[#E9E4D4]/50 bg-gradient-to-br from-white to-[#FAF7F2]/40 shadow-[0_12px_40px_rgba(79,63,52,0.03)] relative overflow-hidden transition-all rounded-[24px]">
+            <div className="absolute top-0 right-0 p-4 opacity-[0.03] select-none pointer-events-none">
+              <Target size={140} className="text-[#4F3F34]" />
             </div>
 
             <div className="relative z-10 space-y-6">
-              <div className="flex items-center justify-between">
+              {/* Header and Status */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-2xl font-black text-blue-900 leading-none mb-2">DAILY PROTOCOL</h3>
-                  <p className="text-blue-900/40 text-[10px] font-black uppercase tracking-[0.2em]">Resets in <CountdownToMidnight /></p>
+                  <h3 className="text-lg font-black text-[#4F3F34] uppercase tracking-wider leading-none mb-1.5 flex items-center gap-2">
+                    <Zap size={16} className="text-[#69C496]" strokeWidth={2.5} />
+                    DAILY PROTOCOL
+                  </h3>
+                  <p className="text-[#7D6B58] text-[9px] font-bold uppercase tracking-[0.15em] flex items-center gap-1.5">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#69C496] animate-pulse" />
+                    Resets in: <CountdownToMidnight />
+                  </p>
                 </div>
-                <div className="text-right">
-                  <div className="text-blue-900 font-black text-lg">
+                <div className="text-left sm:text-right flex items-center sm:flex-col justify-between sm:justify-start gap-2">
+                  <div className="text-[#4F3F34] font-black text-base flex items-center gap-1">
                     {isPro ? (
-                      <span className="flex items-center gap-1 text-emerald-600">
-                        <Infinity size={20} />
-                        UNLIMITED
+                      <span className="flex items-center gap-1 text-[#69C496] bg-[#69C496]/10 px-3 py-1 rounded-full text-xs font-extrabold shadow-sm">
+                        <Infinity size={14} strokeWidth={2.5} />
+                        UNLIMITED PRO
                       </span>
                     ) : (
-                      `${dailyProgress.completionsCount} / 3`
+                      <span className="bg-[#69C496]/5 border border-[#69C496]/20 px-3 py-1 rounded-full text-xs font-black text-[#69C496] shadow-sm">
+                        {dailyProgress.completionsCount} / 3 Challenges Done
+                      </span>
                     )}
                   </div>
-                  <p className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest">
-                    {isPro ? 'Pro Status Active' : 'Daily Limit Status'}
+                  <p className="text-[9px] font-bold text-[#7D6B58]/60 uppercase tracking-wider">
+                    {isPro ? 'Pro Status Active' : 'Daily Challenge Limit'}
                   </p>
                 </div>
               </div>
 
-              <button 
+              {/* Progress Visualization */}
+              {!isPro && (
+                <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-200/50">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ type: "spring", stiffness: 80, damping: 15 }}
+                    className="bg-gradient-to-r from-[#69C496] to-[#58B383] h-full rounded-full shadow-sm relative overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                  </motion.div>
+                </div>
+              )}
+
+              {/* Main 3D Tactile Action Button */}
+              <motion.button 
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ y: 2 }}
                 onClick={() => {
                   if (!isPro && dailyProgress.completionsCount >= 3) return;
                   vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                   onStartChallenge();
                 }}
                 disabled={!isPro && dailyProgress.completionsCount >= 3}
-                className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-3 relative group overflow-hidden"
+                className={`w-full text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-2xl flex items-center justify-center gap-2.5 relative group overflow-hidden transition-all ${
+                  !isPro && dailyProgress.completionsCount >= 3
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none border border-slate-200'
+                    : 'bg-[#69C496] hover:bg-[#58B383] shadow-[0_4px_0_#4e9973] active:shadow-[0_1px_0_#4e9973] active:translate-y-1'
+                }`}
               >
-                <Zap size={24} className="group-hover:scale-125 transition-transform" />
+                <Zap size={18} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
                 {!isPro && dailyProgress.completionsCount >= 3 
                   ? 'PROTOCOL COMPLETE 🏆' 
                   : dailyProgress.completionsCount > 0 
                     ? `NEXT CHALLENGE (#${dailyProgress.completionsCount + 1})` 
                     : 'START INITIAL CHALLENGE'}
-              </button>
+              </motion.button>
 
               {!isPro && dailyProgress.completionsCount >= 3 && (
-                <div className="flex items-center justify-center gap-4 p-4 bg-white/40 rounded-2xl border border-blue-100/50">
+                <div className="flex items-center justify-center gap-3 p-3.5 bg-yellow-50/40 rounded-2xl border border-yellow-200/50">
                   <div className="flex items-center gap-2">
-                    <Clock size={16} className="text-blue-400" />
-                    <span className="text-xs font-black text-blue-900/60 uppercase">Next Recovery:</span>
+                    <Clock size={15} className="text-amber-500" strokeWidth={2.5} />
+                    <span className="text-[10px] font-black text-[#4F3F34]/80 uppercase tracking-wider">Next Recovery:</span>
                   </div>
-                  <div className="text-sm font-black text-blue-600">
+                  <div className="text-xs font-extrabold text-[#69C496]">
                     <NextRestorationCountdown targetTime={(dailyProgress as any).nextRestorationTime} />
                   </div>
                 </div>
               )}
 
-              <div className="flex items-center justify-center gap-3 py-2">
-                {[
-                  { id: "pushups", done: dailyProgress.pushupsDone, icon: "💪" },
-                  { id: "water", done: dailyProgress.waterDrank >= settings.waterGoal, icon: "💧" },
-                  { id: "breathing", done: dailyProgress.breathingDone, icon: "🧘" },
-                  { id: "drawing", done: dailyProgress.drawingDone, icon: "🎨" },
-                  { id: "football", done: dailyProgress.footballDone, icon: "⚽" },
-                  { id: "bubbles", done: dailyProgress.bubblesDone, icon: "🫧" },
-                  { id: "memory", done: dailyProgress.memoryDone, icon: "🧠" },
-                  { id: "gratitude", done: dailyProgress.gratitudeDone, icon: "🙏" },
-                  { id: "reaction", done: dailyProgress.reactionDone, icon: "⚡" }
-                ].filter(task => !(settings.archivedOfficialChallenges || []).includes(task.id)).map((task, i) => (
-                  <div 
-                    key={i} 
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all duration-500 scale-90 ${
-                      task.done ? 'bg-blue-600/10 grayscale-0 opacity-100 scale-100' : 'bg-slate-100 grayscale opacity-30 shadow-inner'
-                    }`}
-                  >
-                    {task.icon}
-                  </div>
-                ))}
+              {/* Challenge Category Navigation */}
+              <div className="space-y-3 pt-4 border-t border-[#E9E4D4]/40">
+                <span className="text-[9px] font-black text-[#7D6B58]/60 uppercase tracking-[0.2em] block text-center sm:text-left">
+                  TAP ANY CATEGORY TO RUN DIRECT CHALLENGE
+                </span>
+                
+                <div className="grid grid-cols-5 xs:grid-cols-5 sm:flex sm:flex-wrap items-center justify-center gap-2.5 sm:gap-3 py-1">
+                  {[
+                    { id: "pushups", label: "Pushups", done: dailyProgress.pushupsDone, icon: "💪" },
+                    { id: "water", label: "Water", done: dailyProgress.waterDrank >= settings.waterGoal, icon: "💧" },
+                    { id: "breathing", label: "Breath", done: dailyProgress.breathingDone, icon: "🧘" },
+                    { id: "drawing", label: "Draw", done: dailyProgress.drawingDone, icon: "🎨" },
+                    { id: "football", label: "Field", done: dailyProgress.footballDone, icon: "⚽" },
+                    { id: "bubbles", label: "Bubble", done: dailyProgress.bubblesDone, icon: "🫧" },
+                    { id: "memory", label: "Brain", done: dailyProgress.memoryDone, icon: "🧠" },
+                    { id: "gratitude", label: "Gratitude", done: dailyProgress.gratitudeDone, icon: "🙏" },
+                    { id: "reaction", label: "Reaction", done: dailyProgress.reactionDone, icon: "⚡" },
+                    { id: "meditation", label: "Calm", done: dailyProgress.meditationDone, icon: "🧘‍♀️" }
+                  ].filter(task => !(settings.archivedOfficialChallenges || []).includes(task.id)).map((task, i) => (
+                    <motion.button 
+                      key={task.id}
+                      id={`challenge-category-nav-${task.id}`}
+                      whileHover={{ scale: 1.08, y: -2 }}
+                      whileTap={{ scale: 0.93 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                      onClick={() => onSelectTask(task.id)}
+                      className={`flex flex-col items-center justify-center p-2 rounded-2xl w-full sm:w-[58px] aspect-square transition-all cursor-pointer relative group ${
+                        task.done 
+                          ? 'bg-[#69C496]/10 border-2 border-[#69C496]/40 text-[#4F3F34]' 
+                          : 'bg-white border border-[#E9E4D4]/60 hover:bg-slate-50 text-[#7D6B58]/50 hover:text-[#4F3F34]'
+                      }`}
+                      title={`Start ${task.label}`}
+                    >
+                      <span className={`text-[21px] select-none block transition-transform duration-300 group-hover:scale-110 ${task.done ? 'filter-none' : 'grayscale-[20%] opacity-80'}`}>
+                        {task.icon}
+                      </span>
+                      
+                      {/* Smooth indicator dot for completed states */}
+                      {task.done && (
+                        <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#69C496] shadow-sm">
+                          <CheckCircle2 size={10} className="text-white" strokeWidth={3} />
+                        </span>
+                      )}
+
+                      <span className="text-[7.5px] font-bold uppercase tracking-tight mt-1 text-[#7D6B58] block max-w-full truncate">
+                        {task.label}
+                      </span>
+                    </motion.button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -470,10 +546,46 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
 
       case 'mascot':
         if (layoutConfig.hideMascot) return null;
+        
+        // Define dynamic status dialogue text based on the mascot's current mood state
+        let companionSpeech = "";
+        if (mascotMood === 'boiling') {
+          companionSpeech = "🔥 COGENT VELOCITY ENGAGED! NO EXCUSES TODAY!";
+        } else if (mascotMood === 'angry') {
+          companionSpeech = "⚡ Hey! Less tapping, more high performance habits!";
+        } else if (mascotMood === 'happy') {
+          companionSpeech = "✨ Yes! Every bit of discipline builds massive momentum!";
+        } else {
+          companionSpeech = `☘️ "${quote}"`;
+        }
+
         return (
-          <div key="mascot" className="relative w-full aspect-square sm:w-[500px] sm:h-[500px] lg:w-[600px] lg:h-[600px] flex items-center justify-center flex-shrink-0 mx-auto">
-            <div className="absolute inset-0 bg-blue-400/5 blur-[40px] rounded-full" />
-            <motion.div animate={mascotControls} className="w-[90%] h-[90%] relative z-10">
+          <div key="mascot" className="relative w-full aspect-square sm:w-[500px] sm:h-[520px] lg:w-[580px] lg:h-[600px] flex flex-col items-center justify-center flex-shrink-0 mx-auto py-4 select-none">
+            {/* Soft Ambient Shadow Underlay */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#69C496]/5 via-amber-500/[0.02] to-transparent blur-[60px] rounded-full" />
+            
+            {/* Elegant Duolingo style Dialogue Speech Bubble */}
+            <motion.div 
+              initial={{ opacity: 0, y: 15, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 20 }}
+              className="relative mb-6 max-w-[85%] bg-white border-2 border-[#E9E4D4] p-4 rounded-3xl shadow-md text-center group cursor-pointer hover:border-[#69C496]/40 transition-colors"
+              onClick={triggerJump}
+            >
+              <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-r-2 border-b-2 border-[#E9E4D4] rotate-45" />
+              <p className="text-[#4F3F34] text-xs font-black tracking-wide leading-relaxed">
+                {companionSpeech}
+              </p>
+              <div className="text-[9px] font-extrabold text-[#7D6B58] uppercase tracking-[0.12em] mt-1.5 opacity-60 group-hover:text-[#69C496] transition-colors">
+                TAP COMPANION TO JUMP • {stats.streak} DAYS STRONG
+              </div>
+            </motion.div>
+
+            {/* Mascot Container */}
+            <motion.div 
+              animate={mascotControls} 
+              className="w-[82%] h-[82%] relative z-10 cursor-pointer"
+            >
               <Mascot 
                 className="w-full h-full" 
                 mood={mascotMood}

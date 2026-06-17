@@ -277,7 +277,7 @@ export function useNexoraData(
       };
 
       try {
-        const timeoutDuration = hasCache ? 4000 : 15000;
+        const timeoutDuration = hasCache ? 15000 : 25000;
         const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error(`Firebase network timed out (${timeoutDuration / 1000}s)`)), timeoutDuration)
         );
@@ -297,8 +297,17 @@ export function useNexoraData(
           
           console.log("Hooks: Core Firestore data loaded successfully.");
         } catch (fetchErr) {
-          console.error("Hooks: Failed fetching initial user collections:", fetchErr);
-          throw fetchErr;
+          if (hasCache) {
+            console.warn("Hooks: Primary connection fetch timed out or failed, but local cached session is present. Proceeding with cache fallback.", fetchErr);
+            if (loadingTimeout) clearTimeout(loadingTimeout);
+            isLoaderResolved = true;
+            setIsDataReady(true);
+            setLoading(false);
+            return;
+          } else {
+            console.error("Hooks: Failed fetching initial user collections:", fetchErr);
+            throw fetchErr;
+          }
         }
 
         let firestoreSettings = DEFAULT_SETTINGS;
