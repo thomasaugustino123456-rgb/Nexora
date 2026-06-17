@@ -1526,21 +1526,21 @@ export const SocialScreen = React.memo(({
       </AnimatePresence>
 
       {/* REDESIGNED BOTTOM TAB SECTIONS BAR TO MATCH MAIN NAV BAR STYLE */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 sm:p-5 flex justify-center pointer-events-none z-[450] bg-gradient-to-t from-slate-50/90 via-slate-50/40 to-transparent">
-         <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/80 shadow-2xl px-6 py-3.5 rounded-3xl flex items-center gap-8 sm:gap-14 pointer-events-auto max-w-[95vw] overflow-x-auto no-scrollbar">
+      <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[450] bg-gradient-to-t from-slate-50/90 via-slate-50/40 to-transparent">
+         <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/80 shadow-2xl px-2.5 py-1.5 rounded-3xl flex items-center justify-around gap-1 pointer-events-auto w-[92%] max-w-[395px] sm:max-w-[480px] h-[52px] sm:h-[60px] overflow-hidden select-none">
             {[
-               { id: 'home', label: 'Home', icon: <Compass size={21} /> },
-               { id: 'reels', label: 'Reels', icon: <Video size={21} /> },
-               { id: 'circles', label: 'Groups', icon: <Users size={21} /> },
+               { id: 'home', label: 'Home', icon: <Compass size={18} /> },
+               { id: 'reels', label: 'Reels', icon: <Video size={18} /> },
+               { id: 'circles', label: 'Groups', icon: <Users size={18} /> },
                { id: 'inbox', label: 'Inbox', icon: (
                   <div className="relative">
-                     <Bell size={21} />
+                     <Bell size={18} />
                      {notifications.some(n => !n.isRead) && (
-                       <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white animate-pulse" />
+                       <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full border border-white animate-pulse" />
                      )}
                   </div>
                ) },
-               { id: 'library', label: 'Library', icon: <Bookmark size={21} /> }
+               { id: 'library', label: 'Library', icon: <Bookmark size={18} /> }
             ].map(tab => {
                const isActive = activeTab === tab.id;
                return (
@@ -1550,12 +1550,12 @@ export const SocialScreen = React.memo(({
                       setActiveTab(tab.id as any);
                       vibrate(VIBRATION_PATTERNS.CLICK);
                     }}
-                    className={`flex flex-col items-center gap-1 transition-all text-[8px] sm:text-[9.5px] font-black uppercase tracking-widest ${isActive ? 'text-indigo-600 scale-105 font-black' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all text-[8px] sm:text-[9.5px] font-black uppercase tracking-wider ${isActive ? 'text-indigo-600 font-extrabold' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                     <div className={`transition-transform duration-200 ${isActive ? 'scale-110 drop-shadow-[0_2px_8px_rgba(79,70,229,0.3)]' : ''}`}>
+                     <div className={`transition-transform duration-200 ${isActive ? 'scale-105 drop-shadow-[0_1px_4px_rgba(79,70,229,0.25)]' : ''}`}>
                         {tab.icon}
                      </div>
-                     <span>{tab.label}</span>
+                     <span className="leading-none scale-95 sm:scale-100">{tab.label}</span>
                   </button>
                );
             })}

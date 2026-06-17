@@ -20,6 +20,7 @@ interface VideoItem {
   mediaSequence?: { url: string; type: 'video' | 'image' }[];
   audioUrl?: string;
   isAuthorized?: boolean;
+  type?: 'video' | 'photo';
 }
 
 interface TikTokReelsProps {
@@ -175,9 +176,17 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
   // Real-time Firestore document sync
   useEffect(() => {
     const qVideos = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'));
+    console.log("Firestore Audit: Querying collection 'social_videos' in TikTokReels...");
     const unsub = onSnapshot(qVideos, (snapshot) => {
+      console.log(`Firestore Audit: Collection 'social_videos' queried. Retrieved ${snapshot.size} documents.`);
       const dbVideos = snapshot.docs.map(docSnap => {
         const data = docSnap.data();
+        const detectedType = data.type || (data.videoUrl && (
+          data.videoUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || 
+          data.videoUrl.includes('images.unsplash.com') ||
+          data.videoUrl.includes('image')
+        ) ? 'photo' : 'video');
+        
         return {
           id: docSnap.id,
           title: data.caption?.split(':')[0]?.trim() || 'Custom Reel',
@@ -192,7 +201,8 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
           dislikedBy: [],
           mediaSequence: data.mediaSequence || [],
           audioUrl: data.audioUrl || undefined,
-          isAuthorized: data.isAuthorized ?? true
+          isAuthorized: data.isAuthorized ?? true,
+          type: detectedType
         };
       });
       setReelsList(dbVideos.length > 0 ? [...dbVideos, ...STOCK_REELS] : STOCK_REELS);
@@ -605,7 +615,8 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
       const mType = firstMedia?.type || 'video';
 
       // Write to live database collection
-      await addDoc(collection(db, 'social_videos'), {
+      console.log("Firestore Audit: Writing new reel to collection 'social_videos'...");
+      const docRef = await addDoc(collection(db, 'social_videos'), {
         userId: user?.uid || 'guest',
         userName: user?.displayName || 'Anonymous Transponder',
         userPhoto: user?.photoURL || '',
@@ -623,6 +634,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
         isAuthorized: true,
         mediaSequence: stagedMediaList
       });
+      console.log(`Firestore Audit: Successful write. Collection: 'social_videos', Document ID: '${docRef.id}'`);
 
       setIsPosting(false);
       setShowCreatorEngine(false);
@@ -663,6 +675,14 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
   }, []);
 
   const activeReel = reelsList[currentIndex];
+  const isImage = activeReel && (
+    activeReel.type === 'photo' || 
+    (activeReel.videoUrl && (
+      activeReel.videoUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || 
+      activeReel.videoUrl.includes('images.unsplash.com') ||
+      activeReel.videoUrl.includes('image')
+    ))
+  );
   const activeComments = commentsList[activeReel?.id] || [];
 
   // Filter effect css settings
@@ -707,17 +727,27 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
       {/* Snap loop scrolling viewport */}
       <div className="relative flex-1 bg-neutral-950 flex flex-col items-center justify-center overflow-hidden">
         
-        {/* Dynamic loop video */}
+        {/* Dynamic loop video or image */}
         <div className="relative w-full h-full flex items-center justify-center">
-          <video
-            ref={el => { videoRefs.current[activeReel.id] = el; }}
-            src={activeReel.videoUrl}
-            className={`w-full h-full object-cover select-none pointer-events-auto transition-all duration-300 ${getFilterStyle(activeFilter)}`}
-            loop
-            muted={isMuted}
-            autoPlay
-            playsInline
-          />
+          {isImage ? (
+            <img
+              src={activeReel.videoUrl}
+              alt={activeReel.title}
+              className={`w-full h-full object-cover select-none pointer-events-auto transition-all duration-300 ${getFilterStyle(activeFilter)}`}
+              draggable={false}
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <video
+              ref={el => { videoRefs.current[activeReel.id] = el; }}
+              src={activeReel.videoUrl}
+              className={`w-full h-full object-cover select-none pointer-events-auto transition-all duration-300 ${getFilterStyle(activeFilter)}`}
+              loop
+              muted={isMuted}
+              autoPlay
+              playsInline
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/80 pointer-events-none" />
         </div>
 

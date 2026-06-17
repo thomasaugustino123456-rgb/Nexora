@@ -5289,6 +5289,9 @@ export default function App() {
                       currentAppVersion={currentAppVersion}
                       isStandalone={isStandalone}
                       onTriggerPwaInstall={() => {
+                        setPwaDismissedMain(false);
+                        setPwaDismissedAuth(false);
+                        setPwaDismissedLanding(false);
                         setShowPwaBanner(true);
                         showToast("Installer prompt launched at bottom! 📥", "success");
                       }}

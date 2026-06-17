@@ -176,7 +176,9 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
 
   useEffect(() => {
     let q = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'), limit(30));
+    console.log("Firestore Audit: Querying collection 'social_videos' in NexusVideoScreen...");
     const unsub = onSnapshot(q, (snapshot) => {
+      console.log(`Firestore Audit: Collection 'social_videos' in NexusVideoScreen queried. Returned ${snapshot.size} documents.`);
       setVideos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NexusVideo)));
     }, (err) => {
       console.error("Videos query error:", err);
@@ -234,7 +236,9 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
         isAuthorized: true,
         platform
       };
-      await addDoc(collection(db, 'social_videos'), videoData);
+      console.log("Firestore Audit: Writing new reel/vibe to collection 'social_videos'...");
+      const docRef = await addDoc(collection(db, 'social_videos'), videoData);
+      console.log(`Firestore Audit: Successful write. Collection: 'social_videos', Document ID: '${docRef.id}'`);
       setIsCreating(false);
       setVideoUrl('');
       setCaption('');
@@ -477,7 +481,9 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
                       savedBy: []
                     };
                     
-                    await addDoc(collection(db, 'social_videos'), videoData);
+                    console.log("Firestore Audit: Publishing new sequence to collection 'social_videos'...");
+                    const docRef = await addDoc(collection(db, 'social_videos'), videoData);
+                    console.log(`Firestore Audit: Successful sequence publish. Collection: 'social_videos', Document ID: '${docRef.id}'`);
                     showToast('Nexus Reels Synchronized! 📡', 'success');
                     vibrate(VIBRATION_PATTERNS.SUCCESS);
                   } catch (err) {
