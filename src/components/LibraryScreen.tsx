@@ -46,7 +46,7 @@ export function LibraryScreen({
 
   const tabs = [
     { id: 'inventory', label: 'Vault', icon: Package, desc: 'Skins & Tracks' },
-    { id: 'media', label: 'Media', icon: Video, desc: 'Saved Reels & Clips' },
+    // { id: 'media', label: 'Media', icon: Video, desc: 'Saved Reels & Clips' },
     { id: 'creative', label: 'Sketches', icon: Palette, desc: 'Saved Masterpieces' },
     { id: 'archive', label: 'Protocols', icon: StickyNote, desc: 'Saved Brain Dumps' },
   ];

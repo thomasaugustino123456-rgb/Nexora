@@ -691,6 +691,7 @@ export function SettingsScreen({
               </motion.div>
             )}
 
+            {/*
             <div className="flex items-center justify-between p-4 bg-orange-600 text-white rounded-2xl shadow-lg border-2 border-orange-400 mt-3 hover:translate-y-[-2px] transition-all cursor-pointer" onClick={() => setSettings({ isReelsDisabled: !settings.isReelsDisabled })}>
                <div className="flex items-center gap-4">
                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
@@ -707,6 +708,7 @@ export function SettingsScreen({
                   <div className={`absolute top-1 w-5 h-5 rounded-full transition-all ${!settings.isReelsDisabled ? 'left-6 bg-orange-600' : 'left-1 bg-white/40'}`} />
                </div>
             </div>
+            */}
 
             {fcmError && (
               <div className="p-4 bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-between mt-4">

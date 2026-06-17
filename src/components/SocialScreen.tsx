@@ -486,7 +486,7 @@ export const SocialScreen = React.memo(({
     }
   };
 
-  if (activeTab === 'reels') {
+  if (false && activeTab === 'reels') {
     return (
       <div className="fixed inset-0 w-full h-full bg-black z-[1000] overflow-hidden flex flex-col">
         <TikTokReels 
@@ -1530,7 +1530,7 @@ export const SocialScreen = React.memo(({
          <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/80 shadow-2xl px-2.5 py-1.5 rounded-3xl flex items-center justify-around gap-1 pointer-events-auto w-[92%] max-w-[395px] sm:max-w-[480px] h-[52px] sm:h-[60px] overflow-hidden select-none">
             {[
                { id: 'home', label: 'Home', icon: <Compass size={18} /> },
-               { id: 'reels', label: 'Reels', icon: <Video size={18} /> },
+               // { id: 'reels', label: 'Reels', icon: <Video size={18} /> },
                { id: 'circles', label: 'Groups', icon: <Users size={18} /> },
                { id: 'inbox', label: 'Inbox', icon: (
                   <div className="relative">
