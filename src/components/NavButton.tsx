@@ -23,13 +23,13 @@ export function NavButton({ active, onClick, icon, label }: NavButtonProps) {
     <button 
       id={`nav-button-${label.toLowerCase()}`}
       onClick={handleClick}
-      className={`flex flex-col items-center justify-center gap-1 sm:gap-1.5 transition-all flex-shrink-0 cursor-pointer p-1.5 min-w-[50px] relative rounded-xl outline-none select-none`}
+      className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all flex-shrink-0 cursor-pointer px-1 py-1 min-w-[45px] sm:min-w-[55px] relative rounded-xl outline-none select-none`}
     >
       {/* Premium background indicator under active button */}
       {active && (
         <motion.div 
           layoutId="bottom-nav-active-pill"
-          className="absolute inset-0 bg-[#69C496]/10 rounded-2xl border border-[#69C496]/20"
+          className="absolute inset-[2px] bg-[#69C496]/10 rounded-[14px] border border-[#69C496]/15"
           transition={{ type: "spring", stiffness: 380, damping: 26 }}
         />
       )}
@@ -44,7 +44,7 @@ export function NavButton({ active, onClick, icon, label }: NavButtonProps) {
       </div>
 
       {/* Label Text */}
-      <span className={`relative z-10 text-[8.5px] font-black uppercase tracking-[0.08em] transition-colors duration-300 ${
+      <span className={`relative z-10 text-[7.5px] sm:text-[8px] font-black uppercase tracking-[0.06em] transition-colors duration-300 ${
         active 
           ? 'text-[#69C496]' 
           : 'text-[#7D6B58]/60'
@@ -56,7 +56,7 @@ export function NavButton({ active, onClick, icon, label }: NavButtonProps) {
       {active && (
         <motion.span 
           layoutId="bottom-nav-indicator-dot"
-          className="absolute bottom-1 w-1 h-1 rounded-full bg-[#69C496]"
+          className="absolute bottom-0 w-1 h-1 rounded-full bg-[#69C496]"
           transition={{ type: "spring", stiffness: 350, damping: 25 }}
         />
       )}
