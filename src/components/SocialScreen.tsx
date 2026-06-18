@@ -5,6 +5,7 @@ import {
   Send, Check, AlertTriangle, Sparkles, MessageCircle, Info, Image as ImageIcon,
   CheckCircle2, PlusCircle, Shield
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { SocialCircle, Post, Screen, UserSettings, UserStats, SocialComment, NexusNotification } from '../types';
 import { User as FirebaseUser } from 'firebase/auth';
 import { 
@@ -48,6 +49,8 @@ export function SocialScreen({
   const [showAllGroups, setShowAllGroups] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showFullSearchPage, setShowFullSearchPage] = useState(false);
+  const [createPostMode, setCreatePostMode] = useState<'text' | 'image'>('text');
 
   // Search filter query
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,6 +88,46 @@ export function SocialScreen({
   const currentUserEmail = user?.email || 'guest@nexora.io';
   const currentUserPhoto = settings.profilePic || user?.photoURL || '';
 
+  // Auto-pre-select target group when launching post creation from within a group
+  useEffect(() => {
+    if (showCreatePost) {
+      if (selectedGroupId) {
+        setPostTargetGroup(selectedGroupId);
+      } else {
+        setPostTargetGroup('public');
+      }
+    }
+  }, [showCreatePost, selectedGroupId]);
+
+  // Open notifications and mark all current notifications as read
+  const handleOpenNotifications = async () => {
+    setShowNotifications(true);
+    if (!user) return;
+    const unread = (notifications || []).filter(n => !n.isRead);
+    if (unread.length === 0) return;
+    
+    for (const notif of unread) {
+      try {
+        const notifRef = doc(db, 'users', user.uid, 'notifications', notif.id);
+        await updateDoc(notifRef, { isRead: true });
+      } catch (e) {
+        console.warn('Failed to mark notification as read:', e);
+      }
+    }
+  };
+
+  // Launch Create Post only if user is member of selected group
+  const handleLaunchCreatePost = () => {
+    if (selectedGroupId) {
+      const isJoined = (settings.joinedCircleIds || []).includes(selectedGroupId);
+      if (!isJoined) {
+        showToast('You must join this sub-community group to post here, bro! 🏮', 'info');
+        return;
+      }
+    }
+    setShowCreatePost(true);
+  };
+
   // Listen to comment list on active post detail
   useEffect(() => {
     if (selectedPost) {
@@ -97,8 +140,7 @@ export function SocialScreen({
     setLoadingComments(true);
     try {
       const q = query(
-        collection(db, "comments"),
-        where("postId", "==", selectedPost.id),
+        collection(db, "posts", selectedPost.id, "comments"),
         orderBy("createdAt", "asc")
       );
       const snap = await getDocs(q);
@@ -130,7 +172,7 @@ export function SocialScreen({
         createdAt: new Date().toISOString()
       };
 
-      await addDoc(collection(db, "comments"), newComment);
+      await addDoc(collection(db, "posts", selectedPost.id, "comments"), newComment);
       
       // Update comment count
       const postRef = doc(db, "posts", selectedPost.id);
@@ -262,9 +304,9 @@ export function SocialScreen({
         userEmail: currentUserEmail,
         userPhoto: currentUserPhoto,
         title: postTitle.trim(),
-        content: postContent.trim(),
-        image: postImageBase64 || undefined,
-        imageUrl: postImageBase64 || undefined,
+        content: createPostMode === 'text' ? postContent.trim() : '',
+        image: createPostMode === 'image' ? (postImageBase64 || undefined) : undefined,
+        imageUrl: createPostMode === 'image' ? (postImageBase64 || undefined) : undefined,
         circleId: postTargetGroup === 'public' ? 'public' : postTargetGroup,
         circleName: postTargetGroup === 'public' ? 'Public Feed' : (targetCircle?.name || 'General'),
         flames: 0,
@@ -272,7 +314,7 @@ export function SocialScreen({
         likedBy: [],
         shieldedBy: [],
         commentCount: 0,
-        type: postImageBase64 ? 'image' : 'text',
+        type: createPostMode === 'image' ? 'image' : 'text',
         createdAt: new Date().toISOString()
       };
 
@@ -606,7 +648,7 @@ export function SocialScreen({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Create Group fast-trigger */}
           <button 
             onClick={() => setShowCreateGroup(true)}
@@ -615,13 +657,22 @@ export function SocialScreen({
             <PlusCircle size={15} /> Create Group
           </button>
 
+          {/* Top Search Button */}
+          <button 
+            onClick={() => setShowFullSearchPage(true)}
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-3xl shadow-sm relative transition-all active:scale-95 text-slate-700"
+            title="Search groups and posts"
+          >
+            <Search size={20} />
+          </button>
+
           {/* Top Notification Bell */}
           <button 
-            onClick={() => setShowNotifications(true)}
-            className="p-3 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-3xl shadow-sm relative transition-all active:scale-95"
+            onClick={handleOpenNotifications}
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-3xl shadow-sm relative transition-all active:scale-95 animate-none"
           >
             <Bell size={20} className="text-slate-700" />
-            {notifications.some(n => !n.isRead) && (
+            {(notifications || []).some(n => !n.isRead) && (
               <span className="absolute top-2.5 right-2.5 w-3 h-3 bg-rose-500 rounded-full border-2 border-white animate-pulse" />
             )}
           </button>
@@ -637,87 +688,135 @@ export function SocialScreen({
             {/* Back to feed */}
             <button 
               onClick={() => setSelectedGroupId(null)}
-              className="flex items-center gap-2 text-indigo-600 font-bold text-sm bg-indigo-50/50 hover:bg-indigo-50 px-4 py-2.5 rounded-2xl w-fit transition-all"
+              className="flex items-center gap-2 text-indigo-600 font-bold text-sm bg-indigo-50/50 hover:bg-indigo-50 px-4 py-2.5 rounded-2xl w-fit transition-all hover:scale-102 active:scale-95"
             >
               <ChevronLeft size={16} /> Back to global Feed
             </button>
 
-            {/* Banner/Hero Header card */}
-            <div className="bg-white border border-slate-200/80 p-6 md:p-8 rounded-[2.5rem] shadow-sm space-y-4 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl -z-10" />
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-gradient-to-tr from-indigo-50 to-indigo-100 rounded-3xl flex items-center justify-center text-4xl shadow-inner">
-                    {currentViewingCircle.icon || '🏮'}
+            {/* Split Grid: Left 2 cols are Main card & Discussions feed. Right 1 col is Room Guidelines (sticky on desktop) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+              {/* Left span-2 column */}
+              <div className="md:col-span-2 space-y-6">
+                
+                {/* Banner/Hero Header card */}
+                <div className="bg-white border border-slate-200/80 rounded-[2.5rem] shadow-xs overflow-hidden flex flex-col">
+                  {/* Cover Banner */}
+                  <div className="relative h-28 sm:h-36 overflow-hidden bg-slate-900">
+                    <img 
+                      src={
+                        currentViewingCircle.category?.toLowerCase().includes('fit') 
+                          ? 'https://images.unsplash.com/photo-1517838277535-f5f99be501cd?q=80&w=800'
+                          : currentViewingCircle.category?.toLowerCase().includes('health') || currentViewingCircle.category?.toLowerCase().includes('water')
+                          ? 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=800'
+                          : currentViewingCircle.category?.toLowerCase().includes('learn')
+                          ? 'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?q=80&w=800'
+                          : 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800'
+                      } 
+                      alt="Sub-community category banner" 
+                      className="w-full h-full object-cover opacity-80"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/10" />
                   </div>
-                  <div>
-                    <span className="text-[10px] font-black tracking-widest text-indigo-600 uppercase">SUB-COMMUNITY</span>
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">{currentViewingCircle.name}</h2>
-                    <p className="text-xs text-slate-500 font-semibold">{currentViewingCircle.memberCount || 1} online members</p>
+
+                  {/* Header Content */}
+                  <div className="p-6 md:p-8 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1.5 flex-1">
+                        <span className="text-[10px] font-black tracking-widest text-indigo-600 uppercase">SUB-COMMUNITY</span>
+                        <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none">n/{currentViewingCircle.name.toLowerCase()}</h2>
+                        <p className="text-xs text-slate-400 font-bold">{currentViewingCircle.memberCount || 1} online members</p>
+                        <p className="text-sm text-slate-650 font-medium leading-relaxed pt-1.5">{currentViewingCircle.description}</p>
+                      </div>
+
+                      {/* Group design avatar positioned elegantly in Right Angle (as user requested: "move the Group pic to be in Right Angle... and descriptions next to it") */}
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-tr from-slate-50 to-slate-100 rounded-3xl flex items-center justify-center text-4xl shadow-inner border border-slate-200/50 flex-shrink-0">
+                        {currentViewingCircle.icon || '🏮'}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <button 
+                        onClick={() => handleJoinGroup(currentViewingCircle)}
+                        className={`px-6 py-2.5 rounded-full font-black text-xs transition-all uppercase tracking-wider ${
+                          (settings.joinedCircleIds || []).includes(currentViewingCircle.id) 
+                            ? 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-rose-50 hover:text-rose-600'
+                            : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                        }`}
+                      >
+                        {(settings.joinedCircleIds || []).includes(currentViewingCircle.id) ? 'Joined' : 'Join Group'}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <button 
-                  onClick={() => handleJoinGroup(currentViewingCircle)}
-                  className={`px-6 py-2.5 rounded-full font-black text-xs transition-all uppercase tracking-wider ${
-                    (settings.joinedCircleIds || []).includes(currentViewingCircle.id) 
-                      ? 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-rose-50 hover:text-rose-600'
-                      : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
-                  }`}
-                >
-                  {(settings.joinedCircleIds || []).includes(currentViewingCircle.id) ? 'Joined' : 'Join Group'}
-                </button>
-              </div>
-
-              <p className="text-sm text-slate-600 font-medium leading-relaxed max-w-2xl">{currentViewingCircle.description}</p>
-              
-              {/* Rules block */}
-              {currentViewingCircle.rules && currentViewingCircle.rules.length > 0 && (
-                <div className="pt-3 border-t border-slate-100">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Community Guidelines</span>
-                  <div className="flex flex-wrap gap-2">
-                    {currentViewingCircle.rules.map((rule, idx) => (
-                      <span key={idx} className="text-[11px] font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">{rule}</span>
-                    ))}
+                {/* Mobile-only guidelines (only displays below 768px, hidden on desktop: "in the side on guidelines do not display it under if we are using desktop mode, render room guidelines side on side") */}
+                {currentViewingCircle.rules && currentViewingCircle.rules.length > 0 && (
+                  <div className="block md:hidden bg-white border border-slate-200/80 p-5 rounded-[2rem] space-y-3">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Community Guidelines</span>
+                    <div className="flex flex-wrap gap-2">
+                      {currentViewingCircle.rules.map((rule, idx) => (
+                        <span key={idx} className="text-xs font-bold text-slate-600 bg-slate-50 border border-slate-100/50 px-3 py-1.5 rounded-2xl">{rule}</span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
 
-            {/* Posts in Group */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-black text-slate-800 tracking-tight">Discussions ({visiblePosts.length})</h3>
-                <button 
-                  onClick={() => {
-                    setPostTargetGroup(currentViewingCircle.id);
-                    setShowCreatePost(true);
-                  }}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-full flex items-center gap-1.5 shadow-md shadow-indigo-600/10 transition-all active:scale-95"
-                >
-                  <Plus size={14} /> New Post here
-                </button>
-              </div>
-
-              {visiblePosts.length === 0 ? (
-                <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-200/60 max-w-md mx-auto">
-                  <Compass size={40} className="mx-auto text-slate-300 mb-3" />
-                  <p className="font-bold text-slate-500 text-sm">No discussions launched in this group yet.</p>
-                  <button 
-                    onClick={() => {
-                      setPostTargetGroup(currentViewingCircle.id);
-                      setShowCreatePost(true);
-                    }}
-                    className="mt-4 px-5 py-2 bg-indigo-50 text-indigo-600 font-bold text-xs rounded-xl"
-                  >
-                    Be the first to post!
-                  </button>
-                </div>
-              ) : (
+                {/* Discussions Feed */}
                 <div className="space-y-4">
-                  {visiblePosts.map(post => renderPostCard(post))}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h3 className="text-lg font-black text-slate-850 tracking-tight">Discussions ({visiblePosts.length})</h3>
+                    <button 
+                      onClick={handleLaunchCreatePost}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-full flex items-center gap-1.5 shadow-md shadow-indigo-600/10 transition-all active:scale-95"
+                    >
+                      <Plus size={14} /> New Post here
+                    </button>
+                  </div>
+
+                  {visiblePosts.length === 0 ? (
+                    <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-200/60 max-w-md mx-auto space-y-3">
+                      <Compass size={40} className="mx-auto text-slate-300" />
+                      <p className="font-bold text-slate-500 text-sm">No discussions launched in this group yet.</p>
+                      <button 
+                        onClick={handleLaunchCreatePost}
+                        className="mt-4 px-5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold text-xs rounded-xl transition-colors"
+                      >
+                        Be the first to post!
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {visiblePosts.map(post => renderPostCard(post))}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Desktop-only Column for Guidelines - Render side-on-side! */}
+              <div className="hidden md:block md:col-span-1 space-y-6 sticky top-24">
+                {currentViewingCircle.rules && currentViewingCircle.rules.length > 0 && (
+                  <div className="bg-white border border-slate-200/80 p-6 rounded-[2rem] shadow-xs space-y-3.5">
+                    <div className="flex items-center gap-2">
+                      <Shield className="text-indigo-600" size={18} />
+                      <h3 className="text-sm font-black text-slate-850 uppercase tracking-tight">Room Guidelines</h3>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                      Please adhere to the sub-community standards below while collaborating inside this room:
+                    </p>
+                    <div className="space-y-2 pt-2 border-t border-slate-50">
+                      {currentViewingCircle.rules.map((rule, idx) => (
+                        <div key={idx} className="flex gap-2.5 items-start p-2.5 hover:bg-slate-50 rounded-xl transition-all">
+                          <span className="w-5 h-5 rounded-full bg-indigo-50 border border-indigo-100/50 flex-shrink-0 flex items-center justify-center font-black text-[10px] text-indigo-600">
+                            {idx + 1}
+                          </span>
+                          <span className="text-xs font-semibold text-slate-700 leading-normal">{rule}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ) : activeTab === 'groups' ? (
@@ -855,18 +954,6 @@ export function SocialScreen({
           // VIEW: COMMUNITY HOME / GLOBAL FEED
           <div className="space-y-6 animate-in fade-in duration-200">
             
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-              <input 
-                type="text"
-                placeholder="Search sub-communities, titles, authors or topics..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-3xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-100 outline-none shadow-sm transition-all"
-              />
-            </div>
-
             {/* categories list / see all view */}
             {showAllCategories ? (
               <div className="space-y-4 bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm animate-in zoom-in-95 duration-200">
@@ -919,7 +1006,7 @@ export function SocialScreen({
               </section>
             )}
 
-            {/* Popular Groups Section */}
+            {/* Popular Groups Section (Completely redesigned: NO horizontal scrolling layout!) */}
             {showAllGroups ? (
               <div className="space-y-4 bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm animate-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between">
@@ -931,51 +1018,69 @@ export function SocialScreen({
                 </div>
               </div>
             ) : (
-              <section className="space-y-3">
+              <section className="space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-black text-slate-800 tracking-tight">Popular Groups</h2>
-                  <button onClick={() => setShowAllGroups(true)} className="text-indigo-600 font-extrabold text-xs tracking-wider uppercase">See all</button>
+                  <div>
+                    <h2 className="text-lg font-black text-slate-850 tracking-tight leading-none">Popular Rooms 🏮</h2>
+                    <p className="text-[11px] text-slate-400 font-bold uppercase mt-1">Recommended sub-communities to join</p>
+                  </div>
+                  <button 
+                    onClick={() => setShowAllGroups(true)} 
+                    className="text-indigo-650 font-black text-xs tracking-wider uppercase bg-indigo-50/50 hover:bg-indigo-50 px-3.5 py-1.5 rounded-full transition-all"
+                  >
+                    See all
+                  </button>
                 </div>
-                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none snap-x">
-                  {initialCircles.slice(0, 5).map(circle => {
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {initialCircles.slice(0, 4).map(circle => {
                     const isJoined = (settings.joinedCircleIds || []).includes(circle.id);
                     return (
                       <div 
                         key={circle.id} 
-                        className="min-w-[210px] max-w-[210px] bg-white p-5 rounded-[2rem] border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-4 snap-start hover:border-indigo-100 transition-all flex-shrink-0"
+                        className="bg-white p-5 rounded-[2rem] border border-slate-200/60 shadow-xs flex flex-col justify-between space-y-4 hover:border-slate-300 hover:shadow-sm transition-all"
                       >
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-3xl bg-indigo-50/50 p-2 rounded-2xl block">{circle.icon || '🏮'}</span>
-                            <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse border border-white" />
+                            <span className="text-3xl bg-slate-50 p-2 rounded-2xl block border border-slate-100">{circle.icon || '🏮'}</span>
+                            <span className="text-[9.5px] font-black bg-indigo-50/60 text-indigo-600 px-2.5 py-1 rounded-full uppercase tracking-widest">{circle.category}</span>
                           </div>
                           <div>
                             <h3 
                               onClick={() => setSelectedGroupId(circle.id)} 
                               className="font-black text-slate-800 text-sm tracking-tight cursor-pointer hover:text-indigo-600 line-clamp-1 transition-colors"
                             >
-                              {circle.name}
+                              n/{circle.name.toLowerCase()}
                             </h3>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase">{circle.memberCount || 340} online</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">{circle.memberCount || 1} members</p>
                           </div>
-                          <p className="text-[11px] text-slate-500 font-medium leading-normal line-clamp-2">{circle.description}</p>
+                          <p className="text-[11px] text-slate-500 font-medium leading-relaxed line-clamp-2">{circle.description}</p>
                         </div>
-                        <button 
-                          onClick={() => handleJoinGroup(circle)}
-                          className={`w-full py-2 rounded-xl font-black text-xs transition-all tracking-wide ${
-                            isJoined 
-                              ? 'bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600'
-                              : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/10'
+
+                        <div className="flex gap-2 pt-2">
+                          <button 
+                            onClick={() => setSelectedGroupId(circle.id)}
+                            className="flex-grow py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-xs rounded-xl transition-all"
+                          >
+                            Enter Room
+                          </button>
+                          <button 
+                            onClick={() => handleJoinGroup(circle)}
+                            className={`flex-grow py-2 rounded-xl font-black text-xs transition-all tracking-wide ${
+                              isJoined 
+                                ? 'bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600'
+                                : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/10'
                           }`}
                         >
                           {isJoined ? 'Joined' : 'Join'}
                         </button>
                       </div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
             {/* FEED SECTION TABS */}
             <section className="space-y-4">
@@ -1021,7 +1126,7 @@ export function SocialScreen({
         )}
       </main>
 
-      {/* ─── NEW POST FORM POPUP SCREEN ─── */}
+      {/* ─── NEW POST FORM POPUP SCREEN (REDESIGNED FOR EXQUISITE FLOW) ─── */}
       {showCreatePost && (
         <div className="fixed inset-0 bg-black/50 overflow-y-auto backdrop-blur-sm z-[600] flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-lg p-6 md:p-8 space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
@@ -1035,6 +1140,32 @@ export function SocialScreen({
                 className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-all"
               >
                 <Check size={18} />
+              </button>
+            </div>
+
+            {/* Split Mode Selector (Text Post vs Image Upload) */}
+            <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
+              <button
+                type="button"
+                onClick={() => setCreatePostMode('text')}
+                className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${
+                  createPostMode === 'text' 
+                    ? 'bg-white text-indigo-600 shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-705 bg-transparent'
+                }`}
+              >
+                Text Post
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreatePostMode('image')}
+                className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${
+                  createPostMode === 'image' 
+                    ? 'bg-white text-indigo-600 shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-705 bg-transparent'
+                }`}
+              >
+                Upload Image
               </button>
             </div>
 
@@ -1067,61 +1198,73 @@ export function SocialScreen({
                 />
               </div>
 
-              {/* Content textarea */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">What is on your mind?</label>
-                <textarea 
-                  rows={4}
-                  placeholder="Share details of your achievements, tips, daily completed pushes or water goals..."
-                  value={postContent}
-                  onChange={e => setPostContent(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 outline-none placeholder-slate-400 focus:ring-1 focus:ring-indigo-100"
-                />
-              </div>
-
-              {/* Attached image preview */}
-              {postImageBase64 && (
-                <div className="relative rounded-2xl overflow-hidden max-h-48 border border-slate-200">
-                  <img src={postImageBase64} alt="Attached Preview" className="w-full h-full object-cover" />
-                  <button 
-                    type="button"
-                    onClick={() => setPostImageBase64('')}
-                    className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full text-xs font-bold"
-                  >
-                    Clear
-                  </button>
+              {/* Text Post - Body input */}
+              {createPostMode === 'text' && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Post Body *</label>
+                  <textarea 
+                    rows={4}
+                    placeholder="Share details of your achievements, tips, daily completed pushes or water goals..."
+                    value={postContent}
+                    onChange={e => setPostContent(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 outline-none placeholder-slate-400 focus:ring-1 focus:ring-indigo-100"
+                    required={createPostMode === 'text'}
+                  />
                 </div>
               )}
 
-              {/* Image upload trigger */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Attach visual proof (optional)</label>
-                <div className="flex items-center gap-3">
-                  <label className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center gap-1.5">
-                    <ImageIcon size={15} /> Upload image
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleImageFileChange}
-                      className="hidden"
-                    />
-                  </label>
-                  <span className="text-[10px] text-slate-400 font-bold">Max 5MB • Jpeg/Png preferred</span>
+              {/* Image Post - Upload attachment */}
+              {createPostMode === 'image' && (
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Upload Visual Resource *</label>
+                  {postImageBase64 ? (
+                    <div className="relative rounded-2xl overflow-hidden max-h-48 border border-slate-200 animate-in zoom-in-95">
+                      <img src={postImageBase64} alt="Attached Preview" className="w-full h-full object-cover" />
+                      <button 
+                        type="button"
+                        onClick={() => setPostImageBase64('')}
+                        className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full text-xs font-bold"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50 text-center space-y-2">
+                      <ImageIcon size={32} className="text-slate-300 animate-pulse" />
+                      <div className="space-y-1">
+                        <label className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer inline-block shadow-md">
+                          Choose Image File
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleImageFileChange}
+                            className="hidden"
+                            required={createPostMode === 'image'}
+                          />
+                        </label>
+                        <p className="text-[9px] text-slate-400 font-bold">Max 5MB • Jpeg/Png preferred</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
 
+              {/* Conditional Publishing Trigger */}
               <div className="pt-2">
-                {/* Ensure postTitle is filled before button is shown/enabled */}
-                {postTitle.trim() !== '' ? (
+                {((createPostMode === 'text' && postTitle.trim() !== '' && postContent.trim() !== '') ||
+                  (createPostMode === 'image' && postTitle.trim() !== '' && postImageBase64 !== '')) ? (
                   <button 
                     type="submit"
-                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-indigo-600/15 transition-all"
+                    className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-emerald-500/15 transition-all"
                   >
                     Publish Post 📡
                   </button>
                 ) : (
-                  <div className="p-3 bg-slate-50 rounded-2xl text-center text-[10.5px] font-bold text-slate-400">
-                    Write a Post Title to publish your work
+                  <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl text-center text-[10.5px] font-bold text-slate-400 animate-pulse">
+                    {createPostMode === 'text' 
+                      ? 'Please complete the Post Title and Body to publish' 
+                      : 'Please enter a Post Title and upload an image to publish'
+                    }
                   </div>
                 )}
               </div>
@@ -1209,6 +1352,131 @@ export function SocialScreen({
                 Assemble Sub-community
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── FULL-SCREEN SEARCH OVERLAY (BEAUTIFULLY POLISHED) ─── */}
+      {showFullSearchPage && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[700] flex justify-center p-4 sm:p-10 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-2xl h-fit max-h-[85vh] p-6 sm:p-8 flex flex-col space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
+            {/* Header segment */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black text-slate-800 tracking-tight">Search Nexora Community 🔍</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mt-0.5">Find posts, discussions, authors and hubs</p>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowFullSearchPage(false);
+                  setSearchQuery('');
+                }}
+                className="text-xs font-black text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-750 px-4 py-2 rounded-2xl uppercase transition-all"
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Live Search Input Box */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 animate-none" />
+              <input 
+                type="text"
+                autoFocus
+                placeholder="Type keywords, authors, #milestones or rooms..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-100 outline-none transition-all shadow-inner"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Results sections */}
+            <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+              {searchQuery.trim() === '' ? (
+                <div className="py-10 text-center space-y-2">
+                  <Compass size={40} className="mx-auto text-slate-300" />
+                  <p className="font-extrabold text-slate-500 text-xs uppercase tracking-wide">Enter a search term to begin exploring</p>
+                  <p className="text-[11px] text-slate-400 font-semibold max-w-sm mx-auto leading-relaxed">
+                    Matched discussions, water pushes, muscle milestones, and discipline rooms will be displayed in real time.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Matching Groups Segment */}
+                  {initialCircles.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.category?.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 && (
+                    <div className="space-y-2.5">
+                      <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Matched Rooms</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {initialCircles
+                          .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.category?.toLowerCase().includes(searchQuery.toLowerCase()))
+                          .map(circle => (
+                            <div 
+                              key={circle.id}
+                              onClick={() => {
+                                setSelectedGroupId(circle.id);
+                                setShowFullSearchPage(false);
+                              }}
+                              className="p-3 border border-slate-100 hover:border-indigo-100 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-indigo-50/10 transition-all"
+                            >
+                              <span className="text-2xl p-1.5 bg-slate-50 border border-slate-100 rounded-xl">{circle.icon || '🏮'}</span>
+                              <div className="overflow-hidden">
+                                <p className="font-extrabold text-slate-800 text-xs truncate">n/{circle.name.toLowerCase()}</p>
+                                <p className="text-[9.5px] text-slate-400 font-bold truncate capitalize">{circle.category}</p>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Matching Posts Segment */}
+                  <div className="space-y-2.5">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Matched Discussions</h4>
+                    {visiblePosts.length === 0 ? (
+                      <p className="text-xs font-bold text-slate-400 py-4 italic">No matching community posts found.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {visiblePosts.map(post => {
+                          const isAttachedImg = post.image || post.imageUrl;
+                          return (
+                            <div 
+                              key={post.id}
+                              onClick={() => {
+                                setSelectedPost(post);
+                                setShowFullSearchPage(false);
+                              }}
+                              className="p-4 bg-slate-50/60 hover:bg-slate-50 border border-slate-100 hover:border-indigo-100 rounded-2xl cursor-pointer transition-all flex items-start gap-3.5"
+                            >
+                              {/* Option image preview */}
+                              {isAttachedImg && (
+                                <img src={isAttachedImg} alt="preview" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                              )}
+                              <div className="space-y-1 overflow-hidden flex-1">
+                                <h5 className="font-black text-slate-800 text-xs tracking-tight truncate line-clamp-1">{post.title}</h5>
+                                <p className="text-[10.5px] text-slate-500 font-semibold truncate hover:text-indigo-600 pr-4">{post.content}</p>
+                                <div className="flex items-center gap-2 pt-1 text-[9.5px] text-slate-400 font-bold uppercase">
+                                  <span>by {post.userName}</span>
+                                  <span>•</span>
+                                  <span>{post.circleName || 'General'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

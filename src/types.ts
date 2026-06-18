@@ -167,6 +167,7 @@ export interface DailyProgress {
   skippedPushups?: boolean;
   waterChallengeCount?: number;
   waterLogs?: { id: string; time: string; amount: number }[];
+  customPlanCompleted?: boolean;
 }
 
 export type TrophyType = 'golden' | 'ice' | 'broken';

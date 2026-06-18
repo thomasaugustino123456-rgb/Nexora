@@ -87,6 +87,7 @@ export function useNexoraData(
           footballDone: false,
           bubblesDone: false,
           completionsCount: 0,
+          customPlanCompleted: false,
         },
   );
   const [gardenState, setGardenState] = useState<GardenState>(cachedGarden);
