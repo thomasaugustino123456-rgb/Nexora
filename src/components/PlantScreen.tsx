@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout, Target, Trophy, Play, X, Lock, ShoppingBag, Package, Trash2, Power, PowerOff, Flower2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout, Target, Trophy, Play, X, Lock, ShoppingBag, Package, Trash2, Power, PowerOff, Flower2, Map } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { PlantState, UserSettings, UserStats, PlantType } from '../types';
 import { vibrate } from '../lib/vibrate';
@@ -57,7 +57,6 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   const [step, setStep] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [showGarden, setShowGarden] = useState(false);
-  const [showCozyGardenGrid, setShowCozyGardenGrid] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showShop, setShowShop] = useState(false);
@@ -224,18 +223,20 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
           <span className="font-black text-blue-900 text-sm uppercase">{ecosystemInfo[plantState.type]?.name || "Plant"}</span>
         </div>
         <button 
-          onClick={() => { vibrate(5); setShowCozyGardenGrid(true); }}
-          className="p-2 transition-all relative text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100/80 rounded-xl border border-emerald-250 flex items-center gap-1 active:scale-95 shrink-0"
-          title="My Cozy Sanctuary Garden"
-        >
-          <Flower2 size={22} className="animate-bounce" />
-          <span className="text-[10.5px] font-black uppercase tracking-wider hidden sm:inline text-emerald-800 pr-1">Cozy Garden</span>
-        </button>
-        <button 
           onClick={() => { vibrate(5); setShowGarden(!showGarden); }}
           className={`p-2 transition-colors ${showGarden ? 'text-green-500' : 'text-blue-900/40'}`}
+          title="My Cozy Sanctuary Garden"
         >
-          <Trophy size={24} />
+          <Flower2 size={24} />
+        </button>
+
+        <button 
+          onClick={() => { vibrate(5); /* TODO: Hook up Map */ }}
+          className={`p-2 transition-all relative text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100/80 rounded-xl border border-emerald-250 flex items-center gap-1 active:scale-95 shrink-0`}
+          title="Adventure Map"
+        >
+          <Map size={22} className="animate-bounce" />
+          <span className="text-[10.5px] font-black uppercase tracking-wider hidden sm:inline text-emerald-800 pr-1">Adventure Map</span>
         </button>
         <button 
           onClick={() => { 
@@ -845,7 +846,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
         </div>
       </div>
       <AnimatePresence>
-        {showCozyGardenGrid && (
+        {showGarden && (
           <motion.div
             initial={{ opacity: 0, x: '100vw' }}
             animate={{ opacity: 1, x: 0 }}
@@ -854,7 +855,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
             className="fixed inset-0 bg-white z-[300] overflow-y-auto"
           >
             <GardenScreen 
-              onBack={() => setShowCozyGardenGrid(false)}
+              onBack={() => setShowGarden(false)}
               gardenState={gardenState}
               setGardenState={setGardenState}
               stats={stats}
