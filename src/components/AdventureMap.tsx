@@ -612,16 +612,16 @@ export function AdventureMap({
         <div className="flex items-center gap-3">
           <button 
             onClick={onBack}
-            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white rounded-2xl border border-white/5 transition-all active:scale-95 flex items-center justify-center shadow-inner"
+            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white rounded-2xl border border-white/5 transition-all active:scale-95 flex items-center justify-center shadow-inner animate-[pulse_3s_infinite]"
             title="Exit Map"
           >
             <ArrowLeft size={16} strokeWidth={3} />
           </button>
           <div>
-            <span className="text-[8px] font-black tracking-widest uppercase text-emerald-400 block font-mono">WORLD ADVENTURE</span>
+            <span className="text-[8px] font-black tracking-widest uppercase text-emerald-400 block font-mono">Nexora Expedition</span>
             <div className="flex items-center gap-1.5">
               <Compass className="w-4 h-4 text-emerald-400 animate-spin-slow" />
-              <h1 className="text-sm font-black text-white uppercase tracking-tight">Nexora Expedition Trails</h1>
+              <h1 className="text-sm font-black text-white uppercase tracking-tight">Adventure Trails</h1>
             </div>
           </div>
         </div>
@@ -640,632 +640,622 @@ export function AdventureMap({
         </div>
       </header>
 
-      {/* ─── WORLD NAV BAR (Sequential selector for 6 worlds) ─── */}
-      <nav className="absolute top-16 inset-x-0 h-14 bg-[#0a111e] border-b border-white/5 px-4 overflow-x-auto overflow-y-hidden flex items-center gap-2.5 z-40 select-none scrollbar-none">
-        {WORLDS_DATA.map((w, idx) => {
-          const isWorldUnlocked = completedLevelIds.length >= idx * 11 || idx === 0;
-          const isActive = currentWorldIdx === idx;
-
-          return (
-            <button
-              key={w.id}
-              onClick={() => {
-                vibrate(5);
-                playNatureSynthSound('click');
-                if (!isWorldUnlocked) {
-                  if (showToast) showToast(`Clear the previous worlds down the track to enter World ${w.id}! 🧭🔒`, 'info');
-                  return;
-                }
-                setCurrentWorldIdx(idx);
-                setTimeout(() => {
-                  const targetLvl = w.levels[0].id;
-                  const elem = document.getElementById(`level-node-${targetLvl}`);
-                  if (elem && scrollContainerRef.current) {
-                    elem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }
-                }, 100);
-              }}
-              className={`flex-shrink-0 px-4 py-1.5 rounded-2xl border text-xs font-black uppercase tracking-tight transition-all flex items-center gap-2 ${
-                isActive 
-                  ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-950/20'
-                  : isWorldUnlocked
-                    ? 'bg-slate-800/70 border-white/5 text-slate-300 hover:bg-slate-800'
-                    : 'bg-slate-900/40 border-slate-950 text-slate-600 cursor-not-allowed'
-              }`}
-            >
-              <span>World {w.id}</span>
-              {!isWorldUnlocked ? <Lock size={10} /> : <span className="text-[10px]">{w.id === 1 ? '🏙️' : w.id === 2 ? '🌲' : w.id === 3 ? '🌵' : w.id === 4 ? '🦈' : w.id === 5 ? '🏔️' : '🌈'}</span>}
-            </button>
-          );
-        })}
-      </nav>
-
       {/* ─── FULL-SCREEN LIVING LANDSCAPE ADVENTURE SCROLL TRACK ─── */}
       <div 
         ref={scrollContainerRef}
         className="flex-1 w-full overflow-y-auto pb-44 scroll-smooth scrollbar-none select-none relative"
-        style={{ paddingTop: '120px' }} // clear both headers
+        style={{ paddingTop: '80px' }} // clear sticky header nicely
       >
-        <div className="w-full max-w-xl mx-auto flex flex-col relative">
+        <div className="w-full max-w-xl mx-auto flex flex-col relative gap-8 px-4">
 
-          {/* Living Interactive Canvas layout of the Current Selected World */}
+          {/* Stacking All Unlocked Worlds in Reverse Order (Highest Unlocked World at top, World 1 at bottom so you climb up) */}
           {(() => {
-            const world = WORLDS_DATA[currentWorldIdx];
-            return (
-              <div 
-                key={world.id}
-                className={`relative w-full h-[1800px] rounded-[3rem] ${world.bgColor} border border-white/5 overflow-hidden shadow-2xl transition-all duration-500`}
-              >
-                {/* World Ambient Atmosphere Overlay */}
-                <div className={`absolute inset-x-0 top-0 h-44 bg-gradient-to-b ${world.skyColor} pointer-events-none z-10`} />
-                <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-10" />
+            const activeWorld = WORLDS_DATA.find(w => w.levels.some(l => l.id === activeLevelId)) || WORLDS_DATA[0];
+            const activeWorldId = activeWorld.id;
+            const unlockedWorlds = WORLDS_DATA.filter(world => world.id <= activeWorldId);
+            const stackedWorlds = [...unlockedWorlds].reverse();
 
-                {/* ─── WORLD SPECIFIC PARALLAX & RICH DYNAMIC CUSTOM GRAPHICS ─── */}
+            return stackedWorlds.map((world) => {
+              return (
+                <div 
+                  key={world.id}
+                  className={`relative w-full h-[1800px] rounded-[3rem] ${world.bgColor} border border-white/10 overflow-hidden shadow-2xl transition-all duration-500`}
+                >
+                  {/* World Ambient Atmosphere Overlay */}
+                  <div className={`absolute inset-x-0 top-0 h-44 bg-gradient-to-b ${world.skyColor} pointer-events-none z-10`} />
+                  <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-10" />
 
-                {/* --- WORLD 1: BEGINNER CITY LANDSCAPE (Skyscrapers, Cafe, Parks, Fountains, Flower garden) --- */}
-                {world.id === 1 && (
-                  <div className="absolute inset-0 pointer-events-none z-0">
-                    
-                    {/* Floating Clouds */}
-                    <div className="absolute top-14 inset-x-0 h-20 overflow-hidden">
+                  {/* World visual badge indicator */}
+                  <div className="absolute top-6 left-6 z-20 bg-[#090f1a]/90 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl flex items-center gap-3 shadow-lg">
+                    <span className="text-2xl filter drop-shadow">
+                      {world.id === 1 ? '🏙️' : world.id === 2 ? '🌲' : world.id === 3 ? '🌵' : world.id === 4 ? '🦈' : world.id === 5 ? '🏔️' : '🌈'}
+                    </span>
+                    <div>
+                      <span className="text-[7px] font-mono font-black text-emerald-400 tracking-[0.15em] uppercase block">TERRITORY {world.id}/6</span>
+                      <h2 className="font-extrabold text-xs text-white uppercase tracking-tight leading-none mt-0.5">{world.name}</h2>
+                    </div>
+                  </div>
+
+                  {/* ─── WORLD SPECIFIC PARALLAX & RICH DYNAMIC CUSTOM GRAPHICS ─── */}
+
+                  {/* --- WORLD 1: BEGINNER CITY LANDSCAPE (Skyscrapers, Cafe, Parks, Fountains, Flower garden) --- */}
+                  {world.id === 1 && (
+                    <div className="absolute inset-0 pointer-events-none z-0">
+                      {/* Floating Clouds */}
+                      <div className="absolute top-14 inset-x-0 h-20 overflow-hidden">
+                        <motion.div 
+                          animate={{ x: ['-20%', '110%'] }} 
+                          transition={{ duration: 35, repeat: Infinity, ease: 'linear' }}
+                          className="absolute text-5xl opacity-20 filter drop-shadow"
+                        >
+                          ☁️
+                        </motion.div>
+                        <motion.div 
+                          animate={{ x: ['-50%', '120%'] }} 
+                          transition={{ duration: 45, repeat: Infinity, ease: 'linear', delay: 10 }}
+                          className="absolute text-6xl opacity-15 filter blur-[1px]"
+                        >
+                          ☁️
+                        </motion.div>
+                      </div>
+
+                      {/* Animated Birds soaring over sky heights */}
                       <motion.div 
-                        animate={{ x: ['-20%', '110%'] }} 
-                        transition={{ duration: 35, repeat: Infinity, ease: 'linear' }}
-                        className="absolute text-5xl opacity-20 filter drop-shadow"
+                        animate={{ x: ['-10%', '110%'], y: [200, 240, 200] }} 
+                        transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute text-xl z-20 flex gap-1 text-slate-500"
                       >
-                        ☁️
+                        🕊️<span>🕊️</span>
                       </motion.div>
-                      <motion.div 
-                        animate={{ x: ['-50%', '120%'] }} 
-                        transition={{ duration: 45, repeat: Infinity, ease: 'linear', delay: 10 }}
-                        className="absolute text-6xl opacity-15 filter blur-[1px]"
-                      >
-                        ☁️
-                      </motion.div>
-                    </div>
 
-                    {/* Animated Birds soaring over sky heights */}
-                    <motion.div 
-                      animate={{ x: ['-10%', '110%'], y: [200, 240, 200] }} 
-                      transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute text-xl z-20 flex gap-1 text-slate-500"
-                    >
-                      🕊️<span>🕊️</span>
-                    </motion.div>
-
-                    {/* Handcrafted City Skylines (Modern houses, cafe architectures, parks) */}
-                    <div className="absolute top-[350px] left-8 w-[140px] h-[190px] bg-slate-800/90 border border-slate-700/50 rounded-2xl p-3 shadow-2xl flex flex-col justify-between">
-                      <span className="text-[9px] font-black text-slate-400 block uppercase font-mono border-b border-slate-700/60 pb-1">Metropolitan Cafe</span>
-                      <div className="flex flex-wrap gap-1.5 justify-center">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                          <div key={i} className="w-3.5 h-3.5 bg-yellow-400/80 rounded animate-pulse" style={{ animationDelay: `${i * 0.4}s` }} />
-                        ))}
+                      {/* Handcrafted City Skylines (Modern houses, cafe architectures, parks) */}
+                      <div className="absolute top-[350px] left-8 w-[140px] h-[190px] bg-slate-800/90 border border-slate-700/50 rounded-2xl p-3 shadow-2xl flex flex-col justify-between">
+                        <span className="text-[9px] font-black text-slate-400 block uppercase font-mono border-b border-slate-700/60 pb-1">Metropolitan Cafe</span>
+                        <div className="flex flex-wrap gap-1.5 justify-center">
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="w-3.5 h-3.5 bg-yellow-400/80 rounded animate-pulse" style={{ animationDelay: `${i * 0.4}s` }} />
+                          ))}
+                        </div>
+                        <span className="text-xl text-center">☕🍰</span>
                       </div>
-                      <span className="text-xl text-center">☕🍰</span>
-                    </div>
 
-                    <div className="absolute top-[820px] right-8 w-[160px] h-[220px] bg-slate-800/90 border border-slate-700/50 rounded-2xl p-4 shadow-2xl flex flex-col justify-between">
-                      <span className="text-[9px] font-black text-cyan-400 block uppercase font-mono border-b border-slate-700/60 pb-1">Nexora HQ Tower</span>
-                      <div className="grid grid-cols-3 gap-2 py-1">
-                        {Array.from({ length: 9 }).map((_, i) => (
-                          <div key={i} className="w-3.5 h-3 bg-teal-300/60 rounded-sm animate-pulse" />
-                        ))}
+                      <div className="absolute top-[820px] right-8 w-[160px] h-[220px] bg-slate-800/90 border border-slate-700/50 rounded-2xl p-4 shadow-2xl flex flex-col justify-between">
+                        <span className="text-[9px] font-black text-cyan-400 block uppercase font-mono border-b border-slate-700/60 pb-1">Nexora HQ Tower</span>
+                        <div className="grid grid-cols-3 gap-2 py-1">
+                          {Array.from({ length: 9 }).map((_, i) => (
+                            <div key={i} className="w-3.5 h-3 bg-teal-300/60 rounded-sm animate-pulse" />
+                          ))}
+                        </div>
+                        <span className="text-2xl text-center">🏢⭐</span>
                       </div>
-                      <span className="text-2xl text-center">🏢⭐</span>
-                    </div>
 
-                    <div className="absolute top-[1250px] left-8 w-[150px] h-[160px] bg-slate-800/80 border border-slate-700/40 rounded-3xl p-3 flex flex-col justify-between items-center text-center">
-                      <span className="text-[8px] font-black tracking-widest text-emerald-400 font-mono uppercase">Neighborhood Park</span>
-                      <div className="flex gap-2">
-                        <span className="text-2xl animate-bounce" style={{ animationDuration: '3s' }}>🌲</span>
-                        <span className="text-2xl animate-bounce" style={{ animationDuration: '4s' }}>🌳</span>
+                      <div className="absolute top-[1250px] left-8 w-[150px] h-[160px] bg-slate-800/80 border border-slate-700/40 rounded-3xl p-3 flex flex-col justify-between items-center text-center">
+                        <span className="text-[8px] font-black tracking-widest text-emerald-400 font-mono uppercase">Neighborhood Park</span>
+                        <div className="flex gap-2">
+                          <span className="text-2xl animate-bounce" style={{ animationDuration: '3s' }}>🌲</span>
+                          <span className="text-2xl animate-bounce" style={{ animationDuration: '4s' }}>🌳</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-medium">Flower Patch 🌷🌹</span>
                       </div>
-                      <span className="text-[10px] text-slate-400 font-medium">Flower Patch 🌷🌹</span>
-                    </div>
 
-                    {/* Interactive Fluid Fountain with real custom spraying animations */}
-                    <div 
-                      className="absolute top-[620px] right-14 w-28 h-28 bg-slate-850/90 border border-slate-700/60 rounded-full flex flex-col items-center justify-center pointer-events-auto cursor-pointer shadow-lg active:scale-95 transition-all"
-                      onClick={() => {
-                        vibrate(5);
-                        playNatureSynthSound('river');
-                        if (showToast) showToast("⛲ Splashing water fountain! Mind refreshed.", 'info');
-                      }}
-                      title="Tap the fountain"
-                    >
-                      <div className="absolute -top-3 flex flex-col gap-0.5 items-center">
-                        <span className="text-xl animate-bounce">💦</span>
-                        <span className="text-[7px] font-mono font-black text-sky-400 bg-sky-950/80 px-1 py-0.5 rounded border border-sky-500/20 uppercase tracking-widest">TAP SPLASH</span>
+                      {/* Interactive Fluid Fountain with real custom spraying animations */}
+                      <div 
+                        className="absolute top-[620px] right-14 w-28 h-28 bg-slate-800/90 border border-slate-700/65 rounded-full flex flex-col items-center justify-center pointer-events-auto cursor-pointer shadow-lg active:scale-95 transition-all"
+                        onClick={() => {
+                          vibrate(5);
+                          playNatureSynthSound('river');
+                          if (showToast) showToast(" Fountain splashing with water split! Mind refreshed ⛲💦", 'info');
+                        }}
+                        title="Tap the fountain"
+                      >
+                        <div className="absolute -top-3 flex flex-col gap-0.5 items-center">
+                          <span className="text-xl animate-bounce">💦</span>
+                          <span className="text-[7px] font-mono font-black text-sky-450 bg-[#090f1a] px-1 py-0.5 rounded border border-sky-500/20 uppercase tracking-widest animate-pulse">TAP SPLASH</span>
+                        </div>
+                        <span className="text-3xl filter drop-shadow">⛲</span>
                       </div>
-                      <span className="text-3xl filter drop-shadow">⛲</span>
-                    </div >
 
-                    {/* Bike lanes decorator */}
-                    <div className="absolute bottom-[280px] left-1/3 flex items-center gap-1.5 px-3 py-1 bg-slate-800/40 rounded-full border border-white/5 text-[9px] text-slate-400">
-                      <span>🚲 Bike Lane Trail</span>
-                    </div>
-                  </div>
-                )}
-
-
-                {/* --- WORLD 2: WHISPERING REDWOOD FOREST LANDSCAPE (Moss stones, streams, bridges, waterfalls, giant trees) --- */}
-                {world.id === 2 && (
-                  <div className="absolute inset-0 pointer-events-none z-0">
-                    
-                    {/* Waving forest shadows & sunrays */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 via-transparent to-amber-500/5 pointer-events-none" />
-
-                    {/* Giant Redwood Trees trunks rising */}
-                    <div className="absolute top-[120px] left-12 w-14 h-[400px] bg-amber-950/40 border-r-4 border-emerald-900/30 rounded-r-3xl flex flex-col justify-between py-10">
-                      <span className="text-2xl text-center select-none filter opacity-60">🌲</span>
-                      <span className="text-3xl text-center select-none filter opacity-75 animate-pulse">🌲</span>
-                    </div>
-
-                    <div className="absolute top-[750px] right-6 w-16 h-[500px] bg-amber-950/40 border-l-4 border-emerald-900/30 rounded-l-3xl flex flex-col justify-between py-12">
-                      <span className="text-3xl text-center select-none filter opacity-70 animate-pulse">🌳</span>
-                      <span className="text-2xl text-center select-none filter opacity-60">🌲</span>
-                    </div>
-
-                    {/* Beautiful Waterfall Cascade (Clickable nature loop) */}
-                    <div 
-                      className="absolute top-[520px] left-2/3 -translate-x-1/2 w-32 h-32 bg-emerald-900/30 border border-emerald-500/20 rounded-2xl flex flex-col items-center justify-center pointer-events-auto cursor-pointer hover:bg-emerald-900/40 active:scale-95 transition-all"
-                      onClick={() => {
-                        vibrate(6);
-                        playNatureSynthSound('river');
-                        if (showToast) showToast("🌊 Cascading Waterfall flowing down forest cliffs!", "info");
-                      }}
-                    >
-                      <motion.div 
-                        animate={{ y: [0, 8, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                        className="text-4xl text-center"
-                      >
-                        💧
-                      </motion.div>
-                      <span className="text-[7.5px] font-black font-mono text-emerald-300 uppercase tracking-widest mt-1">WATERFALL RUSH</span>
-                    </div>
-
-                    {/* Butterfly animations */}
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <motion.div
-                        key={i}
-                        animate={{ 
-                          x: [Math.sin(i) * 100 + 100, Math.sin(i) * 100 + 160, Math.sin(i) * 100 + 100],
-                          y: [200 + (i * 280), 220 + (i * 280), 200 + (i * 280)]
-                        }}
-                        transition={{ duration: 5 + i, repeat: Infinity, ease: 'easeInOut' }}
-                        className="absolute text-lg"
-                      >
-                        🦋
-                      </motion.div>
-                    ))}
-
-                    {/* Wooden Bridge and stream crossway graphics */}
-                    <div className="absolute top-[1050px] left-1/2 -translate-x-1/2 w-48 h-12 bg-amber-900/60 border-y-2 border-amber-800 rounded-lg flex items-center justify-between px-3 text-amber-200 text-[9px] font-black uppercase font-mono shadow-md z-10">
-                      <span>🌁 Suspended Forest Bridge</span>
-                      <span>🌲</span>
-                    </div>
-
-                    <div className="absolute bottom-[280px] right-20 text-3xl opacity-50">🍄🍄</div>
-                    <div className="absolute top-[480px] left-16 text-3xl opacity-40">🍄</div>
-                  </div>
-                )}
-
-
-                {/* --- WORLD 3: GOLDEN DESERT LANDSCAPE (Dust drift, heat wave ripple, ancient fossils, camel animation) --- */}
-                {world.id === 3 && (
-                  <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-b from-amber-950/20 via-transparent to-amber-950/40">
-                    
-                    {/* Golden Baking Sun */}
-                    <motion.div 
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
-                      className="absolute top-16 left-16 w-24 h-24 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center border-4 border-amber-300/40 shadow-[0_0_55px_rgba(245,158,11,0.5)] z-20"
-                    >
-                      <span className="text-4xl">☀️</span>
-                    </motion.div>
-
-                    {/* Heat Wave Shimmer Overlay Effect */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/5 to-transparent animate-pulse-slow mix-blend-color-dodge" />
-
-                    {/* Animated moving camel walking across the golden sands */}
-                    <motion.div 
-                      animate={{ 
-                        x: ['-20%', '115%'],
-                        y: [600, 620, 600]
-                      }}
-                      transition={{ 
-                        duration: 32, 
-                        repeat: Infinity, 
-                        ease: 'linear' 
-                      }}
-                      className="absolute z-20 pointer-events-auto cursor-pointer"
-                      onClick={() => {
-                        vibrate(10);
-                        playNatureSynthSound('camel');
-                        if (showToast) showToast("🐫 Dry Camel braying and chewing cactus!", "info");
-                      }}
-                      title="Tap the camel"
-                    >
-                      <div className="flex flex-col items-center">
-                        <span className="text-4xl filter drop-shadow">🐫</span>
-                        <span className="text-[7px] font-bold font-mono text-amber-300 bg-amber-955/80 border border-amber-500/20 px-1 py-0.5 rounded tracking-widest uppercase">TAP BRAY</span>
+                      <div className="absolute bottom-[280px] left-1/3 flex items-center gap-1.5 px-3 py-1 bg-slate-800/40 rounded-full border border-white/5 text-[9px] text-slate-400">
+                        <span>🚲 Bike Lane Trail</span>
                       </div>
-                    </motion.div>
-
-                    {/* Clay Nomads Tents & Adobe Villages */}
-                    <div className="absolute top-[450px] right-12 text-3xl">⛺</div>
-                    <div className="absolute top-[1150px] left-16 text-4xl">🕌</div>
-
-                    {/* Cacti fields */}
-                    <div className="absolute top-[320px] left-20 text-3xl opacity-50">🌵</div>
-                    <div className="absolute top-[950px] right-20 text-3xl opacity-40">🌵</div>
-                    <div className="absolute bottom-[220px] left-24 text-4xl opacity-50">🌵</div>
-
-                    {/* Ancient Dinosaur Bones & Fossil remnants ☠️ */}
-                    <div className="absolute top-[750px] left-1/4 flex items-center gap-1 opacity-70">
-                      <span className="text-2xl">☠️</span>
-                      <span className="text-[8px] font-mono font-black text-amber-300 uppercase tracking-widest">Prehistoric Bones</span>
                     </div>
+                  )}
 
-                    <div className="absolute top-[1380px] right-1/4 flex items-center gap-1 opacity-60">
-                      <span className="text-xl">🦴</span>
-                      <span className="text-[7.5px] font-mono font-bold text-amber-200/50 uppercase tracking-widest">Fossil Site</span>
-                    </div>
+                  {/* --- WORLD 2: WHISPERING REDWOOD FOREST LANDSCAPE (Moss stones, streams, timber bridges, giant trees) --- */}
+                  {world.id === 2 && (
+                    <div className="absolute inset-0 pointer-events-none z-0">
+                      <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 via-transparent to-amber-500/5 pointer-events-none" />
 
-                    {/* Dust particles drifting */}
-                    {Array.from({ length: 12 }).map((_, i) => (
-                      <motion.div
-                        key={i}
-                        animate={{ 
-                          x: ['-5%', '105%'],
-                          y: [280 + (i * 120), 300 + (i * 120)]
-                        }}
-                        transition={{ duration: 12 + i, repeat: Infinity, ease: 'linear' }}
-                        className="absolute text-[8px] opacity-25 text-amber-200"
-                      >
-                        ░▒
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-
-
-                {/* --- WORLD 4: OCEAN KINGDOM LANDSCAPE (Swaying palms, sailing boats, sharks, tropical coral reefs) --- */}
-                {world.id === 4 && (
-                  <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#0e3c5a]/40 to-[#051c2d]/80">
-                    
-                    {/* Waving Sea Corals on the margin borders */}
-                    <div className="absolute bottom-16 left-12 text-5xl opacity-45">🪸</div>
-                    <div className="absolute top-[420px] left-8 text-4xl opacity-35">🪸</div>
-                    <div className="absolute top-[980px] right-12 text-5xl opacity-50 animate-pulse">🪸</div>
-
-                    {/* Animated Swimming Sharks below seabed level ranges */}
-                    <motion.div 
-                      animate={{ x: ['115%', '-15%'] }}
-                      transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
-                      className="absolute top-[800px] z-10"
-                    >
-                      <div className="flex flex-col items-center">
-                        <span className="text-3xl select-none filter drop-shadow">🦈</span>
-                        <span className="text-[6.5px] font-black font-mono text-cyan-400 bg-black/40 px-1 rounded uppercase tracking-widest">Shark Guard</span>
+                      {/* Giant Redwood Trees trunks rising */}
+                      <div className="absolute top-[120px] left-12 w-14 h-[400px] bg-amber-970/40 border-r-4 border-emerald-900/30 rounded-r-3xl flex flex-col justify-between py-10">
+                        <span className="text-2xl text-center select-none filter opacity-60">🌲</span>
+                        <span className="text-3xl text-center select-none filter opacity-75 animate-pulse">🌲</span>
                       </div>
-                    </motion.div>
 
-                    <motion.div 
-                      animate={{ x: ['-15%', '115%'] }}
-                      transition={{ duration: 18, repeat: Infinity, ease: 'linear', delay: 4 }}
-                      className="absolute top-[1300px] z-10"
-                    >
-                      <span className="text-2xl">🦈</span>
-                    </motion.div>
+                      <div className="absolute top-[750px] right-6 w-16 h-[500px] bg-amber-970/40 border-l-4 border-emerald-900/30 rounded-l-3xl flex flex-col justify-between py-12">
+                        <span className="text-3xl text-center select-none filter opacity-70 animate-pulse">🌳</span>
+                        <span className="text-2xl text-center select-none filter opacity-60">🌲</span>
+                      </div>
 
-                    {/* Swaying coconut Palm trees */}
-                    <div className="absolute top-[280px] right-8 w-20 h-20 flex flex-col items-center">
-                      <span className="text-3xl animate-bounce" style={{ animationDuration: '4s' }}>🌴</span>
-                      <span className="text-[7px] text-slate-400 uppercase font-mono mt-1">Islet</span>
-                    </div>
-
-                    {/* Animated Sailing Boat floating on the aqua water */}
-                    <motion.div
-                      animate={{ 
-                        x: ['-10%', '110%'],
-                        y: [520, 540, 520],
-                        rotate: [-3, 3, -3]
-                      }}
-                      transition={{ duration: 24, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute pointer-events-auto cursor-pointer"
-                      onClick={() => {
-                        vibrate(6);
-                        playNatureSynthSound('river');
-                        if (showToast) showToast("⛵ Wooden sailboat riding tropical tides!", 'info');
-                      }}
-                    >
-                      <span className="text-3xl filter drop-shadow">⛵</span>
-                    </motion.div>
-
-                    {/* Multi-colored Tropical Fish swimming clusters */}
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <motion.div
-                        key={i}
-                        animate={{ 
-                          x: i % 2 === 0 ? ['110%', '-10%'] : ['-10%', '110%'],
-                          y: [300 + (i * 220), 320 + (i * 220)]
+                      {/* Beautiful Waterfall Cascade (Clickable nature loop) */}
+                      <div 
+                        className="absolute top-[520px] left-2/3 -translate-x-1/2 w-32 h-32 bg-emerald-950/40 border border-emerald-500/20 rounded-2xl flex flex-col items-center justify-center pointer-events-auto cursor-pointer hover:bg-emerald-900/40 active:scale-95 transition-all"
+                        onClick={() => {
+                          vibrate(6);
+                          playNatureSynthSound('river');
+                          if (showToast) showToast("🌊 Cascading Waterfall flowing down mountain rocks! Water river rushing.", "info");
                         }}
-                        transition={{ duration: 12 + i, repeat: Infinity, ease: 'linear' }}
-                        className="absolute text-xl flex gap-1.5"
                       >
-                        <span>🐠</span><span>🐡</span>
-                      </motion.div>
-                    ))}
+                        <motion.div 
+                          animate={{ y: [0, 8, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                          className="text-4xl text-center"
+                        >
+                          💧
+                        </motion.div>
+                        <span className="text-[7.5px] font-black font-mono text-emerald-300 uppercase tracking-widest mt-1">WATERFALL RUSH</span>
+                      </div>
 
-                    {/* Ocean water bubbles rising up */}
-                    {Array.from({ length: 15 }).map((_, i) => (
-                      <motion.div
-                        key={i}
-                        animate={{ 
-                          y: ['105%', '-5%'],
-                          x: [Math.random() * 450, (Math.random() * 450) + 40]
+                      {/* Interactive forest animal tap */}
+                      <div 
+                        className="absolute top-[920px] left-8 w-24 h-24 bg-emerald-900/20 border border-emerald-700/30 rounded-full flex flex-col items-center justify-center pointer-events-auto cursor-pointer hover:bg-emerald-900/40 active:scale-95 transition-all"
+                        onClick={() => {
+                          vibrate(8);
+                          playNatureSynthSound('chirp');
+                          if (showToast) showToast("🦉 Forest owl hooting in the canopy heights!", "info");
                         }}
-                        transition={{ 
-                          duration: 8 + Math.random() * 6,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                          delay: Math.random() * 5
-                        }}
-                        className="absolute text-xs text-cyan-300 opacity-40"
                       >
-                        🫧
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
+                        <span className="text-3xl animate-pulse">🦉</span>
+                        <span className="text-[6.5px] font-mono font-black text-emerald-400 mt-0.5">LISTENER</span>
+                      </div>
 
+                      {/* Butterfly animations */}
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ 
+                            x: [Math.sin(i) * 100 + 100, Math.sin(i) * 100 + 160, Math.sin(i) * 100 + 100],
+                            y: [200 + (i * 280), 220 + (i * 280), 200 + (i * 280)]
+                          }}
+                          transition={{ duration: 5 + i, repeat: Infinity, ease: 'easeInOut' }}
+                          className="absolute text-lg"
+                        >
+                          🦋
+                        </motion.div>
+                      ))}
 
-                {/* --- WORLD 5: FROZEN PEAKS LANDSCAPE (Snow village, glaciers, ice caves, blizzard drift, aurora lights) --- */}
-                {world.id === 5 && (
-                  <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#0a182c]/40 via-transparent to-[#050f1d]/85">
-                    
-                    {/* Spectacular glowing Neon Aurora Borealis Ribbon */}
-                    <div className="absolute top-10 inset-x-0 h-44 bg-gradient-to-r from-purple-500/10 via-cyan-400/10 to-indigo-500/10 animate-pulse blur-3xl pointer-events-none z-15" />
+                      {/* Wooden Bridge and stream crossway graphics */}
+                      <div className="absolute top-[1050px] left-1/2 -translate-x-1/2 w-48 h-12 bg-amber-900/60 border-y-2 border-amber-800 rounded-lg flex items-center justify-between px-3 text-amber-200 text-[9px] font-black uppercase font-mono shadow-md z-10">
+                        <span>🌁 Suspended Forest Bridge</span>
+                        <span>🌲</span>
+                      </div>
 
-                    {/* Fallen Icicle clusters & mountain caverns */}
-                    <div className="absolute top-[320px] left-12 text-3xl opacity-50">🧊</div>
-                    <div className="absolute top-[850px] right-14 text-4xl opacity-35">🧊</div>
-                    <div className="absolute top-[1350px] left-16 text-3xl opacity-45">🧊</div>
-
-                    {/* Cozy Cabin / Frozen Snow Village indicators */}
-                    <div className="absolute top-[620px] left-1/4 w-[110px] bg-slate-900/80 border border-sky-400/20 p-2.5 rounded-2xl flex flex-col items-center">
-                      <span className="text-2xl animate-pulse">🏡</span>
-                      <span className="text-[7.5px] font-mono font-black text-sky-400 uppercase mt-1">Glacier Cabin</span>
+                      <div className="absolute bottom-[280px] right-20 text-3xl opacity-50">🍄🍄</div>
+                      <div className="absolute top-[480px] left-16 text-3xl opacity-40">🍄</div>
                     </div>
+                  )}
 
-                    <div className="absolute top-[1150px] right-1/4 w-[120px] bg-slate-900/80 border border-sky-400/20 p-2.5 rounded-2xl flex flex-col items-center">
-                      <span className="text-2xl">🏚️</span>
-                      <span className="text-[7.5px] font-mono font-black text-slate-400 uppercase mt-1">Ancient Ice Dome</span>
-                    </div>
-
-                    {/* Freezing Glacier mountain peaks in backdrops */}
-                    <div className="absolute top-[160px] inset-x-0 flex justify-around">
-                      <span className="text-5xl opacity-30">🏔️</span>
-                      <span className="text-6xl opacity-25">🏔️</span>
-                    </div>
-
-                    {/* Interactive Glacier Breeze crack loop */}
-                    <div 
-                      className="absolute top-[920px] right-12 text-2xl bg-cyan-500/10 px-3 py-1.5 border border-cyan-400/20 rounded-full flex items-center gap-1 text-cyan-300 pointer-events-auto cursor-pointer active:scale-95 transition-all shadow-inner"
-                      onClick={() => {
-                        vibrate(6);
-                        playNatureSynthSound('ice');
-                        if (showToast) showToast("❄️ Extreme icy crack echoes in mountain passes!", "info");
-                      }}
-                    >
-                      🔊 FREEZE COLD
-                    </div>
-
-                    {/* Drifting blizzard snowflakes */}
-                    {Array.from({ length: 25 }).map((_, i) => (
-                      <motion.div
-                        key={i}
-                        animate={{ 
-                          y: ['-5%', '105%'],
-                          x: [Math.random() * 500, (Math.random() * 500) - 50]
-                        }}
-                        transition={{ 
-                          duration: 4 + Math.random() * 4,
-                          repeat: Infinity,
-                          ease: 'linear',
-                          delay: Math.random() * 4
-                        }}
-                        className="absolute text-sky-200/60 text-xs"
-                      >
-                        ❄️
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-
-
-                {/* --- WORLD 6: SKY PLAINS LANDSCAPE (Endless meadows, windmills rotating, rainbows, cloud palaces) --- */}
-                {world.id === 6 && (
-                  <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-b from-yellow-500/5 via-transparent to-yellow-500/15">
-                    
-                    {/* Double Magical Rainbow graphic backdrops */}
-                    <div className="absolute top-16 left-1/2 -translate-x-1/2 w-80 h-40 border-t-8 border-r-8 border-l-8 border-red-500/15 rounded-full filter blur-[1px] pointer-events-none" />
-                    <div className="absolute top-[80px] left-1/2 -translate-x-1/2 w-[270px] h-[135px] border-t-8 border-r-8 border-l-8 border-yellow-400/10 rounded-full filter blur-[2px] pointer-events-none" />
-
-                    {/* Beautiful Sovereign Kingdom Gate Architecture */}
-                    <div className="absolute top-[120px] left-1/2 -translate-x-1/2 w-48 bg-slate-900/95 border-3 border-yellow-500 p-4 rounded-3xl text-center shadow-xl">
-                      <p className="text-[8px] font-mono font-black text-yellow-400 uppercase tracking-widest animate-pulse">CITADEL SUMMIT</p>
-                      <span className="text-3xl my-1.5 block">👑🏛️</span>
-                      <span className="text-[9px] font-bold text-slate-300">Legendary Nexora Tree thrives inside the sacred gates.</span>
-                    </div>
-
-                    {/* Dynamic Rotating Windmills built with CSS transitions */}
-                    <div className="absolute top-[480px] left-12 w-24 h-32 flex flex-col items-center">
+                  {/* --- WORLD 3: GOLDEN DESERT LANDSCAPE (Baking sun, prehistoric dinosaur bones, camel animation, silty soil) --- */}
+                  {world.id === 3 && (
+                    <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-b from-amber-955/20 via-transparent to-amber-950/40">
+                      
+                      {/* Golden Baking Sun */}
                       <motion.div 
                         animate={{ rotate: 360 }}
-                        transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
-                        className="text-4xl"
+                        transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
+                        className="absolute top-16 left-16 w-24 h-24 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center border-4 border-amber-350/40 shadow-[0_0_55px_rgba(245,158,11,0.5)] z-20"
                       >
-                        ☸️
+                        <span className="text-4xl">☀️</span>
                       </motion.div>
-                      <span className="text-[7.5px] font-mono font-black text-emerald-400 mt-1 uppercase">Windmill 1</span>
-                    </div>
 
-                    <div className="absolute top-[1020px] right-12 w-24 h-32 flex flex-col items-center">
+                      {/* Heat Wave Shimmer Overlay Effect */}
+                      <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/5 to-transparent animate-pulse-slow mix-blend-color-dodge" />
+
+                      {/* Layered Desert soil sand dunes (Parallax layers) */}
+                      <div className="absolute bottom-10 left-0 right-0 h-44 bg-[#2b1704]/40 rounded-t-[100%] filter blur-xl transform translate-y-20 scale-125" />
+                      <div className="absolute bottom-28 left-6 right-6 h-36 bg-[#4c2909]/30 rounded-t-[100%] filter blur-md transform translate-y-12 scale-110" />
+
+                      {/* Animated moving camel walking back & forth, flipping direction automatically */}
                       <motion.div 
-                        animate={{ rotate: -360 }}
-                        transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-                        className="text-4xl"
+                        animate={{ 
+                          x: ['-10%', '110%', '110%', '-10%', '-10%'],
+                          scaleX: [1, 1, -1, -1, 1], // turn around facing direction
+                        }}
+                        transition={{ 
+                          duration: 32, 
+                          repeat: Infinity, 
+                          times: [0, 0.45, 0.5, 0.95, 1.0],
+                          ease: 'linear' 
+                        }}
+                        className="absolute top-[800px] z-20 pointer-events-auto cursor-pointer"
+                        onClick={() => {
+                          vibrate(10);
+                          playNatureSynthSound('camel');
+                          if (showToast) showToast("🐫 tap! Dry Camel braying and chewing cactus desert soil!", "info");
+                        }}
+                        title="Tap the camel"
                       >
-                        ☸️
-                      </motion.div>
-                      <span className="text-[7.5px] font-mono font-black text-emerald-400 mt-1 uppercase">Windmill 2</span>
-                    </div>
-
-                    {/* Wildflowers fields and butterfly clusters */}
-                    <div className="absolute top-[350px] right-16 text-3xl opacity-40">🌷🌻</div>
-                    <div className="absolute top-[820px] left-14 text-4xl opacity-50">🌸🌼</div>
-                    <div className="absolute bottom-[280px] right-24 text-3xl opacity-40">🌻🌹</div>
-
-                    {/* Flying bird flocks singing soft loops */}
-                    <motion.div 
-                      animate={{ 
-                        x: ['-25%', '120%'],
-                        y: [600, 520, 600]
-                      }}
-                      transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute z-10 flex gap-1.5"
-                    >
-                      <span className="text-2xl filter drop-shadow">🐦</span>
-                      <span className="text-2xl filter drop-shadow">🐦</span>
-                    </motion.div>
-
-                    {/* Sound trigger loops label */}
-                    <div 
-                      className="absolute top-[720px] left-1/2 -translate-x-1/2 text-xs bg-emerald-400/20 px-3.5 py-1.5 border border-emerald-400/30 rounded-full flex items-center gap-1.5 text-emerald-200 pointer-events-auto cursor-pointer active:scale-95 transition-all shadow-md"
-                      onClick={() => {
-                        vibrate(5);
-                        playNatureSynthSound('chirp');
-                        if (showToast) showToast("🎶 Peaceful Skylark melody resonating in pastures!", "info");
-                      }}
-                    >
-                      🔊 PLAY MEADOW CHIRP
-                    </div>
-                  </div>
-                )}
-
-                {/* ─── WORLD DETAILS METADATA BILLBOARD ─── */}
-                <div className="absolute top-[4rem] left-6 right-6 z-20 bg-[#0c1424]/90 border border-white/5 p-4 rounded-3xl shadow-2xl flex items-center gap-3.5">
-                  <span className="text-3xl p-2 bg-slate-800/80 rounded-2xl shadow-inner select-none">
-                    {world.id === 1 ? '🏙️' : world.id === 2 ? '🌲' : world.id === 3 ? '🌵' : world.id === 4 ? '🦈' : world.id === 5 ? '🏔️' : '🌈'}
-                  </span>
-                  <div>
-                    <span className="text-[7.5px] font-mono font-black text-emerald-400 tracking-widest uppercase block">CURRENT WORLD CONQUEST [{world.id}/6]</span>
-                    <h2 className="font-extrabold text-sm text-white uppercase tracking-tight leading-none mt-1">{world.name}</h2>
-                    <p className="text-[9px] font-medium text-slate-300 italic mt-1 leading-tight">"{world.theme}"</p>
-                  </div>
-                </div>
-
-                {/* ─── COHESIVE NATURAL WAVING TRAIL CONNECTING ALL 11 LEVELS ─── */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-30" style={{ zIndex: 1 }}>
-                  <path 
-                    d="M 50% 1620 C 32% 1476, 18% 1368, 38% 1224 C 66% 1080, 82% 936, 68% 792 C 42% 648, 22% 504, 36% 360 C 50% 180, 50% 180, 50% 180" 
-                    fill="none" 
-                    stroke="#ffffff" 
-                    strokeWidth="18" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                  />
-                  <path 
-                    d="M 50% 1620 C 32% 1476, 18% 1368, 38% 1224 C 66% 1080, 82% 936, 68% 792 C 42% 648, 22% 504, 36% 360 C 50% 180, 50% 180, 50% 180" 
-                    fill="none" 
-                    stroke="#10b981" 
-                    strokeWidth="5" 
-                    strokeDasharray="12 10"
-                    strokeLinecap="round" 
-                  />
-                </svg>
-
-                {/* ─── DYNAMIC LEVEL RENDER WITH PRECISION PLACEMENT ─── */}
-                {world.levels.map((level, idx) => {
-                  const status = getLevelStatus(level.id);
-                  const isCompleted = status === 'completed';
-                  const isAvailable = status === 'available';
-                  const isLocked = status === 'locked';
-
-                  const coords = LEVEL_COORDS[idx];
-
-                  return (
-                    <div 
-                      key={level.id}
-                      id={`level-node-${level.id}`}
-                      style={{ left: coords.left, bottom: coords.bottom }}
-                      className="absolute z-30 -translate-x-1/2 flex flex-col items-center"
-                    >
-                      {/* Round Checkpoint Anchor */}
-                      <button
-                        onClick={() => handleLevelClick(level)}
-                        className={`relative rounded-full flex items-center justify-center transition-all duration-300 border-3 border-black shadow-2xl ${
-                          level.isBoss 
-                            ? 'w-15 h-15 scale-110 ring-4' 
-                            : 'w-12 h-12'
-                        } ${
-                          isCompleted 
-                            ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
-                            : isAvailable 
-                              ? 'bg-gradient-to-br from-orange-400 to-amber-500 text-white scale-115 ring-4 ring-orange-500/50 animate-[bounce_2.5s_infinite] border-amber-300' 
-                              : 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-75'
-                        }`}
-                      >
-                        {isCompleted ? (
-                          <Check size={level.isBoss ? 24 : 20} className="stroke-[4px]" />
-                        ) : isLocked ? (
-                          <Lock size={level.isBoss ? 16 : 14} className="stroke-[2.5px]" />
-                        ) : level.isBoss ? (
-                          <span className="font-black text-xs font-mono uppercase text-yellow-300 animate-pulse">BOSS</span>
-                        ) : (
-                          <span className="font-extrabold text-sm font-sans tracking-tight">{level.id}</span>
-                        )}
-
-                        {/* Pulsing ring wrapper for available checkpoints */}
-                        {isAvailable && (
-                          <div className="absolute -inset-2.5 rounded-full border-2 border-orange-400/60 animate-ping opacity-60" />
-                        )}
-                      </button>
-
-                      {/* Spark of Boss crown above boss levels */}
-                      {level.isBoss && !isCompleted && !isLocked && (
-                        <div className="absolute -top-5 z-40 bg-yellow-500/90 text-black text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-yellow-400 font-mono scale-95 shadow-md">
-                          <Trophy size={6.5} /> Apex Boss
+                        <div className="flex flex-col items-center">
+                          <span className="text-4xl filter drop-shadow">🐫</span>
+                          <span className="text-[7px] font-bold font-mono text-amber-305 bg-amber-950/90 border border-amber-500/20 px-1.5 py-0.5 rounded tracking-widest uppercase">CHEW SOIL</span>
                         </div>
-                      )}
+                      </motion.div>
 
-                      {/* Micro Stars ratings */}
-                      <div className="flex items-center gap-0.5 mt-1 bg-black/80 border border-slate-800/80 px-1.5 py-0.5 rounded-full">
-                        <Star size={7.5} className={isCompleted ? "text-yellow-400 fill-yellow-400" : "text-slate-600"} />
-                        <Star size={8} className={isCompleted ? "text-yellow-400 fill-yellow-400" : "text-slate-600"} />
-                        <Star size={7.5} className={isCompleted ? "text-yellow-400 fill-yellow-400" : "text-slate-600"} />
+                      {/* Clay Nomads Tents & Adobe Villages */}
+                      <div className="absolute top-[450px] right-12 text-3xl">⛺</div>
+                      <div className="absolute top-[1150px] left-16 text-4xl">🕌</div>
+
+                      {/* Cacti fields */}
+                      <div className="absolute top-[320px] left-20 text-3xl opacity-50">🌵</div>
+                      <div className="absolute top-[950px] right-20 text-3xl opacity-40">🌵</div>
+                      <div className="absolute bottom-[220px] left-24 text-4xl opacity-50">🌵</div>
+
+                      {/* Ancient Dinosaur Bones & Fossil remnants ☠️ */}
+                      <div className="absolute top-[620px] left-1/4 flex items-center gap-1 opacity-70 bg-[#090f1a]/70 p-2.5 rounded-2xl border border-amber-500/10">
+                        <span className="text-2xl">☠️</span>
+                        <span className="text-[8px] font-mono font-black text-amber-300 uppercase tracking-widest">Prehistoric Bones</span>
                       </div>
 
-                      {/* Hover / tap title bubble tooltip */}
-                      <div 
-                        onClick={() => status !== 'locked' && handleLevelClick(level)}
-                        className={`mt-1 max-w-[100px] px-2 py-0.5 bg-[#0f172a] border border-slate-800 rounded-lg text-center transition-all active:scale-95 cursor-pointer shadow-md ${
-                          isLocked ? 'opacity-40' : 'hover:bg-slate-900 border-slate-700'
-                        }`}
-                      >
-                        <p className="text-[7px] font-mono font-black text-amber-400 uppercase leading-none">LVL {level.id}</p>
-                        <p className="text-[8px] font-black text-white truncate max-w-[85px] uppercase leading-tight mt-0.5">{level.title}</p>
+                      <div className="absolute top-[1380px] right-1/4 flex items-center gap-1 opacity-60">
+                        <span className="text-xl">🦴</span>
+                        <span className="text-[7.5px] font-mono font-bold text-amber-200/50 uppercase tracking-widest">Fossil Site</span>
                       </div>
 
+                      {/* Dust particles drifting */}
+                      {Array.from({ length: 12 }).map((_, i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ 
+                            x: ['-5%', '105%'],
+                            y: [280 + (i * 120), 300 + (i * 120)]
+                          }}
+                          transition={{ duration: 12 + i, repeat: Infinity, ease: 'linear' }}
+                          className="absolute text-[8px] opacity-25 text-amber-200"
+                        >
+                          ░▒
+                        </motion.div>
+                      ))}
                     </div>
-                  );
-                })}
+                  )}
 
-              </div>
-            );
+                  {/* --- WORLD 4: OCEAN KINGDOM LANDSCAPE (Coral reefs, swimming fish, sharks) --- */}
+                  {world.id === 4 && (
+                    <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#0e3c5a]/40 to-[#051c2d]/80">
+                      
+                      {/* Coral Reef highlights */}
+                      <div className="absolute bottom-16 left-12 text-5xl opacity-45">🪸</div>
+                      <div className="absolute top-[420px] left-8 text-4xl opacity-35">🪸</div>
+                      <div className="absolute top-[980px] right-12 text-5xl opacity-50 animate-pulse">🪸</div>
+
+                      {/* Animated swimming shark moving back and forth, flipping direction */}
+                      <motion.div 
+                        animate={{ 
+                          x: ['110%', '-10%', '-10%', '110%', '110%'],
+                          scaleX: [1, 1, -1, -1, 1], // turn around facing direction
+                          y: [800, 810, 790, 810, 800]
+                        }}
+                        transition={{ 
+                          duration: 22, 
+                          repeat: Infinity, 
+                          times: [0, 0.45, 0.5, 0.95, 1.0],
+                          ease: 'easeInOut' 
+                        }}
+                        className="absolute z-10 pointer-events-auto cursor-pointer"
+                        title="Tap the shark"
+                        onClick={() => {
+                          vibrate(10);
+                          playNatureSynthSound('ocean_splash');
+                          if (showToast) showToast("🦈 Watch out! Swimming Shark guarding ocean coral reef depths!", "info");
+                        }}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span className="text-4xl filter drop-shadow">🦈</span>
+                          <span className="text-[7px] font-black font-mono text-cyan-405 bg-black/60 px-1 py-0.5 rounded border border-cyan-500/20 tracking-wider">TAP SPLASH</span>
+                        </div>
+                      </motion.div>
+
+                      {/* Moving Small colorful swimming fish cluster */}
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ 
+                            x: i % 2 === 0 ? ['-10%', '110%', '110%', '-10%', '-10%'] : ['110%', '-10%', '-10%', '110%', '110%'],
+                            scaleX: i % 2 === 0 ? [1, 1, -1, -1, 1] : [-1, -1, 1, 1, -1],
+                            y: [320 + (i * 200), 340 + (i * 200), 310 + (i * 200), 330 + (i * 200), 320 + (i * 200)]
+                          }}
+                          transition={{ 
+                            duration: 16 + i * 2, 
+                            repeat: Infinity, 
+                            times: [0, 0.45, 0.5, 0.95, 1.0],
+                            ease: 'easeInOut' 
+                          }}
+                          className="absolute text-xl flex gap-1 items-center"
+                        >
+                          <span>🐠</span>
+                          <span className="text-[8px] font-mono text-cyan-300">🐠</span>
+                        </motion.div>
+                      ))}
+
+                      {/* Swaying coconut Palm trees */}
+                      <div className="absolute top-[280px] right-8 w-20 h-20 flex flex-col items-center">
+                        <span className="text-3xl animate-bounce" style={{ animationDuration: '4s' }}>🌴</span>
+                        <span className="text-[7px] text-slate-450 uppercase font-mono mt-1">Islet</span>
+                      </div>
+
+                      {/* Animated Sailing Boat floating on the aqua water */}
+                      <motion.div
+                        animate={{ 
+                          x: ['-10%', '110%'],
+                          y: [520, 540, 520],
+                          rotate: [-3, 3, -3]
+                        }}
+                        transition={{ duration: 24, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute pointer-events-auto cursor-pointer"
+                        onClick={() => {
+                          vibrate(6);
+                          playNatureSynthSound('river');
+                          if (showToast) showToast("⛵ Beautiful sailboat sailing through oceanic waves!", 'info');
+                        }}
+                      >
+                        <span className="text-3xl filter drop-shadow">⛵</span>
+                      </motion.div>
+
+                      {/* Ocean water bubbles rising up */}
+                      {Array.from({ length: 15 }).map((_, i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ 
+                            y: ['105%', '-5%'],
+                            x: [Math.random() * 450, (Math.random() * 450) + 40]
+                          }}
+                          transition={{ 
+                            duration: 8 + Math.random() * 6,
+                            repeat: Infinity,
+                            ease: 'easeInOut',
+                            delay: Math.random() * 5
+                          }}
+                          className="absolute text-xs text-cyan-300 opacity-40"
+                        >
+                          🫧
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* --- WORLD 5: FROZEN PEAKS LANDSCAPE (Ice mountains, tall glaciers, ice sounds, blizzard) --- */}
+                  {world.id === 5 && (
+                    <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#0a182c]/40 via-transparent to-[#050f1d]/85">
+                      
+                      {/* Spectacular glowing Neon Aurora Borealis Ribbon */}
+                      <div className="absolute top-10 inset-x-0 h-44 bg-gradient-to-r from-purple-500/10 via-cyan-400/10 to-indigo-500/10 animate-pulse blur-3xl pointer-events-none z-15" />
+
+                      {/* Glaciers/Icicles on the trail peaks */}
+                      <div className="absolute top-[320px] left-12 text-3xl opacity-50">🧊</div>
+                      <div className="absolute top-[850px] right-14 text-4xl opacity-35">🧊</div>
+                      <div className="absolute top-[1350px] left-16 text-3xl opacity-45">🧊</div>
+
+                      {/* Interactive deep ice mountain crackling sound */}
+                      <div 
+                        className="absolute top-[920px] right-12 z-25 bg-cyan-500/15 border border-cyan-400/30 px-3.5 py-1.5 rounded-full text-cyan-200 text-xs font-black uppercase font-mono shadow-md cursor-pointer pointer-events-auto active:scale-95 transition-all"
+                        onClick={() => {
+                          vibrate(8);
+                          playNatureSynthSound('ice');
+                          if (showToast) showToast("❄️ crack! Deep icy resonance echo in snow mountain glacier!", "info");
+                        }}
+                      >
+                        🔊 TAP ICE CRACK 🏔️
+                      </div>
+
+                      {/* Cozy Cabin / Frozen Snow Village indicators */}
+                      <div className="absolute top-[620px] left-1/4 w-[110px] bg-slate-900/80 border border-sky-400/20 p-2.5 rounded-2xl flex flex-col items-center">
+                        <span className="text-2xl animate-pulse">🏡</span>
+                        <span className="text-[7.5px] font-mono font-black text-sky-450 uppercase mt-1">Glacier Cabin</span>
+                      </div>
+
+                      <div className="absolute top-[1150px] right-1/4 w-[120px] bg-slate-900/80 border border-sky-400/20 p-2.5 rounded-2xl flex flex-col items-center">
+                        <span className="text-2xl">🏚️</span>
+                        <span className="text-[7.5px] font-mono font-black text-slate-400 uppercase mt-1">Ancient Ice Dome</span>
+                      </div>
+
+                      {/* Freezing Glacier mountain peaks in backdrops */}
+                      <div className="absolute top-[160px] inset-x-0 flex justify-around">
+                        <span className="text-6xl opacity-35">🏔️</span>
+                        <span className="text-7xl opacity-30">🏔️</span>
+                      </div>
+
+                      {/* Drifting blizzard snowflakes */}
+                      {Array.from({ length: 25 }).map((_, i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ 
+                            y: ['-5%', '105%'],
+                            x: [Math.random() * 500, (Math.random() * 500) - 50]
+                          }}
+                          transition={{ 
+                            duration: 4 + Math.random() * 4,
+                            repeat: Infinity,
+                            ease: 'linear',
+                            delay: Math.random() * 4
+                          }}
+                          className="absolute text-sky-200/60 text-xs"
+                        >
+                          ❄️
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* --- WORLD 6: SKY PLAINS LANDSCAPE (Plane flat grasslands, rotating windmills, moving birds, chirps) --- */}
+                  {world.id === 6 && (
+                    <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-b from-yellow-500/5 via-transparent to-yellow-500/15">
+                      
+                      {/* Double Magical Rainbow graphic backdrops */}
+                      <div className="absolute top-16 left-1/2 -translate-x-1/2 w-80 h-40 border-t-8 border-r-8 border-l-8 border-red-500/15 rounded-full filter blur-[1px] pointer-events-none" />
+                      <div className="absolute top-[80px] left-1/2 -translate-x-1/2 w-[270px] h-[135px] border-t-8 border-r-8 border-l-8 border-yellow-400/10 rounded-full filter blur-[2px] pointer-events-none" />
+
+                      {/* Flat Grass Plain Layered Aesthetics */}
+                      <div className="absolute inset-0 bg-[#071307]/50 pointer-events-none" />
+                      <div className="absolute bottom-10 inset-x-0 h-40 bg-emerald-900/15 rounded-t-[100%] filter blur-xl" />
+
+                      {/* Sovereign citadel gate on peak */}
+                      <div className="absolute top-[120px] left-1/2 -translate-x-1/2 w-48 bg-slate-900/95 border-3 border-yellow-500 p-4 rounded-3xl text-center shadow-xl">
+                        <p className="text-[8px] font-mono font-black text-yellow-400 uppercase tracking-widest animate-pulse">CITADEL SUMMIT</p>
+                        <span className="text-3xl my-1.5 block">👑🏛️</span>
+                        <span className="text-[9px] font-bold text-slate-300">Legendary Nexora Tree thrives inside the sacred gates.</span>
+                      </div>
+
+                      {/* Interactive soaring skylark birds with bray chirps */}
+                      <motion.div
+                        animate={{ 
+                          x: ['-15%', '115%'],
+                          y: [600, 520, 610, 550, 600],
+                        }}
+                        transition={{ 
+                          duration: 20, 
+                          repeat: Infinity, 
+                          ease: 'easeInOut' 
+                        }}
+                        className="absolute z-20 pointer-events-auto cursor-pointer flex gap-2"
+                        title="Tap the birds"
+                        onClick={() => {
+                          vibrate(5);
+                          playNatureSynthSound('chirp');
+                          if (showToast) showToast("🐦 chirps! Sovereign Skylark singing musical tones!", "info");
+                        }}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span className="text-3xl filter drop-shadow">🕊️</span>
+                          <span className="text-[7px] font-mono font-black text-emerald-400 bg-emerald-950/80 px-1 py-0.5 rounded border border-emerald-500/20 uppercase">TAP CHIRP</span>
+                        </div>
+                      </motion.div>
+
+                      {/* Dynamic Rotating Windmills built with CSS transitions */}
+                      <div className="absolute top-[480px] left-12 w-24 h-32 flex flex-col items-center">
+                        <motion.div 
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+                          className="text-4xl"
+                        >
+                          ☸️
+                        </motion.div>
+                        <span className="text-[7.5px] font-mono font-black text-emerald-400 mt-1 uppercase">Windmill 1</span>
+                      </div>
+
+                      <div className="absolute top-[1020px] right-12 w-24 h-32 flex flex-col items-center">
+                        <motion.div 
+                          animate={{ rotate: -360 }}
+                          transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+                          className="text-4xl"
+                        >
+                          ☸️
+                        </motion.div>
+                        <span className="text-[7.5px] font-mono font-black text-emerald-400 mt-1 uppercase">Windmill 2</span>
+                      </div>
+
+                      {/* Wildflowers fields and butterfly clusters */}
+                      <div className="absolute top-[350px] right-16 text-3xl opacity-40">🌷🌻</div>
+                      <div className="absolute top-[820px] left-14 text-4xl opacity-50">🌸🌼</div>
+                      <div className="absolute bottom-[280px] right-24 text-3xl opacity-40">🌻🌹</div>
+                    </div>
+                  )}
+
+                  {/* ─── COHESIVE NATURAL WAVING TRAIL CONNECTING ALL 11 LEVELS ─── */}
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-35" style={{ zIndex: 1 }}>
+                    <path 
+                      d="M 50% 1620 C 32% 1476, 18% 1368, 38% 1224 C 66% 1080, 82% 936, 68% 792 C 42% 648, 22% 504, 36% 360 C 50% 180, 50% 180, 50% 180" 
+                      fill="none" 
+                      stroke="#ffffff" 
+                      strokeWidth="18" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                    />
+                    <path 
+                      d="M 50% 1620 C 32% 1476, 18% 1368, 38% 1224 C 66% 1080, 82% 936, 68% 792 C 42% 648, 22% 504, 36% 360 C 50% 180, 50% 180, 50% 180" 
+                      fill="none" 
+                      stroke="#10b981" 
+                      strokeWidth="5" 
+                      strokeDasharray="12 10"
+                      strokeLinecap="round" 
+                    />
+                  </svg>
+
+                  {/* ─── DYNAMIC LEVEL RENDER WITH PRECISION PLACEMENT ─── */}
+                  {world.levels.map((level, idx) => {
+                    const status = getLevelStatus(level.id);
+                    const isCompleted = status === 'completed';
+                    const isAvailable = status === 'available';
+                    const isLocked = status === 'locked';
+
+                    const coords = LEVEL_COORDS[idx];
+
+                    return (
+                      <div 
+                        key={level.id}
+                        id={`level-node-${level.id}`}
+                        style={{ left: coords.left, bottom: coords.bottom }}
+                        className="absolute z-30 -translate-x-1/2 flex flex-col items-center"
+                      >
+                        {/* Round Checkpoint Anchor */}
+                        <button
+                          onClick={() => handleLevelClick(level)}
+                          className={`relative rounded-full flex items-center justify-center transition-all duration-300 border-3 border-black shadow-2xl ${
+                            level.isBoss 
+                              ? 'w-15 h-15 scale-110 ring-4' 
+                              : 'w-12 h-12'
+                          } ${
+                            isCompleted 
+                              ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
+                              : isAvailable 
+                                ? 'bg-gradient-to-br from-orange-400 to-amber-500 text-white scale-115 ring-4 ring-orange-500/50 animate-[bounce_2.5s_infinite] border-amber-300' 
+                                : 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-75'
+                          }`}
+                        >
+                          {isCompleted ? (
+                            <Check size={level.isBoss ? 24 : 20} className="stroke-[4px]" />
+                          ) : isLocked ? (
+                            <Lock size={level.isBoss ? 16 : 14} className="stroke-[2.5px]" />
+                          ) : level.isBoss ? (
+                            <span className="font-black text-xs font-mono uppercase text-yellow-300 animate-pulse">BOSS</span>
+                          ) : (
+                            <span className="font-extrabold text-sm font-sans tracking-tight">{level.id}</span>
+                          )}
+
+                          {/* Pulsing ring wrapper for available checkpoints */}
+                          {isAvailable && (
+                            <div className="absolute -inset-2.5 rounded-full border-2 border-orange-400/60 animate-ping opacity-60" />
+                          )}
+                        </button>
+
+                        {/* Spark of Boss crown above boss levels */}
+                        {level.isBoss && !isCompleted && !isLocked && (
+                          <div className="absolute -top-5 z-40 bg-yellow-500/90 text-black text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-yellow-400 font-mono scale-95 shadow-md">
+                            <Trophy size={6.5} /> Apex Boss
+                          </div>
+                        )}
+
+                        {/* Micro Stars ratings */}
+                        <div className="flex items-center gap-0.5 mt-1 bg-black/80 border border-slate-800/80 px-1.5 py-0.5 rounded-full">
+                          <Star size={7.5} className={isCompleted ? "text-yellow-400 fill-yellow-400" : "text-slate-600"} />
+                          <Star size={8} className={isCompleted ? "text-yellow-400 fill-yellow-400" : "text-slate-600"} />
+                          <Star size={7.5} className={isCompleted ? "text-yellow-400 fill-yellow-400" : "text-slate-600"} />
+                        </div>
+
+                        {/* Hover / tap title bubble tooltip */}
+                        <div 
+                          onClick={() => status !== 'locked' && handleLevelClick(level)}
+                          className={`mt-1 max-w-[100px] px-2 py-0.5 bg-[#0f172a] border border-slate-800 rounded-lg text-center transition-all active:scale-95 cursor-pointer shadow-md ${
+                            isLocked ? 'opacity-40' : 'hover:bg-slate-900 border-slate-700'
+                          }`}
+                        >
+                          <p className="text-[7px] font-mono font-black text-amber-400 uppercase leading-none">LVL {level.id}</p>
+                          <p className="text-[8px] font-black text-white truncate max-w-[85px] uppercase leading-tight mt-0.5">{level.title}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            });
           })()}
 
         </div>

@@ -5008,7 +5008,7 @@ export default function App() {
             )}
 
           <main
-            className={`flex-1 flex flex-col w-full max-w-7xl mx-auto ${(activeScreen as string) === "subscription" || (activeScreen as string) === "archives" || (activeScreen as string) === "leaderboard" || (activeScreen as string) === "admin" || showArchitectLab ? "px-0 sm:px-0 pb-0 pt-0 max-w-none" : "px-4 sm:px-6 pb-32"}`}
+            className={`flex-1 flex flex-col w-full max-w-7xl mx-auto ${(activeScreen as string) === "subscription" || (activeScreen as string) === "archives" || (activeScreen as string) === "leaderboard" || (activeScreen as string) === "admin" || (activeScreen as string) === "garden" || showArchitectLab ? "px-0 sm:px-0 pb-0 pt-0 max-w-none" : "px-4 sm:px-6 pb-32"}`}
           >
             <AnimatePresence mode="wait">
               {showArchitectLab ? (
