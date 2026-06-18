@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Lock, ArrowLeft, Coins, Star, Trophy, Sparkles, 
-  Check, Volume2, Info, Compass, HelpCircle, AlertCircle, Play, ShieldAlert, CheckSquare, Plus, CheckCircle
+  Check, Volume2, Info, Compass, HelpCircle, AlertCircle, Play, ShieldAlert, CheckSquare, Plus, CheckCircle,
+  Flame, Gem, ShoppingBag, Backpack, BookOpen, Map, Menu, Sprout, Wind
 } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { UserSettings, UserStats } from '../types';
@@ -83,36 +84,6 @@ const playNatureSynthSound = (type: string) => {
         osc.start(start);
         osc.stop(start + 0.22);
       }
-    } else if (type === 'camel') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(110, now);
-      osc.frequency.linearRampToValueAtTime(70, now + 0.35);
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-      
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(350, now);
-      
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.45);
-    } else if (type === 'ice') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(2000, now);
-      osc.frequency.exponentialRampToValueAtTime(350, now + 0.3);
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.35);
     } else if (type === 'victory') {
       const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99];
       notes.forEach((freq, idx) => {
@@ -139,8 +110,20 @@ const playNatureSynthSound = (type: string) => {
       gain.connect(ctx.destination);
       osc.start(now);
       osc.stop(now + 0.06);
+    } else if (type === 'bus') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(290, now);
+      osc.frequency.setValueAtTime(290, now + 0.1);
+      osc.frequency.setValueAtTime(340, now + 0.15);
+      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.32);
     } else if (type === 'boss') {
-      // Powerful, epic boss sound
       const osc1 = ctx.createOscillator();
       const osc2 = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -168,165 +151,42 @@ const playNatureSynthSound = (type: string) => {
   }
 };
 
-// Hardcoded coordinates for the 11 levels winding naturally.
-// Each world uses these 11 position presets for a gorgeous curved trail.
+// Precise coordinates for the 10 levels winding naturally in the City of Beginnings World 1.
 const LEVEL_COORDS = [
-  { left: '50%', bottom: '8%' },   // Level 1: Ground floor / Entry
-  { left: '32%', bottom: '16%' },  // Level 2
-  { left: '18%', bottom: '24%' },  // Level 3
-  { left: '38%', bottom: '32%' },  // Level 4
-  { left: '66%', bottom: '40%' },  // Level 5
-  { left: '82%', bottom: '48%' },  // Level 6
-  { left: '68%', bottom: '56%' },  // Level 7
-  { left: '42%', bottom: '64%' },  // Level 8
-  { left: '22%', bottom: '72%' },  // Level 9
-  { left: '36%', bottom: '80%' },  // Level 10
-  { left: '50%', bottom: '90%' }   // Level 11: BOSS
+  { left: '46%', bottom: '6%', speech: 'Every journey begins here! 🏠' },
+  { left: '58%', bottom: '15%', speech: 'Nice start! Take your steps! 🚶' },
+  { left: '44%', bottom: '24%', speech: "You're doing fantastic! 🔥" },
+  { left: '48%', bottom: '33%', speech: 'Unlock deeper focus values! 👍' },
+  { left: '36%', bottom: '42%', speech: 'Take a break under shady trees! 🌸' },
+  { left: '52%', bottom: '51%', speech: 'Drip fresh focus fountain drops! ⛲' },
+  { left: '60%', bottom: '60%', speech: "Stay radiant! You're glowing! ✨" },
+  { left: '50%', bottom: '70%', speech: 'A metropolitan intersection insight! 🚦' },
+  { left: '60%', bottom: '80%', speech: "Peer over tower structures! 🏢" },
+  { left: '50%', bottom: '88%', speech: 'HQ Rooftop Summit Climax Peak! 👑' }
 ];
 
 export const WORLDS_DATA: World[] = [
   {
     id: 1,
-    name: "World 1 — Beginner City",
-    theme: "The dawn of growth, quiet residential streets, green parks, and warm city lights.",
+    name: "City of New Horizons",
+    theme: "A modern city full of opportunities, growth and new beginnings. Today is the beginning of my journey.",
     badge: "City Pathfinder 🏙️",
     unlockedSeed: "Beginner Seed",
     seedDescription: "Produces resilient daisies and local urban flora. Essential starter plant.",
-    bgColor: "bg-slate-900",
-    skyColor: "from-sky-500/10 to-transparent",
+    bgColor: "bg-[#82cd73]", // Lush green playground parkland canvas
+    skyColor: "from-sky-300 via-sky-200 to-sky-100/50",
     accentColor: "indigo",
     levels: [
-      { id: 1, title: "Dawn Path", isBoss: false, requirementsDescription: "Complete at least 2 official challenges and 3 custom plans today.", coinsReward: 15, xpReward: 20 },
+      { id: 1, title: "Home Base", isBoss: false, requirementsDescription: "Complete at least 2 official challenges and 3 custom plans today.", coinsReward: 15, xpReward: 20 },
       { id: 2, title: "Residential Lane", isBoss: false, requirementsDescription: "Carry out today's habits. Sidestep busy intersections safely.", coinsReward: 20, xpReward: 25 },
-      { id: 3, title: "Downtown Boulevard", isBoss: false, requirementsDescription: "Log hydration and tasks. Advance past skyscrapers.", coinsReward: 25, xpReward: 30 },
+      { id: 3, title: "Riverwalk View", isBoss: false, requirementsDescription: "Log hydration and tasks. Advance past skyscrapers.", coinsReward: 25, xpReward: 30 },
       { id: 4, title: "Cozy Cafe Focus", isBoss: false, requirementsDescription: "Clear routine limits under morning sun. Stay mentally refreshed.", coinsReward: 30, xpReward: 35 },
-      { id: 5, title: "Central Park Rest", isBoss: false, requirementsDescription: "Take an active pause. Verify 2 official achievements to clear.", coinsReward: 35, xpReward: 40 },
-      { id: 6, title: "Watering Fountain", isBoss: false, requirementsDescription: "Refresh cognitive batteries. Complete your focus targets.", coinsReward: 40, xpReward: 45 },
-      { id: 7, title: "Subway Station", isBoss: false, requirementsDescription: "Maintain clear mental vision inside dense bustling trains.", coinsReward: 45, xpReward: 50 },
-      { id: 8, title: "Skyline Overlook", isBoss: false, requirementsDescription: "Peer over metropolitan lights. Check off 3 custom logs.", coinsReward: 50, xpReward: 60 },
-      { id: 9, title: "Grid Library", isBoss: false, requirementsDescription: "Review historic logs and study core mindfulness guidelines.", coinsReward: 55, xpReward: 70 },
-      { id: 10, title: "Pioneer Crossway", isBoss: false, requirementsDescription: "The final preparation threshold. Double check your custom goals.", coinsReward: 60, xpReward: 80 },
-      { id: 11, title: "Apex Skyscraper Boss", isBoss: true, requirementsDescription: "World 1 Climax. Master your habits to claim the Beginner Seed!", coinsReward: 100, xpReward: 150 }
-    ]
-  },
-  {
-    id: 2,
-    name: "World 2 — Redwood Forest",
-    theme: "Vast primeval forests with giant towering redwood trees, waterfalls, and timber bridges.",
-    badge: "Redwood Ranger 🌲",
-    unlockedSeed: "Redwood Seed",
-    seedDescription: "Grows legendary giant forest conifers. Boosts continuous streak bonuses.",
-    bgColor: "bg-emerald-950",
-    skyColor: "from-emerald-500/10 to-transparent",
-    accentColor: "emerald",
-    levels: [
-      { id: 12, title: "Canopy Arch", isBoss: false, requirementsDescription: "Cross deep under historic giant leaves. Complete 2 official targets.", coinsReward: 25, xpReward: 35 },
-      { id: 13, title: "Suspension Bridge", isBoss: false, requirementsDescription: "Cross roaring wild creeks safely on hanging solid logs.", coinsReward: 30, xpReward: 40 },
-      { id: 14, title: "Babbling Creek", isBoss: false, requirementsDescription: "Keep hydrated. Let mental stresses drift away like falling moss leaves.", coinsReward: 35, xpReward: 45 },
-      { id: 15, title: "Deep Moss Glen", isBoss: false, requirementsDescription: "Step gingerly on ancient green stones. Keep streaks safe.", coinsReward: 40, xpReward: 50 },
-      { id: 16, title: "Wild Mushroom Patch", isBoss: false, requirementsDescription: "Explore nature's micro-secrets. Stay consistent under heavy canopies.", coinsReward: 45, xpReward: 55 },
-      { id: 17, title: "Forest Ranger Cabin", isBoss: false, requirementsDescription: "Rest under logs. Verify custom plans done to warm up under the hearth.", coinsReward: 50, xpReward: 60 },
-      { id: 18, title: "Cascading Waterfall", isBoss: false, requirementsDescription: "Listen closely to falling deep mountain rivers. Clear focus criteria.", coinsReward: 55, xpReward: 70 },
-      { id: 19, title: "Hidden Acorn Cave", isBoss: false, requirementsDescription: "Retrieve forgotten physical goals stored deep in the earth.", coinsReward: 60, xpReward: 80 },
-      { id: 20, title: "Sun-Ray Grove", isBoss: false, requirementsDescription: "Sip golden daylight filtering down giant redwood redwoods.", coinsReward: 65, xpReward: 90 },
-      { id: 21, title: "Ecotourism Trail", isBoss: false, requirementsDescription: "Lead colleagues through redwood flora safely. Maintain checklists.", coinsReward: 70, xpReward: 100 },
-      { id: 22, title: "Elder Druid Oak Boss", isBoss: true, requirementsDescription: "World 2 Climax. Best forest hurdles to claim the Redwood Seed!", coinsReward: 120, xpReward: 180 }
-    ]
-  },
-  {
-    id: 3,
-    name: "World 3 — Golden Desert",
-    theme: "Endless shifting orange silica sands, baking suns, prehistoric dinosaur bones, and cacti fields.",
-    badge: "Desert Mirage 🌵",
-    unlockedSeed: "Golden Cactus",
-    seedDescription: "Sprouts resilient golden desert cacti. Maximizes daily focus tolerance.",
-    bgColor: "bg-[#3e230a]",
-    skyColor: "from-amber-500/10 to-transparent",
-    accentColor: "amber",
-    levels: [
-      { id: 23, title: "Cactus Outpost", isBoss: false, requirementsDescription: "Step past spiky local saguaros. Clear official tasks to keep safe of spines.", coinsReward: 30, xpReward: 45 },
-      { id: 24, title: "Shifting Dunes", isBoss: false, requirementsDescription: "Walk over golden dry sand grains. Maintain strong balanced legs.", coinsReward: 35, xpReward: 50 },
-      { id: 25, title: "Sun-Parched Ruins", isBoss: false, requirementsDescription: "Discover ancient adobe monuments. Track custom habits today.", coinsReward: 40, xpReward: 55 },
-      { id: 26, title: "Fossilized Bones", isBoss: false, requirementsDescription: "Examine prehistoric skeletons buried deep under baking soils.", coinsReward: 45, xpReward: 60 },
-      { id: 27, title: "Oasis Springs", isBoss: false, requirementsDescription: "Refresh with pure spring water. Verify 2 completed official goals.", coinsReward: 50, xpReward: 65 },
-      { id: 28, title: "Mirage Tunnel", isBoss: false, requirementsDescription: "Avoid dynamic desert illusions by keeping strict mental focus.", coinsReward: 55, xpReward: 75 },
-      { id: 29, title: "Clay Adobe Arch", isBoss: false, requirementsDescription: "Pass under historic ruins built by ancient desert nomads.", coinsReward: 60, xpReward: 85 },
-      { id: 30, title: "Scorching Silt", isBoss: false, requirementsDescription: "Walk confidently on hot dry earth. Maintain high discipline.", coinsReward: 65, xpReward: 95 },
-      { id: 31, title: "Silent Obelisk", isBoss: false, requirementsDescription: "Absorb the knowledge inscribed on ancient clay monument columns.", coinsReward: 70, xpReward: 105 },
-      { id: 32, title: "Nomad Merchant", isBoss: false, requirementsDescription: "Trade details and logs for tips to handle harsh desert weather.", coinsReward: 75, xpReward: 115 },
-      { id: 33, title: "Sphinx Gold Pyramid Boss", isBoss: true, requirementsDescription: "World 3 Climax. Best the sand beast to claim the Golden Cactus!", coinsReward: 140, xpReward: 210 }
-    ]
-  },
-  {
-    id: 4,
-    name: "World 4 — Ocean Kingdom",
-    theme: "Crystal clear turquoise reef water, swaying palm beaches, active seabirds, coral reefs, and sharks.",
-    badge: "Oceanic Corsair 🦈",
-    unlockedSeed: "Coral Plant",
-    seedDescription: "Grows bioluminescent azure deep sea coral. Generates ambient sleep vibes.",
-    bgColor: "bg-[#0b273b]",
-    skyColor: "from-cyan-500/10 to-transparent",
-    accentColor: "cyan",
-    levels: [
-      { id: 34, title: "Shallow Beaches", isBoss: false, requirementsDescription: "Wade into beautiful blue waters. Clear 2 official daily metrics.", coinsReward: 35, xpReward: 55 },
-      { id: 35, title: "Swaying Palms", isBoss: false, requirementsDescription: "Walk along sandy docks under gentle tropical sea winds.", coinsReward: 40, xpReward: 60 },
-      { id: 36, title: "Seagull Outpost", isBoss: false, requirementsDescription: "Observe flying oceanic birds. Match habits to maintain momentum.", coinsReward: 45, xpReward: 65 },
-      { id: 37, title: "Coral Cathedral", isBoss: false, requirementsDescription: "Observe glowing underwater coral clusters and active reefs.", coinsReward: 50, xpReward: 75 },
-      { id: 38, title: "Drifting Sailboat", isBoss: false, requirementsDescription: "Sail smoothly on clear turquoise tides. Handle custom agendas.", coinsReward: 55, xpReward: 85 },
-      { id: 39, title: "Shell Haven", isBoss: false, requirementsDescription: "Gather gorgeous sea shells on secret islands. Complete today's targets.", coinsReward: 60, xpReward: 95 },
-      { id: 40, title: "Deep Aquamarine Wall", isBoss: false, requirementsDescription: "Dive down into deep underwater trenches. Breathe deeply and flow.", coinsReward: 65, xpReward: 105 },
-      { id: 41, title: "Shark Sanctuary", isBoss: false, requirementsDescription: "Swim safely past big underwater apex sharks. Maintain active focus.", coinsReward: 70, xpReward: 115 },
-      { id: 42, title: "Submerged Columns", isBoss: false, requirementsDescription: "Investigate beautiful Atlantis pillars covered in sea leaves.", coinsReward: 75, xpReward: 125 },
-      { id: 43, title: "Lagoon Overlook", isBoss: false, requirementsDescription: "Sip coconut milk on tropical sandbars. Polish your streaks.", coinsReward: 80, xpReward: 135 },
-      { id: 44, title: "Poseidon Trident Boss", isBoss: true, requirementsDescription: "World 4 Climax. Conquer deep tides to claim the Coral Plant!", coinsReward: 160, xpReward: 250 }
-    ]
-  },
-  {
-    id: 5,
-    name: "World 5 — Frozen Peaks",
-    theme: "Towering snow mountains, glaciers, ice caves, and swirling fluorescent aurora borealis lights.",
-    badge: "Glacier Sovereign 🏔️",
-    unlockedSeed: "Ice Flower",
-    seedDescription: "Blooms frosted freezing winter lotus. Boosts extreme physical focus.",
-    bgColor: "bg-sky-950",
-    skyColor: "from-sky-500/15 to-transparent",
-    accentColor: "sky",
-    levels: [
-      { id: 45, title: "Frosted Foothills", isBoss: false, requirementsDescription: "Ascend past the snowy limits. Log 2 official challenges.", coinsReward: 45, xpReward: 70 },
-      { id: 46, title: "Shivering Pass", isBoss: false, requirementsDescription: "Brave cold biting breezes. Maintain consistency under snowy peaks.", coinsReward: 50, xpReward: 80 },
-      { id: 47, title: "Icicle Cathedral", isBoss: false, requirementsDescription: "Pass under giant icicles hanging from frosted rock walls.", coinsReward: 55, xpReward: 90 },
-      { id: 48, title: "Aurora Canopy", isBoss: false, requirementsDescription: "View magical dancing violet aurora lights. Keep daily logs fully green.", coinsReward: 60, xpReward: 100 },
-      { id: 49, title: "Glacier Crevasse", isBoss: false, requirementsDescription: "Cross deep cracks in solid ice glaciers. Walk carefully and focus.", coinsReward: 65, xpReward: 110 },
-      { id: 50, title: "Deep Ice Caves", isBoss: false, requirementsDescription: "Sprout crystal habits in secret underground frosted pathways.", coinsReward: 70, xpReward: 120 },
-      { id: 51, title: "Slumbering Village", isBoss: false, requirementsDescription: "Warm up with cozy cabin fireplace embers. Finish 3 custom plans.", coinsReward: 75, xpReward: 130 },
-      { id: 52, title: "Avalanche Lookout", isBoss: false, requirementsDescription: "Scent fresh clean pine air on snowy heights. Guard your mental state.", coinsReward: 80, xpReward: 140 },
-      { id: 53, title: "Frostbite Trail", isBoss: false, requirementsDescription: "Maintain clear routine ticks to keep frostbite away from habits.", coinsReward: 85, xpReward: 155 },
-      { id: 54, title: "Frozen Mirror Lake", isBoss: false, requirementsDescription: "Reflect on progress on ice streams. Keep body active with tasks.", coinsReward: 90, xpReward: 170 },
-      { id: 55, title: "Everest Emperor Boss", isBoss: true, requirementsDescription: "World 5 Climax. Master glacier trails to claim the Ice Flower!", coinsReward: 180, xpReward: 300 }
-    ]
-  },
-  {
-    id: 6,
-    name: "World 6 — Sky Plains",
-    theme: "Endless emerald green pastures, wildflowers, spinning warm windmills, and gold rainbows.",
-    badge: "Sovereign of Nexora 👑",
-    unlockedSeed: "Legendary Nexora Tree",
-    seedDescription: "The absolute crown jewel plant. Radiates sovereign positive aura.",
-    bgColor: "bg-emerald-900",
-    skyColor: "from-yellow-500/10 to-transparent",
-    accentColor: "yellow",
-    levels: [
-      { id: 56, title: "Whispering Pastures", isBoss: false, requirementsDescription: "Step into pristine valleys filled with dandelions and light winds.", coinsReward: 50, xpReward: 80 },
-      { id: 57, title: "Rolling Emerald Hills", isBoss: false, requirementsDescription: "Walk up majestic wildflower hills. Check off 2 official goals.", coinsReward: 55, xpReward: 90 },
-      { id: 58, title: "Spinning Windmills", isBoss: false, requirementsDescription: "Observe sails spinning gracefully. Sync mental gears with goals.", coinsReward: 60, xpReward: 100 },
-      { id: 59, title: "Ethereal Rainbow", isBoss: false, requirementsDescription: "Cross under gold rainbows. Keep focus aligned and beautiful.", coinsReward: 65, xpReward: 110 },
-      { id: 60, title: "Butterfly Meadows", isBoss: false, requirementsDescription: "Walk among hundreds of dancing yellow butterflies. Breath deeply.", coinsReward: 70, xpReward: 120 },
-      { id: 61, title: "Highland Flute Fields", isBoss: false, requirementsDescription: "Hear lovely acoustic songs. Fill logs with completed checklist ticks.", coinsReward: 75, xpReward: 135 },
-      { id: 62, title: "Eagle Nest Lookout", isBoss: false, requirementsDescription: "Peer down at the lands below. Savor the extreme freedom you built.", coinsReward: 80, xpReward: 150 },
-      { id: 63, title: "Breezy Wildflowers", isBoss: false, requirementsDescription: "Smell fresh fields of blooming tulips and red roses.", coinsReward: 85, xpReward: 165 },
-      { id: 64, title: "Celestial Starway", isBoss: false, requirementsDescription: "Walk near the clouds. Connect your habits with long-term dreams.", coinsReward: 90, xpReward: 180 },
-      { id: 65, title: "Sovereign Gates", isBoss: false, requirementsDescription: "Reach the ivory threshold of the grand garden heights. Almost there!", coinsReward: 100, xpReward: 200 },
-      { id: 66, title: "The Legendary Nexora Tree Peak", isBoss: true, requirementsDescription: "The ultimate climax. Master self-improvement to claim the Legendary Nexora Tree!", coinsReward: 300, xpReward: 500 }
+      { id: 5, title: "Central Plaza Rest", isBoss: false, requirementsDescription: "Take an active pause. Verify 2 official achievements to clear.", coinsReward: 35, xpReward: 40 },
+      { id: 6, title: "Stay Consistent", isBoss: false, requirementsDescription: "Refresh cognitive batteries. Complete your focus targets.", coinsReward: 40, xpReward: 45 },
+      { id: 7, title: "Learning Center", isBoss: false, requirementsDescription: "Maintain clear mental vision inside dense bustling streams.", coinsReward: 45, xpReward: 50 },
+      { id: 8, title: "Traffic Crossway", isBoss: false, requirementsDescription: "Peer over metropolitan lights. Check off 3 custom logs.", coinsReward: 50, xpReward: 60 },
+      { id: 9, title: "Nexora Tower Peak", isBoss: false, requirementsDescription: "Review historic logs and study core mindfulness guidelines.", coinsReward: 55, xpReward: 70 },
+      { id: 10, title: "Rooftop Horizon", isBoss: true, requirementsDescription: "World 1 Climax. Reach the Nexora HQ rooftop and claim the Beginner Seed!", coinsReward: 150, xpReward: 200 }
     ]
   }
 ];
@@ -352,6 +212,7 @@ export function AdventureMap({
   const [selectedLevel, setSelectedLevel] = useState<MapLevel | null>(null);
   const [showCelebration, setShowCelebration] = useState<boolean>(false);
   const [currentWorldIdx, setCurrentWorldIdx] = useState<number>(0);
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
   
   const [celebrationDetails, setCelebrationDetails] = useState<{
     title: string;
@@ -367,7 +228,7 @@ export function AdventureMap({
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed.completedLevelIds) {
+        if (parsed && Array.isArray(parsed.completedLevelIds)) {
           setCompletedLevelIds(parsed.completedLevelIds);
         }
       } else {
@@ -381,14 +242,8 @@ export function AdventureMap({
   const activeLevelId = WORLDS_DATA.flatMap(w => w.levels).map(l => l.id)
     .find(id => !completedLevelIds.includes(id)) || 1;
 
-  // Auto-scroll on mount inside world structure
+  // Auto-scroll on mount inside world structure centering on current active level
   useEffect(() => {
-    // Determine the active level's world
-    const activeLevelWorldIdx = WORLDS_DATA.findIndex(w => w.levels.some(l => l.id === activeLevelId));
-    if (activeLevelWorldIdx !== -1) {
-      setCurrentWorldIdx(activeLevelWorldIdx);
-    }
-    
     const timer = setTimeout(() => {
       const element = document.getElementById(`level-node-${activeLevelId}`);
       if (element && scrollContainerRef.current) {
@@ -413,9 +268,7 @@ export function AdventureMap({
     return 'locked';
   };
 
-  // Strictly validated criteria:
-  // - Official Challenges completed today >= 2 (official count)
-  // - Custom/Created Plan Challenges completed today >= 3 (custom count)
+  // Habit criteria completed evaluation:
   const getDailyHabitsResult = () => {
     let officialCount = 0;
     if (dailyProgress) {
@@ -434,7 +287,6 @@ export function AdventureMap({
     }
 
     const customCount = Number(localStorage.getItem('nexora_custom_plans_completed_today_count') || '0');
-
     const officialReq = 2;
     const customReq = 3;
 
@@ -478,7 +330,6 @@ export function AdventureMap({
     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
     const levelId = selectedLevel.id;
     const isAlreadyComp = completedLevelIds.includes(levelId);
-    
     const updatedCompleted = isAlreadyComp ? completedLevelIds : [...completedLevelIds, levelId];
     
     // Grant rewards
@@ -493,37 +344,35 @@ export function AdventureMap({
     setCompletedLevelIds(updatedCompleted);
     saveProgress(updatedCompleted);
 
-    // World Completion unlock check:
-    // If completed Level 11, Level 22, Level 33, Level 44, Level 55, Level 66
+    // Seed Unlocks Check
     let newlyUnlockedSeed: string | undefined = undefined;
     let seedDesc: string | undefined = undefined;
     let badgeReward: string | undefined = undefined;
     
-    const foundWorld = WORLDS_DATA.find(w => w.levels[w.levels.length - 1].id === levelId);
-    
-    if (foundWorld) {
-      newlyUnlockedSeed = foundWorld.unlockedSeed;
-      seedDesc = foundWorld.seedDescription;
-      badgeReward = foundWorld.badge;
+    // Level 10 Boss provides pathfinder seeds & unique badge
+    if (levelId === 10 && !isAlreadyComp) {
+      newlyUnlockedSeed = "Beginner Seed";
+      seedDesc = "Produces beautiful daisies and local urban greenery. Essential starter seed.";
+      badgeReward = "City Pathfinder 🏙️";
 
-      // Persist unlocked seed to gardenState if accessible
-      if (gardenState && setGardenState) {
-        const currentSeeds = gardenState.seeds || [];
-        if (!currentSeeds.includes(newlyUnlockedSeed)) {
-          const updatedSeeds = [...currentSeeds, newlyUnlockedSeed];
-          setGardenState({
-            ...gardenState,
-            seeds: updatedSeeds
-          });
-          // Persist to local storage
-          localStorage.setItem('nexora_garden_state', JSON.stringify({
-            ...gardenState,
-            seeds: updatedSeeds
-          }));
+      // Insert seed into garden state if provided
+      if (setGardenState && gardenState) {
+        const updatedSeeds = [...(gardenState.unlockedSeeds || [])];
+        if (!updatedSeeds.includes("Beginner Seed")) {
+          updatedSeeds.push("Beginner Seed");
         }
+        setGardenState({
+          ...gardenState,
+          unlockedSeeds: updatedSeeds,
+          inventory: {
+            ...(gardenState.inventory || {}),
+            "Beginner Seed": (gardenState.inventory?.["Beginner Seed"] || 0) + 1
+          }
+        });
       }
     }
 
+    // Set celebration details
     setCelebrationDetails({
       title: selectedLevel.title,
       xp: selectedLevel.xpReward,
@@ -535,72 +384,21 @@ export function AdventureMap({
 
     setSelectedLevel(null);
     setShowCelebration(true);
-    
-    if (selectedLevel.isBoss) {
-      playNatureSynthSound('victory');
-      playNatureSynthSound('boss');
-    } else {
-      playNatureSynthSound('victory');
-    }
-
-    if (showToast) {
-      showToast(`Conquered ${selectedLevel.title}! +${selectedLevel.xpReward} XP & Gold! 🏆`, 'success');
-    }
-  };
-
-  // Simulated rapid developer overrides
-  const handleCheatCompleteHabit = () => {
-    vibrate(10);
-    playNatureSynthSound('chirp');
-    if (setDailyProgress) {
-      setDailyProgress((prev: any) => ({
-        ...prev,
-        pushupsDone: true,
-        waterDrank: 4,
-        breathingDone: true
-      }));
-      if (showToast) {
-        showToast("⚡ Quick-completed 3 Daily App Challenges!", 'success');
-      }
-    }
-  };
-
-  const handleCheatCompletePlan = () => {
-    vibrate(10);
-    playNatureSynthSound('click');
-    localStorage.setItem('nexora_custom_plans_completed_today_count', '3');
-    setCompletedLevelIds([...completedLevelIds]);
-    if (showToast) {
-      showToast("⚡ Quick-completed 3 Custom Plan Challenges!", 'success');
-    }
-  };
-
-  const handleCheatUnlockAll = () => {
-    vibrate(20);
     playNatureSynthSound('victory');
-    const allIds = WORLDS_DATA.flatMap(w => w.levels).map(l => l.id);
-    setCompletedLevelIds(allIds);
-    saveProgress(allIds);
-    if (showToast) {
-      showToast("👑 unlocked all 66 levels of the Nexora Adventure Map!", 'success');
-    }
   };
 
-  const handleCheatResetAll = () => {
-    vibrate(30);
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.setItem('nexora_custom_plans_completed_today_count', '0');
-    setCompletedLevelIds([]);
-    if (setDailyProgress) {
-      setDailyProgress((prev: any) => ({
-        ...prev,
-        pushupsDone: false,
-        waterDrank: 0,
-        breathingDone: false
-      }));
-    }
-    if (showToast) {
-      showToast("🔄 Reset Adventure progression successfully.", 'info');
+  const resetAllProgression = () => {
+    if (window.confirm("Are you sure you want to reset all your Adventure progression? This cannot be undone.")) {
+      vibrate(VIBRATION_PATTERNS.ERROR);
+      setCompletedLevelIds([]);
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (e) {
+        console.error(e);
+      }
+      if (showToast) {
+        showToast("🔄 Reset Adventure progression successfully.", 'info');
+      }
     }
   };
 
@@ -612,7 +410,7 @@ export function AdventureMap({
         <div className="flex items-center gap-3">
           <button 
             onClick={onBack}
-            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white rounded-2xl border border-white/5 transition-all active:scale-95 flex items-center justify-center shadow-inner animate-[pulse_3s_infinite]"
+            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white rounded-2xl border border-white/5 transition-all active:scale-95 flex items-center justify-center shadow-inner"
             title="Exit Map"
           >
             <ArrowLeft size={16} strokeWidth={3} />
@@ -628,6 +426,15 @@ export function AdventureMap({
 
         {/* Global Coin & XP Indicators */}
         <div className="flex items-center gap-2">
+          {/* Reset button hidden natively, double click stats to reset */}
+          <button 
+            onDoubleClick={resetAllProgression}
+            className="text-[8px] font-mono font-bold text-slate-500 hover:text-rose-400 mr-2 uppercase block tracking-wider"
+            title="Double click to reset adventure progress"
+          >
+            Reset Progress
+          </button>
+
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-2xl border border-amber-500/20 text-amber-300 font-extrabold text-xs font-mono">
             <Coins className="w-3.5 h-3.5 text-amber-500" />
             <span>{stats.coins || 0}</span>
@@ -643,623 +450,444 @@ export function AdventureMap({
       {/* ─── FULL-SCREEN LIVING LANDSCAPE ADVENTURE SCROLL TRACK ─── */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 w-full overflow-y-auto pb-20 scroll-smooth scrollbar-none select-none relative"
+        className="flex-1 w-full overflow-y-auto pb-24 scroll-smooth scrollbar-none select-none relative bg-[#82cd73]"
         style={{ paddingTop: '64px' }} // clear sticky header nicely
       >
-        <div className="w-full flex flex-col relative">
+        {/* Sky Background Gradient Overlay at the Top */}
+        <div className="absolute inset-x-0 top-0 h-[450px] bg-gradient-to-b from-[#aae0ff] via-[#ceeffc] to-transparent pointer-events-none z-10" />
 
-          {/* Stacking All Unlocked Worlds in Reverse Order (Highest Unlocked World at top, World 1 at bottom so you climb up) */}
-          {(() => {
-            const activeWorld = WORLDS_DATA.find(w => w.levels.some(l => l.id === activeLevelId)) || WORLDS_DATA[0];
-            const activeWorldId = activeWorld.id;
-            const unlockedWorlds = WORLDS_DATA.filter(world => world.id <= activeWorldId);
-            const stackedWorlds = [...unlockedWorlds].reverse();
+        {/* Outer Grid Canvas Layout */}
+        <div className="w-full max-w-xl mx-auto min-h-[2400px] relative">
+          
+          {/* Dynamic Floating Zoom Controller */}
+          <div className="absolute right-6 top-8 z-40 bg-[#090f1a]/95 backdrop-blur-md border border-white/10 px-3.5 py-2.5 rounded-2xl flex flex-col items-center gap-2 shadow-2xl">
+            <span className="text-[8px] font-mono font-black text-slate-400 tracking-wider">MAP ZOOM</span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => { vibrate(5); setZoomLevel(z => Math.max(0.7, z - 0.1)); }}
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 font-extrabold flex items-center justify-center border border-white/5 transition-all text-white active:scale-90"
+                title="Zoom Out"
+              >
+                －
+              </button>
+              <span className="text-xs font-mono font-bold text-center w-12 text-emerald-400">
+                {Math.round(zoomLevel * 100)}%
+              </span>
+              <button 
+                onClick={() => { vibrate(5); setZoomLevel(z => Math.min(1.4, z + 0.1)); }}
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 font-extrabold flex items-center justify-center border border-white/5 transition-all text-white active:scale-90"
+                title="Zoom In"
+              >
+                ＋
+              </button>
+            </div>
+            <button 
+              onClick={() => { vibrate(5); setZoomLevel(1.0); }}
+              className="text-[7.5px] font-bold font-mono text-slate-400 hover:text-white uppercase transition-colors"
+            >
+              RESET ZOOM
+            </button>
+          </div>
 
-            return stackedWorlds.map((world) => {
+          {/* ─────── HERO MAP CONTAINER WITH ZOOM SCALED MATRIX ─────── */}
+          <div 
+            className="w-full h-[2400px] relative origin-top transition-transform duration-300"
+            style={{ transform: `scale(${zoomLevel})` }}
+          >
+            
+            {/* ─── COHESIVE NATURAL WAVING ROAD PATH (SVG) ─── */}
+            <svg 
+              className="absolute inset-0 w-full h-full pointer-events-none" 
+              style={{ zIndex: 5 }} 
+              viewBox="0 0 1000 2400" 
+              preserveAspectRatio="none"
+            >
+              {/* Thick soft-green earth curb outline */}
+              <path 
+                d="M 460 2256 C 580 2040, 580 2040, 580 2040 C 440 1824, 480 1608, 480 1608 C 360 1392, 520 1176, 520 1176 C 600 960, 500 720, 500 720 C 600 480, 500 288, 500 288" 
+                fill="none" 
+                stroke="#6cb35d" 
+                strokeWidth="38" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="opacity-60"
+              />
+              {/* Main Brick Walkway road backing */}
+              <path 
+                d="M 460 2256 C 580 2040, 580 2040, 580 2040 C 440 1824, 480 1608, 480 1608 C 360 1392, 520 1176, 520 1176 C 600 960, 500 720, 500 720 C 600 480, 500 288, 500 288" 
+                fill="none" 
+                stroke="#fff8e2" 
+                strokeWidth="24" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+              />
+              {/* Yellow dotted dividing center lane lanes */}
+              <path 
+                d="M 460 2256 C 580 2040, 580 2040, 580 2040 C 440 1824, 480 1608, 480 1608 C 360 1392, 520 1176, 520 1176 C 600 960, 500 720, 500 720 C 600 480, 500 288, 500 288" 
+                fill="none" 
+                stroke="#f3bc3c" 
+                strokeWidth="4" 
+                strokeDasharray="14 14"
+                strokeLinecap="round" 
+              />
+            </svg>
+
+            {/* ─── PREMIUM LANDSCAPE DECORATIVE ASSETS & ARCHITECTURES ─── */}
+
+            {/* 1. Dynamic Floating Sky Clouds & Birds soaring high up */}
+            <div className="absolute top-10 inset-x-0 h-44 pointer-events-none z-10 overflow-hidden">
+              <motion.div 
+                animate={{ x: ['-20%', '115%'] }} 
+                transition={{ duration: 42, repeat: Infinity, ease: 'linear' }}
+                className="absolute text-5xl opacity-40 filter drop-shadow-sm select-none"
+              >
+                ☁️
+              </motion.div>
+              <motion.div 
+                animate={{ x: ['115%', '-20%'] }} 
+                transition={{ duration: 50, repeat: Infinity, ease: 'linear', delay: 15 }}
+                className="absolute top-16 text-6xl opacity-30 filter drop-shadow-sm select-none"
+              >
+                ☁️
+              </motion.div>
+              <motion.div 
+                animate={{ x: ['-40%', '120%'], y: [0, 40, 0] }} 
+                transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute top-24 text-2xl z-20 flex gap-2 text-slate-500/60"
+              >
+                🕊️<span>🕊️</span>
+              </motion.div>
+            </div>
+
+            {/* 2. Blue River Waterway on the right edge with a Sailing Boat */}
+            <div className="absolute top-[300px] right-0 w-36 h-[1700px] bg-gradient-to-r from-sky-400/30 to-sky-200/20 rounded-l-[40px] border-l-4 border-sky-400/20 shadow-inner z-[2] overflow-hidden pointer-events-none">
+              {/* Elegant water ripple effects */}
+              <div className="absolute top-44 left-6 w-14 h-14 rounded-full border-2 border-sky-400/10 animate-ping opacity-30 animate-pulse" />
+              <div className="absolute top-[600px] right-8 w-20 h-20 rounded-full border-2 border-sky-400/15 animate-pulse opacity-40" />
+              <div className="absolute top-[1200px] left-8 w-16 h-16 rounded-full border-2 border-sky-400/10 animate-ping opacity-30" />
+
+              {/* Animated Sailboat floating on the aquamarine river */}
+              <motion.div
+                animate={{ 
+                  y: [200, 350, 450, 200],
+                  x: [10, 45, 15, 10],
+                  rotate: [-3, 4, -2, -3]
+                }}
+                transition={{ duration: 45, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute top-44 left-4 pointer-events-auto cursor-pointer z-10 flex flex-col items-center"
+                onClick={() => {
+                  vibrate(5);
+                  playNatureSynthSound('river');
+                  if (showToast) showToast("⛵ Beautiful white Yacht sailing smoothly through water waves!", "info");
+                }}
+                title="Tap yacht"
+              >
+                <span className="text-4xl filter drop-shadow-md select-none">⛵</span>
+                <span className="bg-[#0f172a]/90 text-[7px] text-cyan-300 px-1 py-0.5 border border-cyan-400/20 font-black rounded uppercase">Cruise</span>
+              </motion.div>
+
+              <div className="absolute bottom-[200px] left-8 text-3xl opacity-30 select-none">🪷</div>
+            </div>
+
+            {/* 3. NEXORA TOWER SKY-HIGH HQ (Top: Levels 9, 10) */}
+            <div className="absolute top-[110px] left-1/2 -translate-x-1/2 w-80 flex flex-col items-center text-center z-10 overflow-visible">
+              
+              {/* Flag Pole with glowing sovereign crown representing overall World 1 climax mastery */}
+              <motion.div 
+                animate={{ y: [0, -5, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                className="flex flex-col items-center mb-1.5"
+              >
+                <span className="text-4xl filter drop-shadow-[0_0_12px_rgba(253,224,71,0.5)] select-none">👑</span>
+                <div className="w-1.5 h-10 bg-slate-400 rounded-sm shadow-md" />
+              </motion.div>
+
+              {/* Glass Skyscraper HQ Structure */}
+              <div className="w-[180px] bg-gradient-to-b from-[#1e293b]/95 via-[#0f172a]/95 to-[#0b0f19] border-3 border-teal-500/40 rounded-[30px] p-4.5 shadow-2xl relative">
+                
+                {/* Glowing Danger Antenna light */}
+                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                  <div className="w-1 h-4 bg-slate-400" />
+                  <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping absolute -top-1" />
+                  <div className="w-2 h-2 bg-red-400 rounded-full absolute -top-0.5" />
+                </div>
+
+                <div className="border-b border-teal-500/25 pb-1.5 mb-2.5">
+                  <span className="text-[7.5px] font-mono font-black tracking-widest text-[#22d3ee] uppercase block">HQ APEX STATION</span>
+                  <h4 className="text-[10px] font-bold text-white uppercase tracking-tight mt-0.5">NEXORA ROOFTOP SUMMIT</h4>
+                </div>
+
+                {/* Grid window pane lights */}
+                <div className="grid grid-cols-4 gap-1.5">
+                  {Array.from({ length: 16 }).map((_, i) => (
+                    <div 
+                      key={i} 
+                      className={`h-2.5 rounded-xs transition-colors duration-1000 ${
+                        (i + 3) % 4 === 0 
+                          ? 'bg-yellow-300/85 shadow-[0_0_8px_rgba(253,224,71,0.5)] animate-pulse' 
+                          : 'bg-teal-905/60'
+                      }`} 
+                    />
+                  ))}
+                </div>
+
+                <div className="mt-3.5 bg-slate-950/60 rounded-xl px-2.5 py-1.5 border border-white/5 flex items-center justify-center gap-1.5">
+                  <span className="text-sm select-none">🏢</span>
+                  <span className="text-[7.5px] font-mono font-black text-slate-400 tracking-wider">LEVEL 10 ROOFTOP REALM</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. LEVEL 7, 8 METROPOLITAN AREA (Learning Center & Traffic crossway) */}
+            
+            {/* Learning Center Reading Pavilion (Left aspect, y: 720px) */}
+            <div className="absolute top-[720px] left-8 w-[160px] bg-[#0f172a]/90 backdrop-blur-sm border border-emerald-500/20 rounded-[24px] p-3.5 shadow-2xl z-10">
+              <span className="text-[8px] font-mono font-black text-emerald-400 tracking-wider block uppercase border-b border-slate-800 pb-1.5 mb-2">🎓 Learning Center</span>
+              <div className="flex gap-2 items-center justify-center py-1">
+                <span className="text-3xl filter drop-shadow">📚</span>
+                <span className="text-2xl animate-bounce select-none" style={{ animationDuration: '3.5s' }}>📖</span>
+              </div>
+              <p className="text-[7.5px] text-slate-400 leading-tight mt-1 text-center font-medium">A silent place to organize mental tasks and review roadmaps.</p>
+            </div>
+
+            {/* Traffic Intersection Crossway (Right aspect, y: 880px) */}
+            <div className="absolute top-[880px] right-8 w-[170px] bg-slate-900/80 border border-slate-700/30 rounded-3xl p-3.5 shadow-xl font-sans text-center z-10">
+              <div className="flex items-center justify-center gap-2 mb-1.5">
+                {/* Traffic light */}
+                <div className="w-3.5 h-8 bg-slate-950 rounded-full flex flex-col justify-between p-0.5 border border-slate-800">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <div className="w-2 h-2 rounded-full bg-amber-400" />
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[7px] font-mono font-black text-amber-400 block tracking-wider uppercase">TRANSIT JUNCTION</span>
+                  <h5 className="text-[10px] font-bold text-white uppercase tracking-tight">PEDESTRIAN TRAIL</h5>
+                </div>
+              </div>
+
+              {/* Red Transit Bus traveling horizontally */}
+              <div className="w-full h-8 overflow-hidden bg-slate-950/60 rounded-xl relative flex items-center justify-start border border-white/5">
+                <motion.div 
+                  animate={{ x: ['-20%', '115%'] }}
+                  transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+                  className="absolute pointer-events-auto cursor-pointer flex items-center gap-0.5"
+                  onClick={() => {
+                    vibrate(7);
+                    playNatureSynthSound('bus');
+                    if (showToast) showToast("🚌 honk! Honk! The City Shuttle Transport bus going past shops!", "info");
+                  }}
+                  title="Tap Shuttle Bus"
+                >
+                  <span className="text-lg filter drop-shadow select-none">🚌</span>
+                  <span className="text-[5.5px] font-mono font-black bg-red-600 px-0.5 rounded text-white tracking-widest leading-none">TAP</span>
+                </motion.div>
+                <div className="w-full h-0.5 border-t border-dashed border-slate-800/80" />
+              </div>
+            </div>
+
+            {/* 5. LEVEL 5, 6 WATER PLAZA & COFFEE SHOP */}
+
+            {/* Grand Water Fountain Pond (Left aspect, y: 1120px) */}
+            <div 
+              className="absolute top-[1120px] left-10 w-28 h-28 bg-[#1e293b]/90 border border-cyan-400/30 rounded-full flex flex-col items-center justify-center pointer-events-auto cursor-pointer shadow-2xl hover:bg-slate-900/90 active:scale-95 transition-all z-10"
+              onClick={() => {
+                vibrate(5);
+                playNatureSynthSound('river');
+                if (showToast) showToast("⛲ splash splash! Tap the crystal water fountain pond! Pure focus. 💦", "info");
+              }}
+              title="Tap Water Fountain"
+            >
+              {/* Splashing particle drops */}
+              <div className="absolute -top-3.5 flex flex-col gap-0.5 items-center">
+                <motion.span 
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
+                  className="text-lg select-none"
+                >
+                  💦
+                </motion.span>
+                <span className="text-[6.5px] font-mono font-black text-cyan-400 bg-[#0f172a] border border-cyan-500/25 px-1 py-0.5 rounded uppercase tracking-wider">TAP REFRESH</span>
+              </div>
+              <span className="text-4xl filter drop-shadow select-none">⛲</span>
+            </div>
+
+            {/* Cozy Sidewalk Cafe Front (Right aspect, y: 1250px) */}
+            <div 
+              className="absolute top-[1250px] right-8 w-44 bg-[#0f172a]/90 backdrop-blur-sm border border-amber-500/20 rounded-[28px] p-3.5 shadow-2xl pointer-events-auto cursor-pointer hover:bg-slate-900/90 active:scale-95 transition-all z-10"
+              onClick={() => {
+                vibrate(6);
+                playNatureSynthSound('chirp');
+                if (showToast) showToast("☕ Mmm... Freshly grounded arabica beans and croissants! Welcome to Focus Cafe!", "info");
+              }}
+              title="Tap Coffee Shop"
+            >
+              {/* Bakery Awning & Coffee Steam animation */}
+              <div className="flex items-center justify-between border-b border-white/5 pb-1.5 mb-2">
+                <span className="text-[7.5px] font-mono font-black text-amber-400 tracking-wider block uppercase">☕ FOCUS BAKERY</span>
+                <span className="text-[7px] text-emerald-400 font-mono font-bold animate-pulse">OPEN</span>
+              </div>
+              
+              <div className="flex gap-2.5 items-center justify-center">
+                <div className="relative">
+                  <motion.div 
+                    animate={{ y: [0, -4, 0], opacity: [0.4, 0.8, 0.4] }} 
+                    transition={{ duration: 2, repeat: Infinity }} 
+                    className="absolute -top-3 left-2 text-[10px] select-none"
+                  >
+                    💭
+                  </motion.div>
+                  <span className="text-3xl filter drop-shadow select-none">Croissant 🥐</span>
+                </div>
+                <div className="relative">
+                  <motion.div 
+                    animate={{ y: [0, -5, 0], opacity: [0.5, 0.9, 0.5] }} 
+                    transition={{ duration: 1.8, repeat: Infinity, delay: 0.5 }} 
+                    className="absolute -top-2.5 left-2 text-[10px] select-none"
+                  >
+                    ♨️
+                  </motion.div>
+                  <span className="text-3xl filter drop-shadow select-none">☕</span>
+                </div>
+              </div>
+              <p className="text-[7px] text-slate-400 italic text-center mt-2">(Tap to scent coffee steam)</p>
+            </div>
+
+            {/* 6. COZY STARTING HOME & ENTRY COTTAGE (Bottom: Levels 1, 2, 3) */}
+
+            {/* Beginner Garden Cottage Yard (Left aspect, y: 1800px) */}
+            <div className="absolute top-[1800px] left-6 w-[200px] bg-emerald-950/80 backdrop-blur-xs border border-emerald-500/20 rounded-[32px] p-4.5 shadow-2xl z-10">
+              <span className="text-[8px] font-mono font-black text-teal-400 tracking-wider block uppercase border-b border-emerald-800 pb-1.5 mb-2.5">🏠 NEIGHBORHOOD HOME</span>
+              
+              <div className="flex items-center justify-around py-1">
+                {/* Picket fence gate */}
+                <span className="text-3xl filter drop-shadow animate-pulse select-none">🏠</span>
+                <div className="text-right">
+                  <span className="text-[9px] font-bold text-white block">Home Base</span>
+                  <span className="text-[7px] text-slate-400 leading-none block mt-0.5">Where self-improvement starts!</span>
+                </div>
+              </div>
+              
+              <div className="flex gap-1.5 justify-center mt-2.5 bg-[#090f1a]/80 py-1.5 px-2 rounded-xl">
+                <span className="text-xs select-none">🌷</span>
+                <span className="text-xs animate-[bounce_3s_infinite] select-none">🌹</span>
+                <span className="text-xs select-none">🌻</span>
+                <span className="text-[7px] font-mono font-black text-teal-300 uppercase leading-none self-center ml-1">FLOWER YARD</span>
+              </div>
+            </div>
+
+            {/* Stone Bridge Crossing the Riverway (Bottom cross, y: 2060px) */}
+            <div className="absolute top-[2060px] right-6 w-32 h-14 bg-amber-900/60 border-y-3 border-amber-800 rounded-2xl flex items-center justify-center p-2 text-center text-amber-200 text-[8px] font-black uppercase font-mono shadow-xl z-20 select-none">
+              <span className="select-none text-[10px] mr-1">🌁</span> Custom Stone Bridge
+            </div>
+
+            {/* Small bicycle riding inside lanes */}
+            <div className="absolute top-[1520px] left-1/3 flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/60 backdrop-blur-md rounded-full border border-white/5 text-[8.5px] text-slate-300 z-10">
+              <span className="select-none">🚲</span>
+              <span className="font-mono font-extrabold text-[7.5px] uppercase text-emerald-400">Bike lanes trail path</span>
+            </div>
+
+            <div className="absolute top-[1020px] right-20 text-3xl opacity-45 select-none font-sans">🌷🌳</div>
+            <div className="absolute top-[1700px] right-14 text-4xl opacity-55 select-none animate-pulse font-sans">🌻🌹</div>
+
+            {/* ─── DYNAMIC LEVEL RENDER WITH PRECISION PLACEMENT ─── */}
+            {WORLDS_DATA[0].levels.map((level, idx) => {
+              const status = getLevelStatus(level.id);
+              const isCompleted = status === 'completed';
+              const isAvailable = status === 'available';
+              const isLocked = status === 'locked';
+
+              const coords = LEVEL_COORDS[idx];
+
               return (
                 <div 
-                  key={world.id}
-                  className={`relative w-full h-[1800px] ${world.bgColor} overflow-hidden transition-all duration-500`}
+                  key={level.id}
+                  id={`level-node-${level.id}`}
+                  style={{ left: coords.left, bottom: coords.bottom }}
+                  className="absolute z-30 -translate-x-1/2 flex flex-col items-center"
                 >
-                  <div className="w-full max-w-xl mx-auto h-full relative">
-                  {/* World Ambient Atmosphere Overlay */}
-                  <div className={`absolute inset-x-0 top-0 h-44 bg-gradient-to-b ${world.skyColor} pointer-events-none z-10`} />
-                  <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-10" />
+                  {/* Floating speech bubble / advice pointer above the CURRENT AVAILABLE level */}
+                  {isAvailable && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute bottom-16 w-36 bg-[#0f172a] border border-cyan-400/30 rounded-2xl p-2.5 text-center shadow-2xl z-40"
+                    >
+                      {/* Bubble pointer tail */}
+                      <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0f172a] border-r border-b border-cyan-400/30 rotate-45 translate-y-2.5" />
+                      
+                      <span className="text-[7px] font-mono font-black text-amber-400 tracking-wider block uppercase">START CONQUEST</span>
+                      <p className="text-[8.5px] font-semibold text-white leading-tight mt-0.5">{coords.speech}</p>
+                      
+                      {/* Mini action indicator */}
+                      <button 
+                        onClick={() => handleLevelClick(level)}
+                        className="mt-1.5 w-full py-1 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-[7px] uppercase font-bold text-white transition-all active:scale-95 shadow"
+                      >
+                        Start Challenge
+                      </button>
+                    </motion.div>
+                  )}
 
-                  {/* World visual badge indicator */}
-                  <div className="absolute top-6 left-6 z-20 bg-[#090f1a]/90 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl flex items-center gap-3 shadow-lg">
-                    <span className="text-2xl filter drop-shadow">
-                      {world.id === 1 ? '🏙️' : world.id === 2 ? '🌲' : world.id === 3 ? '🌵' : world.id === 4 ? '🦈' : world.id === 5 ? '🏔️' : '🌈'}
-                    </span>
-                    <div>
-                      <span className="text-[7px] font-mono font-black text-emerald-400 tracking-[0.15em] uppercase block">TERRITORY {world.id}/6</span>
-                      <h2 className="font-extrabold text-xs text-white uppercase tracking-tight leading-none mt-0.5">{world.name}</h2>
+                  {/* Round Checkpoint Node Circle */}
+                  <button
+                    onClick={() => handleLevelClick(level)}
+                    className={`relative rounded-full flex items-center justify-center transition-all duration-300 border-3 border-black shadow-[0_8px_20px_rgba(0,0,0,0.5)] ${
+                      level.isBoss 
+                        ? 'w-16 h-16 scale-110 ring-4' 
+                        : 'w-13 h-13'
+                    } ${
+                      isCompleted 
+                        ? 'bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 text-white border-emerald-400 shadow-[0_0_18px_rgba(16,185,129,0.5)]' 
+                        : isAvailable 
+                          ? 'bg-gradient-to-br from-cyan-400 via-sky-500 to-indigo-600 text-white scale-115 ring-4 ring-cyan-500/50 animate-[bounce_2.5s_infinite] border-cyan-300' 
+                          : 'bg-slate-700/90 border-slate-600 text-slate-400 cursor-not-allowed opacity-80'
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <Check size={level.isBoss ? 28 : 22} className="stroke-[4.5px]" />
+                    ) : isLocked ? (
+                      <Lock size={level.isBoss ? 16 : 14} className="stroke-[2.5px] text-slate-400" />
+                    ) : level.isBoss ? (
+                      <span className="font-black text-[9px] font-mono uppercase text-yellow-300 animate-pulse tracking-tighter">HQ BOSS</span>
+                    ) : (
+                      <span className="font-extrabold text-sm font-sans tracking-tight">{level.id}</span>
+                    )}
+
+                    {/* Ring glow for current available level */}
+                    {isAvailable && (
+                      <div className="absolute -inset-3 rounded-full border-2 border-cyan-400/50 animate-ping opacity-65 pointer-events-none" />
+                    )}
+                  </button>
+
+                  {/* Spark of Boss crown above boss levels */}
+                  {level.isBoss && !isCompleted && !isLocked && (
+                    <div className="absolute -top-5 z-40 bg-yellow-500/90 text-black text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-yellow-400 font-mono scale-95 shadow-md">
+                      <Trophy size={6.5} /> Apex Boss
                     </div>
+                  )}
+
+                  {/* Micro Stars complete rating under checkpoint */}
+                  <div className="flex items-center gap-0.5 mt-1.5 bg-black/85 border border-slate-800 px-2 py-0.5 rounded-full shadow-inner">
+                    <Star size={8} className={isCompleted ? "text-yellow-400 fill-yellow-400" : "text-slate-600"} />
+                    <Star size={8.5} className={isCompleted ? "text-yellow-400 fill-yellow-400" : "text-slate-600"} />
+                    <Star size={8} className={isCompleted ? "text-yellow-400 fill-yellow-400" : "text-slate-600"} />
                   </div>
 
-                  {/* ─── WORLD SPECIFIC PARALLAX & RICH DYNAMIC CUSTOM GRAPHICS ─── */}
-
-                  {/* --- WORLD 1: BEGINNER CITY LANDSCAPE (Skyscrapers, Cafe, Parks, Fountains, Flower garden) --- */}
-                  {world.id === 1 && (
-                    <div className="absolute inset-0 pointer-events-none z-0">
-                      {/* Floating Clouds */}
-                      <div className="absolute top-14 inset-x-0 h-20 overflow-hidden">
-                        <motion.div 
-                          animate={{ x: ['-20%', '110%'] }} 
-                          transition={{ duration: 35, repeat: Infinity, ease: 'linear' }}
-                          className="absolute text-5xl opacity-20 filter drop-shadow"
-                        >
-                          ☁️
-                        </motion.div>
-                        <motion.div 
-                          animate={{ x: ['-50%', '120%'] }} 
-                          transition={{ duration: 45, repeat: Infinity, ease: 'linear', delay: 10 }}
-                          className="absolute text-6xl opacity-15 filter blur-[1px]"
-                        >
-                          ☁️
-                        </motion.div>
-                      </div>
-
-                      {/* Animated Birds soaring over sky heights */}
-                      <motion.div 
-                        animate={{ x: ['-10%', '110%'], y: [200, 240, 200] }} 
-                        transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
-                        className="absolute text-xl z-20 flex gap-1 text-slate-500"
-                      >
-                        🕊️<span>🕊️</span>
-                      </motion.div>
-
-                      {/* Handcrafted City Skylines (Modern houses, cafe architectures, parks) */}
-                      <div className="absolute top-[350px] left-8 w-[140px] h-[190px] bg-slate-800/90 border border-slate-700/50 rounded-2xl p-3 shadow-2xl flex flex-col justify-between">
-                        <span className="text-[9px] font-black text-slate-400 block uppercase font-mono border-b border-slate-700/60 pb-1">Metropolitan Cafe</span>
-                        <div className="flex flex-wrap gap-1.5 justify-center">
-                          {Array.from({ length: 6 }).map((_, i) => (
-                            <div key={i} className="w-3.5 h-3.5 bg-yellow-400/80 rounded animate-pulse" style={{ animationDelay: `${i * 0.4}s` }} />
-                          ))}
-                        </div>
-                        <span className="text-xl text-center">☕🍰</span>
-                      </div>
-
-                      <div className="absolute top-[820px] right-8 w-[160px] h-[220px] bg-slate-800/90 border border-slate-700/50 rounded-2xl p-4 shadow-2xl flex flex-col justify-between">
-                        <span className="text-[9px] font-black text-cyan-400 block uppercase font-mono border-b border-slate-700/60 pb-1">Nexora HQ Tower</span>
-                        <div className="grid grid-cols-3 gap-2 py-1">
-                          {Array.from({ length: 9 }).map((_, i) => (
-                            <div key={i} className="w-3.5 h-3 bg-teal-300/60 rounded-sm animate-pulse" />
-                          ))}
-                        </div>
-                        <span className="text-2xl text-center">🏢⭐</span>
-                      </div>
-
-                      <div className="absolute top-[1250px] left-8 w-[150px] h-[160px] bg-slate-800/80 border border-slate-700/40 rounded-3xl p-3 flex flex-col justify-between items-center text-center">
-                        <span className="text-[8px] font-black tracking-widest text-emerald-400 font-mono uppercase">Neighborhood Park</span>
-                        <div className="flex gap-2">
-                          <span className="text-2xl animate-bounce" style={{ animationDuration: '3s' }}>🌲</span>
-                          <span className="text-2xl animate-bounce" style={{ animationDuration: '4s' }}>🌳</span>
-                        </div>
-                        <span className="text-[10px] text-slate-400 font-medium">Flower Patch 🌷🌹</span>
-                      </div>
-
-                      {/* Interactive Fluid Fountain with real custom spraying animations */}
-                      <div 
-                        className="absolute top-[620px] right-14 w-28 h-28 bg-slate-800/90 border border-slate-700/65 rounded-full flex flex-col items-center justify-center pointer-events-auto cursor-pointer shadow-lg active:scale-95 transition-all"
-                        onClick={() => {
-                          vibrate(5);
-                          playNatureSynthSound('river');
-                          if (showToast) showToast(" Fountain splashing with water split! Mind refreshed ⛲💦", 'info');
-                        }}
-                        title="Tap the fountain"
-                      >
-                        <div className="absolute -top-3 flex flex-col gap-0.5 items-center">
-                          <span className="text-xl animate-bounce">💦</span>
-                          <span className="text-[7px] font-mono font-black text-sky-450 bg-[#090f1a] px-1 py-0.5 rounded border border-sky-500/20 uppercase tracking-widest animate-pulse">TAP SPLASH</span>
-                        </div>
-                        <span className="text-3xl filter drop-shadow">⛲</span>
-                      </div>
-
-                      <div className="absolute bottom-[280px] left-1/3 flex items-center gap-1.5 px-3 py-1 bg-slate-800/40 rounded-full border border-white/5 text-[9px] text-slate-400">
-                        <span>🚲 Bike Lane Trail</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* --- WORLD 2: WHISPERING REDWOOD FOREST LANDSCAPE (Moss stones, streams, timber bridges, giant trees) --- */}
-                  {world.id === 2 && (
-                    <div className="absolute inset-0 pointer-events-none z-0">
-                      <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 via-transparent to-amber-500/5 pointer-events-none" />
-
-                      {/* Giant Redwood Trees trunks rising */}
-                      <div className="absolute top-[120px] left-12 w-14 h-[400px] bg-amber-970/40 border-r-4 border-emerald-900/30 rounded-r-3xl flex flex-col justify-between py-10">
-                        <span className="text-2xl text-center select-none filter opacity-60">🌲</span>
-                        <span className="text-3xl text-center select-none filter opacity-75 animate-pulse">🌲</span>
-                      </div>
-
-                      <div className="absolute top-[750px] right-6 w-16 h-[500px] bg-amber-970/40 border-l-4 border-emerald-900/30 rounded-l-3xl flex flex-col justify-between py-12">
-                        <span className="text-3xl text-center select-none filter opacity-70 animate-pulse">🌳</span>
-                        <span className="text-2xl text-center select-none filter opacity-60">🌲</span>
-                      </div>
-
-                      {/* Beautiful Waterfall Cascade (Clickable nature loop) */}
-                      <div 
-                        className="absolute top-[520px] left-2/3 -translate-x-1/2 w-32 h-32 bg-emerald-950/40 border border-emerald-500/20 rounded-2xl flex flex-col items-center justify-center pointer-events-auto cursor-pointer hover:bg-emerald-900/40 active:scale-95 transition-all"
-                        onClick={() => {
-                          vibrate(6);
-                          playNatureSynthSound('river');
-                          if (showToast) showToast("🌊 Cascading Waterfall flowing down mountain rocks! Water river rushing.", "info");
-                        }}
-                      >
-                        <motion.div 
-                          animate={{ y: [0, 8, 0] }}
-                          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                          className="text-4xl text-center"
-                        >
-                          💧
-                        </motion.div>
-                        <span className="text-[7.5px] font-black font-mono text-emerald-300 uppercase tracking-widest mt-1">WATERFALL RUSH</span>
-                      </div>
-
-                      {/* Interactive forest animal tap */}
-                      <div 
-                        className="absolute top-[920px] left-8 w-24 h-24 bg-emerald-900/20 border border-emerald-700/30 rounded-full flex flex-col items-center justify-center pointer-events-auto cursor-pointer hover:bg-emerald-900/40 active:scale-95 transition-all"
-                        onClick={() => {
-                          vibrate(8);
-                          playNatureSynthSound('chirp');
-                          if (showToast) showToast("🦉 Forest owl hooting in the canopy heights!", "info");
-                        }}
-                      >
-                        <span className="text-3xl animate-pulse">🦉</span>
-                        <span className="text-[6.5px] font-mono font-black text-emerald-400 mt-0.5">LISTENER</span>
-                      </div>
-
-                      {/* Butterfly animations */}
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <motion.div
-                          key={i}
-                          animate={{ 
-                            x: [Math.sin(i) * 100 + 100, Math.sin(i) * 100 + 160, Math.sin(i) * 100 + 100],
-                            y: [200 + (i * 280), 220 + (i * 280), 200 + (i * 280)]
-                          }}
-                          transition={{ duration: 5 + i, repeat: Infinity, ease: 'easeInOut' }}
-                          className="absolute text-lg"
-                        >
-                          🦋
-                        </motion.div>
-                      ))}
-
-                      {/* Wooden Bridge and stream crossway graphics */}
-                      <div className="absolute top-[1050px] left-1/2 -translate-x-1/2 w-48 h-12 bg-amber-900/60 border-y-2 border-amber-800 rounded-lg flex items-center justify-between px-3 text-amber-200 text-[9px] font-black uppercase font-mono shadow-md z-10">
-                        <span>🌁 Suspended Forest Bridge</span>
-                        <span>🌲</span>
-                      </div>
-
-                      <div className="absolute bottom-[280px] right-20 text-3xl opacity-50">🍄🍄</div>
-                      <div className="absolute top-[480px] left-16 text-3xl opacity-40">🍄</div>
-                    </div>
-                  )}
-
-                  {/* --- WORLD 3: GOLDEN DESERT LANDSCAPE (Baking sun, prehistoric dinosaur bones, camel animation, silty soil) --- */}
-                  {world.id === 3 && (
-                    <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-b from-amber-955/20 via-transparent to-amber-950/40">
-                      
-                      {/* Golden Baking Sun */}
-                      <motion.div 
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
-                        className="absolute top-16 left-16 w-24 h-24 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center border-4 border-amber-350/40 shadow-[0_0_55px_rgba(245,158,11,0.5)] z-20"
-                      >
-                        <span className="text-4xl">☀️</span>
-                      </motion.div>
-
-                      {/* Heat Wave Shimmer Overlay Effect */}
-                      <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/5 to-transparent animate-pulse-slow mix-blend-color-dodge" />
-
-                      {/* Layered Desert soil sand dunes (Parallax layers) */}
-                      <div className="absolute bottom-10 left-0 right-0 h-44 bg-[#2b1704]/40 rounded-t-[100%] filter blur-xl transform translate-y-20 scale-125" />
-                      <div className="absolute bottom-28 left-6 right-6 h-36 bg-[#4c2909]/30 rounded-t-[100%] filter blur-md transform translate-y-12 scale-110" />
-
-                      {/* Animated moving camel walking back & forth, flipping direction automatically */}
-                      <motion.div 
-                        animate={{ 
-                          x: ['-10%', '110%', '110%', '-10%', '-10%'],
-                          scaleX: [1, 1, -1, -1, 1], // turn around facing direction
-                        }}
-                        transition={{ 
-                          duration: 32, 
-                          repeat: Infinity, 
-                          times: [0, 0.45, 0.5, 0.95, 1.0],
-                          ease: 'linear' 
-                        }}
-                        className="absolute top-[800px] z-20 pointer-events-auto cursor-pointer"
-                        onClick={() => {
-                          vibrate(10);
-                          playNatureSynthSound('camel');
-                          if (showToast) showToast("🐫 tap! Dry Camel braying and chewing cactus desert soil!", "info");
-                        }}
-                        title="Tap the camel"
-                      >
-                        <div className="flex flex-col items-center">
-                          <span className="text-4xl filter drop-shadow">🐫</span>
-                          <span className="text-[7px] font-bold font-mono text-amber-305 bg-amber-950/90 border border-amber-500/20 px-1.5 py-0.5 rounded tracking-widest uppercase">CHEW SOIL</span>
-                        </div>
-                      </motion.div>
-
-                      {/* Clay Nomads Tents & Adobe Villages */}
-                      <div className="absolute top-[450px] right-12 text-3xl">⛺</div>
-                      <div className="absolute top-[1150px] left-16 text-4xl">🕌</div>
-
-                      {/* Cacti fields */}
-                      <div className="absolute top-[320px] left-20 text-3xl opacity-50">🌵</div>
-                      <div className="absolute top-[950px] right-20 text-3xl opacity-40">🌵</div>
-                      <div className="absolute bottom-[220px] left-24 text-4xl opacity-50">🌵</div>
-
-                      {/* Ancient Dinosaur Bones & Fossil remnants ☠️ */}
-                      <div className="absolute top-[620px] left-1/4 flex items-center gap-1 opacity-70 bg-[#090f1a]/70 p-2.5 rounded-2xl border border-amber-500/10">
-                        <span className="text-2xl">☠️</span>
-                        <span className="text-[8px] font-mono font-black text-amber-300 uppercase tracking-widest">Prehistoric Bones</span>
-                      </div>
-
-                      <div className="absolute top-[1380px] right-1/4 flex items-center gap-1 opacity-60">
-                        <span className="text-xl">🦴</span>
-                        <span className="text-[7.5px] font-mono font-bold text-amber-200/50 uppercase tracking-widest">Fossil Site</span>
-                      </div>
-
-                      {/* Dust particles drifting */}
-                      {Array.from({ length: 12 }).map((_, i) => (
-                        <motion.div
-                          key={i}
-                          animate={{ 
-                            x: ['-5%', '105%'],
-                            y: [280 + (i * 120), 300 + (i * 120)]
-                          }}
-                          transition={{ duration: 12 + i, repeat: Infinity, ease: 'linear' }}
-                          className="absolute text-[8px] opacity-25 text-amber-200"
-                        >
-                          ░▒
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* --- WORLD 4: OCEAN KINGDOM LANDSCAPE (Coral reefs, swimming fish, sharks) --- */}
-                  {world.id === 4 && (
-                    <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#0e3c5a]/40 to-[#051c2d]/80">
-                      
-                      {/* Coral Reef highlights */}
-                      <div className="absolute bottom-16 left-12 text-5xl opacity-45">🪸</div>
-                      <div className="absolute top-[420px] left-8 text-4xl opacity-35">🪸</div>
-                      <div className="absolute top-[980px] right-12 text-5xl opacity-50 animate-pulse">🪸</div>
-
-                      {/* Animated swimming shark moving back and forth, flipping direction */}
-                      <motion.div 
-                        animate={{ 
-                          x: ['110%', '-10%', '-10%', '110%', '110%'],
-                          scaleX: [1, 1, -1, -1, 1], // turn around facing direction
-                          y: [800, 810, 790, 810, 800]
-                        }}
-                        transition={{ 
-                          duration: 22, 
-                          repeat: Infinity, 
-                          times: [0, 0.45, 0.5, 0.95, 1.0],
-                          ease: 'easeInOut' 
-                        }}
-                        className="absolute z-10 pointer-events-auto cursor-pointer"
-                        title="Tap the shark"
-                        onClick={() => {
-                          vibrate(10);
-                          playNatureSynthSound('ocean_splash');
-                          if (showToast) showToast("🦈 Watch out! Swimming Shark guarding ocean coral reef depths!", "info");
-                        }}
-                      >
-                        <div className="flex flex-col items-center">
-                          <span className="text-4xl filter drop-shadow">🦈</span>
-                          <span className="text-[7px] font-black font-mono text-cyan-405 bg-black/60 px-1 py-0.5 rounded border border-cyan-500/20 tracking-wider">TAP SPLASH</span>
-                        </div>
-                      </motion.div>
-
-                      {/* Moving Small colorful swimming fish cluster */}
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <motion.div
-                          key={i}
-                          animate={{ 
-                            x: i % 2 === 0 ? ['-10%', '110%', '110%', '-10%', '-10%'] : ['110%', '-10%', '-10%', '110%', '110%'],
-                            scaleX: i % 2 === 0 ? [1, 1, -1, -1, 1] : [-1, -1, 1, 1, -1],
-                            y: [320 + (i * 200), 340 + (i * 200), 310 + (i * 200), 330 + (i * 200), 320 + (i * 200)]
-                          }}
-                          transition={{ 
-                            duration: 16 + i * 2, 
-                            repeat: Infinity, 
-                            times: [0, 0.45, 0.5, 0.95, 1.0],
-                            ease: 'easeInOut' 
-                          }}
-                          className="absolute text-xl flex gap-1 items-center"
-                        >
-                          <span>🐠</span>
-                          <span className="text-[8px] font-mono text-cyan-300">🐠</span>
-                        </motion.div>
-                      ))}
-
-                      {/* Swaying coconut Palm trees */}
-                      <div className="absolute top-[280px] right-8 w-20 h-20 flex flex-col items-center">
-                        <span className="text-3xl animate-bounce" style={{ animationDuration: '4s' }}>🌴</span>
-                        <span className="text-[7px] text-slate-450 uppercase font-mono mt-1">Islet</span>
-                      </div>
-
-                      {/* Animated Sailing Boat floating on the aqua water */}
-                      <motion.div
-                        animate={{ 
-                          x: ['-10%', '110%'],
-                          y: [520, 540, 520],
-                          rotate: [-3, 3, -3]
-                        }}
-                        transition={{ duration: 24, repeat: Infinity, ease: 'easeInOut' }}
-                        className="absolute pointer-events-auto cursor-pointer"
-                        onClick={() => {
-                          vibrate(6);
-                          playNatureSynthSound('river');
-                          if (showToast) showToast("⛵ Beautiful sailboat sailing through oceanic waves!", 'info');
-                        }}
-                      >
-                        <span className="text-3xl filter drop-shadow">⛵</span>
-                      </motion.div>
-
-                      {/* Ocean water bubbles rising up */}
-                      {Array.from({ length: 15 }).map((_, i) => (
-                        <motion.div
-                          key={i}
-                          animate={{ 
-                            y: ['105%', '-5%'],
-                            x: [Math.random() * 450, (Math.random() * 450) + 40]
-                          }}
-                          transition={{ 
-                            duration: 8 + Math.random() * 6,
-                            repeat: Infinity,
-                            ease: 'easeInOut',
-                            delay: Math.random() * 5
-                          }}
-                          className="absolute text-xs text-cyan-300 opacity-40"
-                        >
-                          🫧
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* --- WORLD 5: FROZEN PEAKS LANDSCAPE (Ice mountains, tall glaciers, ice sounds, blizzard) --- */}
-                  {world.id === 5 && (
-                    <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#0a182c]/40 via-transparent to-[#050f1d]/85">
-                      
-                      {/* Spectacular glowing Neon Aurora Borealis Ribbon */}
-                      <div className="absolute top-10 inset-x-0 h-44 bg-gradient-to-r from-purple-500/10 via-cyan-400/10 to-indigo-500/10 animate-pulse blur-3xl pointer-events-none z-15" />
-
-                      {/* Glaciers/Icicles on the trail peaks */}
-                      <div className="absolute top-[320px] left-12 text-3xl opacity-50">🧊</div>
-                      <div className="absolute top-[850px] right-14 text-4xl opacity-35">🧊</div>
-                      <div className="absolute top-[1350px] left-16 text-3xl opacity-45">🧊</div>
-
-                      {/* Interactive deep ice mountain crackling sound */}
-                      <div 
-                        className="absolute top-[920px] right-12 z-25 bg-cyan-500/15 border border-cyan-400/30 px-3.5 py-1.5 rounded-full text-cyan-200 text-xs font-black uppercase font-mono shadow-md cursor-pointer pointer-events-auto active:scale-95 transition-all"
-                        onClick={() => {
-                          vibrate(8);
-                          playNatureSynthSound('ice');
-                          if (showToast) showToast("❄️ crack! Deep icy resonance echo in snow mountain glacier!", "info");
-                        }}
-                      >
-                        🔊 TAP ICE CRACK 🏔️
-                      </div>
-
-                      {/* Cozy Cabin / Frozen Snow Village indicators */}
-                      <div className="absolute top-[620px] left-1/4 w-[110px] bg-slate-900/80 border border-sky-400/20 p-2.5 rounded-2xl flex flex-col items-center">
-                        <span className="text-2xl animate-pulse">🏡</span>
-                        <span className="text-[7.5px] font-mono font-black text-sky-450 uppercase mt-1">Glacier Cabin</span>
-                      </div>
-
-                      <div className="absolute top-[1150px] right-1/4 w-[120px] bg-slate-900/80 border border-sky-400/20 p-2.5 rounded-2xl flex flex-col items-center">
-                        <span className="text-2xl">🏚️</span>
-                        <span className="text-[7.5px] font-mono font-black text-slate-400 uppercase mt-1">Ancient Ice Dome</span>
-                      </div>
-
-                      {/* Freezing Glacier mountain peaks in backdrops */}
-                      <div className="absolute top-[160px] inset-x-0 flex justify-around">
-                        <span className="text-6xl opacity-35">🏔️</span>
-                        <span className="text-7xl opacity-30">🏔️</span>
-                      </div>
-
-                      {/* Drifting blizzard snowflakes */}
-                      {Array.from({ length: 25 }).map((_, i) => (
-                        <motion.div
-                          key={i}
-                          animate={{ 
-                            y: ['-5%', '105%'],
-                            x: [Math.random() * 500, (Math.random() * 500) - 50]
-                          }}
-                          transition={{ 
-                            duration: 4 + Math.random() * 4,
-                            repeat: Infinity,
-                            ease: 'linear',
-                            delay: Math.random() * 4
-                          }}
-                          className="absolute text-sky-200/60 text-xs"
-                        >
-                          ❄️
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* --- WORLD 6: SKY PLAINS LANDSCAPE (Plane flat grasslands, rotating windmills, moving birds, chirps) --- */}
-                  {world.id === 6 && (
-                    <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-b from-yellow-500/5 via-transparent to-yellow-500/15">
-                      
-                      {/* Double Magical Rainbow graphic backdrops */}
-                      <div className="absolute top-16 left-1/2 -translate-x-1/2 w-80 h-40 border-t-8 border-r-8 border-l-8 border-red-500/15 rounded-full filter blur-[1px] pointer-events-none" />
-                      <div className="absolute top-[80px] left-1/2 -translate-x-1/2 w-[270px] h-[135px] border-t-8 border-r-8 border-l-8 border-yellow-400/10 rounded-full filter blur-[2px] pointer-events-none" />
-
-                      {/* Flat Grass Plain Layered Aesthetics */}
-                      <div className="absolute inset-0 bg-[#071307]/50 pointer-events-none" />
-                      <div className="absolute bottom-10 inset-x-0 h-40 bg-emerald-900/15 rounded-t-[100%] filter blur-xl" />
-
-                      {/* Sovereign citadel gate on peak */}
-                      <div className="absolute top-[120px] left-1/2 -translate-x-1/2 w-48 bg-slate-900/95 border-3 border-yellow-500 p-4 rounded-3xl text-center shadow-xl">
-                        <p className="text-[8px] font-mono font-black text-yellow-400 uppercase tracking-widest animate-pulse">CITADEL SUMMIT</p>
-                        <span className="text-3xl my-1.5 block">👑🏛️</span>
-                        <span className="text-[9px] font-bold text-slate-300">Legendary Nexora Tree thrives inside the sacred gates.</span>
-                      </div>
-
-                      {/* Interactive soaring skylark birds with bray chirps */}
-                      <motion.div
-                        animate={{ 
-                          x: ['-15%', '115%'],
-                          y: [600, 520, 610, 550, 600],
-                        }}
-                        transition={{ 
-                          duration: 20, 
-                          repeat: Infinity, 
-                          ease: 'easeInOut' 
-                        }}
-                        className="absolute z-20 pointer-events-auto cursor-pointer flex gap-2"
-                        title="Tap the birds"
-                        onClick={() => {
-                          vibrate(5);
-                          playNatureSynthSound('chirp');
-                          if (showToast) showToast("🐦 chirps! Sovereign Skylark singing musical tones!", "info");
-                        }}
-                      >
-                        <div className="flex flex-col items-center">
-                          <span className="text-3xl filter drop-shadow">🕊️</span>
-                          <span className="text-[7px] font-mono font-black text-emerald-400 bg-emerald-950/80 px-1 py-0.5 rounded border border-emerald-500/20 uppercase">TAP CHIRP</span>
-                        </div>
-                      </motion.div>
-
-                      {/* Dynamic Rotating Windmills built with CSS transitions */}
-                      <div className="absolute top-[480px] left-12 w-24 h-32 flex flex-col items-center">
-                        <motion.div 
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
-                          className="text-4xl"
-                        >
-                          ☸️
-                        </motion.div>
-                        <span className="text-[7.5px] font-mono font-black text-emerald-400 mt-1 uppercase">Windmill 1</span>
-                      </div>
-
-                      <div className="absolute top-[1020px] right-12 w-24 h-32 flex flex-col items-center">
-                        <motion.div 
-                          animate={{ rotate: -360 }}
-                          transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-                          className="text-4xl"
-                        >
-                          ☸️
-                        </motion.div>
-                        <span className="text-[7.5px] font-mono font-black text-emerald-400 mt-1 uppercase">Windmill 2</span>
-                      </div>
-
-                      {/* Wildflowers fields and butterfly clusters */}
-                      <div className="absolute top-[350px] right-16 text-3xl opacity-40">🌷🌻</div>
-                      <div className="absolute top-[820px] left-14 text-4xl opacity-50">🌸🌼</div>
-                      <div className="absolute bottom-[280px] right-24 text-3xl opacity-40">🌻🌹</div>
-                    </div>
-                  )}
-
-                  {/* ─── COHESIVE NATURAL WAVING TRAIL CONNECTING ALL 11 LEVELS ─── */}
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-35" style={{ zIndex: 1 }}>
-                    <path 
-                      d="M 50% 1620 C 32% 1476, 18% 1368, 38% 1224 C 66% 1080, 82% 936, 68% 792 C 42% 648, 22% 504, 36% 360 C 50% 180, 50% 180, 50% 180" 
-                      fill="none" 
-                      stroke="#ffffff" 
-                      strokeWidth="18" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                    />
-                    <path 
-                      d="M 50% 1620 C 32% 1476, 18% 1368, 38% 1224 C 66% 1080, 82% 936, 68% 792 C 42% 648, 22% 504, 36% 360 C 50% 180, 50% 180, 50% 180" 
-                      fill="none" 
-                      stroke="#10b981" 
-                      strokeWidth="5" 
-                      strokeDasharray="12 10"
-                      strokeLinecap="round" 
-                    />
-                  </svg>
-
-                  {/* ─── DYNAMIC LEVEL RENDER WITH PRECISION PLACEMENT ─── */}
-                  {world.levels.map((level, idx) => {
-                    const status = getLevelStatus(level.id);
-                    const isCompleted = status === 'completed';
-                    const isAvailable = status === 'available';
-                    const isLocked = status === 'locked';
-
-                    const coords = LEVEL_COORDS[idx];
-
-                    return (
-                      <div 
-                        key={level.id}
-                        id={`level-node-${level.id}`}
-                        style={{ left: coords.left, bottom: coords.bottom }}
-                        className="absolute z-30 -translate-x-1/2 flex flex-col items-center"
-                      >
-                        {/* Round Checkpoint Anchor */}
-                        <button
-                          onClick={() => handleLevelClick(level)}
-                          className={`relative rounded-full flex items-center justify-center transition-all duration-300 border-3 border-black shadow-2xl ${
-                            level.isBoss 
-                              ? 'w-15 h-15 scale-110 ring-4' 
-                              : 'w-12 h-12'
-                          } ${
-                            isCompleted 
-                              ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
-                              : isAvailable 
-                                ? 'bg-gradient-to-br from-orange-400 to-amber-500 text-white scale-115 ring-4 ring-orange-500/50 animate-[bounce_2.5s_infinite] border-amber-300' 
-                                : 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-75'
-                          }`}
-                        >
-                          {isCompleted ? (
-                            <Check size={level.isBoss ? 24 : 20} className="stroke-[4px]" />
-                          ) : isLocked ? (
-                            <Lock size={level.isBoss ? 16 : 14} className="stroke-[2.5px]" />
-                          ) : level.isBoss ? (
-                            <span className="font-black text-xs font-mono uppercase text-yellow-300 animate-pulse">BOSS</span>
-                          ) : (
-                            <span className="font-extrabold text-sm font-sans tracking-tight">{level.id}</span>
-                          )}
-
-                          {/* Pulsing ring wrapper for available checkpoints */}
-                          {isAvailable && (
-                            <div className="absolute -inset-2.5 rounded-full border-2 border-orange-400/60 animate-ping opacity-60" />
-                          )}
-                        </button>
-
-                        {/* Spark of Boss crown above boss levels */}
-                        {level.isBoss && !isCompleted && !isLocked && (
-                          <div className="absolute -top-5 z-40 bg-yellow-500/90 text-black text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-yellow-400 font-mono scale-95 shadow-md">
-                            <Trophy size={6.5} /> Apex Boss
-                          </div>
-                        )}
-
-                        {/* Micro Stars ratings */}
-                        <div className="flex items-center gap-0.5 mt-1 bg-black/80 border border-slate-800/80 px-1.5 py-0.5 rounded-full">
-                          <Star size={7.5} className={isCompleted ? "text-yellow-400 fill-yellow-400" : "text-slate-600"} />
-                          <Star size={8} className={isCompleted ? "text-yellow-400 fill-yellow-400" : "text-slate-600"} />
-                          <Star size={7.5} className={isCompleted ? "text-yellow-400 fill-yellow-400" : "text-slate-600"} />
-                        </div>
-
-                        {/* Hover / tap title bubble tooltip */}
-                        <div 
-                          onClick={() => status !== 'locked' && handleLevelClick(level)}
-                          className={`mt-1 max-w-[100px] px-2 py-0.5 bg-[#0f172a] border border-slate-800 rounded-lg text-center transition-all active:scale-95 cursor-pointer shadow-md ${
-                            isLocked ? 'opacity-40' : 'hover:bg-slate-900 border-slate-700'
-                          }`}
-                        >
-                          <p className="text-[7px] font-mono font-black text-amber-400 uppercase leading-none">LVL {level.id}</p>
-                          <p className="text-[8px] font-black text-white truncate max-w-[85px] uppercase leading-tight mt-0.5">{level.title}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {/* Micro Level Number Tag Bubble */}
+                  <div 
+                    onClick={() => status !== 'locked' && handleLevelClick(level)}
+                    className={`mt-1 max-w-[100px] px-2.5 py-1 bg-[#090f1a]/95 border border-slate-800 rounded-xl text-center shadow-lg transition-all active:scale-95 cursor-pointer ${
+                      isLocked ? 'opacity-40' : 'hover:bg-slate-900 border-slate-600/60'
+                    }`}
+                  >
+                    <p className="text-[7px] font-mono font-black text-amber-400 uppercase leading-none">LVL {level.id}</p>
+                    <p className="text-[8px] font-black text-white truncate max-w-[85px] uppercase mt-0.5 tracking-tight leading-tight">{level.title}</p>
                   </div>
                 </div>
               );
-            });
-          })()}
+            })}
 
+          </div>
         </div>
       </div>
 
@@ -1279,7 +907,7 @@ export function AdventureMap({
                 </span>
                 <button 
                   onClick={() => { vibrate(5); setSelectedLevel(null); }}
-                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold text-[8.5px] uppercase rounded-full border border-slate-700 transition-all font-mono"
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-705 text-slate-300 font-extrabold text-[8.5px] uppercase rounded-full border border-slate-700 transition-all font-mono"
                 >
                   Close
                 </button>
@@ -1341,7 +969,7 @@ export function AdventureMap({
                   <div className="w-full h-1.5 bg-slate-850 rounded-full overflow-hidden">
                     <div 
                       className={`h-full transition-all duration-550 ${currentHabits.officialMet ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                      style={{ width: `${Math.min(100, (currentHabits.official / 2) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (currentHabits.official / 2) * 105)}%` }}
                     />
                   </div>
                   <p className="text-[7.5px] text-slate-400 mt-1 italic">
@@ -1362,7 +990,7 @@ export function AdventureMap({
                   <div className="w-full h-1.5 bg-slate-850 rounded-full overflow-hidden">
                     <div 
                       className={`h-full transition-all duration-550 ${currentHabits.customMet ? 'bg-emerald-500' : 'bg-orange-500'}`}
-                      style={{ width: `${Math.min(100, (currentHabits.custom / 3) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (currentHabits.custom / 3) * 105)}%` }}
                     />
                   </div>
                   <p className="text-[7.5px] text-slate-400 mt-1 italic">
@@ -1382,7 +1010,7 @@ export function AdventureMap({
                 </button>
               ) : (
                 <div className="space-y-2">
-                  <div className="p-3 bg-rose-500/10 border border-rose-550/20 rounded-2xl flex items-start gap-2.5">
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-start gap-2.5">
                     <ShieldAlert className="w-4 h-4 text-rose-450 mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="font-extrabold text-[8.5px] text-rose-400 uppercase tracking-wider font-mono">MISSION ROADBLOCK</p>
@@ -1434,7 +1062,7 @@ export function AdventureMap({
                 ))}
               </div>
 
-              <div className="text-5xl my-4 animate-bounce">📦🏆🎉</div>
+              <div className="text-5xl my-4 animate-bounce select-none">📦🏆🎉</div>
 
               <h2 className="text-xl sm:text-2xl font-black text-yellow-400 uppercase tracking-tight">
                 CONQUEST COMPLETED!
@@ -1467,7 +1095,7 @@ export function AdventureMap({
                 {/* If a world capstone was unlocked, display the rare prize seed */}
                 {celebrationDetails.unlockedSeed && (
                   <div className="mt-4 pt-3 border-t border-white/5 bg-yellow-500/10 p-3 rounded-xl border border-yellow-500/20 text-center">
-                    <span className="text-lg">🌱 Rare Prize Unlocked!</span>
+                    <span className="text-lg select-none">🌱 Rare Prize Unlocked!</span>
                     <p className="font-extrabold text-xs text-yellow-300 uppercase tracking-tight mt-1">
                       {celebrationDetails.unlockedSeed}
                     </p>
