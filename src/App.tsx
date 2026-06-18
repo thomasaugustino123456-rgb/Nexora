@@ -4882,6 +4882,7 @@ export default function App() {
             (activeScreen as string) !== "admin" &&
             (activeScreen as string) !== "hydration-detail" &&
             (activeScreen as string) !== "social" &&
+            (activeScreen as string) !== "garden" &&
             !showArchitectLab && (
               <header className="px-6 pt-8 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl border-b border-[#E9E4D4]/50">
                 <div className="flex items-center gap-3 select-none">
@@ -6124,6 +6125,8 @@ export default function App() {
                       gardenState={gardenState}
                       setGardenState={setGardenState}
                       showToast={showToast}
+                      dailyProgress={dailyProgress}
+                      setDailyProgress={setDailyProgress}
                     />
                   </Suspense>
                 </motion.div>
@@ -6329,6 +6332,7 @@ export default function App() {
             (activeScreen as string) !== "admin" &&
             (activeScreen as string) !== "hydration-detail" &&
             (activeScreen as string) !== "social" &&
+            (activeScreen as string) !== "garden" &&
             !showArchitectLab && (
               <motion.div
                 initial={false}
