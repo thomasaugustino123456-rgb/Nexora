@@ -627,15 +627,15 @@ export function SocialScreen({
   };
 
   return (
-    // Outer flex wrapper taking up solid 100vh with no background holes
-    <div className="flex flex-col min-h-screen w-full bg-slate-50 text-slate-900 select-none relative pb-28">
+    // Clean, natural wrapper that flows seamlessly with the app without custom bounding bg boxes or scrolling overrides
+    <div className="w-full text-slate-800 select-none relative pb-12">
       
       {/* ─── HEADER BAR ─── */}
-      <header className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-slate-100 md:px-8 px-6 py-4 flex items-center justify-between z-40 transition-colors">
+      <header className="flex items-center justify-between pb-4 border-b border-slate-200/50 mb-4">
         <div className="flex items-center gap-3">
           <button 
             onClick={onBack}
-            className="p-2 hover:bg-slate-100 rounded-2xl transition-all text-slate-600 active:scale-95"
+            className="p-2 hover:bg-slate-100 rounded-2xl transition-all text-slate-650 active:scale-95"
             title="Go Back to Hub"
           >
             <ArrowLeft size={22} />
@@ -680,7 +680,7 @@ export function SocialScreen({
       </header>
 
       {/* ─── MAIN SCROLLABLE WRAPPER ─── */}
-      <main className="flex-1 flex flex-col w-full max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-6">
+      <div className="w-full max-w-4xl mx-auto space-y-6">
         
         {/* VIEW: GROUP DETAILED PAGE */}
         {selectedGroupId && currentViewingCircle ? (
@@ -1124,7 +1124,7 @@ export function SocialScreen({
             </section>
           </div>
         )}
-      </main>
+      </div>
 
       {/* ─── NEW POST FORM POPUP SCREEN (REDESIGNED FOR EXQUISITE FLOW) ─── */}
       {showCreatePost && (
