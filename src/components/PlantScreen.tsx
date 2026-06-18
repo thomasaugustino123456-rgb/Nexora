@@ -231,7 +231,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
         </button>
 
         <button 
-          onClick={() => { vibrate(5); /* TODO: Hook up Map */ }}
+          onClick={() => { vibrate(5); if (onOpenGarden) onOpenGarden(); }}
           className={`p-2 transition-all relative text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100/80 rounded-xl border border-emerald-250 flex items-center gap-1 active:scale-95 shrink-0`}
           title="Adventure Map"
         >
