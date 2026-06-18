@@ -643,10 +643,10 @@ export function AdventureMap({
       {/* ─── FULL-SCREEN LIVING LANDSCAPE ADVENTURE SCROLL TRACK ─── */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 w-full overflow-y-auto pb-44 scroll-smooth scrollbar-none select-none relative"
-        style={{ paddingTop: '80px' }} // clear sticky header nicely
+        className="flex-1 w-full overflow-y-auto pb-20 scroll-smooth scrollbar-none select-none relative"
+        style={{ paddingTop: '64px' }} // clear sticky header nicely
       >
-        <div className="w-full max-w-xl mx-auto flex flex-col relative gap-8 px-4">
+        <div className="w-full flex flex-col relative">
 
           {/* Stacking All Unlocked Worlds in Reverse Order (Highest Unlocked World at top, World 1 at bottom so you climb up) */}
           {(() => {
@@ -659,8 +659,9 @@ export function AdventureMap({
               return (
                 <div 
                   key={world.id}
-                  className={`relative w-full h-[1800px] rounded-[3rem] ${world.bgColor} border border-white/10 overflow-hidden shadow-2xl transition-all duration-500`}
+                  className={`relative w-full h-[1800px] ${world.bgColor} overflow-hidden transition-all duration-500`}
                 >
+                  <div className="w-full max-w-xl mx-auto h-full relative">
                   {/* World Ambient Atmosphere Overlay */}
                   <div className={`absolute inset-x-0 top-0 h-44 bg-gradient-to-b ${world.skyColor} pointer-events-none z-10`} />
                   <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-10" />
@@ -1253,6 +1254,7 @@ export function AdventureMap({
                       </div>
                     );
                   })}
+                  </div>
                 </div>
               );
             });
@@ -1260,38 +1262,6 @@ export function AdventureMap({
 
         </div>
       </div>
-
-      {/* ─── REWRITE VERIFICATION ADVENTURE DEV PANEL (FOR USER CONVENIENCE SIMULTANEOUS TEST) ─── */}
-      <footer className="absolute bottom-0 inset-x-0 h-16 bg-[#090f1a]/95 border-t border-white/5 py-2 px-4 flex items-center justify-around z-50 shadow-2xl">
-        <button 
-          onClick={handleCheatCompleteHabit}
-          className="flex-1 max-w-[130px] p-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/20 rounded-xl text-[9px] font-black uppercase tracking-wider font-mono mx-1 flex flex-col items-center justify-center leading-tight transition-all active:scale-95"
-        >
-          <span>Quick Log</span>
-          <span>Official Habit</span>
-        </button>
-        <button 
-          onClick={handleCheatCompletePlan}
-          className="flex-1 max-w-[130px] p-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/20 rounded-xl text-[9px] font-black uppercase tracking-wider font-mono mx-1 flex flex-col items-center justify-center leading-tight transition-all active:scale-95"
-        >
-          <span>Quick Log</span>
-          <span>Custom Plan</span>
-        </button>
-        <button 
-          onClick={handleCheatUnlockAll}
-          className="flex-1 max-w-[130px] p-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/20 rounded-xl text-[9px] font-black uppercase tracking-wider font-mono mx-1 flex flex-col items-center justify-center leading-tight transition-all active:scale-95 animate-pulse"
-        >
-          <span>⚡ CHEAT UNLOCK</span>
-          <span>ALL 66 LEVELS</span>
-        </button>
-        <button 
-          onClick={handleCheatResetAll}
-          className="p-2 bg-slate-800/80 hover:bg-rose-900/20 border border-slate-700 hover:border-rose-900/40 text-rose-400 rounded-xl text-[9px] font-black uppercase tracking-wider font-mono mx-1 flex flex-col items-center justify-center leading-tight transition-all active:scale-95"
-          title="Reset progression"
-        >
-          <span>RESET MAP</span>
-        </button>
-      </footer>
 
       {/* ─── MODAL 1: PRE-ENTRY GATE / MISSION BRIEFING (COMPLETION TARGET VERIFIER) ─── */}
       <AnimatePresence>
