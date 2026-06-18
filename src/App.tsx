@@ -181,6 +181,7 @@ import { addSeedToInventory } from "./types/garden";
 import { startPreloading } from "./lib/preloader";
 
 import { GardenScreen } from "./components/GardenScreen";
+import { AdventureMap } from "./components/AdventureMap";
 import { HouseScreen } from "./components/HouseScreen";
 import { ArchivesScreen } from "./components/ArchivesScreen";
 import { LibraryScreen } from "./components/LibraryScreen";
@@ -6087,6 +6088,7 @@ export default function App() {
                       gardenState={gardenState}
                       setGardenState={setGardenState}
                       showToast={showToast}
+                      onUpdateStats={onUpdateStats}
                       onOpenGarden={() => {
                         vibrate(5);
                         setActiveScreen("garden");
@@ -6108,17 +6110,19 @@ export default function App() {
                 >
                   <Suspense
                     fallback={
-                      <div className="flex items-center justify-center p-20 animate-pulse text-green-700 font-black italic uppercase tracking-widest">
-                        NURTURING GARDEN...
+                      <div className="flex items-center justify-center p-20 animate-pulse text-emerald-500 font-black italic uppercase tracking-widest">
+                        GENERATING CHALLENGE MAP...
                       </div>
                     }
                   >
-                    <GardenScreen 
+                    <AdventureMap 
                       onBack={() => setActiveScreen("home")} 
-                      gardenState={gardenState}
-                      setGardenState={setGardenState}
+                      settings={settings}
+                      onUpdateSettings={onUpdateSettings}
                       stats={stats}
                       onUpdateStats={onUpdateStats}
+                      gardenState={gardenState}
+                      setGardenState={setGardenState}
                       showToast={showToast}
                     />
                   </Suspense>
