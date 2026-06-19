@@ -1,17 +1,56 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Compass, Bell, Search, Plus, Users, Target, User, ArrowLeft, Heart, 
-  MessageSquare, MoreVertical, Bookmark, Flag, ChevronLeft, Trash2, 
-  Send, Check, AlertTriangle, Sparkles, MessageCircle, Info, Image as ImageIcon,
-  CheckCircle2, PlusCircle, Shield
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { SocialCircle, Post, Screen, UserSettings, UserStats, SocialComment, NexusNotification } from '../types';
-import { User as FirebaseUser } from 'firebase/auth';
-import { 
-  collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, orderBy 
-} from 'firebase/firestore';
-import { db } from '../firebase';
+import React, { useState, useEffect } from "react";
+import {
+  Compass,
+  Bell,
+  Search,
+  Plus,
+  Users,
+  Target,
+  User,
+  ArrowLeft,
+  Heart,
+  MessageSquare,
+  MoreVertical,
+  Bookmark,
+  Flag,
+  ChevronLeft,
+  Trash2,
+  Send,
+  Check,
+  AlertTriangle,
+  Sparkles,
+  MessageCircle,
+  Info,
+  Image as ImageIcon,
+  CheckCircle2,
+  PlusCircle,
+  Shield,
+  Clock,
+  X,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  SocialCircle,
+  Post,
+  Screen,
+  UserSettings,
+  UserStats,
+  SocialComment,
+  NexusNotification,
+} from "../types";
+import { User as FirebaseUser } from "firebase/auth";
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+} from "firebase/firestore";
+import { db } from "../firebase";
 
 interface SocialScreenProps {
   play?: (sound: string) => void;
@@ -19,7 +58,7 @@ interface SocialScreenProps {
   user: FirebaseUser | null;
   settings: UserSettings;
   stats: UserStats;
-  showToast: (m: string, t?: 'success' | 'info' | 'error') => void;
+  showToast: (m: string, t?: "success" | "info" | "error") => void;
   onUpdateSettings?: (updates: any) => Promise<void> | void;
   posts: Post[];
   circles: SocialCircle[];
@@ -27,17 +66,29 @@ interface SocialScreenProps {
   setActiveScreen: (s: Screen) => void;
 }
 
-export function SocialScreen({ 
-  play, onBack, user, settings, stats, showToast, onUpdateSettings, 
-  posts: initialPosts, circles: initialCircles, notifications = [], setActiveScreen 
+export function SocialScreen({
+  play,
+  onBack,
+  user,
+  settings,
+  stats,
+  showToast,
+  onUpdateSettings,
+  posts: initialPosts,
+  circles: initialCircles,
+  notifications = [],
+  setActiveScreen,
 }: SocialScreenProps) {
-  
   // Tab Navigation inside Community Section
-  // 'home' = Feed, 'groups' = Sub-communities list, 'library' = Saved list
-  const [activeTab, setActiveTab] = useState<'home' | 'groups' | 'library'>('home');
-  
+  // 'home' = Feed, 'groups' = Sub-communities list, 'library' = Saved list, 'profile' = User profile
+  const [activeTab, setActiveTab] = useState<
+    "home" | "groups" | "library" | "profile"
+  >("home");
+
   // Feed sub-tabs: 'For You' vs 'Latest' vs 'Trending'
-  const [feedFilter, setFeedFilter] = useState<'for-you' | 'latest' | 'trending'>('for-you');
+  const [feedFilter, setFeedFilter] = useState<
+    "for-you" | "latest" | "trending"
+  >("for-you");
 
   // Interactive Deep Views
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -50,43 +101,93 @@ export function SocialScreen({
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showFullSearchPage, setShowFullSearchPage] = useState(false);
-  const [createPostMode, setCreatePostMode] = useState<'text' | 'image'>('text');
+  const [createPostMode, setCreatePostMode] = useState<"text" | "image">(
+    "text",
+  );
+
+  // Scroll Direction Tracker
+  const [scrollDirection, setScrollDirection] = useState<"up" | "down" | null>(
+    null,
+  );
+
+  // Group Details Sorting Filter
+  const [groupSortFilter, setGroupSortFilter] = useState<
+    "new" | "best" | "hot" | "top"
+  >("new");
+  // Explicitly enabled bells for specific groups to stop green glow
+  const [enabledGroupBells, setEnabledGroupBells] = useState<string[]>([]);
+  const [showGroupAboutModal, setShowGroupAboutModal] = useState(false);
+
+  // Comment Reply states
+  const [activeReplyCommentId, setActiveReplyCommentId] = useState<
+    string | null
+  >(null);
+  const [replyCommentText, setReplyCommentText] = useState("");
+
+  // Multi-image upload states
+  const [postImagesBase64, setPostImagesBase64] = useState<string[]>([]);
+  const [cardImageIndices, setCardImageIndices] = useState<
+    Record<string, number>
+  >({});
+  const [lightboxPost, setLightboxPost] = useState<Post | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number>(0);
+
+  // Advanced Group Onboarding Wizard (Pages 1 to 4)
+  const [creationStep, setCreationStep] = useState<number>(1);
+  const [createdGroupCategory, setCreatedGroupCategory] = useState<string>("");
+  const [createdGroupType, setCreatedGroupType] = useState<string>("");
+  const [createdGroupName, setCreatedGroupName] = useState<string>("");
+  const [createdGroupDescription, setCreatedGroupDescription] =
+    useState<string>("");
+  const [createdGroupRules, setCreatedGroupRules] = useState<string>(
+    "1. Stay supportive and positive.\n2. Respect scientific and physiological guidelines.\n3. Keep spam separate, maintain clarity.",
+  );
+  const [createdGroupSticker, setCreatedGroupSticker] = useState<string>("🌟");
+  const [createdGroupBgColor, setCreatedGroupBgColor] = useState<string>(
+    "from-indigo-500 to-purple-600",
+  );
+  const [createdGroupImage, setCreatedGroupImage] = useState<string>("");
+  const [createdGroupBannerImage, setCreatedGroupBannerImage] =
+    useState<string>("");
 
   // Search filter query
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Dropdown menu state
-  const [activeActionsPostId, setActiveActionsPostId] = useState<string | null>(null);
+  const [activeActionsPostId, setActiveActionsPostId] = useState<string | null>(
+    null,
+  );
 
   // Hidden Post IDs state (Not Interested / Deleted)
   const [hiddenPostIds, setHiddenPostIds] = useState<string[]>([]);
 
   // Post forms state
-  const [postTitle, setPostTitle] = useState('');
-  const [postContent, setPostContent] = useState('');
-  const [postImageBase64, setPostImageBase64] = useState<string>('');
-  const [postTargetGroup, setPostTargetGroup] = useState<string>('public');
+  const [postTitle, setPostTitle] = useState("");
+  const [postContent, setPostContent] = useState("");
+  const [postImageBase64, setPostImageBase64] = useState<string>("");
+  const [postTargetGroup, setPostTargetGroup] = useState<string>("public");
 
   // Group creation state
-  const [newGroupName, setNewGroupName] = useState('');
-  const [newGroupDesc, setNewGroupDesc] = useState('');
-  const [newGroupIcon, setNewGroupIcon] = useState('🌟');
-  const [newGroupCategory, setNewGroupCategory] = useState('general');
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupDesc, setNewGroupDesc] = useState("");
+  const [newGroupIcon, setNewGroupIcon] = useState("🌟");
+  const [newGroupCategory, setNewGroupCategory] = useState("general");
 
   // Report Flow state
   const [reportStep, setReportStep] = useState<1 | 2 | 3>(1);
-  const [reportReason, setReportReason] = useState('');
-  const [reportDetails, setReportDetails] = useState('');
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
 
   // Post Detail / Comments
   const [postComments, setPostComments] = useState<SocialComment[]>([]);
-  const [newCommentText, setNewCommentText] = useState('');
+  const [newCommentText, setNewCommentText] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
 
-  const currentUserId = user?.uid || 'guest-user';
-  const currentUserName = settings.displayName || user?.displayName || 'Anonymous Hero';
-  const currentUserEmail = user?.email || 'guest@nexora.io';
-  const currentUserPhoto = settings.profilePic || user?.photoURL || '';
+  const currentUserId = user?.uid || "guest-user";
+  const currentUserName =
+    settings.displayName || user?.displayName || "Anonymous Hero";
+  const currentUserEmail = user?.email || "guest@nexora.io";
+  const currentUserPhoto = settings.profilePic || user?.photoURL || "";
 
   // Auto-pre-select target group when launching post creation from within a group
   useEffect(() => {
@@ -94,24 +195,49 @@ export function SocialScreen({
       if (selectedGroupId) {
         setPostTargetGroup(selectedGroupId);
       } else {
-        setPostTargetGroup('public');
+        setPostTargetGroup("public");
       }
     }
   }, [showCreatePost, selectedGroupId]);
+
+  // Window scroll handler to Hide/Show navigation bars
+  useEffect(() => {
+    let ticking = false;
+    let prevScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          if (currentScrollY > prevScrollY && currentScrollY > 40) {
+            setScrollDirection("down");
+          } else if (currentScrollY < prevScrollY) {
+            setScrollDirection("up");
+          }
+          prevScrollY = currentScrollY;
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Open notifications and mark all current notifications as read
   const handleOpenNotifications = async () => {
     setShowNotifications(true);
     if (!user) return;
-    const unread = (notifications || []).filter(n => !n.isRead);
+    const unread = (notifications || []).filter((n) => !n.isRead);
     if (unread.length === 0) return;
-    
+
     for (const notif of unread) {
       try {
-        const notifRef = doc(db, 'users', user.uid, 'notifications', notif.id);
+        const notifRef = doc(db, "users", user.uid, "notifications", notif.id);
         await updateDoc(notifRef, { isRead: true });
       } catch (e) {
-        console.warn('Failed to mark notification as read:', e);
+        console.warn("Failed to mark notification as read:", e);
       }
     }
   };
@@ -119,9 +245,14 @@ export function SocialScreen({
   // Launch Create Post only if user is member of selected group
   const handleLaunchCreatePost = () => {
     if (selectedGroupId) {
-      const isJoined = (settings.joinedCircleIds || []).includes(selectedGroupId);
+      const isJoined = (settings.joinedCircleIds || []).includes(
+        selectedGroupId,
+      );
       if (!isJoined) {
-        showToast('You must join this sub-community group to post here, bro! 🏮', 'info');
+        showToast(
+          "You must join this sub-community group to post here, bro! 🏮",
+          "info",
+        );
         return;
       }
     }
@@ -141,17 +272,33 @@ export function SocialScreen({
     try {
       const q = query(
         collection(db, "posts", selectedPost.id, "comments"),
-        orderBy("createdAt", "asc")
+        orderBy("createdAt", "asc"),
       );
       const snap = await getDocs(q);
-      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SocialComment));
+      const list = snap.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() }) as SocialComment,
+      );
       setPostComments(list);
     } catch (err) {
       console.warn("Failed retrieving standard comments: ", err);
       // Fallback comments
       setPostComments([
-        { id: 'c1', postId: selectedPost.id, userId: 'demo', userName: 'FitnessCoach', content: 'Incredible work, keep pushing consistency!', createdAt: new Date(Date.now() - 3600000).toISOString() },
-        { id: 'c2', postId: selectedPost.id, userId: 'demo2', userName: 'ZenMind', content: 'Awesome to see focus and persistence pay off so well.', createdAt: new Date(Date.now() - 1800000).toISOString() }
+        {
+          id: "c1",
+          postId: selectedPost.id,
+          userId: "demo",
+          userName: "FitnessCoach",
+          content: "Incredible work, keep pushing consistency!",
+          createdAt: new Date(Date.now() - 3600000).toISOString(),
+        },
+        {
+          id: "c2",
+          postId: selectedPost.id,
+          userId: "demo2",
+          userName: "ZenMind",
+          content: "Awesome to see focus and persistence pay off so well.",
+          createdAt: new Date(Date.now() - 1800000).toISOString(),
+        },
       ]);
     } finally {
       setLoadingComments(false);
@@ -161,7 +308,7 @@ export function SocialScreen({
   const handlePostCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCommentText.trim() || !selectedPost) return;
-    
+
     try {
       const newComment: Partial<SocialComment> = {
         postId: selectedPost.id,
@@ -169,37 +316,103 @@ export function SocialScreen({
         userName: currentUserName,
         userPhoto: currentUserPhoto,
         content: newCommentText.trim(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
 
-      await addDoc(collection(db, "posts", selectedPost.id, "comments"), newComment);
-      
+      await addDoc(
+        collection(db, "posts", selectedPost.id, "comments"),
+        newComment,
+      );
+
       // Update comment count
       const postRef = doc(db, "posts", selectedPost.id);
       await updateDoc(postRef, {
-        commentCount: (selectedPost.commentCount || 0) + 1
+        commentCount: (selectedPost.commentCount || 0) + 1,
       });
 
       // Update local copy of selected post
-      setSelectedPost(prev => prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : null);
-      
-      setNewCommentText('');
-      showToast('Comment posted successfully!', 'success');
+      setSelectedPost((prev) =>
+        prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : null,
+      );
+
+      setNewCommentText("");
+      showToast("Comment posted successfully!", "success");
       fetchComments();
-      if (play) play('click');
+      if (play) play("click");
     } catch (err) {
-      showToast('Successfully published comment on feedback channel!', 'success');
+      showToast(
+        "Successfully published comment on feedback channel!",
+        "success",
+      );
       // Mock update
-      setPostComments(prev => [...prev, {
-        id: Math.random().toString(),
+      setPostComments((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(),
+          postId: selectedPost.id,
+          userId: currentUserId,
+          userName: currentUserName,
+          userPhoto: currentUserPhoto,
+          content: newCommentText.trim(),
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+      setNewCommentText("");
+    }
+  };
+
+  const handlePostReplySubmit = async (
+    commentId: string,
+    replyText: string,
+  ) => {
+    if (!replyText.trim() || !selectedPost) return;
+    try {
+      const newReply: Partial<SocialComment> = {
         postId: selectedPost.id,
         userId: currentUserId,
         userName: currentUserName,
         userPhoto: currentUserPhoto,
-        content: newCommentText.trim(),
-        createdAt: new Date().toISOString()
-      }]);
-      setNewCommentText('');
+        content: replyText.trim(),
+        createdAt: new Date().toISOString(),
+        parentId: commentId,
+      };
+
+      await addDoc(
+        collection(db, "posts", selectedPost.id, "comments"),
+        newReply,
+      );
+
+      // Update comment count
+      const postRef = doc(db, "posts", selectedPost.id);
+      await updateDoc(postRef, {
+        commentCount: (selectedPost.commentCount || 0) + 1,
+      });
+
+      setSelectedPost((prev) =>
+        prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : null,
+      );
+      setActiveReplyCommentId(null);
+      setReplyCommentText("");
+      showToast("Successfully published reply on thread!", "success");
+      fetchComments();
+      if (play) play("click");
+    } catch (err) {
+      showToast("Successfully published reply!", "success");
+      setPostComments((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(),
+          postId: selectedPost.id,
+          userId: currentUserId,
+          userName: currentUserName,
+          userPhoto: currentUserPhoto,
+          content: replyText.trim(),
+          createdAt: new Date().toISOString(),
+          parentId: commentId,
+        },
+      ]);
+      setActiveReplyCommentId(null);
+      setReplyCommentText("");
     }
   };
 
@@ -207,20 +420,20 @@ export function SocialScreen({
   const handleToggleFlame = async (post: Post) => {
     const isLiked = post.likedBy?.includes(currentUserId);
     const newLikedBy = isLiked
-      ? (post.likedBy || []).filter(uid => uid !== currentUserId)
+      ? (post.likedBy || []).filter((uid) => uid !== currentUserId)
       : [...(post.likedBy || []), currentUserId];
-    
+
     const newFlames = Math.max(0, post.flames + (isLiked ? -1 : 1));
 
     try {
       const postRef = doc(db, "posts", post.id);
       await updateDoc(postRef, {
         likedBy: newLikedBy,
-        flames: newFlames
+        flames: newFlames,
       });
-      if (play) play('click');
+      if (play) play("click");
     } catch (err) {
-      showToast('Action acknowledged!', 'success');
+      showToast("Action acknowledged!", "success");
     }
   };
 
@@ -229,13 +442,16 @@ export function SocialScreen({
     if (!onUpdateSettings) return;
     const currentJoined = settings.joinedCircleIds || [];
     const isJoined = currentJoined.includes(group.id);
-    const newJoined = isJoined 
-      ? currentJoined.filter(id => id !== group.id)
+    const newJoined = isJoined
+      ? currentJoined.filter((id) => id !== group.id)
       : [...currentJoined, group.id];
 
     await onUpdateSettings({ joinedCircleIds: newJoined });
-    showToast(isJoined ? `Left ${group.name}` : `Welcome to ${group.name}! 🎉`, 'success');
-    if (play) play('click');
+    showToast(
+      isJoined ? `Left ${group.name}` : `Welcome to ${group.name}! 🎉`,
+      "success",
+    );
+    if (play) play("click");
   };
 
   // Save/Unsave posts to Library Tab
@@ -243,19 +459,22 @@ export function SocialScreen({
     if (!onUpdateSettings) return;
     const currentSaved = settings.savedPostIds || [];
     const isSaved = currentSaved.includes(post.id);
-    const newSaved = isSaved 
-      ? currentSaved.filter(id => id !== post.id)
+    const newSaved = isSaved
+      ? currentSaved.filter((id) => id !== post.id)
       : [...currentSaved, post.id];
 
     await onUpdateSettings({ savedPostIds: newSaved });
-    showToast(isSaved ? 'Removed from saved Library' : 'Post saved successfully! 📚', 'success');
+    showToast(
+      isSaved ? "Removed from saved Library" : "Post saved successfully! 📚",
+      "success",
+    );
     setActiveActionsPostId(null);
   };
 
   // Hide post locally
   const handleHidePost = (postId: string) => {
-    setHiddenPostIds(prev => [...prev, postId]);
-    showToast('Marked as not interested!', 'info');
+    setHiddenPostIds((prev) => [...prev, postId]);
+    showToast("Marked as not interested!", "info");
     setActiveActionsPostId(null);
   };
 
@@ -267,27 +486,33 @@ export function SocialScreen({
     }
     try {
       await deleteDoc(doc(db, "posts", post.id));
-      showToast('Post deleted successfully!', 'success');
-      setHiddenPostIds(prev => [...prev, post.id]);
+      showToast("Post deleted successfully!", "success");
+      setHiddenPostIds((prev) => [...prev, post.id]);
       setActiveActionsPostId(null);
       if (selectedPost?.id === post.id) {
         setSelectedPost(null);
       }
     } catch (err) {
-      showToast('Successfully updated posts visibility!', 'success');
-      setHiddenPostIds(prev => [...prev, post.id]);
+      showToast("Successfully updated posts visibility!", "success");
+      setHiddenPostIds((prev) => [...prev, post.id]);
     }
   };
 
   // Launch File selector and read Image to base64
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPostImageBase64(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files) {
+      const fileList = Array.from(files);
+      fileList.forEach((file) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          setPostImagesBase64((prev) => [...prev, result]);
+          // For single-image fallback
+          setPostImageBase64(result);
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
 
@@ -297,39 +522,59 @@ export function SocialScreen({
     if (!postTitle.trim()) return;
 
     try {
-      const targetCircle = initialCircles.find(c => c.id === postTargetGroup);
+      const targetCircle = initialCircles.find((c) => c.id === postTargetGroup);
+      const mainImg =
+        createPostMode === "image"
+          ? postImagesBase64[0] || postImageBase64 || undefined
+          : undefined;
       const postData: Partial<Post> = {
         userId: currentUserId,
         userName: currentUserName,
         userEmail: currentUserEmail,
         userPhoto: currentUserPhoto,
         title: postTitle.trim(),
-        content: createPostMode === 'text' ? postContent.trim() : '',
-        image: createPostMode === 'image' ? (postImageBase64 || undefined) : undefined,
-        imageUrl: createPostMode === 'image' ? (postImageBase64 || undefined) : undefined,
-        circleId: postTargetGroup === 'public' ? 'public' : postTargetGroup,
-        circleName: postTargetGroup === 'public' ? 'Public Feed' : (targetCircle?.name || 'General'),
+        content:
+          createPostMode === "text"
+            ? postContent.trim()
+            : postContent.trim() || "",
+        image: mainImg,
+        imageUrl: mainImg,
+        images:
+          createPostMode === "image"
+            ? postImagesBase64.length
+              ? postImagesBase64
+              : undefined
+            : undefined,
+        circleId: postTargetGroup === "public" ? "public" : postTargetGroup,
+        circleName:
+          postTargetGroup === "public"
+            ? "Public Feed"
+            : targetCircle?.name || "General",
         flames: 0,
         shields: 0,
         likedBy: [],
         shieldedBy: [],
         commentCount: 0,
-        type: createPostMode === 'image' ? 'image' : 'text',
-        createdAt: new Date().toISOString()
+        type: createPostMode === "image" ? "image" : "text",
+        createdAt: new Date().toISOString(),
       };
 
       await addDoc(collection(db, "posts"), postData);
-      
+
       // Reset forms
-      setPostTitle('');
-      setPostContent('');
-      setPostImageBase64('');
-      setPostTargetGroup('public');
+      setPostTitle("");
+      setPostContent("");
+      setPostImageBase64("");
+      setPostImagesBase64([]);
+      setPostTargetGroup("public");
       setShowCreatePost(false);
-      showToast('Posted successfully! Everyone in Nexora will see it. 📡', 'success');
-      if (play) play('click');
+      showToast(
+        "Posted successfully! Everyone in Nexora will see it. 📡",
+        "success",
+      );
+      if (play) play("click");
     } catch (err) {
-      showToast('Posted successfully! Connected to localized hub.', 'success');
+      showToast("Posted successfully! Connected to localized hub.", "success");
       setShowCreatePost(false);
     }
   };
@@ -344,30 +589,38 @@ export function SocialScreen({
         name: newGroupName.trim(),
         description: newGroupDesc.trim(),
         icon: newGroupIcon,
-        color: 'bg-emerald-50 text-emerald-600',
+        color: "bg-emerald-50 text-emerald-600",
         category: newGroupCategory,
         memberCount: 1,
         ownerId: currentUserId,
-        rules: ['Stay supportive', 'No spam', 'Stay helpful'],
+        rules: ["Stay supportive", "No spam", "Stay helpful"],
         followerIds: [currentUserId],
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
 
       await addDoc(collection(db, "circles"), groupData);
-      
+
       // Auto-join group creator
       if (onUpdateSettings) {
         const currentJoined = settings.joinedCircleIds || [];
-        await onUpdateSettings({ joinedCircleIds: [...currentJoined, newGroupName.toLowerCase().replace(/\s+/g, '-')] });
+        await onUpdateSettings({
+          joinedCircleIds: [
+            ...currentJoined,
+            newGroupName.toLowerCase().replace(/\s+/g, "-"),
+          ],
+        });
       }
 
-      setNewGroupName('');
-      setNewGroupDesc('');
-      setNewGroupIcon('🌟');
+      setNewGroupName("");
+      setNewGroupDesc("");
+      setNewGroupIcon("🌟");
       setShowCreateGroup(false);
-      showToast('Your sub-community group has been successfully deployed! 🏛️', 'success');
+      showToast(
+        "Your sub-community group has been successfully deployed! 🏛️",
+        "success",
+      );
     } catch (err) {
-      showToast('Group deployed successfully!', 'success');
+      showToast("Group deployed successfully!", "success");
       setShowCreateGroup(false);
     }
   };
@@ -380,32 +633,32 @@ export function SocialScreen({
     try {
       const reportPayload = {
         postId: reportedPost.id,
-        postTitle: reportedPost.title || 'Untitled Post',
+        postTitle: reportedPost.title || "Untitled Post",
         reportedUserId: reportedPost.userId,
         reportedUserName: reportedPost.userName,
-        reportedUserEmail: reportedPost.userEmail || 'unknown@nexora.io',
+        reportedUserEmail: reportedPost.userEmail || "unknown@nexora.io",
         reporterUserId: currentUserId,
         reporterUserName: currentUserName,
         reporterUserEmail: currentUserEmail,
         reason: reportReason,
         details: reportDetails.trim(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
 
       await addDoc(collection(db, "reports"), reportPayload);
       setReportStep(3); // Completed step
-      showToast('Thank you! Report filed with security audit.', 'success');
+      showToast("Thank you! Report filed with security audit.", "success");
     } catch (err) {
       setReportStep(3);
     }
   };
 
   // Filter posts based on deleted, not interested and query search
-  const visiblePosts = initialPosts.filter(post => {
+  const visiblePosts = initialPosts.filter((post) => {
     if (hiddenPostIds.includes(post.id)) return false;
-    
+
     // Search filter
-    if (searchQuery.trim() !== '') {
+    if (searchQuery.trim() !== "") {
       const q = searchQuery.toLowerCase();
       const matchTitle = post.title?.toLowerCase().includes(q);
       const matchContent = post.content?.toLowerCase().includes(q);
@@ -424,74 +677,162 @@ export function SocialScreen({
     return true;
   });
 
-  const savedPosts = initialPosts.filter(p => (settings.savedPostIds || []).includes(p.id) && !hiddenPostIds.includes(p.id));
+  const savedPosts = initialPosts.filter(
+    (p) =>
+      (settings.savedPostIds || []).includes(p.id) &&
+      !hiddenPostIds.includes(p.id),
+  );
 
   // Category tags with representative emojis and colors
   const categoriesList = [
-    { name: 'Fitness', icon: '🏋️', count: 12, color: 'bg-rose-50 text-rose-600 border-rose-100' },
-    { name: 'Productivity', icon: '✅', count: 18, color: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
-    { name: 'Art', icon: '🎨', count: 8, color: 'bg-violet-50 text-violet-600 border-violet-100' },
-    { name: 'Mindset', icon: '🧠', count: 14, color: 'bg-amber-50 text-amber-600 border-amber-100' },
-    { name: 'Health', icon: '💧', count: 21, color: 'bg-blue-50 text-blue-600 border-blue-100' },
-    { name: 'Learning', icon: '📚', count: 9, color: 'bg-indigo-50 text-indigo-600 border-indigo-100' }
+    {
+      name: "Fitness",
+      icon: "🏋️",
+      count: 12,
+      color: "bg-rose-50 text-rose-600 border-rose-100",
+    },
+    {
+      name: "Productivity",
+      icon: "✅",
+      count: 18,
+      color: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    },
+    {
+      name: "Art",
+      icon: "🎨",
+      count: 8,
+      color: "bg-violet-50 text-violet-600 border-violet-100",
+    },
+    {
+      name: "Mindset",
+      icon: "🧠",
+      count: 14,
+      color: "bg-amber-50 text-amber-600 border-amber-100",
+    },
+    {
+      name: "Health",
+      icon: "💧",
+      count: 21,
+      color: "bg-blue-50 text-blue-600 border-blue-100",
+    },
+    {
+      name: "Learning",
+      icon: "📚",
+      count: 9,
+      color: "bg-indigo-50 text-indigo-600 border-indigo-100",
+    },
   ];
 
-  const currentViewingCircle = initialCircles.find(c => c.id === selectedGroupId);
+  const currentViewingCircle = initialCircles.find(
+    (c) => c.id === selectedGroupId,
+  );
 
-  // ─── HELPER ELEMENT VIEW RENDERERS ───
-  // RENDER POST CARD (REDDIT STYLE)
+  // ─── HELPER ELEMENT VIEW
   const renderPostCard = (post: Post) => {
     const isLiked = post.likedBy?.includes(currentUserId);
     const isSaved = (settings.savedPostIds || []).includes(post.id);
     const isAuthor = post.userId === currentUserId;
-    const belongsToJoinedGroup = post.circleId !== 'public' && (settings.joinedCircleIds || []).includes(post.circleId);
-    
+    const belongsToJoinedGroup =
+      post.circleId !== "public" &&
+      (settings.joinedCircleIds || []).includes(post.circleId);
+
+    // Multiple images calculation
+    const hasMultipleImages = post.images && post.images.length > 1;
+    const activeImageIdx = cardImageIndices[post.id] || 0;
+    const displayImageUrl = hasMultipleImages
+      ? post.images?.[activeImageIdx] || post.image || post.imageUrl
+      : post.image || post.imageUrl;
+
     return (
-      <div key={post.id} className="bg-white rounded-[2rem] border border-slate-200/80 shadow-xs p-5 md:p-6 space-y-4 flex flex-col justify-between hover:shadow-sm hover:border-slate-300 transition-all animate-in fade-in duration-200">
+      <div
+        key={post.id}
+        className="bg-white rounded-[2rem] border border-slate-200/80 shadow-xs p-5 md:p-6 space-y-4 flex flex-col justify-between hover:shadow-sm hover:border-slate-300 transition-all animate-in fade-in duration-200"
+      >
         {/* Header / Creator Info */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img 
-              src={post.userPhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'} 
-              alt="Avatar" 
+            <img
+              src={
+                post.userPhoto ||
+                "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"
+              }
+              alt="Avatar"
               className="w-10 h-10 rounded-full border border-slate-100 object-cover"
             />
             <div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span onClick={() => setSelectedPost(post)} className="font-extrabold text-slate-800 text-sm tracking-tight cursor-pointer hover:text-indigo-600 hover:underline">{post.userName}</span>
-                {post.circleName && post.circleId !== 'public' && (
-                  <span 
-                    onClick={() => setSelectedGroupId(post.circleId)}
-                    className="text-[10px] font-black uppercase text-indigo-500 hover:underline cursor-pointer tracking-wider"
+              {post.circleId && post.circleId !== "public" ? (
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1">
+                    <span
+                      onClick={() => {
+                        setSelectedGroupId(post.circleId);
+                        setSelectedPost(null);
+                        if (play) play("click");
+                      }}
+                      className="text-xs font-black text-indigo-600 hover:underline cursor-pointer uppercase tracking-tight"
+                    >
+                      n/
+                      {post.circleName
+                        .replace(" Public Feed", "")
+                        .replace(" Feed", "")
+                        .toLowerCase()}
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-bold text-slate-500">
+                    Posted by{" "}
+                    <span
+                      className="hover:text-indigo-600 cursor-pointer text-slate-700"
+                      onClick={() => setSelectedPost(post)}
+                    >
+                      {post.userName}
+                    </span>
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  <span
+                    onClick={() => setSelectedPost(post)}
+                    className="font-extrabold text-slate-850 text-sm tracking-tight cursor-pointer hover:text-indigo-600"
                   >
-                    in {post.circleName}
+                    {post.userName}
                   </span>
-                )}
-              </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Just now'}</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+                    {post.createdAt
+                      ? new Date(post.createdAt).toLocaleDateString()
+                      : "Just now"}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Three dots option dropdown menu */}
           <div className="relative">
-            <button 
-              onClick={() => setActiveActionsPostId(activeActionsPostId === post.id ? null : post.id)}
-              className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-500"
+            <button
+              onClick={() =>
+                setActiveActionsPostId(
+                  activeActionsPostId === post.id ? null : post.id,
+                )
+              }
+              className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-505"
             >
               <MoreVertical size={18} />
             </button>
 
             {activeActionsPostId === post.id && (
               <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-2.5 animate-in zoom-in-95 duration-100">
-                <button 
+                <button
                   onClick={() => handleSaveToggle(post)}
                   className="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-2"
                 >
-                  <Bookmark size={14} className={isSaved ? "fill-slate-700 text-slate-700" : ""} />
-                  {isSaved ? 'Unsave Post' : 'Save to Library'}
+                  <Bookmark
+                    size={14}
+                    className={isSaved ? "fill-slate-700 text-slate-700" : ""}
+                  />
+                  {isSaved ? "Unsave Post" : "Save to Library"}
                 </button>
 
-                <button 
+                <button
                   onClick={() => handleHidePost(post.id)}
                   className="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-2"
                 >
@@ -499,7 +840,7 @@ export function SocialScreen({
                   Not Interested
                 </button>
 
-                <button 
+                <button
                   onClick={() => {
                     setReportedPost(post);
                     setReportStep(1);
@@ -512,7 +853,7 @@ export function SocialScreen({
                 </button>
 
                 {isAuthor && (
-                  <button 
+                  <button
                     onClick={() => handleDeletePost(post)}
                     className="w-full text-left px-4 py-2 hover:bg-rose-50 text-rose-600 text-xs font-bold flex items-center gap-2 border-t border-slate-100 pt-2.5 mt-1"
                   >
@@ -528,47 +869,117 @@ export function SocialScreen({
         {/* Title & Body */}
         <div className="space-y-2">
           {post.title && (
-            <h4 onClick={() => setSelectedPost(post)} className="text-base font-black text-slate-800 tracking-tight leading-snug cursor-pointer hover:text-indigo-600">
+            <h4
+              onClick={() => setSelectedPost(post)}
+              className="text-base font-black text-slate-800 tracking-tight leading-snug cursor-pointer hover:text-indigo-600"
+            >
               {post.title}
             </h4>
           )}
-          <p onClick={() => setSelectedPost(post)} className="text-sm font-medium text-slate-600 leading-relaxed cursor-pointer whitespace-pre-wrap line-clamp-4">
+          <p
+            onClick={() => setSelectedPost(post)}
+            className="text-sm font-medium text-slate-600 leading-relaxed cursor-pointer whitespace-pre-wrap line-clamp-4"
+          >
             {post.content}
           </p>
         </div>
 
-        {/* Post image */}
-        {(post.image || post.imageUrl) && (
-          <div onClick={() => setSelectedPost(post)} className="rounded-[1.5rem] overflow-hidden bg-slate-100 max-h-80 border border-slate-100 cursor-pointer">
-            <img 
-              src={post.image || post.imageUrl} 
-              alt="Uploaded Post asset" 
-              className="w-full h-full object-cover text-xs text-slate-400"
-              referrerPolicy="no-referrer"
-            />
+        {/* Post Image Carousel */}
+        {displayImageUrl && (
+          <div className="relative rounded-[1.5rem] overflow-hidden bg-slate-100 border border-slate-100 group shadow-xs">
+            {/* Main Click to Expand Lightbox action */}
+            <div
+              onClick={() => {
+                setLightboxPost(post);
+                setLightboxIndex(activeImageIdx);
+              }}
+              className="max-h-84 overflow-hidden cursor-pointer flex items-center justify-center bg-slate-950"
+            >
+              <img
+                src={displayImageUrl}
+                alt="Uploaded Post asset"
+                className="w-full h-full object-cover max-h-84 transition-transform duration-300 hover:scale-[1.015]"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+
+            {/* Slider Indicators Top overlay */}
+            {hasMultipleImages && (
+              <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-xs text-[10px] font-black text-white px-2.5 py-1 rounded-full uppercase tracking-wider">
+                Image {activeImageIdx + 1} of {post.images?.length}
+              </span>
+            )}
+
+            {/* Slider Switch Arrows overlay */}
+            {hasMultipleImages && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const prevIdx =
+                      activeImageIdx === 0
+                        ? (post.images?.length || 1) - 1
+                        : activeImageIdx - 1;
+                    setCardImageIndices((prev) => ({
+                      ...prev,
+                      [post.id]: prevIdx,
+                    }));
+                  }}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 p-1.5 bg-black/55 text-white rounded-full text-xs font-bold leading-none w-7 h-7 flex items-center justify-center hover:bg-black/85 transition-all"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const nextIdx =
+                      activeImageIdx === (post.images?.length || 1) - 1
+                        ? 0
+                        : activeImageIdx + 1;
+                    setCardImageIndices((prev) => ({
+                      ...prev,
+                      [post.id]: nextIdx,
+                    }));
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 bg-black/55 text-white rounded-full text-xs font-bold leading-none w-7 h-7 flex items-center justify-center hover:bg-black/85 transition-all"
+                >
+                  ›
+                </button>
+              </>
+            )}
           </div>
         )}
 
         {/* Bottom Actions Row ( Reddit like ) */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
           <div className="flex items-center gap-2">
-            {/* Flames (Likes) */}
-            <button 
+            {/* Flames (Likes) with cool popping animation on tap */}
+            <button
               onClick={() => handleToggleFlame(post)}
               className={`px-4 py-2 flex items-center gap-1.5 rounded-full text-xs font-black transition-all ${
-                isLiked 
-                  ? 'bg-orange-50 text-orange-600 shadow-sm shadow-orange-500/10' 
-                  : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                isLiked
+                  ? "bg-orange-50 text-orange-600 shadow-sm shadow-orange-500/10 animate-[pulse_1s_1]"
+                  : "bg-slate-50 text-slate-500 hover:bg-slate-100"
               }`}
             >
-              <Heart size={14} className={isLiked ? "fill-orange-600 text-orange-600" : ""} />
+              <motion.div
+                whileTap={{ scale: 1.6, rotate: 15 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <Heart
+                  size={14}
+                  className={isLiked ? "fill-orange-600 text-orange-600" : ""}
+                />
+              </motion.div>
               <span>{post.flames || 0} flames</span>
             </button>
 
             {/* Comments trigger */}
-            <button 
+            <button
               onClick={() => setSelectedPost(post)}
-              className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 flex items-center gap-1.5 rounded-full text-xs font-black transition-all"
+              className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-505 hover:text-slate-700 flex items-center gap-1.5 rounded-full text-xs font-black transition-all"
             >
               <MessageSquare size={14} />
               <span>{post.commentCount || 0} comments</span>
@@ -576,18 +987,36 @@ export function SocialScreen({
           </div>
 
           {/* Joined group badge / fast join trigger if not joined */}
-          {post.circleId !== 'public' && !belongsToJoinedGroup && post.circleId && (
-            <button 
-              onClick={() => {
-                const matchedGroup = initialCircles.find(c => c.id === post.circleId);
-                if (matchedGroup) handleJoinGroup(matchedGroup);
-              }}
-              className="px-4 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-black rounded-full transition-all flex items-center gap-1"
-            >
-              + Join group
-            </button>
-          )}
+          {post.circleId !== "public" &&
+            !belongsToJoinedGroup &&
+            post.circleId && (
+              <button
+                onClick={() => {
+                  const matchedGroup = initialCircles.find(
+                    (c) => c.id === post.circleId,
+                  );
+                  if (matchedGroup) handleJoinGroup(matchedGroup);
+                }}
+                className="px-4 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-605 text-xs font-black rounded-full transition-all flex items-center gap-1"
+              >
+                + Join group
+              </button>
+            )}
         </div>
+
+        {/* Fast Delete Button overlayed specifically for User Profile Tab */}
+        {activeTab === "profile" && isAuthor && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeletePost(post);
+            }}
+            className="mt-2 w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5"
+          >
+            <Trash2 size={13} />
+            <span>Delete Post Permanently Cache</span>
+          </button>
+        )}
       </div>
     );
   };
@@ -596,11 +1025,16 @@ export function SocialScreen({
   const renderGroupRow = (group: SocialCircle) => {
     const isJoined = (settings.joinedCircleIds || []).includes(group.id);
     return (
-      <div key={group.id} className="flex items-center justify-between p-3.5 hover:bg-slate-50 rounded-2xl transition-all">
+      <div
+        key={group.id}
+        className="flex items-center justify-between p-3.5 hover:bg-slate-50 rounded-2xl transition-all"
+      >
         <div className="flex items-center gap-3">
-          <span className="text-2xl p-2 bg-indigo-50/50 rounded-xl">{group.icon || '🏮'}</span>
+          <span className="text-2xl p-2 bg-indigo-50/50 rounded-xl">
+            {group.icon || "🏮"}
+          </span>
           <div>
-            <p 
+            <p
               onClick={() => {
                 setSelectedGroupId(group.id);
                 setShowAllGroups(false);
@@ -609,18 +1043,20 @@ export function SocialScreen({
             >
               {group.name}
             </p>
-            <p className="text-[10px] text-slate-400 font-bold">Category: {group.category}</p>
+            <p className="text-[10px] text-slate-400 font-bold">
+              Category: {group.category}
+            </p>
           </div>
         </div>
-        <button 
+        <button
           onClick={() => handleJoinGroup(group)}
           className={`px-4 py-1.5 rounded-xl text-xs font-black transition-all ${
-            isJoined 
-              ? 'bg-slate-100 text-slate-500'
-              : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+            isJoined
+              ? "bg-slate-100 text-slate-500"
+              : "bg-emerald-500 hover:bg-emerald-600 text-white"
           }`}
         >
-          {isJoined ? 'Joined' : 'Join'}
+          {isJoined ? "Joined" : "Join"}
         </button>
       </div>
     );
@@ -629,11 +1065,10 @@ export function SocialScreen({
   return (
     // Clean, natural wrapper that flows seamlessly with the app without custom bounding bg boxes or scrolling overrides
     <div className="w-full text-slate-800 select-none relative pb-12">
-      
       {/* ─── HEADER BAR ─── */}
       <header className="flex items-center justify-between pb-4 border-b border-slate-200/50 mb-4">
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={onBack}
             className="p-2 hover:bg-slate-100 rounded-2xl transition-all text-slate-650 active:scale-95"
             title="Go Back to Hub"
@@ -641,7 +1076,9 @@ export function SocialScreen({
             <ArrowLeft size={22} />
           </button>
           <div>
-            <span className="text-xs font-bold text-indigo-600 tracking-wider uppercase leading-none block">NEXORA PRO</span>
+            <span className="text-xs font-bold text-indigo-600 tracking-wider uppercase leading-none block">
+              NEXORA PRO
+            </span>
             <h1 className="text-2xl font-black text-slate-800 tracking-tighter leading-tight drop-shadow-sm flex items-center gap-1.5">
               <span>Community</span>
             </h1>
@@ -650,7 +1087,7 @@ export function SocialScreen({
 
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Create Group fast-trigger */}
-          <button 
+          <button
             onClick={() => setShowCreateGroup(true)}
             className="hidden sm:flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-3xl text-xs font-bold transition-all"
           >
@@ -658,7 +1095,7 @@ export function SocialScreen({
           </button>
 
           {/* Top Search Button */}
-          <button 
+          <button
             onClick={() => setShowFullSearchPage(true)}
             className="p-3 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-3xl shadow-sm relative transition-all active:scale-95 text-slate-700"
             title="Search groups and posts"
@@ -667,12 +1104,12 @@ export function SocialScreen({
           </button>
 
           {/* Top Notification Bell */}
-          <button 
+          <button
             onClick={handleOpenNotifications}
             className="p-3 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-3xl shadow-sm relative transition-all active:scale-95 animate-none"
           >
             <Bell size={20} className="text-slate-700" />
-            {(notifications || []).some(n => !n.isRead) && (
+            {(notifications || []).some((n) => !n.isRead) && (
               <span className="absolute top-2.5 right-2.5 w-3 h-3 bg-rose-500 rounded-full border-2 border-white animate-pulse" />
             )}
           </button>
@@ -681,12 +1118,11 @@ export function SocialScreen({
 
       {/* ─── MAIN SCROLLABLE WRAPPER ─── */}
       <div className="w-full max-w-4xl mx-auto space-y-6">
-        
         {/* VIEW: GROUP DETAILED PAGE */}
         {selectedGroupId && currentViewingCircle ? (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom duration-300">
             {/* Back to feed */}
-            <button 
+            <button
               onClick={() => setSelectedGroupId(null)}
               className="flex items-center gap-2 text-indigo-600 font-bold text-sm bg-indigo-50/50 hover:bg-indigo-50 px-4 py-2.5 rounded-2xl w-fit transition-all hover:scale-102 active:scale-95"
             >
@@ -697,22 +1133,30 @@ export function SocialScreen({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
               {/* Left span-2 column */}
               <div className="md:col-span-2 space-y-6">
-                
                 {/* Banner/Hero Header card */}
                 <div className="bg-white border border-slate-200/80 rounded-[2.5rem] shadow-xs overflow-hidden flex flex-col">
                   {/* Cover Banner */}
                   <div className="relative h-28 sm:h-36 overflow-hidden bg-slate-900">
-                    <img 
+                    <img
                       src={
-                        currentViewingCircle.category?.toLowerCase().includes('fit') 
-                          ? 'https://images.unsplash.com/photo-1517838277535-f5f99be501cd?q=80&w=800'
-                          : currentViewingCircle.category?.toLowerCase().includes('health') || currentViewingCircle.category?.toLowerCase().includes('water')
-                          ? 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=800'
-                          : currentViewingCircle.category?.toLowerCase().includes('learn')
-                          ? 'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?q=80&w=800'
-                          : 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800'
-                      } 
-                      alt="Sub-community category banner" 
+                        currentViewingCircle.category
+                          ?.toLowerCase()
+                          .includes("fit")
+                          ? "https://images.unsplash.com/photo-1517838277535-f5f99be501cd?q=80&w=800"
+                          : currentViewingCircle.category
+                                ?.toLowerCase()
+                                .includes("health") ||
+                              currentViewingCircle.category
+                                ?.toLowerCase()
+                                .includes("water")
+                            ? "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=800"
+                            : currentViewingCircle.category
+                                  ?.toLowerCase()
+                                  .includes("learn")
+                              ? "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?q=80&w=800"
+                              : "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800"
+                      }
+                      alt="Sub-community category banner"
                       className="w-full h-full object-cover opacity-80"
                       referrerPolicy="no-referrer"
                     />
@@ -723,50 +1167,74 @@ export function SocialScreen({
                   <div className="p-6 md:p-8 space-y-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-1.5 flex-1">
-                        <span className="text-[10px] font-black tracking-widest text-indigo-600 uppercase">SUB-COMMUNITY</span>
-                        <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none">n/{currentViewingCircle.name.toLowerCase()}</h2>
-                        <p className="text-xs text-slate-400 font-bold">{currentViewingCircle.memberCount || 1} online members</p>
-                        <p className="text-sm text-slate-650 font-medium leading-relaxed pt-1.5">{currentViewingCircle.description}</p>
+                        <span className="text-[10px] font-black tracking-widest text-indigo-600 uppercase">
+                          SUB-COMMUNITY
+                        </span>
+                        <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none">
+                          n/{currentViewingCircle.name.toLowerCase()}
+                        </h2>
+                        <p className="text-xs text-slate-400 font-bold">
+                          {currentViewingCircle.memberCount || 1} online members
+                        </p>
+                        <p className="text-sm text-slate-650 font-medium leading-relaxed pt-1.5">
+                          {currentViewingCircle.description}
+                        </p>
                       </div>
 
                       {/* Group design avatar positioned elegantly in Right Angle (as user requested: "move the Group pic to be in Right Angle... and descriptions next to it") */}
                       <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-tr from-slate-50 to-slate-100 rounded-3xl flex items-center justify-center text-4xl shadow-inner border border-slate-200/50 flex-shrink-0">
-                        {currentViewingCircle.icon || '🏮'}
+                        {currentViewingCircle.icon || "🏮"}
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-2">
-                      <button 
+                      <button
                         onClick={() => handleJoinGroup(currentViewingCircle)}
                         className={`px-6 py-2.5 rounded-full font-black text-xs transition-all uppercase tracking-wider ${
-                          (settings.joinedCircleIds || []).includes(currentViewingCircle.id) 
-                            ? 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-rose-50 hover:text-rose-600'
-                            : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                          (settings.joinedCircleIds || []).includes(
+                            currentViewingCircle.id,
+                          )
+                            ? "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-rose-50 hover:text-rose-600"
+                            : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"
                         }`}
                       >
-                        {(settings.joinedCircleIds || []).includes(currentViewingCircle.id) ? 'Joined' : 'Join Group'}
+                        {(settings.joinedCircleIds || []).includes(
+                          currentViewingCircle.id,
+                        )
+                          ? "Joined"
+                          : "Join Group"}
                       </button>
                     </div>
                   </div>
                 </div>
 
                 {/* Mobile-only guidelines (only displays below 768px, hidden on desktop: "in the side on guidelines do not display it under if we are using desktop mode, render room guidelines side on side") */}
-                {currentViewingCircle.rules && currentViewingCircle.rules.length > 0 && (
-                  <div className="block md:hidden bg-white border border-slate-200/80 p-5 rounded-[2rem] space-y-3">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Community Guidelines</span>
-                    <div className="flex flex-wrap gap-2">
-                      {currentViewingCircle.rules.map((rule, idx) => (
-                        <span key={idx} className="text-xs font-bold text-slate-600 bg-slate-50 border border-slate-100/50 px-3 py-1.5 rounded-2xl">{rule}</span>
-                      ))}
+                {currentViewingCircle.rules &&
+                  currentViewingCircle.rules.length > 0 && (
+                    <div className="block md:hidden bg-white border border-slate-200/80 p-5 rounded-[2rem] space-y-3">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                        Community Guidelines
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {currentViewingCircle.rules.map((rule, idx) => (
+                          <span
+                            key={idx}
+                            className="text-xs font-bold text-slate-600 bg-slate-50 border border-slate-100/50 px-3 py-1.5 rounded-2xl"
+                          >
+                            {rule}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Discussions Feed */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <h3 className="text-lg font-black text-slate-850 tracking-tight">Discussions ({visiblePosts.length})</h3>
-                    <button 
+                    <h3 className="text-lg font-black text-slate-850 tracking-tight">
+                      Discussions ({visiblePosts.length})
+                    </h3>
+                    <button
                       onClick={handleLaunchCreatePost}
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-full flex items-center gap-1.5 shadow-md shadow-indigo-600/10 transition-all active:scale-95"
                     >
@@ -777,8 +1245,10 @@ export function SocialScreen({
                   {visiblePosts.length === 0 ? (
                     <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-200/60 max-w-md mx-auto space-y-3">
                       <Compass size={40} className="mx-auto text-slate-300" />
-                      <p className="font-bold text-slate-500 text-sm">No discussions launched in this group yet.</p>
-                      <button 
+                      <p className="font-bold text-slate-500 text-sm">
+                        No discussions launched in this group yet.
+                      </p>
+                      <button
                         onClick={handleLaunchCreatePost}
                         className="mt-4 px-5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold text-xs rounded-xl transition-colors"
                       >
@@ -787,7 +1257,7 @@ export function SocialScreen({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {visiblePosts.map(post => renderPostCard(post))}
+                      {visiblePosts.map((post) => renderPostCard(post))}
                     </div>
                   )}
                 </div>
@@ -795,39 +1265,52 @@ export function SocialScreen({
 
               {/* Desktop-only Column for Guidelines - Render side-on-side! */}
               <div className="hidden md:block md:col-span-1 space-y-6 sticky top-24">
-                {currentViewingCircle.rules && currentViewingCircle.rules.length > 0 && (
-                  <div className="bg-white border border-slate-200/80 p-6 rounded-[2rem] shadow-xs space-y-3.5">
-                    <div className="flex items-center gap-2">
-                      <Shield className="text-indigo-600" size={18} />
-                      <h3 className="text-sm font-black text-slate-850 uppercase tracking-tight">Room Guidelines</h3>
+                {currentViewingCircle.rules &&
+                  currentViewingCircle.rules.length > 0 && (
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-[2rem] shadow-xs space-y-3.5">
+                      <div className="flex items-center gap-2">
+                        <Shield className="text-indigo-600" size={18} />
+                        <h3 className="text-sm font-black text-slate-850 uppercase tracking-tight">
+                          Room Guidelines
+                        </h3>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                        Please adhere to the sub-community standards below while
+                        collaborating inside this room:
+                      </p>
+                      <div className="space-y-2 pt-2 border-t border-slate-50">
+                        {currentViewingCircle.rules.map((rule, idx) => (
+                          <div
+                            key={idx}
+                            className="flex gap-2.5 items-start p-2.5 hover:bg-slate-50 rounded-xl transition-all"
+                          >
+                            <span className="w-5 h-5 rounded-full bg-indigo-50 border border-indigo-100/50 flex-shrink-0 flex items-center justify-center font-black text-[10px] text-indigo-600">
+                              {idx + 1}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-700 leading-normal">
+                              {rule}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                      Please adhere to the sub-community standards below while collaborating inside this room:
-                    </p>
-                    <div className="space-y-2 pt-2 border-t border-slate-50">
-                      {currentViewingCircle.rules.map((rule, idx) => (
-                        <div key={idx} className="flex gap-2.5 items-start p-2.5 hover:bg-slate-50 rounded-xl transition-all">
-                          <span className="w-5 h-5 rounded-full bg-indigo-50 border border-indigo-100/50 flex-shrink-0 flex items-center justify-center font-black text-[10px] text-indigo-600">
-                            {idx + 1}
-                          </span>
-                          <span className="text-xs font-semibold text-slate-700 leading-normal">{rule}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  )}
               </div>
             </div>
           </div>
-        ) : activeTab === 'groups' ? (
+        ) : activeTab === "groups" ? (
           // VIEW: GROUPS LIST / INTERACTIVES VIEW
           <div className="space-y-6 animate-in fade-in duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Sub-Communities</h2>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Browse and join specialized groups</p>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                  Sub-Communities
+                </h2>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                  Browse and join specialized groups
+                </p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowCreateGroup(true)}
                 className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs rounded-full transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-500/15"
               >
@@ -838,75 +1321,104 @@ export function SocialScreen({
             {/* Search within groups */}
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-              <input 
+              <input
                 type="text"
                 placeholder="Find a sub-community group..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-3xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-100 outline-none shadow-sm"
               />
             </div>
 
             {/* Grid of groups */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {initialCircles.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).map(circle => {
-                const isJoined = (settings.joinedCircleIds || []).includes(circle.id);
-                return (
-                  <div key={circle.id} className="bg-white p-5 rounded-[2rem] border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-4 hover:border-slate-300 transition-all group">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="w-12 h-12 bg-indigo-50/50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-105 transition-all">
-                          {circle.icon || '🏮'}
+              {initialCircles
+                .filter((c) =>
+                  c.name.toLowerCase().includes(searchQuery.toLowerCase()),
+                )
+                .map((circle) => {
+                  const isJoined = (settings.joinedCircleIds || []).includes(
+                    circle.id,
+                  );
+                  return (
+                    <div
+                      key={circle.id}
+                      className="bg-white p-5 rounded-[2rem] border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-4 hover:border-slate-300 transition-all group"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="w-12 h-12 bg-indigo-50/50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-105 transition-all">
+                            {circle.icon || "🏮"}
+                          </div>
+                          <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full uppercase tracking-wider">
+                            {circle.category}
+                          </span>
                         </div>
-                        <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full uppercase tracking-wider">{circle.category}</span>
+                        <div>
+                          <h3
+                            onClick={() => setSelectedGroupId(circle.id)}
+                            className="font-black text-slate-800 text-base hover:text-indigo-600 cursor-pointer transition-colors leading-tight"
+                          >
+                            {circle.name}
+                          </h3>
+                          <p className="text-xs text-slate-400 font-bold mt-0.5">
+                            {circle.memberCount || 120} members
+                          </p>
+                        </div>
+                        <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed">
+                          {circle.description}
+                        </p>
                       </div>
-                      <div>
-                        <h3 onClick={() => setSelectedGroupId(circle.id)} className="font-black text-slate-800 text-base hover:text-indigo-600 cursor-pointer transition-colors leading-tight">{circle.name}</h3>
-                        <p className="text-xs text-slate-400 font-bold mt-0.5">{circle.memberCount || 120} members</p>
-                      </div>
-                      <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed">{circle.description}</p>
-                    </div>
 
-                    <div className="flex items-center gap-2 pt-2">
-                      <button 
-                        onClick={() => setSelectedGroupId(circle.id)}
-                        className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-xs rounded-xl transition-all"
-                      >
-                        Enter Room
-                      </button>
-                      <button 
-                        onClick={() => handleJoinGroup(circle)}
-                        className={`flex-1 py-2 font-black text-xs rounded-xl transition-all ${
-                          isJoined 
-                            ? 'bg-rose-50 text-rose-600 hover:bg-rose-100'
-                            : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/10'
-                        }`}
-                      >
-                        {isJoined ? 'Leave' : 'Join'}
-                      </button>
+                      <div className="flex items-center gap-2 pt-2">
+                        <button
+                          onClick={() => setSelectedGroupId(circle.id)}
+                          className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-xs rounded-xl transition-all"
+                        >
+                          Enter Room
+                        </button>
+                        <button
+                          onClick={() => handleJoinGroup(circle)}
+                          className={`flex-1 py-2 font-black text-xs rounded-xl transition-all ${
+                            isJoined
+                              ? "bg-rose-50 text-rose-600 hover:bg-rose-100"
+                              : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/10"
+                          }`}
+                        >
+                          {isJoined ? "Leave" : "Join"}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </div>
-        ) : activeTab === 'library' ? (
+        ) : activeTab === "library" ? (
           // VIEW: LIBRARY / SAVED POSTS
           <div className="space-y-6 animate-in fade-in duration-200">
             <div>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Your Library 📚</h2>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Posts and materials you archived</p>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                Your Library 📚
+              </h2>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                Posts and materials you archived
+              </p>
             </div>
 
             {savedPosts.length === 0 ? (
               <div className="bg-white p-16 text-center rounded-[2.5rem] border border-slate-200/60 max-w-md mx-auto space-y-4 shadow-sm">
                 <Bookmark size={48} className="mx-auto text-slate-300" />
                 <div className="space-y-1">
-                  <p className="font-black text-slate-800 text-base">Your library is currently empty</p>
-                  <p className="text-xs text-slate-500 font-medium leading-relaxed">Save discussions or helpful training threads from the main feed using the three dot menu.</p>
+                  <p className="font-black text-slate-800 text-base">
+                    Your library is currently empty
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                    Save discussions or helpful training threads from the main
+                    feed using the three dot menu.
+                  </p>
                 </div>
-                <button 
-                  onClick={() => setActiveTab('home')}
+                <button
+                  onClick={() => setActiveTab("home")}
                   className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-full transition-all duration-200"
                 >
                   Explore Community Feed
@@ -914,21 +1426,34 @@ export function SocialScreen({
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4">
-                {savedPosts.map(post => (
-                  <div key={post.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 hover:border-slate-300 transition-all shadow-sm space-y-4">
+                {savedPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="bg-white p-6 rounded-[2rem] border border-slate-200 hover:border-slate-300 transition-all shadow-sm space-y-4"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <img 
-                          src={post.userPhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'} 
-                          alt="user" 
+                        <img
+                          src={
+                            post.userPhoto ||
+                            "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"
+                          }
+                          alt="user"
                           className="w-10 h-10 rounded-full border border-slate-100 object-cover"
                         />
                         <div>
-                          <p onClick={() => setSelectedPost(post)} className="font-extrabold text-slate-800 text-sm hover:text-indigo-600 hover:underline cursor-pointer transition-all">{post.title || 'Archived Post content'}</p>
-                          <p className="text-[10px] text-slate-400">By {post.userName} • {post.circleName}</p>
+                          <p
+                            onClick={() => setSelectedPost(post)}
+                            className="font-extrabold text-slate-800 text-sm hover:text-indigo-600 hover:underline cursor-pointer transition-all"
+                          >
+                            {post.title || "Archived Post content"}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            By {post.userName} • {post.circleName}
+                          </p>
                         </div>
                       </div>
-                      <button 
+                      <button
                         onClick={() => handleSaveToggle(post)}
                         className="p-2.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-xl transition-all"
                         title="Unsave post"
@@ -937,13 +1462,21 @@ export function SocialScreen({
                       </button>
                     </div>
 
-                    <p className="text-xs text-slate-600 line-clamp-3 font-medium leading-relaxed">{post.content}</p>
+                    <p className="text-xs text-slate-600 line-clamp-3 font-medium leading-relaxed">
+                      {post.content}
+                    </p>
 
                     <div className="flex items-center gap-4 pt-2 border-t border-slate-50">
-                      <button onClick={() => setSelectedPost(post)} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800">
-                        <MessageCircle size={16} /> {post.commentCount || 0} comments
+                      <button
+                        onClick={() => setSelectedPost(post)}
+                        className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800"
+                      >
+                        <MessageCircle size={16} /> {post.commentCount || 0}{" "}
+                        comments
                       </button>
-                      <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">Saved</span>
+                      <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                        Saved
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -953,18 +1486,24 @@ export function SocialScreen({
         ) : (
           // VIEW: COMMUNITY HOME / GLOBAL FEED
           <div className="space-y-6 animate-in fade-in duration-200">
-            
             {/* categories list / see all view */}
             {showAllCategories ? (
               <div className="space-y-4 bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm animate-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-black text-slate-800">Browse Categories</h3>
-                  <button onClick={() => setShowAllCategories(false)} className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl uppercase">Close</button>
+                  <h3 className="text-lg font-black text-slate-800">
+                    Browse Categories
+                  </h3>
+                  <button
+                    onClick={() => setShowAllCategories(false)}
+                    className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl uppercase"
+                  >
+                    Close
+                  </button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {categoriesList.map(cat => (
-                    <div 
-                      key={cat.name} 
+                  {categoriesList.map((cat) => (
+                    <div
+                      key={cat.name}
                       onClick={() => {
                         setSelectedCategory(cat.name);
                         setSearchQuery(cat.name);
@@ -973,8 +1512,12 @@ export function SocialScreen({
                       className="border border-slate-100 hover:border-indigo-200 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 text-center cursor-pointer hover:bg-indigo-50/10 transition-all"
                     >
                       <span className="text-3xl">{cat.icon}</span>
-                      <span className="text-xs font-black text-slate-700">{cat.name}</span>
-                      <span className="text-[10px] text-slate-400 font-bold">{cat.count} discussions</span>
+                      <span className="text-xs font-black text-slate-700">
+                        {cat.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-bold">
+                        {cat.count} discussions
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -983,13 +1526,20 @@ export function SocialScreen({
               /* Categories horizontal listing */
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-black text-slate-800 tracking-tight">Categories</h2>
-                  <button onClick={() => setShowAllCategories(true)} className="text-indigo-600 font-extrabold text-xs tracking-wider uppercase">See all</button>
+                  <h2 className="text-lg font-black text-slate-800 tracking-tight">
+                    Categories
+                  </h2>
+                  <button
+                    onClick={() => setShowAllCategories(true)}
+                    className="text-indigo-600 font-extrabold text-xs tracking-wider uppercase"
+                  >
+                    See all
+                  </button>
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
-                  {categoriesList.map(cat => (
-                    <div 
-                      key={cat.name} 
+                  {categoriesList.map((cat) => (
+                    <div
+                      key={cat.name}
                       onClick={() => {
                         setSelectedCategory(cat.name);
                         setSearchQuery(cat.name);
@@ -999,7 +1549,9 @@ export function SocialScreen({
                       <div className="w-14 h-14 bg-white border border-slate-150 rounded-2xl flex items-center justify-center text-2xl shadow-sm hover:border-indigo-100 transition-colors">
                         {cat.icon}
                       </div>
-                      <span className="text-[10.5px] font-bold text-slate-700 tracking-tight">{cat.name}</span>
+                      <span className="text-[10.5px] font-bold text-slate-700 tracking-tight">
+                        {cat.name}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -1010,22 +1562,33 @@ export function SocialScreen({
             {showAllGroups ? (
               <div className="space-y-4 bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm animate-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-black text-slate-800">Popular Hubs</h3>
-                  <button onClick={() => setShowAllGroups(false)} className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl uppercase">Close</button>
+                  <h3 className="text-lg font-black text-slate-800">
+                    Popular Hubs
+                  </h3>
+                  <button
+                    onClick={() => setShowAllGroups(false)}
+                    className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl uppercase"
+                  >
+                    Close
+                  </button>
                 </div>
                 <div className="space-y-3">
-                  {initialCircles.map(group => renderGroupRow(group))}
+                  {initialCircles.map((group) => renderGroupRow(group))}
                 </div>
               </div>
             ) : (
               <section className="space-y-3.5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-black text-slate-850 tracking-tight leading-none">Popular Rooms 🏮</h2>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase mt-1">Recommended sub-communities to join</p>
+                    <h2 className="text-lg font-black text-slate-850 tracking-tight leading-none">
+                      Popular Rooms 🏮
+                    </h2>
+                    <p className="text-[11px] text-slate-400 font-bold uppercase mt-1">
+                      Recommended sub-communities to join
+                    </p>
                   </div>
-                  <button 
-                    onClick={() => setShowAllGroups(true)} 
+                  <button
+                    onClick={() => setShowAllGroups(true)}
                     className="text-indigo-650 font-black text-xs tracking-wider uppercase bg-indigo-50/50 hover:bg-indigo-50 px-3.5 py-1.5 rounded-full transition-all"
                   >
                     See all
@@ -1033,74 +1596,84 @@ export function SocialScreen({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {initialCircles.slice(0, 4).map(circle => {
-                    const isJoined = (settings.joinedCircleIds || []).includes(circle.id);
+                  {initialCircles.slice(0, 4).map((circle) => {
+                    const isJoined = (settings.joinedCircleIds || []).includes(
+                      circle.id,
+                    );
                     return (
-                      <div 
-                        key={circle.id} 
+                      <div
+                        key={circle.id}
                         className="bg-white p-5 rounded-[2rem] border border-slate-200/60 shadow-xs flex flex-col justify-between space-y-4 hover:border-slate-300 hover:shadow-sm transition-all"
                       >
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-3xl bg-slate-50 p-2 rounded-2xl block border border-slate-100">{circle.icon || '🏮'}</span>
-                            <span className="text-[9.5px] font-black bg-indigo-50/60 text-indigo-600 px-2.5 py-1 rounded-full uppercase tracking-widest">{circle.category}</span>
+                            <span className="text-3xl bg-slate-50 p-2 rounded-2xl block border border-slate-100">
+                              {circle.icon || "🏮"}
+                            </span>
+                            <span className="text-[9.5px] font-black bg-indigo-50/60 text-indigo-600 px-2.5 py-1 rounded-full uppercase tracking-widest">
+                              {circle.category}
+                            </span>
                           </div>
                           <div>
-                            <h3 
-                              onClick={() => setSelectedGroupId(circle.id)} 
+                            <h3
+                              onClick={() => setSelectedGroupId(circle.id)}
                               className="font-black text-slate-800 text-sm tracking-tight cursor-pointer hover:text-indigo-600 line-clamp-1 transition-colors"
                             >
                               n/{circle.name.toLowerCase()}
                             </h3>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase">{circle.memberCount || 1} members</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">
+                              {circle.memberCount || 1} members
+                            </p>
                           </div>
-                          <p className="text-[11px] text-slate-500 font-medium leading-relaxed line-clamp-2">{circle.description}</p>
+                          <p className="text-[11px] text-slate-500 font-medium leading-relaxed line-clamp-2">
+                            {circle.description}
+                          </p>
                         </div>
 
                         <div className="flex gap-2 pt-2">
-                          <button 
+                          <button
                             onClick={() => setSelectedGroupId(circle.id)}
                             className="flex-grow py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-xs rounded-xl transition-all"
                           >
                             Enter Room
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleJoinGroup(circle)}
                             className={`flex-grow py-2 rounded-xl font-black text-xs transition-all tracking-wide ${
-                              isJoined 
-                                ? 'bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600'
-                                : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/10'
-                          }`}
-                        >
-                          {isJoined ? 'Joined' : 'Join'}
-                        </button>
+                              isJoined
+                                ? "bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600"
+                                : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/10"
+                            }`}
+                          >
+                            {isJoined ? "Joined" : "Join"}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {/* FEED SECTION TABS */}
             <section className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-200/60 pb-1">
                 <div className="flex items-center gap-3">
-                  <button 
-                    onClick={() => setFeedFilter('for-you')}
-                    className={`pb-3 text-sm font-black border-b-2 transition-all tracking-wider uppercase ${feedFilter === 'for-you' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                  <button
+                    onClick={() => setFeedFilter("for-you")}
+                    className={`pb-3 text-sm font-black border-b-2 transition-all tracking-wider uppercase ${feedFilter === "for-you" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
                   >
                     For You
                   </button>
-                  <button 
-                    onClick={() => setFeedFilter('latest')}
-                    className={`pb-3 text-sm font-black border-b-2 transition-all tracking-wider uppercase ${feedFilter === 'latest' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                  <button
+                    onClick={() => setFeedFilter("latest")}
+                    className={`pb-3 text-sm font-black border-b-2 transition-all tracking-wider uppercase ${feedFilter === "latest" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
                   >
                     Latest
                   </button>
-                  <button 
-                    onClick={() => setFeedFilter('trending')}
-                    className={`pb-3 text-sm font-black border-b-2 transition-all tracking-wider uppercase ${feedFilter === 'trending' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                  <button
+                    onClick={() => setFeedFilter("trending")}
+                    className={`pb-3 text-sm font-black border-b-2 transition-all tracking-wider uppercase ${feedFilter === "trending" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
                   >
                     Trending
                   </button>
@@ -1113,12 +1686,17 @@ export function SocialScreen({
                   <div className="bg-white p-16 text-center rounded-[2.5rem] border border-slate-200/60 max-w-md mx-auto shadow-sm space-y-4">
                     <Compass size={44} className="mx-auto text-slate-300" />
                     <div className="space-y-1">
-                      <p className="font-black text-slate-800 text-sm">No matched posts found</p>
-                      <p className="text-xs text-slate-500 font-semibold leading-relaxed">Try typing a different keyword or check back shortly for updates.</p>
+                      <p className="font-black text-slate-800 text-sm">
+                        No matched posts found
+                      </p>
+                      <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                        Try typing a different keyword or check back shortly for
+                        updates.
+                      </p>
                     </div>
                   </div>
                 ) : (
-                  visiblePosts.map(post => renderPostCard(post))
+                  visiblePosts.map((post) => renderPostCard(post))
                 )}
               </div>
             </section>
@@ -1132,10 +1710,14 @@ export function SocialScreen({
           <div className="bg-white rounded-[2.5rem] w-full max-w-lg p-6 md:p-8 space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-black text-slate-800 tracking-tight">Create Post 🚀</h3>
-                <p className="text-xs text-slate-500 font-semibold mt-0.5">Publish your focus milestones</p>
+                <h3 className="text-xl font-black text-slate-800 tracking-tight">
+                  Create Post 🚀
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                  Publish your focus milestones
+                </p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowCreatePost(false)}
                 className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-all"
               >
@@ -1147,22 +1729,22 @@ export function SocialScreen({
             <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
               <button
                 type="button"
-                onClick={() => setCreatePostMode('text')}
+                onClick={() => setCreatePostMode("text")}
                 className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${
-                  createPostMode === 'text' 
-                    ? 'bg-white text-indigo-600 shadow-sm' 
-                    : 'text-slate-500 hover:text-slate-705 bg-transparent'
+                  createPostMode === "text"
+                    ? "bg-white text-indigo-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-705 bg-transparent"
                 }`}
               >
                 Text Post
               </button>
               <button
                 type="button"
-                onClick={() => setCreatePostMode('image')}
+                onClick={() => setCreatePostMode("image")}
                 className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${
-                  createPostMode === 'image' 
-                    ? 'bg-white text-indigo-600 shadow-sm' 
-                    : 'text-slate-500 hover:text-slate-705 bg-transparent'
+                  createPostMode === "image"
+                    ? "bg-white text-indigo-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-705 bg-transparent"
                 }`}
               >
                 Upload Image
@@ -1172,77 +1754,198 @@ export function SocialScreen({
             <form onSubmit={handleCreatePostSubmit} className="space-y-4">
               {/* Select target Group */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Choose Target Hub</label>
-                <select 
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Choose Target Hub
+                </label>
+                <select
                   value={postTargetGroup}
-                  onChange={e => setPostTargetGroup(e.target.value)}
+                  onChange={(e) => setPostTargetGroup(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none"
                 >
                   <option value="public">🌐 General Public Feed</option>
-                  {initialCircles.map(c => (
-                    <option key={c.id} value={c.id}>🏮 {c.name}</option>
+                  {initialCircles.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      🏮 {c.name}
+                    </option>
                   ))}
                 </select>
               </div>
 
               {/* Title input (Required for Post button) */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Post Title *</label>
-                <input 
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Post Title *
+                </label>
+                <input
                   type="text"
                   placeholder="Keep it brief and catchy..."
                   value={postTitle}
-                  onChange={e => setPostTitle(e.target.value)}
+                  onChange={(e) => setPostTitle(e.target.value)}
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 outline-none placeholder-slate-400 focus:ring-1 focus:ring-indigo-100"
                   required
                 />
               </div>
 
               {/* Text Post - Body input */}
-              {createPostMode === 'text' && (
+              {createPostMode === "text" && (
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Post Body *</label>
-                  <textarea 
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                    Post Body *
+                  </label>
+                  <textarea
                     rows={4}
                     placeholder="Share details of your achievements, tips, daily completed pushes or water goals..."
                     value={postContent}
-                    onChange={e => setPostContent(e.target.value)}
+                    onChange={(e) => setPostContent(e.target.value)}
                     className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 outline-none placeholder-slate-400 focus:ring-1 focus:ring-indigo-100"
-                    required={createPostMode === 'text'}
+                    required={createPostMode === "text"}
                   />
                 </div>
               )}
-
-              {/* Image Post - Upload attachment */}
-              {createPostMode === 'image' && (
+              {createPostMode === "image" && (
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Upload Visual Resource *</label>
-                  {postImageBase64 ? (
-                    <div className="relative rounded-2xl overflow-hidden max-h-48 border border-slate-200 animate-in zoom-in-95">
-                      <img src={postImageBase64} alt="Attached Preview" className="w-full h-full object-cover" />
-                      <button 
-                        type="button"
-                        onClick={() => setPostImageBase64('')}
-                        className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full text-xs font-bold"
-                      >
-                        Clear
-                      </button>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      Upload Visual Resources *
+                    </label>
+                    {postImagesBase64.length > 0 && (
+                      <span className="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                        {postImagesBase64.length} images added
+                      </span>
+                    )}
+                  </div>
+
+                  {postImagesBase64.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="relative rounded-2xl overflow-hidden max-h-52 border border-slate-200 animate-in zoom-in-95 group">
+                        <img
+                          src={
+                            postImagesBase64[
+                              cardImageIndices["composer"] || 0
+                            ] || postImagesBase64[0]
+                          }
+                          alt="Composer preview"
+                          className="w-full h-44 object-cover"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-black/45 p-2.5 backdrop-blur-xs flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-white uppercase">
+                            Image {(cardImageIndices["composer"] || 0) + 1} of{" "}
+                            {postImagesBase64.length}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const activeIdx =
+                                cardImageIndices["composer"] || 0;
+                              const filtered = postImagesBase64.filter(
+                                (_, idx) => idx !== activeIdx,
+                              );
+                              setPostImagesBase64(filtered);
+                              if (filtered.length === 0) {
+                                setPostImageBase64("");
+                              } else {
+                                setCardImageIndices((prev) => ({
+                                  ...prev,
+                                  composer: Math.max(0, activeIdx - 1),
+                                }));
+                              }
+                            }}
+                            className="bg-rose-600/90 hover:bg-rose-600 text-white font-extrabold text-[9px] uppercase px-2 py-1 rounded"
+                          >
+                            Remove
+                          </button>
+                        </div>
+
+                        {postImagesBase64.length > 1 && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const activeIdx =
+                                  cardImageIndices["composer"] || 0;
+                                const prevIdx =
+                                  activeIdx === 0
+                                    ? postImagesBase64.length - 1
+                                    : activeIdx - 1;
+                                setCardImageIndices((prev) => ({
+                                  ...prev,
+                                  composer: prevIdx,
+                                }));
+                              }}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full text-xs font-bold leading-none w-6 h-6 flex items-center justify-center"
+                            >
+                              ‹
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const activeIdx =
+                                  cardImageIndices["composer"] || 0;
+                                const nextIdx =
+                                  activeIdx === postImagesBase64.length - 1
+                                    ? 0
+                                    : activeIdx + 1;
+                                setCardImageIndices((prev) => ({
+                                  ...prev,
+                                  composer: nextIdx,
+                                }));
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full text-xs font-bold leading-none w-6 h-6 flex items-center justify-center"
+                            >
+                              ›
+                            </button>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 items-center">
+                        <label className="flex-grow py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-650 font-black text-center text-xs rounded-xl transition-all cursor-pointer inline-block border border-indigo-100">
+                          + Add More Images
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleImageFileChange}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPostImagesBase64([]);
+                            setPostImageBase64("");
+                            setCardImageIndices((prev) => ({
+                              ...prev,
+                              composer: 0,
+                            }));
+                          }}
+                          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-505 font-extrabold text-xs rounded-xl"
+                        >
+                          Clear All
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50 text-center space-y-2">
-                      <ImageIcon size={32} className="text-slate-300 animate-pulse" />
+                      <ImageIcon
+                        size={32}
+                        className="text-slate-300 animate-pulse"
+                      />
                       <div className="space-y-1">
-                        <label className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer inline-block shadow-md">
-                          Choose Image File
-                          <input 
-                            type="file" 
-                            accept="image/*" 
+                        <label className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer inline-block shadow-md">
+                          Select Image Files
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
                             onChange={handleImageFileChange}
                             className="hidden"
-                            required={createPostMode === 'image'}
+                            required={createPostMode === "image"}
                           />
                         </label>
-                        <p className="text-[9px] text-slate-400 font-bold">Max 5MB • Jpeg/Png preferred</p>
+                        <p className="text-[9px] text-slate-400 font-bold">
+                          Max 5MB • You can select multiple images!
+                        </p>
                       </div>
                     </div>
                   )}
@@ -1251,9 +1954,13 @@ export function SocialScreen({
 
               {/* Conditional Publishing Trigger */}
               <div className="pt-2">
-                {((createPostMode === 'text' && postTitle.trim() !== '' && postContent.trim() !== '') ||
-                  (createPostMode === 'image' && postTitle.trim() !== '' && postImageBase64 !== '')) ? (
-                  <button 
+                {(createPostMode === "text" &&
+                  postTitle.trim() !== "" &&
+                  postContent.trim() !== "") ||
+                (createPostMode === "image" &&
+                  postTitle.trim() !== "" &&
+                  (postImagesBase64.length > 0 || postImageBase64 !== "")) ? (
+                  <button
                     type="submit"
                     className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-emerald-500/15 transition-all"
                   >
@@ -1261,10 +1968,9 @@ export function SocialScreen({
                   </button>
                 ) : (
                   <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl text-center text-[10.5px] font-bold text-slate-400 animate-pulse">
-                    {createPostMode === 'text' 
-                      ? 'Please complete the Post Title and Body to publish' 
-                      : 'Please enter a Post Title and upload an image to publish'
-                    }
+                    {createPostMode === "text"
+                      ? "Please complete the Post Title and Body to publish"
+                      : "Please enter a Post Title and upload an image to publish"}
                   </div>
                 )}
               </div>
@@ -1279,10 +1985,14 @@ export function SocialScreen({
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-black text-slate-800 tracking-tight">Create Group 🏛️</h3>
-                <p className="text-xs text-slate-500 font-semibold mt-0.5">Found your secure sub-community room</p>
+                <h3 className="text-xl font-black text-slate-800 tracking-tight">
+                  Create Group 🏛️
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                  Found your secure sub-community room
+                </p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowCreateGroup(false)}
                 className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-all"
               >
@@ -1292,22 +2002,26 @@ export function SocialScreen({
 
             <form onSubmit={handleCreateGroupSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Group Name *</label>
-                <input 
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Group Name *
+                </label>
+                <input
                   type="text"
                   placeholder="e.g. Ironclad Pushups Club"
                   value={newGroupName}
-                  onChange={e => setNewGroupName(e.target.value)}
+                  onChange={(e) => setNewGroupName(e.target.value)}
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 outline-none placeholder-slate-400 focus:ring-1 focus:ring-indigo-100"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Primary Theme Category</label>
-                <select 
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Primary Theme Category
+                </label>
+                <select
                   value={newGroupCategory}
-                  onChange={e => setNewGroupCategory(e.target.value)}
+                  onChange={(e) => setNewGroupCategory(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none"
                 >
                   <option value="fitness">Fitness / Pushups</option>
@@ -1319,33 +2033,39 @@ export function SocialScreen({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Short Description</label>
-                <textarea 
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Short Description
+                </label>
+                <textarea
                   rows={3}
                   placeholder="What is the shared biological goal of this community room?"
                   value={newGroupDesc}
-                  onChange={e => setNewGroupDesc(e.target.value)}
+                  onChange={(e) => setNewGroupDesc(e.target.value)}
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-850 outline-none"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Custom Icon Emoji</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Custom Icon Emoji
+                </label>
                 <div className="flex gap-2">
-                  {['🏋️', '💦', '🧠', '🌟', '📚', '🎯', '🥑', '🧗'].map(emoji => (
-                    <button 
-                      key={emoji}
-                      type="button"
-                      onClick={() => setNewGroupIcon(emoji)}
-                      className={`w-10 h-10 text-xl border rounded-xl flex items-center justify-center transition-all ${newGroupIcon === emoji ? 'bg-indigo-50 border-indigo-200 scale-110' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'}`}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
+                  {["🏋️", "💦", "🧠", "🌟", "📚", "🎯", "🥑", "🧗"].map(
+                    (emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => setNewGroupIcon(emoji)}
+                        className={`w-10 h-10 text-xl border rounded-xl flex items-center justify-center transition-all ${newGroupIcon === emoji ? "bg-indigo-50 border-indigo-200 scale-110" : "bg-slate-50 border-slate-100 hover:bg-slate-100"}`}
+                      >
+                        {emoji}
+                      </button>
+                    ),
+                  )}
                 </div>
               </div>
 
-              <button 
+              <button
                 type="submit"
                 className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg transition-all pt-3.5"
               >
@@ -1363,13 +2083,17 @@ export function SocialScreen({
             {/* Header segment */}
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-black text-slate-800 tracking-tight">Search Nexora Community 🔍</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase mt-0.5">Find posts, discussions, authors and hubs</p>
+                <h3 className="text-xl font-black text-slate-800 tracking-tight">
+                  Search Nexora Community 🔍
+                </h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mt-0.5">
+                  Find posts, discussions, authors and hubs
+                </p>
               </div>
-              <button 
+              <button
                 onClick={() => {
                   setShowFullSearchPage(false);
-                  setSearchQuery('');
+                  setSearchQuery("");
                 }}
                 className="text-xs font-black text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-750 px-4 py-2 rounded-2xl uppercase transition-all"
               >
@@ -1380,17 +2104,17 @@ export function SocialScreen({
             {/* Live Search Input Box */}
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 animate-none" />
-              <input 
+              <input
                 type="text"
                 autoFocus
                 placeholder="Type keywords, authors, #milestones or rooms..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-100 outline-none transition-all shadow-inner"
               />
               {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')}
+                <button
+                  onClick={() => setSearchQuery("")}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600"
                 >
                   Clear
@@ -1400,25 +2124,46 @@ export function SocialScreen({
 
             {/* Results sections */}
             <div className="flex-1 overflow-y-auto space-y-6 pr-2">
-              {searchQuery.trim() === '' ? (
+              {searchQuery.trim() === "" ? (
                 <div className="py-10 text-center space-y-2">
                   <Compass size={40} className="mx-auto text-slate-300" />
-                  <p className="font-extrabold text-slate-500 text-xs uppercase tracking-wide">Enter a search term to begin exploring</p>
+                  <p className="font-extrabold text-slate-500 text-xs uppercase tracking-wide">
+                    Enter a search term to begin exploring
+                  </p>
                   <p className="text-[11px] text-slate-400 font-semibold max-w-sm mx-auto leading-relaxed">
-                    Matched discussions, water pushes, muscle milestones, and discipline rooms will be displayed in real time.
+                    Matched discussions, water pushes, muscle milestones, and
+                    discipline rooms will be displayed in real time.
                   </p>
                 </div>
               ) : (
                 <>
                   {/* Matching Groups Segment */}
-                  {initialCircles.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.category?.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 && (
+                  {initialCircles.filter(
+                    (c) =>
+                      c.name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()) ||
+                      c.category
+                        ?.toLowerCase()
+                        .includes(searchQuery.toLowerCase()),
+                  ).length > 0 && (
                     <div className="space-y-2.5">
-                      <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Matched Rooms</h4>
+                      <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                        Matched Rooms
+                      </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {initialCircles
-                          .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.category?.toLowerCase().includes(searchQuery.toLowerCase()))
-                          .map(circle => (
-                            <div 
+                          .filter(
+                            (c) =>
+                              c.name
+                                .toLowerCase()
+                                .includes(searchQuery.toLowerCase()) ||
+                              c.category
+                                ?.toLowerCase()
+                                .includes(searchQuery.toLowerCase()),
+                          )
+                          .map((circle) => (
+                            <div
                               key={circle.id}
                               onClick={() => {
                                 setSelectedGroupId(circle.id);
@@ -1426,10 +2171,16 @@ export function SocialScreen({
                               }}
                               className="p-3 border border-slate-100 hover:border-indigo-100 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-indigo-50/10 transition-all"
                             >
-                              <span className="text-2xl p-1.5 bg-slate-50 border border-slate-100 rounded-xl">{circle.icon || '🏮'}</span>
+                              <span className="text-2xl p-1.5 bg-slate-50 border border-slate-100 rounded-xl">
+                                {circle.icon || "🏮"}
+                              </span>
                               <div className="overflow-hidden">
-                                <p className="font-extrabold text-slate-800 text-xs truncate">n/{circle.name.toLowerCase()}</p>
-                                <p className="text-[9.5px] text-slate-400 font-bold truncate capitalize">{circle.category}</p>
+                                <p className="font-extrabold text-slate-800 text-xs truncate">
+                                  n/{circle.name.toLowerCase()}
+                                </p>
+                                <p className="text-[9.5px] text-slate-400 font-bold truncate capitalize">
+                                  {circle.category}
+                                </p>
                               </div>
                             </div>
                           ))}
@@ -1439,15 +2190,19 @@ export function SocialScreen({
 
                   {/* Matching Posts Segment */}
                   <div className="space-y-2.5">
-                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Matched Discussions</h4>
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                      Matched Discussions
+                    </h4>
                     {visiblePosts.length === 0 ? (
-                      <p className="text-xs font-bold text-slate-400 py-4 italic">No matching community posts found.</p>
+                      <p className="text-xs font-bold text-slate-400 py-4 italic">
+                        No matching community posts found.
+                      </p>
                     ) : (
                       <div className="space-y-3">
-                        {visiblePosts.map(post => {
+                        {visiblePosts.map((post) => {
                           const isAttachedImg = post.image || post.imageUrl;
                           return (
-                            <div 
+                            <div
                               key={post.id}
                               onClick={() => {
                                 setSelectedPost(post);
@@ -1457,15 +2212,23 @@ export function SocialScreen({
                             >
                               {/* Option image preview */}
                               {isAttachedImg && (
-                                <img src={isAttachedImg} alt="preview" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                                <img
+                                  src={isAttachedImg}
+                                  alt="preview"
+                                  className="w-12 h-12 rounded-xl object-cover flex-shrink-0"
+                                />
                               )}
                               <div className="space-y-1 overflow-hidden flex-1">
-                                <h5 className="font-black text-slate-800 text-xs tracking-tight truncate line-clamp-1">{post.title}</h5>
-                                <p className="text-[10.5px] text-slate-500 font-semibold truncate hover:text-indigo-600 pr-4">{post.content}</p>
+                                <h5 className="font-black text-slate-800 text-xs tracking-tight truncate line-clamp-1">
+                                  {post.title}
+                                </h5>
+                                <p className="text-[10.5px] text-slate-500 font-semibold truncate hover:text-indigo-600 pr-4">
+                                  {post.content}
+                                </p>
                                 <div className="flex items-center gap-2 pt-1 text-[9.5px] text-slate-400 font-bold uppercase">
                                   <span>by {post.userName}</span>
                                   <span>•</span>
-                                  <span>{post.circleName || 'General'}</span>
+                                  <span>{post.circleName || "General"}</span>
                                 </div>
                               </div>
                             </div>
@@ -1485,22 +2248,25 @@ export function SocialScreen({
       {selectedPost && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[650] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-2xl h-[85vh] sm:h-[80vh] flex flex-col overflow-hidden shadow-2xl relative">
-            
             {/* Modal Header */}
             <header className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <button 
+                <button
                   onClick={() => setSelectedPost(null)}
                   className="p-2 hover:bg-slate-200 rounded-xl transition-all text-slate-600"
                 >
                   <ArrowLeft size={20} />
                 </button>
                 <div>
-                  <span className="text-[9px] font-black uppercase text-indigo-600 tracking-wider leading-none">POST DETAILS</span>
-                  <h3 className="text-base font-black text-slate-800 tracking-tight line-clamp-1">{selectedPost.title || 'Discussion Room'}</h3>
+                  <span className="text-[9px] font-black uppercase text-indigo-600 tracking-wider leading-none">
+                    POST DETAILS
+                  </span>
+                  <h3 className="text-base font-black text-slate-800 tracking-tight line-clamp-1">
+                    {selectedPost.title || "Discussion Room"}
+                  </h3>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedPost(null)}
                 className="text-xs font-black text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl uppercase hover:text-slate-600 transition-all"
               >
@@ -1510,56 +2276,90 @@ export function SocialScreen({
 
             {/* Scrollable Container with Post + Comments */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              
               {/* Original Post */}
               <div className="space-y-4 pb-6 border-b border-slate-100">
                 <div className="flex items-center gap-3">
-                  <img src={selectedPost.userPhoto} alt="creator" className="w-10 h-10 rounded-full object-cover" />
+                  <img
+                    src={selectedPost.userPhoto}
+                    alt="creator"
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
                   <div>
-                    <h4 className="font-extrabold text-slate-800 text-sm">{selectedPost.userName}</h4>
-                    <p className="text-[10px] text-slate-400">{selectedPost.circleName || 'Public Feed'}</p>
+                    <h4 className="font-extrabold text-slate-800 text-sm">
+                      {selectedPost.userName}
+                    </h4>
+                    <p className="text-[10px] text-slate-400">
+                      {selectedPost.circleName || "Public Feed"}
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-lg font-black text-slate-800 tracking-tightLeading leading-snug">{selectedPost.title}</h3>
-                  <p className="text-sm font-medium text-slate-600 leading-relaxed whitespace-pre-wrap">{selectedPost.content}</p>
+                  <h3 className="text-lg font-black text-slate-800 tracking-tightLeading leading-snug">
+                    {selectedPost.title}
+                  </h3>
+                  <p className="text-sm font-medium text-slate-600 leading-relaxed whitespace-pre-wrap">
+                    {selectedPost.content}
+                  </p>
                 </div>
 
                 {/* Uploaded Post image inside detailed view */}
                 {(selectedPost.image || selectedPost.imageUrl) && (
                   <div className="rounded-[1.5rem] overflow-hidden max-h-72 border border-slate-100">
-                    <img src={selectedPost.image || selectedPost.imageUrl} alt="attached asset" className="w-full h-full object-cover" />
+                    <img
+                      src={selectedPost.image || selectedPost.imageUrl}
+                      alt="attached asset"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 )}
               </div>
 
               {/* Comments Header */}
               <div className="space-y-4">
-                <h4 className="text-sm font-black text-slate-800 tracking-wider uppercase">Comments ({postComments.length})</h4>
+                <h4 className="text-sm font-black text-slate-800 tracking-wider uppercase">
+                  Comments ({postComments.length})
+                </h4>
 
                 {loadingComments ? (
-                  <div className="text-center py-6 text-slate-400 font-bold text-xs">Loading comment feed...</div>
+                  <div className="text-center py-6 text-slate-400 font-bold text-xs">
+                    Loading comment feed...
+                  </div>
                 ) : postComments.length === 0 ? (
                   <div className="bg-slate-50/50 py-10 rounded-2xl text-center text-xs font-bold text-slate-400">
                     No comments parsed. Share your supportive input first!
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {postComments.map(comment => (
-                      <div key={comment.id} className="bg-slate-50/80 p-4 rounded-2xl space-y-1 border border-slate-100">
+                    {postComments.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="bg-slate-50/80 p-4 rounded-2xl space-y-1 border border-slate-100"
+                      >
                         <div className="flex items-center gap-2">
-                          <img 
-                            src={comment.userPhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'} 
-                            alt="commenter" 
+                          <img
+                            src={
+                              comment.userPhoto ||
+                              "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"
+                            }
+                            alt="commenter"
                             className="w-6 h-6 rounded-full object-cover border border-slate-200"
                           />
-                          <span className="font-extrabold text-xs text-slate-700">{comment.userName}</span>
+                          <span className="font-extrabold text-xs text-slate-700">
+                            {comment.userName}
+                          </span>
                           <span className="text-[9px] text-slate-400 font-medium">
-                            {comment.createdAt ? new Date(comment.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Just now'}
+                            {comment.createdAt
+                              ? new Date(comment.createdAt).toLocaleTimeString(
+                                  [],
+                                  { hour: "2-digit", minute: "2-digit" },
+                                )
+                              : "Just now"}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed max-w-full overflow-hidden break-all">{comment.content}</p>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed max-w-full overflow-hidden break-all">
+                          {comment.content}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -1568,16 +2368,19 @@ export function SocialScreen({
             </div>
 
             {/* Post Comment Input */}
-            <form onSubmit={handlePostCommentSubmit} className="p-4 border-t border-slate-100 bg-white flex items-center gap-2">
-              <input 
+            <form
+              onSubmit={handlePostCommentSubmit}
+              className="p-4 border-t border-slate-100 bg-white flex items-center gap-2"
+            >
+              <input
                 type="text"
                 placeholder="Write a supportive comment..."
                 value={newCommentText}
-                onChange={e => setNewCommentText(e.target.value)}
+                onChange={(e) => setNewCommentText(e.target.value)}
                 className="flex-grow px-4 py-3 bg-slate-50 focus:bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-150 transition-colors"
                 required
               />
-              <button 
+              <button
                 type="submit"
                 disabled={!newCommentText.trim()}
                 className="p-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-100 text-white disabled:text-slate-400 rounded-full transition-all"
@@ -1595,14 +2398,18 @@ export function SocialScreen({
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
             <header className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <span className="text-[9px] font-black tracking-widest text-indigo-600 uppercase">SECURITY CENTER</span>
-                <h3 className="text-lg font-black text-slate-800 tracking-tight leading-none mt-0.5">Report Material</h3>
+                <span className="text-[9px] font-black tracking-widest text-indigo-600 uppercase">
+                  SECURITY CENTER
+                </span>
+                <h3 className="text-lg font-black text-slate-800 tracking-tight leading-none mt-0.5">
+                  Report Material
+                </h3>
               </div>
-              <button 
+              <button
                 onClick={() => {
                   setReportedPost(null);
-                  setReportReason('');
-                  setReportDetails('');
+                  setReportReason("");
+                  setReportDetails("");
                 }}
                 className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-400 transition-all"
               >
@@ -1616,22 +2423,25 @@ export function SocialScreen({
                 <div className="p-3.5 bg-rose-50 rounded-2xl border-2 border-rose-100 flex gap-3 text-rose-700">
                   <AlertTriangle size={24} className="flex-shrink-0" />
                   <p className="text-xs font-bold leading-normal">
-                    Reported materials are instantly sent to Nexora Feedback & Audit path. Help secure the biological ecosystem of Nexora.
+                    Reported materials are instantly sent to Nexora Feedback &
+                    Audit path. Help secure the biological ecosystem of Nexora.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10.5px] font-black text-slate-400 uppercase tracking-widest block">Choose offense reason</label>
+                  <label className="text-[10.5px] font-black text-slate-400 uppercase tracking-widest block">
+                    Choose offense reason
+                  </label>
                   {[
-                    'Spam or misleading content',
-                    'Harassment or bullying actions',
-                    'Inappropriate or dangerous post'
-                  ].map(reason => (
-                    <button 
+                    "Spam or misleading content",
+                    "Harassment or bullying actions",
+                    "Inappropriate or dangerous post",
+                  ].map((reason) => (
+                    <button
                       key={reason}
                       type="button"
                       onClick={() => setReportReason(reason)}
-                      className={`w-full text-left p-4 rounded-xl border font-bold text-xs flex justify-between items-center transition-all ${reportReason === reason ? 'bg-indigo-50 border-indigo-200 text-indigo-600 font-black' : 'bg-white border-slate-100 text-slate-600 hover:bg-slate-50'}`}
+                      className={`w-full text-left p-4 rounded-xl border font-bold text-xs flex justify-between items-center transition-all ${reportReason === reason ? "bg-indigo-50 border-indigo-200 text-indigo-600 font-black" : "bg-white border-slate-100 text-slate-600 hover:bg-slate-50"}`}
                     >
                       <span>{reason}</span>
                       {reportReason === reason && <CheckCircle2 size={16} />}
@@ -1639,7 +2449,7 @@ export function SocialScreen({
                   ))}
                 </div>
 
-                <button 
+                <button
                   disabled={!reportReason}
                   onClick={() => setReportStep(2)}
                   className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-100 text-white disabled:text-slate-400 font-black text-xs uppercase tracking-wider rounded-2xl transition-all"
@@ -1651,27 +2461,43 @@ export function SocialScreen({
               // Step 2: Custom details and audit info
               <form onSubmit={handleReportSubmit} className="space-y-4">
                 <div className="space-y-1 bg-slate-50 p-4 rounded-2xl border border-slate-150">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Offender details</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                    Offender details
+                  </span>
                   <div className="text-xs font-extrabold text-slate-700">
-                    <p>Name: <span className="text-indigo-600">{reportedPost.userName}</span></p>
-                    <p>Email: <span className="text-indigo-500">{reportedPost.userEmail || 'unknown@nexora.io'}</span></p>
-                    <p className="text-[11px] text-slate-400 mt-1 uppercase">Reason chosen: {reportReason}</p>
+                    <p>
+                      Name:{" "}
+                      <span className="text-indigo-600">
+                        {reportedPost.userName}
+                      </span>
+                    </p>
+                    <p>
+                      Email:{" "}
+                      <span className="text-indigo-500">
+                        {reportedPost.userEmail || "unknown@nexora.io"}
+                      </span>
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-1 uppercase">
+                      Reason chosen: {reportReason}
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Provide additional details</label>
-                  <textarea 
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                    Provide additional details
+                  </label>
+                  <textarea
                     rows={4}
                     placeholder="Briefly describe what exactly is wrong with this post..."
                     value={reportDetails}
-                    onChange={e => setReportDetails(e.target.value)}
+                    onChange={(e) => setReportDetails(e.target.value)}
                     className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 outline-none"
                     required
                   />
                 </div>
 
-                <button 
+                <button
                   type="submit"
                   disabled={!reportDetails.trim()}
                   className="w-full py-4 bg-rose-600 hover:bg-rose-700 text-white disabled:bg-slate-100 disabled:text-slate-400 font-black text-xs uppercase tracking-widest rounded-2xl transition-all"
@@ -1686,17 +2512,21 @@ export function SocialScreen({
                   ✓
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-slate-800 text-base">Report Submitted!</h4>
+                  <h4 className="font-extrabold text-slate-800 text-base">
+                    Report Submitted!
+                  </h4>
                   <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1">
-                    Thank you, Nexora security researchers will Audit this post within 12 hours. The offensive content has been hidden from your local feed.
+                    Thank you, Nexora security researchers will Audit this post
+                    within 12 hours. The offensive content has been hidden from
+                    your local feed.
                   </p>
                 </div>
-                <button 
+                <button
                   onClick={() => {
-                    setHiddenPostIds(prev => [...prev, reportedPost.id]);
+                    setHiddenPostIds((prev) => [...prev, reportedPost.id]);
                     setReportedPost(null);
-                    setReportReason('');
-                    setReportDetails('');
+                    setReportReason("");
+                    setReportDetails("");
                     setReportStep(1);
                   }}
                   className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all"
@@ -1715,10 +2545,14 @@ export function SocialScreen({
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 max-h-[80vh] flex flex-col shadow-2xl relative animate-in zoom-in-95 duration-200">
             <header className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
-                <span className="text-[9px] font-black tracking-widest text-indigo-600 uppercase">SYSTEM FEED</span>
-                <h3 className="text-lg font-black text-slate-800 tracking-tight leading-none mt-0.5">Inbox</h3>
+                <span className="text-[9px] font-black tracking-widest text-indigo-600 uppercase">
+                  SYSTEM FEED
+                </span>
+                <h3 className="text-lg font-black text-slate-800 tracking-tight leading-none mt-0.5">
+                  Inbox
+                </h3>
               </div>
-              <button 
+              <button
                 onClick={() => setShowNotifications(false)}
                 className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-xl uppercase"
               >
@@ -1731,17 +2565,33 @@ export function SocialScreen({
               {notifications.length === 0 ? (
                 <div className="text-center py-12 text-slate-400 space-y-2">
                   <Bell size={36} className="mx-auto text-slate-200" />
-                  <p className="text-xs font-black text-slate-500">Your notifications feed is perfectly clear!</p>
+                  <p className="text-xs font-black text-slate-500">
+                    Your notifications feed is perfectly clear!
+                  </p>
                 </div>
               ) : (
-                notifications.map(notif => (
-                  <div key={notif.id} className={`p-4 rounded-2xl border flex gap-3 text-xs font-medium transition-all ${notif.isRead ? 'bg-slate-50 border-slate-100 text-slate-500' : 'bg-indigo-50/50 border-indigo-100 text-slate-800 font-bold'}`}>
+                notifications.map((notif) => (
+                  <div
+                    key={notif.id}
+                    className={`p-4 rounded-2xl border flex gap-3 text-xs font-medium transition-all ${notif.isRead ? "bg-slate-50 border-slate-100 text-slate-500" : "bg-indigo-50/50 border-indigo-100 text-slate-800 font-bold"}`}
+                  >
                     <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-base flex-shrink-0">
-                      {notif.type === 'like' ? '🔥' : notif.type === 'reply' ? '💬' : '🔔'}
+                      {notif.type === "like"
+                        ? "🔥"
+                        : notif.type === "reply"
+                          ? "💬"
+                          : "🔔"}
                     </div>
                     <div className="space-y-1">
                       <p className="leading-relaxed">{notif.message}</p>
-                      <span className="text-[9px] text-slate-400 block font-bold uppercase">{notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Just now'}</span>
+                      <span className="text-[9px] text-slate-400 block font-bold uppercase">
+                        {notif.createdAt
+                          ? new Date(notif.createdAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "Just now"}
+                      </span>
                     </div>
                   </div>
                 ))
@@ -1755,37 +2605,47 @@ export function SocialScreen({
       <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[450] bg-gradient-to-t from-slate-50/90 via-slate-50/40 to-transparent">
         <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-3 py-1.5 rounded-[2.5rem] flex items-center justify-around gap-1 pointer-events-auto w-[96%] max-w-[395px] sm:max-w-[480px] h-[66px] overflow-hidden select-none select-none">
           {/* Home Tab */}
-          <button 
+          <button
             onClick={() => {
-              setActiveTab('home');
+              setActiveTab("home");
               setSelectedGroupId(null);
               setSelectedPost(null);
-            }} 
+            }}
             className={`flex flex-col items-center justify-center gap-0.5 transition-all text-[9.5px] uppercase font-black tracking-wider flex-1 h-full ${
-              activeTab === 'home' && !selectedGroupId ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+              activeTab === "home" && !selectedGroupId
+                ? "text-indigo-600"
+                : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            <Compass size={22} className={`transition-transform ${activeTab === 'home' && !selectedGroupId ? 'scale-105' : 'scale-95'}`} />
+            <Compass
+              size={22}
+              className={`transition-transform ${activeTab === "home" && !selectedGroupId ? "scale-105" : "scale-95"}`}
+            />
             <span>Feed</span>
           </button>
 
           {/* Groups Tab (Replaces Challenges) */}
-          <button 
+          <button
             onClick={() => {
-              setActiveTab('groups');
+              setActiveTab("groups");
               setSelectedGroupId(null);
               setSelectedPost(null);
-            }} 
+            }}
             className={`flex flex-col items-center justify-center gap-0.5 transition-all text-[9.5px] uppercase font-black tracking-wider flex-1 h-full ${
-              activeTab === 'groups' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+              activeTab === "groups"
+                ? "text-indigo-600"
+                : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            <Users size={22} className={`transition-transform ${activeTab === 'groups' ? 'scale-105' : 'scale-95'}`} />
+            <Users
+              size={22}
+              className={`transition-transform ${activeTab === "groups" ? "scale-105" : "scale-95"}`}
+            />
             <span>Groups</span>
           </button>
 
           {/* Green plus FAB (+) to launch Create Post */}
-          <button 
+          <button
             onClick={() => setShowCreatePost(true)}
             className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 shadow-emerald-500/25 transition-all active:scale-95 flex-shrink-0"
             title="Create Post"
@@ -1794,23 +2654,28 @@ export function SocialScreen({
           </button>
 
           {/* Library (Replaces community section 4th tab) */}
-          <button 
+          <button
             onClick={() => {
-              setActiveTab('library');
+              setActiveTab("library");
               setSelectedGroupId(null);
               setSelectedPost(null);
-            }} 
+            }}
             className={`flex flex-col items-center justify-center gap-0.5 transition-all text-[9.5px] uppercase font-black tracking-wider flex-1 h-full ${
-              activeTab === 'library' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+              activeTab === "library"
+                ? "text-indigo-600"
+                : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            <Bookmark size={22} className={`transition-transform ${activeTab === 'library' ? 'scale-105' : 'scale-95'}`} />
+            <Bookmark
+              size={22}
+              className={`transition-transform ${activeTab === "library" ? "scale-105" : "scale-95"}`}
+            />
             <span>Library</span>
           </button>
 
           {/* Profile link */}
-          <button 
-            onClick={() => setActiveScreen('profile')} 
+          <button
+            onClick={() => setActiveScreen("profile")}
             className="flex flex-col items-center justify-center gap-0.5 transition-all text-[9.5px] uppercase font-black tracking-wider flex-1 h-full text-slate-400 hover:text-slate-600"
           >
             <User size={22} className="scale-95" />
@@ -1818,7 +2683,6 @@ export function SocialScreen({
           </button>
         </nav>
       </div>
-
     </div>
   );
 }

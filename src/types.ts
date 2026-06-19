@@ -310,6 +310,7 @@ export interface Post {
   circleName: string;
   content: string;
   image?: string;
+  images?: string[];
   title?: string;
   imageUrl?: string;
   flames: number; // likes

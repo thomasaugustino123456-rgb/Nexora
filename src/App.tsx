@@ -6343,7 +6343,7 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[80]"
               >
-                <nav className="glass-card px-2.5 py-1.5 flex items-center justify-around gap-1 pointer-events-auto w-[92%] max-w-[395px] sm:max-w-[480px] h-[52px] sm:h-[60px] border border-[#E9E4D4]/50 shadow-[0_8px_25px_rgba(79,63,52,0.05)] overflow-hidden select-none">
+                <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-3 py-1.5 rounded-[2.5rem] flex items-center justify-around gap-1 pointer-events-auto w-[96%] max-w-[395px] sm:max-w-[480px] h-[66px] overflow-hidden select-none">
                   {(settings.navOrder || Object.keys(NAV_ITEMS_MAP)).map(
                     (id) => {
                       const item = NAV_ITEMS_MAP[id];

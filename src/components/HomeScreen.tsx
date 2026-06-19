@@ -232,14 +232,6 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
               {/* Quick Actions Toolbar */}
               <div className="flex items-center justify-start md:justify-end gap-3 px-1">
                 <button 
-                  onClick={onOpenGarden}
-                  className="p-3.5 bg-gradient-to-br from-emerald-600 to-teal-800 text-white rounded-2xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all group relative overflow-hidden flex items-center justify-center border border-emerald-500/30"
-                  title="Adventure Map"
-                >
-                  <Map size={20} className="group-hover:rotate-12 transition-transform animate-pulse" strokeWidth={2} />
-                </button>
-    
-                <button 
                   onClick={() => {
                     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                     onOpenArchives();
@@ -280,30 +272,6 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                 </button>
               </div>
             </div>
-
-            {/* Nexora Adventure Map Promotional Card */}
-            {!settings.hasEnteredGarden && (
-              <div className="w-full bg-gradient-to-br from-[#0F1E16] via-[#1A3326] to-[#0F1E16] border border-emerald-800/40 p-5 rounded-3xl text-white relative overflow-hidden shadow-md group">
-                <div className="absolute top-1/2 -translate-y-1/2 right-6 opacity-[0.08] text-6xl select-none pointer-events-none group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">🗺️</div>
-                <div className="flex items-center justify-between gap-5 flex-wrap relative z-10">
-                  <div className="flex-1">
-                    <span className="text-[8px] font-black text-amber-300 uppercase tracking-widest flex items-center gap-1">
-                      <Sparkles size={10} className="text-amber-300 animate-pulse" /> NEW PROGRESSION SYSTEM
-                    </span>
-                    <h4 className="text-sm font-black uppercase tracking-tight mt-0.5 text-stone-100">Nexora Adventure Map System is Live</h4>
-                    <p className="text-[10px] text-emerald-200/90 font-bold uppercase mt-1.5 leading-relaxed max-w-lg">
-                      Travel upward through 6 nature-themed worlds! Clear structured interactive daily focus challenge levels to unlock trails, collect Coins/XP, and earn rare seed rewards.
-                    </p>
-                  </div>
-                  <button
-                    onClick={onOpenGarden}
-                    className="w-full sm:w-auto px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all text-center"
-                  >
-                    Start Journey 🗺️
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         );
 
