@@ -231,14 +231,6 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
         </button>
 
         <button 
-          onClick={() => { vibrate(5); if (onOpenGarden) onOpenGarden(); }}
-          className={`p-2 transition-all relative text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100/80 rounded-xl border border-emerald-250 flex items-center gap-1 active:scale-95 shrink-0`}
-          title="Adventure Map"
-        >
-          <Map size={22} className="animate-bounce" />
-          <span className="text-[10.5px] font-black uppercase tracking-wider hidden sm:inline text-emerald-800 pr-1">Adventure Map</span>
-        </button>
-        <button 
           onClick={() => { 
             vibrate(5); 
             setShowLibrary(true);
@@ -499,11 +491,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
                         <button 
                           onClick={() => { 
                             setShowLibrary(false); 
-                            if (onOpenGarden) {
-                              onOpenGarden();
-                            } else {
-                              onExit();
-                            }
+                            onExit();
                           }}
                           className="mt-6 px-8 py-3 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
                         >

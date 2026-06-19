@@ -213,7 +213,14 @@ service cloud.firestore {
              data.category is string &&
              data.ownerId == request.auth.uid &&
              (!('rules' in data) || data.rules is list) &&
-             (!('followerIds' in data) || data.followerIds is list);
+             (!('followerIds' in data) || data.followerIds is list) &&
+             (!('customIconUrl' in data) || (data.customIconUrl is string && data.customIconUrl.size() < 1048576)) &&
+             (!('customBgUrl' in data) || (data.customBgUrl is string && data.customBgUrl.size() < 1048576)) &&
+             (!('roles' in data) || data.roles is list) &&
+             (!('communityType' in data) || data.communityType is string) &&
+             (!('whatGroupIsFor' in data) || data.whatGroupIsFor is string) &&
+             (!('bgThemeColor' in data) || data.bgThemeColor is string) &&
+             (!('sticker' in data) || data.sticker is string);
     }
 
     // Community Helpers
@@ -235,7 +242,8 @@ service cloud.firestore {
              (!('shields' in data) || data.shields is number) &&
              (!('commentCount' in data) || data.commentCount is number) &&
              (!('likedBy' in data) || data.likedBy is list) &&
-             (!('shieldedBy' in data) || data.shieldedBy is list);
+             (!('shieldedBy' in data) || data.shieldedBy is list) &&
+             (!('deleted' in data) || data.deleted is bool);
     }
 
     function isValidComment(data) {

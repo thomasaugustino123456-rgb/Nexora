@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Compass,
   Bell,
@@ -14,6 +14,7 @@ import {
   Bookmark,
   Flag,
   ChevronLeft,
+  ChevronRight,
   Trash2,
   Send,
   Check,
@@ -26,6 +27,7 @@ import {
   PlusCircle,
   Shield,
   Clock,
+  Award,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -43,6 +45,7 @@ import {
   collection,
   doc,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   getDocs,
@@ -51,6 +54,7 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { CreateCircleWizard } from "./CreateCircleWizard";
 
 interface SocialScreenProps {
   play?: (sound: string) => void;
@@ -117,6 +121,14 @@ export function SocialScreen({
   // Explicitly enabled bells for specific groups to stop green glow
   const [enabledGroupBells, setEnabledGroupBells] = useState<string[]>([]);
   const [showGroupAboutModal, setShowGroupAboutModal] = useState(false);
+
+  const toggleGroupBell = (groupId: string) => {
+    setEnabledGroupBells((prev) =>
+      prev.includes(groupId)
+        ? prev.filter((id) => id !== groupId)
+        : [...prev, groupId]
+    );
+  };
 
   // Comment Reply states
   const [activeReplyCommentId, setActiveReplyCommentId] = useState<
@@ -478,14 +490,14 @@ export function SocialScreen({
     setActiveActionsPostId(null);
   };
 
-  // Delete post permanently
+  // Delete post via soft-deletion protocol
   const handleDeletePost = async (post: Post) => {
     if (post.userId !== currentUserId) {
       showToast("Cannot delete another user's post!", "error");
       return;
     }
     try {
-      await deleteDoc(doc(db, "posts", post.id));
+      await updateDoc(doc(db, "posts", post.id), { deleted: true });
       showToast("Post deleted successfully!", "success");
       setHiddenPostIds((prev) => [...prev, post.id]);
       setActiveActionsPostId(null);
@@ -493,7 +505,7 @@ export function SocialScreen({
         setSelectedPost(null);
       }
     } catch (err) {
-      showToast("Successfully updated posts visibility!", "success");
+      showToast("Updated posts visibility successfully!", "success");
       setHiddenPostIds((prev) => [...prev, post.id]);
     }
   };
@@ -653,29 +665,50 @@ export function SocialScreen({
     }
   };
 
-  // Filter posts based on deleted, not interested and query search
-  const visiblePosts = initialPosts.filter((post) => {
-    if (hiddenPostIds.includes(post.id)) return false;
+  // Filter posts based on deleted, not interested and query search, plus custom sub-community sorting
+  const visiblePosts = useMemo(() => {
+    const filtered = initialPosts.filter((post) => {
+      if (post.deleted) return false;
+      if (hiddenPostIds.includes(post.id)) return false;
 
-    // Search filter
-    if (searchQuery.trim() !== "") {
-      const q = searchQuery.toLowerCase();
-      const matchTitle = post.title?.toLowerCase().includes(q);
-      const matchContent = post.content?.toLowerCase().includes(q);
-      const matchUser = post.userName?.toLowerCase().includes(q);
-      const matchCircle = post.circleName?.toLowerCase().includes(q);
-      if (!matchTitle && !matchContent && !matchUser && !matchCircle) {
+      // Search filter
+      if (searchQuery.trim() !== "") {
+        const q = searchQuery.toLowerCase();
+        const matchTitle = post.title?.toLowerCase().includes(q);
+        const matchContent = post.content?.toLowerCase().includes(q);
+        const matchUser = post.userName?.toLowerCase().includes(q);
+        const matchCircle = post.circleName?.toLowerCase().includes(q);
+        if (!matchTitle && !matchContent && !matchUser && !matchCircle) {
+          return false;
+        }
+      }
+
+      // Filter by category or circle
+      if (selectedGroupId && post.circleId !== selectedGroupId) {
         return false;
       }
+
+      return true;
+    });
+
+    if (selectedGroupId) {
+      return [...filtered].sort((a, b) => {
+        if (groupSortFilter === "best" || groupSortFilter === "hot") {
+          const aScore = (a.flames || a.likedBy?.length || 0);
+          const bScore = (b.flames || b.likedBy?.length || 0);
+          return bScore - aScore;
+        } else if (groupSortFilter === "top") {
+          return (b.commentCount || 0) - (a.commentCount || 0);
+        } else {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bTime - aTime;
+        }
+      });
     }
 
-    // Filter by category or circle
-    if (selectedGroupId && post.circleId !== selectedGroupId) {
-      return false;
-    }
-
-    return true;
-  });
+    return filtered;
+  }, [initialPosts, hiddenPostIds, searchQuery, selectedGroupId, groupSortFilter]);
 
   const savedPosts = initialPosts.filter(
     (p) =>
@@ -744,9 +777,13 @@ export function SocialScreen({
       : post.image || post.imageUrl;
 
     return (
-      <div
+      <motion.div
         key={post.id}
-        className="bg-white rounded-[2rem] border border-slate-200/80 shadow-xs p-5 md:p-6 space-y-4 flex flex-col justify-between hover:shadow-sm hover:border-slate-300 transition-all animate-in fade-in duration-200"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-20px" }}
+        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+        className="bg-white rounded-[2rem] border border-slate-200/80 shadow-xs p-5 md:p-6 space-y-4 flex flex-col justify-between hover:shadow-sm hover:border-slate-300 transition-all"
       >
         {/* Header / Creator Info */}
         <div className="flex items-center justify-between">
@@ -956,11 +993,14 @@ export function SocialScreen({
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
           <div className="flex items-center gap-2">
             {/* Flames (Likes) with cool popping animation on tap */}
-            <button
+            <motion.button
+              whileTap={{ y: -8, scale: 1.08 }}
+              animate={isLiked ? { scale: [1, 1.25, 1], y: [0, -6, 0] } : {}}
+              transition={{ type: "spring", stiffness: 350, damping: 10 }}
               onClick={() => handleToggleFlame(post)}
               className={`px-4 py-2 flex items-center gap-1.5 rounded-full text-xs font-black transition-all ${
                 isLiked
-                  ? "bg-orange-50 text-orange-600 shadow-sm shadow-orange-500/10 animate-[pulse_1s_1]"
+                  ? "bg-orange-50 text-orange-600 shadow-sm shadow-orange-500/10"
                   : "bg-slate-50 text-slate-500 hover:bg-slate-100"
               }`}
             >
@@ -974,7 +1014,7 @@ export function SocialScreen({
                 />
               </motion.div>
               <span>{post.flames || 0} flames</span>
-            </button>
+            </motion.button>
 
             {/* Comments trigger */}
             <button
@@ -1017,7 +1057,7 @@ export function SocialScreen({
             <span>Delete Post Permanently Cache</span>
           </button>
         )}
-      </div>
+      </motion.div>
     );
   };
 
@@ -1133,80 +1173,93 @@ export function SocialScreen({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
               {/* Left span-2 column */}
               <div className="md:col-span-2 space-y-6">
-                {/* Banner/Hero Header card */}
-                <div className="bg-white border border-slate-200/80 rounded-[2.5rem] shadow-xs overflow-hidden flex flex-col">
-                  {/* Cover Banner */}
-                  <div className="relative h-28 sm:h-36 overflow-hidden bg-slate-900">
-                    <img
-                      src={
-                        currentViewingCircle.category
-                          ?.toLowerCase()
-                          .includes("fit")
-                          ? "https://images.unsplash.com/photo-1517838277535-f5f99be501cd?q=80&w=800"
-                          : currentViewingCircle.category
-                                ?.toLowerCase()
-                                .includes("health") ||
-                              currentViewingCircle.category
-                                ?.toLowerCase()
-                                .includes("water")
-                            ? "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=800"
-                            : currentViewingCircle.category
-                                  ?.toLowerCase()
-                                  .includes("learn")
-                              ? "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?q=80&w=800"
-                              : "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800"
-                      }
-                      alt="Sub-community category banner"
-                      className="w-full h-full object-cover opacity-80"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/10" />
-                  </div>
-
-                  {/* Header Content */}
-                  <div className="p-6 md:p-8 space-y-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-1.5 flex-1">
-                        <span className="text-[10px] font-black tracking-widest text-indigo-600 uppercase">
-                          SUB-COMMUNITY
-                        </span>
-                        <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none">
-                          n/{currentViewingCircle.name.toLowerCase()}
-                        </h2>
-                        <p className="text-xs text-slate-400 font-bold">
-                          {currentViewingCircle.memberCount || 1} online members
-                        </p>
-                        <p className="text-sm text-slate-650 font-medium leading-relaxed pt-1.5">
-                          {currentViewingCircle.description}
-                        </p>
-                      </div>
-
-                      {/* Group design avatar positioned elegantly in Right Angle (as user requested: "move the Group pic to be in Right Angle... and descriptions next to it") */}
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-tr from-slate-50 to-slate-100 rounded-3xl flex items-center justify-center text-4xl shadow-inner border border-slate-200/50 flex-shrink-0">
+                
+                {/* Clean, minimalist flat sub-community header (No heavy box or banner - requested by user) */}
+                {(() => {
+                  const isJoined = (settings.joinedCircleIds || []).includes(currentViewingCircle.id);
+                  const isBellEnabled = enabledGroupBells.includes(currentViewingCircle.id);
+                  return (
+                    <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-205 flex flex-col sm:flex-row items-center sm:items-start gap-5 animate-in fade-in duration-200">
+                      {/* Left side Group pic/avatar */}
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-3xl flex items-center justify-center text-3xl sm:text-4xl shadow-sm border border-slate-200 shrink-0 select-none">
                         {currentViewingCircle.icon || "🏮"}
                       </div>
-                    </div>
 
-                    <div className="flex items-center justify-between pt-2">
-                      <button
-                        onClick={() => handleJoinGroup(currentViewingCircle)}
-                        className={`px-6 py-2.5 rounded-full font-black text-xs transition-all uppercase tracking-wider ${
-                          (settings.joinedCircleIds || []).includes(
-                            currentViewingCircle.id,
-                          )
-                            ? "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-rose-50 hover:text-rose-600"
-                            : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"
-                        }`}
-                      >
-                        {(settings.joinedCircleIds || []).includes(
-                          currentViewingCircle.id,
-                        )
-                          ? "Joined"
-                          : "Join Group"}
-                      </button>
+                      {/* Info & buttons next to group pic */}
+                      <div className="flex-1 space-y-2 text-center sm:text-left">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] font-black tracking-widest text-indigo-600 uppercase">SUB-COMMUNITY ROOM</span>
+                            <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight leading-none">
+                              n/{currentViewingCircle.name.toLowerCase()}
+                            </h2>
+                          </div>
+
+                          {/* Action controls */}
+                          <div className="flex items-center justify-center sm:justify-start gap-2">
+                            {/* Joined Toggle */}
+                            <button
+                              onClick={() => {
+                                handleJoinGroup(currentViewingCircle);
+                                if (play) play('click');
+                              }}
+                              className={`px-4 py-2 rounded-xl font-black text-xs transition-all uppercase tracking-wider shadow-sm ${
+                                isJoined
+                                  ? "bg-slate-100 text-slate-500 border border-slate-200/80 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100"
+                                  : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/10"
+                              }`}
+                            >
+                              {isJoined ? "Joined" : "Join Team"}
+                            </button>
+
+                            {/* Notification Bell (glows with pulsing green when joined and NOT enabled yet) */}
+                            {isJoined && (
+                              <button
+                                onClick={() => {
+                                  toggleGroupBell(currentViewingCircle.id);
+                                  if (play) play('click');
+                                }}
+                                className={`p-2.5 rounded-xl border transition-all relative ${
+                                  isBellEnabled
+                                    ? "bg-slate-100 text-slate-500 border-slate-200"
+                                    : "bg-emerald-50/60 border-emerald-100 text-emerald-650"
+                                }`}
+                                title={isBellEnabled ? "Notifications muted" : "Enable notifications (Glow Stop)"}
+                              >
+                                <Bell size={15} className={!isBellEnabled ? "animate-bounce" : ""} />
+                                
+                                {/* Glow element with pulsing Green */}
+                                {!isBellEnabled && (
+                                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,1)]"></span>
+                                  </span>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Description & About triggering button */}
+                        <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-xl">
+                          {currentViewingCircle.description}
+                        </p>
+
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 pt-1 text-xs">
+                          <span className="text-slate-400 font-bold uppercase text-[10px] tracking-wider">{currentViewingCircle.memberCount || 1} Online Members</span>
+                          <span className="text-slate-300">•</span>
+                          <button
+                            onClick={() => setShowGroupAboutModal(true)}
+                            className="text-indigo-650 hover:text-indigo-850 font-black uppercase text-[10px] tracking-wider bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 shrink-0"
+                          >
+                            <Info size={11} />
+                            <span>Group About</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* Mobile-only guidelines (only displays below 768px, hidden on desktop: "in the side on guidelines do not display it under if we are using desktop mode, render room guidelines side on side") */}
                 {currentViewingCircle.rules &&
@@ -1230,16 +1283,55 @@ export function SocialScreen({
 
                 {/* Discussions Feed */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <h3 className="text-lg font-black text-slate-850 tracking-tight">
-                      Discussions ({visiblePosts.length})
-                    </h3>
-                    <button
-                      onClick={handleLaunchCreatePost}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-full flex items-center gap-1.5 shadow-md shadow-indigo-600/10 transition-all active:scale-95"
-                    >
-                      <Plus size={14} /> New Post here
-                    </button>
+                  <div className="bg-white p-5 rounded-[2rem] border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest leading-none">
+                        Room Discussions ({visiblePosts.length})
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">
+                        Current layout: {groupSortFilter.toUpperCase()}
+                      </p>
+                    </div>
+
+                    {/* Selector Controls bar */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-150">
+                        {[
+                          { id: 'new' as const, label: 'New', icon: Sparkles },
+                          { id: 'best' as const, label: 'Best', icon: Award },
+                          { id: 'top' as const, label: 'Top', icon: MessageSquare }
+                        ].map((item) => {
+                          const IsSelected = groupSortFilter === item.id;
+                          const IconComponent = item.icon;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => {
+                                setGroupSortFilter(item.id);
+                                if (play) play('click');
+                              }}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10.5px] font-black uppercase tracking-wider transition-all duration-150 ${
+                                IsSelected
+                                  ? "bg-white text-indigo-650 shadow-xs"
+                                  : "text-slate-400 hover:text-slate-650"
+                              }`}
+                              title={`Sort by ${item.label}`}
+                            >
+                              <IconComponent size={13} className={IsSelected ? "text-indigo-500 scale-110" : ""} />
+                              <span>{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <button
+                        onClick={handleLaunchCreatePost}
+                        className="px-4.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/10 transition-all active:scale-95"
+                      >
+                        <Plus size={13} />
+                        <span>Add Log</span>
+                      </button>
+                    </div>
                   </div>
 
                   {visiblePosts.length === 0 ? (
@@ -1558,22 +1650,59 @@ export function SocialScreen({
               </section>
             )}
 
-            {/* Popular Groups Section (Completely redesigned: NO horizontal scrolling layout!) */}
+            {/* Popular Groups Section (Completely redesigned: Premium horizontal scrolling layout!) */}
             {showAllGroups ? (
-              <div className="space-y-4 bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm animate-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-black text-slate-800">
-                    Popular Hubs
-                  </h3>
+              <div className="space-y-4 bg-white p-6 rounded-[2.5rem] border border-slate-205 shadow-md animate-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="space-y-0.5">
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                      Active Sub-Communities
+                    </h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">
+                      All created spaces available
+                    </p>
+                  </div>
                   <button
                     onClick={() => setShowAllGroups(false)}
-                    className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl uppercase"
+                    className="text-xs font-black text-rose-600 bg-rose-50 hover:bg-rose-100 px-4 py-2 rounded-xl uppercase transition-colors"
                   >
-                    Close
+                    Close Panel
                   </button>
                 </div>
-                <div className="space-y-3">
-                  {initialCircles.map((group) => renderGroupRow(group))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {initialCircles.map((group) => {
+                    const isJoined = (settings.joinedCircleIds || []).includes(group.id);
+                    return (
+                      <div key={group.id} className="bg-slate-50/55 p-4 rounded-3xl border border-slate-150 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="text-2xl shrink-0">{group.icon || "🏮"}</span>
+                          <div className="min-w-0">
+                            <h4
+                              onClick={() => {
+                                setSelectedGroupId(group.id);
+                                setShowAllGroups(false);
+                              }}
+                              className="font-black text-xs text-slate-850 hover:text-indigo-600 cursor-pointer truncate"
+                            >
+                              n/{group.name.toLowerCase()}
+                            </h4>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase">{group.category}</p>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => handleJoinGroup(group)}
+                          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-colors shrink-0 ${
+                            isJoined
+                              ? "bg-slate-200 text-slate-600 hover:bg-rose-100 hover:text-rose-600"
+                              : "bg-indigo-600 text-white hover:bg-indigo-700"
+                          }`}
+                        >
+                          {isJoined ? "Joined" : "Join"}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
@@ -1581,29 +1710,29 @@ export function SocialScreen({
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-black text-slate-850 tracking-tight leading-none">
-                      Popular Rooms 🏮
+                      Popular Spaces 🏮
                     </h2>
                     <p className="text-[11px] text-slate-400 font-bold uppercase mt-1">
-                      Recommended sub-communities to join
+                      Recommended horizontal sub-communities to join
                     </p>
                   </div>
                   <button
                     onClick={() => setShowAllGroups(true)}
-                    className="text-indigo-650 font-black text-xs tracking-wider uppercase bg-indigo-50/50 hover:bg-indigo-50 px-3.5 py-1.5 rounded-full transition-all"
+                    className="text-indigo-650 hover:text-indigo-850 font-black text-[10.5px] tracking-wider uppercase bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl transition-all shadow-xs"
                   >
-                    See all
+                    See All Groups
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {initialCircles.slice(0, 4).map((circle) => {
+                <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x no-scrollbar scroll-smooth">
+                  {initialCircles.map((circle) => {
                     const isJoined = (settings.joinedCircleIds || []).includes(
                       circle.id,
                     );
                     return (
                       <div
                         key={circle.id}
-                        className="bg-white p-5 rounded-[2rem] border border-slate-200/60 shadow-xs flex flex-col justify-between space-y-4 hover:border-slate-300 hover:shadow-sm transition-all"
+                        className="bg-white p-5 rounded-[2.5rem] border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-4 hover:border-slate-300 hover:shadow-sm transition-all snap-start w-[275px] sm:w-[300px] shrink-0"
                       >
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
@@ -1625,7 +1754,7 @@ export function SocialScreen({
                               {circle.memberCount || 1} members
                             </p>
                           </div>
-                          <p className="text-[11px] text-slate-500 font-medium leading-relaxed line-clamp-2">
+                          <p className="text-[11px] text-slate-500 font-medium leading-relaxed line-clamp-2 min-h-[34px]">
                             {circle.description}
                           </p>
                         </div>
@@ -1633,7 +1762,7 @@ export function SocialScreen({
                         <div className="flex gap-2 pt-2">
                           <button
                             onClick={() => setSelectedGroupId(circle.id)}
-                            className="flex-grow py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-xs rounded-xl transition-all"
+                            className="flex-grow py-2 bg-slate-50 hover:bg-slate-100 text-slate-650 font-black text-xs rounded-xl transition-all"
                           >
                             Enter Room
                           </button>
@@ -1979,99 +2108,136 @@ export function SocialScreen({
         </div>
       )}
 
-      {/* ─── NEW GROUP FORM POPUP SCREEN ─── */}
+      {/* ─── NEW GROUP FORM POPUP SCREEN (CreateCircleWizard) ─── */}
       {showCreateGroup && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[600] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-black text-slate-800 tracking-tight">
-                  Create Group 🏛️
-                </h3>
-                <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                  Found your secure sub-community room
-                </p>
+        <CreateCircleWizard
+          onClose={() => setShowCreateGroup(false)}
+          onComplete={async (data) => {
+            try {
+              const circlesRef = collection(db, "circles");
+              const circleId = data.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-");
+              
+              const circlePayload = {
+                ...data,
+                id: circleId,
+                memberCount: 1,
+                createdAt: new Date().toISOString(),
+                createdBy: currentUserId,
+              };
+
+              await setDoc(doc(circlesRef, circleId), circlePayload);
+              showToast(`n/${data.name.toLowerCase()} established! 🚀`, "success");
+              setSelectedGroupId(circleId);
+              setShowCreateGroup(false);
+            } catch (err) {
+              console.error(err);
+              showToast("Error creating sub-community. Please check connection.", "error");
+            }
+          }}
+          isSubmitting={false}
+        />
+      )}
+
+      {/* ─── GROUP ABOUT PROTOCOL POPUP MODAL ─── */}
+      {showGroupAboutModal && currentViewingCircle && (
+        <div 
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[1200] flex items-center justify-center p-4 animate-in fade-in duration-200" 
+          onClick={() => setShowGroupAboutModal(false)}
+        >
+          <div 
+            className="bg-white rounded-[2.5rem] w-full max-w-md p-7 shadow-2xl relative border border-slate-100 flex flex-col max-h-[85vh] overflow-hidden" 
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <span className="text-3xl bg-indigo-50 p-2.5 rounded-2xl block border border-slate-100 select-none">
+                  {currentViewingCircle.icon || "🏮"}
+                </span>
+                <div>
+                  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-none block">Room Protocol</span>
+                  <h3 className="text-base font-black text-slate-800 tracking-tight mt-1 leading-none">
+                    n/{currentViewingCircle.name.toLowerCase()}
+                  </h3>
+                </div>
               </div>
               <button
-                onClick={() => setShowCreateGroup(false)}
-                className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-all"
+                onClick={() => setShowGroupAboutModal(false)}
+                className="p-2 hover:bg-slate-100 hover:text-slate-700 text-slate-400 rounded-xl transition-colors"
+                title="Close panel"
               >
-                <Plus size={16} />
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateGroupSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                  Group Name *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Ironclad Pushups Club"
-                  value={newGroupName}
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 outline-none placeholder-slate-400 focus:ring-1 focus:ring-indigo-100"
-                  required
-                />
+            <div className="flex-1 overflow-y-auto py-5 space-y-5 scrollbar-none pr-1">
+              <div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Main category</span>
+                <span className="mt-1 inline-block text-[10px] font-black bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full uppercase tracking-wider">
+                  {currentViewingCircle.category}
+                </span>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                  Primary Theme Category
-                </label>
-                <select
-                  value={newGroupCategory}
-                  onChange={(e) => setNewGroupCategory(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none"
-                >
-                  <option value="fitness">Fitness / Pushups</option>
-                  <option value="health">Hydration / Water</option>
-                  <option value="mindset">Mindset / Discipline</option>
-                  <option value="learning">Books / Knowledge</option>
-                  <option value="general">General Hub</option>
-                </select>
+              <div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Description</span>
+                <p className="text-xs text-slate-655 font-semibold leading-relaxed mt-1">
+                  {currentViewingCircle.description || "No description loaded."}
+                </p>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                  Short Description
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="What is the shared biological goal of this community room?"
-                  value={newGroupDesc}
-                  onChange={(e) => setNewGroupDesc(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-850 outline-none"
-                />
-              </div>
+              {currentViewingCircle.whatGroupIsFor && (
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">What this group is for</span>
+                  <p className="text-xs text-slate-600 leading-relaxed font-semibold mt-1">
+                    {currentViewingCircle.whatGroupIsFor}
+                  </p>
+                </div>
+              )}
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                  Custom Icon Emoji
-                </label>
-                <div className="flex gap-2">
-                  {["🏋️", "💦", "🧠", "🌟", "📚", "🎯", "🥑", "🧗"].map(
-                    (emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => setNewGroupIcon(emoji)}
-                        className={`w-10 h-10 text-xl border rounded-xl flex items-center justify-center transition-all ${newGroupIcon === emoji ? "bg-indigo-50 border-indigo-200 scale-110" : "bg-slate-50 border-slate-100 hover:bg-slate-100"}`}
-                      >
-                        {emoji}
-                      </button>
-                    ),
-                  )}
+              {currentViewingCircle.primaryPurpose && (
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Objective & Goals</span>
+                  <p className="text-xs text-slate-700 font-extrabold mt-1">
+                    🎯 {currentViewingCircle.primaryPurpose}
+                  </p>
+                </div>
+              )}
+
+              {currentViewingCircle.roles && currentViewingCircle.roles.length > 0 && (
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Official Badge Roles</span>
+                  <div className="flex flex-wrap gap-1">
+                    {currentViewingCircle.roles.map((r, i) => (
+                      <span key={i} className="text-[9px] font-black text-indigo-600 bg-indigo-50/50 border border-indigo-100/30 px-2 py-0.5 rounded-md">
+                        🛡️ {r}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Guidelines & Rules</span>
+                <div className="space-y-1.5 text-xs text-slate-500 font-medium">
+                  {(currentViewingCircle.rules || [
+                    "Be respectful and positive.",
+                    "No spam or promotional advertisements.",
+                    "Follow human guidelines and assist colleagues."
+                  ]).map((rule, idx) => (
+                    <div key={idx} className="flex gap-2 items-start">
+                      <span className="text-indigo-500 font-black">•</span>
+                      <span>{rule}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
+            </div>
 
-              <button
-                type="submit"
-                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg transition-all pt-3.5"
-              >
-                Assemble Sub-community
-              </button>
-            </form>
+            <button
+              onClick={() => setShowGroupAboutModal(false)}
+              className="w-full mt-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors shrink-0"
+            >
+              Acknowledged Protocol
+            </button>
           </div>
         </div>
       )}
@@ -2331,37 +2497,91 @@ export function SocialScreen({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {postComments.map((comment) => (
-                      <div
-                        key={comment.id}
-                        className="bg-slate-50/80 p-4 rounded-2xl space-y-1 border border-slate-100"
-                      >
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={
-                              comment.userPhoto ||
-                              "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"
-                            }
-                            alt="commenter"
-                            className="w-6 h-6 rounded-full object-cover border border-slate-200"
-                          />
-                          <span className="font-extrabold text-xs text-slate-700">
-                            {comment.userName}
-                          </span>
-                          <span className="text-[9px] text-slate-400 font-medium">
-                            {comment.createdAt
-                              ? new Date(comment.createdAt).toLocaleTimeString(
-                                  [],
-                                  { hour: "2-digit", minute: "2-digit" },
-                                )
-                              : "Just now"}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed max-w-full overflow-hidden break-all">
-                          {comment.content}
-                        </p>
-                      </div>
-                    ))}
+                    {/* Render top-level comments first, then their child replies recursively */}
+                    {(() => {
+                      const topLevelComments = postComments.filter(c => !c.parentId);
+                      
+                      const renderCommentNode = (comment: SocialComment, depth: number = 0) => {
+                        const childReplies = postComments.filter(c => c.parentId === comment.id);
+                        
+                        return (
+                          <div 
+                            key={comment.id} 
+                            style={{ marginLeft: `${depth > 0 ? (depth > 3 ? 12 : 16) : 0}px` }}
+                            className={`border-l-2 p-3.5 pl-4 rounded-r-2xl space-y-2 mt-3 transition-all ${
+                              depth > 0 
+                                ? 'bg-slate-50/40 border-indigo-200/50 shadow-2xs' 
+                                : 'bg-slate-50/80 border-slate-200 shadow-3xs'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={comment.userPhoto || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"}
+                                  alt="commenter"
+                                  className="w-[22px] h-[22px] rounded-full object-cover border border-slate-200"
+                                />
+                                <span className="font-extrabold text-xs text-slate-700">
+                                  {comment.userName}
+                                </span>
+                                <span className="text-[9px] text-slate-405 font-medium">
+                                  {comment.createdAt
+                                    ? new Date(comment.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                    : "Just now"}
+                                </span>
+                              </div>
+                              
+                              {/* Reply Button on every comment */}
+                              <button
+                                onClick={() => {
+                                  setActiveReplyCommentId(activeReplyCommentId === comment.id ? null : comment.id);
+                                  setReplyCommentText("");
+                                }}
+                                className="px-2.5 py-1 text-[10px] font-black text-indigo-600 hover:text-indigo-705 bg-indigo-50 hover:bg-indigo-100 rounded-lg uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                              >
+                                {activeReplyCommentId === comment.id ? "Cancel" : "Reply"}
+                              </button>
+                            </div>
+
+                            <p className="text-xs text-slate-600 font-medium leading-relaxed max-w-full overflow-hidden break-all">
+                              {comment.content}
+                            </p>
+
+                            {/* Reply Input Form inline */}
+                            {activeReplyCommentId === comment.id && (
+                              <form 
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  handlePostReplySubmit(comment.id, replyCommentText);
+                                }}
+                                className="mt-2 flex items-center gap-2 bg-white rounded-xl border border-slate-200 p-1.5 shadow-xs animate-in slide-in-from-top-1 px-2 py-1 duration-150"
+                              >
+                                <input
+                                  type="text"
+                                  placeholder={`Reply to ${comment.userName}...`}
+                                  value={replyCommentText}
+                                  onChange={(e) => setReplyCommentText(e.target.value)}
+                                  className="flex-grow bg-transparent text-xs text-slate-700 outline-none px-2 py-1 font-medium"
+                                  autoFocus
+                                />
+                                <button
+                                  type="submit"
+                                  disabled={!replyCommentText.trim()}
+                                  className="p-1 px-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-100 text-white disabled:text-slate-400 text-[10px] font-black rounded-lg uppercase tracking-wider transition-all"
+                                >
+                                  Send
+                                </button>
+                              </form>
+                            )}
+
+                            {/* Recursively render replies */}
+                            {childReplies.map(reply => renderCommentNode(reply, depth + 1))}
+                          </div>
+                        );
+                      };
+
+                      return topLevelComments.map(comment => renderCommentNode(comment, 0));
+                    })()}
                   </div>
                 )}
               </div>
@@ -2391,6 +2611,103 @@ export function SocialScreen({
           </div>
         </div>
       )}
+
+      {/* ─── FULLSCREEN EXPANDED IMAGE LIGHTBOX MODAL ─── */}
+      <AnimatePresence>
+        {lightboxPost && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/98 backdrop-blur-md z-[800] flex flex-col justify-between p-4 select-none"
+            onClick={() => setLightboxPost(null)}
+          >
+            {/* Header with navigation/close - Small back icon block */}
+            <div className="w-full flex items-center justify-between p-2 z-[810]" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={() => setLightboxPost(null)}
+                className="flex items-center gap-2 p-2 hover:bg-white/10 rounded-full text-white/80 transition-all text-xs font-black uppercase tracking-wider"
+              >
+                <ArrowLeft size={18} />
+                <span>Back</span>
+              </button>
+              <span className="text-xs font-bold text-white/50 tracking-widest uppercase">
+                Image {lightboxIndex + 1} of {lightboxPost.images && lightboxPost.images.length > 0 ? lightboxPost.images.length : 1}
+              </span>
+              <button
+                onClick={() => setLightboxPost(null)}
+                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all"
+              >
+                <Plus className="rotate-45 w-[18px] h-[18px]" />
+              </button>
+            </div>
+
+            {/* Middle main viewing stage container */}
+            <div 
+              className="flex-1 flex items-center justify-center relative touch-none"
+              onClick={() => setLightboxPost(null)}
+            >
+              {/* Image Switcher Buttons */}
+              {lightboxPost.images && lightboxPost.images.length > 1 && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const prevIdx =
+                        lightboxIndex === 0
+                          ? lightboxPost.images!.length - 1
+                          : lightboxIndex - 1;
+                      setLightboxIndex(prevIdx);
+                    }}
+                    className="absolute left-4 p-3 bg-white/10 hover:bg-white/20 active:scale-95 text-white rounded-full z-[820] backdrop-blur-xs transition-all border border-white/10"
+                    title="Previous Image"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const nextIdx =
+                        lightboxIndex === lightboxPost.images!.length - 1
+                          ? 0
+                          : lightboxIndex + 1;
+                      setLightboxIndex(nextIdx);
+                    }}
+                    className="absolute right-4 p-3 bg-white/10 hover:bg-white/20 active:scale-95 text-white rounded-full z-[820] backdrop-blur-xs transition-all border border-white/10"
+                    title="Next Image"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
+                </>
+              )}
+
+              {/* Main Image display */}
+              <motion.img
+                key={lightboxIndex}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                src={lightboxPost.images && lightboxPost.images.length > 0 ? lightboxPost.images[lightboxIndex] : (lightboxPost.image || lightboxPost.imageUrl)}
+                alt="Expanded asset view"
+                className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl border border-white/10"
+                onClick={(e) => e.stopPropagation()}
+                referrerPolicy="no-referrer"
+              />
+            </div>
+
+            {/* Bottom Info Row */}
+            <div className="w-full text-center pb-6 px-4 z-[810]" onClick={(e) => e.stopPropagation()}>
+              <p className="text-white text-sm font-black tracking-tight max-w-lg mx-auto truncate">
+                {lightboxPost.title || "Shared Post asset"}
+              </p>
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-wider mt-1">
+                Post by {lightboxPost.userName}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ─── YOUTUBE GRADE REPORT WIZARD SCREEN ─── */}
       {reportedPost && (
@@ -2602,8 +2919,16 @@ export function SocialScreen({
       )}
 
       {/* ─── BOTTOM REDESIGNED NAVIGATION BAR (STRETCHES WITH ABSOLUTELY ZERO DEAD HOLES) ─── */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[450] bg-gradient-to-t from-slate-50/90 via-slate-50/40 to-transparent">
-        <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-3 py-1.5 rounded-[2.5rem] flex items-center justify-around gap-1 pointer-events-auto w-[96%] max-w-[395px] sm:max-w-[480px] h-[66px] overflow-hidden select-none select-none">
+      <motion.div
+        initial={false}
+        animate={{
+          y: scrollDirection === "down" ? 110 : 0,
+          opacity: scrollDirection === "down" ? 0 : 1,
+        }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[450] bg-gradient-to-t from-slate-50/90 via-slate-50/40 to-transparent"
+      >
+        <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-3 py-1.5 rounded-[2.5rem] flex items-center justify-around gap-1 pointer-events-auto w-[96%] max-w-[395px] sm:max-w-[480px] h-[72px] overflow-hidden select-none">
           {/* Home Tab */}
           <button
             onClick={() => {
@@ -2675,14 +3000,25 @@ export function SocialScreen({
 
           {/* Profile link */}
           <button
-            onClick={() => setActiveScreen("profile")}
-            className="flex flex-col items-center justify-center gap-0.5 transition-all text-[9.5px] uppercase font-black tracking-wider flex-1 h-full text-slate-400 hover:text-slate-600"
+            onClick={() => {
+              setActiveTab("profile");
+              setSelectedGroupId(null);
+              setSelectedPost(null);
+            }}
+            className={`flex flex-col items-center justify-center gap-0.5 transition-all text-[9.5px] uppercase font-black tracking-wider flex-1 h-full ${
+              activeTab === "profile"
+                ? "text-indigo-600"
+                : "text-slate-400 hover:text-slate-600"
+            }`}
           >
-            <User size={22} className="scale-95" />
+            <User
+              size={22}
+              className={`transition-transform ${activeTab === "profile" ? "scale-105" : "scale-95"}`}
+            />
             <span>Profile</span>
           </button>
         </nav>
-      </div>
+      </motion.div>
     </div>
   );
 }

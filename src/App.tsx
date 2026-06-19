@@ -181,7 +181,6 @@ import { addSeedToInventory } from "./types/garden";
 import { startPreloading } from "./lib/preloader";
 
 import { GardenScreen } from "./components/GardenScreen";
-import { AdventureMap } from "./components/AdventureMap";
 import { HouseScreen } from "./components/HouseScreen";
 import { ArchivesScreen } from "./components/ArchivesScreen";
 import { LibraryScreen } from "./components/LibraryScreen";
@@ -6101,36 +6100,6 @@ export default function App() {
                   </Suspense>
                 </motion.div>
               )}
-              {activeScreen === "garden" && (
-                <motion.div
-                  key="garden"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="w-full"
-                >
-                  <Suspense
-                    fallback={
-                      <div className="flex items-center justify-center p-20 animate-pulse text-emerald-500 font-black italic uppercase tracking-widest">
-                        GENERATING CHALLENGE MAP...
-                      </div>
-                    }
-                  >
-                    <AdventureMap 
-                      onBack={() => setActiveScreen("home")} 
-                      settings={settings}
-                      onUpdateSettings={onUpdateSettings}
-                      stats={stats}
-                      onUpdateStats={onUpdateStats}
-                      gardenState={gardenState}
-                      setGardenState={setGardenState}
-                      showToast={showToast}
-                      dailyProgress={dailyProgress}
-                      setDailyProgress={setDailyProgress}
-                    />
-                  </Suspense>
-                </motion.div>
-              )}
 
               {activeScreen === "hydration-detail" && (
                 <motion.div
@@ -6343,7 +6312,7 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[80]"
               >
-                <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-3 py-1.5 rounded-[2.5rem] flex items-center justify-around gap-1 pointer-events-auto w-[96%] max-w-[395px] sm:max-w-[480px] h-[66px] overflow-hidden select-none">
+                <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-3 py-1.5 rounded-[2.5rem] flex items-center justify-around gap-1 pointer-events-auto w-[96%] max-w-[395px] sm:max-w-[480px] h-[72px] overflow-hidden select-none">
                   {(settings.navOrder || Object.keys(NAV_ITEMS_MAP)).map(
                     (id) => {
                       const item = NAV_ITEMS_MAP[id];

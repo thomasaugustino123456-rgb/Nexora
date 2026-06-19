@@ -298,6 +298,12 @@ export interface SocialCircle {
   deleted?: boolean;
   customIconUrl?: string;
   customBgUrl?: string;
+  roles?: string[];
+  communityType?: string;
+  whatGroupIsFor?: string;
+  bgThemeColor?: string;
+  sticker?: string;
+  primaryPurpose?: string;
 }
 
 export interface Post {
@@ -320,6 +326,7 @@ export interface Post {
   commentCount: number;
   createdAt: string;
   type: 'text' | 'image' | 'milestone' | 'video';
+  deleted?: boolean;
   videoUrl?: string;
   milestoneData?: {
     type: 'streak' | 'trophy' | 'level';
