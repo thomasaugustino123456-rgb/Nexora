@@ -8,6 +8,8 @@ import {
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { UserSettings, UserStats } from '../types';
 
+const cityWorldBg = new URL('../assets/images/city_world_bg_1781813646094.jpg', import.meta.url).href;
+
 interface AdventureMapProps {
   onBack: () => void;
   settings: UserSettings;
@@ -153,16 +155,16 @@ const playNatureSynthSound = (type: string) => {
 
 // Precise coordinates for the 10 levels winding naturally in the City of Beginnings World 1.
 const LEVEL_COORDS = [
-  { left: '46%', bottom: '6%', speech: 'Every journey begins here! 🏠' },
-  { left: '58%', bottom: '15%', speech: 'Nice start! Take your steps! 🚶' },
-  { left: '44%', bottom: '24%', speech: "You're doing fantastic! 🔥" },
-  { left: '48%', bottom: '33%', speech: 'Unlock deeper focus values! 👍' },
-  { left: '36%', bottom: '42%', speech: 'Take a break under shady trees! 🌸' },
-  { left: '52%', bottom: '51%', speech: 'Drip fresh focus fountain drops! ⛲' },
-  { left: '60%', bottom: '60%', speech: "Stay radiant! You're glowing! ✨" },
-  { left: '50%', bottom: '70%', speech: 'A metropolitan intersection insight! 🚦' },
-  { left: '60%', bottom: '80%', speech: "Peer over tower structures! 🏢" },
-  { left: '50%', bottom: '88%', speech: 'HQ Rooftop Summit Climax Peak! 👑' }
+  { left: '52%', bottom: '8%', speech: 'Every journey begins with a single step.' },
+  { left: '53%', bottom: '18%', speech: 'Nice start!' },
+  { left: '46%', bottom: '27%', speech: "You're on fire!" },
+  { left: '46%', bottom: '36%', speech: 'Keep up!' },
+  { left: '36%', bottom: '44%', speech: 'Great job!' },
+  { left: '50%', bottom: '52%', speech: 'Stay Consistent' },
+  { left: '56%', bottom: '61%', speech: 'Almost there!' },
+  { left: '49%', bottom: '71%', speech: 'Excellent 🌟' },
+  { left: '57%', bottom: '80%', speech: "Keep going! You're doing great!" },
+  { left: '50%', bottom: '88%', speech: 'Reach the rooftop for a big view!' }
 ];
 
 export const WORLDS_DATA: World[] = [
@@ -405,28 +407,21 @@ export function AdventureMap({
   return (
     <div className="fixed inset-0 w-full h-screen bg-[#070b13] text-white flex flex-col overflow-hidden z-[200]">
       
-      {/* ─── STICKY HEADER AREA ─── */}
-      <header className="absolute top-0 inset-x-0 h-16 bg-[#090f1a]/95 backdrop-blur-md border-b border-white/5 px-4 sm:px-6 flex items-center justify-between z-50 select-none shadow-xl">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={onBack}
-            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white rounded-2xl border border-white/5 transition-all active:scale-95 flex items-center justify-center shadow-inner"
-            title="Exit Map"
-          >
-            <ArrowLeft size={16} strokeWidth={3} />
-          </button>
+      {/* ─── STICKY/FLOATING HUD HEADER OVERLAYS ─── */}
+      <div className="absolute top-4 inset-x-4 flex flex-col sm:flex-row gap-3 justify-between items-center z-50 pointer-events-none">
+        {/* Nexora Brand Pill */}
+        <div className="bg-[#0b1528]/95 backdrop-blur-md border border-white/10 px-4 py-2 rounded-[20px] shadow-2xl flex items-center gap-3 pointer-events-auto">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white filter drop-shadow">
+            <Sprout className="w-5 h-5 text-emerald-100" />
+          </div>
           <div>
-            <span className="text-[8px] font-black tracking-widest uppercase text-emerald-400 block font-mono">Nexora Expedition</span>
-            <div className="flex items-center gap-1.5">
-              <Compass className="w-4 h-4 text-emerald-400 animate-spin-slow" />
-              <h1 className="text-sm font-black text-white uppercase tracking-tight">Adventure Trails</h1>
-            </div>
+            <h2 className="text-xs font-black tracking-wider text-white select-none leading-none">NEXORA</h2>
+            <p className="text-[8px] font-bold text-[#82cd73] select-none leading-none mt-1">Your Journey Begins</p>
           </div>
         </div>
 
-        {/* Global Coin & XP Indicators */}
-        <div className="flex items-center gap-2">
-          {/* Reset button hidden natively, double click stats to reset */}
+        {/* Coins, Gems, Streak Indicators */}
+        <div className="flex items-center gap-2 pointer-events-auto">
           <button 
             onDoubleClick={resetAllProgression}
             className="text-[8px] font-mono font-bold text-slate-500 hover:text-rose-400 mr-2 uppercase block tracking-wider"
@@ -435,359 +430,207 @@ export function AdventureMap({
             Reset Progress
           </button>
 
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-2xl border border-amber-500/20 text-amber-300 font-extrabold text-xs font-mono">
-            <Coins className="w-3.5 h-3.5 text-amber-500" />
-            <span>{stats.coins || 0}</span>
+          {/* Coins Pill */}
+          <div className="bg-[#0b1528]/95 border border-white/10 rounded-full py-1.5 pl-3 pr-1.5 flex items-center gap-2 shadow-xl hover:bg-slate-900 transition-colors">
+            <span className="text-yellow-400 select-none">🪙</span>
+            <span className="text-xs font-black font-mono text-white select-none">{stats.coins !== undefined ? Number(stats.coins).toLocaleString() : '1,250'}</span>
+            <button 
+              onClick={() => { vibrate(5); if (onUpdateStats) onUpdateStats((p: any) => ({ ...p, coins: (p.coins || 0) + 100 })); }}
+              className="w-5 h-5 rounded-full bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-white font-extrabold text-[10px]"
+            >
+              +
+            </button>
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-emerald-300 font-extrabold text-xs font-mono">
-            <Star className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{stats.xp || 0} XP</span>
+          {/* Gems Pill */}
+          <div className="bg-[#0b1528]/95 border border-white/10 rounded-full py-1.5 pl-3 pr-1.5 flex items-center gap-2 shadow-xl hover:bg-slate-900 transition-colors">
+            <span className="text-cyan-400 select-none">💎</span>
+            <span className="text-xs font-black font-mono text-white select-none">{stats.gems !== undefined ? Number(stats.gems).toLocaleString() : '280'}</span>
+            <button 
+              onClick={() => { vibrate(5); if (onUpdateStats) onUpdateStats((p: any) => ({ ...p, gems: (p.gems || 0) + 10 })); }}
+              className="w-5 h-5 rounded-full bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-white font-extrabold text-[10px]"
+            >
+              +
+            </button>
+          </div>
+
+          {/* Streak Pill */}
+          <div className="bg-[#0b1528]/95 border border-white/10 rounded-full py-1.5 px-3 flex items-center gap-2 shadow-xl">
+            <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
+            <span className="text-xs font-black text-white select-none">{stats.streak || 12} Day Streak</span>
+          </div>
+
+          {/* Back navigation/burger menu button */}
+          <button 
+            onClick={onBack}
+            className="p-2 bg-[#0b1528]/95 hover:bg-slate-900 rounded-xl border border-white/10 text-white shadow-xl flex items-center justify-center transition-all active:scale-95"
+            title="Exit Map"
+          >
+            <Menu size={16} strokeWidth={3} />
+          </button>
+        </div>
+      </div>
+
+      {/* ─── WORLD TITLE CARD FLOATER ─── */}
+      <div className="absolute top-24 left-4 w-60 bg-[#0b1528]/90 backdrop-blur-md border border-white/10 rounded-[24px] p-4 shadow-2xl z-40 pointer-events-auto flex flex-col gap-2.5 hidden sm:flex">
+        <div>
+          <span className="text-[7px] font-black tracking-widest text-[#7dd3fc] uppercase font-mono">WORLD 1</span>
+          <h3 className="text-xs font-black text-white uppercase tracking-tight mt-0.5">CITY OF NEW HORIZONS</h3>
+        </div>
+        <p className="text-[9px] text-slate-300 font-medium leading-relaxed font-sans">
+          A modern city full of opportunities, growth and new beginnings. Today is the beginning of my journey.
+        </p>
+        <div className="border-t border-white/10 pt-2 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Sprout className="w-3.5 h-3.5 text-emerald-450" />
+            <div>
+              <span className="text-[7px] font-black text-slate-400 uppercase font-mono block leading-none">WORLD REWARD</span>
+              <span className="text-[8.5px] font-black text-emerald-350 block mt-0.5">Beginner Seed</span>
+            </div>
+          </div>
+          <div className="w-6 h-6 rounded-lg bg-slate-800/80 border border-white/10 flex items-center justify-center text-slate-400">
+            <Lock size={12} />
           </div>
         </div>
-      </header>
+      </div>
+
+      {/* ─── LEFT SIDE NAVIGATION FLOATER ─── */}
+      <div className="absolute bottom-28 left-4 flex flex-col gap-3.5 z-40 pointer-events-auto">
+        <button 
+          onClick={() => { vibrate(5); if (showToast) showToast("🏪 Shop is opening soon inside your inventory!", "info"); }}
+          className="w-13 h-13 rounded-2xl bg-[#0b1528]/95 hover:bg-slate-900 border border-white/10 shadow-2xl flex flex-col items-center justify-center text-white transition-all active:scale-95 group"
+        >
+          <ShoppingBag className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
+          <span className="text-[7.5px] font-black uppercase text-slate-400 tracking-tight mt-0.5">Shop</span>
+        </button>
+        <button 
+          onClick={() => { vibrate(5); if (showToast) showToast("🎒 Open inventory details inside active profiles!", "info"); }}
+          className="w-13 h-13 rounded-2xl bg-[#0b1528]/95 hover:bg-slate-900 border border-white/10 shadow-2xl flex flex-col items-center justify-center text-white transition-all active:scale-95 group"
+        >
+          <Backpack className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
+          <span className="text-[7.5px] font-black uppercase text-slate-400 tracking-tight mt-0.5">Inventory</span>
+        </button>
+        <button 
+          onClick={() => { vibrate(5); if (showToast) showToast("📖 Personal habit journal logs saved privately!", "info"); }}
+          className="w-13 h-13 rounded-2xl bg-[#0b1528]/95 hover:bg-slate-900 border border-white/10 shadow-2xl flex flex-col items-center justify-center text-white transition-all active:scale-95 group"
+        >
+          <BookOpen className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition-transform" />
+          <span className="text-[7.5px] font-black uppercase text-slate-400 tracking-tight mt-0.5">Journal</span>
+        </button>
+        <button 
+          onClick={() => { vibrate(5); if (showToast) showToast("🌱 Your green greenhouse plant is growing!", "info"); }}
+          className="w-13 h-13 rounded-2xl bg-[#0b1528]/95 hover:bg-slate-900 border border-white/10 shadow-2xl flex flex-col items-center justify-center text-white transition-all active:scale-95 group p-1"
+        >
+          <Sprout className="w-5 h-5 text-emerald-450 group-hover:scale-110 transition-transform animate-pulse" />
+          <span className="text-[7.5px] font-black uppercase text-slate-400 tracking-tight mt-0.5">My Plant</span>
+        </button>
+      </div>
+
+      {/* ─── RIGHT SIDE NAVIGATION FLOATER ─── */}
+      <div className="absolute bottom-28 right-4 flex flex-col gap-3.5 z-40 pointer-events-auto">
+        <button 
+          onClick={() => { vibrate(5); if (showToast) showToast("🏙️ World 1: City of New Horizons active!", "info"); }}
+          className="w-13 h-13 rounded-2xl bg-[#0b1528]/95 hover:bg-slate-900 border border-white/10 shadow-2xl flex flex-col items-center justify-center text-white transition-all active:scale-95 group"
+        >
+          <Map className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" />
+          <span className="text-[7.5px] font-black uppercase text-slate-400 tracking-tight mt-0.5">Worlds</span>
+        </button>
+        <button 
+          onClick={() => { vibrate(5); if (showToast) showToast("🏆 Check rankings on Leaderboard screen!", "info"); }}
+          className="w-13 h-13 rounded-2xl bg-[#0b1528]/95 hover:bg-slate-900 border border-white/10 shadow-2xl flex flex-col items-center justify-center text-white transition-all active:scale-95 group"
+        >
+          <Trophy className="w-5 h-5 text-yellow-450 group-hover:scale-110 transition-transform" />
+          <span className="text-[7.5px] font-black uppercase text-slate-400 tracking-tight mt-0.5">Rankings</span>
+        </button>
+      </div>
 
       {/* ─── FULL-SCREEN LIVING LANDSCAPE ADVENTURE SCROLL TRACK ─── */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 w-full overflow-y-auto pb-24 scroll-smooth scrollbar-none select-none relative bg-[#82cd73]"
-        style={{ paddingTop: '64px' }} // clear sticky header nicely
+        className="flex-1 w-full overflow-y-auto pb-24 scroll-smooth scrollbar-none select-none relative bg-[#3f651c]"
       >
-        {/* Sky Background Gradient Overlay at the Top */}
-        <div className="absolute inset-x-0 top-0 h-[450px] bg-gradient-to-b from-[#aae0ff] via-[#ceeffc] to-transparent pointer-events-none z-10" />
-
         {/* Outer Grid Canvas Layout */}
         <div className="w-full max-w-xl mx-auto min-h-[2400px] relative">
           
           {/* Dynamic Floating Zoom Controller */}
-          <div className="absolute right-6 top-8 z-40 bg-[#090f1a]/95 backdrop-blur-md border border-white/10 px-3.5 py-2.5 rounded-2xl flex flex-col items-center gap-2 shadow-2xl">
-            <span className="text-[8px] font-mono font-black text-slate-400 tracking-wider">MAP ZOOM</span>
-            <div className="flex items-center gap-2">
+          <div className="absolute right-4 top-24 z-40 bg-[#090f1a]/95 backdrop-blur-md border border-white/10 px-3 py-2 rounded-2xl flex flex-col items-center gap-1.5 shadow-2xl pointer-events-auto">
+            <span className="text-[7px] font-mono font-black text-slate-400 tracking-wider">ZOOM</span>
+            <div className="flex items-center gap-1.5">
               <button 
                 onClick={() => { vibrate(5); setZoomLevel(z => Math.max(0.7, z - 0.1)); }}
-                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 font-extrabold flex items-center justify-center border border-white/5 transition-all text-white active:scale-90"
-                title="Zoom Out"
+                className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 font-extrabold flex items-center justify-center border border-white/5 transition-all text-white text-xs active:scale-90"
               >
                 －
               </button>
-              <span className="text-xs font-mono font-bold text-center w-12 text-emerald-400">
+              <span className="text-[10px] font-mono font-bold text-center w-8 text-emerald-400">
                 {Math.round(zoomLevel * 100)}%
               </span>
               <button 
                 onClick={() => { vibrate(5); setZoomLevel(z => Math.min(1.4, z + 0.1)); }}
-                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 font-extrabold flex items-center justify-center border border-white/5 transition-all text-white active:scale-90"
-                title="Zoom In"
+                className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-705 font-extrabold flex items-center justify-center border border-white/5 transition-all text-white text-xs active:scale-90"
               >
                 ＋
               </button>
             </div>
-            <button 
-              onClick={() => { vibrate(5); setZoomLevel(1.0); }}
-              className="text-[7.5px] font-bold font-mono text-slate-400 hover:text-white uppercase transition-colors"
-            >
-              RESET ZOOM
-            </button>
           </div>
 
           {/* ─────── HERO MAP CONTAINER WITH ZOOM SCALED MATRIX ─────── */}
           <div 
             className="w-full h-[2400px] relative origin-top transition-transform duration-300"
-            style={{ transform: `scale(${zoomLevel})` }}
+            style={{ 
+              transform: `scale(${zoomLevel})`,
+              backgroundImage: `url(${cityWorldBg})`,
+              backgroundSize: '100% 100%',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center'
+            }}
           >
             
-            {/* ─── COHESIVE NATURAL WAVING ROAD PATH (SVG) ─── */}
-            <svg 
-              className="absolute inset-0 w-full h-full pointer-events-none" 
-              style={{ zIndex: 5 }} 
-              viewBox="0 0 1000 2400" 
-              preserveAspectRatio="none"
-            >
-              {/* Thick soft-green earth curb outline */}
-              <path 
-                d="M 460 2256 C 580 2040, 580 2040, 580 2040 C 440 1824, 480 1608, 480 1608 C 360 1392, 520 1176, 520 1176 C 600 960, 500 720, 500 720 C 600 480, 500 288, 500 288" 
-                fill="none" 
-                stroke="#6cb35d" 
-                strokeWidth="38" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className="opacity-60"
-              />
-              {/* Main Brick Walkway road backing */}
-              <path 
-                d="M 460 2256 C 580 2040, 580 2040, 580 2040 C 440 1824, 480 1608, 480 1608 C 360 1392, 520 1176, 520 1176 C 600 960, 500 720, 500 720 C 600 480, 500 288, 500 288" 
-                fill="none" 
-                stroke="#fff8e2" 
-                strokeWidth="24" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-              />
-              {/* Yellow dotted dividing center lane lanes */}
-              <path 
-                d="M 460 2256 C 580 2040, 580 2040, 580 2040 C 440 1824, 480 1608, 480 1608 C 360 1392, 520 1176, 520 1176 C 600 960, 500 720, 500 720 C 600 480, 500 288, 500 288" 
-                fill="none" 
-                stroke="#f3bc3c" 
-                strokeWidth="4" 
-                strokeDasharray="14 14"
-                strokeLinecap="round" 
-              />
-            </svg>
-
-            {/* ─── PREMIUM LANDSCAPE DECORATIVE ASSETS & ARCHITECTURES ─── */}
-
-            {/* 1. Dynamic Floating Sky Clouds & Birds soaring high up */}
+            {/* 1. Floating Sky Clouds & Birds soared on top of background */}
             <div className="absolute top-10 inset-x-0 h-44 pointer-events-none z-10 overflow-hidden">
               <motion.div 
                 animate={{ x: ['-20%', '115%'] }} 
                 transition={{ duration: 42, repeat: Infinity, ease: 'linear' }}
-                className="absolute text-5xl opacity-40 filter drop-shadow-sm select-none"
+                className="absolute text-5xl opacity-40 select-none"
               >
                 ☁️
               </motion.div>
               <motion.div 
                 animate={{ x: ['115%', '-20%'] }} 
                 transition={{ duration: 50, repeat: Infinity, ease: 'linear', delay: 15 }}
-                className="absolute top-16 text-6xl opacity-30 filter drop-shadow-sm select-none"
+                className="absolute top-16 text-6xl opacity-30 select-none"
               >
                 ☁️
               </motion.div>
               <motion.div 
                 animate={{ x: ['-40%', '120%'], y: [0, 40, 0] }} 
                 transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute top-24 text-2xl z-20 flex gap-2 text-slate-500/60"
+                className="absolute top-24 text-xl z-20 flex gap-2 text-slate-500/45"
               >
                 🕊️<span>🕊️</span>
               </motion.div>
             </div>
 
-            {/* 2. Blue River Waterway on the right edge with a Sailing Boat */}
-            <div className="absolute top-[300px] right-0 w-36 h-[1700px] bg-gradient-to-r from-sky-400/30 to-sky-200/20 rounded-l-[40px] border-l-4 border-sky-400/20 shadow-inner z-[2] overflow-hidden pointer-events-none">
-              {/* Elegant water ripple effects */}
-              <div className="absolute top-44 left-6 w-14 h-14 rounded-full border-2 border-sky-400/10 animate-ping opacity-30 animate-pulse" />
-              <div className="absolute top-[600px] right-8 w-20 h-20 rounded-full border-2 border-sky-400/15 animate-pulse opacity-40" />
-              <div className="absolute top-[1200px] left-8 w-16 h-16 rounded-full border-2 border-sky-400/10 animate-ping opacity-30" />
-
-              {/* Animated Sailboat floating on the aquamarine river */}
+            {/* 2. Animated sailboat overlay on the river right-hand area */}
+            <div className="absolute top-[300px] right-0 w-36 h-[1700px] pointer-events-none z-[10] overflow-hidden">
               <motion.div
                 animate={{ 
-                  y: [200, 350, 450, 200],
+                  y: [400, 550, 650, 400],
                   x: [10, 45, 15, 10],
                   rotate: [-3, 4, -2, -3]
                 }}
                 transition={{ duration: 45, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute top-44 left-4 pointer-events-auto cursor-pointer z-10 flex flex-col items-center"
+                className="absolute top-44 left-10 pointer-events-auto cursor-pointer z-10 flex flex-col items-center"
                 onClick={() => {
                   vibrate(5);
                   playNatureSynthSound('river');
-                  if (showToast) showToast("⛵ Beautiful white Yacht sailing smoothly through water waves!", "info");
+                  if (showToast) showToast("⛵ Tap Yacht sailing smoothly through water waves!", "info");
                 }}
                 title="Tap yacht"
               >
-                <span className="text-4xl filter drop-shadow-md select-none">⛵</span>
-                <span className="bg-[#0f172a]/90 text-[7px] text-cyan-300 px-1 py-0.5 border border-cyan-400/20 font-black rounded uppercase">Cruise</span>
+                <span className="text-3xl filter drop-shadow-md select-none">⛵</span>
               </motion.div>
-
-              <div className="absolute bottom-[200px] left-8 text-3xl opacity-30 select-none">🪷</div>
             </div>
-
-            {/* 3. NEXORA TOWER SKY-HIGH HQ (Top: Levels 9, 10) */}
-            <div className="absolute top-[110px] left-1/2 -translate-x-1/2 w-80 flex flex-col items-center text-center z-10 overflow-visible">
-              
-              {/* Flag Pole with glowing sovereign crown representing overall World 1 climax mastery */}
-              <motion.div 
-                animate={{ y: [0, -5, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="flex flex-col items-center mb-1.5"
-              >
-                <span className="text-4xl filter drop-shadow-[0_0_12px_rgba(253,224,71,0.5)] select-none">👑</span>
-                <div className="w-1.5 h-10 bg-slate-400 rounded-sm shadow-md" />
-              </motion.div>
-
-              {/* Glass Skyscraper HQ Structure */}
-              <div className="w-[180px] bg-gradient-to-b from-[#1e293b]/95 via-[#0f172a]/95 to-[#0b0f19] border-3 border-teal-500/40 rounded-[30px] p-4.5 shadow-2xl relative">
-                
-                {/* Glowing Danger Antenna light */}
-                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                  <div className="w-1 h-4 bg-slate-400" />
-                  <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping absolute -top-1" />
-                  <div className="w-2 h-2 bg-red-400 rounded-full absolute -top-0.5" />
-                </div>
-
-                <div className="border-b border-teal-500/25 pb-1.5 mb-2.5">
-                  <span className="text-[7.5px] font-mono font-black tracking-widest text-[#22d3ee] uppercase block">HQ APEX STATION</span>
-                  <h4 className="text-[10px] font-bold text-white uppercase tracking-tight mt-0.5">NEXORA ROOFTOP SUMMIT</h4>
-                </div>
-
-                {/* Grid window pane lights */}
-                <div className="grid grid-cols-4 gap-1.5">
-                  {Array.from({ length: 16 }).map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={`h-2.5 rounded-xs transition-colors duration-1000 ${
-                        (i + 3) % 4 === 0 
-                          ? 'bg-yellow-300/85 shadow-[0_0_8px_rgba(253,224,71,0.5)] animate-pulse' 
-                          : 'bg-teal-905/60'
-                      }`} 
-                    />
-                  ))}
-                </div>
-
-                <div className="mt-3.5 bg-slate-950/60 rounded-xl px-2.5 py-1.5 border border-white/5 flex items-center justify-center gap-1.5">
-                  <span className="text-sm select-none">🏢</span>
-                  <span className="text-[7.5px] font-mono font-black text-slate-400 tracking-wider">LEVEL 10 ROOFTOP REALM</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 4. LEVEL 7, 8 METROPOLITAN AREA (Learning Center & Traffic crossway) */}
-            
-            {/* Learning Center Reading Pavilion (Left aspect, y: 720px) */}
-            <div className="absolute top-[720px] left-8 w-[160px] bg-[#0f172a]/90 backdrop-blur-sm border border-emerald-500/20 rounded-[24px] p-3.5 shadow-2xl z-10">
-              <span className="text-[8px] font-mono font-black text-emerald-400 tracking-wider block uppercase border-b border-slate-800 pb-1.5 mb-2">🎓 Learning Center</span>
-              <div className="flex gap-2 items-center justify-center py-1">
-                <span className="text-3xl filter drop-shadow">📚</span>
-                <span className="text-2xl animate-bounce select-none" style={{ animationDuration: '3.5s' }}>📖</span>
-              </div>
-              <p className="text-[7.5px] text-slate-400 leading-tight mt-1 text-center font-medium">A silent place to organize mental tasks and review roadmaps.</p>
-            </div>
-
-            {/* Traffic Intersection Crossway (Right aspect, y: 880px) */}
-            <div className="absolute top-[880px] right-8 w-[170px] bg-slate-900/80 border border-slate-700/30 rounded-3xl p-3.5 shadow-xl font-sans text-center z-10">
-              <div className="flex items-center justify-center gap-2 mb-1.5">
-                {/* Traffic light */}
-                <div className="w-3.5 h-8 bg-slate-950 rounded-full flex flex-col justify-between p-0.5 border border-slate-800">
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <div className="w-2 h-2 rounded-full bg-amber-400" />
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                </div>
-                <div>
-                  <span className="text-[7px] font-mono font-black text-amber-400 block tracking-wider uppercase">TRANSIT JUNCTION</span>
-                  <h5 className="text-[10px] font-bold text-white uppercase tracking-tight">PEDESTRIAN TRAIL</h5>
-                </div>
-              </div>
-
-              {/* Red Transit Bus traveling horizontally */}
-              <div className="w-full h-8 overflow-hidden bg-slate-950/60 rounded-xl relative flex items-center justify-start border border-white/5">
-                <motion.div 
-                  animate={{ x: ['-20%', '115%'] }}
-                  transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
-                  className="absolute pointer-events-auto cursor-pointer flex items-center gap-0.5"
-                  onClick={() => {
-                    vibrate(7);
-                    playNatureSynthSound('bus');
-                    if (showToast) showToast("🚌 honk! Honk! The City Shuttle Transport bus going past shops!", "info");
-                  }}
-                  title="Tap Shuttle Bus"
-                >
-                  <span className="text-lg filter drop-shadow select-none">🚌</span>
-                  <span className="text-[5.5px] font-mono font-black bg-red-600 px-0.5 rounded text-white tracking-widest leading-none">TAP</span>
-                </motion.div>
-                <div className="w-full h-0.5 border-t border-dashed border-slate-800/80" />
-              </div>
-            </div>
-
-            {/* 5. LEVEL 5, 6 WATER PLAZA & COFFEE SHOP */}
-
-            {/* Grand Water Fountain Pond (Left aspect, y: 1120px) */}
-            <div 
-              className="absolute top-[1120px] left-10 w-28 h-28 bg-[#1e293b]/90 border border-cyan-400/30 rounded-full flex flex-col items-center justify-center pointer-events-auto cursor-pointer shadow-2xl hover:bg-slate-900/90 active:scale-95 transition-all z-10"
-              onClick={() => {
-                vibrate(5);
-                playNatureSynthSound('river');
-                if (showToast) showToast("⛲ splash splash! Tap the crystal water fountain pond! Pure focus. 💦", "info");
-              }}
-              title="Tap Water Fountain"
-            >
-              {/* Splashing particle drops */}
-              <div className="absolute -top-3.5 flex flex-col gap-0.5 items-center">
-                <motion.span 
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
-                  className="text-lg select-none"
-                >
-                  💦
-                </motion.span>
-                <span className="text-[6.5px] font-mono font-black text-cyan-400 bg-[#0f172a] border border-cyan-500/25 px-1 py-0.5 rounded uppercase tracking-wider">TAP REFRESH</span>
-              </div>
-              <span className="text-4xl filter drop-shadow select-none">⛲</span>
-            </div>
-
-            {/* Cozy Sidewalk Cafe Front (Right aspect, y: 1250px) */}
-            <div 
-              className="absolute top-[1250px] right-8 w-44 bg-[#0f172a]/90 backdrop-blur-sm border border-amber-500/20 rounded-[28px] p-3.5 shadow-2xl pointer-events-auto cursor-pointer hover:bg-slate-900/90 active:scale-95 transition-all z-10"
-              onClick={() => {
-                vibrate(6);
-                playNatureSynthSound('chirp');
-                if (showToast) showToast("☕ Mmm... Freshly grounded arabica beans and croissants! Welcome to Focus Cafe!", "info");
-              }}
-              title="Tap Coffee Shop"
-            >
-              {/* Bakery Awning & Coffee Steam animation */}
-              <div className="flex items-center justify-between border-b border-white/5 pb-1.5 mb-2">
-                <span className="text-[7.5px] font-mono font-black text-amber-400 tracking-wider block uppercase">☕ FOCUS BAKERY</span>
-                <span className="text-[7px] text-emerald-400 font-mono font-bold animate-pulse">OPEN</span>
-              </div>
-              
-              <div className="flex gap-2.5 items-center justify-center">
-                <div className="relative">
-                  <motion.div 
-                    animate={{ y: [0, -4, 0], opacity: [0.4, 0.8, 0.4] }} 
-                    transition={{ duration: 2, repeat: Infinity }} 
-                    className="absolute -top-3 left-2 text-[10px] select-none"
-                  >
-                    💭
-                  </motion.div>
-                  <span className="text-3xl filter drop-shadow select-none">Croissant 🥐</span>
-                </div>
-                <div className="relative">
-                  <motion.div 
-                    animate={{ y: [0, -5, 0], opacity: [0.5, 0.9, 0.5] }} 
-                    transition={{ duration: 1.8, repeat: Infinity, delay: 0.5 }} 
-                    className="absolute -top-2.5 left-2 text-[10px] select-none"
-                  >
-                    ♨️
-                  </motion.div>
-                  <span className="text-3xl filter drop-shadow select-none">☕</span>
-                </div>
-              </div>
-              <p className="text-[7px] text-slate-400 italic text-center mt-2">(Tap to scent coffee steam)</p>
-            </div>
-
-            {/* 6. COZY STARTING HOME & ENTRY COTTAGE (Bottom: Levels 1, 2, 3) */}
-
-            {/* Beginner Garden Cottage Yard (Left aspect, y: 1800px) */}
-            <div className="absolute top-[1800px] left-6 w-[200px] bg-emerald-950/80 backdrop-blur-xs border border-emerald-500/20 rounded-[32px] p-4.5 shadow-2xl z-10">
-              <span className="text-[8px] font-mono font-black text-teal-400 tracking-wider block uppercase border-b border-emerald-800 pb-1.5 mb-2.5">🏠 NEIGHBORHOOD HOME</span>
-              
-              <div className="flex items-center justify-around py-1">
-                {/* Picket fence gate */}
-                <span className="text-3xl filter drop-shadow animate-pulse select-none">🏠</span>
-                <div className="text-right">
-                  <span className="text-[9px] font-bold text-white block">Home Base</span>
-                  <span className="text-[7px] text-slate-400 leading-none block mt-0.5">Where self-improvement starts!</span>
-                </div>
-              </div>
-              
-              <div className="flex gap-1.5 justify-center mt-2.5 bg-[#090f1a]/80 py-1.5 px-2 rounded-xl">
-                <span className="text-xs select-none">🌷</span>
-                <span className="text-xs animate-[bounce_3s_infinite] select-none">🌹</span>
-                <span className="text-xs select-none">🌻</span>
-                <span className="text-[7px] font-mono font-black text-teal-300 uppercase leading-none self-center ml-1">FLOWER YARD</span>
-              </div>
-            </div>
-
-            {/* Stone Bridge Crossing the Riverway (Bottom cross, y: 2060px) */}
-            <div className="absolute top-[2060px] right-6 w-32 h-14 bg-amber-900/60 border-y-3 border-amber-800 rounded-2xl flex items-center justify-center p-2 text-center text-amber-200 text-[8px] font-black uppercase font-mono shadow-xl z-20 select-none">
-              <span className="select-none text-[10px] mr-1">🌁</span> Custom Stone Bridge
-            </div>
-
-            {/* Small bicycle riding inside lanes */}
-            <div className="absolute top-[1520px] left-1/3 flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/60 backdrop-blur-md rounded-full border border-white/5 text-[8.5px] text-slate-300 z-10">
-              <span className="select-none">🚲</span>
-              <span className="font-mono font-extrabold text-[7.5px] uppercase text-emerald-400">Bike lanes trail path</span>
-            </div>
-
-            <div className="absolute top-[1020px] right-20 text-3xl opacity-45 select-none font-sans">🌷🌳</div>
-            <div className="absolute top-[1700px] right-14 text-4xl opacity-55 select-none animate-pulse font-sans">🌻🌹</div>
 
             {/* ─── DYNAMIC LEVEL RENDER WITH PRECISION PLACEMENT ─── */}
             {WORLDS_DATA[0].levels.map((level, idx) => {

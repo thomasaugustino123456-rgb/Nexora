@@ -196,6 +196,7 @@ export interface UserStats {
   lastGiftDate?: string | null;
   currentChallengeIndex: number; // The index of the next challenge to be completed
   coins: number;
+  gems?: number;
   weeklyPoints: number;
   weeklyXP: number;
   lastWeeklyReset?: string; // ISO date
