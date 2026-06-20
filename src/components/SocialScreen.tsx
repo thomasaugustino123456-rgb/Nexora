@@ -43,6 +43,7 @@ import {
 import { User as FirebaseUser } from "firebase/auth";
 import {
   collection,
+  collectionGroup,
   doc,
   addDoc,
   setDoc,
@@ -195,6 +196,10 @@ export function SocialScreen({
   const [newCommentText, setNewCommentText] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
 
+  // User written comments state
+  const [userWrittenComments, setUserWrittenComments] = useState<any[]>([]);
+  const [loadingUserComments, setLoadingUserComments] = useState(false);
+
   const currentUserId = user?.uid || "guest-user";
   const currentUserName =
     settings.displayName || user?.displayName || "Anonymous Hero";
@@ -316,6 +321,37 @@ export function SocialScreen({
       setLoadingComments(false);
     }
   };
+
+  // Fetch user written comments across all posts using collectionGroup with index-free safety
+  const fetchUserWrittenComments = async () => {
+    if (!user) return;
+    setLoadingUserComments(true);
+    try {
+      const q = query(
+        collectionGroup(db, "comments"),
+        where("userId", "==", currentUserId),
+        orderBy("createdAt", "desc")
+      );
+      const snap = await getDocs(q);
+      const list = snap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setUserWrittenComments(list);
+    } catch (err) {
+      console.warn("Failed retrieving user written comments via collectionGroup (index might be missing):", err);
+      // Fallback: search locally in initialPosts or show empty gracefully
+      setUserWrittenComments([]);
+    } finally {
+      setLoadingUserComments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "profile" && user) {
+      fetchUserWrittenComments();
+    }
+  }, [activeTab, user]);
 
   const handlePostCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1575,6 +1611,282 @@ export function SocialScreen({
               </div>
             )}
           </div>
+        ) : activeTab === "profile" ? (
+          // VIEW: USER PROFILE SECTION
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Header: user profile image, name underneath, styled on the left */}
+            <div className="bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-6 justify-between">
+              <div className="flex flex-col items-start gap-3">
+                <img
+                  src={currentUserPhoto || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"}
+                  alt="user profile animate-bounce"
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-slate-100 shadow-xl bg-slate-100 hover:scale-102 transition-transform"
+                />
+                <div className="mt-1">
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-850 tracking-tight leading-tight">
+                    {settings.displayName || user?.displayName || user?.email?.split("@")[0] || "Water Champion"}
+                  </h2>
+                  <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">
+                    {user?.email || "Community Operative"}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Optional summary stats or metadata (clean, not telemetry) */}
+              <div className="flex gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-150 self-stretch md:self-auto items-center justify-around h-fit">
+                <div className="text-center px-2">
+                  <p className="text-xl font-black text-indigo-600">
+                    {initialPosts.filter((post) => post.userId === currentUserId && !post.deleted && !hiddenPostIds.includes(post.id)).length}
+                  </p>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider">Posts</p>
+                </div>
+                <div className="w-px h-8 bg-slate-200" />
+                <div className="text-center px-2">
+                  <p className="text-xl font-black text-indigo-600">
+                    {initialCircles.filter(circle => (settings.joinedCircleIds || []).includes(circle.id)).length}
+                  </p>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider">Joined</p>
+                </div>
+                <div className="w-px h-8 bg-slate-200" />
+                <div className="text-center px-2">
+                  <p className="text-xl font-black text-indigo-600">
+                    {initialCircles.filter(circle => circle.ownerId === currentUserId).length}
+                  </p>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider">Created</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Part 1: "only bro that he/she joined" - Joined Sub-Communities Section */}
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-855 tracking-tight leading-none text-indigo-750">
+                    Joined Spaces ({initialCircles.filter(circle => (settings.joinedCircleIds || []).includes(circle.id)).length}) 🏮
+                  </h3>
+                  <p className="text-[10px] sm:text-[11px] text-slate-405 font-bold uppercase mt-1">
+                    Sub-communities you participate in
+                  </p>
+                </div>
+              </div>
+
+              {initialCircles.filter(circle => (settings.joinedCircleIds || []).includes(circle.id)).length === 0 ? (
+                <div className="bg-slate-50 border border-slate-200/60 p-8 text-center rounded-[2rem] space-y-2">
+                  <p className="font-extrabold text-slate-600 text-sm">Not in any groups yet</p>
+                  <p className="text-xs text-slate-400 font-medium">Head over to the Groups tab to join spaces, bro!</p>
+                  <button
+                    onClick={() => setActiveTab("groups")}
+                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase rounded-lg transition-all"
+                  >
+                    Browse Groups
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {initialCircles.filter(circle => (settings.joinedCircleIds || []).includes(circle.id)).map((circle) => {
+                    return (
+                      <div
+                        key={circle.id}
+                        className="bg-white p-4.5 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between gap-3 hover:shadow-xs hover:border-slate-300 transition-all"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="text-2xl shrink-0 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                            {circle.icon || "🏮"}
+                          </span>
+                          <div className="min-w-0">
+                            <h4
+                              onClick={() => setSelectedGroupId(circle.id)}
+                              className="font-black text-xs text-slate-800 hover:text-indigo-600 cursor-pointer truncate"
+                            >
+                              n/{circle.name.toLowerCase()}
+                            </h4>
+                            <p className="text-[9px] text-slate-405 font-bold uppercase">{circle.category}</p>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => handleJoinGroup(circle)}
+                          className="px-2.5 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-[9px] font-black uppercase transition-colors shrink-0"
+                        >
+                          Leave
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Part 2: "Group section not the one the user joined but for the create Group where the users create their own Group that he/she Created bro" - Created Groups Section */}
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-850 tracking-tight leading-none text-emerald-700">
+                    My Created Sub-Communities ({initialCircles.filter(circle => circle.ownerId === currentUserId).length}) 🎨
+                  </h3>
+                  <p className="text-[10px] sm:text-[11px] text-slate-405 font-bold uppercase mt-1">
+                    Groups created and owned by you
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowCreateGroup(true)}
+                  className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase rounded-lg transition-all flex items-center gap-1 shadow-sm"
+                >
+                  <Plus size={12} /> Create Custom Group
+                </button>
+              </div>
+
+              {initialCircles.filter(circle => circle.ownerId === currentUserId).length === 0 ? (
+                <div className="bg-slate-50 border border-slate-200/60 p-8 text-center rounded-[2rem] space-y-2">
+                  <p className="font-extrabold text-slate-600 text-sm">No communities created yet</p>
+                  <p className="text-xs text-slate-400 font-medium">Have a specific wellness topic? Design your own community!</p>
+                  <button
+                    onClick={() => setShowCreateGroup(true)}
+                    className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase rounded-lg transition-all"
+                  >
+                    Launch Creator Wizard
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {initialCircles.filter(circle => circle.ownerId === currentUserId).map((circle) => {
+                    const isJoined = (settings.joinedCircleIds || []).includes(circle.id);
+                    return (
+                      <div
+                        key={circle.id}
+                        className="bg-white p-4.5 rounded-3xl border border-emerald-100 hover:border-emerald-250 shadow-xs flex items-center justify-between gap-3 transition-all"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="text-2xl shrink-0 bg-emerald-50 p-1.5 rounded-xl border border-emerald-100/50">
+                            {circle.icon || "🏮"}
+                          </span>
+                          <div className="min-w-0">
+                            <h4
+                              onClick={() => setSelectedGroupId(circle.id)}
+                              className="font-black text-xs text-slate-800 hover:text-indigo-600 cursor-pointer truncate"
+                            >
+                              n/{circle.name.toLowerCase()}
+                            </h4>
+                            <p className="text-[9px] text-emerald-600 font-black uppercase">Creator/Owner</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setSelectedGroupId(circle.id)}
+                            className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-650 rounded-lg text-[9px] font-black uppercase transition-all shrink-0"
+                          >
+                            Enter
+                          </button>
+                          {!isJoined && (
+                            <button
+                              onClick={() => handleJoinGroup(circle)}
+                              className="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-[9px] font-black uppercase transition-colors shrink-0"
+                            >
+                              Join
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Part 3: "and after that u can now past the post the user make" - My Posts Feed */}
+            <div className="space-y-3.5 pt-2">
+              <div className="border-b border-slate-205 pb-1 flex justify-between items-center">
+                <h3 className="text-base sm:text-lg font-black text-slate-855 tracking-tight uppercase">
+                  My Posts ({initialPosts.filter((post) => post.userId === currentUserId && !post.deleted && !hiddenPostIds.includes(post.id)).length}) 📝
+                </h3>
+              </div>
+
+              <div className="space-y-4">
+                {initialPosts.filter((post) => post.userId === currentUserId && !post.deleted && !hiddenPostIds.includes(post.id)).length === 0 ? (
+                  <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-200/60 max-w-sm mx-auto space-y-2">
+                    <p className="font-extrabold text-slate-600 text-sm">No posts shared yet</p>
+                    <p className="text-xs text-slate-400 font-medium leading-relaxed">Share your progress logs or questions in any public feed or group!</p>
+                    <button
+                      onClick={() => setShowCreatePost(true)}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl transition-all"
+                    >
+                      Create First Post
+                    </button>
+                  </div>
+                ) : (
+                  initialPosts.filter((post) => post.userId === currentUserId && !post.deleted && !hiddenPostIds.includes(post.id)).map((post) => renderPostCard(post))
+                )}
+              </div>
+            </div>
+
+            {/* Part 4: "and add the oone of comments too bro" - My Written Comments List */}
+            <div className="space-y-3.5 pt-2">
+              <div className="border-b border-slate-205 pb-1 flex justify-between items-center">
+                <h3 className="text-base sm:text-lg font-black text-slate-855 tracking-tight uppercase border-indigo-200">
+                  Comments I Made ({userWrittenComments.length}) 💬
+                </h3>
+              </div>
+
+              {loadingUserComments ? (
+                <div className="flex justify-center p-6">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-600 border-t-transparent" />
+                </div>
+              ) : userWrittenComments.length === 0 ? (
+                <div className="bg-white p-10 text-center rounded-[2rem] border border-slate-200/60 max-w-sm mx-auto">
+                  <p className="font-extrabold text-slate-505 text-xs">No commentary parsed yet</p>
+                  <p className="text-[11px] text-slate-404 font-medium mt-1">Contribute to discussion threads within groups to see comments listed here.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {userWrittenComments.map((comment) => (
+                    <div
+                      key={comment.id}
+                      className="bg-white p-4.5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all space-y-2 relative"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9.5px] font-black text-indigo-650 bg-indigo-50/75 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                          Comment on community post
+                        </span>
+                        <span className="text-[9px] text-slate-404 font-black font-mono">
+                          {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : 'recent'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-705 font-medium leading-relaxed italic border-l-2 border-indigo-100 pl-2">
+                        &ldquo;{comment.text}&rdquo;
+                      </p>
+                      
+                      <div className="flex gap-2 justify-end text-[10px]">
+                        <button
+                          onClick={async () => {
+                            const post = initialPosts.find(p => p.id === comment.postId);
+                            if (post) {
+                              setSelectedPost(post);
+                            } else {
+                              try {
+                                const { getDoc } = await import("firebase/firestore");
+                                const postDoc = await getDoc(doc(db, "posts", comment.postId));
+                                if (postDoc.exists()) {
+                                  setSelectedPost({ id: postDoc.id, ...postDoc.data() } as Post);
+                                } else {
+                                  showToast("Associated post was deleted.", "info");
+                                }
+                              } catch {
+                                showToast("Associated post is deleted or unreachable.", "info");
+                              }
+                            }
+                          }}
+                          className="font-black text-indigo-650 hover:text-indigo-850 hover:underline px-2.5 py-1 bg-slate-50 rounded-lg transition-colors"
+                        >
+                          View Thread
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         ) : (
           // VIEW: COMMUNITY HOME / GLOBAL FEED
           <div className="space-y-6 animate-in fade-in duration-200">
@@ -2123,6 +2435,8 @@ export function SocialScreen({
                 memberCount: 1,
                 createdAt: new Date().toISOString(),
                 createdBy: currentUserId,
+                ownerId: currentUserId,
+                followerIds: [currentUserId],
               };
 
               await setDoc(doc(circlesRef, circleId), circlePayload);

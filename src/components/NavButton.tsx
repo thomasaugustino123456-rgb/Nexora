@@ -23,7 +23,7 @@ export function NavButton({ active, onClick, icon, label }: NavButtonProps) {
     <button 
       id={`nav-button-${label.toLowerCase()}`}
       onClick={handleClick}
-      className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all flex-shrink-0 cursor-pointer px-2 py-1.5 min-w-[55px] sm:min-w-[65px] relative rounded-xl outline-none select-none`}
+      className={`flex flex-col items-center justify-center gap-0.5 transition-all flex-shrink-0 cursor-pointer px-1.5 py-1 min-w-[42px] sm:min-w-[60px] relative rounded-xl outline-none select-none`}
     >
       {/* Premium background indicator under active button */}
       {active && (
@@ -37,14 +37,14 @@ export function NavButton({ active, onClick, icon, label }: NavButtonProps) {
       {/* Icon Area */}
       <div className={`relative z-10 transition-transform duration-300 ${
         active 
-          ? 'text-[#69C496] scale-110' 
-          : 'text-[#7D6B58]/60 hover:text-[#4F3F34] scale-100'
+          ? 'text-[#69C496] scale-105' 
+          : 'text-[#7D6B58]/60 hover:text-[#4F3F34] scale-95'
       }`}>
         {icon}
       </div>
 
       {/* Label Text */}
-      <span className={`relative z-10 text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider transition-colors duration-300 ${
+      <span className={`relative z-10 text-[8px] sm:text-[9.5px] font-black uppercase tracking-wider transition-colors duration-300 ${
         active 
           ? 'text-[#69C496]' 
           : 'text-[#7D6B58]/60'

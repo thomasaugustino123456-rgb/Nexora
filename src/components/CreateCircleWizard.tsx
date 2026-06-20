@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Plus, Image as ImageIcon, Check, Landmark, Shield, HelpCircle, Lock, Eye, Star, Palette, Award, Sparkles, Sliders } from 'lucide-react';
+import { X, Plus, Image as ImageIcon, Check, Landmark, Shield, HelpCircle, Lock, Eye, Star, Palette, Award, Sparkles, Sliders, Trash2 } from 'lucide-react';
 import { SocialCircle } from '../types';
 
 interface CreateCircleWizardProps {
@@ -468,6 +468,14 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
                             <div className="flex items-center gap-2">
                               <span className="text-[9px] text-emerald-600 font-black bg-emerald-50 px-2 py-0.5 rounded-md">ADDED</span>
                               <img src={customIconUrl} className="w-6 h-6 rounded-md object-cover" alt="Preview logo" />
+                              <button
+                                type="button"
+                                onClick={() => setCustomIconUrl('')}
+                                className="p-1 hover:bg-rose-50 text-rose-500 hover:text-rose-600 rounded-md transition-colors"
+                                title="Delete Image"
+                              >
+                                <Trash2 size={13} />
+                              </button>
                             </div>
                           ) : (
                             <span className="text-[10px] text-slate-400 font-medium">None chosen</span>
@@ -484,7 +492,7 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
                       </div>
                       
                       <div className="mt-4 flex items-center gap-3">
-                        <label className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-850 hover:bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors shrink-0">
+                        <label className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-700 hover:bg-slate-850 text-white rounded-xl text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors shrink-0">
                           <ImageIcon size={12} />
                           Browse
                           <input type="file" accept="image/*" onChange={handleBgUpload} className="hidden" />
@@ -496,6 +504,14 @@ export function CreateCircleWizard({ onClose, onComplete, isSubmitting, initialD
                             <div className="flex items-center gap-2">
                               <span className="text-[9px] text-emerald-600 font-black bg-emerald-50 px-2 py-0.5 rounded-md">ADDED</span>
                               <img src={customBgUrl} className="w-10 h-5 rounded-md object-cover" alt="Preview theme" />
+                              <button
+                                type="button"
+                                onClick={() => setCustomBgUrl('')}
+                                className="p-1 hover:bg-rose-50 text-rose-500 hover:text-rose-600 rounded-md transition-colors"
+                                title="Delete Image"
+                              >
+                                <Trash2 size={13} />
+                              </button>
                             </div>
                           ) : (
                             <span className="text-[10px] text-slate-400 font-medium">None chosen</span>

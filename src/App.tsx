@@ -6297,7 +6297,6 @@ export default function App() {
             (activeScreen as string) !== "plant" &&
             (activeScreen as string) !== "house" &&
             (activeScreen as string) !== "archives" &&
-            (activeScreen as string) !== "leaderboard" &&
             (activeScreen as string) !== "admin" &&
             (activeScreen as string) !== "hydration-detail" &&
             (activeScreen as string) !== "social" &&
@@ -6312,7 +6311,7 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[80]"
               >
-                <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-3 py-1.5 rounded-[2.5rem] flex items-center justify-around gap-1 pointer-events-auto w-[96%] max-w-[395px] sm:max-w-[480px] h-[72px] overflow-hidden select-none">
+                <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-2 py-1 rounded-[2rem] flex items-center justify-around gap-0.5 pointer-events-auto w-[96%] max-w-[370px] sm:max-w-[440px] h-[60px] sm:h-[66px] overflow-hidden select-none">
                   {(settings.navOrder || Object.keys(NAV_ITEMS_MAP)).map(
                     (id) => {
                       const item = NAV_ITEMS_MAP[id];
