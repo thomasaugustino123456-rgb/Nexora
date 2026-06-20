@@ -160,6 +160,7 @@ import { HomeScreen } from "./components/HomeScreen";
 import { LootDropResult } from "./types/garden";
 import { LootCard } from "./components/LootCard";
 import { Mascot } from "./components/Mascot";
+import { MascotSecretCelebration } from "./components/MascotSecretCelebration";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import {
   GoldenTrophy,
@@ -529,6 +530,60 @@ export default function App() {
     },
     [setStats],
   );
+
+  const headerMascotControls = useAnimationControls();
+  const lastLogoTapRef = useRef<number>(0);
+  const logoTapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const triggerHeaderMascotReaction = async () => {
+    await headerMascotControls.start({
+      scaleY: [1, 0.78, 1.15, 0.95, 1],
+      scaleX: [1, 1.2, 0.85, 1.05, 1],
+      y: [0, 5, -28, 2, 0],
+      rotate: [0, -4, 10, -2, 0],
+      boxShadow: [
+        "0 0 0 rgba(96,165,250,0)",
+        "0 0 10px rgba(96,165,250,0.4)",
+        "0 0 20px rgba(96,165,250,0.6)",
+        "0 0 4px rgba(96,165,250,0.2)",
+        "0 0 0 rgba(96,165,250,0)"
+      ],
+      transition: { duration: 0.45, ease: "easeInOut" }
+    });
+  };
+
+  const triggerHeaderMascotSingleBounce = async () => {
+    await headerMascotControls.start({
+      y: [0, -8, 0],
+      scaleY: [1, 0.92, 1.04, 1],
+      transition: { duration: 0.28, ease: "easeInOut" }
+    });
+  };
+
+  const handleLogoTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+
+    if (now - lastLogoTapRef.current < DOUBLE_TAP_DELAY) {
+      if (logoTapTimeoutRef.current) {
+        clearTimeout(logoTapTimeoutRef.current);
+        logoTapTimeoutRef.current = null;
+      }
+      triggerHeaderMascotReaction();
+      window.dispatchEvent(
+        new CustomEvent("trigger-mascot-celebration", {
+          detail: { source: "logo", rect }
+        })
+      );
+    } else {
+      lastLogoTapRef.current = now;
+      logoTapTimeoutRef.current = setTimeout(() => {
+        triggerHeaderMascotSingleBounce();
+        logoTapTimeoutRef.current = null;
+      }, DOUBLE_TAP_DELAY);
+    }
+  };
 
   const today = new Date().toISOString().split("T")[0];
   const [circles, setCircles] = useState<SocialCircle[]>([]);
@@ -4651,16 +4706,20 @@ export default function App() {
             !showArchitectLab && (
               <header className="px-6 pt-8 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl border-b border-[#E9E4D4]/50">
                 <div className="flex items-center gap-3 select-none">
-                  <div className="relative group p-0.5 rounded-2xl bg-[#69C496]/10 border border-[#69C496]/30 shadow-sm transition-all hover:scale-105 duration-300">
+                  <motion.div
+                    animate={headerMascotControls}
+                    onClick={handleLogoTap}
+                    className="relative group p-0.5 rounded-2xl bg-[#69C496]/10 border border-[#69C496]/30 shadow-sm transition-all hover:scale-105 duration-300 cursor-pointer"
+                  >
                     <MascotImage
                       alt="Nexora Logo"
-                      className="w-14 h-14 object-cover rounded-[15px]"
+                      className="w-14 h-14 object-cover rounded-[15px] pointer-events-none"
                     />
                     <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-[#69C496]"></span>
                     </span>
-                  </div>
+                  </motion.div>
                   <div className="flex flex-col">
                     <h1 className="text-2xl font-black tracking-tight text-blue-950 bg-gradient-to-r from-blue-950 via-[#4F3F34] to-[#4F3F34] bg-clip-text text-transparent">
                       Nexora
@@ -6868,6 +6927,14 @@ export default function App() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          <MascotSecretCelebration
+            stats={stats}
+            onUpdateStats={onUpdateStats}
+            gardenState={gardenState}
+            setGardenState={setGardenState}
+            showToast={showToast}
+          />
         </div>
       </div>
     </ErrorBoundary>

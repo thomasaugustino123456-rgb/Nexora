@@ -10,7 +10,7 @@ interface MascotProps {
   hat?: string;
   theme?: string;
   soundPack?: 'cat' | 'dog';
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onPointerMove?: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerLeave?: () => void;
   isSitting?: boolean;
@@ -72,7 +72,7 @@ export const Mascot = React.memo(({
     setTilt(ratio * 16); // tilt by up to 8 degrees left/right
   };
 
-  const handleMascotClick = useCallback(() => {
+  const handleMascotClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     setClickCount(prev => {
       const newCount = prev + 1;
       const isDog = soundPack === 'dog';
@@ -91,7 +91,7 @@ export const Mascot = React.memo(({
       transition: { duration: 0.5, ease: "easeInOut" }
     });
     
-    if (onClick) onClick();
+    if (onClick) onClick(e);
   }, [soundPack, play, controls, onClick]);
 
   const actualMood = useMemo(() => (clickCount >= 9 && clickCount <= 12) ? 'angry' : mood, [clickCount, mood]);

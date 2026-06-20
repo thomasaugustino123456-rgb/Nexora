@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { 
   AlertCircle, Star, Bell, Flame, Trophy as TrophyIcon, 
@@ -136,11 +136,45 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
     await mascotControls.start({ y: 0, transition: { type: "spring", stiffness: 400, damping: 10 } });
   };
 
-  const handleMascotTap = () => {
-    vibrate(VIBRATION_PATTERNS.CLICK);
-    setTapCount(prev => prev + 1);
-    if (tapCount < 5) {
-      triggerJump();
+  const lastMascotTapRef = useRef<number>(0);
+  const mascotTapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const triggerMascotDoubleTapReaction = async () => {
+    await mascotControls.start({
+      scaleY: [1, 0.76, 1.18, 0.94, 1],
+      scaleX: [1, 1.22, 0.82, 1.06, 1],
+      y: [0, 5, -55, 3, 0],
+      rotate: [0, -6, 15, -2, 0],
+      transition: { duration: 0.45, ease: "easeInOut" }
+    });
+  };
+
+  const handleMascotTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+
+    if (now - lastMascotTapRef.current < DOUBLE_TAP_DELAY) {
+      if (mascotTapTimeoutRef.current) {
+        clearTimeout(mascotTapTimeoutRef.current);
+        mascotTapTimeoutRef.current = null;
+      }
+      triggerMascotDoubleTapReaction();
+      window.dispatchEvent(
+        new CustomEvent("trigger-mascot-celebration", {
+          detail: { source: "home", rect }
+        })
+      );
+    } else {
+      lastMascotTapRef.current = now;
+      mascotTapTimeoutRef.current = setTimeout(() => {
+        vibrate(VIBRATION_PATTERNS.CLICK);
+        setTapCount(prev => prev + 1);
+        if (tapCount < 5) {
+          triggerJump();
+        }
+        mascotTapTimeoutRef.current = null;
+      }, DOUBLE_TAP_DELAY);
     }
   };
 
