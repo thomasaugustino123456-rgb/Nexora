@@ -1120,8 +1120,14 @@ export default function App() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
+        const notifId = snapshot.docs[0].id;
+        // Check if user dismissed it locally in this session/browser
+        if (localStorage.getItem(`nexora_system_notif_dismissed_${notifId}`)) {
+          return;
+        }
+
         const notifData = {
-          id: snapshot.docs[0].id,
+          id: notifId,
           ...snapshot.docs[0].data(),
         } as SystemNotification;
         setActiveSystemNotification(notifData);
@@ -1133,14 +1139,20 @@ export default function App() {
   }, [user, isDataReady]);
 
   const markSystemNotificationRead = async (id: string) => {
+    // ALWAYS hide the notification immediately from the UI
+    setActiveSystemNotification(null);
+
+    try {
+      localStorage.setItem(`nexora_system_notif_dismissed_${id}`, "true");
+    } catch {}
+
     if (!user) return;
     try {
       await updateDoc(doc(db, "users", user.uid, "notifications", id), {
         read: true,
       });
-      setActiveSystemNotification(null);
     } catch (e) {
-      console.error("Failed to mark notification as read:", e);
+      console.warn("Failed to mark notification as read in Firestore:", e);
     }
   };
   const [scrollDirection, setScrollDirection] = useState<"up" | "down" | null>(
@@ -1889,18 +1901,13 @@ export default function App() {
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showIOSInstallGuide, setShowIOSInstallGuide] = useState(false);
 
-  // Advanced PWA Master Installation Prompter States
+  // Advanced PWA Master Installation Prompter States - Completely Disabled as requested
   const [isStandalone, setIsStandalone] = useState(false);
-  const [pwaInstalled, setPwaInstalled] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("nexora_pwa_installed") === "true";
-    }
-    return false;
-  });
+  const [pwaInstalled, setPwaInstalled] = useState<boolean>(false);
   const [showPwaBanner, setShowPwaBanner] = useState(false);
-  const [pwaDismissedLanding, setPwaDismissedLanding] = useState(false);
-  const [pwaDismissedAuth, setPwaDismissedAuth] = useState(false);
-  const [pwaDismissedMain, setPwaDismissedMain] = useState(false);
+  const [pwaDismissedLanding, setPwaDismissedLanding] = useState(true);
+  const [pwaDismissedAuth, setPwaDismissedAuth] = useState(true);
+  const [pwaDismissedMain, setPwaDismissedMain] = useState(true);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState("");
@@ -1914,10 +1921,6 @@ export default function App() {
         (window.navigator.userAgent.includes("Safari") && !window.navigator.userAgent.includes("Chrome") && (window.navigator as any).standalone) ||
         document.referrer.includes("android-app://");
       setIsStandalone(standalone);
-      if (standalone) {
-        localStorage.setItem("nexora_pwa_installed", "true");
-        setPwaInstalled(true);
-      }
     };
     checkStandalone();
     const mediaQuery = window.matchMedia("(display-mode: standalone)");
@@ -1928,24 +1931,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isStandalone) {
-      setShowPwaBanner(false);
-      return;
-    }
-    // "but when the user is on taking the Challenges bro the message don't have to be shown bro"
-    if (activeScreen === "challenge" || challengeStep !== null) {
-      setShowPwaBanner(false);
-      return;
-    }
-    if (!user) {
-      if (showAuth) {
-        setShowPwaBanner(!pwaDismissedAuth);
-      } else {
-        setShowPwaBanner(!pwaDismissedLanding);
-      }
-    } else {
-      setShowPwaBanner(!pwaDismissedMain);
-    }
+    setShowPwaBanner(false);
   }, [user, showAuth, needsOnboarding, isStandalone, activeScreen, challengeStep, pwaDismissedLanding, pwaDismissedAuth, pwaDismissedMain]);
 
   // "when I click the Cancel button supposed it have to appear again when the user go to another section of the app"
@@ -2698,12 +2684,7 @@ export default function App() {
       /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
 
     if (!isStandalone && isIOS) {
-      // For iOS, we can't use beforeinstallprompt, so we show a custom guide
-      // But maybe not immediately on every load to avoid annoyance
-      const hasSeenGuide = localStorage.getItem("nexora_ios_guide_seen");
-      if (!hasSeenGuide) {
-        setShowIOSInstallGuide(true);
-      }
+      // Custom iOS guides completely disabled as requested
     }
 
     // Request notification permission on mount if supported
@@ -4554,222 +4535,7 @@ export default function App() {
       </div>
       */}
 
-        {/* Advanced Multi-Stage PWA Install Banner */}
-        <AnimatePresence>
-          {showPwaBanner && (
-            <motion.div
-              initial={{ opacity: 0, y: 100, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 100, scale: 0.95 }}
-              className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[250] w-full max-w-sm px-4"
-            >
-              <div className="bg-slate-900/95 border-2 border-[#69C496]/50 rounded-[32px] p-5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] shadow-[#69C496]/10 backdrop-blur-xl text-white space-y-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 bg-slate-800 rounded-2xl border border-slate-700/60 p-1 flex items-center justify-center shadow-xl shrink-0">
-                    <MascotImage
-                      alt="Nexora Mascot Logo"
-                      className="w-14 h-14 rounded-xl object-cover shadow-inner"
-                    />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 text-[8px] font-black bg-[#69C496] text-slate-900 uppercase tracking-widest rounded-full animate-pulse">
-                        INSTALL
-                      </span>
-                      <h4 className="font-extrabold text-white text-sm tracking-tight leading-none">
-                        Add Nexora to Phone Home Screen
-                      </h4>
-                    </div>
-                    <p className="text-[10px] text-slate-300 font-semibold leading-normal">
-                      Get the premium 4K mascot launcher, 1-click access, and smooth offline performance! Looks stunning on your home screen.
-                    </p>
-                  </div>
-                </div>
-                {isDownloading ? (
-                  <div className="space-y-3 pt-2">
-                    <div className="flex justify-between items-center text-[10px] font-semibold">
-                      <span className="text-[#69C496] font-bold animate-pulse">
-                        {downloadStatus}
-                      </span>
-                      <span className="text-white font-extrabold text-xs">
-                        {downloadProgress}%
-                      </span>
-                    </div>
-                    {/* Progress track */}
-                    <div className="w-full h-2.5 bg-slate-850 rounded-full overflow-hidden border border-slate-800/80 p-[2px]">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#69C496] to-cyan-400 rounded-full transition-all duration-100"
-                        style={{ width: `${downloadProgress}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between items-center text-[8px] text-slate-400 font-extrabold uppercase tracking-widest leading-none">
-                      <span>Secure Payload Transmit</span>
-                      <span>15.2 MB / 15.2 MB</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3 pt-1">
-                    <button
-                      onClick={() => {
-                        if (settings.soundEnabled) play("nav_switch");
-                        // Dismiss for the current phase segment
-                        if (!user) {
-                          if (showAuth) {
-                            setPwaDismissedAuth(true);
-                          } else {
-                            setPwaDismissedLanding(true);
-                          }
-                        } else {
-                          setPwaDismissedMain(true);
-                        }
-                      }}
-                      className="py-3 px-4 bg-slate-800 hover:bg-slate-750 text-slate-300 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all border border-slate-700/50 active:scale-95 text-center"
-                    >
-                      NOT NOW, BRO
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleInstallClick();
-                      }}
-                      className="py-3 px-4 bg-[#69C496] hover:bg-[#5bb586] text-slate-900 text-[10px] font-black uppercase tracking-wider rounded-xl shadow-lg shadow-[#69C496]/20 transition-all active:scale-95 text-center"
-                    >
-                      DOWNLOAD APP 📥
-                    </button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Universal PWA Step-by-Step Assistant Guide */}
-        <AnimatePresence>
-          {showIOSInstallGuide && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[500] flex items-end sm:items-center justify-center p-4">
-              <motion.div
-                initial={{ y: "100%", opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: "100%", opacity: 0 }}
-                className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-[32px] p-6 pb-8 space-y-6 text-white shadow-2xl"
-              >
-                <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-                  <span className="text-[10px] font-black text-[#69C496] uppercase tracking-widest">
-                    NEXORA HYBRID APP
-                  </span>
-                  <button
-                    onClick={() => setShowIOSInstallGuide(false)}
-                    className="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-
-                <div className="text-center space-y-3">
-                  <div className="w-24 h-24 bg-gradient-to-tr from-slate-800 to-slate-900 rounded-[28px] flex items-center justify-center mx-auto mb-2 border-2 border-[#69C496]/30 shadow-2xl relative">
-                    <MascotImage
-                      alt="Logo"
-                      className="w-20 h-20 rounded-2xl object-cover"
-                    />
-                    <div className="absolute -bottom-1 -right-1 bg-[#69C496] text-slate-900 rounded-full p-1.5 shadow-lg shadow-[#69C496]/20">
-                      <Smartphone size={16} />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-black text-white tracking-tight">
-                    Add Nexora to your Home Screen
-                  </h3>
-                  <p className="text-slate-400 text-xs font-semibold leading-relaxed max-w-xs mx-auto">
-                    Enjoy the ultimate full-screen distraction-free companion experience. Complete consistency starts now!
-                  </p>
-                </div>
-
-                {/* Platform-Specific Interactive Instructions */}
-                <div className="space-y-4 bg-slate-950 p-5 rounded-2xl border border-slate-800">
-                  {/iPad|iPhone|iPod/.test(navigator.userAgent) ? (
-                    // iOS Instruction Set
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
-                          1
-                        </div>
-                        <p className="text-xs font-bold text-slate-200">
-                          Tap the <span className="text-indigo-400 font-extrabold underline">Share</span> button in your Safari browser navigation bar.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
-                          2
-                        </div>
-                        <p className="text-xs font-bold text-slate-200">
-                          Scroll down the sharing menu and select <span className="text-[#69C496] font-extrabold bg-[#69C496]/10 px-2 py-0.5 rounded-md">"Add to Home Screen"</span>.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
-                          3
-                        </div>
-                        <p className="text-xs font-bold text-slate-200">
-                          Tap <span className="text-indigo-400 font-extrabold">Add</span> in the top-right corner, and you're good to go!
-                        </p>
-                      </div>
-                    </div>
-                  ) : /Android/i.test(navigator.userAgent) ? (
-                    // Android Chrome Instruction Set
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
-                          1
-                        </div>
-                        <p className="text-xs font-bold text-slate-200">
-                          Tap the <span className="text-indigo-400 font-extrabold">three dot options menu</span> in the top right corner of Chrome.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
-                          2
-                        </div>
-                        <p className="text-xs font-bold text-slate-200">
-                          Select the <span className="text-[#69C496] font-extrabold bg-[#69C496]/10 px-2 py-0.5 rounded-md">"Install App"</span> or <span className="text-indigo-400 font-extrabold">"Add to Home screen"</span> option.
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    // Desktop instructions fallback
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
-                          1
-                        </div>
-                        <p className="text-xs font-bold text-slate-200">
-                          Look at your address bar next to the bookmarks star icon at the top right.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-md shadow-indigo-500/20">
-                          2
-                        </div>
-                        <p className="text-xs font-bold text-slate-200">
-                          Click the <span className="text-indigo-400 font-extrabold">Install App 🖥️</span> icon or find "Install App" under browser settings.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setShowIOSInstallGuide(false);
-                      localStorage.setItem("nexora_ios_guide_seen", "true");
-                    }}
-                    className="w-full bg-[#69C496] text-slate-900 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-[#69C496]/20 active:scale-95 transition-transform text-center"
-                  >
-                    GOT IT, LET'S DO IT!
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+        {/* PWA Banners and Step-by-Step iOS Install guide removed completely as requested */}
 
         {/* Offline Indicator */}
         <AnimatePresence>
@@ -5888,6 +5654,8 @@ export default function App() {
                         setActiveScreen("home");
                       }}
                       showToast={showToast}
+                      setActiveScreen={setActiveScreen}
+                      circles={circles}
                     />
                   </Suspense>
                 </motion.div>

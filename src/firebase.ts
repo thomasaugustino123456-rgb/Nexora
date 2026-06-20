@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { initializeFirestore, enableMultiTabIndexedDbPersistence } from 'firebase/firestore';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import { getAnalytics, logEvent, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 import firebaseConfigData from './firebase-applet-config.json';
@@ -65,15 +65,21 @@ export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 }, databaseId === "(default)" ? undefined : databaseId);
 
-// Persistence is key for offline/slow networks
+// Persistence is key for offline/slow networks/multiple preview windows
 if (typeof window !== 'undefined') {
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.warn("Firestore Persistence: Multiple tabs open, persistence can only be enabled in one tab at a time.");
-    } else if (err.code === 'unimplemented') {
-      console.warn("Firestore Persistence: The current browser doesn't support all of the features required to enable persistence.");
-    }
-  });
+  try {
+    enableMultiTabIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn("Firestore Multi-Tab Persistence: Multiple tabs open, state synchronization active.");
+      } else if (err.code === 'unimplemented') {
+        console.warn("Firestore Multi-Tab Persistence: The current browser doesn't support all of the features required to enable active synchronization.");
+      } else {
+        console.warn("Firestore Multi-Tab Persistence failed safely:", err);
+      }
+    });
+  } catch (err) {
+    console.warn("Caught synchronous exception while enabling Firestore Multi-Tab Persistence:", err);
+  }
 }
 
 export const auth = getAuth(app);

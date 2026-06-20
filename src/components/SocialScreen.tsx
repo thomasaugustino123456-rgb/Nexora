@@ -56,6 +56,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { CreateCircleWizard } from "./CreateCircleWizard";
+import { NexusLinkRenderer } from "./NexusLinkRenderer";
 
 interface SocialScreenProps {
   play?: (sound: string) => void;
@@ -206,6 +207,53 @@ export function SocialScreen({
   const currentUserEmail = user?.email || "guest@nexora.io";
   const currentUserPhoto = settings.profilePic || user?.photoURL || "";
 
+  const [localAddedPosts, setLocalAddedPosts] = useState<Post[]>(() => {
+    try {
+      const saved = localStorage.getItem("nexora_local_posts");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const allPosts = useMemo(() => {
+    const combined = [...localAddedPosts, ...initialPosts];
+    return combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+  }, [initialPosts, localAddedPosts]);
+
+  // Listen to Nexus Group shortcut events and local storage routing
+  useEffect(() => {
+    const handleRouteGroup = () => {
+      const shortcutId = localStorage.getItem("nexora_shortcut_circle_id");
+      const shortcutName = localStorage.getItem("nexora_shortcut_circle_name");
+
+      if (shortcutId) {
+        setSelectedGroupId(shortcutId);
+        setActiveTab("groups");
+        localStorage.removeItem("nexora_shortcut_circle_id");
+        localStorage.removeItem("nexora_shortcut_circle_name");
+      } else if (shortcutName) {
+        const matched = initialCircles.find(
+          (c) =>
+            c.name.toLowerCase().replace(/[\s_\-]+/g, "") === shortcutName.toLowerCase().replace(/[\s_\-]+/g, "")
+        );
+        if (matched) {
+          setSelectedGroupId(matched.id);
+          setActiveTab("groups");
+        } else {
+          showToast(`The group "n/${shortcutName}" is not registered on Nexora yet! 🏮`, "info");
+        }
+        localStorage.removeItem("nexora_shortcut_circle_name");
+      }
+    };
+
+    handleRouteGroup();
+    window.addEventListener("nexora_route_group", handleRouteGroup);
+    return () => {
+      window.removeEventListener("nexora_route_group", handleRouteGroup);
+    };
+  }, [initialCircles]);
+
   // Auto-pre-select target group when launching post creation from within a group
   useEffect(() => {
     if (showCreatePost) {
@@ -329,19 +377,37 @@ export function SocialScreen({
     try {
       const q = query(
         collectionGroup(db, "comments"),
-        where("userId", "==", currentUserId),
-        orderBy("createdAt", "desc")
+        where("userId", "==", currentUserId)
       );
       const snap = await getDocs(q);
       const list = snap.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-      setUserWrittenComments(list);
+
+      // Sort in-memory to prevent missing composite index requirements
+      list.sort((a: any, b: any) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      // Merge with localStorage comments
+      const key = `nexora_comments_${currentUserId}`;
+      const savedLocal = localStorage.getItem(key);
+      const localList = savedLocal ? JSON.parse(savedLocal) : [];
+
+      const combined = [...localList, ...list];
+      const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+
+      setUserWrittenComments(unique);
     } catch (err) {
       console.warn("Failed retrieving user written comments via collectionGroup (index might be missing):", err);
-      // Fallback: search locally in initialPosts or show empty gracefully
-      setUserWrittenComments([]);
+      // Fallback: search locally in localStorage
+      const key = `nexora_comments_${currentUserId}`;
+      const savedLocal = localStorage.getItem(key);
+      const localList = savedLocal ? JSON.parse(savedLocal) : [];
+      setUserWrittenComments(localList);
     } finally {
       setLoadingUserComments(false);
     }
@@ -352,6 +418,27 @@ export function SocialScreen({
       fetchUserWrittenComments();
     }
   }, [activeTab, user]);
+
+  const saveCommentLocally = (comment: any) => {
+    try {
+      const key = `nexora_comments_${currentUserId}`;
+      const savedLocal = localStorage.getItem(key);
+      const localList = savedLocal ? JSON.parse(savedLocal) : [];
+      const preparedCommentObj = {
+        id: comment.id || Math.random().toString(36).substring(7),
+        postId: comment.postId,
+        userId: comment.userId,
+        userName: comment.userName,
+        userPhoto: comment.userPhoto,
+        content: comment.content || comment.text || "",
+        createdAt: comment.createdAt || new Date().toISOString(),
+      };
+      localList.unshift(preparedCommentObj);
+      localStorage.setItem(key, JSON.stringify(localList));
+    } catch (e) {
+      console.warn("Failed to save comment locally:", e);
+    }
+  };
 
   const handlePostCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -366,6 +453,8 @@ export function SocialScreen({
         content: newCommentText.trim(),
         createdAt: new Date().toISOString(),
       };
+
+      saveCommentLocally(newComment);
 
       await addDoc(
         collection(db, "posts", selectedPost.id, "comments"),
@@ -393,17 +482,19 @@ export function SocialScreen({
         "success",
       );
       // Mock update
+      const localCommentObj = {
+        id: Math.random().toString(),
+        postId: selectedPost.id,
+        userId: currentUserId,
+        userName: currentUserName,
+        userPhoto: currentUserPhoto,
+        content: newCommentText.trim(),
+        createdAt: new Date().toISOString(),
+      };
+      saveCommentLocally(localCommentObj);
       setPostComments((prev) => [
         ...prev,
-        {
-          id: Math.random().toString(),
-          postId: selectedPost.id,
-          userId: currentUserId,
-          userName: currentUserName,
-          userPhoto: currentUserPhoto,
-          content: newCommentText.trim(),
-          createdAt: new Date().toISOString(),
-        },
+        localCommentObj,
       ]);
       setNewCommentText("");
     }
@@ -424,6 +515,8 @@ export function SocialScreen({
         createdAt: new Date().toISOString(),
         parentId: commentId,
       };
+
+      saveCommentLocally(newReply);
 
       await addDoc(
         collection(db, "posts", selectedPost.id, "comments"),
@@ -446,18 +539,20 @@ export function SocialScreen({
       if (play) play("click");
     } catch (err) {
       showToast("Successfully published reply!", "success");
+      const localReplyObj = {
+        id: Math.random().toString(),
+        postId: selectedPost.id,
+        userId: currentUserId,
+        userName: currentUserName,
+        userPhoto: currentUserPhoto,
+        content: replyText.trim(),
+        createdAt: new Date().toISOString(),
+        parentId: commentId,
+      };
+      saveCommentLocally(localReplyObj);
       setPostComments((prev) => [
         ...prev,
-        {
-          id: Math.random().toString(),
-          postId: selectedPost.id,
-          userId: currentUserId,
-          userName: currentUserName,
-          userPhoto: currentUserPhoto,
-          content: replyText.trim(),
-          createdAt: new Date().toISOString(),
-          parentId: commentId,
-        },
+        localReplyObj,
       ]);
       setActiveReplyCommentId(null);
       setReplyCommentText("");
@@ -607,7 +702,25 @@ export function SocialScreen({
         createdAt: new Date().toISOString(),
       };
 
-      await addDoc(collection(db, "posts"), postData);
+      const tempPostId = "local_p_" + Math.random().toString(36).substring(7);
+      const fullPostTemp: Post = {
+        id: tempPostId,
+        ...postData,
+      } as Post;
+
+      setLocalAddedPosts((prev) => {
+        const next = [fullPostTemp, ...prev];
+        try {
+          localStorage.setItem("nexora_local_posts", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      try {
+        await addDoc(collection(db, "posts"), postData);
+      } catch (firestoreErr) {
+        console.warn("Firestore save deferred, using offline local registry:", firestoreErr);
+      }
 
       // Reset forms
       setPostTitle("");
@@ -703,7 +816,7 @@ export function SocialScreen({
 
   // Filter posts based on deleted, not interested and query search, plus custom sub-community sorting
   const visiblePosts = useMemo(() => {
-    const filtered = initialPosts.filter((post) => {
+    const filtered = allPosts.filter((post) => {
       if (post.deleted) return false;
       if (hiddenPostIds.includes(post.id)) return false;
 
@@ -744,9 +857,9 @@ export function SocialScreen({
     }
 
     return filtered;
-  }, [initialPosts, hiddenPostIds, searchQuery, selectedGroupId, groupSortFilter]);
+  }, [allPosts, hiddenPostIds, searchQuery, selectedGroupId, groupSortFilter]);
 
-  const savedPosts = initialPosts.filter(
+  const savedPosts = allPosts.filter(
     (p) =>
       (settings.savedPostIds || []).includes(p.id) &&
       !hiddenPostIds.includes(p.id),
@@ -953,7 +1066,7 @@ export function SocialScreen({
             onClick={() => setSelectedPost(post)}
             className="text-sm font-medium text-slate-600 leading-relaxed cursor-pointer whitespace-pre-wrap line-clamp-4"
           >
-            {post.content}
+            <NexusLinkRenderer text={post.content} circles={initialCircles} showToast={showToast} />
           </p>
         </div>
 
@@ -1591,7 +1704,7 @@ export function SocialScreen({
                     </div>
 
                     <p className="text-xs text-slate-600 line-clamp-3 font-medium leading-relaxed">
-                      {post.content}
+                      <NexusLinkRenderer text={post.content} circles={initialCircles} showToast={showToast} />
                     </p>
 
                     <div className="flex items-center gap-4 pt-2 border-t border-slate-50">
@@ -1636,7 +1749,7 @@ export function SocialScreen({
               <div className="flex gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-150 self-stretch md:self-auto items-center justify-around h-fit">
                 <div className="text-center px-2">
                   <p className="text-xl font-black text-indigo-600">
-                    {initialPosts.filter((post) => post.userId === currentUserId && !post.deleted && !hiddenPostIds.includes(post.id)).length}
+                    {allPosts.filter((post) => post.userId === currentUserId && !post.deleted && !hiddenPostIds.includes(post.id)).length}
                   </p>
                   <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider">Posts</p>
                 </div>
@@ -1798,12 +1911,12 @@ export function SocialScreen({
             <div className="space-y-3.5 pt-2">
               <div className="border-b border-slate-205 pb-1 flex justify-between items-center">
                 <h3 className="text-base sm:text-lg font-black text-slate-855 tracking-tight uppercase">
-                  My Posts ({initialPosts.filter((post) => post.userId === currentUserId && !post.deleted && !hiddenPostIds.includes(post.id)).length}) 📝
+                  My Posts ({allPosts.filter((post) => post.userId === currentUserId && !post.deleted && !hiddenPostIds.includes(post.id)).length}) 📝
                 </h3>
               </div>
 
               <div className="space-y-4">
-                {initialPosts.filter((post) => post.userId === currentUserId && !post.deleted && !hiddenPostIds.includes(post.id)).length === 0 ? (
+                {allPosts.filter((post) => post.userId === currentUserId && !post.deleted && !hiddenPostIds.includes(post.id)).length === 0 ? (
                   <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-200/60 max-w-sm mx-auto space-y-2">
                     <p className="font-extrabold text-slate-600 text-sm">No posts shared yet</p>
                     <p className="text-xs text-slate-400 font-medium leading-relaxed">Share your progress logs or questions in any public feed or group!</p>
@@ -1815,7 +1928,7 @@ export function SocialScreen({
                     </button>
                   </div>
                 ) : (
-                  initialPosts.filter((post) => post.userId === currentUserId && !post.deleted && !hiddenPostIds.includes(post.id)).map((post) => renderPostCard(post))
+                  allPosts.filter((post) => post.userId === currentUserId && !post.deleted && !hiddenPostIds.includes(post.id)).map((post) => renderPostCard(post))
                 )}
               </div>
             </div>
@@ -1853,13 +1966,13 @@ export function SocialScreen({
                         </span>
                       </div>
                       <p className="text-xs text-slate-705 font-medium leading-relaxed italic border-l-2 border-indigo-100 pl-2">
-                        &ldquo;{comment.text}&rdquo;
+                        &ldquo;{comment.content || comment.text}&rdquo;
                       </p>
                       
                       <div className="flex gap-2 justify-end text-[10px]">
                         <button
                           onClick={async () => {
-                            const post = initialPosts.find(p => p.id === comment.postId);
+                            const post = allPosts.find(p => p.id === comment.postId);
                             if (post) {
                               setSelectedPost(post);
                             } else {
@@ -2703,7 +2816,7 @@ export function SocialScreen({
                                   {post.title}
                                 </h5>
                                 <p className="text-[10.5px] text-slate-500 font-semibold truncate hover:text-indigo-600 pr-4">
-                                  {post.content}
+                                  <NexusLinkRenderer text={post.content} circles={initialCircles} showToast={showToast} />
                                 </p>
                                 <div className="flex items-center gap-2 pt-1 text-[9.5px] text-slate-400 font-bold uppercase">
                                   <span>by {post.userName}</span>
@@ -2858,7 +2971,7 @@ export function SocialScreen({
                             </div>
 
                             <p className="text-xs text-slate-600 font-medium leading-relaxed max-w-full overflow-hidden break-all">
-                              {comment.content}
+                              <NexusLinkRenderer text={comment.content} circles={initialCircles} showToast={showToast} />
                             </p>
 
                             {/* Reply Input Form inline */}

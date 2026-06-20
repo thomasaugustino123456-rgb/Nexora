@@ -884,34 +884,7 @@ export function SettingsScreen({
           </div>
         </div>
 
-        {/* PWA Installer Client section */}
-        {!isStandalone && (
-          <div className="glass-card p-6 bg-gradient-to-tr from-[#69C496]/5 to-indigo-50/10 border-2 border-[#69C496]/40 space-y-4 rounded-[28px] shadow-lg shadow-[#69C496]/5">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-[#69C496]/10 rounded-2xl flex items-center justify-center text-[#69C496] shadow-inner shrink-0 border border-[#69C496]/20">
-                <Smartphone size={22} className="animate-bounce" />
-              </div>
-              <div className="space-y-0.5">
-                <h3 className="font-extrabold text-blue-950 uppercase text-xs tracking-wider">Premium Nexora Client</h3>
-                <p className="text-[10px] font-semibold text-emerald-650 tracking-tight">Immersive desktop/mobile home screen client!</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-blue-900/70 leading-normal font-medium">
-              Run Nexora as a native client! Get the high-resolution homescreen mascot launcher, extreme fluid performance, and zero browser distraction.
-            </p>
-
-            <button
-              onClick={() => {
-                vibrate(VIBRATION_PATTERNS.CLICK);
-                if (onTriggerPwaInstall) onTriggerPwaInstall();
-              }}
-              className="w-full bg-[#69C496] hover:bg-[#5bb586] text-slate-900 py-3 rounded-2xl font-black text-xs tracking-widest transition-all active:scale-95 shadow-md shadow-[#69C496]/15 flex items-center justify-center gap-2"
-            >
-              📥 INSTALL / DOWNLOAD APP TO HOME SCREEN
-            </button>
-          </div>
-        )}
+        {/* PWA Installer Client section completely removed as requested */}
 
         {/* Support & Dev Section */}
         <div className="glass-card p-6 space-y-4">

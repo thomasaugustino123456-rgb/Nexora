@@ -4,6 +4,8 @@ import { Book, Plus, X, Tag, Calendar, History, Trash2, Save, ArrowLeft, Pencil,
 import { UserStats } from '../types';
 import { analyzeNoteMood } from '../services/aiService';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
+import { SocialCircle, Screen } from '../types';
+import { NexusLinkRenderer } from './NexusLinkRenderer';
 
 const Typewriter = ({ text }: { text: string }) => {
   const [displayedText, setDisplayedText] = useState("");
@@ -22,7 +24,21 @@ const Typewriter = ({ text }: { text: string }) => {
   return <p>{displayedText}</p>;
 };
 
-export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: UserStats, setStats: (s: UserStats | ((prev: UserStats) => UserStats)) => void, onBack: () => void, showToast: (msg: string, type?: 'success' | 'info' | 'error') => void }) {
+export function NotebookScreen({ 
+  stats, 
+  setStats, 
+  onBack, 
+  showToast,
+  setActiveScreen,
+  circles = []
+}: { 
+  stats: UserStats, 
+  setStats: (s: UserStats | ((prev: UserStats) => UserStats)) => void, 
+  onBack: () => void, 
+  showToast: (msg: string, type?: 'success' | 'info' | 'error') => void,
+  setActiveScreen?: (s: Screen) => void,
+  circles?: SocialCircle[]
+}) {
   const [activeNote, setActiveNote] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [title, setTitle] = useState('');
@@ -119,7 +135,7 @@ export function NotebookScreen({ stats, setStats, onBack, showToast }: { stats: 
                     <div className="relative z-10 space-y-3">
                        <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full">{note.category || 'Focus'}</span>
                        <h3 className="text-xl font-black text-blue-900 line-clamp-1">{note.text.split(': ')[0]}</h3>
-                       <p className="text-sm font-medium text-blue-900/40 line-clamp-3 leading-relaxed italic">"{note.text.split(': ')[1] || note.text}"</p>
+                       <p className="text-sm font-medium text-blue-900/40 line-clamp-3 leading-relaxed italic">{"\""}<NexusLinkRenderer text={note.text.split(': ')[1] || note.text} circles={circles} setActiveScreen={setActiveScreen} />{"\""}</p>
                     </div>
                  </motion.div>
                ))}
