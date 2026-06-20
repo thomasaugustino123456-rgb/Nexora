@@ -3,26 +3,29 @@ import path from 'path';
 
 async function generatePWAIcons() {
   try {
-    const sourcePath = path.resolve('public/nexora_mascot_logo.png');
-    console.log('Loading source image:', sourcePath);
+    const sourcePath = path.resolve('src/assets/images/nexora_mascot_logo_1781981236517.jpg');
+    console.log('Loading source premium logo image:', sourcePath);
     const img = await Jimp.read(sourcePath);
-    console.log(`Successfully loaded. Original dimensions: ${img.width}x${img.height}`);
+    console.log(`Successfully loaded logo image. Original dimensions: ${img.width}x${img.height}`);
 
-    // Generate 192x192 icon
-    console.log('Generating 192x192 PNG PWA icon...');
-    const icon192 = img.clone().resize({ width: 192, height: 192 });
-    await icon192.write(path.resolve('public/icon-192.png'));
-    console.log('Successfully saved icon-192.png');
+    // Generate main nexora_mascot_logo.png
+    console.log('Saving high quality master logo...');
+    await img.write(path.resolve('public/nexora_mascot_logo.png'));
+    console.log('Successfully saved public/nexora_mascot_logo.png');
 
-    // Generate 512x512 icon
-    console.log('Generating 512x512 PNG PWA icon...');
-    const icon512 = img.clone().resize({ width: 512, height: 512 });
-    await icon512.write(path.resolve('public/icon-512.png'));
-    console.log('Successfully saved icon-512.png');
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
 
-    console.log('PWA Icons generation complete!');
+    for (const size of sizes) {
+      console.log(`Generating ${size}x${size} PNG PWA icon...`);
+      const resized = img.clone().resize({ width: size, height: size });
+      await resized.write(path.resolve(`public/icon-${size}.png`));
+      console.log(`Successfully saved icon-${size}.png`);
+    }
+
+    // Also copy to icon-192.png / icon-512.png standard targets
+    console.log('PWA Icons generation complete successfully!');
   } catch (error) {
-    console.error('Failed to generate PWA PNG icons, providing inline design SVGs as fallback.', error);
+    console.error('Failed to generate PWA PNG icons, providing fallback logs.', error);
   }
 }
 

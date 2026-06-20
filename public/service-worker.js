@@ -1,9 +1,15 @@
-const CACHE_NAME = 'nexora-v5.3.0'; // Updated to ensure fresh cache bust
+const CACHE_NAME = 'nexora-v6.0.0'; // Updated to ensure fresh cache bust with new icons and premium flow
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/icon-72.png',
+  '/icon-96.png',
+  '/icon-128.png',
+  '/icon-144.png',
+  '/icon-152.png',
   '/icon-192.png',
+  '/icon-384.png',
   '/icon-512.png',
   '/nexora_mascot_logo.png',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap',
