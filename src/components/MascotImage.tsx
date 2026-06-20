@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
-// Use q_100 instead of q_auto for absolute maximum clarity and zero compression artifacts!
-const nexoraAppIcon = "https://res.cloudinary.com/ddtfq9acc/image/upload/q_100,f_auto/v1780831447/file_00000000659471f48492f78ba083fafc_wt3p7m.png";
+// Use the premium custom generated Nexora Mascot squircle app icon
+const nexoraAppIcon = "/src/assets/images/nexora_mascot_logo_1781981236517.jpg";
 
 interface MascotImageProps {
   className?: string;
@@ -82,7 +82,7 @@ export function MascotImage({ className = "w-16 h-16 rounded-2xl", alt = "Nexora
   // To make it look incredibly sharp and clear, we set high-contrast rendering properties.
   return (
     <div 
-      className={`relative flex items-center justify-center shrink-0 ${className}`} 
+      className={`relative flex items-center justify-center shrink-0 overflow-hidden ${className}`} 
       style={{ 
         ...style,
         background: "transparent",
