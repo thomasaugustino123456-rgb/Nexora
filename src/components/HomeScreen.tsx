@@ -149,8 +149,23 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
     });
   };
 
+  const triggerMascotSimpleTapReaction = async () => {
+    await mascotControls.start({
+      scale: [1, 1.1, 1],
+      y: [0, -10, 0],
+      transition: { duration: 0.2 }
+    });
+  };
+
   const handleMascotTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    triggerMascotSimpleTapReaction();
     const rect = e.currentTarget.getBoundingClientRect();
+    window.dispatchEvent(
+        new CustomEvent("trigger-mascot-celebration", {
+          detail: { source: "home", rect }
+        })
+    );
+
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300;
 
@@ -160,11 +175,6 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
         mascotTapTimeoutRef.current = null;
       }
       triggerMascotDoubleTapReaction();
-      window.dispatchEvent(
-        new CustomEvent("trigger-mascot-celebration", {
-          detail: { source: "home", rect }
-        })
-      );
     } else {
       lastMascotTapRef.current = now;
       mascotTapTimeoutRef.current = setTimeout(() => {

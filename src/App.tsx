@@ -160,7 +160,7 @@ import { HomeScreen } from "./components/HomeScreen";
 import { LootDropResult } from "./types/garden";
 import { LootCard } from "./components/LootCard";
 import { Mascot } from "./components/Mascot";
-import { MascotSecretCelebration } from "./components/MascotSecretCelebration";
+import { MascotParticleRain } from "./components/MascotParticleRain";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import {
   GoldenTrophy,
@@ -6928,13 +6928,7 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          <MascotSecretCelebration
-            stats={stats}
-            onUpdateStats={onUpdateStats}
-            gardenState={gardenState}
-            setGardenState={setGardenState}
-            showToast={showToast}
-          />
+          <MascotParticleRain />
         </div>
       </div>
     </ErrorBoundary>
