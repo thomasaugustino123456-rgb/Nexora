@@ -34,10 +34,14 @@ export function SplashScreen() {
           }}
           className="relative w-48 h-48 drop-shadow-[0_0_50px_rgba(59,130,246,0.6)]"
         >
+          <div 
+          className="w-full h-full rounded-[48px] shadow-[0_0_35px_rgba(0,0,0,0.5)] border-4 border-blue-500/40"
+        >
           <MascotImage 
             alt="Nexora Mascot" 
-            className="w-full h-full object-cover rounded-[48px] shadow-[0_0_35px_rgba(0,0,0,0.5)] border-4 border-blue-500/40"
+            className="w-full h-full"
           />
+        </div>
           
           {/* Sparkles around mascot */}
           <motion.div 
