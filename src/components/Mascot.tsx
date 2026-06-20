@@ -91,14 +91,26 @@ export const Mascot = React.memo(({
           <div className="absolute inset-0 bg-gradient-to-t from-blue-500/[0.05] to-transparent pointer-events-none z-10" />
 
           {/* Official Mascot Artwork */}
-          <img 
-            src={nexoraMascotImage} 
-            alt="Nexora Mascot Official Character" 
-            className="w-full h-full object-cover shrink-0 select-none pointer-events-none"
-            style={{
-              imageRendering: "crisp-edges"
-            }}
-          />
+          <svg viewBox="0 0 100 100" className="w-[85%] h-[85%] text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Core Slime Body */}
+            <path 
+              d="M 50 15 C 72 15, 88 35, 88 58 C 88 78, 71 84, 50 84 C 29 84, 12 78, 12 58 C 12 35, 28 15, 50 15 Z" 
+              fill="#5CD6FF" 
+              stroke="#E0F2FE" 
+              strokeWidth="2.5" 
+            />
+            {/* Slime Cute Shiny Highlight Accent */}
+            <path 
+              d="M 28 32 C 34 26, 42 24, 50 24" 
+              stroke="#FFFFFF" 
+              strokeWidth="3" 
+              strokeLinecap="round" 
+              opacity="0.6" 
+            />
+            {/* Big sparkling eyes */}
+            <circle cx="38" cy="52" r="6.5" fill="#000" />
+            <circle cx="62" cy="52" r="6.5" fill="#000" />
+          </svg>
 
           {/* Star lights sparkles overlay (keeps UI sparkling) */}
           <div className="absolute inset-x-0 bottom-4 flex justify-center gap-1.5 pointer-events-none z-20 opacity-70">
