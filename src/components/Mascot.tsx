@@ -17,7 +17,7 @@ interface MascotProps {
   performanceMode?: boolean;
 }
 
-const nexoraMascotImage = "/src/assets/images/nexora_mascot_logo_1781981236517.jpg";
+const nexoraMascotImage = "https://i.postimg.cc/NGzHZ3yg/file-00000000ea80724689e362eb989b6932.png";
 
 export const Mascot = React.memo(({ 
   className, 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 // Use the premium custom generated Nexora Mascot squircle app icon
-const nexoraAppIcon = "/src/assets/images/nexora_mascot_logo_1781981236517.jpg";
+const nexoraAppIcon = "https://i.postimg.cc/NGzHZ3yg/file-00000000ea80724689e362eb989b6932.png";
 
 interface MascotImageProps {
   className?: string;

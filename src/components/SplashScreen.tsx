@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { MascotImage } from './MascotImage';
 
-const nexoraAppIcon = "/src/assets/images/nexora_mascot_logo_1781981236517.jpg";
+const nexoraAppIcon = "https://i.postimg.cc/NGzHZ3yg/file-00000000ea80724689e362eb989b6932.png";
 
 export function SplashScreen() {
   return (
