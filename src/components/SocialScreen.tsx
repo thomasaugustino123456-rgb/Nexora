@@ -180,9 +180,9 @@ export function SocialScreen({
   setActiveScreen,
 }: SocialScreenProps) {
   // Tab Navigation inside Community Section
-  // 'home' = Feed, 'groups' = Sub-communities list, 'library' = Saved list, 'profile' = User profile
+  // 'home' = Feed, 'groups' = Sub-communities list, 'rewards' = Achievements/Rewards cabinet, 'library' = Saved list, 'profile' = User profile
   const [activeTab, setActiveTab] = useState<
-    "home" | "groups" | "library" | "profile"
+    "home" | "groups" | "rewards" | "library" | "profile"
   >("home");
 
   // Feed sub-tabs: 'For You' vs 'Latest' vs 'Trending'
@@ -2587,6 +2587,251 @@ export function SocialScreen({
               </div>
             )}
           </div>
+        ) : activeTab === "rewards" ? (
+          // VIEW: REWARDS & ACHIEVEMENTS SECTION (DEDICATED BRAND NEW TAB!)
+          <div className="space-y-6 pt-2 select-none animate-in fade-in duration-300">
+            {/* Simple Flat Header */}
+            <div className="border-b border-slate-200 pb-2.5">
+              <span className="text-[10px] font-black text-indigo-600 tracking-wider uppercase">
+                Community Trophy Cabinet
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight leading-none mt-1">
+                Rewards & Achievements
+              </h3>
+              <p className="text-xs text-slate-500 font-semibold mt-1">
+                Complete social milestones to unlock collectible medallions, exclusive tags, and claim XP/Coin boosts.
+              </p>
+              
+              {/* Embedded Progress bar (flat) */}
+              <div className="max-w-md mt-3.5 space-y-1.5 bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
+                <div className="flex justify-between text-[10px] font-black tracking-wide text-slate-500 uppercase">
+                  <span>XP REWARDS UNLOCKED</span>
+                  <span>{Math.round((achievements.filter(a => a.unlocked).length / achievements.length) * 100)}%</span>
+                </div>
+                <div className="w-full bg-slate-200/60 h-3 rounded-full overflow-hidden border border-slate-300 p-0.5">
+                  <div 
+                    className="bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${(achievements.filter(a => a.unlocked).length / achievements.length) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Flat filter pill buttons */}
+            <div className="flex gap-2 max-w-sm">
+              {(["all", "unlocked", "locked"] as const).map((filterOpt) => (
+                <button
+                  key={filterOpt}
+                  onClick={() => {
+                    setAchievementFilter(filterOpt);
+                    vibrate(12);
+                    if (play) play("click");
+                  }}
+                  className={`flex-1 py-1.5 text-center text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
+                    achievementFilter === filterOpt
+                      ? "bg-orange-500 text-white shadow-sm"
+                      : "bg-slate-200/50 text-slate-600 hover:text-slate-800 hover:bg-slate-200"
+                  }`}
+                >
+                  {filterOpt === "all" ? "🌐 All" : filterOpt === "unlocked" ? "✅ Unlocked" : "🔒 Locked"}
+                </button>
+              ))}
+            </div>
+
+            {/* Render dynamic inline list of categories */}
+            <div className="space-y-6">
+              {[
+                { id: "exploration", name: "Exploration" },
+                { id: "community", name: "Building Community" },
+                { id: "streak", name: "Nexora Streak" },
+                { id: "getting_started", name: "Getting Started" },
+                { id: "moderation", name: "Community Moderation" }
+              ].map((cat) => {
+                const categoryBadges = achievements.filter(a => a.category === cat.id);
+                const filteredBadges = categoryBadges.filter((item) => {
+                  if (achievementFilter === "unlocked") return item.unlocked;
+                  if (achievementFilter === "locked") return !item.unlocked;
+                  return true;
+                });
+
+                if (filteredBadges.length === 0) return null;
+
+                const totalUnlocked = categoryBadges.filter(b => b.unlocked).length;
+
+                return (
+                  <div key={cat.id} className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                      <span className="font-extrabold text-sm text-slate-800 uppercase tracking-tight">
+                        {cat.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-bold">
+                        {totalUnlocked} / {categoryBadges.length} unlocked
+                      </span>
+                    </div>
+
+                    {/* Flex grid of medallions with NO custom bounding card backgrounds */}
+                    <div className="flex flex-wrap gap-x-5 gap-y-6 justify-start items-start pt-1">
+                      {filteredBadges.map((item) => {
+                        const isSelected = selectedAchievementId === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setSelectedAchievementId(isSelected ? null : item.id);
+                              vibrate(18);
+                              if (play) play("click");
+                            }}
+                            className="flex flex-col items-center group w-20 text-center focus:outline-none"
+                          >
+                            {/* Round Medallion wrapper (gilded gold if unlocked, grey ring and coin shape if locked) */}
+                            {item.unlocked ? (
+                              <div className={`relative w-16 h-16 rounded-full flex items-center justify-center p-0.5 bg-gradient-to-tr from-amber-500 via-amber-400 to-orange-400 shadow-sm shadow-orange-500/10 transform transition-all group-hover:scale-105 group-active:scale-95 ${
+                                isSelected ? "ring-4 ring-orange-500/30" : "ring-2 ring-white"
+                              }`}>
+                                <div className="absolute inset-[3px] rounded-full border border-amber-400 bg-gradient-to-br from-amber-50 to-orange-100/30 flex items-center justify-center">
+                                  <span className="text-2xl drop-shadow-sm select-none">
+                                    {item.icon}
+                                  </span>
+                                </div>
+                                <div className="absolute bottom-0.5 right-1 text-[7px] animate-pulse">✨</div>
+                              </div>
+                            ) : (
+                              <div className={`relative w-16 h-16 rounded-full flex items-center justify-center bg-slate-100 border border-slate-200 transform transition-all opacity-60 group-hover:opacity-85 ${
+                                isSelected ? "ring-4 ring-slate-400/30" : ""
+                              }`}>
+                                <div className="absolute inset-[3px] rounded-full bg-slate-50 flex items-center justify-center filter grayscale opacity-60">
+                                  <span className="text-xl select-none">
+                                    {item.icon}
+                                  </span>
+                                </div>
+                                <div className="absolute -bottom-1 -right-1 bg-slate-200 border border-slate-300 text-slate-500 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[8px] font-extrabold shadow-sm">
+                                  🔒
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Title labels underneath */}
+                            <span className={`text-[10px] font-extrabold leading-tight pt-1.5 tracking-tight line-clamp-1 block w-full text-center ${
+                              item.unlocked ? "text-slate-800 group-hover:text-orange-600" : "text-slate-400"
+                            }`}>
+                              {item.title}
+                            </span>
+
+                            {/* Target info */}
+                            <span className="text-[8px] font-bold text-slate-400 block mt-0.5 text-center leading-none">
+                              {item.unlocked ? item.date || "Unlocked" : `${item.currentValue}/${item.targetValue}`}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Dynamic details section inline below the medallions */}
+            <AnimatePresence>
+              {(() => {
+                const selectedItem = achievements.find(a => a.id === selectedAchievementId);
+                if (!selectedItem) return null;
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="bg-white p-5 rounded-3xl border border-slate-200 shadow-md space-y-3 max-w-xl transition-all relative mt-2"
+                  >
+                    <button
+                      onClick={() => setSelectedAchievementId(null)}
+                      className="absolute top-4 right-4 p-1 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-all"
+                      title="Close Detail Panel"
+                    >
+                      <X size={14} />
+                    </button>
+
+                    <div className="flex items-center gap-3.5">
+                      {selectedItem.unlocked ? (
+                        <div className="w-14 h-14 rounded-full flex items-center justify-center p-0.5 bg-gradient-to-tr from-amber-400 to-orange-500 shadow-sm animate-bounce">
+                          <div className="absolute inset-[3px] rounded-full bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
+                            <span className="text-2xl select-none">
+                              {selectedItem.icon}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-14 h-14 rounded-full flex items-center justify-center bg-slate-100 border border-slate-200 opacity-70">
+                          <span className="text-xl select-none filter grayscale">
+                            {selectedItem.icon}
+                          </span>
+                        </div>
+                      )}
+
+                      <div>
+                        <h4 className="text-base font-black text-slate-800 leading-none">
+                          {selectedItem.title}
+                        </h4>
+                        <span className={`inline-block text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full mt-1.5 ${
+                          selectedItem.unlocked
+                            ? "bg-emerald-50 border border-emerald-150 text-emerald-600"
+                            : "bg-slate-100 border border-slate-200 text-slate-500"
+                        }`}>
+                          {selectedItem.unlocked ? "🏆 Unlocked Trophy" : "🔒 Action Required"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs font-semibold text-slate-500 leading-relaxed pt-1">
+                      {selectedItem.description}
+                    </p>
+
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-150 space-y-0.5">
+                      <span className="text-[8px] uppercase tracking-wider font-black text-indigo-600">Requirement</span>
+                      <p className="text-xs font-semibold text-slate-600">{selectedItem.helperText}</p>
+                    </div>
+
+                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          selectedItem.unlocked ? "bg-emerald-500" : "bg-indigo-600"
+                        }`}
+                        style={{ width: `${Math.round(Math.min(100, (selectedItem.currentValue / selectedItem.targetValue) * 100))}%` }}
+                      />
+                    </div>
+
+                    <div className="flex justify-between items-center text-[9px] font-black text-slate-400 tracking-wider">
+                      <span>Milestone Progress:</span>
+                      <span>{selectedItem.currentValue} / {selectedItem.targetValue}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 bg-orange-50 p-3 rounded-xl border border-orange-100">
+                      <div>
+                        <p className="text-[8px] uppercase font-black text-orange-600 tracking-wider">Reward Claim</p>
+                        <p className="text-xs text-slate-700 font-bold">+{selectedItem.rewardXP} XP & +{selectedItem.rewardCoins} Coins</p>
+                      </div>
+                      {selectedItem.unlocked ? (
+                        <button
+                          onClick={() => {
+                            vibrate(30);
+                            if (play) play("click");
+                            setSelectedAchievementId(null);
+                            showToast(`Successfully unlocked & synchronized ${selectedItem.title}!`);
+                          }}
+                          className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
+                        >
+                          Claim Boost
+                        </button>
+                      ) : (
+                        <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-400 rounded-md text-[8px] font-bold">
+                          Locked
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })()}
+            </AnimatePresence>
+          </div>
         ) : activeTab === "profile" ? (
           // VIEW: USER PROFILE SECTION
           <div className="space-y-6 animate-in fade-in duration-200">
@@ -2597,7 +2842,7 @@ export function SocialScreen({
                 <div 
                   className="relative group cursor-pointer shrink-0" 
                   onClick={() => {
-                    document.getElementById("trophy-cabinet")?.scrollIntoView({ behavior: "smooth" });
+                    setActiveTab("rewards");
                     vibrate(10);
                     if (play) play("click");
                   }}
@@ -2628,7 +2873,7 @@ export function SocialScreen({
                   {/* Small link pill to cabinet */}
                   <button
                     onClick={() => {
-                      document.getElementById("trophy-cabinet")?.scrollIntoView({ behavior: "smooth" });
+                      setActiveTab("rewards");
                       vibrate(10);
                       if (play) play("click");
                     }}
@@ -4593,7 +4838,7 @@ export function SocialScreen({
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[450] bg-gradient-to-t from-slate-50/90 via-slate-50/40 to-transparent"
       >
-        <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-3 py-1.5 rounded-[2.5rem] flex items-center justify-around gap-1 pointer-events-auto w-[96%] max-w-[395px] sm:max-w-[480px] h-[72px] overflow-hidden select-none">
+        <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-2 py-1.5 rounded-[2.5rem] flex items-center justify-around gap-0.5 pointer-events-auto w-[98%] max-w-[420px] sm:max-w-[530px] h-[72px] overflow-hidden select-none">
           {/* Home Tab */}
           <button
             onClick={() => {
@@ -4641,6 +4886,26 @@ export function SocialScreen({
             title="Create Post"
           >
             <Plus size={32} />
+          </button>
+
+          {/* Rewards Tab */}
+          <button
+            onClick={() => {
+              setActiveTab("rewards");
+              setSelectedGroupId(null);
+              setSelectedPost(null);
+            }}
+            className={`flex flex-col items-center justify-center gap-0.5 transition-all text-[9.5px] uppercase font-black tracking-wider flex-1 h-full ${
+              activeTab === "rewards"
+                ? "text-indigo-600"
+                : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            <Award
+              size={22}
+              className={`transition-transform ${activeTab === "rewards" ? "scale-105" : "scale-95"}`}
+            />
+            <span>Rewards</span>
           </button>
 
           {/* Library (Replaces community section 4th tab) */}
