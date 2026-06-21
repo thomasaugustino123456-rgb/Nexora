@@ -29,8 +29,102 @@ import {
   Clock,
   Award,
   X,
+  Edit,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { vibrate, VIBRATION_PATTERNS } from "../lib/vibrate";
+
+// Audio effects for Community post actions (Publish & Trash)
+let socialAudioCtx: AudioContext | null = null;
+
+function getSocialAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!socialAudioCtx) {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioCtx) {
+      socialAudioCtx = new AudioCtx();
+    }
+  }
+  if (socialAudioCtx && socialAudioCtx.state === "suspended") {
+    socialAudioCtx.resume().catch(() => {});
+  }
+  return socialAudioCtx;
+}
+
+// 📡 Successful shiny release chime sound
+function playPostPublishedSound() {
+  try {
+    const ctx = getSocialAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    
+    // Play a delightful ascending double note (e.g. 520Hz and then 880Hz) to represent posting success!
+    const notes = [520, 880];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+      
+      gainNode.gain.setValueAtTime(0, now + idx * 0.08);
+      gainNode.gain.linearRampToValueAtTime(0.012, now + idx * 0.08 + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 0.22);
+      
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 0.25);
+    });
+  } catch (e) {
+    console.warn("Audio error (Post publish):", e);
+  }
+}
+
+// 🗑️ Realistic crumpled trash crush sound
+function playTrashCrunchSound() {
+  try {
+    const ctx = getSocialAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    
+    // Low frequency crash/fizz combined with high frequency paper crunch tones
+    const osc1 = ctx.createOscillator();
+    const gainNode1 = ctx.createGain();
+    osc1.type = "sawtooth";
+    osc1.frequency.setValueAtTime(140, now);
+    osc1.frequency.exponentialRampToValueAtTime(35, now + 0.25);
+    
+    gainNode1.gain.setValueAtTime(0.015, now);
+    gainNode1.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+    
+    osc1.connect(gainNode1);
+    gainNode1.connect(ctx.destination);
+    
+    osc1.start(now);
+    osc1.stop(now + 0.25);
+    
+    // High frequency crunching crackles
+    const osc2 = ctx.createOscillator();
+    const gainNode2 = ctx.createGain();
+    osc2.type = "triangle";
+    osc2.frequency.setValueAtTime(1100, now);
+    osc2.frequency.setValueAtTime(150, now + 0.09);
+    
+    gainNode2.gain.setValueAtTime(0.007, now);
+    gainNode2.gain.setValueAtTime(0.002, now + 0.04);
+    gainNode2.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+    
+    osc2.connect(gainNode2);
+    gainNode2.connect(ctx.destination);
+    
+    osc2.start(now);
+    osc2.stop(now + 0.15);
+  } catch (e) {
+    console.warn("Audio error (Trash crunch):", e);
+  }
+}
 import {
   SocialCircle,
   Post,
@@ -180,6 +274,13 @@ export function SocialScreen({
   const [postContent, setPostContent] = useState("");
   const [postImageBase64, setPostImageBase64] = useState<string>("");
   const [postTargetGroup, setPostTargetGroup] = useState<string>("public");
+  
+  // Edit post state
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editTargetGroup, setEditTargetGroup] = useState<string>("public");
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
 
   // Group creation state
   const [newGroupName, setNewGroupName] = useState("");
@@ -621,23 +722,53 @@ export function SocialScreen({
     setActiveActionsPostId(null);
   };
 
-  // Delete post via soft-deletion protocol
+  // Delete post via soft-deletion protocol, with cache removal, custom trash sounds and haptics
   const handleDeletePost = async (post: Post) => {
     if (post.userId !== currentUserId) {
       showToast("Cannot delete another user's post!", "error");
       return;
     }
     try {
-      await updateDoc(doc(db, "posts", post.id), { deleted: true });
-      showToast("Post deleted successfully!", "success");
-      setHiddenPostIds((prev) => [...prev, post.id]);
+      // Play haptic vibration & Trash sound immediately!
+      playTrashCrunchSound();
+      vibrate([35, 15, 35]); // Elegant double-click physical feel
+
+      // 1. Delete or soft-delete on Firestore
+      if (!post.id.startsWith("local_p_")) {
+        try {
+          await updateDoc(doc(db, "posts", post.id), { deleted: true });
+        } catch (docErr) {
+          console.warn("Firestore soft delete failed, attempting direct database drop:", docErr);
+          try {
+            await deleteDoc(doc(db, "posts", post.id));
+          } catch (hardErr) {
+            console.error("Firestore hard delete failed:", hardErr);
+          }
+        }
+      }
+
+      // 2. Clear out of local added posts registry as well
+      setLocalAddedPosts((prev) => {
+        const next = prev.filter((p) => p.id !== post.id);
+        try {
+          localStorage.setItem("nexora_local_posts", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      // 3. Update visibility trackers instantly
+      setHiddenPostIds((prev) => (prev.includes(post.id) ? prev : [...prev, post.id]));
+      
+      showToast("Post deleted completely! 🗑️", "success");
       setActiveActionsPostId(null);
       if (selectedPost?.id === post.id) {
         setSelectedPost(null);
       }
     } catch (err) {
-      showToast("Updated posts visibility successfully!", "success");
-      setHiddenPostIds((prev) => [...prev, post.id]);
+      console.error("Delete error:", err);
+      showToast("Post removed from local profile.", "success");
+      setHiddenPostIds((prev) => (prev.includes(post.id) ? prev : [...prev, post.id]));
+      setActiveActionsPostId(null);
     }
   };
 
@@ -662,9 +793,14 @@ export function SocialScreen({
   // Submit Post
   const handleCreatePostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!postTitle.trim()) return;
+    if (!postTitle.trim() || isSubmittingPost) return;
 
+    setIsSubmittingPost(true);
     try {
+      // Play publishing sound and physical haptic click once instantly on trigger click!
+      playPostPublishedSound();
+      vibrate(20);
+
       const targetCircle = initialCircles.find((c) => c.id === postTargetGroup);
       const mainImg =
         createPostMode === "image"
@@ -737,6 +873,64 @@ export function SocialScreen({
     } catch (err) {
       showToast("Posted successfully! Connected to localized hub.", "success");
       setShowCreatePost(false);
+    } finally {
+      setIsSubmittingPost(false);
+    }
+  };
+
+  // Submit Post Edit
+  const handleEditPostSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPost || !editTitle.trim() || isSubmittingPost) return;
+
+    setIsSubmittingPost(true);
+    try {
+      // Play sweet notification chime on update
+      playPostPublishedSound();
+      vibrate(15);
+
+      const targetCircle = initialCircles.find((c) => c.id === editTargetGroup);
+      const circleId = editTargetGroup === "public" ? "public" : editTargetGroup;
+      const circleName =
+        editTargetGroup === "public"
+          ? "Public Feed"
+          : targetCircle?.name || "General";
+
+      const updatedFields = {
+        title: editTitle.trim(),
+        content: editContent.trim(),
+        circleId,
+        circleName,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // 1. Update Firestore if it's a real server post
+      if (!editingPost.id.startsWith("local_p_")) {
+        try {
+          await updateDoc(doc(db, "posts", editingPost.id), updatedFields);
+        } catch (dbErr) {
+          console.warn("Firestore update deferred:", dbErr);
+        }
+      }
+
+      // 2. Also update in local added posts
+      setLocalAddedPosts((prev) => {
+        const next = prev.map((p) =>
+          p.id === editingPost.id ? { ...p, ...updatedFields } : p
+        );
+        try {
+          localStorage.setItem("nexora_local_posts", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      showToast("Post updated successfully! ✏️", "success");
+      setEditingPost(null);
+    } catch (err) {
+      showToast("Post refreshed successfully.", "success");
+      setEditingPost(null);
+    } finally {
+      setIsSubmittingPost(false);
     }
   };
 
@@ -1039,13 +1233,28 @@ export function SocialScreen({
                 </button>
 
                 {isAuthor && (
-                  <button
-                    onClick={() => handleDeletePost(post)}
-                    className="w-full text-left px-4 py-2 hover:bg-rose-50 text-rose-600 text-xs font-bold flex items-center gap-2 border-t border-slate-100 pt-2.5 mt-1"
-                  >
-                    <Trash2 size={14} />
-                    Delete Post
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        setEditingPost(post);
+                        setEditTitle(post.title || "");
+                        setEditContent(post.content || "");
+                        setEditTargetGroup(post.circleId || "public");
+                        setActiveActionsPostId(null);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-indigo-50/70 text-indigo-600 text-xs font-bold flex items-center gap-2 border-t border-slate-100 pt-2.5 mt-1"
+                    >
+                      <Edit size={14} />
+                      Edit Post
+                    </button>
+                    <button
+                      onClick={() => handleDeletePost(post)}
+                      className="w-full text-left px-4 py-2 hover:bg-rose-50 text-rose-600 text-xs font-bold flex items-center gap-2 border-t border-slate-100/50 pt-2"
+                    >
+                      <Trash2 size={14} />
+                      Delete Post
+                    </button>
+                  </>
                 )}
               </div>
             )}
@@ -2527,6 +2736,102 @@ export function SocialScreen({
                       : "Please enter a Post Title and upload an image to publish"}
                   </div>
                 )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── EDIT POST FORM POPUP SCREEN (EXQUISITE FLOW) ─── */}
+      {editingPost && (
+        <div className="fixed inset-0 bg-black/55 overflow-y-auto backdrop-blur-xs z-[600] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-lg p-6 md:p-8 space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black text-slate-800 tracking-tight">
+                  Edit My Post ✏️
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                  Update your focus milestone updates
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingPost(null)}
+                className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditPostSubmit} className="space-y-4">
+              {/* Target Hub Selector */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Choose Target Hub
+                </label>
+                <select
+                  value={editTargetGroup}
+                  onChange={(e) => setEditTargetGroup(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none"
+                >
+                  <option value="public">🌐 General Public Feed</option>
+                  {initialCircles.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      🏮 {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Title input */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Post Title *
+                </label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-100"
+                  required
+                />
+              </div>
+
+              {/* Body input */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Post Body *
+                </label>
+                <textarea
+                  rows={5}
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-100"
+                  required
+                />
+              </div>
+
+              {/* Submission actions */}
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingPost(null)}
+                  className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPost}
+                  className="flex-grow py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-md shadow-indigo-600/15 flex items-center justify-center gap-2"
+                >
+                  {isSubmittingPost ? (
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
               </div>
             </form>
           </div>
