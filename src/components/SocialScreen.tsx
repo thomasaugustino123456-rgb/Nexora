@@ -312,6 +312,7 @@ export function SocialScreen({
   });
 
   const [showAchievementsBoard, setShowAchievementsBoard] = useState(false);
+  const [selectedCategorySeeAll, setSelectedCategorySeeAll] = useState<string | null>(null);
   const [selectedAchievementId, setSelectedAchievementId] = useState<string | null>(null);
   const [achievementFilter, setAchievementFilter] = useState<"all" | "unlocked" | "locked">("all");
 
@@ -412,20 +413,324 @@ export function SocialScreen({
         date: "5/23/26",
       },
       {
-        id: "conv_catalyst",
+        id: "conv_starter",
         category: "exploration",
-        title: "Conversation Catalyst",
+        title: "Conversation Starter",
         description: "Ignite interesting discussions or comments on multiple community threads.",
         icon: "💬",
         bgGradient: "from-indigo-400 via-pink-400 to-purple-500",
         metricName: "Comments",
-        helperText: "Add 3 comments onto other circles' shared posts.",
+        helperText: "Add 1 comment onto other circles' shared posts.",
+        rewardXP: 150,
+        rewardCoins: 75,
+        currentValue: totalCommentsCount,
+        targetValue: 1,
+        unlocked: totalCommentsCount >= 1,
+        date: "5/23/26",
+      },
+      {
+        id: "quality_comment",
+        category: "exploration",
+        title: "Quality Comment",
+        description: "Post useful insights that are highly structured and helpful for your peers.",
+        icon: "💬",
+        bgGradient: "from-amber-400 to-yellow-500",
+        metricName: "Comments",
+        helperText: "Write at least 2 comments across circles.",
         rewardXP: 200,
         rewardCoins: 100,
         currentValue: totalCommentsCount,
+        targetValue: 2,
+        unlocked: totalCommentsCount >= 2,
+        date: "5/22/26",
+      },
+      {
+        id: "cool_comment",
+        category: "exploration",
+        title: "Cool Comment",
+        description: "Write positive feedback and share support with your peers.",
+        icon: "💬",
+        bgGradient: "from-emerald-400 to-teal-500",
+        metricName: "Comments",
+        helperText: "Contribute at least 1 comment.",
+        rewardXP: 100,
+        rewardCoins: 50,
+        currentValue: totalCommentsCount,
+        targetValue: 1,
+        unlocked: totalCommentsCount >= 1,
+        date: "5/22/26",
+      },
+      {
+        id: "banana_baby",
+        category: "exploration",
+        title: "Banana Baby",
+        description: "Start logging session focus metrics and view visual tracker stats.",
+        icon: "🍌",
+        bgGradient: "from-yellow-300 to-orange-400",
+        metricName: "Posts",
+        helperText: "Share 1 focus tracker log in Nexora.",
+        rewardXP: 100,
+        rewardCoins: 50,
+        currentValue: myPostsCount >= 1 ? 1 : 0,
+        targetValue: 1,
+        unlocked: myPostsCount >= 1,
+        date: "5/20/26",
+      },
+      {
+        id: "banana_beginner",
+        category: "exploration",
+        title: "Banana Beginner",
+        description: "Continue to log metrics and check focus levels on a regular basis.",
+        icon: "🍌",
+        bgGradient: "from-yellow-400 to-amber-500",
+        metricName: "Posts",
+        helperText: "Share 2 focus logs in circles.",
+        rewardXP: 200,
+        rewardCoins: 100,
+        currentValue: myPostsCount,
+        targetValue: 2,
+        unlocked: myPostsCount >= 2,
+        date: "5/20/26",
+      },
+      {
+        id: "sharing_enthusiast",
+        category: "exploration",
+        title: "Sharing Enthusiast",
+        description: "Active explorer keeping sub-community feeds updated with custom insights.",
+        icon: "📤",
+        bgGradient: "from-sky-400 to-blue-500",
+        metricName: "Shares",
+        helperText: "Share 3 focus logs in any circle.",
+        rewardXP: 250,
+        rewardCoins: 125,
+        currentValue: myPostsCount,
         targetValue: 3,
-        unlocked: totalCommentsCount >= 3,
-        date: "5/23/26",
+        unlocked: myPostsCount >= 3,
+        date: "3/10 shares",
+      },
+      {
+        id: "banana_aficionado",
+        category: "exploration",
+        title: "Banana Aficionado",
+        description: "Collect high amounts of track time and logs over your focus journey.",
+        icon: "🍌",
+        bgGradient: "from-amber-500 to-orange-600",
+        metricName: "Bananas",
+        helperText: "Achieve a premium total index of 10,000 bananas.",
+        rewardXP: 1000,
+        rewardCoins: 500,
+        currentValue: 2913,
+        targetValue: 10000,
+        unlocked: false,
+        date: "2,913/10,000 bananas",
+      },
+      {
+        id: "hometown_hero",
+        category: "exploration",
+        title: "Hometown Hero",
+        description: "Establish strong footprint in your local primary focus community.",
+        icon: "🏠",
+        bgGradient: "from-blue-400 to-indigo-600",
+        metricName: "Groups Joined",
+        helperText: "Join at least 1 community circle in Nexora.",
+        rewardXP: 200,
+        rewardCoins: 100,
+        currentValue: joinedGroupsCount,
+        targetValue: 1,
+        unlocked: joinedGroupsCount >= 1,
+        date: "",
+      },
+      {
+        id: "sharing_advocate",
+        category: "exploration",
+        title: "Sharing Advocate",
+        description: "Spread productivity awareness across the community workspace.",
+        icon: "📤",
+        bgGradient: "from-cyan-400 to-indigo-500",
+        metricName: "Shares",
+        helperText: "Log at least 10 sessions/posts in Nexora.",
+        rewardXP: 500,
+        rewardCoins: 250,
+        currentValue: myPostsCount,
+        targetValue: 10,
+        unlocked: myPostsCount >= 10,
+        date: "",
+      },
+      {
+        id: "sharing_pro",
+        category: "exploration",
+        title: "Sharing Pro",
+        description: "Elite provider of valuable focus logs and shared session summaries.",
+        icon: "📤",
+        bgGradient: "from-indigo-600 to-purple-600",
+        metricName: "Shares",
+        helperText: "Log 20 sessions/posts in circles.",
+        rewardXP: 800,
+        rewardCoins: 400,
+        currentValue: myPostsCount,
+        targetValue: 20,
+        unlocked: myPostsCount >= 20,
+        date: "",
+      },
+      {
+        id: "sharing_legend",
+        category: "exploration",
+        title: "Sharing Legend",
+        description: "A legendary status of productivity sharing and community contributions.",
+        icon: "📤",
+        bgGradient: "from-purple-600 to-pink-600",
+        metricName: "Shares",
+        helperText: "Log 50 sessions/posts in Nexora.",
+        rewardXP: 1500,
+        rewardCoins: 750,
+        currentValue: myPostsCount,
+        targetValue: 50,
+        unlocked: myPostsCount >= 50,
+        date: "",
+      },
+      {
+        id: "banana_master",
+        category: "exploration",
+        title: "Banana Master",
+        description: "Collect massive amounts of track metrics for standard evaluation.",
+        icon: "🍌",
+        bgGradient: "from-orange-500 to-red-500",
+        metricName: "Bananas",
+        helperText: "Gather a total tracker record of 12,000 bananas.",
+        rewardXP: 2000,
+        rewardCoins: 1000,
+        currentValue: 5000,
+        targetValue: 12000,
+        unlocked: false,
+        date: "",
+      },
+      {
+        id: "banana_legend",
+        category: "exploration",
+        title: "Banana Legend",
+        description: "Become an absolute legend in tracking metrics for self-evaluation.",
+        icon: "🍌",
+        bgGradient: "from-yellow-400 to-red-600",
+        metricName: "Bananas",
+        helperText: "Unlock a legendary baseline index of 20,000 bananas.",
+        rewardXP: 4000,
+        rewardCoins: 2000,
+        currentValue: 8000,
+        targetValue: 20000,
+        unlocked: false,
+        date: "",
+      },
+      {
+        id: "potassium_overlord",
+        category: "exploration",
+        title: "Potassium Overlord",
+        description: "Complete authority on focus tracking, logging parameters and analytics.",
+        icon: "👑",
+        bgGradient: "from-rose-500 to-violet-600 animate-pulse",
+        metricName: "Bananas",
+        helperText: "Obtain an ultimate sum of 50,000 bananas.",
+        rewardXP: 10000,
+        rewardCoins: 5000,
+        currentValue: 15000,
+        targetValue: 50000,
+        unlocked: false,
+        date: "",
+      },
+      {
+        id: "nice_post",
+        category: "exploration",
+        title: "Nice Post",
+        description: "Receive high praise from colleagues with 5 or more flames on a post.",
+        icon: "✨",
+        bgGradient: "from-sky-400 to-blue-500",
+        metricName: "Flames",
+        helperText: "Accumulate 5 upflames on a single posts.",
+        rewardXP: 150,
+        rewardCoins: 75,
+        currentValue: popularPostMetric.maxFlames,
+        targetValue: 5,
+        unlocked: popularPostMetric.maxFlames >= 5,
+        date: "",
+      },
+      {
+        id: "buzz_worthy_post",
+        category: "exploration",
+        title: "Buzz-Worthy Post",
+        description: "Get community traction and attract interesting conversations.",
+        icon: "🐝",
+        bgGradient: "from-yellow-400 to-amber-600",
+        metricName: "Flames",
+        helperText: "Accumulate 10 upflames on a single post.",
+        rewardXP: 300,
+        rewardCoins: 150,
+        currentValue: popularPostMetric.maxFlames,
+        targetValue: 10,
+        unlocked: popularPostMetric.maxFlames >= 10,
+        date: "",
+      },
+      {
+        id: "popular_post",
+        category: "exploration",
+        title: "Popular Post",
+        description: "A solid post that triggers feedback from many active teammates.",
+        icon: "🔥",
+        bgGradient: "from-orange-400 to-red-500",
+        metricName: "Flames",
+        helperText: "Amass 25 upflames on a post.",
+        rewardXP: 500,
+        rewardCoins: 250,
+        currentValue: popularPostMetric.maxFlames,
+        targetValue: 25,
+        unlocked: popularPostMetric.maxFlames >= 25,
+        date: "",
+      },
+      {
+        id: "premiere_post",
+        category: "exploration",
+        title: "Premiere Post",
+        description: "Get widely recognized as an educational and inspirational guide.",
+        icon: "🎬",
+        bgGradient: "from-purple-500 to-indigo-600",
+        metricName: "Flames",
+        helperText: "Receive 50 upflames on a single focus post.",
+        rewardXP: 1000,
+        rewardCoins: 500,
+        currentValue: popularPostMetric.maxFlames,
+        targetValue: 50,
+        unlocked: popularPostMetric.maxFlames >= 50,
+        date: "",
+      },
+      {
+        id: "peak_post",
+        category: "exploration",
+        title: "Peak Post",
+        description: "Gather an ultimate record of 100 flames and reach the top spot.",
+        icon: "🏔️",
+        bgGradient: "from-teal-400 to-emerald-600 shadow-lg",
+        metricName: "Flames",
+        helperText: "Receive 100 upflames on a single post.",
+        rewardXP: 2500,
+        rewardCoins: 1250,
+        currentValue: popularPostMetric.maxFlames,
+        targetValue: 100,
+        unlocked: popularPostMetric.maxFlames >= 100,
+        date: "",
+      },
+      {
+        id: "captivating_comment",
+        category: "exploration",
+        title: "Captivating Comment",
+        description: "Write highly engaging, high-traction comment feedback under group posts.",
+        icon: "💬",
+        bgGradient: "from-pink-500 to-purple-600",
+        metricName: "Comments",
+        helperText: "Write at least 10 comments on peer circles.",
+        rewardXP: 400,
+        rewardCoins: 200,
+        currentValue: totalCommentsCount,
+        targetValue: 10,
+        unlocked: totalCommentsCount >= 10,
+        date: "",
       },
 
       // 2. Building Community
@@ -462,23 +767,199 @@ export function SocialScreen({
         date: "5/25/26",
       },
       {
-        id: "top_contributor",
+        id: "top_10_commenter",
         category: "community",
-        title: "Top 10% Contributor",
-        description: "Reach elite heights by gathering high-level reputation points across Nexora.",
-        icon: "🏆",
-        bgGradient: "from-yellow-400 via-amber-500 to-orange-600",
-        metricName: "XP Points",
-        helperText: "Acquire a lifetime sum of 1,000 points or more on your user profile.",
+        title: "Top 10% Commenter",
+        description: "Be one of the most reliable and active communication catalysts.",
+        icon: "👑",
+        bgGradient: "from-violet-500 to-fuchsia-600",
+        metricName: "Comments",
+        helperText: "Write at least 15 comments across Nexora circles.",
+        rewardXP: 600,
+        rewardCoins: 300,
+        currentValue: totalCommentsCount,
+        targetValue: 15,
+        unlocked: totalCommentsCount >= 15,
+        date: "",
+      },
+      {
+        id: "top_10_poster",
+        category: "community",
+        title: "Top 10% Poster",
+        description: "Publish several comprehensive journals and host key dialogues.",
+        icon: "📝",
+        bgGradient: "from-blue-500 to-cyan-600",
+        metricName: "Posts",
+        helperText: "Write and share 10 detailed focus posts.",
+        rewardXP: 600,
+        rewardCoins: 300,
+        currentValue: myPostsCount,
+        targetValue: 10,
+        unlocked: myPostsCount >= 10,
+        date: "",
+      },
+      {
+        id: "top_5_commenter",
+        category: "community",
+        title: "Top 5% Commenter",
+        description: "Unlock elite peer support status by keeping community streams alive.",
+        icon: "👑",
+        bgGradient: "from-rose-500 to-amber-500",
+        metricName: "Comments",
+        helperText: "Publish 30 comments across various circles.",
+        rewardXP: 1200,
+        rewardCoins: 600,
+        currentValue: totalCommentsCount,
+        targetValue: 30,
+        unlocked: totalCommentsCount >= 30,
+        date: "",
+      },
+      {
+        id: "top_5_poster",
+        category: "community",
+        title: "Top 5% Poster",
+        description: "Pioneer focus techniques and provide structural feedback.",
+        icon: "📝",
+        bgGradient: "from-sky-500 to-indigo-700 animate-pulse",
+        metricName: "Posts",
+        helperText: "Publish 20 rich focus logs.",
+        rewardXP: 1200,
+        rewardCoins: 600,
+        currentValue: myPostsCount,
+        targetValue: 20,
+        unlocked: myPostsCount >= 20,
+        date: "",
+      },
+      {
+        id: "super_contributor",
+        category: "community",
+        title: "Super Contributor",
+        description: "Outstanding support of collective circles with both comments and logs.",
+        icon: "💎",
+        bgGradient: "from-indigo-400 via-pink-400 to-teal-400",
+        metricName: "Contributions",
+        helperText: "Amass a combined 25 posts/comments.",
         rewardXP: 1000,
         rewardCoins: 500,
+        currentValue: myPostsCount + totalCommentsCount,
+        targetValue: 25,
+        unlocked: (myPostsCount + totalCommentsCount) >= 25,
+        date: "",
+      },
+      {
+        id: "repeat_contributor",
+        category: "community",
+        title: "Repeat Contributor",
+        description: "Form daily interaction loops and maintain a helpful attitude.",
+        icon: "🔄",
+        bgGradient: "from-slate-400 to-indigo-500",
+        metricName: "Contributions",
+        helperText: "Amass a combined 10 posts/comments.",
+        rewardXP: 400,
+        rewardCoins: 200,
+        currentValue: myPostsCount + totalCommentsCount,
+        targetValue: 10,
+        unlocked: (myPostsCount + totalCommentsCount) >= 10,
+        date: "",
+      },
+      {
+        id: "content_connoisseur",
+        category: "community",
+        title: "Content Connoisseur",
+        description: "Successfully craft 5 valuable focus logs that peers bookmark.",
+        icon: "📚",
+        bgGradient: "from-emerald-400 to-teal-600",
+        metricName: "Posts",
+        helperText: "Write at least 5 posts in Nexora.",
+        rewardXP: 500,
+        rewardCoins: 250,
+        currentValue: myPostsCount,
+        targetValue: 5,
+        unlocked: myPostsCount >= 5,
+        date: "",
+      },
+      {
+        id: "flag_planter",
+        category: "community",
+        title: "Flag Planter",
+        description: "Mark your initial active territory across multiple community spaces.",
+        icon: "🏳️",
+        bgGradient: "from-amber-400 to-orange-500",
+        metricName: "Circles joined",
+        helperText: "Join 3 or more community circles in Nexora.",
+        rewardXP: 300,
+        rewardCoins: 150,
+        currentValue: joinedGroupsCount,
+        targetValue: 3,
+        unlocked: joinedGroupsCount >= 3,
+        date: "",
+      },
+      {
+        id: "elder",
+        category: "community",
+        title: "Elder",
+        description: "A wise, long-term advisor status among high-ranking productivity peers.",
+        icon: "🧓",
+        bgGradient: "from-slate-400 via-zinc-500 to-stone-600",
+        metricName: "Profile Points",
+        helperText: "Collect 500 or more total profile XP points.",
+        rewardXP: 500,
+        rewardCoins: 250,
         currentValue: totalPoints,
-        targetValue: 1000,
-        unlocked: totalPoints >= 1000,
-        date: "5/26/26",
+        targetValue: 500,
+        unlocked: totalPoints >= 500,
+        date: "",
+      },
+      {
+        id: "rising_star",
+        category: "community",
+        title: "Rising Star",
+        description: "Make swift headway towards joining elite ranks of global contributors.",
+        icon: "⭐",
+        bgGradient: "from-yellow-400 via-green-400 to-teal-500",
+        metricName: "Profile Points",
+        helperText: "Collect 250 or more total profile XP points.",
+        rewardXP: 250,
+        rewardCoins: 125,
+        currentValue: totalPoints,
+        targetValue: 250,
+        unlocked: totalPoints >= 250,
+        date: "",
+      },
+      {
+        id: "picasso",
+        category: "community",
+        title: "Picasso",
+        description: "Express your persona clearly by customizing your Display Portrait Portrait.",
+        icon: "🎨",
+        bgGradient: "from-rose-400 to-fuchsia-500",
+        metricName: "Avatar Setup",
+        helperText: "Configure a custom profile picture image.",
+        rewardXP: 100,
+        rewardCoins: 50,
+        currentValue: currentUserPhoto && currentUserPhoto !== "" ? 1 : 0,
+        targetValue: 1,
+        unlocked: !!(currentUserPhoto && currentUserPhoto !== ""),
+        date: "5/18/26",
+      },
+      {
+        id: "thats_me",
+        category: "community",
+        title: "That's Me",
+        description: "Define standard user identification features for secure communication.",
+        icon: "👤",
+        bgGradient: "from-indigo-400 to-blue-500",
+        metricName: "Name Setup",
+        helperText: "Configure a customized display username.",
+        rewardXP: 100,
+        rewardCoins: 50,
+        currentValue: currentUserName && currentUserName !== "Anonymous Hero" ? 1 : 0,
+        targetValue: 1,
+        unlocked: !!(currentUserName && currentUserName !== "Anonymous Hero"),
+        date: "5/18/26",
       },
 
-      // 3. Focus Streak
+      // 3. Reddit Streak
       {
         id: "streak_5",
         category: "streak",
@@ -526,6 +1007,230 @@ export function SocialScreen({
         targetValue: 20,
         unlocked: currentStreak >= 20,
         date: "5/28/26",
+      },
+      {
+        id: "streak_30",
+        category: "streak",
+        title: "30-Day Streak",
+        description: "An unbelievable active run tracking and finishing daily mindfulness cycles.",
+        icon: "🔥",
+        bgGradient: "from-indigo-500 to-pink-500",
+        metricName: "Streak",
+        helperText: "Achieve a solid continuous streak of 30 days.",
+        rewardXP: 1500,
+        rewardCoins: 750,
+        currentValue: currentStreak,
+        targetValue: 30,
+        unlocked: currentStreak >= 30,
+        date: "",
+      },
+      {
+        id: "streak_75",
+        category: "streak",
+        title: "75-Day Streak",
+        description: "Remarkable dedication level to personal growth and focus routines.",
+        icon: "🔥",
+        bgGradient: "from-rose-500 to-orange-500",
+        metricName: "Streak",
+        helperText: "Maintain an active streak of 75 days.",
+        rewardXP: 2500,
+        rewardCoins: 1250,
+        currentValue: currentStreak,
+        targetValue: 75,
+        unlocked: currentStreak >= 75,
+        date: "",
+      },
+      {
+        id: "streak_100",
+        category: "streak",
+        title: "100-Day Streak",
+        description: "The absolute centurion! A milestone of incredible proportion.",
+        icon: "💯",
+        bgGradient: "from-red-600 to-rose-600 animate-bounce",
+        metricName: "Streak",
+        helperText: "Maintain an active streak of 100 days.",
+        rewardXP: 4000,
+        rewardCoins: 2000,
+        currentValue: currentStreak,
+        targetValue: 100,
+        unlocked: currentStreak >= 100,
+        date: "",
+      },
+      {
+        id: "streak_150",
+        category: "streak",
+        title: "150-Day Streak",
+        description: "Unshakable self-discipline is your second nature.",
+        icon: "🔥",
+        bgGradient: "from-amber-400 to-emerald-500",
+        metricName: "Streak",
+        helperText: "Maintain an active streak of 150 days.",
+        rewardXP: 6000,
+        rewardCoins: 3000,
+        currentValue: currentStreak,
+        targetValue: 150,
+        unlocked: currentStreak >= 150,
+        date: "",
+      },
+      {
+        id: "streak_200",
+        category: "streak",
+        title: "200-Day Streak",
+        description: "Two hundred cycles of absolute clarity and progress! Mind blown.",
+        icon: "🔥",
+        bgGradient: "from-teal-400 to-indigo-600",
+        metricName: "Streak",
+        helperText: "Maintain an active streak of 200 days.",
+        rewardXP: 8000,
+        rewardCoins: 4000,
+        currentValue: currentStreak,
+        targetValue: 200,
+        unlocked: currentStreak >= 200,
+        date: "",
+      },
+      {
+        id: "streak_300",
+        category: "streak",
+        title: "300-Day Streak",
+        description: "Fierce consistency that outlasts all transient distractions.",
+        icon: "🔥",
+        bgGradient: "from-violet-600 to-pink-500",
+        metricName: "Streak",
+        helperText: "Maintain an active streak of 300 days.",
+        rewardXP: 12000,
+        rewardCoins: 6000,
+        currentValue: currentStreak,
+        targetValue: 300,
+        unlocked: currentStreak >= 300,
+        date: "",
+      },
+      {
+        id: "streak_365",
+        category: "streak",
+        title: "365-Day Streak",
+        description: "Exactly a full year of unbroken daily progress! Absolute champion status.",
+        icon: "🎆",
+        bgGradient: "from-yellow-400 via-pink-500 to-indigo-600",
+        metricName: "Streak",
+        helperText: "Maintain an active streak of 365 days.",
+        rewardXP: 20000,
+        rewardCoins: 10000,
+        currentValue: currentStreak,
+        targetValue: 365,
+        unlocked: currentStreak >= 365,
+        date: "",
+      },
+      {
+        id: "streak_400",
+        category: "streak",
+        title: "400-Day Streak",
+        description: "Pioneering habits into the next tier of personal greatness.",
+        icon: "🔥",
+        bgGradient: "from-emerald-400 to-teal-700",
+        metricName: "Streak",
+        helperText: "Maintain an active streak of 400 days.",
+        rewardXP: 25000,
+        rewardCoins: 12500,
+        currentValue: currentStreak,
+        targetValue: 400,
+        unlocked: currentStreak >= 400,
+        date: "",
+      },
+      {
+        id: "streak_500",
+        category: "streak",
+        title: "500-Day Streak",
+        description: "Five hundred streaks. Unshakeable practitioner of deep focus work.",
+        icon: "🏔️",
+        bgGradient: "from-cyan-500 to-blue-700",
+        metricName: "Streak",
+        helperText: "Maintain an active streak of 500 days.",
+        rewardXP: 35000,
+        rewardCoins: 17500,
+        currentValue: currentStreak,
+        targetValue: 500,
+        unlocked: currentStreak >= 500,
+        date: "",
+      },
+      {
+        id: "streak_600",
+        category: "streak",
+        title: "600-Day Streak",
+        description: "Forming an absolute bullet-proof daily routines architecture.",
+        icon: "🔥",
+        bgGradient: "from-orange-500 to-red-700",
+        metricName: "Streak",
+        helperText: "Maintain an active streak of 600 days.",
+        rewardXP: 50000,
+        rewardCoins: 25000,
+        currentValue: currentStreak,
+        targetValue: 600,
+        unlocked: currentStreak >= 600,
+        date: "",
+      },
+      {
+        id: "streak_700",
+        category: "streak",
+        title: "700-Day Streak",
+        description: "Reaching deep neural networks optimization of daily productivity.",
+        icon: "👑",
+        bgGradient: "from-purple-600 via-fuchsia-600 to-indigo-650",
+        metricName: "Streak",
+        helperText: "Maintain an active streak of 700 days.",
+        rewardXP: 75000,
+        rewardCoins: 37500,
+        currentValue: currentStreak,
+        targetValue: 700,
+        unlocked: currentStreak >= 700,
+        date: "",
+      },
+      {
+        id: "basement_dweller",
+        category: "streak",
+        title: "Basement Dweller",
+        description: "Literally lived inside the productivity tracking interface for 150 days.",
+        icon: "🏠",
+        bgGradient: "from-slate-700 to-zinc-900 border border-slate-700",
+        metricName: "Streak",
+        helperText: "Log consecutive sessions for 150 days.",
+        rewardXP: 4500,
+        rewardCoins: 2250,
+        currentValue: currentStreak,
+        targetValue: 150,
+        unlocked: currentStreak >= 150,
+        date: "",
+      },
+      {
+        id: "grass_toucher",
+        category: "streak",
+        title: "Grass Toucher",
+        description: "Finally! Logged sessions for 300 days and earned the right to touch grass.",
+        icon: "🌱",
+        bgGradient: "from-green-500 to-emerald-700",
+        metricName: "Streak",
+        helperText: "Complete daily check-ins for 300 days.",
+        rewardXP: 10000,
+        rewardCoins: 5000,
+        currentValue: currentStreak,
+        targetValue: 300,
+        unlocked: currentStreak >= 300,
+        date: "",
+      },
+      {
+        id: "streak_1000",
+        category: "streak",
+        title: "1000-Day Streak",
+        description: "Pure cosmic consciousness. Divine level devotion. Incredible.",
+        icon: "🌌",
+        bgGradient: "from-indigo-900 via-purple-800 to-stone-900 animate-pulse",
+        metricName: "Streak",
+        helperText: "Complete an unbroken daily run of 1000 days.",
+        rewardXP: 150000,
+        rewardCoins: 75000,
+        currentValue: currentStreak,
+        targetValue: 1000,
+        unlocked: currentStreak >= 1000,
+        date: "",
       },
 
       // 4. Getting Started
@@ -577,6 +1282,70 @@ export function SocialScreen({
         unlocked: joinedGroupsCount >= 1,
         date: "5/18/26",
       },
+      {
+        id: "joined_reddit",
+        category: "getting_started",
+        title: "Joined Reddit",
+        description: "Establish official account credentials and log initial metrics.",
+        icon: "🎂",
+        bgGradient: "from-orange-400 to-yellow-500",
+        metricName: "Account Age",
+        helperText: "Set up and register your Nexora membership profile.",
+        rewardXP: 100,
+        rewardCoins: 50,
+        currentValue: 1,
+        targetValue: 1,
+        unlocked: true,
+        date: "5/18/26",
+      },
+      {
+        id: "secured_account",
+        category: "getting_started",
+        title: "Secured Account",
+        description: "Safeguard focus and session history details with robust verification.",
+        icon: "🛡️",
+        bgGradient: "from-sky-400 to-indigo-600",
+        metricName: "Security Info",
+        helperText: "Complete security protocols and credential checks.",
+        rewardXP: 100,
+        rewardCoins: 50,
+        currentValue: 1,
+        targetValue: 1,
+        unlocked: true,
+        date: "5/18/26",
+      },
+      {
+        id: "profile_perfectionist",
+        category: "getting_started",
+        title: "Profile Perfectionist",
+        description: "Align profile name, user description tags, and baseline statistics perfectly.",
+        icon: "🧩",
+        bgGradient: "from-violet-400 to-fuchsia-600",
+        metricName: "Completion",
+        helperText: "Maintain complete personalization of details.",
+        rewardXP: 200,
+        rewardCoins: 100,
+        currentValue: currentUserName && currentUserName !== "Anonymous Hero" ? 1 : 0,
+        targetValue: 1,
+        unlocked: !!(currentUserName && currentUserName !== "Anonymous Hero"),
+        date: "",
+      },
+      {
+        id: "feed_finder",
+        category: "getting_started",
+        title: "Feed Finder",
+        description: "Explore the community feed and discover valuable sub-community insights.",
+        icon: "🔍",
+        bgGradient: "from-emerald-400 to-teal-500",
+        metricName: "Feed Search",
+        helperText: "Scroll and filter community streams.",
+        rewardXP: 100,
+        rewardCoins: 50,
+        currentValue: 1,
+        targetValue: 1,
+        unlocked: true,
+        date: "",
+      },
 
       // 5. Community Moderation
       {
@@ -612,23 +1381,183 @@ export function SocialScreen({
         date: "5/25/26",
       },
       {
-        id: "support_hero",
+        id: "support_network",
         category: "moderation",
-        title: "Support Hero",
-        description: "Help moderators filter non-focus content by reporting potential guideline infractions.",
+        title: "Support Network",
+        description: "Build relationships and connect multiple active groups together.",
         icon: "🛡️",
         bgGradient: "from-slate-600 via-indigo-900 to-slate-800",
-        metricName: "Reports Filed",
-        helperText: "Contribute reports or flags when guidelines are broken.",
+        metricName: "Connected Nodes",
+        helperText: "Connect or join at least 2 active circles.",
         rewardXP: 250,
         rewardCoins: 125,
-        currentValue: 0,
-        targetValue: 1,
-        unlocked: false,
+        currentValue: joinedGroupsCount,
+        targetValue: 2,
+        unlocked: joinedGroupsCount >= 2,
+        date: "",
+      },
+      {
+        id: "mod_hatchling",
+        category: "moderation",
+        title: "Mod Hatchling",
+        description: "Initial recognition of solid community support behaviors.",
+        icon: "🐥",
+        bgGradient: "from-yellow-300 to-orange-400",
+        metricName: "Mod Level",
+        helperText: "Advance to 100 total profile points.",
+        rewardXP: 250,
+        rewardCoins: 125,
+        currentValue: totalPoints,
+        targetValue: 100,
+        unlocked: totalPoints >= 100,
+        date: "",
+      },
+      {
+        id: "mod_awakening",
+        category: "moderation",
+        title: "Mod Awakening",
+        description: "Awaken full focus moderation compliance and compliance parameters.",
+        icon: "🦁",
+        bgGradient: "from-amber-400 to-rose-600",
+        metricName: "Mod Level",
+        helperText: "Advance to 500 total profile points.",
+        rewardXP: 600,
+        rewardCoins: 300,
+        currentValue: totalPoints,
+        targetValue: 500,
+        unlocked: totalPoints >= 500,
+        date: "",
+      },
+      {
+        id: "purrfect_pair",
+        category: "moderation",
+        title: "Purrfect Pair",
+        description: "Teammate integration milestone for dual track communication.",
+        icon: "🐱",
+        bgGradient: "from-pink-400 to-purple-500",
+        metricName: "Joint Operations",
+        helperText: "Participate in 2 dynamic group setups.",
+        rewardXP: 200,
+        rewardCoins: 100,
+        currentValue: joinedGroupsCount,
+        targetValue: 2,
+        unlocked: joinedGroupsCount >= 2,
+        date: "",
+      },
+      {
+        id: "visitors_5",
+        category: "moderation",
+        title: "5 Weekly Visitors",
+        description: "Welcome 5 teammates onto your logs feed or shared group topics.",
+        icon: "👥",
+        bgGradient: "from-slate-400 to-slate-500",
+        metricName: "Weekly Vis",
+        helperText: "Get initial traffic onto your published posts.",
+        rewardXP: 100,
+        rewardCoins: 50,
+        currentValue: popularPostMetric.maxFlames >= 1 ? 5 : 0,
+        targetValue: 5,
+        unlocked: popularPostMetric.maxFlames >= 1,
+        date: "5/15/26",
+      },
+      {
+        id: "visitors_25",
+        category: "moderation",
+        title: "25 Weekly Visitors",
+        description: "Draw stable traffic of 25 active users to evaluate metrics.",
+        icon: "👥",
+        bgGradient: "from-sky-400 to-blue-500",
+        metricName: "Weekly Vis",
+        helperText: "Amass a base of 5 flames or engagement signs.",
+        rewardXP: 250,
+        rewardCoins: 125,
+        currentValue: popularPostMetric.maxFlames >= 5 ? 25 : 0,
+        targetValue: 25,
+        unlocked: popularPostMetric.maxFlames >= 5,
+        date: "",
+      },
+      {
+        id: "visitors_100",
+        category: "moderation",
+        title: "100 Weekly Visitors",
+        description: "Engage 100 weekly viewers on your productivity channels.",
+        icon: "👥",
+        bgGradient: "from-teal-400 to-green-600",
+        metricName: "Weekly Vis",
+        helperText: "Achieve at least 10 upflames on a single log.",
+        rewardXP: 500,
+        rewardCoins: 250,
+        currentValue: popularPostMetric.maxFlames >= 10 ? 100 : 0,
+        targetValue: 100,
+        unlocked: popularPostMetric.maxFlames >= 10,
+        date: "",
+      },
+      {
+        id: "visitors_1k",
+        category: "moderation",
+        title: "1,000 Weekly Visitors",
+        description: "Stellar viewership rates driving global mindfulness compliance.",
+        icon: "👥",
+        bgGradient: "from-violet-500 to-indigo-650",
+        metricName: "Weekly Vis",
+        helperText: "Accumulate at least 20 upflames.",
+        rewardXP: 1000,
+        rewardCoins: 500,
+        currentValue: popularPostMetric.maxFlames >= 20 ? 1000 : 0,
+        targetValue: 1000,
+        unlocked: popularPostMetric.maxFlames >= 20,
+        date: "",
+      },
+      {
+        id: "visitors_10k",
+        category: "moderation",
+        title: "10,000 Weekly Visitors",
+        description: "Inbound traffic reaches peak standards of community reference.",
+        icon: "👥",
+        bgGradient: "from-fuchsia-500 to-purple-700",
+        metricName: "Weekly Vis",
+        helperText: "Gain 50 or more flames response.",
+        rewardXP: 2500,
+        rewardCoins: 1250,
+        currentValue: popularPostMetric.maxFlames >= 50 ? 10000 : 0,
+        targetValue: 10000,
+        unlocked: popularPostMetric.maxFlames >= 50,
+        date: "",
+      },
+      {
+        id: "visitors_100k",
+        category: "moderation",
+        title: "100,000 Weekly Visitors",
+        description: "Phenomenal outreach guiding general health metrics globally.",
+        icon: "👥",
+        bgGradient: "from-amber-400 to-orange-600",
+        metricName: "Weekly Vis",
+        helperText: "Obtain 100 or more flames response.",
+        rewardXP: 6000,
+        rewardCoins: 3000,
+        currentValue: popularPostMetric.maxFlames >= 100 ? 100000 : 0,
+        targetValue: 100000,
+        unlocked: popularPostMetric.maxFlames >= 100,
+        date: "",
+      },
+      {
+        id: "visitors_1m",
+        category: "moderation",
+        title: "1,000,000 Weekly Visitors",
+        description: "The absolute pinnacle. Broadcast level influence inspiring millions.",
+        icon: "🎆",
+        bgGradient: "from-rose-500 to-indigo-900 animate-pulse",
+        metricName: "Weekly Vis",
+        helperText: "Acquire lifetime premium focus status of 250+ flames.",
+        rewardXP: 15000,
+        rewardCoins: 7500,
+        currentValue: popularPostMetric.maxFlames >= 250 ? 1000000 : 0,
+        targetValue: 1000000,
+        unlocked: popularPostMetric.maxFlames >= 250,
         date: "",
       },
     ];
-  }, [myPostsCount, totalCommentsCount, joinedGroupsCount, createdCirclesCount, currentStreak, totalPoints]);
+  }, [myPostsCount, totalCommentsCount, joinedGroupsCount, createdCirclesCount, currentStreak, totalPoints, popularPostMetric, currentUserPhoto, currentUserName]);
 
   // Listen to Nexus Group shortcut events and local storage routing
   useEffect(() => {
@@ -2589,158 +3518,159 @@ export function SocialScreen({
           </div>
         ) : activeTab === "rewards" ? (
           // VIEW: REWARDS & ACHIEVEMENTS SECTION (DEDICATED BRAND NEW TAB!)
-          <div className="space-y-6 pt-2 select-none animate-in fade-in duration-300">
-            {/* Simple Flat Header */}
-            <div className="border-b border-slate-200 pb-2.5">
-              <span className="text-[10px] font-black text-indigo-600 tracking-wider uppercase">
-                Community Trophy Cabinet
-              </span>
-              <h3 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight leading-none mt-1">
-                Rewards & Achievements
-              </h3>
-              <p className="text-xs text-slate-500 font-semibold mt-1">
-                Complete social milestones to unlock collectible medallions, exclusive tags, and claim XP/Coin boosts.
-              </p>
-              
-              {/* Embedded Progress bar (flat) */}
-              <div className="max-w-md mt-3.5 space-y-1.5 bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
-                <div className="flex justify-between text-[10px] font-black tracking-wide text-slate-500 uppercase">
-                  <span>XP REWARDS UNLOCKED</span>
-                  <span>{Math.round((achievements.filter(a => a.unlocked).length / achievements.length) * 100)}%</span>
-                </div>
-                <div className="w-full bg-slate-200/60 h-3 rounded-full overflow-hidden border border-slate-300 p-0.5">
-                  <div 
-                    className="bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${(achievements.filter(a => a.unlocked).length / achievements.length) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Flat filter pill buttons */}
-            <div className="flex gap-2 max-w-sm">
-              {(["all", "unlocked", "locked"] as const).map((filterOpt) => (
+          selectedCategorySeeAll !== null ? (
+            // ─── FOCUSSED SEE ALL VIEW FOR A SINGLE CATEGORY ───
+            <div className="space-y-6 pt-2 select-none animate-in fade-in duration-300">
+              {/* Back button */}
+              <div className="border-b border-slate-200 pb-3">
                 <button
-                  key={filterOpt}
                   onClick={() => {
-                    setAchievementFilter(filterOpt);
-                    vibrate(12);
+                    setSelectedCategorySeeAll(null);
+                    setSelectedAchievementId(null);
+                    vibrate(10);
                     if (play) play("click");
                   }}
-                  className={`flex-1 py-1.5 text-center text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
-                    achievementFilter === filterOpt
-                      ? "bg-orange-500 text-white shadow-sm"
-                      : "bg-slate-200/50 text-slate-600 hover:text-slate-800 hover:bg-slate-200"
-                  }`}
+                  className="group flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 font-extrabold text-[10px] uppercase tracking-wider bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition-all w-fit"
                 >
-                  {filterOpt === "all" ? "🌐 All" : filterOpt === "unlocked" ? "✅ Unlocked" : "🔒 Locked"}
+                  <ChevronLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+                  <span>Back to Cabinet</span>
                 </button>
-              ))}
-            </div>
 
-            {/* Render dynamic inline list of categories */}
-            <div className="space-y-6">
-              {[
-                { id: "exploration", name: "Exploration" },
-                { id: "community", name: "Building Community" },
-                { id: "streak", name: "Nexora Streak" },
-                { id: "getting_started", name: "Getting Started" },
-                { id: "moderation", name: "Community Moderation" }
-              ].map((cat) => {
-                const categoryBadges = achievements.filter(a => a.category === cat.id);
+                {(() => {
+                  const catObj = [
+                    { id: "exploration", name: "Exploration" },
+                    { id: "community", name: "Building Community" },
+                    { id: "streak", name: "Streak Progress" },
+                    { id: "getting_started", name: "Getting Started" },
+                    { id: "moderation", name: "Community Moderation" }
+                  ].find(c => c.id === selectedCategorySeeAll);
+                  
+                  if (!catObj) return null;
+                  const categoryBadges = achievements.filter(a => a.category === selectedCategorySeeAll);
+                  const totalUnlocked = categoryBadges.filter(b => b.unlocked).length;
+
+                  return (
+                    <div className="mt-4">
+                      <span className="text-[10px] font-black text-indigo-600 tracking-wider uppercase">
+                        Trophy Cabinet Folder
+                      </span>
+                      <h3 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight leading-none mt-1">
+                        {catObj.name} Achievements
+                      </h3>
+                      <p className="text-xs text-slate-500 font-semibold mt-1.5">
+                        Showing all {categoryBadges.length} milestones in this category. You have unlocked {totalUnlocked} of them.
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Flat filter pill buttons within See All view */}
+              <div className="flex gap-2 max-w-sm">
+                {(["all", "unlocked", "locked"] as const).map((filterOpt) => (
+                  <button
+                    key={filterOpt}
+                    onClick={() => {
+                      setAchievementFilter(filterOpt);
+                      vibrate(12);
+                      if (play) play("click");
+                    }}
+                    className={`flex-1 py-1.5 text-center text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
+                      achievementFilter === filterOpt
+                        ? "bg-indigo-650 text-white shadow-sm"
+                        : "bg-slate-200/50 text-slate-600 hover:text-slate-800 hover:bg-slate-200"
+                    }`}
+                  >
+                    {filterOpt === "all" ? "🌐 All" : filterOpt === "unlocked" ? "✅ Unlocked" : "🔒 Locked"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Grid of Medallions */}
+              {(() => {
+                const categoryBadges = achievements.filter(a => a.category === selectedCategorySeeAll);
                 const filteredBadges = categoryBadges.filter((item) => {
                   if (achievementFilter === "unlocked") return item.unlocked;
                   if (achievementFilter === "locked") return !item.unlocked;
                   return true;
                 });
 
-                if (filteredBadges.length === 0) return null;
-
-                const totalUnlocked = categoryBadges.filter(b => b.unlocked).length;
+                if (filteredBadges.length === 0) {
+                  return (
+                    <div className="py-12 text-center text-slate-400 font-bold text-xs">
+                      No matching achievements found for this filter.
+                    </div>
+                  );
+                }
 
                 return (
-                  <div key={cat.id} className="space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-                      <span className="font-extrabold text-sm text-slate-800 uppercase tracking-tight">
-                        {cat.name}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-bold">
-                        {totalUnlocked} / {categoryBadges.length} unlocked
-                      </span>
-                    </div>
-
-                    {/* Flex grid of medallions with NO custom bounding card backgrounds */}
-                    <div className="flex flex-wrap gap-x-5 gap-y-6 justify-start items-start pt-1">
-                      {filteredBadges.map((item) => {
-                        const isSelected = selectedAchievementId === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            onClick={() => {
-                              setSelectedAchievementId(isSelected ? null : item.id);
-                              vibrate(18);
-                              if (play) play("click");
-                            }}
-                            className="flex flex-col items-center group w-20 text-center focus:outline-none"
-                          >
-                            {/* Round Medallion wrapper (gilded gold if unlocked, grey ring and coin shape if locked) */}
-                            {item.unlocked ? (
-                              <div className={`relative w-16 h-16 rounded-full flex items-center justify-center p-0.5 bg-gradient-to-tr from-amber-500 via-amber-400 to-orange-400 shadow-sm shadow-orange-500/10 transform transition-all group-hover:scale-105 group-active:scale-95 ${
-                                isSelected ? "ring-4 ring-orange-500/30" : "ring-2 ring-white"
-                              }`}>
-                                <div className="absolute inset-[3px] rounded-full border border-amber-400 bg-gradient-to-br from-amber-50 to-orange-100/30 flex items-center justify-center">
-                                  <span className="text-2xl drop-shadow-sm select-none">
-                                    {item.icon}
-                                  </span>
-                                </div>
-                                <div className="absolute bottom-0.5 right-1 text-[7px] animate-pulse">✨</div>
-                              </div>
-                            ) : (
-                              <div className={`relative w-16 h-16 rounded-full flex items-center justify-center bg-slate-100 border border-slate-200 transform transition-all opacity-60 group-hover:opacity-85 ${
-                                isSelected ? "ring-4 ring-slate-400/30" : ""
-                              }`}>
-                                <div className="absolute inset-[3px] rounded-full bg-slate-50 flex items-center justify-center filter grayscale opacity-60">
-                                  <span className="text-xl select-none">
-                                    {item.icon}
-                                  </span>
-                                </div>
-                                <div className="absolute -bottom-1 -right-1 bg-slate-200 border border-slate-300 text-slate-500 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[8px] font-extrabold shadow-sm">
-                                  🔒
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Title labels underneath */}
-                            <span className={`text-[10px] font-extrabold leading-tight pt-1.5 tracking-tight line-clamp-1 block w-full text-center ${
-                              item.unlocked ? "text-slate-800 group-hover:text-orange-600" : "text-slate-400"
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-y-7 gap-x-4 pt-2 justify-items-center">
+                    {filteredBadges.map((item) => {
+                      const isSelected = selectedAchievementId === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setSelectedAchievementId(isSelected ? null : item.id);
+                            vibrate(18);
+                            if (play) play("click");
+                          }}
+                          className="flex flex-col items-center group w-20 text-center focus:outline-none"
+                        >
+                          {/* Round Medallion wrapper */}
+                          {item.unlocked ? (
+                            <div className={`relative w-16 h-16 rounded-full flex items-center justify-center p-0.5 bg-gradient-to-tr from-amber-500 via-amber-400 to-orange-400 shadow-sm shadow-orange-500/10 transform transition-all group-hover:scale-105 group-active:scale-95 ${
+                              isSelected ? "ring-4 ring-orange-500/30" : "ring-2 ring-white"
                             }`}>
-                              {item.title}
-                            </span>
+                              <div className="absolute inset-[3px] rounded-full border border-amber-400 bg-gradient-to-br from-amber-50 to-orange-100/30 flex items-center justify-center">
+                                <span className="text-2xl drop-shadow-sm select-none">
+                                  {item.icon}
+                                </span>
+                              </div>
+                              <div className="absolute bottom-0.5 right-1 text-[7px] animate-pulse">✨</div>
+                            </div>
+                          ) : (
+                            <div className={`relative w-16 h-16 rounded-full flex items-center justify-center bg-slate-100 border border-slate-200 transform transition-all opacity-60 group-hover:opacity-85 ${
+                              isSelected ? "ring-4 ring-slate-400/30" : ""
+                            }`}>
+                              <div className="absolute inset-[3px] rounded-full bg-slate-50 flex items-center justify-center filter grayscale opacity-60">
+                                <span className="text-xl select-none">
+                                  {item.icon}
+                                </span>
+                              </div>
+                              <div className="absolute -bottom-1 -right-1 bg-slate-200 border border-slate-300 text-slate-500 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[8px] font-extrabold shadow-sm">
+                                🔒
+                              </div>
+                            </div>
+                          )}
 
-                            {/* Target info */}
-                            <span className="text-[8px] font-bold text-slate-400 block mt-0.5 text-center leading-none">
-                              {item.unlocked ? item.date || "Unlocked" : `${item.currentValue}/${item.targetValue}`}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                          {/* Title */}
+                          <span className={`text-[10px] font-extrabold leading-tight pt-1.5 tracking-tight line-clamp-1 block w-full text-center ${
+                            item.unlocked ? "text-slate-800 group-hover:text-orange-600" : "text-slate-400"
+                          }`}>
+                            {item.title}
+                          </span>
+
+                          {/* Progress label */}
+                          <span className="text-[8px] font-bold text-slate-400 block mt-0.5 text-center leading-none">
+                            {item.unlocked ? item.date || "Unlocked" : `${item.currentValue}/${item.targetValue}`}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 );
-              })}
-            </div>
+              })()}
 
-            {/* Dynamic details section inline below the medallions */}
-            <AnimatePresence>
+              {/* Detail drawer inline */}
               {(() => {
                 const selectedItem = achievements.find(a => a.id === selectedAchievementId);
-                if (!selectedItem) return null;
+                if (!selectedItem || selectedItem.category !== selectedCategorySeeAll) return null;
                 return (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="bg-white p-5 rounded-3xl border border-slate-200 shadow-md space-y-3 max-w-xl transition-all relative mt-2"
+                    className="bg-white p-5 rounded-3xl border border-slate-205 shadow-md space-y-3 max-w-xl transition-all relative mt-4"
                   >
                     <button
                       onClick={() => setSelectedAchievementId(null)}
@@ -2790,10 +3720,10 @@ export function SocialScreen({
                       <p className="text-xs font-semibold text-slate-600">{selectedItem.helperText}</p>
                     </div>
 
-                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200">
+                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-205">
                       <div
                         className={`h-full rounded-full transition-all duration-300 ${
-                          selectedItem.unlocked ? "bg-emerald-500" : "bg-indigo-600"
+                          selectedItem.unlocked ? "bg-emerald-500" : "bg-indigo-650"
                         }`}
                         style={{ width: `${Math.round(Math.min(100, (selectedItem.currentValue / selectedItem.targetValue) * 100))}%` }}
                       />
@@ -2830,8 +3760,267 @@ export function SocialScreen({
                   </motion.div>
                 );
               })()}
-            </AnimatePresence>
-          </div>
+            </div>
+          ) : (
+            // ─── STANDARD REWARDS DASHBOARD VIEW ───
+            <div className="space-y-6 pt-2 select-none animate-in fade-in duration-300">
+              {/* Simple Flat Header */}
+              <div className="border-b border-slate-200 pb-2.5">
+                <span className="text-[10px] font-black text-indigo-600 tracking-wider uppercase">
+                  Community Trophy Cabinet
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight leading-none mt-1">
+                  Rewards & Achievements
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold mt-1">
+                  Complete social milestones to unlock collectible medallions, exclusive tags, and claim XP/Coin boosts.
+                </p>
+
+                {/* Embedded Progress bar (flat) */}
+                <div className="max-w-md mt-3.5 space-y-1.5 bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
+                  <div className="flex justify-between text-[10px] font-black tracking-wide text-slate-500 uppercase">
+                    <span>XP REWARDS UNLOCKED</span>
+                    <span>{Math.round((achievements.filter(a => a.unlocked).length / achievements.length) * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200/60 h-3 rounded-full overflow-hidden border border-slate-300 p-0.5">
+                    <div 
+                      className="bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${(achievements.filter(a => a.unlocked).length / achievements.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Flat filter pill buttons */}
+              <div className="flex gap-2 max-w-sm">
+                {(["all", "unlocked", "locked"] as const).map((filterOpt) => (
+                  <button
+                    key={filterOpt}
+                    onClick={() => {
+                      setAchievementFilter(filterOpt);
+                      vibrate(12);
+                      if (play) play("click");
+                    }}
+                    className={`flex-1 py-1.5 text-center text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
+                      achievementFilter === filterOpt
+                        ? "bg-orange-500 text-white shadow-sm"
+                        : "bg-slate-200/50 text-slate-600 hover:text-slate-800 hover:bg-slate-200"
+                    }`}
+                  >
+                    {filterOpt === "all" ? "🌐 All" : filterOpt === "unlocked" ? "✅ Unlocked" : "🔒 Locked"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Render dynamic inline list of categories with HORIZONTAL scrolling tracks and 'See All' triggers */}
+              <div className="space-y-6">
+                {[
+                  { id: "exploration", name: "Exploration" },
+                  { id: "community", name: "Building Community" },
+                  { id: "streak", name: "Streak Progress" },
+                  { id: "getting_started", name: "Getting Started" },
+                  { id: "moderation", name: "Community Moderation" }
+                ].map((cat) => {
+                  const categoryBadges = achievements.filter(a => a.category === cat.id);
+                  const filteredBadges = categoryBadges.filter((item) => {
+                    if (achievementFilter === "unlocked") return item.unlocked;
+                    if (achievementFilter === "locked") return !item.unlocked;
+                    return true;
+                  });
+
+                  if (filteredBadges.length === 0) return null;
+
+                  const totalUnlocked = categoryBadges.filter(b => b.unlocked).length;
+
+                  return (
+                    <div key={cat.id} className="space-y-2.5">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-sm text-slate-800 uppercase tracking-tight">
+                            {cat.name}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-bold bg-slate-100 px-1.5 py-0.5 rounded">
+                            {totalUnlocked}/{categoryBadges.length} Active
+                          </span>
+                        </div>
+                        
+                        <button
+                          onClick={() => {
+                            setSelectedCategorySeeAll(cat.id);
+                            setSelectedAchievementId(null);
+                            vibrate(12);
+                            if (play) play("click");
+                          }}
+                          className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 hover:underline flex items-center gap-1 uppercase tracking-wider"
+                        >
+                          See All ({categoryBadges.length}) ➔
+                        </button>
+                      </div>
+
+                      {/* Horizontal Scrolling track of category badges (strictly no bounds or inner wrapper boxes!) */}
+                      <div className="flex items-start gap-4 overflow-x-auto pb-3 pt-1 scrollbar-none snap-x touch-pan-x scroll-smooth">
+                        {filteredBadges.map((item) => {
+                          const isSelected = selectedAchievementId === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => {
+                                setSelectedAchievementId(isSelected ? null : item.id);
+                                vibrate(18);
+                                if (play) play("click");
+                              }}
+                              className="flex flex-col items-center group w-20 text-center focus:outline-none snap-start shrink-0"
+                            >
+                              {/* Round Medallion wrapper */}
+                              {item.unlocked ? (
+                                <div className={`relative w-16 h-16 rounded-full flex items-center justify-center p-0.5 bg-gradient-to-tr from-amber-500 via-amber-400 to-orange-400 shadow-sm shadow-orange-500/10 transform transition-all group-hover:scale-105 group-active:scale-95 ${
+                                  isSelected ? "ring-4 ring-orange-500/30" : "ring-2 ring-white"
+                                }`}>
+                                  <div className="absolute inset-[3px] rounded-full border border-amber-400 bg-gradient-to-br from-amber-50 to-orange-100/30 flex items-center justify-center">
+                                    <span className="text-2xl drop-shadow-sm select-none animate-in fade-in">
+                                      {item.icon}
+                                    </span>
+                                  </div>
+                                  <div className="absolute bottom-0.5 right-1 text-[7px] animate-pulse">✨</div>
+                                </div>
+                              ) : (
+                                <div className={`relative w-16 h-16 rounded-full flex items-center justify-center bg-slate-100 border border-slate-200 transform transition-all opacity-60 group-hover:opacity-85 ${
+                                  isSelected ? "ring-4 ring-slate-400/30" : ""
+                                }`}>
+                                  <div className="absolute inset-[3px] rounded-full bg-slate-50 flex items-center justify-center filter grayscale opacity-60">
+                                    <span className="text-xl select-none">
+                                      {item.icon}
+                                    </span>
+                                  </div>
+                                  <div className="absolute -bottom-1 -right-1 bg-slate-200 border border-slate-300 text-slate-500 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[8px] font-extrabold shadow-sm">
+                                    🔒
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Title label underneath */}
+                              <span className={`text-[10px] font-extrabold leading-tight pt-1.5 tracking-tight line-clamp-1 block w-full text-center ${
+                                item.unlocked ? "text-slate-800 group-hover:text-orange-600" : "text-slate-400"
+                              }`}>
+                                {item.title}
+                              </span>
+
+                              {/* Progress details indicator */}
+                              <span className="text-[8px] font-bold text-slate-400 block mt-0.5 text-center leading-none">
+                                {item.unlocked ? item.date || "Unlocked" : `${item.currentValue}/${item.targetValue}`}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Dynamic details section inline below the medallions */}
+              <AnimatePresence>
+                {(() => {
+                  const selectedItem = achievements.find(a => a.id === selectedAchievementId);
+                  if (!selectedItem) return null;
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="bg-white p-5 rounded-3xl border border-slate-200 shadow-md space-y-3 max-w-xl transition-all relative mt-2"
+                    >
+                      <button
+                        onClick={() => setSelectedAchievementId(null)}
+                        className="absolute top-4 right-4 p-1 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-all"
+                        title="Close Detail Panel"
+                      >
+                        <X size={14} />
+                      </button>
+
+                      <div className="flex items-center gap-3.5">
+                        {selectedItem.unlocked ? (
+                          <div className="w-14 h-14 rounded-full flex items-center justify-center p-0.5 bg-gradient-to-tr from-amber-400 to-orange-500 shadow-sm animate-bounce">
+                            <div className="absolute inset-[3px] rounded-full bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
+                              <span className="text-2xl select-none">
+                                {selectedItem.icon}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-14 h-14 rounded-full flex items-center justify-center bg-slate-100 border border-slate-200 opacity-70">
+                            <span className="text-xl select-none filter grayscale">
+                              {selectedItem.icon}
+                            </span>
+                          </div>
+                        )}
+
+                        <div>
+                          <h4 className="text-base font-black text-slate-800 leading-none">
+                            {selectedItem.title}
+                          </h4>
+                          <span className={`inline-block text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full mt-1.5 ${
+                            selectedItem.unlocked
+                              ? "bg-emerald-50 border border-emerald-150 text-emerald-600"
+                              : "bg-slate-100 border border-slate-200 text-slate-500"
+                          }`}>
+                            {selectedItem.unlocked ? "🏆 Unlocked Trophy" : "🔒 Action Required"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="text-xs font-semibold text-slate-500 leading-relaxed pt-1">
+                        {selectedItem.description}
+                      </p>
+
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-150 space-y-0.5">
+                        <span className="text-[8px] uppercase tracking-wider font-black text-indigo-600">Requirement</span>
+                        <p className="text-xs font-semibold text-slate-600">{selectedItem.helperText}</p>
+                      </div>
+
+                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            selectedItem.unlocked ? "bg-emerald-500" : "bg-indigo-600"
+                          }`}
+                          style={{ width: `${Math.round(Math.min(100, (selectedItem.currentValue / selectedItem.targetValue) * 100))}%` }}
+                        />
+                      </div>
+
+                      <div className="flex justify-between items-center text-[9px] font-black text-slate-400 tracking-wider">
+                        <span>Milestone Progress:</span>
+                        <span>{selectedItem.currentValue} / {selectedItem.targetValue}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 bg-orange-50 p-3 rounded-xl border border-orange-100">
+                        <div>
+                          <p className="text-[8px] uppercase font-black text-orange-600 tracking-wider">Reward Claim</p>
+                          <p className="text-xs text-slate-700 font-bold">+{selectedItem.rewardXP} XP & +{selectedItem.rewardCoins} Coins</p>
+                        </div>
+                        {selectedItem.unlocked ? (
+                          <button
+                            onClick={() => {
+                              vibrate(30);
+                              if (play) play("click");
+                              setSelectedAchievementId(null);
+                              showToast(`Successfully unlocked & synchronized ${selectedItem.title}!`);
+                            }}
+                            className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
+                          >
+                            Claim Boost
+                          </button>
+                        ) : (
+                          <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-400 rounded-md text-[8px] font-bold">
+                            Locked
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })()}
+              </AnimatePresence>
+            </div>
+          )
         ) : activeTab === "profile" ? (
           // VIEW: USER PROFILE SECTION
           <div className="space-y-6 animate-in fade-in duration-200">
