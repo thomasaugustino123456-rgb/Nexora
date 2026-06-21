@@ -363,6 +363,7 @@ export function SocialScreen({
 
   const achievements: Array<{
     id: string;
+    category: string;
     title: string;
     description: string;
     icon: string;
@@ -374,108 +375,260 @@ export function SocialScreen({
     currentValue: number;
     targetValue: number;
     unlocked: boolean;
+    date: string;
   }> = useMemo(() => {
     return [
+      // 1. Exploration
       {
-        id: "first_spark",
-        title: "First Spark ⚡",
-        description: "Ignited your focus presence by creating your first community milestone or post.",
-        icon: "⚡",
-        bgGradient: "from-amber-400 to-orange-500",
-        metricName: "Post Count",
-        helperText: "Create 1 post under any community circle, public feed, or milestone announcement.",
+        id: "banana_enthusiast",
+        category: "exploration",
+        title: "Banana Enthusiast",
+        description: "Earned by keeping close track of focus analytics, exploring metrics, and being a top explorer.",
+        icon: "🍌",
+        bgGradient: "from-amber-400 via-yellow-350 to-orange-500",
+        metricName: "Visits",
+        helperText: "Keep up-to-date with your explore metrics screen.",
         rewardXP: 100,
         rewardCoins: 50,
-        currentValue: myPostsCount,
+        currentValue: 1,
         targetValue: 1,
-        unlocked: myPostsCount >= 1,
+        unlocked: true,
+        date: "5/24/26",
       },
       {
-        id: "wordsmith",
-        title: "Wordsmith Chronicler 📝",
-        description: "Shared multiple detailed insights or stories with the community.",
-        icon: "📝",
-        bgGradient: "from-indigo-400 via-purple-500 to-indigo-600",
-        metricName: "Posts Shared",
-        helperText: "Share 5 posts to build your focus diary feed.",
-        rewardXP: 300,
-        rewardCoins: 150,
-        currentValue: myPostsCount,
-        targetValue: 5,
-        unlocked: myPostsCount >= 5,
-      },
-      {
-        id: "chat_catalyst",
-        title: "Conversation Catalyst 💬",
-        description: "Contributed meaningful answers, feedback, or dialogue to other users' threads.",
-        icon: "💬",
-        bgGradient: "from-teal-400 to-emerald-600",
-        metricName: "Comments Posted",
-        helperText: "Write 3 helpful comments or replies on any threads.",
+        id: "new_share",
+        category: "exploration",
+        title: "New Share",
+        description: "Awarded when overlaying logs or sharing insights with the sub-community spaces.",
+        icon: "↗️",
+        bgGradient: "from-teal-400 via-emerald-300 to-green-500",
+        metricName: "Shares",
+        helperText: "Publish 1 or more posts to start sharing discussions.",
         rewardXP: 150,
         rewardCoins: 75,
+        currentValue: myPostsCount >= 1 ? 1 : 0,
+        targetValue: 1,
+        unlocked: myPostsCount >= 1,
+        date: "5/23/26",
+      },
+      {
+        id: "conv_catalyst",
+        category: "exploration",
+        title: "Conversation Catalyst",
+        description: "Ignite interesting discussions or comments on multiple community threads.",
+        icon: "💬",
+        bgGradient: "from-indigo-400 via-pink-400 to-purple-500",
+        metricName: "Comments",
+        helperText: "Add 3 comments onto other circles' shared posts.",
+        rewardXP: 200,
+        rewardCoins: 100,
         currentValue: totalCommentsCount,
         targetValue: 3,
         unlocked: totalCommentsCount >= 3,
+        date: "5/23/26",
+      },
+
+      // 2. Building Community
+      {
+        id: "top_commenter",
+        category: "community",
+        title: "Top 25% Commenter",
+        description: "Consistently contribute commentary with dynamic value to ongoing community discussions.",
+        icon: "👑",
+        bgGradient: "from-purple-500 via-fuchsia-400 to-indigo-600",
+        metricName: "Comments",
+        helperText: "Contribute 5 or more comments across community circles to unlock.",
+        rewardXP: 300,
+        rewardCoins: 150,
+        currentValue: totalCommentsCount,
+        targetValue: 5,
+        unlocked: totalCommentsCount >= 5,
+        date: "5/25/26",
       },
       {
-        id: "group_explorer",
-        title: "Group Explorer 🏮",
-        description: "Joined specialized sub-communities tailored to unique focus and breath metrics.",
-        icon: "🏮",
-        bgGradient: "from-fuchsia-400 to-pink-600",
-        metricName: "Spaces Joined",
-        helperText: "Join 2 or more sub-community circles or chatrooms.",
-        rewardXP: 200,
-        rewardCoins: 100,
-        currentValue: joinedGroupsCount,
-        targetValue: 2,
-        unlocked: joinedGroupsCount >= 2,
+        id: "top_poster",
+        category: "community",
+        title: "Top 25% Poster",
+        description: "Express your ideas frequently and gather high engagement levels.",
+        icon: "📝",
+        bgGradient: "from-sky-400 via-blue-500 to-indigo-600",
+        metricName: "Posts",
+        helperText: "Share 3 or more detailed focus logs in any circles.",
+        rewardXP: 300,
+        rewardCoins: 150,
+        currentValue: myPostsCount,
+        targetValue: 3,
+        unlocked: myPostsCount >= 3,
+        date: "5/25/26",
       },
       {
-        id: "pillar_community",
-        title: "Pillar of Nexora 🏛️",
-        description: "Created and launched a new sub-community space for other folks to gather.",
-        icon: "🏛️",
-        bgGradient: "from-rose-500 to-red-600",
-        metricName: "Circles Founded",
-        helperText: "Create your own sub-community circle or custom group.",
-        rewardXP: 500,
-        rewardCoins: 250,
-        currentValue: createdCirclesCount,
-        targetValue: 1,
-        unlocked: createdCirclesCount >= 1,
+        id: "top_contributor",
+        category: "community",
+        title: "Top 10% Contributor",
+        description: "Reach elite heights by gathering high-level reputation points across Nexora.",
+        icon: "🏆",
+        bgGradient: "from-yellow-400 via-amber-500 to-orange-600",
+        metricName: "XP Points",
+        helperText: "Acquire a lifetime sum of 1,000 points or more on your user profile.",
+        rewardXP: 1000,
+        rewardCoins: 500,
+        currentValue: totalPoints,
+        targetValue: 1000,
+        unlocked: totalPoints >= 1000,
+        date: "5/26/26",
       },
+
+      // 3. Focus Streak
       {
-        id: "consistency_guardian",
-        title: "Consistency Guardian 🔥",
-        description: "Maintained a high-performance mental focus streak across days.",
-        icon: "🔥",
-        bgGradient: "from-orange-500 to-rose-600",
-        metricName: "Current Streak",
-        helperText: "Achieve a current day focus streak of 3 or higher.",
+        id: "streak_5",
+        category: "streak",
+        title: "5-Day Streak",
+        description: "Keep the mental clarity check-ins burning for five consecutive days.",
+        icon: "🕯️",
+        bgGradient: "from-orange-400 via-amber-400 to-red-500",
+        metricName: "Streak",
+        helperText: "Maintain a current streak of 5 days or more.",
         rewardXP: 250,
         rewardCoins: 125,
         currentValue: currentStreak,
-        targetValue: 3,
-        unlocked: currentStreak >= 3,
+        targetValue: 5,
+        unlocked: currentStreak >= 5,
+        date: "5/22/26",
       },
       {
-        id: "social_star",
-        title: "Community Star 📈",
-        description: "Earned significant attention! One of your posts received high conversation.",
-        icon: "📈",
-        bgGradient: "from-cyan-400 to-blue-500",
-        metricName: "Max Comments on a Post",
-        helperText: "Receive 3 or more comments/replies of interest on any single self-created post.",
-        rewardXP: 400,
-        rewardCoins: 200,
-        currentValue: popularPostMetric.maxComments,
-        targetValue: 3,
-        unlocked: popularPostMetric.maxComments >= 3,
+        id: "streak_10",
+        category: "streak",
+        title: "10-Day Streak",
+        description: "Mindfulness practitioner! Maintain the streak flame glowing persistently.",
+        icon: "🔥",
+        bgGradient: "from-red-500 via-orange-400 to-yellow-500",
+        metricName: "Streak",
+        helperText: "Maintain a current habit streak of 10 days or more.",
+        rewardXP: 500,
+        rewardCoins: 250,
+        currentValue: currentStreak,
+        targetValue: 10,
+        unlocked: currentStreak >= 10,
+        date: "5/27/26",
+      },
+      {
+        id: "streak_20",
+        category: "streak",
+        title: "20-Day Streak",
+        description: "A supreme champion status of solid consistency and focus power.",
+        icon: "👑",
+        bgGradient: "from-blue-600 via-indigo-500 to-violet-600",
+        metricName: "Streak",
+        helperText: "Maintain an ultimate level streak of 20 days or more.",
+        rewardXP: 1000,
+        rewardCoins: 500,
+        currentValue: currentStreak,
+        targetValue: 20,
+        unlocked: currentStreak >= 20,
+        date: "5/28/26",
+      },
+
+      // 4. Getting Started
+      {
+        id: "det_doggo",
+        category: "getting_started",
+        title: "Detective Doggo",
+        description: "Sleuth active settings page to fill your display name bio and configure preferences.",
+        icon: "🐕",
+        bgGradient: "from-yellow-400 via-orange-300 to-amber-500",
+        metricName: "Profile Setup",
+        helperText: "Configure custom username or bio settings.",
+        rewardXP: 100,
+        rewardCoins: 50,
+        currentValue: 1,
+        targetValue: 1,
+        unlocked: true,
+        date: "5/23/26",
+      },
+      {
+        id: "pers_of_interests",
+        category: "getting_started",
+        title: "Person of Interests",
+        description: "Add multiple interested categories or customize your user profile avatar.",
+        icon: "🎨",
+        bgGradient: "from-pink-500 via-purple-400 to-rose-500",
+        metricName: "Setup Image",
+        helperText: "Customize display portrait picture under settings.",
+        rewardXP: 100,
+        rewardCoins: 50,
+        currentValue: 1,
+        targetValue: 1,
+        unlocked: true,
+        date: "5/18/26",
+      },
+      {
+        id: "newcomer",
+        category: "getting_started",
+        title: "Newcomer",
+        description: "Introduce yourself to circles and successfully join at least one focus circle.",
+        icon: "🌱",
+        bgGradient: "from-green-400 via-emerald-300 to-teal-500",
+        metricName: "Groups Joined",
+        helperText: "Join at least one sub-community space to earn newcomer badge.",
+        rewardXP: 100,
+        rewardCoins: 50,
+        currentValue: joinedGroupsCount >= 1 ? 1 : 0,
+        targetValue: 1,
+        unlocked: joinedGroupsCount >= 1,
+        date: "5/18/26",
+      },
+
+      // 5. Community Moderation
+      {
+        id: "base_bag",
+        category: "moderation",
+        title: "Basecamp Bag",
+        description: "Unlock core moderation tools, terms of compliance, and safety standards guide.",
+        icon: "🎒",
+        bgGradient: "from-sky-400 to-slate-500",
+        metricName: "Rules Prepared",
+        helperText: "Equip your basecamp safety awareness handbook.",
+        rewardXP: 100,
+        rewardCoins: 50,
+        currentValue: 1,
+        targetValue: 1,
+        unlocked: true,
+        date: "5/20/26",
+      },
+      {
+        id: "grand_sprouting",
+        category: "moderation",
+        title: "Grand Sprouting",
+        description: "Host and monitor your own custom focus circle space or sub-community.",
+        icon: "🌿",
+        bgGradient: "from-green-500 via-emerald-450 to-lime-500",
+        metricName: "Circle Creation",
+        helperText: "Sprout a sub-community room in Nexora.",
+        rewardXP: 300,
+        rewardCoins: 150,
+        currentValue: createdCirclesCount,
+        targetValue: 1,
+        unlocked: createdCirclesCount >= 1,
+        date: "5/25/26",
+      },
+      {
+        id: "support_hero",
+        category: "moderation",
+        title: "Support Hero",
+        description: "Help moderators filter non-focus content by reporting potential guideline infractions.",
+        icon: "🛡️",
+        bgGradient: "from-slate-600 via-indigo-900 to-slate-800",
+        metricName: "Reports Filed",
+        helperText: "Contribute reports or flags when guidelines are broken.",
+        rewardXP: 250,
+        rewardCoins: 125,
+        currentValue: 0,
+        targetValue: 1,
+        unlocked: false,
+        date: "",
       },
     ];
-  }, [myPostsCount, totalCommentsCount, joinedGroupsCount, createdCirclesCount, currentStreak, popularPostMetric]);
+  }, [myPostsCount, totalCommentsCount, joinedGroupsCount, createdCirclesCount, currentStreak, totalPoints]);
 
   // Listen to Nexus Group shortcut events and local storage routing
   useEffect(() => {
@@ -1642,6 +1795,327 @@ export function SocialScreen({
       </div>
     );
   };
+
+  if (showAchievementsBoard) {
+    const categories = [
+      { id: "exploration", name: "Exploration" },
+      { id: "community", name: "Building Community" },
+      { id: "streak", name: "Nexora Streak" },
+      { id: "getting_started", name: "Getting Started" },
+      { id: "moderation", name: "Community Moderation" }
+    ];
+
+    const selectedItem = achievements.find(a => a.id === selectedAchievementId);
+
+    return (
+      <div className="w-full min-h-screen bg-[#F0F2F5] text-slate-800 select-none pb-24 font-sans animate-in fade-in duration-300">
+        {/* ─── DEDICATED REDDIT-ACCURATE HEADER ─── */}
+        <header className="flex items-center justify-between px-4 py-3.5 bg-white border-b border-slate-200 sticky top-0 z-[600] shadow-sm">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setShowAchievementsBoard(false);
+                setSelectedAchievementId(null);
+                if (play) play("click");
+              }}
+              className="p-2 hover:bg-slate-100 rounded-full text-slate-850 active:scale-95 transition-all"
+              title="Back to Community Hub"
+            >
+              <ArrowLeft size={22} />
+            </button>
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-slate-900 flex items-center gap-2">
+                <span>Achievements</span>
+                <span className="text-xs px-2.5 py-0.5 bg-indigo-50 border border-indigo-150 text-indigo-600 rounded-full font-extrabold tracking-wider uppercase scale-90 sm:scale-100">
+                  REWARDS
+                </span>
+              </h1>
+            </div>
+          </div>
+          <button 
+            className="p-2 hover:bg-slate-100 rounded-full text-slate-705 active:scale-95 transition-all"
+            title="Options"
+          >
+            <MoreVertical size={20} />
+          </button>
+        </header>
+
+        {/* ─── SCROLLABLE INNER BODY ─── */}
+        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+          
+          {/* USER PROGRESS SUMMARY (Reddit styled profile bar) */}
+          <div className="bg-white p-5 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-5 animate-in slide-in-from-top duration-300">
+            <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+              <div className="relative">
+                <img
+                  src={currentUserPhoto || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"}
+                  alt="user"
+                  className="w-16 h-16 rounded-full border-2 border-slate-100 object-cover ring-4 ring-indigo-50/50"
+                />
+                <div className="absolute -bottom-1 -right-1 bg-amber-400 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md border border-white">
+                  🏆
+                </div>
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="font-extrabold text-slate-900 text-base leading-tight">
+                  {currentUserName}
+                </h4>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                  Champion Badge Collector • LV {stats?.level || 1}
+                </p>
+                <p className="text-xs text-slate-500 font-medium pt-0.5">
+                  You have unlocked <strong className="text-indigo-600 font-black">{achievements.filter(a => a.unlocked).length}</strong> of <strong className="text-slate-905">{achievements.length}</strong> achievements
+                </p>
+              </div>
+            </div>
+
+            {/* Overall progress visualizer inside banner row */}
+            <div className="w-full md:w-72 space-y-2 shrink-0">
+              <div className="flex justify-between items-center text-[10px] font-black text-slate-400 tracking-wider">
+                <span>XP REWARDS UNLOCKED</span>
+                <span>{Math.round((achievements.filter(a => a.unlocked).length / achievements.length) * 100)}%</span>
+              </div>
+              <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-150 p-0.5">
+                <div 
+                  className="bg-gradient-to-r from-orange-505 via-amber-400 to-yellow-400 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${(achievements.filter(a => a.unlocked).length / achievements.length) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* FILTER BUTTONS ROW (All, Unlocked, Locked) */}
+          <div className="flex gap-2 p-1 bg-white rounded-2xl border border-slate-200 max-w-sm">
+            {(["all", "unlocked", "locked"] as const).map((filterOpt) => (
+              <button
+                key={filterOpt}
+                onClick={() => {
+                  setAchievementFilter(filterOpt);
+                  vibrate(12);
+                  if (play) play("click");
+                }}
+                className={`flex-1 py-2 text-center text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${
+                  achievementFilter === filterOpt
+                    ? "bg-orange-550 text-white bg-orange-500 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                }`}
+              >
+                {filterOpt === "all" ? "🌐 All" : filterOpt === "unlocked" ? "✅ Unlocked" : "🔒 Locked"}
+              </button>
+            ))}
+          </div>
+
+          {/* DYNAMIC CATEGORY BLOCKS (Flat scrolling, no nested heights or custom scroll scopes!) */}
+          <div className="space-y-4">
+            {categories.map((cat) => {
+              const categoryBadges = achievements.filter(a => a.category === cat.id);
+              const filteredBadges = categoryBadges.filter((item) => {
+                if (achievementFilter === "unlocked") return item.unlocked;
+                if (achievementFilter === "locked") return !item.unlocked;
+                return true;
+              });
+
+              if (filteredBadges.length === 0) return null;
+
+              const totalUnlocked = categoryBadges.filter(b => b.unlocked).length;
+
+              return (
+                <div 
+                  key={cat.id} 
+                  className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-xs space-y-4 animate-in fade-in duration-200"
+                >
+                  {/* Category Title Header */}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                      <h3 className="font-extrabold text-base text-slate-900 tracking-tight">
+                        {cat.name}
+                      </h3>
+                      <p className="text-xs text-slate-400 font-bold mt-0.5">
+                        {totalUnlocked} of {categoryBadges.length} unlocked
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-black text-indigo-650 tracking-wider uppercase hover:underline cursor-pointer">
+                      View all
+                    </span>
+                  </div>
+
+                  {/* High fidelity Concentric Reddit Medallions (Wrapping grid - no inner scroll boundaries!) */}
+                  <div className="flex flex-wrap gap-x-5 gap-y-7 justify-start items-start pt-2">
+                    {filteredBadges.map((item) => {
+                      const isSelected = selectedAchievementId === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setSelectedAchievementId(item.id);
+                            vibrate(18);
+                            if (play) play("click");
+                          }}
+                          className="flex flex-col items-center group w-24 text-center focus:outline-none"
+                        >
+                          {/* 3D Shiny Concentric Round Medallion Container */}
+                          {item.unlocked ? (
+                            <div className={`relative w-18 h-18 sm:w-20 sm:h-20 rounded-full flex items-center justify-center p-0.5 bg-gradient-to-tr from-amber-500 via-yellow-3.5 to-orange-400 shadow-md shadow-orange-500/10 transform transition-all group-hover:scale-105 group-active:scale-95 ${
+                              isSelected ? "ring-4 ring-orange-500/30 scale-102" : "ring-2 ring-white"
+                            }`}>
+                              {/* Glowing Inner Concentric Golden Bevel */}
+                              <div className="absolute inset-[3px] rounded-full border border-amber-400/80 bg-gradient-to-b from-white/30 to-transparent pointer-events-none z-10" />
+                              <div className="absolute inset-[5px] rounded-full border border-amber-600/15 bg-gradient-to-br from-amber-100/50 via-amber-50/20 to-orange-100/40 flex items-center justify-center">
+                                <span className="text-3xl drop-shadow-md select-none transform group-hover:scale-110 transition-transform">
+                                  {item.icon}
+                                </span>
+                              </div>
+                              {/* Glittery Sparkle indicators */}
+                              <div className="absolute bottom-1 right-1.5 text-[8px] animate-pulse">✨</div>
+                              <div className="absolute top-1 left-2 text-[6px] animate-pulse">⭐</div>
+                            </div>
+                          ) : (
+                            <div className={`relative w-18 h-18 sm:w-20 sm:h-20 rounded-full flex items-center justify-center bg-slate-100 border border-slate-200 shadow-inner transform transition-all opacity-65 group-hover:opacity-85 ${
+                              isSelected ? "ring-4 ring-slate-400/30 text-slate-400" : ""
+                            }`}>
+                              <div className="absolute inset-[4px] rounded-full bg-slate-50 flex items-center justify-center filter grayscale saturate-0 opacity-65">
+                                <span className="text-2xl select-none">
+                                  {item.icon}
+                                </span>
+                              </div>
+                              {/* Grey Lock Overlay in bottom corner */}
+                              <div className="absolute -bottom-1 -right-1 bg-slate-205 border border-slate-300 text-slate-500 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[8px] shadow-sm font-extrabold">
+                                🔒
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Medallion title label */}
+                          <span className={`text-[11px] font-black leading-tight pt-2 tracking-tight line-clamp-2 block w-full text-center ${
+                            item.unlocked ? "text-slate-800 group-hover:text-orange-600" : "text-slate-405 text-slate-400"
+                          }`}>
+                            {item.title}
+                          </span>
+
+                          {/* Medallion sub-history info */}
+                          <span className="text-[9px] font-bold text-slate-400 block mt-0.5 text-center leading-none">
+                            {item.unlocked ? item.date || "Unlocked" : `${item.currentValue}/${item.targetValue}`}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* DETAIL PREVIEW DRAWER (Beautiful overlay card layout!) */}
+          <AnimatePresence>
+            {selectedItem && (
+              <motion.div 
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 15 }}
+                className="bg-white p-6 rounded-[2.5rem] border border-slate-200/85 shadow-xl space-y-4 max-w-xl mx-auto mt-6 relative"
+              >
+                {/* Close Button top-right */}
+                <button 
+                  onClick={() => setSelectedAchievementId(null)}
+                  className="absolute top-5 right-5 p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-705 transition-all active:scale-95"
+                >
+                  <X size={15} />
+                </button>
+
+                <div className="flex items-center gap-4">
+                  {/* Large dynamic medallion */}
+                  {selectedItem.unlocked ? (
+                    <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-full flex items-center justify-center p-0.5 bg-gradient-to-tr from-amber-400 via-yellow-350 to-orange-500 shadow-lg shadow-orange-500/10 ring-4 ring-orange-50">
+                      <div className="absolute inset-[3px] rounded-full border border-amber-405 bg-gradient-to-br from-amber-50 to-orange-100/40 flex items-center justify-center z-10">
+                        <span className="text-3px sm:text-4xl select-none transform hover:rotate-12 transition-transform">
+                          {selectedItem.icon}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-full flex items-center justify-center bg-slate-100 border border-slate-205 shadow-inner opacity-75">
+                      <div className="absolute inset-[3px] rounded-full bg-slate-50 flex items-center justify-center filter grayscale saturate-0 opacity-70">
+                        <span className="text-2xl sm:text-3xl select-none">
+                          {selectedItem.icon}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900 leading-tight">
+                      {selectedItem.title}
+                    </h4>
+                    <span className={`inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full mt-1 ${
+                      selectedItem.unlocked 
+                        ? "bg-emerald-50 border border-emerald-150 text-emerald-600 animate-pulse" 
+                        : "bg-slate-100 border border-slate-200 text-slate-500"
+                    }`}>
+                      {selectedItem.unlocked ? "🏆 UNLOCKED CABINET BADGE" : "🔒 IN PROGRESS"}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-605 leading-relaxed font-semibold text-slate-500">
+                  {selectedItem.description}
+                </p>
+
+                {/* Criteria text */}
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-150 space-y-1">
+                  <p className="text-[10px] uppercase tracking-wider font-black text-indigo-600">HOW TO UNLOCK</p>
+                  <p className="text-xs font-semibold text-slate-505 text-slate-600">{selectedItem.helperText}</p>
+                </div>
+
+                {/* Progress bar inside details */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between items-center text-[10px] font-black tracking-wider text-slate-400">
+                    <span>PROGRESS STATUS</span>
+                    <span>{selectedItem.currentValue} / {selectedItem.targetValue} ({Math.round(Math.min(100, (selectedItem.currentValue / selectedItem.targetValue) * 100))}%)</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        selectedItem.unlocked ? "bg-emerald-500" : "bg-indigo-600"
+                      }`}
+                      style={{ width: `${Math.round(Math.min(100, (selectedItem.currentValue / selectedItem.targetValue) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Estimated rewards claim CTA */}
+                <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-amber-500/5 to-orange-500/5 p-4 rounded-2xl border border-amber-500/10">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base animate-pulse">🎁</span>
+                    <div>
+                      <p className="text-[9px] uppercase font-black text-orange-600 tracking-wider">ESTIMATED REWARD BOOSTS</p>
+                      <p className="text-xs text-slate-700 font-extrabold">+{selectedItem.rewardXP} XP & +{selectedItem.rewardCoins} Coins</p>
+                    </div>
+                  </div>
+                  {selectedItem.unlocked ? (
+                    <button
+                      onClick={() => {
+                        vibrate(30);
+                        if (play) play("click");
+                        setSelectedAchievementId(null);
+                        showToast(`Successfully unlocked & synchronized ${selectedItem.title}!`);
+                      }}
+                      className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-orange-500/10 active:scale-95"
+                    >
+                      CLAIM BOOST
+                    </button>
+                  ) : (
+                    <span className="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-400 rounded-lg text-[9px] font-extrabold tracking-wider">
+                      LOCKED 🔒
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    );
+  }
 
   return (
     // Clean, natural wrapper that flows seamlessly with the app without custom bounding bg boxes or scrolling overrides
@@ -3124,220 +3598,6 @@ export function SocialScreen({
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* ─── REDDIT-STYLE ACHIEVEMENTS BOARD OVERLAY MODAL ─── */}
-      {showAchievementsBoard && (
-        <div className="fixed inset-0 bg-slate-950/80 overflow-y-auto backdrop-blur-sm z-[700] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 text-white rounded-[2.5rem] w-full max-w-2xl p-6 md:p-8 space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
-            
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl text-amber-400 drop-shadow-lg leading-none">🏆</span>
-                <div>
-                  <h3 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                    Trophy Cabinet
-                  </h3>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                    Reddit-Style Community Achievements
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAchievementsBoard(false);
-                  setSelectedAchievementId(null);
-                  if (play) play("click");
-                }}
-                className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full transition-all whitespace-nowrap inline-flex items-center"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Overall summary card */}
-            <div className="bg-slate-950/50 p-4.5 rounded-3xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-center sm:text-left">
-                <p className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">Overall Completion</p>
-                <p className="text-lg font-black text-amber-400 mt-0.5">
-                  {achievements.filter(a => a.unlocked).length} of {achievements.length} Unlocked ({Math.round((achievements.filter(a => a.unlocked).length / achievements.length) * 100 > 100 ? 100 : (achievements.filter(a => a.unlocked).length / achievements.length) * 100)}%)
-                </p>
-              </div>
-              
-              {/* Progress visualizer */}
-              <div className="flex gap-1.5 h-3 items-center w-full sm:w-1/2">
-                {achievements.map((item) => (
-                  <div 
-                    key={item.id}
-                    className={`flex-1 h-3 rounded-full transition-all duration-300 ${
-                      item.unlocked 
-                        ? `bg-gradient-to-r ${item.bgGradient} shadow-xs shadow-orange-500/10` 
-                        : "bg-slate-800"
-                    }`}
-                    title={item.title}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Filter segments */}
-            <div className="flex gap-2 p-1.5 bg-slate-950 rounded-2xl border border-slate-800/80 max-w-md">
-              {(["all", "unlocked", "locked"] as const).map((filterOpt) => (
-                <button
-                  key={filterOpt}
-                  onClick={() => {
-                    setAchievementFilter(filterOpt);
-                    vibrate(10);
-                  }}
-                  className={`flex-1 py-2 text-center text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
-                    achievementFilter === filterOpt
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  {filterOpt === "all" ? "🌐 All" : filterOpt === "unlocked" ? "✅ Unlocked" : "🔒 Locked"}
-                </button>
-              ))}
-            </div>
-
-            {/* Achievements lists / grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {achievements
-                .filter((item) => {
-                  if (achievementFilter === "unlocked") return item.unlocked;
-                  if (achievementFilter === "locked") return !item.unlocked;
-                  return true;
-                })
-                .map((item) => {
-                  const isSelected = selectedAchievementId === item.id;
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => {
-                        setSelectedAchievementId(item.id);
-                        vibrate(20);
-                        if (play) play("click");
-                      }}
-                      className={`p-5 rounded-3xl border text-left cursor-pointer transition-all relative overflow-hidden group space-y-3.5 ${
-                        isSelected 
-                          ? "bg-slate-800/95 border-indigo-505 shadow-md shadow-indigo-500/10 scale-[1.01]" 
-                          : item.unlocked 
-                            ? "bg-slate-950/60 hover:bg-slate-850/40 border-slate-800 hover:border-slate-750" 
-                            : "bg-slate-950/40 border-slate-800/30 filter saturate-50 opacity-75"
-                      }`}
-                    >
-                      {/* background pattern */}
-                      {item.unlocked && (
-                        <div className="absolute -right-8 -bottom-8 w-20 h-20 bg-indigo-500/5 rounded-full blur-xl group-hover:scale-125 transition-transform" />
-                      )}
-
-                      <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-md ${
-                          item.unlocked 
-                            ? `bg-gradient-to-br ${item.bgGradient}` 
-                            : "bg-slate-800 text-slate-500"
-                        }`}>
-                          <span className="text-2xl">{item.icon}</span>
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-extrabold text-sm tracking-tight leading-tight flex items-center gap-1.5 text-white">
-                            {item.title}
-                          </h4>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
-                            {item.metricName}: {item.currentValue} / {item.targetValue}
-                          </p>
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-slate-300 font-medium leading-relaxed line-clamp-2">
-                        {item.description}
-                      </p>
-
-                      {/* Progress bar / Unlock criteria ticker */}
-                      <div className="space-y-1">
-                        <div className="w-full bg-slate-955 h-1.5 rounded-full overflow-hidden border border-slate-800/70">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-300 ${
-                              item.unlocked ? "bg-emerald-500" : "bg-indigo-600"
-                            }`}
-                            style={{ 
-                              width: `${
-                                item.unlocked 
-                                  ? 100 
-                                  : Math.round((item.currentValue / item.targetValue) * 100) > 100 
-                                    ? 100 
-                                    : Math.round((item.currentValue / item.targetValue) * 100)
-                              }%` 
-                            }}
-                          />
-                        </div>
-                        <div className="flex justify-between items-center text-[9px] font-extrabold tracking-wider">
-                          <span className={item.unlocked ? "text-emerald-400" : "text-indigo-400"}>
-                            {item.unlocked ? "🏆 UNLOCKED!" : `${Math.round((item.currentValue / item.targetValue) * 100) > 100 ? 100 : Math.round((item.currentValue / item.targetValue) * 100)}% COMPLETE`}
-                          </span>
-                          <span className="text-slate-500 font-extrabold">
-                            {item.currentValue} / {item.targetValue}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-
-            {/* Expanded Achievement details drawer */}
-            {selectedAchievementId && (() => {
-              const selectedItem = achievements.find(a => a.id === selectedAchievementId);
-              if (!selectedItem) return null;
-              return (
-                <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800 space-y-4 animate-in slide-in-from-bottom-2 duration-250">
-                  <div className="flex items-center gap-3.5">
-                    <div className={`w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-br ${selectedItem.bgGradient} shadow-lg ring-2 ring-white/10`}>
-                      <span className="text-3xl">{selectedItem.icon}</span>
-                    </div>
-                    <div>
-                      <h4 className="text-base font-black text-white">{selectedItem.title}</h4>
-                      <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mt-0.5">
-                        {selectedItem.unlocked ? "✅ Unlocked Badge Cabinet Member!" : "🔒 Quest in Progress"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-300 leading-relaxed font-semibold">
-                    {selectedItem.description}
-                  </p>
-
-                  <div className="p-3 bg-slate-900 rounded-2xl border border-slate-850 space-y-1">
-                    <p className="text-[9px] uppercase tracking-widest font-black text-indigo-400">HOW TO UNLOCK</p>
-                    <p className="text-xs font-semibold text-slate-300">{selectedItem.helperText}</p>
-                  </div>
-
-                  {/* Rewards Row */}
-                  <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-3.5 rounded-2xl border border-amber-500/20">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base animate-pulse">🚀</span>
-                      <div>
-                        <p className="text-[9px] uppercase font-bold text-amber-400 tracking-wider">ESTIMATED REWARD BOOSTS</p>
-                        <p className="text-xs text-slate-300 font-extrabold">+{selectedItem.rewardXP} XP & +{selectedItem.rewardCoins} Coins</p>
-                      </div>
-                    </div>
-                    {selectedItem.unlocked ? (
-                      <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-full text-[9px] font-black uppercase tracking-wider">
-                        CLAIMED ✅
-                      </span>
-                    ) : (
-                      <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/25 text-amber-400 rounded-full text-[9px] font-black uppercase tracking-wider">
-                        LOCKED 🔒
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
           </div>
         </div>
       )}
