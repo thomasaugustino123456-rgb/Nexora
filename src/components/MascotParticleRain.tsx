@@ -1,4 +1,141 @@
 import React, { useEffect, useRef } from "react";
+import { vibrate } from "../lib/vibrate";
+
+let particleAudioCtx: AudioContext | null = null;
+
+function getParticleAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!particleAudioCtx) {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioCtx) {
+      particleAudioCtx = new AudioCtx();
+    }
+  }
+  if (particleAudioCtx && particleAudioCtx.state === "suspended") {
+    particleAudioCtx.resume().catch(() => {});
+  }
+  return particleAudioCtx;
+}
+
+// Cooldown tracker for audio triggers to prevent sonic overloading
+const lastSoundTimes = {
+  coin: 0,
+  leaf: 0,
+  star: 0,
+};
+
+let lastVibrateTime = 0;
+
+function triggerLightVibration() {
+  const now = Date.now();
+  if (now - lastVibrateTime < 60) return; // Prevent excessive buzzing frequencies
+  lastVibrateTime = now;
+  try {
+    vibrate(6); // 6ms lightweight physical haptic feedback tick
+  } catch (e) {
+    console.warn("Vibration feedback failed:", e);
+  }
+}
+
+// 🪙 Tiny high-pitch metal chime
+function playTing() {
+  try {
+    const ctx = getParticleAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1450, now);
+    osc.frequency.exponentialRampToValueAtTime(2100, now + 0.04);
+    
+    // Low, safe volume that remains highly pleasant
+    gainNode.gain.setValueAtTime(0.015, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+    
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    osc.start(now);
+    osc.stop(now + 0.12);
+  } catch (e) {
+    console.warn("Audio error (Coin):", e);
+  }
+}
+
+// 🍃 Soft rustling wing/leaf breeze
+function playWhoosh() {
+  try {
+    const ctx = getParticleAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.linearRampToValueAtTime(240, now + 0.15);
+    
+    gainNode.gain.setValueAtTime(0.012, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+    
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    osc.start(now);
+    osc.stop(now + 0.2);
+  } catch (e) {
+    console.warn("Audio error (Leaf):", e);
+  }
+}
+
+// ⭐ Magical cascading crystal sparkles
+function playSparkle() {
+  try {
+    const ctx = getParticleAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    
+    const freqs = [1050, 1320, 1580, 2100];
+    freqs.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + i * 0.035);
+      
+      gainNode.gain.setValueAtTime(0, now + i * 0.035);
+      gainNode.gain.linearRampToValueAtTime(0.01, now + i * 0.035 + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.035 + 0.14);
+      
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      osc.start(now + i * 0.035);
+      osc.stop(now + i * 0.035 + 0.15);
+    });
+  } catch (e) {
+    console.warn("Audio error (Star):", e);
+  }
+}
+
+function playThrottledSound(type: "coin" | "leaf" | "star") {
+  const now = Date.now();
+  const cooldown = type === "leaf" ? 120 : type === "star" ? 150 : 80;
+  if (now - lastSoundTimes[type] < cooldown) return;
+  lastSoundTimes[type] = now;
+  
+  if (type === "coin") {
+    playTing();
+  } else if (type === "leaf") {
+    playWhoosh();
+  } else if (type === "star") {
+    playSparkle();
+  }
+}
 
 interface Particle {
   id: number;
@@ -281,23 +418,31 @@ export function MascotParticleRain() {
                   p.vy = -Math.abs(p.vy) * 0.45;
                   p.vx += (Math.random() - 0.5) * 2.2;
                   p.bounceCount++;
+                  playThrottledSound("coin");
+                  triggerLightVibration();
                 } else {
                   // Settle on card
                   p.y = obs.top - sizeOffset;
                   p.vy = 0;
                   p.vx = 0;
                   p.restingObstacleIndex = idx;
+                  playThrottledSound("coin");
+                  triggerLightVibration();
                 }
               } else if (p.type === "star") {
                 if (p.bounceCount < 1) {
                   p.y = obs.top - sizeOffset;
                   p.vy = -Math.abs(p.vy) * 0.32;
                   p.bounceCount++;
+                  playThrottledSound("star");
+                  triggerLightVibration();
                 } else {
                   p.y = obs.top - sizeOffset;
                   p.vy = 0;
                   p.vx = 0;
                   p.restingObstacleIndex = idx;
+                  playThrottledSound("star");
+                  triggerLightVibration();
                 }
               } else {
                 // Leaf settles gently with zero bouncing
@@ -305,6 +450,8 @@ export function MascotParticleRain() {
                 p.vy = 0;
                 p.vx = 0;
                 p.restingObstacleIndex = idx;
+                playThrottledSound("leaf");
+                triggerLightVibration();
               }
               break; // exit obstaclegrid checks
             }
@@ -320,13 +467,19 @@ export function MascotParticleRain() {
             p.vy = -Math.abs(p.vy) * 0.44;
             p.vx += (Math.random() - 0.5) * 2.0;
             p.bounceCount++;
+            playThrottledSound("coin");
+            triggerLightVibration();
           } else if (p.type === "star" && p.bounceCount < 1) {
             p.vy = -Math.abs(p.vy) * 0.28;
             p.bounceCount++;
+            playThrottledSound("star");
+            triggerLightVibration();
           } else {
             p.isResting = true;
             p.vy = 0;
             p.vx = 0;
+            playThrottledSound(p.type);
+            triggerLightVibration();
           }
         }
       }
