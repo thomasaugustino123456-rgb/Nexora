@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { MascotImage } from './MascotImage';
 
 const nexoraAppIcon = "https://i.postimg.cc/NGzHZ3yg/file-00000000ea80724689e362eb989b6932.png";
 
@@ -22,26 +21,29 @@ export function SplashScreen() {
       </div>
 
       <div className="relative flex flex-col items-center gap-8">
-        {/* Mascot Image */}
+        {/* App Logo */}
         <motion.div
-          initial={{ scale: 0.8, opacity: 0, rotate: -10 }}
-          animate={{ scale: 1, opacity: 1, rotate: 0 }}
+          initial={{ scale: 0.8, opacity: 0, scaleY: 0.85 }}
+          animate={{ scale: 1, opacity: 1, scaleY: 1 }}
           transition={{ 
             type: "spring",
-            stiffness: 260,
-            damping: 20,
+            stiffness: 240,
+            damping: 18,
             duration: 0.8
           }}
-          className="relative w-48 h-48 drop-shadow-[0_0_50px_rgba(59,130,246,0.6)]"
+          className="relative w-48 h-48 drop-shadow-[0_0_55px_rgba(59,130,246,0.6)]"
         >
           <div 
-          className="w-full h-full rounded-[48px] shadow-[0_0_35px_rgba(0,0,0,0.5)] border-4 border-blue-500/40"
-        >
-          <MascotImage 
-            alt="Nexora Mascot" 
-            className="w-full h-full"
-          />
-        </div>
+            className="w-full h-full rounded-[48px] overflow-hidden shadow-[0_15px_30px_rgba(0,0,0,0.6)] border-4 border-blue-500/45 bg-[#081225]"
+          >
+            <img 
+              src={nexoraAppIcon} 
+              alt="Nexora App Logo" 
+              className="w-full h-full object-contain p-0.5 select-none pointer-events-none"
+              style={{ imageRendering: "auto" }}
+              referrerPolicy="no-referrer"
+            />
+          </div>
           
           {/* Sparkles around mascot */}
           <motion.div 
