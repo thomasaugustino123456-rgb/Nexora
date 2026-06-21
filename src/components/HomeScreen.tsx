@@ -159,13 +159,6 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
 
   const handleMascotTap = (e: React.MouseEvent<HTMLDivElement>) => {
     triggerMascotSimpleTapReaction();
-    const rect = e.currentTarget.getBoundingClientRect();
-    window.dispatchEvent(
-        new CustomEvent("trigger-mascot-celebration", {
-          detail: { source: "home", rect }
-        })
-    );
-
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300;
 
@@ -226,6 +219,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
               <div className="grid grid-cols-3 gap-3 md:gap-6 flex-1">
                 {/* Streak Metric */}
                 <motion.div 
+                  id="metric-streak"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -242,6 +236,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                 
                 {/* XP Metric */}
                 <motion.div 
+                  id="metric-xp"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -258,6 +253,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
 
                 {/* Coins Metric */}
                 <motion.div 
+                  id="metric-coins"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -324,7 +320,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
         const progressPercent = Math.min(100, Math.floor(((dailyProgress.completionsCount || 0) / 3) * 100));
         
         return (
-          <div key="protocol" className="glass-card p-6 border-2 border-[#E9E4D4]/50 bg-gradient-to-br from-white to-[#FAF7F2]/40 shadow-[0_12px_40px_rgba(79,63,52,0.03)] relative overflow-hidden transition-all rounded-[24px]">
+          <div key="protocol" id="card-start-protocol" className="glass-card p-6 border-2 border-[#E9E4D4]/50 bg-gradient-to-br from-white to-[#FAF7F2]/40 shadow-[0_12px_40px_rgba(79,63,52,0.03)] relative overflow-hidden transition-all rounded-[24px]">
             <div className="absolute top-0 right-0 p-4 opacity-[0.03] select-none pointer-events-none">
               <Target size={140} className="text-[#4F3F34]" />
             </div>
