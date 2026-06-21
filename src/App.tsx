@@ -5342,7 +5342,7 @@ export default function App() {
                           });
                         }
 
-                        setSettings((prev) => {
+                        onUpdateSettings((prev) => {
                           let inventory = prev.inventory || [];
                           
                           // If we activated the new skin/music/sound-pack, deactivate existing matching categories
@@ -5718,7 +5718,7 @@ export default function App() {
                     }}
                     onDeactivate={(id) => {
                       vibrate(VIBRATION_PATTERNS.CLICK);
-                      setSettings((prev) => {
+                      onUpdateSettings((prev) => {
                         const itemToDeactivate = prev.inventory?.find(
                           (i) => i.id === id,
                         );
@@ -5750,7 +5750,7 @@ export default function App() {
                     }}
                     onDelete={(id) => {
                       vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                      setSettings((prev) => {
+                      onUpdateSettings((prev) => {
                         const itemToDelete = prev.inventory?.find(
                           (i) => i.id === id,
                         );
@@ -5802,7 +5802,7 @@ export default function App() {
                     }}
                     onDeleteChallenge={(id) => {
                       vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                      setSettings((prev) => ({
+                      onUpdateSettings((prev) => ({
                         ...prev,
                         savedChallengeIds: (
                           prev.savedChallengeIds || []

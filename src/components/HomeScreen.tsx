@@ -596,7 +596,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
             {/* Mascot Container */}
             <motion.div 
               animate={mascotControls} 
-              className="w-[82%] h-[82%] relative z-10 cursor-pointer"
+              className="w-[95%] h-[95%] relative z-10 cursor-pointer"
             >
               <Mascot 
                 className="w-full h-full" 

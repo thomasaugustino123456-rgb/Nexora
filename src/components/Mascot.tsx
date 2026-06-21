@@ -57,9 +57,11 @@ export const Mascot = React.memo(({
     setClickCount(prev => {
       const newCount = prev + 1;
       const isDog = soundPack === 'dog';
-      if (newCount <= 5) play(isDog ? 'dogHappy' : 'catHappy');
-      else if (newCount <= 12) play(isDog ? 'dogHungry' : 'catHungry');
-      return newCount;
+      // Loop the sound states so clicks indefinitely play sound
+      const currentCount = newCount > 12 ? 1 : newCount;
+      if (currentCount <= 5) play(isDog ? 'dogHappy' : 'catHappy');
+      else if (currentCount <= 12) play(isDog ? 'dogHungry' : 'catHungry');
+      return currentCount;
     });
 
     controls.start({
@@ -208,7 +210,7 @@ export const Mascot = React.memo(({
 
       {/* Fully Animated Vector SVG Glass Beaker Bottle Mascot Shell */}
       <div className="relative w-full h-full p-1 anim-mascot-float-main">
-        <svg viewBox="0 0 500 600" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-[0_15px_35px_rgba(59,130,246,0.3)]">
+        <svg viewBox="0 40 500 495" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-[0_15px_35px_rgba(59,130,246,0.3)]">
           <defs>
             <linearGradient id="glass-grad-main" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.8" />
@@ -289,12 +291,6 @@ export const Mascot = React.memo(({
             <ellipse cx="250" cy="330" rx="190" ry="160" />
             <path d="M 120,210 C 100,150 110,120 120,110 C 140,110 160,150 180,180 Z" strokeLinejoin="round" />
             <path d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" strokeLinejoin="round" />
-          </g>
-
-          {/* Beaker Side Handles */}
-          <g stroke="#38BDF8" strokeWidth="4" fill="url(#glass-grad-main)">
-            <ellipse cx="60" cy="310" rx="15" ry="30" transform="rotate(-15, 60, 310)" />
-            <ellipse cx="440" cy="310" rx="15" ry="30" transform="rotate(15, 440, 310)" />
           </g>
 
           {/* Glass Gloss Refraction Lines */}
