@@ -65,9 +65,15 @@ export const Mascot = React.memo(({
     });
 
     controls.start({
-      scale: [1, 0.94, 1.05, 0.98, 1],
-      rotate: [0, -3, 3, -1, 0],
-      transition: { duration: 0.4, ease: "easeInOut" }
+      y: [0, 12, -80, -90, -80, -12, 6, -2, 0],
+      scaleY: [1, 0.72, 1.35, 1.38, 1.35, 0.82, 1.1, 0.96, 1],
+      scaleX: [1, 1.28, 0.72, 0.7, 0.72, 1.18, 0.9, 1.04, 1],
+      rotate: [0, -6, 6, 8, 6, -3, 2, -1, 0],
+      transition: {
+        duration: 0.85,
+        times: [0, 0.12, 0.35, 0.45, 0.55, 0.7, 0.82, 0.92, 1],
+        ease: "easeInOut"
+      }
     });
     
     if (onClick) onClick(e);
@@ -237,9 +243,6 @@ export const Mascot = React.memo(({
 
           {/* BACKGROUND LIQUID INTERACTION */}
           <g clipPath="url(#mascot-shell-mask-main)">
-            <rect x="0" y="0" width="500" height="600" fill="#081225" />
-            <ellipse cx="250" cy="330" rx="175" ry="145" fill="#0E2346" fillOpacity="0.4" />
-
             <motion.g 
               animate={{ y: mood === 'boiling' ? 140 : 220 }}
               transition={{ type: "spring", stiffness: 80, damping: 15 }}
@@ -285,6 +288,12 @@ export const Mascot = React.memo(({
           {/* Beaker Lip Opening */}
           <ellipse cx="250" cy="130" rx="30" ry="8" fill="rgba(255,255,255,0.25)" stroke="#38BDF8" strokeWidth="4" />
           <path d="M 220 130 L 220 160 A 10 10 0 0 0 230 170 L 270 170 A 10 10 0 0 0 280 160 L 280 130" fill="none" stroke="#38BDF8" strokeWidth="4" />
+
+          {/* Beaker Side Handles */}
+          <g stroke="#38BDF8" strokeWidth="4" fill="url(#glass-grad-main)" fillOpacity="0.2">
+            <ellipse cx="60" cy="310" rx="15" ry="30" transform="rotate(-15, 60, 310)" />
+            <ellipse cx="440" cy="310" rx="15" ry="30" transform="rotate(15, 440, 310)" />
+          </g>
 
           {/* Main Beaker Outlines with Shiny Highlights Overlay */}
           <g stroke="#38BDF8" strokeWidth="4.5" fill="url(#glass-grad-main)" fillOpacity="0.2">
