@@ -1840,17 +1840,17 @@ export function SocialScreen({
           </button>
         </header>
 
-        {/* ─── SCROLLABLE INNER BODY ─── */}
+        {/* ─── COHESIVE PROFILE FLOW (NO SCROLL BAR OVERRIDES OR RESTRICTIVE BG BOX CARDS) ─── */}
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
           
-          {/* USER PROGRESS SUMMARY (Reddit styled profile bar) */}
-          <div className="bg-white p-5 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-5 animate-in slide-in-from-top duration-300">
+          {/* USER PROGRESS SUMMARY (Flat borderless design - no background box!) */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-5 animate-in slide-in-from-top duration-300 py-3">
             <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
               <div className="relative">
                 <img
                   src={currentUserPhoto || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"}
                   alt="user"
-                  className="w-16 h-16 rounded-full border-2 border-slate-100 object-cover ring-4 ring-indigo-50/50"
+                  className="w-16 h-16 rounded-full border-2 border-slate-200 object-cover ring-4 ring-indigo-50/50"
                 />
                 <div className="absolute -bottom-1 -right-1 bg-amber-400 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md border border-white">
                   🏆
@@ -1875,17 +1875,17 @@ export function SocialScreen({
                 <span>XP REWARDS UNLOCKED</span>
                 <span>{Math.round((achievements.filter(a => a.unlocked).length / achievements.length) * 100)}%</span>
               </div>
-              <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-150 p-0.5">
+              <div className="w-full bg-slate-200/60 h-3 rounded-full overflow-hidden border border-slate-300 p-0.5">
                 <div 
-                  className="bg-gradient-to-r from-orange-505 via-amber-400 to-yellow-400 h-full rounded-full transition-all duration-500"
+                  className="bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 h-full rounded-full transition-all duration-500"
                   style={{ width: `${(achievements.filter(a => a.unlocked).length / achievements.length) * 100}%` }}
                 />
               </div>
             </div>
           </div>
 
-          {/* FILTER BUTTONS ROW (All, Unlocked, Locked) */}
-          <div className="flex gap-2 p-1 bg-white rounded-2xl border border-slate-200 max-w-sm">
+          {/* FILTER BUTTONS ROW (Flat pill buttons on light grey background page) */}
+          <div className="flex gap-2 max-w-sm">
             {(["all", "unlocked", "locked"] as const).map((filterOpt) => (
               <button
                 key={filterOpt}
@@ -1896,8 +1896,8 @@ export function SocialScreen({
                 }}
                 className={`flex-1 py-2 text-center text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${
                   achievementFilter === filterOpt
-                    ? "bg-orange-550 text-white bg-orange-500 shadow-xs"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    ? "bg-orange-500 text-white shadow-sm"
+                    : "bg-slate-200/60 text-slate-600 hover:text-slate-850 hover:bg-slate-200"
                 }`}
               >
                 {filterOpt === "all" ? "🌐 All" : filterOpt === "unlocked" ? "✅ Unlocked" : "🔒 Locked"}
@@ -1905,7 +1905,7 @@ export function SocialScreen({
             ))}
           </div>
 
-          {/* DYNAMIC CATEGORY BLOCKS (Flat scrolling, no nested heights or custom scroll scopes!) */}
+          {/* DYNAMIC CATEGORY BLOCKS (Flat clean groups - completely borderless and box-free layout!) */}
           <div className="space-y-4">
             {categories.map((cat) => {
               const categoryBadges = achievements.filter(a => a.category === cat.id);
@@ -1922,10 +1922,10 @@ export function SocialScreen({
               return (
                 <div 
                   key={cat.id} 
-                  className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-xs space-y-4 animate-in fade-in duration-200"
+                  className="space-y-4 animate-in fade-in duration-200 py-3"
                 >
                   {/* Category Title Header */}
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center justify-between border-b border-slate-300 pb-2">
                     <div>
                       <h3 className="font-extrabold text-base text-slate-900 tracking-tight">
                         {cat.name}
@@ -1934,9 +1934,6 @@ export function SocialScreen({
                         {totalUnlocked} of {categoryBadges.length} unlocked
                       </p>
                     </div>
-                    <span className="text-[11px] font-black text-indigo-650 tracking-wider uppercase hover:underline cursor-pointer">
-                      View all
-                    </span>
                   </div>
 
                   {/* High fidelity Concentric Reddit Medallions (Wrapping grid - no inner scroll boundaries!) */}
