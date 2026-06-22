@@ -2830,61 +2830,21 @@ export default function App() {
     const activePrompt = deferredPrompt || (window as any).deferredPrompt;
     if (activePrompt) {
       try {
-        console.log("PWA: Triggering native deferred prompt on click to satisfy user gesture limit immediately");
-        
-        // Show downloading container so user sees progress is active of the install
-        setIsDownloading(true);
-        setDownloadProgress(3);
-        setDownloadStatus("Initiating custom system installer handoff...");
-
-        // Trigger prompt synchronously inside user gesture!
+        console.log("PWA: Triggering native deferred prompt on click");
+        // Trigger native prompt synchronously inside user gesture!
         activePrompt.prompt();
         const { outcome } = await activePrompt.userChoice;
         console.log(`PWA: User response to the install prompt: ${outcome}`);
         
         if (outcome === "accepted") {
-          // Play the ultra fast simulated download sequence
-          setDownloadProgress(15);
-          setDownloadStatus("Handshake secured! Registering application lifecycle hooks...");
-
-          let currentProgress = 15;
-          const statuses = [
-            "Syncing official offline app core assets...",
-            "Downloading high-speed vector interface packs...",
-            "Configuring smart local storage persistence engine...",
-            "Mascot launcher and homescreen shortcuts successfully deployed!"
-          ];
-
-          const interval = setInterval(() => {
-            currentProgress += Math.floor(Math.random() * 15) + 10;
-            if (currentProgress >= 100) {
-              clearInterval(interval);
-              setDownloadProgress(100);
-              setDownloadStatus("Deployment complete!");
-              setTimeout(() => {
-                setIsDownloading(false);
-                setDeferredPrompt(null);
-                (window as any).deferredPrompt = null;
-                setShowInstallButton(false);
-                localStorage.setItem("nexora_pwa_installed", "true");
-                setPwaInstalled(true);
-                setShowPwaBanner(false);
-                showToast("🎉 Nexora successfully installed to your Home Screen!", "success");
-              }, 500);
-            } else {
-              setDownloadProgress(currentProgress);
-              const idx = Math.min(
-                Math.floor(((currentProgress - 15) / 85) * statuses.length),
-                statuses.length - 1
-              );
-              setDownloadStatus(statuses[idx]);
-            }
-          }, 60);
-
+          setDeferredPrompt(null);
+          (window as any).deferredPrompt = null;
+          setShowInstallButton(false);
+          localStorage.setItem("nexora_pwa_installed", "true");
+          setPwaInstalled(true);
+          setShowPwaBanner(false);
+          showToast("🎉 Nexora successfully installed to your Home Screen!", "success");
         } else {
-          // If the user cancelled/declined
-          setIsDownloading(false);
-          setDownloadProgress(0);
           showToast("Nexora PWA installation cancelled.", "info");
         }
         return;
@@ -2894,145 +2854,18 @@ export default function App() {
     }
 
     // Fallback: This is when activePrompt is null (e.g., iPhone/iPad Safari or browsers without beforeinstallprompt support).
-    // In this case, we run the beautiful downloading simulation and then show the step-by-step instructions (showIOSInstallGuide).
-    setIsDownloading(true);
-    setDownloadProgress(0);
-    setDownloadStatus("Connecting to secure app servers...");
-    
-    const statuses = [
-      "Securing connection handshake with CDN repository...",
-      "Connecting to official Google Play & Apple App payload servers...",
-      "Downloading Nexora Core engine & bundles (4.3 MB / 15.2 MB)...",
-      "Downloading high-speed vector interface assets (8.9 MB / 15.2 MB)...",
-      "Downloading offline smart database cache (13.7 MB / 15.2 MB)...",
-      "Decompressing device-optimized binary assets...",
-      "Injecting standalone sandboxed environment hooks...",
-      "Generating high-resolution mascot desktop launcher shortcuts...",
-      "Packaging successful! Preparing installation instructions..."
-    ];
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isSafariBrowser = /Safari/.test(navigator.userAgent) && !/Chrome|CriOS|FxiOS|OPiOS|mercury/.test(navigator.userAgent);
 
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += Math.floor(Math.random() * 8) + 5;
-      if (currentProgress >= 100) {
-        currentProgress = 100;
-        clearInterval(interval);
-        setDownloadProgress(100);
-        setDownloadStatus("Package verified! Downloading stand-alone companion app... ✅");
-        
-        // Trigger actual direct launcher file download
-        try {
-          const launcherContent = `<!DOCTYPE html>
-<html>
-<head>
-    <title>Nexora Standalone Companion</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            background: radial-gradient(circle at center, #131924, #0b0d13);
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
-            padding: 20px;
-        }
-        .card {
-            max-width: 440px;
-            padding: 40px 32px;
-            border-radius: 32px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(20px);
-        }
-        .icon {
-            font-size: 64px;
-            margin-bottom: 24px;
-            background: rgba(105, 196, 150, 0.1);
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        h1 {
-            font-size: 26px;
-            font-weight: 950;
-            margin: 0 0 12px 0;
-            color: #69C496;
-            letter-spacing: -0.02em;
-        }
-        p {
-            font-size: 14px;
-            color: #a0aec0;
-            line-height: 1.6;
-            margin: 0 0 32px 0;
-        }
-        .btn {
-            display: block;
-            background: linear-gradient(135deg, #69C496, #4fb080);
-            color: #0b0d13;
-            font-weight: 905;
-            text-decoration: none;
-            padding: 16px;
-            border-radius: 16px;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            box-shadow: 0 8px 24px rgba(105, 196, 150, 0.25);
-            transition: all 0.25s ease;
-        }
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 28px rgba(105, 196, 150, 0.4);
-            filter: brightness(1.1);
-        }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <div class="icon">🌿</div>
-        <h1>Nexora Standing Active</h1>
-        <p>Your premium, device-optimized launcher is successful. Click below to boot directly into your ultra-fast offline grid node.</p>
-        <a class="btn" href="${window.location.origin}">Launch Nexora App</a>
-    </div>
-</body>
-</html>`;
-          const blob = new Blob([launcherContent], { type: "text/html" });
-          const url = URL.createObjectURL(blob);
-          const tempLink = document.createElement("a");
-          tempLink.href = url;
-          tempLink.download = "Nexora_Launcher.html";
-          document.body.appendChild(tempLink);
-          tempLink.click();
-          document.body.removeChild(tempLink);
-          URL.revokeObjectURL(url);
-          showToast("Standalone launcher package downloaded! 📥", "success");
-        } catch (e) {
-          console.error("Local file download error:", e);
-        }
-
-        setTimeout(() => {
-          setIsDownloading(false);
-          setShowIOSInstallGuide(true);
-        }, 1200);
+    if (isIOSDevice) {
+      if (isSafariBrowser) {
+        setShowIOSInstallGuide(true);
       } else {
-        setDownloadProgress(currentProgress);
-        const msgIdx = Math.min(
-          Math.floor((currentProgress / 100) * statuses.length),
-          statuses.length - 1
-        );
-        setDownloadStatus(statuses[msgIdx]);
+        showToast("To install Nexora on iOS, please open this app in the official Safari browser and choose 'Add to Home Screen'.", "info");
       }
-    }, 90);
+    } else {
+      showToast("To install Nexora, select 'Add to Home Screen' or the install option from your browser's menu.", "info");
+    }
   };
 
   useEffect(() => {
@@ -4620,19 +4453,6 @@ export default function App() {
             </div>
           )}
 
-          {isDownloading && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
-              <div className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-400 mx-auto" />
-                <h4 className="text-xl font-bold">Deploying Standalone Companion</h4>
-                <div className="w-full bg-blue-950 h-3 rounded-full overflow-hidden">
-                  <div style={{ width: `${downloadProgress}%` }} className="h-full bg-blue-400" />
-                </div>
-                <p className="text-xs text-blue-300 border-t border-blue-900/40 pt-4 font-mono italic">{downloadStatus}</p>
-              </div>
-            </div>
-          )}
-
           {showIOSInstallGuide && (
             <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
               <div className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 text-center">
@@ -4761,19 +4581,6 @@ export default function App() {
                   </button>
                 </div>
               </motion.div>
-            </div>
-          )}
-
-          {isDownloading && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
-              <div className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-400 mx-auto" />
-                <h4 className="text-xl font-bold">Deploying Standalone Companion</h4>
-                <div className="w-full bg-blue-950 h-3 rounded-full overflow-hidden">
-                  <div style={{ width: `${downloadProgress}%` }} className="h-full bg-blue-400" />
-                </div>
-                <p className="text-xs text-blue-300 border-t border-blue-900/40 pt-4 font-mono italic">{downloadStatus}</p>
-              </div>
             </div>
           )}
 
@@ -5054,37 +4861,7 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* Beautiful Premium Download Progress Modal */}
-        <AnimatePresence>
-          {isDownloading && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[700] flex items-center justify-center p-6">
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-md w-full space-y-6 shadow-[0_0_50px_rgba(59,130,246,0.3)] text-center relative overflow-hidden"
-              >
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-400 mx-auto" />
-                
-                <div className="space-y-2">
-                  <h4 className="text-xl font-bold text-white uppercase tracking-wider">Deploying Standalone Companion</h4>
-                  <p className="text-xs text-blue-300 font-bold uppercase tracking-widest">Progress: {downloadProgress}%</p>
-                </div>
-
-                <div className="w-full bg-blue-950 h-3 rounded-full overflow-hidden border border-blue-900/40">
-                  <motion.div 
-                    animate={{ width: `${downloadProgress}%` }}
-                    className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 shadow-[0_0_10px_#3b82f6]"
-                  />
-                </div>
-
-                <p className="text-xs text-blue-300/80 font-mono italic px-2">
-                  {downloadStatus}
-                </p>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+        {/* Beautiful Premium Download Progress Modal removed */}
 
         {/* Beautiful Custom iOS Setup / Walkthrough Guide */}
         <AnimatePresence>
