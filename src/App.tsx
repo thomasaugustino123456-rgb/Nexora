@@ -1956,6 +1956,7 @@ export default function App() {
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showIOSInstallGuide, setShowIOSInstallGuide] = useState(false);
   const [showInstallPopup, setShowInstallPopup] = useState(false);
+  const [appMascotError, setAppMascotError] = useState(false);
 
   // Advanced PWA Master Installation Prompter States - Completely Disabled as requested
   const [isStandalone, setIsStandalone] = useState(false);
@@ -1984,10 +1985,16 @@ export default function App() {
       setIsStandalone(standalone);
 
       // Show beautiful install popup after visiting multiple times if not standalone and not dismissed
-      const isInstalled = localStorage.getItem("nexora_pwa_installed") === "true";
+      const isInstalled = standalone || localStorage.getItem("nexora_pwa_installed") === "true";
       const isDismissed = sessionStorage.getItem("nexora_install_prompt_dismissed") === "true";
       
-      if (!standalone && !isInstalled && !isDismissed && visits >= 2) {
+      const lastDismissedAt = localStorage.getItem("nexora_install_modal_dismissed_at");
+      const isDismissed24h = lastDismissedAt && (Date.now() - parseInt(lastDismissedAt, 10)) < (24 * 60 * 60 * 1000);
+
+      // Check if browser supports installation
+      const supportsInstall = !!(deferredPrompt || (window as any).deferredPrompt || ('BeforeInstallPromptEvent' in window));
+
+      if (!isInstalled && !isDismissed && !isDismissed24h && visits >= 2 && supportsInstall) {
         setTimeout(() => {
           setShowInstallPopup(true);
         }, 2000);
@@ -2742,6 +2749,17 @@ export default function App() {
       // Update UI notify the user they can install the PWA
       setShowInstallButton(true);
       console.log("PWA: beforeinstallprompt event fired, reset installation state");
+
+      // Check auto trigger
+      const visitsStr = localStorage.getItem("nexora_visit_count") || "0";
+      const visits = parseInt(visitsStr, 10);
+      const lastDismissedAt = localStorage.getItem("nexora_install_modal_dismissed_at");
+      const isDismissed24h = lastDismissedAt && (Date.now() - parseInt(lastDismissedAt, 10)) < (24 * 60 * 60 * 1000);
+      const isDismissed = sessionStorage.getItem("nexora_install_prompt_dismissed") === "true";
+
+      if (visits >= 2 && !isDismissed && !isDismissed24h) {
+        setShowInstallPopup(true);
+      }
     };
 
     // Custom event dispatched from main.tsx if it fired before this useEffect but after rendering started
@@ -2753,6 +2771,17 @@ export default function App() {
         setPwaInstalled(false);
         setShowInstallButton(true);
         console.log("PWA: Custom pre-load prompt event handled, reset installation state");
+
+        // Check auto trigger
+        const visitsStr = localStorage.getItem("nexora_visit_count") || "0";
+        const visits = parseInt(visitsStr, 10);
+        const lastDismissedAt = localStorage.getItem("nexora_install_modal_dismissed_at");
+        const isDismissed24h = lastDismissedAt && (Date.now() - parseInt(lastDismissedAt, 10)) < (24 * 60 * 60 * 1000);
+        const isDismissed = sessionStorage.getItem("nexora_install_prompt_dismissed") === "true";
+
+        if (visits >= 2 && !isDismissed && !isDismissed24h) {
+          setShowInstallPopup(true);
+        }
       }
     };
 
@@ -4429,8 +4458,18 @@ export default function App() {
                 className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 shadow-[0_0_50px_rgba(59,130,246,0.25)] relative overflow-hidden"
               >
                 <div className="flex flex-col items-center text-center space-y-4">
-                  <div className="relative w-20 h-20 shadow-md">
-                    <img src="/nexora-mascot.png" alt="Mascot" className="w-full h-full object-cover rounded-[20px]" />
+                  <div className="relative w-20 h-20 shadow-md flex items-center justify-center bg-blue-950/40 rounded-[20px] border border-blue-500/20">
+                    {!appMascotError ? (
+                      <img 
+                        src="/nexora-mascot.png" 
+                        alt="" 
+                        className="w-full h-full object-cover rounded-[20px]" 
+                        onError={() => setAppMascotError(true)}
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Smartphone size={32} className="text-blue-400" />
+                    )}
                   </div>
                   <h3 className="text-2xl font-black text-white">Install Nexora</h3>
                   <p className="text-blue-200/70 text-xs">Access fluid device analytics, custom icon, widget options, and home screen badges.</p>
@@ -4445,7 +4484,13 @@ export default function App() {
                   >
                     Install Now
                   </button>
-                  <button onClick={() => setShowInstallPopup(false)} className="w-full text-xs text-blue-300 cursor-pointer">
+                  <button 
+                    onClick={() => {
+                      localStorage.setItem("nexora_install_modal_dismissed_at", Date.now().toString());
+                      setShowInstallPopup(false);
+                    }} 
+                    className="w-full text-xs text-blue-300 cursor-pointer"
+                  >
                     Maybe Later
                   </button>
                 </div>
@@ -4560,8 +4605,18 @@ export default function App() {
                 className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 shadow-[0_0_50px_rgba(59,130,246,0.25)] relative overflow-hidden"
               >
                 <div className="flex flex-col items-center text-center space-y-4">
-                  <div className="relative w-20 h-20 shadow-md">
-                    <img src="/nexora-mascot.png" alt="Mascot" className="w-full h-full object-cover rounded-[20px]" />
+                  <div className="relative w-20 h-20 shadow-md flex items-center justify-center bg-blue-950/40 rounded-[20px] border border-blue-500/20">
+                    {!appMascotError ? (
+                      <img 
+                        src="/nexora-mascot.png" 
+                        alt="" 
+                        className="w-full h-full object-cover rounded-[20px]" 
+                        onError={() => setAppMascotError(true)}
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Smartphone size={32} className="text-blue-400" />
+                    )}
                   </div>
                   <h3 className="text-2xl font-black text-white">Install Nexora</h3>
                   <p className="text-blue-200/70 text-xs">Access fluid device analytics, custom icon, widget options, and home screen badges.</p>
@@ -4576,7 +4631,13 @@ export default function App() {
                   >
                     Install Now
                   </button>
-                  <button onClick={() => setShowInstallPopup(false)} className="w-full text-xs text-blue-300 cursor-pointer">
+                  <button 
+                    onClick={() => {
+                      localStorage.setItem("nexora_install_modal_dismissed_at", Date.now().toString());
+                      setShowInstallPopup(false);
+                    }} 
+                    className="w-full text-xs text-blue-300 cursor-pointer"
+                  >
                     Maybe Later
                   </button>
                 </div>
@@ -4800,12 +4861,18 @@ export default function App() {
 
                 <div className="flex flex-col items-center text-center space-y-4">
                   {/* Master Logo Icon */}
-                  <div className="relative w-24 h-24 drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]">
-                    <img 
-                      src="/nexora-mascot.png" 
-                      alt="Nexora Mascot" 
-                      className="w-full h-full object-cover rounded-[24px] border-2 border-blue-400/40"
-                    />
+                  <div className="relative w-24 h-24 drop-shadow-[0_0_20px_rgba(59,130,246,0.5)] flex items-center justify-center bg-blue-950/40 rounded-[24px] border border-blue-500/20">
+                    {!appMascotError ? (
+                      <img 
+                        src="/nexora-mascot.png" 
+                        alt="" 
+                        className="w-full h-full object-cover rounded-[24px] border-2 border-blue-400/40"
+                        onError={() => setAppMascotError(true)}
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Smartphone size={36} className="text-blue-400" />
+                    )}
                   </div>
                   
                   <div className="space-y-2">
@@ -4830,7 +4897,7 @@ export default function App() {
                   </div>
                   <div className="flex items-center gap-3 text-sm text-blue-100 font-medium">
                     <span className="text-emerald-400 font-bold text-lg">✓</span>
-                    <span>Quick access from your home screen</span>
+                    <span>Quick access from home screen</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-blue-100 font-medium">
                     <span className="text-emerald-400 font-bold text-lg">✓</span>
@@ -4850,7 +4917,10 @@ export default function App() {
                     Install Now
                   </button>
                   <button
-                    onClick={() => setShowInstallPopup(false)}
+                    onClick={() => {
+                      localStorage.setItem("nexora_install_modal_dismissed_at", Date.now().toString());
+                      setShowInstallPopup(false);
+                    }}
                     className="w-full bg-transparent hover:bg-blue-950/40 text-blue-300 border border-blue-900/50 py-3.5 rounded-2xl font-black text-sm active:scale-[0.98] transition-all"
                   >
                     Maybe Later
@@ -5363,14 +5433,7 @@ export default function App() {
                       onSimulateUpdate={handleSimulateNewUpdate}
                       currentAppVersion={currentAppVersion}
                       isStandalone={isStandalone}
-                      onTriggerPwaInstall={() => {
-                        setPwaDismissedMain(false);
-                        setPwaDismissedAuth(false);
-                        setPwaDismissedLanding(false);
-                        setShowPwaBanner(true);
-                        setShowInstallPopup(true);
-                        showToast("Installer prompt launched! 📥", "success");
-                      }}
+                      onTriggerPwaInstall={handleInstallClick}
                     />
                   </Suspense>
                 </motion.div>

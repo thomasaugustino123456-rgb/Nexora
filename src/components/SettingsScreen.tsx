@@ -58,6 +58,7 @@ export function SettingsScreen({
   const [showPrivacyModal, setShowPrivacyModal] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [feedback, setFeedback] = React.useState({ rating: 5, message: '', category: 'General' });
+  const [mascotError, setMascotError] = React.useState(false);
 
   // Password / Link state and actions
   const [passwordInput, setPasswordInput] = React.useState('');
@@ -1047,20 +1048,47 @@ export function SettingsScreen({
             </div>
 
             <div className="pt-2">
-              <button
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.CLICK);
-                  if (typeof onTriggerPwaInstall === "function") {
-                    onTriggerPwaInstall();
-                  } else {
-                    showToast("No installer registration hook detected yet.", "error");
-                  }
-                }}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl py-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-indigo-100 transition-all hover:translate-y-[-1px] active:translate-y-[1px] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Sparkles size={13} className="text-yellow-300 animate-pulse" />
-                <span>INSTALL NEXORA ON YOUR DEVICE</span>
-              </button>
+              {isStandalone || (typeof localStorage !== "undefined" && localStorage.getItem("nexora_pwa_installed") === "true") ? (
+                <div className="w-full bg-emerald-50 bg-opacity-70 border border-emerald-200/50 text-emerald-800 rounded-2xl py-4 font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2">
+                  {!mascotError ? (
+                    <img
+                      src="/nexora-mascot.png"
+                      alt=""
+                      className="w-5 h-5 object-cover rounded-md border border-emerald-300"
+                      referrerPolicy="no-referrer"
+                      onError={() => setMascotError(true)}
+                    />
+                  ) : (
+                    <span className="text-emerald-600 font-extrabold text-sm">✓</span>
+                  )}
+                  <span>Nexora is already installed</span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.CLICK);
+                    if (typeof onTriggerPwaInstall === "function") {
+                      onTriggerPwaInstall();
+                    } else {
+                      showToast("No installer registration hook detected yet.", "error");
+                    }
+                  }}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl py-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-indigo-100 transition-all hover:translate-y-[-1px] active:translate-y-[1px] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {!mascotError ? (
+                    <img
+                      src="/nexora-mascot.png"
+                      alt=""
+                      className="w-5 h-5 object-cover rounded-md border border-white/20 animate-pulse"
+                      referrerPolicy="no-referrer"
+                      onError={() => setMascotError(true)}
+                    />
+                  ) : (
+                    <Smartphone size={14} className="text-indigo-200" />
+                  )}
+                  <span>Install Nexora</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
