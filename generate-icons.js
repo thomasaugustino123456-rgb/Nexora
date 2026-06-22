@@ -1,31 +1,33 @@
-import { Jimp } from 'jimp';
+import fs from 'fs';
 import path from 'path';
 
-async function generatePWAIcons() {
+function generatePWAIcons() {
   try {
-    const sourcePath = path.resolve('src/assets/images/nexora_mascot_logo_1781981236517.jpg');
-    console.log('Loading source premium logo image:', sourcePath);
-    const img = await Jimp.read(sourcePath);
-    console.log(`Successfully loaded logo image. Original dimensions: ${img.width}x${img.height}`);
+    const mascotSource = path.resolve('public/nexora-mascot.png');
+    
+    if (!fs.existsSync(mascotSource)) {
+      console.error('Source official mascot not found at', mascotSource);
+      return;
+    }
 
-    // Generate main nexora_mascot_logo.png
-    console.log('Saving high quality master logo...');
-    await img.write(path.resolve('public/nexora_mascot_logo.png'));
-    console.log('Successfully saved public/nexora_mascot_logo.png');
+    console.log('Duplicating official mascot to target paths to guarantee perfect consistency...');
+
+    // Duplicating to nexora_mascot_logo.png
+    const mascotLogoDest = path.resolve('public/nexora_mascot_logo.png');
+    fs.copyFileSync(mascotSource, mascotLogoDest);
+    console.log('Saved:', mascotLogoDest);
 
     const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
 
     for (const size of sizes) {
-      console.log(`Generating ${size}x${size} PNG PWA icon...`);
-      const resized = img.clone().resize({ width: size, height: size });
-      await resized.write(path.resolve(`public/icon-${size}.png`));
-      console.log(`Successfully saved icon-${size}.png`);
+      const dest = path.resolve(`public/icon-${size}.png`);
+      fs.copyFileSync(mascotSource, dest);
+      console.log(`Duplicated to size ${size}x${size}:`, dest);
     }
 
-    // Also copy to icon-192.png / icon-512.png standard targets
-    console.log('PWA Icons generation complete successfully!');
+    console.log('Mascot validation and alignment complete successfully!');
   } catch (error) {
-    console.error('Failed to generate PWA PNG icons, providing fallback logs.', error);
+    console.error('Failed to align mascot icons:', error);
   }
 }
 

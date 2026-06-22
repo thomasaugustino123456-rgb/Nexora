@@ -646,7 +646,7 @@ async function startServer() {
         },
         webpush: {
           notification: {
-            icon: '/nexora_mascot_logo.png',
+            icon: '/nexora-mascot.png',
             tag: 'motivation-sync',
             renotify: true
           },
@@ -716,8 +716,8 @@ async function startServer() {
         },
         webpush: {
           notification: {
-            icon: '/nexora_mascot_logo.png',
-            badge: '/nexora_mascot_logo.png',
+            icon: '/nexora-mascot.png',
+            badge: '/nexora-mascot.png',
             vibrate: [200, 100, 200],
             tag: 'nexora-alert',
             renotify: true

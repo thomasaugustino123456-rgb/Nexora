@@ -6,78 +6,77 @@
   "orientation": "portrait",
   "theme_color": "#0D1B4C",
   "background_color": "#0D1B4C",
-  "gcm_sender_id": "103953800507",
   "shortcuts": [
     {
       "name": "Start Challenge",
       "short_name": "Challenge",
       "url": "/?screen=challenge",
-      "icons": [{ "src": "/nexora_mascot_logo.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/nexora-mascot.png", "sizes": "192x192" }]
     },
     {
       "name": "Nexus Vision",
       "short_name": "Vision",
       "url": "/?screen=nexus-vision",
-      "icons": [{ "src": "/nexora_mascot_logo.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/nexora-mascot.png", "sizes": "192x192" }]
     }
   ],
   "icons": [
     {
-      "src": "/nexora_mascot_logo.png",
+      "src": "/nexora-mascot.png",
       "sizes": "72x72",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/nexora_mascot_logo.png",
+      "src": "/nexora-mascot.png",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/nexora_mascot_logo.png",
+      "src": "/nexora-mascot.png",
       "sizes": "128x128",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/nexora_mascot_logo.png",
+      "src": "/nexora-mascot.png",
       "sizes": "144x144",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/nexora_mascot_logo.png",
+      "src": "/nexora-mascot.png",
       "sizes": "152x152",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/nexora_mascot_logo.png",
+      "src": "/nexora-mascot.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/nexora_mascot_logo.png",
+      "src": "/nexora-mascot.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/nexora_mascot_logo.png",
+      "src": "/nexora-mascot.png",
       "sizes": "384x384",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/nexora_mascot_logo.png",
+      "src": "/nexora-mascot.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/nexora_mascot_logo.png",
+      "src": "/nexora-mascot.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

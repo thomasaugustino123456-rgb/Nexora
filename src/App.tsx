@@ -4430,7 +4430,7 @@ export default function App() {
               >
                 <div className="flex flex-col items-center text-center space-y-4">
                   <div className="relative w-20 h-20 shadow-md">
-                    <img src="/nexora_mascot_logo.png" alt="Mascot" className="w-full h-full object-cover rounded-[20px]" />
+                    <img src="/nexora-mascot.png" alt="Mascot" className="w-full h-full object-cover rounded-[20px]" />
                   </div>
                   <h3 className="text-2xl font-black text-white">Install Nexora</h3>
                   <p className="text-blue-200/70 text-xs">Access fluid device analytics, custom icon, widget options, and home screen badges.</p>
@@ -4561,7 +4561,7 @@ export default function App() {
               >
                 <div className="flex flex-col items-center text-center space-y-4">
                   <div className="relative w-20 h-20 shadow-md">
-                    <img src="/nexora_mascot_logo.png" alt="Mascot" className="w-full h-full object-cover rounded-[20px]" />
+                    <img src="/nexora-mascot.png" alt="Mascot" className="w-full h-full object-cover rounded-[20px]" />
                   </div>
                   <h3 className="text-2xl font-black text-white">Install Nexora</h3>
                   <p className="text-blue-200/70 text-xs">Access fluid device analytics, custom icon, widget options, and home screen badges.</p>
@@ -4670,7 +4670,7 @@ export default function App() {
         {/* Performance optimized: Background Mascot Watermark removed to prevent heating
       <div className="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0 opacity-[0.03]">
         <img 
-          src="/nexora_mascot_logo.png" 
+          src="/nexora-mascot.png" 
           alt="" 
           className="w-[150%] max-w-none"
           referrerPolicy="no-referrer"
@@ -4802,7 +4802,7 @@ export default function App() {
                   {/* Master Logo Icon */}
                   <div className="relative w-24 h-24 drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]">
                     <img 
-                      src="/nexora_mascot_logo.png" 
+                      src="/nexora-mascot.png" 
                       alt="Nexora Mascot" 
                       className="w-full h-full object-cover rounded-[24px] border-2 border-blue-400/40"
                     />
