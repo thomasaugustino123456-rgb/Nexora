@@ -1961,9 +1961,9 @@ export default function App() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [pwaInstalled, setPwaInstalled] = useState<boolean>(false);
   const [showPwaBanner, setShowPwaBanner] = useState(false);
-  const [pwaDismissedLanding, setPwaDismissedLanding] = useState(true);
-  const [pwaDismissedAuth, setPwaDismissedAuth] = useState(true);
-  const [pwaDismissedMain, setPwaDismissedMain] = useState(true);
+  const [pwaDismissedLanding, setPwaDismissedLanding] = useState(false);
+  const [pwaDismissedAuth, setPwaDismissedAuth] = useState(false);
+  const [pwaDismissedMain, setPwaDismissedMain] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState("");
@@ -2003,7 +2003,7 @@ export default function App() {
 
   useEffect(() => {
     // If running in standalone (PWA already installed and active), do not show.
-    if (isStandalone) {
+    if (isStandalone || pwaInstalled) {
       setShowPwaBanner(false);
       return;
     }
@@ -2025,7 +2025,7 @@ export default function App() {
     
     // Show the installation encouragement banner
     setShowPwaBanner(!isDismissedOnCurrentScreen);
-  }, [user, showAuth, needsOnboarding, isStandalone, activeScreen, challengeStep, pwaDismissedLanding, pwaDismissedAuth, pwaDismissedMain]);
+  }, [user, showAuth, needsOnboarding, isStandalone, pwaInstalled, activeScreen, challengeStep, pwaDismissedLanding, pwaDismissedAuth, pwaDismissedMain]);
 
   // "when I click the Cancel button supposed it have to appear again when the user go to another section of the app"
   // Reset dismiss states on screen transition so the banner can appear again in other sections
