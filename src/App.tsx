@@ -2015,14 +2015,12 @@ export default function App() {
       return;
     }
 
-    if (needsOnboarding || showAuth) {
-      setShowPwaBanner(false);
-      return;
+    // Determine if dismissed on current screen / context
+    let isDismissedOnCurrentScreen = pwaDismissedMain;
+    if (!user) {
+      isDismissedOnCurrentScreen = showAuth ? pwaDismissedAuth : pwaDismissedLanding;
     }
 
-    // Determine if dismissed on current screen
-    const isDismissedOnCurrentScreen = pwaDismissedMain;
-    
     // Show the installation encouragement banner
     setShowPwaBanner(!isDismissedOnCurrentScreen);
   }, [user, showAuth, needsOnboarding, isStandalone, pwaInstalled, activeScreen, challengeStep, pwaDismissedLanding, pwaDismissedAuth, pwaDismissedMain]);
@@ -4509,51 +4507,297 @@ export default function App() {
     }
 
   if (!user) {
-    if (showAuth) {
-      return (
-        <Suspense
-          fallback={
-            <div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">
-              AUTHENTICATING...
-            </div>
-          }
-        >
-          <AuthScreen onBack={() => setShowAuth(false)} />
-        </Suspense>
-      );
-    }
     return (
-      <Suspense
-        fallback={
-          <div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">
-            LOADING MANIFESTO...
-          </div>
-        }
-      >
-        <LandingPage onGetStarted={() => setShowAuth(true)} />
-      </Suspense>
+      <div className="min-h-screen w-full flex flex-col relative overflow-x-hidden">
+        {/* Beautiful PWA Global Banner */}
+        <AnimatePresence>
+          {showPwaBanner && (
+            <motion.div
+              initial={{ height: 0, opacity: 0, y: -20 }}
+              animate={{ height: "auto", opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: -20 }}
+              className="w-full bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white overflow-hidden z-[400] relative shadow-md border-b border-indigo-500/30"
+            >
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3.5 px-6 max-w-7xl mx-auto w-full text-xs font-semibold">
+                <div className="flex items-center gap-3.5 text-center md:text-left flex-1">
+                  <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg shrink-0 shadow-inner animate-bounce">
+                    📲
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="font-black uppercase tracking-[0.14em] text-[10px] text-indigo-200">
+                      NATIVE APPLICATION INSTALLER
+                    </p>
+                    <p className="font-extrabold text-white text-xs sm:text-sm">
+                      Running on Phone/Tablet? Install Nexora client now for fluid 60FPS biometric tracking, offline storage sync, and custom badge counts!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 w-full md:w-auto justify-center md:justify-end">
+                  <button
+                    onClick={() => {
+                      vibrate(10);
+                      handleInstallClick();
+                    }}
+                    className="flex-1 md:flex-initial px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-md hover:scale-[1.02] cursor-pointer"
+                  >
+                    Install Now
+                  </button>
+                  <button
+                    onClick={() => {
+                      vibrate(5);
+                      setPwaDismissedLanding(true);
+                      setPwaDismissedAuth(true);
+                      setPwaDismissedMain(true);
+                      showToast("Installation message dismissed.", "info");
+                    }}
+                    className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-indigo-100 rounded-xl font-extrabold uppercase text-[10px] tracking-widest transition-all cursor-pointer border border-white/10"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <ErrorBoundary>
+          {showAuth ? (
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">
+                  AUTHENTICATING...
+                </div>
+              }
+            >
+              <AuthScreen onBack={() => setShowAuth(false)} />
+            </Suspense>
+          ) : (
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">
+                  LOADING MANIFESTO...
+                </div>
+              }
+            >
+              <LandingPage onGetStarted={() => setShowAuth(true)} />
+            </Suspense>
+          )}
+        </ErrorBoundary>
+
+        {/* Global PWA overlays rendered dynamically in front of Authentication screens */}
+        <AnimatePresence>
+          {showInstallPopup && (
+            <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 30 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 30 }}
+                className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 shadow-[0_0_50px_rgba(59,130,246,0.25)] relative overflow-hidden"
+              >
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <div className="relative w-20 h-20 shadow-md">
+                    <img src="/nexora_mascot_logo.png" alt="Mascot" className="w-full h-full object-cover rounded-[20px]" />
+                  </div>
+                  <h3 className="text-2xl font-black text-white">Install Nexora</h3>
+                  <p className="text-blue-200/70 text-xs">Access fluid device analytics, custom icon, widget options, and home screen badges.</p>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  <button
+                    onClick={() => {
+                      setShowInstallPopup(false);
+                      handleInstallClick();
+                    }}
+                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 font-black py-3.5 rounded-2xl cursor-pointer"
+                  >
+                    Install Now
+                  </button>
+                  <button onClick={() => setShowInstallPopup(false)} className="w-full text-xs text-blue-300 cursor-pointer">
+                    Maybe Later
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {isDownloading && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
+              <div className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-400 mx-auto" />
+                <h4 className="text-xl font-bold">Deploying Standalone Companion</h4>
+                <div className="w-full bg-blue-950 h-3 rounded-full overflow-hidden">
+                  <div style={{ width: `${downloadProgress}%` }} className="h-full bg-blue-400" />
+                </div>
+                <p className="text-xs text-blue-300 border-t border-blue-900/40 pt-4 font-mono italic">{downloadStatus}</p>
+              </div>
+            </div>
+          )}
+
+          {showIOSInstallGuide && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
+              <div className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 text-center">
+                <div className="flex flex-col items-center space-y-4">
+                  <span className="text-4xl animate-bounce">📱</span>
+                  <h3 className="text-2xl font-black">Safari iOS Setup</h3>
+                </div>
+                <p className="text-sm text-blue-200">To run Nexora as a standalone fullscreen app on your Apple device:</p>
+                <div className="text-left space-y-3 bg-[#081225]/80 p-4 rounded-xl text-xs">
+                  <p><b className="text-blue-400">1.</b> Tap share icon at the bottom of Safari.</p>
+                  <p><b className="text-blue-400">2.</b> Scroll and tap <b>"Add to Home Screen"</b>.</p>
+                  <p><b className="text-blue-400">3.</b> Tap <b>"Add"</b> in top-right corner.</p>
+                </div>
+                <button onClick={() => setShowIOSInstallGuide(false)} className="w-full bg-blue-600 py-3 rounded-xl font-bold cursor-pointer">
+                  Got It
+                </button>
+              </div>
+            </div>
+          )}
+        </AnimatePresence>
+      </div>
     );
   }
 
   if (needsOnboarding) {
     return (
-      <Suspense
-        fallback={
-          <div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">
-            PREPARING ONBOARDING...
-          </div>
-        }
-      >
-        <OnboardingScreen
-          onComplete={() => {
-            onUpdateSettings({ onboardingCompleted: true });
-            setNeedsOnboarding(false);
-          }}
-          settings={settings}
-          setSettings={onUpdateSettings}
-          setupFCM={setupFCM}
-        />
-      </Suspense>
+      <div className="min-h-screen w-full flex flex-col relative overflow-x-hidden bg-gradient-to-b from-[#0A1733] to-[#040B1A]">
+        {/* Beautiful PWA Global Banner */}
+        <AnimatePresence>
+          {showPwaBanner && (
+            <motion.div
+              initial={{ height: 0, opacity: 0, y: -20 }}
+              animate={{ height: "auto", opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: -20 }}
+              className="w-full bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white overflow-hidden z-[400] relative shadow-md border-b border-indigo-500/30"
+            >
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3.5 px-6 max-w-7xl mx-auto w-full text-xs font-semibold">
+                <div className="flex items-center gap-3.5 text-center md:text-left flex-1 animate-pulse">
+                  <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg shrink-0 shadow-inner">
+                    📲
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="font-black uppercase tracking-[0.14em] text-[10px] text-indigo-200">
+                      NATIVE APPLICATION INSTALLATION READY
+                    </p>
+                    <p className="font-extrabold text-white text-xs sm:text-sm">
+                      Mischievous browser tabs keeping you slow? Install Nexora client now for fluid 60FPS biometric tracking, offline storage sync, and custom badge counts!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 w-full md:w-auto justify-center md:justify-end">
+                  <button
+                    onClick={() => {
+                      vibrate(10);
+                      handleInstallClick();
+                    }}
+                    className="flex-1 md:flex-initial px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-md hover:scale-[1.02] cursor-pointer"
+                  >
+                    Install Now
+                  </button>
+                  <button
+                    onClick={() => {
+                      vibrate(5);
+                      setPwaDismissedLanding(true);
+                      setPwaDismissedAuth(true);
+                      setPwaDismissedMain(true);
+                      showToast("Installation message dismissed.", "info");
+                    }}
+                    className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-indigo-100 rounded-xl font-extrabold uppercase text-[10px] tracking-widest transition-all cursor-pointer border border-white/10"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <Suspense
+          fallback={
+            <div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">
+              PREPARING ONBOARDING...
+            </div>
+          }
+        >
+          <OnboardingScreen
+            onComplete={() => {
+              onUpdateSettings({ onboardingCompleted: true });
+              setNeedsOnboarding(false);
+            }}
+            settings={settings}
+            setSettings={onUpdateSettings}
+            setupFCM={setupFCM}
+          />
+        </Suspense>
+
+        <AnimatePresence>
+          {showInstallPopup && (
+            <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 30 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 30 }}
+                className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 shadow-[0_0_50px_rgba(59,130,246,0.25)] relative overflow-hidden"
+              >
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <div className="relative w-20 h-20 shadow-md">
+                    <img src="/nexora_mascot_logo.png" alt="Mascot" className="w-full h-full object-cover rounded-[20px]" />
+                  </div>
+                  <h3 className="text-2xl font-black text-white">Install Nexora</h3>
+                  <p className="text-blue-200/70 text-xs">Access fluid device analytics, custom icon, widget options, and home screen badges.</p>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  <button
+                    onClick={() => {
+                      setShowInstallPopup(false);
+                      handleInstallClick();
+                    }}
+                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 font-black py-3.5 rounded-2xl cursor-pointer"
+                  >
+                    Install Now
+                  </button>
+                  <button onClick={() => setShowInstallPopup(false)} className="w-full text-xs text-blue-300 cursor-pointer">
+                    Maybe Later
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {isDownloading && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
+              <div className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-400 mx-auto" />
+                <h4 className="text-xl font-bold">Deploying Standalone Companion</h4>
+                <div className="w-full bg-blue-950 h-3 rounded-full overflow-hidden">
+                  <div style={{ width: `${downloadProgress}%` }} className="h-full bg-blue-400" />
+                </div>
+                <p className="text-xs text-blue-300 border-t border-blue-900/40 pt-4 font-mono italic">{downloadStatus}</p>
+              </div>
+            </div>
+          )}
+
+          {showIOSInstallGuide && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
+              <div className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 text-center">
+                <div className="flex flex-col items-center space-y-4">
+                  <span className="text-4xl animate-bounce">📱</span>
+                  <h3 className="text-2xl font-black">Safari iOS Setup</h3>
+                </div>
+                <p className="text-sm text-blue-200">To run Nexora as a standalone fullscreen app on your Apple device:</p>
+                <div className="text-left space-y-3 bg-[#081225]/80 p-4 rounded-xl text-xs">
+                  <p><b className="text-blue-400">1.</b> Tap share icon at the bottom of Safari.</p>
+                  <p><b className="text-blue-400">2.</b> Scroll and tap <b>"Add to Home Screen"</b>.</p>
+                  <p><b className="text-blue-400">3.</b> Tap <b>"Add"</b> in top-right corner.</p>
+                </div>
+                <button onClick={() => setShowIOSInstallGuide(false)} className="w-full bg-blue-600 py-3 rounded-xl font-bold cursor-pointer">
+                  Got It
+                </button>
+              </div>
+            </div>
+          )}
+        </AnimatePresence>
+      </div>
     );
   }
 
