@@ -5275,7 +5275,8 @@ export default function App() {
                         setPwaDismissedAuth(false);
                         setPwaDismissedLanding(false);
                         setShowPwaBanner(true);
-                        showToast("Installer prompt launched at bottom! 📥", "success");
+                        setShowInstallPopup(true);
+                        showToast("Installer prompt launched! 📥", "success");
                       }}
                     />
                   </Suspense>

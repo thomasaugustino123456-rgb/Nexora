@@ -998,7 +998,72 @@ export function SettingsScreen({
           </div>
         </div>
 
-        {/* PWA Installer Client section completely removed as requested */}
+        {/* 📱 INTERACTIVE PWA APPLICATION INSTALLATION MASTER CENTER */}
+        <div className="safe-glass gpu p-6 space-y-5 animate-in slide-in-from-bottom duration-200">
+          <div className="flex items-center gap-3">
+            <Smartphone size={18} className="text-indigo-500" />
+            <div>
+              <span className="text-[9px] font-black tracking-widest text-indigo-500 uppercase block leading-none">
+                Progressive Web App
+              </span>
+              <h3 className="font-black text-blue-900 uppercase text-xs tracking-wider mt-1">
+                Install Nexora Citizen Client
+              </h3>
+            </div>
+          </div>
+
+          <div className="bg-indigo-50/30 border border-indigo-100/40 rounded-3xl p-5 space-y-4">
+            <div className="flex gap-4 items-start">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-indigo-100 shadow-sm shrink-0">
+                <span className="text-2xl animate-bounce">📥</span>
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-extrabold text-blue-900 text-sm leading-snug">
+                  Run Nexora Directly as a Native Desktop or Mobile App
+                </h4>
+                <p className="text-[10px] text-blue-950/60 leading-relaxed font-medium">
+                  Add Nexora to your home screen or dock to bypass browser shell chrome layouts, unlock fluid fullscreen navigation, and elevate offline biometrics sync performance.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1.5 font-sans">
+              <div className="p-3 bg-white/70 rounded-2xl border border-indigo-100/50 flex items-center gap-2.5">
+                <span className="text-emerald-500 font-extrabold text-xs">✓</span>
+                <span className="text-[10px] text-blue-900 font-extrabold uppercase tracking-wide">60FPS Canvas Speeds</span>
+              </div>
+              <div className="p-3 bg-white/70 rounded-2xl border border-indigo-100/50 flex items-center gap-2.5">
+                <span className="text-emerald-500 font-extrabold text-xs">✓</span>
+                <span className="text-[10px] text-blue-900 font-extrabold uppercase tracking-wide">Uncompromised Sync</span>
+              </div>
+              <div className="p-3 bg-white/70 rounded-2xl border border-indigo-100/50 flex items-center gap-2.5">
+                <span className="text-emerald-500 font-extrabold text-xs">✓</span>
+                <span className="text-[10px] text-blue-900 font-extrabold uppercase tracking-wide">Zero Browser Bars</span>
+              </div>
+              <div className="p-3 bg-white/70 rounded-2xl border border-indigo-100/50 flex items-center gap-2.5">
+                <span className="text-emerald-500 font-extrabold text-xs">✓</span>
+                <span className="text-[10px] text-blue-900 font-extrabold uppercase tracking-wide">App Badge Counts</span>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.CLICK);
+                  if (typeof onTriggerPwaInstall === "function") {
+                    onTriggerPwaInstall();
+                  } else {
+                    showToast("No installer registration hook detected yet.", "error");
+                  }
+                }}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl py-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-indigo-100 transition-all hover:translate-y-[-1px] active:translate-y-[1px] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Sparkles size={13} className="text-yellow-300 animate-pulse" />
+                <span>INSTALL NEXORA ON YOUR DEVICE</span>
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Support & Dev Section */}
         <div className="glass-card p-6 space-y-4">
