@@ -5,7 +5,7 @@ import {
   Trash2, ChevronLeft, RefreshCw, Smartphone, Zap, Flame, 
   Droplets, Target, Clock, Volume2, Palette, Sparkles, 
   ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle, Video,
-  Layout, BoxSelect, Lock, Key
+  Layout, BoxSelect, Lock, Key, EyeOff, MessageSquareOff
 } from 'lucide-react';
 import { User as FirebaseUser, EmailAuthProvider, linkWithCredential, updatePassword, sendPasswordResetEmail, GoogleAuthProvider, reauthenticateWithPopup } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -404,6 +404,120 @@ export function SettingsScreen({
               <div className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${isPro ? 'bg-yellow-400 text-white shadow-lg shadow-yellow-200' : 'bg-gray-100 text-gray-400'}`}>
                 {isPro ? <><Crown size={10} /> Nexus Pro</> : 'Free Tier'}
               </div>
+          </div>
+        </div>
+
+        {/* Privacy & Content Visibility */}
+        <div className="safe-glass gpu p-6 space-y-4 animate-in slide-in-from-bottom duration-200">
+          <div className="flex items-center gap-3 mb-2">
+            <ShieldCheck size={18} className="text-emerald-500" />
+            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Privacy & Content Visibility</h3>
+          </div>
+
+          <div className="p-4 bg-emerald-50/20 border border-emerald-100/30 rounded-2xl space-y-4">
+            {/* Setting 1: Profile Privacy Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-0.5 flex-1">
+                <h4 className="font-black text-blue-900 text-xs flex items-center gap-1.5 uppercase">
+                  <span>🔒 Profile Privacy</span>
+                  <span className={`text-[9px] px-1.5 py-0.5 text-white rounded-full font-black uppercase ${settings.profilePrivacy === "private" ? "bg-rose-500 text-white" : "bg-emerald-500 text-white"}`}>
+                    {settings.profilePrivacy === "private" ? "Cloaked" : "Public"}
+                  </span>
+                </h4>
+                <p className="text-[10px] text-blue-900/60 font-medium leading-normal">
+                  Cloak stats, daily streak values, and custom alien plant milestones from community inspection cards.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  vibrate(10);
+                  const nextVal = settings.profilePrivacy === "private" ? "public" : "private";
+                  setSettings({ profilePrivacy: nextVal });
+                  showToast(`Profile status updated to: ${nextVal.toUpperCase()}`, "success");
+                }}
+                className={`px-3 py-1.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all shrink-0 ${
+                  settings.profilePrivacy === "private"
+                    ? "bg-rose-500 hover:bg-rose-600 text-white"
+                    : "bg-emerald-500 hover:bg-emerald-600 text-white"
+                }`}
+              >
+                {settings.profilePrivacy === "private" ? "Private" : "Public"}
+              </button>
+            </div>
+
+            <div className="border-t border-dashed border-blue-100/50 my-2" />
+
+            {/* Setting 2: Feed Post Hiding Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-0.5 flex-1">
+                <h4 className="font-black text-blue-900 text-xs uppercase flex items-center gap-1.5">
+                  <EyeOff size={12} className="text-blue-500" />
+                  <span>Hide My Posts</span>
+                  {settings.hidePostsFromOthers && (
+                    <span className="text-[8px] px-1 bg-indigo-500 text-white rounded-full font-black uppercase">Hidden</span>
+                  )}
+                </h4>
+                <p className="text-[10px] text-blue-900/60 font-medium leading-normal">
+                  Dynamically exclude your published habit logs and questions from the general citizen feed of peer users.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  vibrate(10);
+                  const nextVal = !settings.hidePostsFromOthers;
+                  setSettings({ hidePostsFromOthers: nextVal });
+                  showToast(nextVal ? "Habit logs cloaked from public feed" : "Habit logs restored to public feed", "info");
+                  
+                  // Trigger background update for historical posts privacy so that Firebase is always synchronized:
+                  try {
+                    const triggerSync = (window as any)._nexora_sync_historical_posts;
+                    if (typeof triggerSync === "function") {
+                      triggerSync(nextVal);
+                    }
+                  } catch (e){}
+                }}
+                className={`px-3 py-1.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all shrink-0 ${
+                  settings.hidePostsFromOthers
+                    ? "bg-indigo-500 text-white shadow-sm"
+                    : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                }`}
+              >
+                {settings.hidePostsFromOthers ? "Enabled" : "Disabled"}
+              </button>
+            </div>
+
+            <div className="border-t border-dashed border-blue-100/50 my-2" />
+
+            {/* Setting 3: Comments Hiding Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-0.5 flex-1">
+                <h4 className="font-black text-blue-900 text-xs uppercase flex items-center gap-1.5">
+                  <MessageSquareOff size={11} className="text-pink-500" />
+                  <span>Hide My Comments</span>
+                  {settings.hideCommentsFromOthers && (
+                    <span className="text-[8px] px-1 bg-pink-500 text-white rounded-full font-black uppercase">Cloaked</span>
+                  )}
+                </h4>
+                <p className="text-[10px] text-blue-900/60 font-medium leading-normal">
+                  Conceal comments from other community members under active feed discussion threads.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  vibrate(10);
+                  const nextVal = !settings.hideCommentsFromOthers;
+                  setSettings({ hideCommentsFromOthers: nextVal });
+                  showToast(nextVal ? "Comments cloaked from peer viewers" : "Comments visible to community", "info");
+                }}
+                className={`px-3 py-1.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all shrink-0 ${
+                  settings.hideCommentsFromOthers
+                    ? "bg-pink-500 text-white shadow-sm"
+                    : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                }`}
+              >
+                {settings.hideCommentsFromOthers ? "Enabled" : "Disabled"}
+              </button>
+            </div>
           </div>
         </div>
 

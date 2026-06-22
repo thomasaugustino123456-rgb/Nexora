@@ -30,6 +30,9 @@ import {
   Award,
   X,
   Edit,
+  ShieldCheck,
+  EyeOff,
+  MessageSquareOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { vibrate, VIBRATION_PATTERNS } from "../lib/vibrate";
@@ -144,6 +147,7 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
+  getDoc,
   query,
   where,
   orderBy,
@@ -316,11 +320,140 @@ export function SocialScreen({
   const [selectedAchievementId, setSelectedAchievementId] = useState<string | null>(null);
   const [achievementFilter, setAchievementFilter] = useState<"all" | "unlocked" | "locked">("all");
 
+  // Real-time custom peer-profile card inspector states
+  const [inspectedUserProfileId, setInspectedUserProfileId] = useState<string | null>(null);
+  const [inspectedUserLoading, setInspectedUserLoading] = useState<boolean>(false);
+  const [inspectedUser, setInspectedUser] = useState<{ settings?: any; stats?: any; displayName?: string; photoURL?: string; userId: string } | null>(null);
+
+  // Background update helper for historical posts privacy toggles
+  const updateHistoricalPostsPrivacy = async (hidePosts: boolean) => {
+    try {
+      const q = query(collection(db, "posts"), where("userId", "==", currentUserId));
+      const snap = await getDocs(q);
+      snap.docs.forEach(async (docRef) => {
+        await updateDoc(docRef.ref, { hidePostsFromOthers: hidePosts });
+      });
+    } catch (e) {
+      console.warn("Could not synchronize historical posts privacy:", e);
+    }
+  };
+
+  // Automated notification and rewards disbursement engine
+  const awardUserRewards = async (targetUserId: string, xp: number, coins: number, reason: string) => {
+    try {
+      if (!targetUserId) return;
+      const statsRef = doc(db, "users", targetUserId, "stats", "main");
+      const { increment } = await import("firebase/firestore");
+      await updateDoc(statsRef, {
+        totalPoints: increment(xp),
+        coins: increment(coins)
+      });
+      // Register a system reward notification card
+      await addDoc(collection(db, "users", targetUserId, "notifications"), {
+        userId: targetUserId,
+        senderId: "system",
+        senderName: "Nexora Rewards",
+        type: "system",
+        message: `🏆 Level Up! Claim: +${xp} XP & +${coins} Coins! (${reason})`,
+        isRead: false,
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error("Failed to disburse milestone rewards:", e);
+    }
+  };
+
+  // Fetch target user context for profile inspection cards
+  const handleInspectUser = async (targetUserId: string) => {
+    if (!targetUserId) return;
+    setInspectedUserProfileId(targetUserId);
+    setInspectedUserLoading(true);
+    try {
+      const userDocRef = doc(db, "users", targetUserId);
+      const userSnap = await getDoc(userDocRef);
+      const statsDocRef = doc(db, "users", targetUserId, "stats", "main");
+      const statsSnap = await getDoc(statsDocRef);
+
+      let userData: any = null;
+      let statsData: any = null;
+
+      if (userSnap.exists()) {
+        userData = userSnap.data();
+      }
+      if (statsSnap.exists()) {
+        statsData = statsSnap.data();
+      }
+
+      setInspectedUser({
+        userId: targetUserId,
+        settings: userData || {},
+        stats: statsData || {},
+        displayName: userData?.displayName || userData?.settings?.displayName || "Anonymous Hero",
+        photoURL: userData?.profilePic || userData?.settings?.profilePic || "",
+      });
+    } catch (error) {
+      console.error("Error inspecting user profile:", error);
+      showToast("Could not retrieve user telemetry, profile might be private.", "error");
+    } finally {
+      setInspectedUserLoading(false);
+    }
+  };
+
+  // Deep-link notification click listener supporting instant page swaps & form focus
+  const handleNotificationClick = async (notif: NexusNotification) => {
+    // Mark the selected notification card as read instantly in database
+    try {
+      const notifRef = doc(db, "users", currentUserId, "notifications", notif.id);
+      await updateDoc(notifRef, { isRead: true });
+    } catch (e) {
+      console.error("Could not write notification read status:", e);
+    }
+
+    if (notif.postId) {
+      let foundPost = allPosts.find((p) => p.id === notif.postId);
+      if (!foundPost) {
+        try {
+          const snap = await getDoc(doc(db, "posts", notif.postId));
+          if (snap.exists()) {
+            foundPost = { id: snap.id, ...snap.data() } as Post;
+          }
+        } catch (e) {
+          console.warn("Dynamic deep-link document query failed:", e);
+        }
+      }
+
+      if (foundPost) {
+        setSelectedPost(foundPost);
+        setShowNotifications(false);
+        setActiveTab("home"); // Shift viewport back to feed
+        showToast("Discussion thread focused!", "info");
+        
+        // Wait for rendering transition to complete, then focus on community feedback input
+        setTimeout(() => {
+          const el = document.getElementById("post-comment-textarea");
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth" });
+            el.focus();
+          }
+        }, 400);
+      } else {
+        showToast("The target post is private or has been removed.", "error");
+      }
+    }
+  };
+
   const currentUserId = user?.uid || "guest-user";
   const currentUserName =
     settings.displayName || user?.displayName || "Anonymous Hero";
   const currentUserEmail = user?.email || "guest@nexora.io";
   const currentUserPhoto = settings.profilePic || user?.photoURL || "";
+
+  useEffect(() => {
+    (window as any)._nexora_sync_historical_posts = updateHistoricalPostsPrivacy;
+    return () => {
+      delete (window as any)._nexora_sync_historical_posts;
+    };
+  }, [currentUserId]);
 
   const [localAddedPosts, setLocalAddedPosts] = useState<Post[]>(() => {
     try {
@@ -1679,8 +1812,13 @@ export function SocialScreen({
       );
       const snap = await getDocs(q);
       const list = snap.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() }) as SocialComment,
-      );
+        (doc) => ({ id: doc.id, ...doc.data() }) as SocialComment & { hideCommentsFromOthers?: boolean },
+      ).filter(c => {
+        if (c.hideCommentsFromOthers && c.userId !== currentUserId && selectedPost.userId !== currentUserId) {
+          return false;
+        }
+        return true;
+      });
       setPostComments(list);
     } catch (err) {
       console.warn("Failed retrieving standard comments: ", err);
@@ -1782,14 +1920,18 @@ export function SocialScreen({
     e.preventDefault();
     if (!newCommentText.trim() || !selectedPost) return;
 
+    const trimmedCommentText = newCommentText.trim();
+
     try {
-      const newComment: Partial<SocialComment> = {
+      const newComment: Partial<SocialComment> & { hideCommentsFromOthers?: boolean; profilePrivacy?: string } = {
         postId: selectedPost.id,
         userId: currentUserId,
         userName: currentUserName,
         userPhoto: currentUserPhoto,
-        content: newCommentText.trim(),
+        content: trimmedCommentText,
         createdAt: new Date().toISOString(),
+        hideCommentsFromOthers: settings.hideCommentsFromOthers || false,
+        profilePrivacy: settings.profilePrivacy || "public",
       };
 
       saveCommentLocally(newComment);
@@ -1798,6 +1940,34 @@ export function SocialScreen({
         collection(db, "posts", selectedPost.id, "comments"),
         newComment,
       );
+
+      // Trigger comment milestone notifications & rewards increment
+      const nextCommentsCount = totalCommentsCount + 1;
+      if (nextCommentsCount === 1) {
+        await awardUserRewards(currentUserId, 50, 25, "First Comment written! Novice Commenter Status Unlocked.");
+        showToast("Level Up! Novice Commenter Reward Unlocked! 🎉", "success");
+      } else if (nextCommentsCount === 5) {
+        await awardUserRewards(currentUserId, 300, 150, "5 Comments written! Engaging Commenter Status Unlocked.");
+        showToast("Level Up! Engaging Commenter Reward Unlocked! 🎉", "success");
+      } else if (nextCommentsCount === 25) {
+        await awardUserRewards(currentUserId, 1000, 500, "25 Comments written! Conversation Leader Status Unlocked.");
+        showToast("Level Up! Conversation Leader Reward Unlocked! 🎉", "success");
+      }
+
+      // Notify the post author when another member writes comments
+      if (selectedPost.userId && selectedPost.userId !== currentUserId) {
+        await addDoc(collection(db, "users", selectedPost.userId, "notifications"), {
+          userId: selectedPost.userId,
+          senderId: currentUserId,
+          senderName: currentUserName,
+          senderPhoto: currentUserPhoto,
+          type: "reply",
+          postId: selectedPost.id,
+          message: `${currentUserName} commented: "${trimmedCommentText.substring(0, 55)}${trimmedCommentText.length > 55 ? "..." : ""}"`,
+          isRead: false,
+          createdAt: new Date().toISOString()
+        });
+      }
 
       // Update comment count
       const postRef = doc(db, "posts", selectedPost.id);
@@ -1840,8 +2010,10 @@ export function SocialScreen({
         userId: currentUserId,
         userName: currentUserName,
         userPhoto: currentUserPhoto,
-        content: newCommentText.trim(),
+        content: trimmedCommentText,
         createdAt: new Date().toISOString(),
+        hideCommentsFromOthers: settings.hideCommentsFromOthers || false,
+        profilePrivacy: settings.profilePrivacy || "public",
       };
       saveCommentLocally(localCommentObj);
       setPostComments((prev) => [
@@ -1941,6 +2113,75 @@ export function SocialScreen({
         flames: newFlames,
       });
       if (play) play("click");
+
+      // Trigger landmark upflame (like) notifications and reward disbursements
+      if (!isLiked && post.userId) {
+        // Send a post like notification to the creator if liking someone else's post
+        if (post.userId !== currentUserId) {
+          await addDoc(collection(db, "users", post.userId, "notifications"), {
+            userId: post.userId,
+            senderId: currentUserId,
+            senderName: currentUserName,
+            senderPhoto: currentUserPhoto,
+            type: "like",
+            postId: post.id,
+            message: `${currentUserName} upflamed your log: "${post.content.substring(0, 35)}${post.content.length > 35 ? "..." : ""}"`,
+            isRead: false,
+            createdAt: new Date().toISOString()
+          });
+        }
+
+        // Milestone level checks for rewards & special notifications
+        if (newFlames === 1) {
+          await addDoc(collection(db, "users", post.userId, "notifications"), {
+            userId: post.userId,
+            senderId: "system",
+            senderName: "Nexora Milestones",
+            type: "system",
+            postId: post.id,
+            message: `🔥 "First Flame" Encouragement! Your log received its very first upflame! Claim: +20 XP & +10 Coins!`,
+            isRead: false,
+            createdAt: new Date().toISOString()
+          });
+          await awardUserRewards(post.userId, 20, 10, "First Flame on your log!");
+        } else if (newFlames === 5) {
+          await addDoc(collection(db, "users", post.userId, "notifications"), {
+            userId: post.userId,
+            senderId: "system",
+            senderName: "Nexora Milestones",
+            type: "system",
+            postId: post.id,
+            message: `⚡ Spark Milestone reaches 5 upflames! Peers appreciate your log content! Claim: +150 XP & +75 Coins!`,
+            isRead: false,
+            createdAt: new Date().toISOString()
+          });
+          await awardUserRewards(post.userId, 150, 75, "Spark Level reached!");
+        } else if (newFlames === 25) {
+          await addDoc(collection(db, "users", post.userId, "notifications"), {
+            userId: post.userId,
+            senderId: "system",
+            senderName: "Nexora Milestones",
+            type: "system",
+            postId: post.id,
+            message: `🌟 Blaze Milestone! Excellent contribution! 25 upflames achieved! Claim: +500 XP & +250 Coins!`,
+            isRead: false,
+            createdAt: new Date().toISOString()
+          });
+          await awardUserRewards(post.userId, 500, 250, "Blaze Level reached!");
+        } else if (newFlames === 100) {
+          await addDoc(collection(db, "users", post.userId, "notifications"), {
+            userId: post.userId,
+            senderId: "system",
+            senderName: "Nexora Milestones",
+            type: "system",
+            postId: post.id,
+            message: `👑 INFERNO STATUS! Your log has reached a legendary 100 upflames! Claim: +2500 XP & +1250 Coins!`,
+            isRead: false,
+            createdAt: new Date().toISOString()
+          });
+          await awardUserRewards(post.userId, 2500, 1250, "Inferno Legendary Status reached!");
+        }
+      }
     } catch (err) {
       showToast("Action acknowledged!", "success");
     }
@@ -2071,7 +2312,7 @@ export function SocialScreen({
         createPostMode === "image"
           ? postImagesBase64[0] || postImageBase64 || undefined
           : undefined;
-      const postData: Partial<Post> = {
+      const postData: Partial<Post> & { hidePostsFromOthers?: boolean; profilePrivacy?: string } = {
         userId: currentUserId,
         userName: currentUserName,
         userEmail: currentUserEmail,
@@ -2101,6 +2342,8 @@ export function SocialScreen({
         commentCount: 0,
         type: createPostMode === "image" ? "image" : "text",
         createdAt: new Date().toISOString(),
+        hidePostsFromOthers: settings.hidePostsFromOthers || false,
+        profilePrivacy: settings.profilePrivacy || "public",
       };
 
       const tempPostId = "local_p_" + Math.random().toString(36).substring(7);
@@ -2279,6 +2522,11 @@ export function SocialScreen({
       if (post.deleted) return false;
       if (hiddenPostIds.includes(post.id)) return false;
 
+      // Privacy check: If another user has enabled "Hide My Posts", skip rendering
+      if (post.userId !== currentUserId && (post as any).hidePostsFromOthers === true) {
+        return false;
+      }
+
       // Search filter
       if (searchQuery.trim() !== "") {
         const q = searchQuery.toLowerCase();
@@ -2397,12 +2645,16 @@ export function SocialScreen({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
+              onClick={(e) => {
+                e.stopPropagation();
+                handleInspectUser(post.userId);
+              }}
               src={
                 post.userPhoto ||
                 "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"
               }
               alt="Avatar"
-              className="w-10 h-10 rounded-full border border-slate-100 object-cover"
+              className="w-10 h-10 rounded-full border border-slate-100 object-cover cursor-pointer hover:border-indigo-400 transition-colors"
             />
             <div>
               {post.circleId && post.circleId !== "public" ? (
@@ -2426,8 +2678,11 @@ export function SocialScreen({
                   <p className="text-[11px] font-bold text-slate-500">
                     Posted by{" "}
                     <span
-                      className="hover:text-indigo-600 cursor-pointer text-slate-700"
-                      onClick={() => setSelectedPost(post)}
+                      className="hover:text-indigo-600 cursor-pointer text-slate-750 font-extrabold"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleInspectUser(post.userId);
+                      }}
                     >
                       {post.userName}
                     </span>
@@ -2436,7 +2691,10 @@ export function SocialScreen({
               ) : (
                 <div className="space-y-0.5">
                   <span
-                    onClick={() => setSelectedPost(post)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleInspectUser(post.userId);
+                    }}
                     className="font-extrabold text-slate-850 text-sm tracking-tight cursor-pointer hover:text-indigo-600"
                   >
                     {post.userName}
@@ -5616,13 +5874,17 @@ export function SocialScreen({
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <img
+                                  onClick={() => handleInspectUser(comment.userId)}
                                   src={comment.userPhoto || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"}
                                   alt="commenter"
-                                  className="w-[22px] h-[22px] rounded-full object-cover border border-slate-200"
+                                  className="w-[22px] h-[22px] rounded-full object-cover border border-slate-200 cursor-pointer hover:border-indigo-400 transition-colors"
                                 />
-                                <span className="font-extrabold text-xs text-slate-700">
+                                <button
+                                  onClick={() => handleInspectUser(comment.userId)}
+                                  className="font-extrabold text-xs text-slate-700 hover:text-indigo-600 transition-all font-sans"
+                                >
                                   {comment.userName}
-                                </span>
+                                </button>
                                 <span className="text-[9px] text-slate-405 font-medium">
                                   {comment.createdAt
                                     ? new Date(comment.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -5692,6 +5954,7 @@ export function SocialScreen({
               className="p-4 border-t border-slate-100 bg-white flex items-center gap-2"
             >
               <input
+                id="post-comment-textarea"
                 type="text"
                 placeholder="Write a supportive comment..."
                 value={newCommentText}
@@ -5989,7 +6252,8 @@ export function SocialScreen({
                 notifications.map((notif) => (
                   <div
                     key={notif.id}
-                    className={`p-4 rounded-2xl border flex gap-3 text-xs font-medium transition-all ${notif.isRead ? "bg-slate-50 border-slate-100 text-slate-500" : "bg-indigo-50/50 border-indigo-100 text-slate-800 font-bold"}`}
+                    onClick={() => handleNotificationClick(notif)}
+                    className={`p-4 rounded-2xl border flex gap-3 text-xs font-medium cursor-pointer hover:border-indigo-300 hover:bg-slate-100/50 transition-all ${notif.isRead ? "bg-slate-50 border-slate-100 text-slate-500" : "bg-indigo-50/50 border-indigo-100 text-slate-800 font-bold shadow-xs"}`}
                   >
                     <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-base flex-shrink-0">
                       {notif.type === "like"
@@ -6011,6 +6275,172 @@ export function SocialScreen({
                     </div>
                   </div>
                 ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 👤 PEER MEMBER PROFILE EXPANDED INSPECTION MODAL */}
+      {inspectedUserProfileId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[800] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-lg p-6 max-h-[85vh] flex flex-col shadow-2xl relative animate-in zoom-in-95 duration-250 border border-slate-100 overflow-hidden text-slate-800">
+            {/* Header / Dismiss */}
+            <header className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🛡️</span>
+                <div>
+                  <span className="text-[9px] font-black tracking-widest text-indigo-600 uppercase">
+                    Nexora Citizen Check
+                  </span>
+                  <h3 className="text-base font-black text-slate-800 tracking-tight leading-none">
+                    Community Profile Card
+                  </h3>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setInspectedUserProfileId(null);
+                  setInspectedUser(null);
+                }}
+                className="px-3.5 py-1.5 text-xs font-black text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl uppercase transition-all whitespace-nowrap"
+              >
+                Close
+              </button>
+            </header>
+
+            {/* Inner Content */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-6">
+              {inspectedUserLoading ? (
+                <div className="py-20 text-center space-y-3">
+                  <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                  <p className="text-xs text-slate-400 font-extrabold animate-pulse">Decrypting citizen telemetry...</p>
+                </div>
+              ) : inspectedUser ? (
+                (() => {
+                  const targetSettings = inspectedUser.settings || {};
+                  const targetStats = inspectedUser.stats || {};
+                  
+                  // Check privacy constraints
+                  const isPrivate = targetSettings.profilePrivacy === "private";
+                  const plantData = targetSettings.plantState || {};
+
+                  return (
+                    <div className="space-y-6">
+                      {/* Avatar & Display Identifiers */}
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left bg-indigo-50/50 p-5 rounded-3xl border border-indigo-100/30">
+                        <img
+                          src={inspectedUser.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"}
+                          alt="Citizen Pic"
+                          className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-white shadow-md ring-4 ring-indigo-50/50 mx-auto"
+                        />
+                        <div className="space-y-1">
+                          <h4 className="text-lg font-black text-slate-800 tracking-tight flex items-center justify-center sm:justify-start gap-1.5 mt-1 font-sans">
+                            {inspectedUser.displayName}
+                            <span className="text-[10px] px-2 py-0.5 bg-indigo-600 text-white rounded-full font-black uppercase font-mono">
+                              LV {Math.floor((targetStats.totalPoints || 0) / 100) + 1}
+                            </span>
+                          </h4>
+                          <p className="text-[10px] font-black uppercase tracking-wider text-indigo-600 font-mono">
+                            {isPrivate ? "🔒 Cloaked Identity" : "🌐 Community Member"}
+                          </p>
+                          <p className="text-xs text-slate-400 font-bold font-sans">
+                            {isPrivate ? "Email is hidden" : `Member Email: ${targetSettings.displayName ? targetSettings.displayName.replace(/\s+/g, "").toLowerCase() + "@citizen.nexora" : "anonymous_operative_email"}`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Privacy Block Check */}
+                      {isPrivate ? (
+                        <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200 text-center space-y-4 py-12">
+                          <span className="text-3xl mx-auto block">🛡️</span>
+                          <div className="space-y-1">
+                            <h5 className="text-sm font-black uppercase tracking-tight text-slate-800">Private Profile Enabled</h5>
+                            <p className="text-xs text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
+                              This member has set their profile to Private. To respect their boundary, their active streak, garden accomplishments, and rewards are cloaked.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-6">
+                          {/* Key Statistics Grid */}
+                          <div className="grid grid-cols-3 gap-3 font-mono">
+                            <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl text-center">
+                              <p className="text-[8px] uppercase font-black text-slate-400 tracking-wider">Current Streak</p>
+                              <p className="text-xl font-black mt-0.5 text-slate-800">🔥 {targetStats.streak || 0}d</p>
+                            </div>
+                            <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl text-center">
+                              <p className="text-[8px] uppercase font-black text-slate-400 tracking-wider">Total Points</p>
+                              <p className="text-xl font-black mt-0.5 text-slate-800 font-mono">⭐ {targetStats.totalPoints || 0}</p>
+                            </div>
+                            <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl text-center">
+                              <p className="text-[8px] uppercase font-black text-slate-400 tracking-wider">Total Coins</p>
+                              <p className="text-xl font-black mt-0.5 text-slate-800">🪙 {targetStats.coins || 0}</p>
+                            </div>
+                          </div>
+
+                          {/* 🌿 Live Plant Progress / Ecosystem Garden Snapshot */}
+                          <div className="bg-emerald-50/50 p-5 rounded-3xl border border-emerald-100/50 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-base">🪴</span>
+                                <div>
+                                  <h5 className="text-xs font-black text-emerald-950 uppercase font-sans">Interactive Alien Plant Progress</h5>
+                                  <p className="text-[10px] text-emerald-700 font-bold font-sans">Current stage of other user's focus plant</p>
+                                </div>
+                              </div>
+                              <span className="text-xs font-black text-emerald-750 uppercase bg-emerald-100/60 px-2.5 py-0.5 rounded-full font-mono">
+                                Stage {plantData.stage !== undefined ? plantData.stage : 1}
+                              </span>
+                            </div>
+
+                            <div className="p-4 bg-white rounded-2xl border border-emerald-100 flex items-center gap-4">
+                              <div className="text-3xl">
+                                {plantData.stage === 0 ? "🌱" : plantData.stage === 1 ? "🌿" : plantData.stage === 2 ? "🪴" : plantData.stage === 3 ? "🌳" : plantData.stage === 4 ? "🌸" : "✨🌸✨"}
+                              </div>
+                              <div className="flex-1 space-y-1">
+                                <p className="text-xs font-extrabold capitalize text-slate-850 font-sans">
+                                  {plantData.species || "Digital Bonsai"}
+                                </p>
+                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                  <div 
+                                    className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                                    style={{ width: `${Math.min(100, plantData.growthPoints || 15)}%` }}
+                                  ></div>
+                                </div>
+                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider font-mono">
+                                  Health Status: {plantData.health || 100}% | {plantData.growthPoints || 15} HP
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Accomplishments Feed Overview */}
+                          <div className="space-y-2">
+                            <span className="text-[10px] font-black text-indigo-600 tracking-wider uppercase block font-mono">
+                              Recent Milestones Achieved
+                            </span>
+                            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-150 space-y-2">
+                              {targetStats.totalCompletedDays ? (
+                                <p className="text-xs text-slate-700 font-medium font-sans">
+                                  📅 Successfully logs habit goals for <strong className="text-indigo-600 font-mono font-black">{targetStats.totalCompletedDays}</strong> days in total!
+                                </p>
+                              ) : (
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest text-center py-2 font-mono">
+                                  No visible milestones cleared yet.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="py-20 text-center text-slate-400 font-mono">
+                  <p className="text-xs font-black">Citizen records not found or unavailable.</p>
+                </div>
               )}
             </div>
           </div>

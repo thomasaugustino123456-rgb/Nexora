@@ -125,6 +125,9 @@ export interface UserSettings {
   isWalkthroughCompleted?: boolean;
   readBookIds?: string[];
   bookClaimTimestamps?: Record<string, number>;
+  profilePrivacy?: "public" | "private";
+  hidePostsFromOthers?: boolean;
+  hideCommentsFromOthers?: boolean;
 }
 
 export interface ShopItem {
