@@ -2002,7 +2002,29 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    setShowPwaBanner(false);
+    // If running in standalone (PWA already installed and active), do not show.
+    if (isStandalone) {
+      setShowPwaBanner(false);
+      return;
+    }
+    
+    // Check if user has already marked app as installed in localStorage
+    const isInstalled = localStorage.getItem("nexora_pwa_installed") === "true";
+    if (isInstalled) {
+      setShowPwaBanner(false);
+      return;
+    }
+
+    if (needsOnboarding || showAuth) {
+      setShowPwaBanner(false);
+      return;
+    }
+
+    // Determine if dismissed on current screen
+    const isDismissedOnCurrentScreen = pwaDismissedMain;
+    
+    // Show the installation encouragement banner
+    setShowPwaBanner(!isDismissedOnCurrentScreen);
   }, [user, showAuth, needsOnboarding, isStandalone, activeScreen, challengeStep, pwaDismissedLanding, pwaDismissedAuth, pwaDismissedMain]);
 
   // "when I click the Cancel button supposed it have to appear again when the user go to another section of the app"
@@ -4605,7 +4627,57 @@ export default function App() {
       </div>
       */}
 
-        {/* PWA Banners and Step-by-Step iOS Install guide removed completely as requested */}
+        {/* PWA Banners and Step-by-Step iOS Install guide */}
+        <AnimatePresence>
+          {showPwaBanner && (
+            <motion.div
+              initial={{ height: 0, opacity: 0, y: -20 }}
+              animate={{ height: "auto", opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: -20 }}
+              className="w-full bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white overflow-hidden z-[400] relative shadow-md border-b border-indigo-500/30"
+            >
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3.5 px-6 max-w-7xl mx-auto w-full text-xs font-semibold">
+                <div className="flex items-center gap-3.5 text-center md:text-left flex-1">
+                  <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg shrink-0 shadow-inner animate-bounce">
+                    📲
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="font-black uppercase tracking-[0.14em] text-[10px] text-indigo-200">
+                      Progressive Web App Recommendation
+                    </p>
+                    <p className="font-extrabold text-white text-xs sm:text-sm">
+                      Install Nexora as a Native App for fluid 60FPS canvas tracking, offline database backup, and real-time biometric goals!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 w-full md:w-auto justify-center md:justify-end">
+                  <button
+                    onClick={() => {
+                      vibrate(10);
+                      handleInstallClick();
+                    }}
+                    className="flex-1 md:flex-initial px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-md hover:scale-[1.02] cursor-pointer"
+                  >
+                    Install Now
+                  </button>
+                  <button
+                    onClick={() => {
+                      vibrate(5);
+                      setPwaDismissedMain(true);
+                      setPwaDismissedLanding(true);
+                      setPwaDismissedAuth(true);
+                      showToast("Installation banner dismissed for this screen.", "info");
+                    }}
+                    className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-indigo-100 rounded-xl font-extrabold uppercase text-[10px] tracking-widest transition-all cursor-pointer border border-white/10"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Offline Indicator handled elegantly via status banner above */}
 
