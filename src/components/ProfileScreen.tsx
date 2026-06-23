@@ -444,6 +444,57 @@ export function ProfileScreen({
         </div>
       </div>
 
+      {/* Persistence Debug Panel */}
+      <div className="glass-card p-8 space-y-6 border-amber-300 bg-amber-50/10">
+        <div className="flex items-center justify-between border-b border-amber-200/50 pb-4">
+          <div>
+            <h3 className="text-xs font-black text-amber-850 uppercase tracking-[0.25em] mb-1">
+              Persistence Debug Panel
+            </h3>
+            <p className="text-[10px] uppercase font-black text-amber-600 tracking-wider">
+              Identity & Firestore Mapping Verification
+            </p>
+          </div>
+          <span className="bg-amber-100 text-amber-800 text-[8px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border border-amber-200">
+            DEBUG ACTIVE
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-1 bg-white p-4 rounded-2xl border border-slate-100">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+              Auth Account Email
+            </span>
+            <span className="text-xs font-mono font-bold text-slate-800 break-all select-all">
+              {user?.email || "No Email Associated / Anonymous"}
+            </span>
+          </div>
+
+          <div className="space-y-1 bg-white p-4 rounded-2xl border border-slate-100">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+              Auth Account UID
+            </span>
+            <span className="text-xs font-mono font-bold text-slate-800 break-all select-all">
+              {user?.uid || "Not Authenticated"}
+            </span>
+          </div>
+
+          <div className="space-y-1 bg-white p-4 rounded-2xl border border-slate-100">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+              Firestore Doc Path
+            </span>
+            <span className="text-xs font-mono font-bold text-slate-800 break-all select-all">
+              {user ? `users/${user.uid}` : "No Document Path (Anonymous)"}
+            </span>
+          </div>
+        </div>
+
+        <div className="text-[10px] text-slate-500 font-medium leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100/80">
+          <span className="font-bold text-slate-700 uppercase tracking-wider block mb-1">💡 Debugger Insights:</span>
+          Compare the <strong className="text-blue-900">Auth Account Email</strong> and <strong className="text-blue-900">UID</strong> displayed above with your browser-side or console logs to verify that the active Google account credentials match the loaded Firestore user settings and daily progress documents.
+        </div>
+      </div>
+
       {/* Commander Deck Control for admin privileges */}
       {(user?.uid === "G77faQhRPfe5jr4hbY0O0L4fNUs2" || user?.email === "thomasaugustino12345678@gmail.com") && (
         <div className="space-y-6">
