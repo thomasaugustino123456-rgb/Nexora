@@ -100,6 +100,7 @@ export function useNexoraData(
   const quotaExceededRef = useRef(false);
   const lastSyncedRef = useRef<string>("");
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isStateLoadedRef = useRef(false);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -107,7 +108,11 @@ export function useNexoraData(
       console.log(`[PERSISTENCE AUDIT] AUTH RESOLVED - User UID: ${currentUser?.uid || "null"}, Email: ${currentUser?.email || "null"}`);
       const prevUserId = localStorage.getItem("nexora_cached_user");
 
+      isStateLoadedRef.current = false;
+
       if (currentUser) {
+        console.log(`[PERSISTENCE AUDIT] AUTH UID: ${currentUser.uid}`);
+        console.log(`[PERSISTENCE AUDIT] FIRESTORE DOCUMENT PATH BEING LOADED: users/${currentUser.uid}`);
         const hasCache = localStorage.getItem("nexora_onboarding_completed") === "true";
         if (prevUserId !== currentUser.uid || !hasCache) {
           // New / different user, or cache cleared (e.g. after explicit logout).
@@ -501,9 +506,34 @@ export function useNexoraData(
     };
   }, [user]);
 
+  // Update isStateLoadedRef when state matches loaded Firestore data
+  useEffect(() => {
+    if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
+
+    const currentStateStr = JSON.stringify({
+      s: settings,
+      st: stats,
+      p: {
+        c: dailyProgress.completed,
+        cc: dailyProgress.completionsCount,
+        d: dailyProgress.date,
+      },
+      g: gardenState,
+    });
+
+    if (currentStateStr === lastSyncedRef.current) {
+      console.log(`[PERSISTENCE AUDIT] State matches loaded Firestore data. Enabling background sync for user UID: ${user.uid}`);
+      isStateLoadedRef.current = true;
+    }
+  }, [settings, stats, dailyProgress, gardenState, user, isDataReady]);
+
   // Background Sync Effect with Aggressive Throttling (Optimized)
   useEffect(() => {
     if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
+    if (!isStateLoadedRef.current) {
+      console.log(`[PERSISTENCE AUDIT] State is not fully loaded/synchronized with Firestore yet. Skipping background sync for user UID: ${user.uid}`);
+      return;
+    }
 
     const syncData = async () => {
       if (quotaExceededRef.current) return;
@@ -526,8 +556,8 @@ export function useNexoraData(
         const progressRef = doc(db, "users", user.uid, "progress", today);
         const leaderboardRef = doc(db, "leaderboard", user.uid);
 
-        console.log(`[PERSISTENCE AUDIT] [WRITE START] Initiating background sync for user UID: ${user.uid}`);
-        console.log(`[PERSISTENCE AUDIT] Target user document path: ${userRef.path}`);
+        console.log(`[PERSISTENCE AUDIT] AUTH UID ON SAVE: ${user.uid}`);
+        console.log(`[PERSISTENCE AUDIT] FIRESTORE DOCUMENT PATH BEING WRITTEN: users/${user.uid}`);
         console.log(`[PERSISTENCE AUDIT] Target progress document path: ${progressRef.path}`);
 
         // 1. Check if core settings/stats/garden changed
