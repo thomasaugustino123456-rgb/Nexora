@@ -255,6 +255,10 @@ export function useNexoraData(
       const progressDocRef = doc(db, "users", user.uid, "progress", today);
       const ecoShopRef = collection(db, "users", user.uid, "eco_shop");
 
+      console.log(`[PERSISTENCE AUDIT] [READ START] Initiated Firestore read for user UID: ${user.uid}`);
+      console.log(`[PERSISTENCE AUDIT] User document path: ${userDocRef.path}`);
+      console.log(`[PERSISTENCE AUDIT] Progress document path: ${progressDocRef.path}`);
+
       const getDocWithCacheFallback = async (docRef: any) => {
         if (!navigator.onLine) {
           try {
@@ -296,8 +300,9 @@ export function useNexoraData(
             timeoutPromise,
           ])) as [any, any, any];
           
-          console.log("Hooks: Core Firestore data loaded successfully.");
+          console.log(`[PERSISTENCE AUDIT] [READ SUCCESS] Core Firestore data loaded successfully for UID: ${user.uid}`);
         } catch (fetchErr) {
+          console.error(`[PERSISTENCE AUDIT] [READ FAILURE] Failed fetching Firestore data for UID: ${user.uid}. Error:`, fetchErr);
           if (hasCache) {
             console.warn("Hooks: Primary connection fetch timed out or failed, but local cached session is present. Proceeding with cache fallback.", fetchErr);
             if (loadingTimeout) clearTimeout(loadingTimeout);
@@ -329,6 +334,8 @@ export function useNexoraData(
 
         if (docSnap.exists()) {
           const data = docSnap.data();
+          console.log(`[PERSISTENCE AUDIT] User document found in Firestore. onboardingCompleted: ${data.onboardingCompleted}`);
+          
           firestoreSettings = {
             ...DEFAULT_SETTINGS,
             ...data,
@@ -370,6 +377,7 @@ export function useNexoraData(
             setNeedsOnboarding(true);
           }
         } else {
+          console.log(`[PERSISTENCE AUDIT] User document not found in Firestore for UID: ${user.uid}. Creating user as new.`);
           const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
           if (onboardingComp) {
             console.log("Hooks: User doc not found on Firestore, but onboarding completed locally. Skipping onboarding.");
@@ -382,12 +390,15 @@ export function useNexoraData(
 
         if (progressSnap.exists()) {
           const pData = progressSnap.data();
+          console.log(`[PERSISTENCE AUDIT] Progress document found for today: ${today}. Completed: ${pData.completed}`);
           if (pData.date === today) {
             firestoreProgress = {
               ...firestoreProgress,
               ...pData,
             };
           }
+        } else {
+          console.log(`[PERSISTENCE AUDIT] Progress document not found for today: ${today}`);
         }
 
         const ecoIds = ecoSnap.docs.map((d) => d.id);
@@ -399,6 +410,13 @@ export function useNexoraData(
             ]),
           ];
         }
+
+        console.log(`[PERSISTENCE AUDIT] [DATA LOADED AFTER LOGIN] for UID ${user.uid}:`);
+        console.log(`- onboardingCompleted:`, docSnap.exists() ? docSnap.data().onboardingCompleted : false);
+        console.log(`- Settings:`, JSON.stringify(firestoreSettings));
+        console.log(`- Stats (Coins: ${firestoreStats.coins}, XP: ${firestoreStats.xp}):`, JSON.stringify(firestoreStats));
+        console.log(`- DailyProgress:`, JSON.stringify(firestoreProgress));
+        console.log(`- GardenState:`, JSON.stringify(firestoreGarden));
 
         // Initialize lastSyncedRef with the exact loaded structure before enabling sync.
         // This ensures the next background sync check sees full identity and returns early,
@@ -447,6 +465,7 @@ export function useNexoraData(
         setIsDataReady(true);
         setLoading(false);
       } catch (err: any) {
+        console.error(`[PERSISTENCE AUDIT] [LOAD FAILURE] Error during user data initialization for UID ${user.uid}:`, err);
         const isOfflineReason = !navigator.onLine || err?.message?.includes("offline") || err?.message?.includes("timed out") || err?.code === "unavailable";
         if (isOfflineReason) {
           console.warn("Hooks: Firestore backend unreachable.");
@@ -500,8 +519,14 @@ export function useNexoraData(
 
       try {
         const userRef = doc(db, "users", user.uid);
+        const progressRef = doc(db, "users", user.uid, "progress", today);
+        const leaderboardRef = doc(db, "leaderboard", user.uid);
 
-        // 1. Check if core settings/stats changed
+        console.log(`[PERSISTENCE AUDIT] [WRITE START] Initiating background sync for user UID: ${user.uid}`);
+        console.log(`[PERSISTENCE AUDIT] Target user document path: ${userRef.path}`);
+        console.log(`[PERSISTENCE AUDIT] Target progress document path: ${progressRef.path}`);
+
+        // 1. Check if core settings/stats/garden changed
         const lastSyncedData = lastSyncedRef.current
           ? JSON.parse(lastSyncedRef.current)
           : null;
@@ -512,6 +537,7 @@ export function useNexoraData(
           JSON.stringify(lastSyncedData.g) !== JSON.stringify(gardenState);
 
         if (coreChanged) {
+          console.log(`[PERSISTENCE AUDIT] Core fields changed. Writing updated settings, stats, and gardenState to: ${userRef.path}`);
           await setDoc(
             userRef,
             {
@@ -528,14 +554,17 @@ export function useNexoraData(
             },
             { merge: true },
           );
+          console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote core document to: ${userRef.path}`);
         }
 
         // 2. Sync progress always attempts, or can be throttled too
+        console.log(`[PERSISTENCE AUDIT] Writing progress document to: ${progressRef.path}`);
         await setDoc(
-          doc(db, "users", user.uid, "progress", today),
+          progressRef,
           dailyProgress,
           { merge: true },
         );
+        console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote progress document to: ${progressRef.path}`);
 
         // 3. Leaderboard sync (only if streak, points, name or photo changed)
         const lbChanged =
@@ -546,8 +575,9 @@ export function useNexoraData(
           lastSyncedData.s?.profilePic !== settings.profilePic;
 
         if (lbChanged) {
+          console.log(`[PERSISTENCE AUDIT] Leaderboard relevant fields changed. Writing to: ${leaderboardRef.path}`);
           await setDoc(
-            doc(db, "leaderboard", user.uid),
+            leaderboardRef,
             {
               uid: user.uid,
               displayName: settings.displayName || "Anonymous",
@@ -561,11 +591,13 @@ export function useNexoraData(
             },
             { merge: true },
           );
+          console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote leaderboard document to: ${leaderboardRef.path}`);
         }
 
         lastSyncedRef.current = currentStateStr;
         console.log("Hooks: Optimized Background Sync Complete ✅");
       } catch (e: any) {
+        console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Error syncing data for user UID: ${user?.uid}. Error:`, e);
         if (e.message?.includes("quota") || e.code === "resource-exhausted") {
           quotaExceededRef.current = true;
           showToast("Nexus Quota Reached. Local cache active. 🛡️", "info");
@@ -589,6 +621,7 @@ export function useNexoraData(
     dailyProgress.completed,
     dailyProgress.completionsCount,
     dailyProgress.date,
+    gardenState,
     user,
     isDataReady,
     needsOnboarding,
@@ -666,6 +699,13 @@ export function useNexoraData(
     if (quotaExceededRef.current) return;
     try {
       const userRef = doc(db, "users", user.uid);
+      const progressRef = doc(db, "users", user.uid, "progress", today);
+      const leaderboardRef = doc(db, "leaderboard", user.uid);
+
+      console.log(`[PERSISTENCE AUDIT] [WRITE START] Initiating FORCE SYNC for user UID: ${user.uid}`);
+      console.log(`[PERSISTENCE AUDIT] Target user document path: ${userRef.path}`);
+      console.log(`[PERSISTENCE AUDIT] Target progress document path: ${progressRef.path}`);
+
       await setDoc(
         userRef,
         {
@@ -682,13 +722,17 @@ export function useNexoraData(
         },
         { merge: true },
       );
+      console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote core document to: ${userRef.path}`);
+
       await setDoc(
-        doc(db, "users", user.uid, "progress", today),
+        progressRef,
         dailyProgress,
         { merge: true },
       );
+      console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote progress document to: ${progressRef.path}`);
+
       await setDoc(
-        doc(db, "leaderboard", user.uid),
+        leaderboardRef,
         {
           uid: user.uid,
           displayName: settings.displayName || "Anonymous",
@@ -702,8 +746,11 @@ export function useNexoraData(
         },
         { merge: true },
       );
+      console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote leaderboard document to: ${leaderboardRef.path}`);
+
       console.log("Hooks: Manual/Force Sync complete ✅");
     } catch (e: any) {
+      console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Force sync failed for user UID: ${user?.uid}. Error:`, e);
       console.error("Hooks: Force sync failed", e);
     }
   }, [user, isDataReady, settings, stats, dailyProgress, gardenState]);

@@ -103,9 +103,14 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
         updates.email = user.email || `${user.uid}@nexora.app`;
         updates.role = 'user';
 
-        setDoc(doc(db, 'users', user.uid), updates, { merge: true }).catch(err => {
+        console.log(`[PERSISTENCE AUDIT] [WRITE START] Onboarding completed. Writing initial user doc to: users/${user.uid}`);
+        try {
+          await setDoc(doc(db, 'users', user.uid), updates, { merge: true });
+          console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote initial user doc on onboarding completion to: users/${user.uid}`);
+        } catch (err: any) {
+          console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Onboarding setDoc failed for user UID: ${user.uid}. Error:`, err);
           console.error("Firestore update failed behind scenes:", err);
-        });
+        }
       }
       
       setSettings(prev => ({
