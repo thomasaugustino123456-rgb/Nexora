@@ -93,6 +93,7 @@ export function useNexoraData(
   const [gardenState, setGardenState] = useState<GardenState>(cachedGarden);
 
   const [needsOnboarding, setNeedsOnboarding] = useState(!cachedOnboarding);
+  const [authLoading, setAuthLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const dataLoadedFromFirestore = useRef(false);
   const lastLoadedUserIdRef = useRef<string | null>(null);
@@ -102,6 +103,8 @@ export function useNexoraData(
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setAuthLoading(false);
+      console.log(`[PERSISTENCE AUDIT] AUTH RESOLVED - User UID: ${currentUser?.uid || "null"}, Email: ${currentUser?.email || "null"}`);
       const prevUserId = localStorage.getItem("nexora_cached_user");
 
       if (currentUser) {
@@ -411,12 +414,13 @@ export function useNexoraData(
           ];
         }
 
-        console.log(`[PERSISTENCE AUDIT] [DATA LOADED AFTER LOGIN] for UID ${user.uid}:`);
-        console.log(`- onboardingCompleted:`, docSnap.exists() ? docSnap.data().onboardingCompleted : false);
-        console.log(`- Settings:`, JSON.stringify(firestoreSettings));
-        console.log(`- Stats (Coins: ${firestoreStats.coins}, XP: ${firestoreStats.xp}):`, JSON.stringify(firestoreStats));
-        console.log(`- DailyProgress:`, JSON.stringify(firestoreProgress));
-        console.log(`- GardenState:`, JSON.stringify(firestoreGarden));
+        console.log(`[PERSISTENCE AUDIT] AUTH UID: ${user.uid}`);
+        console.log(`[PERSISTENCE AUDIT] FIRESTORE DOCUMENT PATH: users/${user.uid}`);
+        console.log(`[PERSISTENCE AUDIT] ONBOARDING STATUS: ${docSnap.exists() ? (docSnap.data().onboardingCompleted ? "Completed" : "Not Completed") : "Not Found"}`);
+        console.log(`[PERSISTENCE AUDIT] LOADED XP: ${firestoreStats.xp}`);
+        console.log(`[PERSISTENCE AUDIT] LOADED COINS: ${firestoreStats.coins}`);
+        console.log(`[PERSISTENCE AUDIT] LOADED STREAK: ${firestoreStats.streak}`);
+        console.log(`[PERSISTENCE AUDIT] LOADED GARDEN STATE:`, JSON.stringify(firestoreGarden));
 
         // Initialize lastSyncedRef with the exact loaded structure before enabling sync.
         // This ensures the next background sync check sees full identity and returns early,
@@ -778,6 +782,7 @@ export function useNexoraData(
   return {
     user,
     loading,
+    authLoading,
     isDataReady,
     settings,
     setSettings: onUpdateSettings,

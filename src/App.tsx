@@ -350,6 +350,7 @@ export default function App() {
   const {
     user,
     loading,
+    authLoading,
     isDataReady,
     settings,
     setSettings,
@@ -4347,7 +4348,7 @@ export default function App() {
     );
   }
 
-  if (loading) {
+  if (loading || authLoading) {
       if (loadError) {
         return (
           <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white">
