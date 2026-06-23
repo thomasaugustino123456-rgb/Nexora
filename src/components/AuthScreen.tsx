@@ -50,6 +50,11 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
   const [error, setError] = useState("");
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [resetSuccessMessage, setResetSuccessMessage] = useState("");
+  const [isInIframe, setIsInIframe] = useState(false);
+
+  useEffect(() => {
+    setIsInIframe(window.self !== window.top);
+  }, []);
 
   // Mascot Interaction State
   const [tapCount, setTapCount] = useState(0);
@@ -224,6 +229,15 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     setIsSigningIn(true);
     setError("");
     setIsTyping(false);
+
+    if (window.self !== window.top) {
+      setError(
+        "Google Sign-In is blocked inside the iframe preview by browser cross-origin security rules. Please click the 'Open in New Tab' icon in the top-right corner of the window to use Google Sign-In, or log in instantly using Email & Password above!"
+      );
+      setIsSigningIn(false);
+      return;
+    }
+
     const provider = new GoogleAuthProvider();
     provider.addScope("profile");
     provider.addScope("email");
@@ -244,11 +258,11 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
         console.log("Sign in popup closed by user (cancelled).");
       } else if (err.code === "auth/unauthorized-domain") {
         setError(
-          "Google Sign-In blocked by domain restrictions.",
+          "Google Sign-In blocked by domain restrictions. Please verify that this hostname is added to the Authorized Domains list in the Firebase Console.",
         );
       } else if (err.code === "auth/operation-not-allowed") {
         setError(
-          'Google Sign-In is not enabled for this application.',
+          'Google Sign-In is not enabled for this application in the Firebase Console.',
         );
       } else if (
         err.code === "auth/invalid-credential" &&
@@ -452,6 +466,16 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
           <GoogleIcon />
           Google
         </button>
+
+        {isInIframe && (
+          <div className="w-full bg-amber-50/70 border border-amber-200/50 text-amber-800 p-3 rounded-xl text-[11px] font-semibold leading-relaxed text-left flex items-start gap-2 shadow-sm">
+            <span className="text-sm">⚠️</span>
+            <div>
+              <span className="font-bold text-amber-900 block mb-0.5">Iframe Preview Mode:</span>
+              Browser cross-origin security blocks Google popups inside frames. To sign in with Google, click the <span className="font-bold text-blue-600 underline">Open in New Tab</span> icon in the top right, or use the Email & Password fields above.
+            </div>
+          </div>
+        )}
 
         <p className="text-sm text-blue-900/60 font-medium pt-2">
           {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
