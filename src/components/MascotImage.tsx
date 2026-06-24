@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Mascot } from './Mascot';
 
 // Use the premium custom generated Nexora Mascot squircle app icon
 const nexoraAppIcon = "https://i.postimg.cc/NGzHZ3yg/file-00000000ea80724689e362eb989b6932.png";
@@ -7,10 +8,20 @@ interface MascotImageProps {
   className?: string;
   alt?: string;
   style?: React.CSSProperties;
+  theme?: string;
 }
 
-export function MascotImage({ className = "w-16 h-16 rounded-2xl", alt = "Nexora Mascot Logo", style }: MascotImageProps) {
+export function MascotImage({ className = "w-16 h-16 rounded-2xl", alt = "Nexora Mascot Logo", style, theme = "standard" }: MascotImageProps) {
   const [hasError, setHasError] = useState(false);
+
+  // If a premium active skin theme is selected, render the high-fidelity Mascot SVG representation instead of a static standard icon!
+  if (theme && theme !== 'standard') {
+    return (
+      <div className={`${className} overflow-hidden shrink-0 flex items-center justify-center`} style={style}>
+        <Mascot theme={theme} className="w-full h-full" mood="happy" />
+      </div>
+    );
+  }
 
   // Fallback beautiful vector representation of our digital companion/slime mascot!
   const renderFallbackSlime = () => (

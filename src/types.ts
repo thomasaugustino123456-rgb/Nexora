@@ -128,6 +128,13 @@ export interface UserSettings {
   profilePrivacy?: "public" | "private";
   hidePostsFromOthers?: boolean;
   hideCommentsFromOthers?: boolean;
+  activeMascotSkin?: string;
+  activeMascotEffect?: string;
+  activeProfileFrame?: string;
+  activeAppTheme?: string;
+  activeGardenTheme?: string;
+  activeBgEffect?: string;
+  proTestingItems?: { itemId: string; expiresAt: string; originalEquipped?: string }[];
 }
 
 export interface ShopItem {

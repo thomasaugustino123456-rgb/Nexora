@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { motion, useAnimation, AnimatePresence } from 'motion/react';
+import { motion, useAnimation } from 'motion/react';
 import { useSound } from '../hooks/useSound';
 
 export type MascotMood = 'happy' | 'angry' | 'boiling' | 'neutral' | 'surprised';
@@ -9,6 +9,7 @@ interface MascotProps {
   mood?: MascotMood;
   hat?: string;
   theme?: string;
+  effect?: string; // none, sparkles, embers, orbs, neon_glow, gold_dust
   soundPack?: 'cat' | 'dog';
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onPointerMove?: (e: React.PointerEvent<HTMLDivElement>) => void;
@@ -22,6 +23,7 @@ export const Mascot = React.memo(({
   mood = 'happy', 
   hat = 'none', 
   theme = 'standard',
+  effect = 'none',
   soundPack = 'cat', 
   onClick,
   onPointerMove,
@@ -57,7 +59,6 @@ export const Mascot = React.memo(({
     setClickCount(prev => {
       const newCount = prev + 1;
       const isDog = soundPack === 'dog';
-      // Loop the sound states so clicks indefinitely play sound
       const currentCount = newCount > 12 ? 1 : newCount;
       if (currentCount <= 5) play(isDog ? 'dogHappy' : 'catHappy');
       else if (currentCount <= 12) play(isDog ? 'dogHungry' : 'catHungry');
@@ -79,39 +80,52 @@ export const Mascot = React.memo(({
     if (onClick) onClick(e);
   }, [soundPack, play, controls, onClick]);
 
+  // Determine Stroke and Outline Colors based on Premium Mascot Skin Theme
+  const strokeColor = useMemo(() => {
+    switch (theme) {
+      case 'cosmic': return '#A855F7';      // Vibrant Deep Purple
+      case 'neon': return '#EC4899';        // Hot Neon Pink
+      case 'fire': return '#F97316';        // Intense Fire Orange
+      case 'ice': return '#0EA5E9';         // Frosty Glacier Blue
+      case 'nature': return '#10B981';      // Lush Emerald Green
+      case 'royal_gold': return '#EAB308';  // Imperial Gold Metallic
+      default: return '#38BDF8';            // Classic Cyber Blue
+    }
+  }, [theme]);
+
   const renderFace = () => {
     switch (mood) {
       case 'angry':
         return (
           <g transform="translate(0, 5)">
             {/* Angry Eyebrows */}
-            <path d="M 175,268 L 215,285" stroke="#001845" strokeWidth="6" strokeLinecap="round" />
-            <path d="M 325,268 L 285,285" stroke="#001845" strokeWidth="6" strokeLinecap="round" />
+            <path d="M 175,268 L 215,285" stroke={theme === 'neon' ? '#EC4899' : '#001845'} strokeWidth="6" strokeLinecap="round" />
+            <path d="M 325,268 L 285,285" stroke={theme === 'neon' ? '#EC4899' : '#001845'} strokeWidth="6" strokeLinecap="round" />
             {/* Narrow Angry Eyes */}
-            <circle cx="210" cy="298" r="13" fill="#001845" />
-            <circle cx="290" cy="298" r="13" fill="#001845" />
+            <circle cx="210" cy="298" r="13" fill={theme === 'neon' ? '#22C55E' : '#001845'} />
+            <circle cx="290" cy="298" r="13" fill={theme === 'neon' ? '#22C55E' : '#001845'} />
             <circle cx="212" cy="294" r="5" fill="#fff" />
             <circle cx="288" cy="294" r="5" fill="#fff" />
             {/* Angry Cheeks Blush */}
             <ellipse cx="178" cy="318" rx="14" ry="7" fill="#FF4D6D" fillOpacity="0.4" />
             <ellipse cx="322" cy="318" rx="14" ry="7" fill="#FF4D6D" fillOpacity="0.4" />
             {/* Grumpy Mouth */}
-            <path d="M 235,330 Q 250,314 265,330" fill="none" stroke="#001845" strokeWidth="5.5" strokeLinecap="round" />
+            <path d="M 235,330 Q 250,314 265,330" fill="none" stroke={theme === 'neon' ? '#EC4899' : '#001845'} strokeWidth="5.5" strokeLinecap="round" />
           </g>
         );
       case 'surprised':
         return (
           <g transform="translate(0, 5)">
             {/* Surprised arched eyebrows */}
-            <path d="M 180,265 Q 195,250 210,265" fill="none" stroke="#001845" strokeWidth="4" strokeLinecap="round" />
-            <path d="M 290,265 Q 305,250 320,265" fill="none" stroke="#001845" strokeWidth="4" strokeLinecap="round" />
+            <path d="M 180,265 Q 195,250 210,265" fill="none" stroke={theme === 'neon' ? '#EC4899' : '#001845'} strokeWidth="4" strokeLinecap="round" />
+            <path d="M 290,265 Q 305,250 320,265" fill="none" stroke={theme === 'neon' ? '#EC4899' : '#001845'} strokeWidth="4" strokeLinecap="round" />
             {/* Wide Open Eyes */}
-            <circle cx="210" cy="290" r="16" fill="#001845" />
-            <circle cx="290" cy="290" r="16" fill="#001845" />
+            <circle cx="210" cy="290" r="16" fill={theme === 'neon' ? '#22C55E' : '#001845'} />
+            <circle cx="290" cy="290" r="16" fill={theme === 'neon' ? '#22C55E' : '#001845'} />
             <circle cx="208" cy="286" r="6" fill="#fff" />
             <circle cx="288" cy="286" r="6" fill="#fff" />
             {/* Surprised Open Mouth */}
-            <circle cx="250" cy="330" r="11" fill="none" stroke="#001845" strokeWidth="4.5" />
+            <circle cx="250" cy="330" r="11" fill="none" stroke={theme === 'neon' ? '#EC4899' : '#001845'} strokeWidth="4.5" />
           </g>
         );
       case 'boiling':
@@ -135,10 +149,10 @@ export const Mascot = React.memo(({
         return (
           <g transform="translate(0, 5)">
             {/* High-quality neutral relaxed sleeping line eyes */}
-            <path d="M 195,290 L 225,290" stroke="#001845" strokeWidth="6.5" strokeLinecap="round" />
-            <path d="M 275,290 L 305,290" stroke="#001845" strokeWidth="6.5" strokeLinecap="round" />
+            <path d="M 195,290 L 225,290" stroke={theme === 'neon' ? '#22C55E' : '#001845'} strokeWidth="6.5" strokeLinecap="round" />
+            <path d="M 275,290 L 305,290" stroke={theme === 'neon' ? '#22C55E' : '#001845'} strokeWidth="6.5" strokeLinecap="round" />
             {/* Simple calm tiny smile line */}
-            <path d="M 238,322 Q 250,326 262,322" fill="none" stroke="#001845" strokeWidth="4.5" strokeLinecap="round" />
+            <path d="M 238,322 Q 250,326 262,322" fill="none" stroke={theme === 'neon' ? '#22C55E' : '#001845'} strokeWidth="4.5" strokeLinecap="round" />
           </g>
         );
       case 'happy':
@@ -146,20 +160,20 @@ export const Mascot = React.memo(({
         return (
           <g transform="translate(0, -5)">
             {/* Classic Sparkling Happy Eyes */}
-            <circle cx="210" cy="290" r="15" fill="#001845" />
-            <circle cx="290" cy="290" r="15" fill="#001845" />
+            <circle cx="210" cy="290" r="15" fill={theme === 'neon' ? '#22C55E' : '#001845'} />
+            <circle cx="290" cy="290" r="15" fill={theme === 'neon' ? '#22C55E' : '#001845'} />
             {/* Sparkling Pupil Highlights */}
             <circle cx="213" cy="285" r="5.5" fill="#fff" />
             <circle cx="293" cy="285" r="5.5" fill="#fff" />
             <circle cx="205" cy="295" r="2.5" fill="#fff" />
             <circle cx="285" cy="295" r="2.5" fill="#fff" />
             {/* Cheek blush */}
-            <ellipse cx="178" cy="312" rx="14" ry="7" fill="#FF4D6D" fillOpacity="0.25" />
-            <ellipse cx="322" cy="312" rx="14" ry="7" fill="#FF4D6D" fillOpacity="0.25" />
+            <ellipse cx="178" cy="312" rx="14" ry="7" fill={theme === 'neon' ? '#EC4899' : '#FF4D6D'} fillOpacity="0.25" />
+            <ellipse cx="322" cy="312" rx="14" ry="7" fill={theme === 'neon' ? '#EC4899' : '#FF4D6D'} fillOpacity="0.25" />
             {/* Cute Smiling Mouth */}
             <path 
               d="M 233 308 Q 250 328 267 308" 
-              fill="none" stroke="#001845" strokeWidth="5" strokeLinecap="round"
+              fill="none" stroke={theme === 'neon' ? '#EC4899' : '#001845'} strokeWidth="5" strokeLinecap="round"
             />
           </g>
         );
@@ -212,23 +226,153 @@ export const Mascot = React.memo(({
           animation: bubbleRiseMascot 4.5s ease-in-out infinite;
           transform-origin: center;
         }
+
+        /* PREMIUM ACTIVE MASCOT EFFECTS CSS */
+        @keyframes effectTwinkle {
+          0%, 100% { transform: scale(0.6) rotate(0deg); opacity: 0.1; }
+          50% { transform: scale(1.1) rotate(180deg); opacity: 1; filter: drop-shadow(0 0 4px #FBBF24); }
+        }
+        @keyframes effectRisingEmber {
+          0% { transform: translateY(40px) scale(0.6); opacity: 0; }
+          40% { opacity: 0.85; }
+          80% { opacity: 0.3; }
+          100% { transform: translateY(-110px) scale(1.1); opacity: 0; }
+        }
+        @keyframes effectFloatingOrb {
+          0%, 100% { transform: translate(0, 0) scale(0.8); opacity: 0.3; }
+          33% { transform: translate(15px, -30px) scale(1.1); opacity: 0.7; }
+          66% { transform: translate(-15px, -50px) scale(0.9); opacity: 0.4; }
+        }
+        @keyframes effectNeonRing {
+          0%, 100% { filter: drop-shadow(0 0 6px #EC4899) drop-shadow(0 0 12px #0EA5E9); transform: scale(1); }
+          50% { filter: drop-shadow(0 0 15px #EC4899) drop-shadow(0 0 30px #22C55E); transform: scale(1.02); }
+        }
+        @keyframes effectSwirlGold {
+          0% { transform: rotate(0deg) translateX(32px) rotate(0deg) scale(0.7); opacity: 0; }
+          50% { opacity: 0.85; }
+          100% { transform: rotate(360deg) translateX(32px) rotate(-360deg) scale(1); opacity: 0; }
+        }
+
+        .premium-particle-sparkle {
+          animation: effectTwinkle 3s ease-in-out infinite;
+        }
+        .premium-particle-ember {
+          animation: effectRisingEmber 3.8s ease-in-out infinite;
+        }
+        .premium-particle-orb {
+          animation: effectFloatingOrb 5s ease-in-out infinite;
+        }
+        .premium-particle-neon {
+          animation: effectNeonRing 2.5s ease-in-out infinite;
+        }
+        .premium-particle-gold {
+          animation: effectSwirlGold 4.2s ease-in-out infinite;
+        }
       `}</style>
 
+      {/* PREMIUM BACKGROUND MASCOT EFFECTS */}
+      {effect !== 'none' && (
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-visible">
+          {effect === 'neon_glow' && (
+            <div className="absolute inset-[-10px] rounded-full bg-gradient-to-tr from-pink-500/20 via-cyan-500/10 to-green-500/20 blur-xl animate-pulse" />
+          )}
+          {effect === 'sparkles' && (
+            <>
+              <div className="absolute top-[10%] left-[15%] text-amber-400 text-sm premium-particle-sparkle" style={{ animationDelay: '0s' }}>✨</div>
+              <div className="absolute top-[20%] right-[10%] text-amber-300 text-xs premium-particle-sparkle" style={{ animationDelay: '0.8s' }}>✨</div>
+              <div className="absolute bottom-[25%] left-[8%] text-amber-400 text-xs premium-particle-sparkle" style={{ animationDelay: '1.5s' }}>✨</div>
+              <div className="absolute bottom-[15%] right-[12%] text-amber-200 text-base premium-particle-sparkle" style={{ animationDelay: '0.4s' }}>✨</div>
+            </>
+          )}
+          {effect === 'embers' && (
+            <>
+              <div className="absolute bottom-[20%] left-[25%] w-2 h-2 rounded-full bg-orange-500 premium-particle-ember" style={{ animationDelay: '0s', animationDuration: '3.2s' }} />
+              <div className="absolute bottom-[15%] right-[25%] w-3 h-3 rounded-full bg-red-500 premium-particle-ember" style={{ animationDelay: '0.7s', animationDuration: '2.8s' }} />
+              <div className="absolute bottom-[30%] left-[45%] w-1.5 h-1.5 rounded-full bg-amber-400 premium-particle-ember" style={{ animationDelay: '1.4s', animationDuration: '3.5s' }} />
+              <div className="absolute bottom-[10%] right-[40%] w-2.5 h-2.5 rounded-full bg-orange-600 premium-particle-ember" style={{ animationDelay: '2.1s', animationDuration: '3s' }} />
+            </>
+          )}
+          {effect === 'orbs' && (
+            <>
+              <div className="absolute top-[30%] left-[10%] w-4 h-4 rounded-full bg-indigo-500/30 blur-xs premium-particle-orb" style={{ animationDelay: '0s' }} />
+              <div className="absolute top-[40%] right-[15%] w-5 h-5 rounded-full bg-purple-500/20 blur-xs premium-particle-orb" style={{ animationDelay: '1.5s' }} />
+              <div className="absolute bottom-[35%] left-[30%] w-3 h-3 rounded-full bg-cyan-400/30 blur-xs premium-particle-orb" style={{ animationDelay: '2.8s' }} />
+            </>
+          )}
+          {effect === 'gold_dust' && (
+            <>
+              <div className="absolute top-1/2 left-1/2 -ml-2 -mt-2 text-yellow-500 text-xs premium-particle-gold" style={{ animationDelay: '0s' }}>⭐</div>
+              <div className="absolute top-1/2 left-1/2 -ml-2 -mt-2 text-yellow-400 text-[10px] premium-particle-gold" style={{ animationDelay: '1s' }}>💫</div>
+              <div className="absolute top-1/2 left-1/2 -ml-2 -mt-2 text-amber-500 text-[8px] premium-particle-gold" style={{ animationDelay: '2s' }}>✨</div>
+              <div className="absolute top-1/2 left-1/2 -ml-2 -mt-2 text-yellow-300 text-xs premium-particle-gold" style={{ animationDelay: '3s' }}>⭐</div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Fully Animated Vector SVG Glass Beaker Bottle Mascot Shell */}
-      <div className="relative w-full h-full p-1 anim-mascot-float-main">
+      <div className={`relative w-full h-full p-1 anim-mascot-float-main ${effect === 'neon_glow' ? 'premium-particle-neon' : ''}`}>
         <svg viewBox="0 40 500 495" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-[0_15px_35px_rgba(59,130,246,0.3)]">
           <defs>
             <linearGradient id="glass-grad-main" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.8" />
-              <stop offset="35%" stopColor="#E2F5FF" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="#B3E5FF" stopOpacity="0.4" />
+              <stop offset="0%" stopColor={
+                theme === 'cosmic' ? "#D8B4FE" :
+                theme === 'neon' ? "#09090B" :
+                theme === 'fire' ? "#FFE4E6" :
+                theme === 'ice' ? "#F0F9FF" :
+                theme === 'nature' ? "#ECFDF5" :
+                theme === 'royal_gold' ? "#FEF9C3" :
+                "#FFFFFF"
+              } stopOpacity={theme === 'neon' ? "0.95" : "0.8"} />
+              <stop offset="35%" stopColor={
+                theme === 'cosmic' ? "#3B0764" :
+                theme === 'neon' ? "#18181B" :
+                theme === 'fire' ? "#FFECEC" :
+                theme === 'ice' ? "#E0F2FE" :
+                theme === 'nature' ? "#D1FAE5" :
+                theme === 'royal_gold' ? "#FEF08A" :
+                "#E2F5FF"
+              } stopOpacity="0.15" />
+              <stop offset="100%" stopColor={
+                theme === 'cosmic' ? "#581C87" :
+                theme === 'neon' ? "#09090B" :
+                theme === 'fire' ? "#FCA5A5" :
+                theme === 'ice' ? "#BAE6FD" :
+                theme === 'nature' ? "#A7F3D0" :
+                theme === 'royal_gold' ? "#F59E0B" :
+                "#B3E5FF"
+              } stopOpacity={theme === 'neon' ? "0.9" : "0.4"} />
             </linearGradient>
 
             {/* Electric Blue Water Gradients for interactive bottle inner */}
             <linearGradient id="water-grad-main-blue" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={mood === 'angry' || mood === 'boiling' ? "#FF5A5A" : "#38BDF8"} />
-              <stop offset="60%" stopColor={mood === 'angry' || mood === 'boiling' ? "#DC2626" : "#0EA5E9"} stopOpacity="0.95" />
-              <stop offset="100%" stopColor={mood === 'angry' || mood === 'boiling' ? "#991B1B" : "#1E40AF"} stopOpacity="0.99" />
+              <stop offset="0%" stopColor={
+                theme === 'cosmic' ? "#C084FC" :
+                theme === 'neon' ? "#22D3EE" :
+                theme === 'fire' ? "#FBBF24" :
+                theme === 'ice' ? "#E0F2FE" :
+                theme === 'nature' ? "#34D399" :
+                theme === 'royal_gold' ? "#FEF08A" :
+                (mood === 'angry' || mood === 'boiling' ? "#FF5A5A" : "#38BDF8")
+              } />
+              <stop offset="60%" stopColor={
+                theme === 'cosmic' ? "#7C3AED" :
+                theme === 'neon' ? "#0EA5E9" :
+                theme === 'fire' ? "#F97316" :
+                theme === 'ice' ? "#38BDF8" :
+                theme === 'nature' ? "#059669" :
+                theme === 'royal_gold' ? "#D97706" :
+                (mood === 'angry' || mood === 'boiling' ? "#DC2626" : "#0EA5E9")
+              } stopOpacity="0.95" />
+              <stop offset="100%" stopColor={
+                theme === 'cosmic' ? "#4C1D95" :
+                theme === 'neon' ? "#EC4899" :
+                theme === 'fire' ? "#991B1B" :
+                theme === 'ice' ? "#1E40AF" :
+                theme === 'nature' ? "#064E3B" :
+                theme === 'royal_gold' ? "#78350F" :
+                (mood === 'angry' || mood === 'boiling' ? "#991B1B" : "#1E40AF")
+              } stopOpacity="0.99" />
             </linearGradient>
 
             <clipPath id="mascot-shell-mask-main">
@@ -239,7 +383,7 @@ export const Mascot = React.memo(({
           </defs>
 
           {/* Ambient Platform Shadow */}
-          <ellipse cx="250" cy="515" rx="130" ry="12" fill="#0284C7" fillOpacity="0.08" />
+          <ellipse cx="250" cy="515" rx="130" ry="12" fill={strokeColor} fillOpacity="0.08" />
 
           {/* BACKGROUND LIQUID INTERACTION */}
           <g clipPath="url(#mascot-shell-mask-main)">
@@ -256,7 +400,15 @@ export const Mascot = React.memo(({
                 <g className="anim-wave-mascot-2" opacity="0.3">
                   <path 
                     d="M -300,10 Q -225,-5 -150,10 T 0,10 T 150,10 T 300,10 T 450,10 T 600,10 T 750,10 T 900,10 L 900,600 L -300,600 Z" 
-                    fill={mood === 'angry' || mood === 'boiling' ? "#FF7F7F" : "#7DD3FC"} 
+                    fill={
+                      theme === 'cosmic' ? "#E9D5FF" :
+                      theme === 'neon' ? "#F472B6" :
+                      theme === 'fire' ? "#FCA5A5" :
+                      theme === 'ice' ? "#BAE6FD" :
+                      theme === 'nature' ? "#A7F3D0" :
+                      theme === 'royal_gold' ? "#FDE047" :
+                      (mood === 'angry' || mood === 'boiling' ? "#FF7F7F" : "#7DD3FC")
+                    }
                   />
                 </g>
 
@@ -269,11 +421,43 @@ export const Mascot = React.memo(({
                 </g>
 
                 {/* Active bubbling/fizzing steam bubbles */}
-                <g fill="#FFFFFF" fillOpacity="0.6">
-                  <circle cx="150" cy="220" r="4" className="anim-bubble-mascot" style={{ animationDelay: '0s', animationDuration: '4.2s' }} />
-                  <circle cx="220" cy="270" r="3" className="anim-bubble-mascot" style={{ animationDelay: '1s', animationDuration: '3.5s' }} />
-                  <circle cx="330" cy="230" r="4.5" className="anim-bubble-mascot" style={{ animationDelay: '0.5s', animationDuration: '4s' }} />
-                  <circle cx="270" cy="310" r="3.5" className="anim-bubble-mascot" style={{ animationDelay: '2s', animationDuration: '3s' }} />
+                <g fill={theme === 'royal_gold' ? "#FCD34D" : theme === 'neon' ? "#22C55E" : "#FFFFFF"} fillOpacity="0.7">
+                  {theme === 'cosmic' ? (
+                    <>
+                      <polygon points="150,220 153,226 159,226 154,230 156,236 150,232 144,236 146,230 141,226 147,226" className="anim-bubble-mascot" style={{ transformOrigin: '150px 220px', animationDelay: '0s', animationDuration: '4.2s' }} />
+                      <polygon points="220,270 222,274 227,274 223,277 225,282 220,279 215,282 217,277 213,274 218,274" className="anim-bubble-mascot" style={{ transformOrigin: '220px 270px', animationDelay: '1s', animationDuration: '3.5s' }} />
+                      <polygon points="330,230 333,235 338,235 334,239 336,244 330,241 324,244 326,239 322,235 327,235" className="anim-bubble-mascot" style={{ transformOrigin: '330px 230px', animationDelay: '0.5s', animationDuration: '4s' }} />
+                      <polygon points="270,310 272,314 277,314 273,317 275,322 270,319 265,322 267,317 263,314 268,314" className="anim-bubble-mascot" style={{ transformOrigin: '270px 310px', animationDelay: '2s', animationDuration: '3s' }} />
+                    </>
+                  ) : theme === 'fire' ? (
+                    <>
+                      <circle cx="150" cy="220" r="5" fill="#EF4444" className="anim-bubble-mascot" style={{ animationDelay: '0s', animationDuration: '3s' }} />
+                      <circle cx="220" cy="270" r="4" fill="#F97316" className="anim-bubble-mascot" style={{ animationDelay: '0.5s', animationDuration: '2.5s' }} />
+                      <circle cx="330" cy="230" r="6" fill="#F59E0B" className="anim-bubble-mascot" style={{ animationDelay: '1.2s', animationDuration: '3.8s' }} />
+                      <circle cx="270" cy="310" r="4.5" fill="#EF4444" className="anim-bubble-mascot" style={{ animationDelay: '1.8s', animationDuration: '2s' }} />
+                    </>
+                  ) : theme === 'ice' ? (
+                    <>
+                      <path d="M 146,216 L 154,224 M 154,216 L 146,224 M 150,214 L 150,226 M 144,220 L 156,220" stroke="#E0F2FE" strokeWidth="2" className="anim-bubble-mascot" style={{ animationDelay: '0s', animationDuration: '4.5s' }} />
+                      <path d="M 216,266 L 224,274 M 224,266 L 216,274 M 220,264 L 220,276 M 214,270 L 226,270" stroke="#E0F2FE" strokeWidth="1.5" className="anim-bubble-mascot" style={{ animationDelay: '1s', animationDuration: '3.8s' }} />
+                      <path d="M 326,226 L 334,234 M 334,226 L 326,234 M 330,224 L 330,236 M 324,230 L 336,230" stroke="#E0F2FE" strokeWidth="2.2" className="anim-bubble-mascot" style={{ animationDelay: '0.5s', animationDuration: '4.1s' }} />
+                      <path d="M 266,306 L 274,314 M 274,306 L 266,314 M 270,304 L 270,316 M 264,310 L 276,310" stroke="#E0F2FE" strokeWidth="1.8" className="anim-bubble-mascot" style={{ animationDelay: '2s', animationDuration: '3s' }} />
+                    </>
+                  ) : theme === 'nature' ? (
+                    <>
+                      <path d="M 150,220 C 153,212 161,212 158,220 C 155,228 147,228 150,220 Z" fill="#10B981" className="anim-bubble-mascot" style={{ animationDelay: '0s', animationDuration: '4.2s' }} />
+                      <path d="M 220,270 C 223,262 231,262 228,270 C 225,278 217,278 220,270 Z" fill="#34D399" className="anim-bubble-mascot" style={{ animationDelay: '1s', animationDuration: '3.5s' }} />
+                      <path d="M 330,230 C 333,222 341,222 338,230 C 335,238 327,238 330,230 Z" fill="#059669" className="anim-bubble-mascot" style={{ animationDelay: '0.5s', animationDuration: '4s' }} />
+                      <path d="M 270,310 C 273,302 281,302 278,310 C 275,318 267,318 270,310 Z" fill="#10B981" className="anim-bubble-mascot" style={{ animationDelay: '2s', animationDuration: '3s' }} />
+                    </>
+                  ) : (
+                    <>
+                      <circle cx="150" cy="220" r="4" className="anim-bubble-mascot" style={{ animationDelay: '0s', animationDuration: '4.2s' }} />
+                      <circle cx="220" cy="270" r="3" className="anim-bubble-mascot" style={{ animationDelay: '1s', animationDuration: '3.5s' }} />
+                      <circle cx="330" cy="230" r="4.5" className="anim-bubble-mascot" style={{ animationDelay: '0.5s', animationDuration: '4s' }} />
+                      <circle cx="270" cy="310" r="3.5" className="anim-bubble-mascot" style={{ animationDelay: '2s', animationDuration: '3s' }} />
+                    </>
+                  )}
                 </g>
               </motion.g>
             </motion.g>
@@ -286,17 +470,17 @@ export const Mascot = React.memo(({
 
           {/* GLASS BEAKER OUTLINES */}
           {/* Beaker Lip Opening */}
-          <ellipse cx="250" cy="130" rx="30" ry="8" fill="rgba(255,255,255,0.25)" stroke="#38BDF8" strokeWidth="4" />
-          <path d="M 220 130 L 220 160 A 10 10 0 0 0 230 170 L 270 170 A 10 10 0 0 0 280 160 L 280 130" fill="none" stroke="#38BDF8" strokeWidth="4" />
+          <ellipse cx="250" cy="130" rx="30" ry="8" fill="rgba(255,255,255,0.25)" stroke={strokeColor} strokeWidth="4" />
+          <path d="M 220 130 L 220 160 A 10 10 0 0 0 230 170 L 270 170 A 10 10 0 0 0 280 160 L 280 130" fill="none" stroke={strokeColor} strokeWidth="4" />
 
           {/* Beaker Side Handles */}
-          <g stroke="#38BDF8" strokeWidth="4" fill="url(#glass-grad-main)" fillOpacity="0.2">
+          <g stroke={strokeColor} strokeWidth="4" fill="url(#glass-grad-main)" fillOpacity="0.2">
             <ellipse cx="60" cy="310" rx="15" ry="30" transform="rotate(-15, 60, 310)" />
             <ellipse cx="440" cy="310" rx="15" ry="30" transform="rotate(15, 440, 310)" />
           </g>
 
           {/* Main Beaker Outlines with Shiny Highlights Overlay */}
-          <g stroke="#38BDF8" strokeWidth="4.5" fill="url(#glass-grad-main)" fillOpacity="0.2">
+          <g stroke={strokeColor} strokeWidth="4.5" fill="url(#glass-grad-main)" fillOpacity="0.2">
             <ellipse cx="250" cy="330" rx="190" ry="160" />
             <path d="M 120,210 C 100,150 110,120 120,110 C 140,110 160,150 180,180 Z" strokeLinejoin="round" />
             <path d="M 380,210 C 400,150 390,120 380,110 C 360,110 340,150 320,180 Z" strokeLinejoin="round" />
@@ -312,11 +496,11 @@ export const Mascot = React.memo(({
           <path d="M 380,135 C 380,135 362,143 352,162" fill="none" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" opacity="0.6" />
 
           {/* Sparkly Star Emitters */}
-          <g fill="#FFFFFF">
+          <g fill={theme === 'royal_gold' ? "#FCD34D" : "#FFFFFF"}>
             <polygon points="100,105 104,108 108,105 104,102" className="animate-pulse" style={{ animationDuration: '2.5s' }} />
             <polygon points="405,125 408,128 411,125 408,122" className="animate-pulse" style={{ animationDuration: '3.5s' }} />
-            <polygon points="85,380 91,385 97,380 91,375" fill="#38BDF8" className="animate-pulse" style={{ animationDuration: '2.8s' }} />
-            <polygon points="415,395 420,399 425,395 420,391" fill="#38BDF8" className="animate-pulse" style={{ animationDuration: '3.1s' }} />
+            <polygon points="85,380 91,385 97,380 91,375" fill={strokeColor} className="animate-pulse" style={{ animationDuration: '2.8s' }} />
+            <polygon points="415,395 420,399 425,395 420,391" fill={strokeColor} className="animate-pulse" style={{ animationDuration: '3.1s' }} />
           </g>
 
           {/* ACCESSORY MATTING (Hats rendered precisely over the SVG crown area) */}
@@ -354,6 +538,7 @@ export const Mascot = React.memo(({
                   <path d="M 140,40 Q 168,15 158,0 Q 152,15 135,30 Z" fill="#F3F4F6" stroke="#D1D5DB" strokeWidth="2.5" />
                   <path d="M 40,55 A 50,50 0 0,1 140,55 Z" fill="#64748B" stroke="#475569" strokeWidth="4" />
                   <rect x="85" y="5" width="10" height="50" fill="#475569" />
+                  <rect x="40" y="50" width="100" height="8" fill="#475569" rx="3" />
                   <rect x="40" y="50" width="100" height="8" fill="#475569" rx="3" />
                 </g>
               )}

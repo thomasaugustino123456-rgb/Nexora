@@ -582,6 +582,7 @@ export function useNexoraData(
         // Successfully loaded. Safe to sync background changes now!
         dataLoadedFromFirestore.current = true;
         isStateLoadedRef.current = true;
+        hasMatchedHydratedStateRef.current = true;
         console.log("[PERSISTENCE FIX]\nFirestore hydration complete\nSync gate unlocked\nBackground sync enabled");
         lastLoadedUserIdRef.current = user.uid;
         if (loadingTimeout) clearTimeout(loadingTimeout);
