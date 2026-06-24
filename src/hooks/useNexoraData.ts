@@ -337,25 +337,31 @@ export function useNexoraData(
       console.log(`[PERSISTENCE AUDIT] Progress document path: ${progressDocRef.path}`);
 
       const getDocWithCacheFallback = async (docRef: any) => {
-        if (!navigator.onLine) {
+        try {
+          return await getDoc(docRef);
+        } catch (e: any) {
+          console.warn(`[PERSISTENCE FIX] getDoc failed for ${docRef.path}, trying cache fallback:`, e);
           try {
             return await getDocFromCache(docRef);
-          } catch (e) {
-            console.warn("getDocFromCache failed, falling back to network getDoc:", e);
+          } catch (cacheErr) {
+            console.warn(`[PERSISTENCE FIX] getDocFromCache failed for ${docRef.path}:`, cacheErr);
+            throw e;
           }
         }
-        return await getDoc(docRef);
       };
 
       const getDocsWithCacheFallback = async (queryRef: any) => {
-        if (!navigator.onLine) {
+        try {
+          return await getDocs(queryRef);
+        } catch (e: any) {
+          console.warn(`[PERSISTENCE FIX] getDocs failed, trying cache fallback:`, e);
           try {
             return await getDocsFromCache(queryRef);
-          } catch (e) {
-            console.warn("getDocsFromCache failed, falling back to network getDocs:", e);
+          } catch (cacheErr) {
+            console.warn(`[PERSISTENCE FIX] getDocsFromCache failed:`, cacheErr);
+            throw e;
           }
         }
-        return await getDocs(queryRef);
       };
 
       try {
@@ -380,47 +386,55 @@ export function useNexoraData(
           console.log(`[PERSISTENCE AUDIT] [READ SUCCESS] Core Firestore data loaded successfully for UID: ${user.uid}`);
         } catch (fetchErr) {
           console.error(`[PERSISTENCE AUDIT] [READ FAILURE] Failed fetching Firestore data for UID: ${user.uid}. Error:`, fetchErr);
-          if (hasCache) {
-            console.warn("Hooks: Primary connection fetch timed out or failed, but local cached session is present. Proceeding with cache fallback.", fetchErr);
+          
+          // Regardless of hasCache, we should fallback gracefully to avoid blocking the user with a hard Connection Failed screen!
+          console.warn("Hooks: Primary connection fetch timed out or failed. Falling back to local states to preserve offline playability.");
 
-            const currentProgress = cachedProgress?.date === today ? cachedProgress : {
-              date: today,
-              completed: false,
-              pushupsDone: false,
-              waterDrank: 0,
-              breathingDone: false,
-              drawingDone: false,
-              footballDone: false,
-              bubblesDone: false,
-              completionsCount: 0,
-              nextRestorationTime: null,
-            };
+          const currentProgress = cachedProgress?.date === today ? cachedProgress : {
+            date: today,
+            completed: false,
+            pushupsDone: false,
+            waterDrank: 0,
+            breathingDone: false,
+            drawingDone: false,
+            footballDone: false,
+            bubblesDone: false,
+            completionsCount: 0,
+            nextRestorationTime: null,
+          };
 
-            const cachedObj = {
-              s: cachedSettings,
-              st: cachedStats,
-              p: {
-                c: currentProgress.completed,
-                cc: currentProgress.completionsCount,
-                d: currentProgress.date,
-              },
-              g: cachedGarden,
-            };
+          const cachedObj = {
+            s: cachedSettings,
+            st: cachedStats,
+            p: {
+              c: currentProgress.completed,
+              cc: currentProgress.completionsCount,
+              d: currentProgress.date,
+            },
+            g: cachedGarden,
+          };
 
-            hydratedStateRef.current = cachedObj;
-            lastSyncedRef.current = cachedObj;
-            isStateLoadedRef.current = true;
-            console.log("[PERSISTENCE FIX]\nFirestore hydration complete\nSync gate unlocked\nBackground sync enabled");
+          hydratedStateRef.current = cachedObj;
+          lastSyncedRef.current = cachedObj;
+          isStateLoadedRef.current = true;
+          console.log("[PERSISTENCE FIX]\nFirestore hydration complete\nSync gate unlocked\nBackground sync enabled (offline mode)");
 
-            if (loadingTimeout) clearTimeout(loadingTimeout);
-            isLoaderResolved = true;
-            setIsDataReady(true);
-            setLoading(false);
-            return;
-          } else {
-            console.error("Hooks: Failed fetching initial user collections:", fetchErr);
-            throw fetchErr;
-          }
+          if (loadingTimeout) clearTimeout(loadingTimeout);
+          isLoaderResolved = true;
+
+          // Set client state to cached or default local states so the app is instantly usable
+          setSettings(cachedSettings);
+          setStats(cachedStats);
+          setDailyProgress(currentProgress);
+          setGardenState(cachedGarden);
+
+          const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
+          setNeedsOnboarding(!onboardingComp);
+          setIsDataReady(true);
+          setLoading(false);
+          
+          showToast("Running offline. Your progress will be synced when connection is restored! 📡", "info");
+          return;
         }
 
         let firestoreSettings = DEFAULT_SETTINGS;
@@ -587,15 +601,15 @@ export function useNexoraData(
           if (loadingTimeout) clearTimeout(loadingTimeout);
           isLoaderResolved = true;
 
-          if (!hasCache) {
-            console.warn("Hooks: User has no local cache and Firestore failed. Showing Connection Failed screen to protect data.");
-            setLoadError("We couldn't connect to our servers to load your profile. Please check your internet connection and try again.");
-          } else {
-            const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
-            setNeedsOnboarding(!onboardingComp);
-            setIsDataReady(true);
-            setLoading(false);
-          }
+          // Rather than showing a hard Connection Failed blocking screen, we always boot into the offline-playable app!
+          console.warn("Hooks: Resolving load data from final catch-block with local states fallback.");
+          
+          const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
+          setNeedsOnboarding(!onboardingComp);
+          setIsDataReady(true);
+          setLoading(false);
+          
+          showToast("Running in local offline mode. Progress will sync when possible! 📡", "info");
         }
       }
     };
