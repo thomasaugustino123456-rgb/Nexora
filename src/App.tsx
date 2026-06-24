@@ -5610,6 +5610,8 @@ export default function App() {
                       onBack={() => setActiveScreen("home")}
                       userId={user.uid}
                       settings={settings}
+                      stats={stats}
+                      onUpdateSettings={onUpdateSettings}
                       onActivatePro={() => {
                         onUpdateSettings({ isPro: true });
                         showToast(
