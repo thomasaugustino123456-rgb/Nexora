@@ -223,14 +223,16 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className="flex flex-col justify-between p-3.5 rounded-2xl bg-orange-500/[0.04] border border-orange-500/10 shadow-sm select-none cursor-pointer"
+                  className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-orange-500/[0.04] border border-orange-500/10 shadow-sm select-none cursor-pointer min-w-0"
                 >
-                  <span className="text-[9px] font-black text-orange-600/60 uppercase tracking-widest block mb-2">Streak</span>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
-                      <Flame size={18} strokeWidth={2.2} />
+                  <span className="text-[9px] font-black text-orange-600/60 uppercase tracking-widest text-center block mb-2">Streak</span>
+                  <div className="flex flex-col items-center gap-1.5 w-full">
+                    <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/10 flex-shrink-0">
+                      <Flame size={15} strokeWidth={2.2} />
                     </div>
-                    <span className="text-2xl font-black text-[#4F3F34] tracking-tight">{stats.streak}</span>
+                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight truncate max-w-full block text-center">
+                      {stats.streak}
+                    </span>
                   </div>
                 </motion.div>
                 
@@ -240,14 +242,16 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className="flex flex-col justify-between p-3.5 rounded-2xl bg-blue-500/[0.04] border border-blue-500/10 shadow-sm select-none cursor-pointer"
+                  className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-blue-500/[0.04] border border-blue-500/10 shadow-sm select-none cursor-pointer min-w-0"
                 >
-                  <span className="text-[9px] font-black text-[#69C496]/80 uppercase tracking-widest block mb-2">XP</span>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#69C496] to-[#58B383] flex items-center justify-center text-white shadow-md shadow-[#69C496]/20">
-                      <Star size={18} strokeWidth={2.2} />
+                  <span className="text-[9px] font-black text-[#69C496]/80 uppercase tracking-widest text-center block mb-2">XP</span>
+                  <div className="flex flex-col items-center gap-1.5 w-full">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#69C496] to-[#58B383] flex items-center justify-center text-white shadow-md shadow-[#69C496]/10 flex-shrink-0">
+                      <Star size={15} strokeWidth={2.2} />
                     </div>
-                    <span className="text-2xl font-black text-[#4F3F34] tracking-tight">{stats.xp || 0}</span>
+                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight truncate max-w-full block text-center">
+                      {stats.xp || 0}
+                    </span>
                   </div>
                 </motion.div>
 
@@ -257,14 +261,16 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className="flex flex-col justify-between p-3.5 rounded-2xl bg-amber-500/[0.04] border border-amber-500/10 shadow-sm select-none cursor-pointer"
+                  className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-amber-500/[0.04] border border-amber-500/10 shadow-sm select-none cursor-pointer min-w-0"
                 >
-                  <span className="text-[9px] font-black text-amber-600/60 uppercase tracking-widest block mb-2">Coins</span>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
-                      <Coins size={18} strokeWidth={2.2} />
+                  <span className="text-[9px] font-black text-amber-600/60 uppercase tracking-widest text-center block mb-2">Coins</span>
+                  <div className="flex flex-col items-center gap-1.5 w-full">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-500/10 flex-shrink-0">
+                      <Coins size={15} strokeWidth={2.2} />
                     </div>
-                    <span className="text-2xl font-black text-[#4F3F34] tracking-tight">{stats.coins || 0}</span>
+                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight truncate max-w-full block text-center">
+                      {stats.coins || 0}
+                    </span>
                   </div>
                 </motion.div>
               </div>

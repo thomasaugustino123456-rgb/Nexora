@@ -6437,6 +6437,7 @@ export default function App() {
             (activeScreen as string) !== "plant" &&
             (activeScreen as string) !== "house" &&
             (activeScreen as string) !== "archives" &&
+            (activeScreen as string) !== "leaderboard" &&
             (activeScreen as string) !== "admin" &&
             (activeScreen as string) !== "hydration-detail" &&
             (activeScreen as string) !== "social" &&

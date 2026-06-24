@@ -84,8 +84,8 @@ export function LibraryScreen({
           </div>
         </div>
 
-        {/* Bento Navigation Tabs with Sunset/Sand accents */}
-        <div className="max-w-2xl mx-auto flex gap-3 pb-3 overflow-x-auto no-scrollbar scroll-smooth">
+        {/* Bento Navigation Tabs with Sunset/Sand accents - No Scrolling, Grid Layout */}
+        <div className="max-w-2xl mx-auto grid grid-cols-3 gap-2 sm:gap-3">
           {tabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -93,17 +93,17 @@ export function LibraryScreen({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as Tab)}
-                className={`flex flex-col items-start p-4 rounded-2xl border transition-all text-left flex-shrink-0 min-w-[135px] sm:min-w-[155px] hover:scale-[1.02] active:scale-[0.98] ${
+                className={`flex flex-col items-center sm:items-start p-2.5 sm:p-4 rounded-2xl border transition-all text-center sm:text-left hover:scale-[1.02] active:scale-[0.98] w-full ${
                   isActive 
                     ? 'bg-[#4F3F34] text-[#FCFAF6] border-[#4F3F34] shadow-md shadow-[#4F3F34]/20' 
                     : 'bg-white text-[#4F3F34] border-[#E9E4D4] hover:bg-[#FAF7F2] shadow-sm'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Icon size={14} className={isActive ? 'text-[#69C496]' : 'text-[#69C496]'} />
-                  <span className="text-[10px] font-black uppercase tracking-wider">{tab.label}</span>
+                <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 mb-1 sm:mb-1.5">
+                  <Icon size={13} className="text-[#69C496]" />
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider">{tab.label}</span>
                 </div>
-                <span className={`text-[9px] font-bold uppercase tracking-wide truncate w-full block ${isActive ? 'text-[#FAF7F2]/60' : 'text-[#4F3F34]/40'}`}>
+                <span className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wide truncate w-full block ${isActive ? 'text-[#FAF7F2]/60' : 'text-[#4F3F34]/40'}`}>
                   {tab.desc}
                 </span>
               </button>
@@ -137,7 +137,7 @@ export function LibraryScreen({
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-[#E9E4D4] bg-white border border-[#E9E4D4] rounded-[2rem] p-5 shadow-sm">
+                  <div className="flex flex-col gap-3">
                     {items.map(item => {
                       const isMusic = item.type === 'music';
                       const isSkin = item.type === 'skin';
@@ -145,7 +145,7 @@ export function LibraryScreen({
                       const active = item.activated;
 
                       return (
-                        <div key={item.id} className="flex items-center gap-4 py-4 first:pt-1 last:pb-1">
+                        <div key={item.id} className="flex items-center gap-4 p-4 bg-white border border-[#E9E4D4] rounded-2xl shadow-sm hover:scale-[1.01] hover:border-[#69C496]/50 transition-all">
                           {/* Item display icon */}
                           <div className="relative">
                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner border transition-all ${
@@ -377,9 +377,9 @@ export function LibraryScreen({
                       </p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-[#E9E4D4] bg-white border border-[#E9E4D4] rounded-[2rem] p-5 shadow-sm">
+                    <div className="flex flex-col gap-3">
                       {settings.savedChallengeIds.map(cid => (
-                        <div key={cid} className="flex items-center justify-between py-3.5 first:pt-1 last:pb-1 animate-fadeIn">
+                        <div key={cid} className="flex items-center justify-between p-4 bg-white border border-[#E9E4D4] rounded-2xl shadow-sm hover:scale-[1.01] transition-all animate-fadeIn">
                           <div className="flex items-center gap-3">
                             <div className="p-2.5 bg-[#E8F5EE] text-[#69C496] rounded-xl border border-[#D0EFE0]">
                               <Zap size={14} className="fill-[#69C496]/40" />
@@ -420,9 +420,9 @@ export function LibraryScreen({
                       <p className="text-[10px] text-[#4F3F34]/50 leading-relaxed font-bold">Your active gratitude and dump thoughts will sync right here, bro.</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-[#E9E4D4] bg-white border border-[#E9E4D4] rounded-[2rem] p-5 shadow-sm">
+                    <div className="flex flex-col gap-3">
                       {stats.gratitudeEntries.map(entry => (
-                        <div key={entry.id} className="flex items-center justify-between gap-4 py-4 first:pt-1 last:pb-1">
+                        <div key={entry.id} className="flex items-center justify-between gap-4 p-4 bg-white border border-[#E9E4D4] rounded-2xl shadow-sm hover:scale-[1.01] transition-all">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-bold text-[#4F3F34] leading-relaxed italic">"{entry.text}"</p>
                             <span className="text-[8px] font-black text-[#4F3F34]/40 uppercase tracking-widest block mt-1.5">{new Date(entry.date).toLocaleDateString()}</span>
