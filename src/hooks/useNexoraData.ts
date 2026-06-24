@@ -18,6 +18,32 @@ import { auth, db } from "../firebase";
 import { UserSettings, UserStats, DailyProgress } from "../types";
 import { GardenState, createInitialGardenState } from "../types/garden";
 
+function deepEqual(a: any, b: any): boolean {
+  if (a === b) return true;
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    if (a.constructor !== b.constructor) return false;
+    if (Array.isArray(a)) {
+      const length = a.length;
+      if (length !== b.length) return false;
+      for (let i = length; i-- !== 0;) {
+        if (!deepEqual(a[i], b[i])) return false;
+      }
+      return true;
+    }
+    const keys = Object.keys(a);
+    if (keys.length !== Object.keys(b).length) return false;
+    for (let i = keys.length; i-- !== 0;) {
+      if (!Object.prototype.hasOwnProperty.call(b, keys[i])) return false;
+    }
+    for (let i = keys.length; i-- !== 0;) {
+      const key = keys[i];
+      if (!deepEqual(a[key], b[key])) return false;
+    }
+    return true;
+  }
+  return a !== a && b !== b;
+}
+
 const today = new Date().toISOString().split("T")[0];
 
 export function useNexoraData(
@@ -98,9 +124,11 @@ export function useNexoraData(
   const dataLoadedFromFirestore = useRef(false);
   const lastLoadedUserIdRef = useRef<string | null>(null);
   const quotaExceededRef = useRef(false);
-  const lastSyncedRef = useRef<string>("");
+  const lastSyncedRef = useRef<any>(null);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isStateLoadedRef = useRef(false);
+  const hasMatchedHydratedStateRef = useRef(false);
+  const hydratedStateRef = useRef<any>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -109,6 +137,8 @@ export function useNexoraData(
       const prevUserId = localStorage.getItem("nexora_cached_user");
 
       isStateLoadedRef.current = false;
+      hasMatchedHydratedStateRef.current = false;
+      hydratedStateRef.current = null;
 
       if (currentUser) {
         console.log(`[PERSISTENCE AUDIT] AUTH UID: ${currentUser.uid}`);
@@ -127,8 +157,11 @@ export function useNexoraData(
           console.log("Hooks: Different user detected, resetting caches in-memory and locally.");
           // Clear sync blockers and caches first
           dataLoadedFromFirestore.current = false;
-          lastSyncedRef.current = "";
+          lastSyncedRef.current = null;
           lastLoadedUserIdRef.current = null;
+          isStateLoadedRef.current = false;
+          hasMatchedHydratedStateRef.current = false;
+          hydratedStateRef.current = null;
           setIsDataReady(false);
           setLoading(true);
 
@@ -165,8 +198,11 @@ export function useNexoraData(
           // CRITICAL: Block any sync during state resets
           dataLoadedFromFirestore.current = false;
           setIsDataReady(false);
-          lastSyncedRef.current = "";
+          lastSyncedRef.current = null;
           lastLoadedUserIdRef.current = null;
+          isStateLoadedRef.current = false;
+          hasMatchedHydratedStateRef.current = false;
+          hydratedStateRef.current = null;
 
           Object.keys(localStorage).forEach((key) => {
             if (key.startsWith("nexora_")) {
@@ -193,7 +229,10 @@ export function useNexoraData(
         setIsDataReady(false); // DO NOT allow ready state without user
         dataLoadedFromFirestore.current = false;
         lastLoadedUserIdRef.current = null;
-        lastSyncedRef.current = "";
+        lastSyncedRef.current = null;
+        isStateLoadedRef.current = false;
+        hasMatchedHydratedStateRef.current = false;
+        hydratedStateRef.current = null;
         setNeedsOnboarding(false);
         setLoading(false);
       }
@@ -255,6 +294,36 @@ export function useNexoraData(
         setIsDataReady(true);
         setLoading(false);
         dataLoadedFromFirestore.current = true;
+
+        const currentProgress = cachedProgress?.date === today ? cachedProgress : {
+          date: today,
+          completed: false,
+          pushupsDone: false,
+          waterDrank: 0,
+          breathingDone: false,
+          drawingDone: false,
+          footballDone: false,
+          bubblesDone: false,
+          completionsCount: 0,
+          nextRestorationTime: null,
+        };
+
+        const cachedObj = {
+          s: cachedSettings,
+          st: cachedStats,
+          p: {
+            c: currentProgress.completed,
+            cc: currentProgress.completionsCount,
+            d: currentProgress.date,
+          },
+          g: cachedGarden,
+        };
+
+        hydratedStateRef.current = cachedObj;
+        lastSyncedRef.current = cachedObj;
+        isStateLoadedRef.current = true;
+        console.log("[PERSISTENCE FIX]\nFirestore hydration complete\nSync gate unlocked\nBackground sync enabled");
+
         lastLoadedUserIdRef.current = user.uid;
         return;
       }
@@ -313,6 +382,36 @@ export function useNexoraData(
           console.error(`[PERSISTENCE AUDIT] [READ FAILURE] Failed fetching Firestore data for UID: ${user.uid}. Error:`, fetchErr);
           if (hasCache) {
             console.warn("Hooks: Primary connection fetch timed out or failed, but local cached session is present. Proceeding with cache fallback.", fetchErr);
+
+            const currentProgress = cachedProgress?.date === today ? cachedProgress : {
+              date: today,
+              completed: false,
+              pushupsDone: false,
+              waterDrank: 0,
+              breathingDone: false,
+              drawingDone: false,
+              footballDone: false,
+              bubblesDone: false,
+              completionsCount: 0,
+              nextRestorationTime: null,
+            };
+
+            const cachedObj = {
+              s: cachedSettings,
+              st: cachedStats,
+              p: {
+                c: currentProgress.completed,
+                cc: currentProgress.completionsCount,
+                d: currentProgress.date,
+              },
+              g: cachedGarden,
+            };
+
+            hydratedStateRef.current = cachedObj;
+            lastSyncedRef.current = cachedObj;
+            isStateLoadedRef.current = true;
+            console.log("[PERSISTENCE FIX]\nFirestore hydration complete\nSync gate unlocked\nBackground sync enabled");
+
             if (loadingTimeout) clearTimeout(loadingTimeout);
             isLoaderResolved = true;
             setIsDataReady(true);
@@ -427,10 +526,7 @@ export function useNexoraData(
         console.log(`[PERSISTENCE AUDIT] LOADED STREAK: ${firestoreStats.streak}`);
         console.log(`[PERSISTENCE AUDIT] LOADED GARDEN STATE:`, JSON.stringify(firestoreGarden));
 
-        // Initialize lastSyncedRef with the exact loaded structure before enabling sync.
-        // This ensures the next background sync check sees full identity and returns early,
-        // preventing any race overrides of defaulted memory states!
-        lastSyncedRef.current = JSON.stringify({
+        const hydratedObj = {
           s: firestoreSettings,
           st: firestoreStats,
           p: {
@@ -439,7 +535,10 @@ export function useNexoraData(
             d: firestoreProgress.date,
           },
           g: firestoreGarden,
-        });
+        };
+
+        hydratedStateRef.current = hydratedObj;
+        lastSyncedRef.current = hydratedObj;
 
         // Save to state and local cache immediately
         setSettings(firestoreSettings);
@@ -468,6 +567,8 @@ export function useNexoraData(
 
         // Successfully loaded. Safe to sync background changes now!
         dataLoadedFromFirestore.current = true;
+        isStateLoadedRef.current = true;
+        console.log("[PERSISTENCE FIX]\nFirestore hydration complete\nSync gate unlocked\nBackground sync enabled");
         lastLoadedUserIdRef.current = user.uid;
         if (loadingTimeout) clearTimeout(loadingTimeout);
         isLoaderResolved = true;
@@ -506,11 +607,13 @@ export function useNexoraData(
     };
   }, [user]);
 
-  // Update isStateLoadedRef when state matches loaded Firestore data
+  // Check if current state matches hydrated state to set hasMatchedHydratedStateRef
   useEffect(() => {
-    if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
+    if (!user || !isDataReady || !dataLoadedFromFirestore.current || !hydratedStateRef.current) return;
 
-    const currentStateStr = JSON.stringify({
+    if (hasMatchedHydratedStateRef.current) return;
+
+    const currentState = {
       s: settings,
       st: stats,
       p: {
@@ -519,11 +622,11 @@ export function useNexoraData(
         d: dailyProgress.date,
       },
       g: gardenState,
-    });
+    };
 
-    if (currentStateStr === lastSyncedRef.current) {
-      console.log(`[PERSISTENCE AUDIT] State matches loaded Firestore data. Enabling background sync for user UID: ${user.uid}`);
-      isStateLoadedRef.current = true;
+    if (deepEqual(currentState, hydratedStateRef.current)) {
+      console.log(`[PERSISTENCE AUDIT] State matches loaded Firestore data. Ready to handle future user mutations.`);
+      hasMatchedHydratedStateRef.current = true;
     }
   }, [settings, stats, dailyProgress, gardenState, user, isDataReady]);
 
@@ -534,11 +637,15 @@ export function useNexoraData(
       console.log(`[PERSISTENCE AUDIT] State is not fully loaded/synchronized with Firestore yet. Skipping background sync for user UID: ${user.uid}`);
       return;
     }
+    if (!hasMatchedHydratedStateRef.current) {
+      console.log(`[PERSISTENCE AUDIT] Stale memory state detected (React has not yet flushed hydrated state from Firestore). Skipping background sync to avoid data loss.`);
+      return;
+    }
 
     const syncData = async () => {
       if (quotaExceededRef.current) return;
 
-      const currentStateStr = JSON.stringify({
+      const currentState = {
         s: settings,
         st: stats,
         p: {
@@ -547,9 +654,9 @@ export function useNexoraData(
           d: dailyProgress.date,
         },
         g: gardenState,
-      });
+      };
 
-      if (currentStateStr === lastSyncedRef.current) return;
+      if (lastSyncedRef.current && deepEqual(currentState, lastSyncedRef.current)) return;
 
       try {
         const userRef = doc(db, "users", user.uid);
@@ -561,14 +668,12 @@ export function useNexoraData(
         console.log(`[PERSISTENCE AUDIT] Target progress document path: ${progressRef.path}`);
 
         // 1. Check if core settings/stats/garden changed
-        const lastSyncedData = lastSyncedRef.current
-          ? JSON.parse(lastSyncedRef.current)
-          : null;
+        const lastSyncedData = lastSyncedRef.current;
         const coreChanged =
           !lastSyncedData ||
-          JSON.stringify(lastSyncedData.s) !== JSON.stringify(settings) ||
-          JSON.stringify(lastSyncedData.st) !== JSON.stringify(stats) ||
-          JSON.stringify(lastSyncedData.g) !== JSON.stringify(gardenState);
+          !deepEqual(lastSyncedData.s, settings) ||
+          !deepEqual(lastSyncedData.st, stats) ||
+          !deepEqual(lastSyncedData.g, gardenState);
 
         if (coreChanged) {
           console.log(`[PERSISTENCE AUDIT] Core fields changed. Writing updated settings, stats, and gardenState to: ${userRef.path}`);
@@ -628,7 +733,7 @@ export function useNexoraData(
           console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote leaderboard document to: ${leaderboardRef.path}`);
         }
 
-        lastSyncedRef.current = currentStateStr;
+        lastSyncedRef.current = currentState;
         console.log("Hooks: Optimized Background Sync Complete ✅");
       } catch (e: any) {
         console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Error syncing data for user UID: ${user?.uid}. Error:`, e);
