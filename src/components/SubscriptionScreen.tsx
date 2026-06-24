@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Check, Crown, Zap, Star, MessageSquare, Heart, ShieldCheck, Users, X } from 'lucide-react';
+import { ArrowLeft, Check, Crown, Zap, ShieldCheck, Users, X, MessageSquare, Heart } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 
 export function SubscriptionScreen({ 
@@ -85,7 +85,7 @@ export function SubscriptionScreen({
           </motion.div>
           
           <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white">NEXORA PRO</h1>
-          <p className="text-slate-400 max-w-md text-lg font-medium leading-relaxed">
+          <p className="text-slate-200 max-w-md text-lg font-medium leading-relaxed">
             The ultimate protocol for discipline legends. Access the Architect Lab and support the mission.
           </p>
         </div>
@@ -104,7 +104,7 @@ export function SubscriptionScreen({
                 <Heart size={12} fill="currentColor" /> THE MISSION
               </div>
               <h2 className="text-3xl font-black italic tracking-tight">WHERE DOES YOUR MONEY GO?</h2>
-              <p className="text-slate-400 text-sm leading-relaxed">
+              <p className="text-slate-200 text-sm leading-relaxed">
                 Nexora isn't a heartless corporation. We are a small team of warriors building the future of discipline. Your subscription directly funds:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
@@ -148,7 +148,7 @@ export function SubscriptionScreen({
                   <h3 className="text-2xl font-black text-white">PRO TEST MODE</h3>
                   <span className="bg-blue-500 text-[8px] font-black px-2 py-0.5 rounded-full text-white uppercase tracking-widest">Limited Time</span>
                 </div>
-                <p className="text-blue-100/70 text-sm font-medium leading-relaxed max-w-lg">
+                <p className="text-blue-100 font-medium leading-relaxed max-w-lg">
                   Curious about the power of Nexora Pro? Unlock every feature, custom plan, and exclusive item for 10 minutes. Experience the peak of consistency.
                 </p>
                 {settings?.proTestStartedAt && (
@@ -207,7 +207,7 @@ export function SubscriptionScreen({
                 </div>
                 <h4 className="font-black text-lg">{f.title}</h4>
               </div>
-              <p className="text-slate-400 text-sm leading-relaxed">{f.description}</p>
+              <p className="text-slate-200 text-sm leading-relaxed">{f.description}</p>
             </motion.div>
           ))}
         </div>
@@ -216,15 +216,15 @@ export function SubscriptionScreen({
         <div className="mb-24 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/5 backdrop-blur-xl">
           <div className="p-8 border-b border-white/10 bg-white/5">
             <h3 className="font-black text-xl tracking-tight uppercase">Protocol Comparison</h3>
-            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-1">Free Tier vs Architect Pro</p>
+            <p className="text-[10px] uppercase tracking-widest text-slate-300 font-bold mt-1">Free Tier vs Architect Pro</p>
           </div>
           <div className="p-0 overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse min-w-[500px] sm:min-w-full">
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="p-6 text-[10px] font-black uppercase text-slate-400">Capability</th>
-                  <th className="p-6 text-[10px] font-black uppercase text-slate-400 text-center bg-white/5">Free</th>
-                  <th className="p-6 text-[10px] font-black uppercase text-amber-500 text-center bg-amber-500/5">Pro</th>
+                  <th className="px-4 py-4 sm:p-6 text-[10px] font-black uppercase text-slate-300">Capability</th>
+                  <th className="px-4 py-4 sm:p-6 text-[10px] font-black uppercase text-slate-300 text-center bg-white/5">Free</th>
+                  <th className="px-4 py-4 sm:p-6 text-[10px] font-black uppercase text-amber-500 text-center bg-amber-500/5">Pro</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
@@ -238,11 +238,11 @@ export function SubscriptionScreen({
                   { name: 'Support', free: 'Community', pro: 'Priority Protocol' },
                 ].map((row, i) => (
                   <tr key={i} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors text-[11px]">
-                    <td className="p-6 font-bold text-slate-300 uppercase tracking-tight">{row.name}</td>
-                    <td className="p-6 text-center text-slate-500 bg-white/5 font-black">
+                    <td className="px-4 py-4 sm:p-6 font-bold text-slate-200 uppercase tracking-tight whitespace-normal">{row.name}</td>
+                    <td className="px-4 py-4 sm:p-6 text-center text-slate-300 bg-white/5 font-black">
                       {typeof row.free === 'boolean' ? (row.free ? <Check size={14} className="mx-auto text-emerald-500" /> : <X size={14} className="mx-auto text-gray-700" />) : row.free}
                     </td>
-                    <td className="p-6 text-center bg-amber-500/5 font-black text-amber-400">
+                    <td className="px-4 py-4 sm:p-6 text-center bg-amber-500/5 font-black text-amber-400">
                       {typeof row.pro === 'boolean' ? (row.pro ? <Crown size={14} className="mx-auto text-amber-500" /> : <X size={14} className="mx-auto text-rose-500" />) : row.pro}
                     </td>
                   </tr>
@@ -262,7 +262,7 @@ export function SubscriptionScreen({
               <div>
                 <h3 className="font-black text-xl">YEARLY</h3>
                 <p className="text-amber-500 font-bold">$64.00 / year</p>
-                <p className="text-[10px] text-slate-500 mt-2">Elite Master Access</p>
+                <p className="text-[10px] text-slate-300 mt-2">Elite Master Access</p>
               </div>
             </div>
             <div className="p-8 rounded-[2rem] bg-gradient-to-b from-amber-500/20 to-amber-950/40 border-2 border-amber-500/50 flex flex-col items-center text-center space-y-4 relative hover:scale-105 transition-all cursor-pointer group">
@@ -271,7 +271,7 @@ export function SubscriptionScreen({
               <div>
                 <h3 className="font-black text-xl">MONTHLY</h3>
                 <p className="text-amber-400 font-bold">$14.99 / mo</p>
-                <p className="text-[10px] text-amber-500/60 mt-2">Maximum Protocol</p>
+                <p className="text-[10px] text-amber-300 mt-2">Maximum Protocol</p>
               </div>
             </div>
             <div className="p-8 rounded-[2rem] bg-white/5 border border-white/10 flex flex-col items-center text-center space-y-4 hover:border-white/20 transition-all cursor-pointer hover:bg-white/10 group">
@@ -279,7 +279,7 @@ export function SubscriptionScreen({
               <div>
                 <h3 className="font-black text-xl">WEEKLY</h3>
                 <p className="text-blue-400 font-bold">$4.99 / wk</p>
-                <p className="text-[10px] text-slate-500 mt-2">Quick Protocol</p>
+                <p className="text-[10px] text-slate-300 mt-2">Quick Protocol</p>
               </div>
             </div>
           </div>
@@ -298,7 +298,7 @@ export function SubscriptionScreen({
                 <Heart className="text-indigo-400" size={28} />
               </div>
               <h3 className="text-3xl font-black tracking-tighter italic">WILLINGLY SUPPORT</h3>
-              <p className="text-base text-slate-400 max-w-lg mx-auto leading-relaxed">
+              <p className="text-base text-slate-200 max-w-lg mx-auto leading-relaxed">
                 Nexora is built for the community. If you find value in our mission, you can choose to willingly support the lab with whatever amount you feel is right. Legends invest in the future.
               </p>
             </div>
@@ -319,16 +319,24 @@ export function SubscriptionScreen({
             </div>
           </motion.div>
 
-                    <div className="mt-8 p-8 rounded-[2.5rem] bg-slate-900/80 border border-white/10 backdrop-blur-md">
+          <div className="mt-8 p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] bg-slate-900/80 border border-white/10 backdrop-blur-md">
             <div className="flex flex-col md:flex-row gap-8">
               <div className="flex-1 space-y-4">
                 <h3 className="text-lg font-black text-blue-400 flex items-center gap-2">
                   <MessageSquare size={20} /> CRYPTO & m-GURUSH
                 </h3>
-                <p className="text-xs text-slate-400">Manual verification for South Sudan and Crypto users. Send payment and your UID <b>({userId})</b> to WhatsApp.</p>
-                <div className="space-y-2 font-mono text-[10px] bg-black/50 p-4 rounded-2xl border border-white/5 break-all">
-                  <p className="text-amber-200">BTC: bc1q5qfv4fkvd9s5j90pc6mg9fjxjyelt992fu0xfh</p>
-                  <p className="text-blue-200 mt-2">USDT (ERC20): 0x0d10b62ca87c87bcfa91cee9a08d3041b10d104e</p>
+                <p className="text-xs text-slate-200 leading-relaxed">
+                  Manual verification for South Sudan and Crypto users. Send payment and your UID <b className="text-white">({userId})</b> to WhatsApp.
+                </p>
+                <div className="space-y-3 font-mono text-[10px] sm:text-xs bg-black/50 p-5 rounded-2xl border border-white/5">
+                  <p className="text-amber-200 select-all break-all leading-normal">
+                    <span className="text-slate-400 font-bold block mb-1">BTC Address:</span>
+                    bc1q5qfv4fkvd9s5j90pc6mg9fjxjyelt992fu0xfh
+                  </p>
+                  <p className="text-blue-200 select-all break-all leading-normal border-t border-white/5 pt-3">
+                    <span className="text-slate-400 font-bold block mb-1">USDT (ERC20) Address:</span>
+                    0x0d10b62ca87c87bcfa91cee9a08d3041b10d104e
+                  </p>
                 </div>
               </div>
               <div className="w-full md:w-64 flex flex-col justify-center gap-3">
@@ -363,4 +371,3 @@ export function SubscriptionScreen({
     </motion.div>
   );
 }
-
