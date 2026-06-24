@@ -54,15 +54,23 @@ export function SettingsScreen({
   isStandalone = false,
   onTriggerPwaInstall
 }: SettingsScreenProps) {
-  const [showFeedbackModal, setShowFeedbackModal] = React.useState(false);
+  const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
   const [showPrivacyModal, setShowPrivacyModal] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-  const [feedback, setFeedback] = React.useState({ rating: 5, message: '', category: 'General' });
   const [mascotError, setMascotError] = React.useState(false);
 
-  // Password / Link state and actions
+  // Password actions state
   const [passwordInput, setPasswordInput] = React.useState('');
   const [isPasswordActionLoading, setIsPasswordActionLoading] = React.useState(false);
+
+  // Community feedback inline state
+  const [feedback, setFeedback] = React.useState({ rating: 5, message: '', category: 'General' });
+
+  // Premium Code Entry state
+  const [proCode, setProCode] = React.useState('');
+
+  // Selected language state (Mock)
+  const [selectedLanguage, setSelectedLanguage] = React.useState('en');
 
   const hasPasswordProvider = user?.providerData?.some(
     (provider) => provider.providerId === 'password'
@@ -83,11 +91,9 @@ export function SettingsScreen({
     setIsPasswordActionLoading(true);
     try {
       if (hasPasswordProvider) {
-        // Update existing password
         await updatePassword(user, passwordInput);
         showToast('Password updated successfully! 🔥', 'success');
       } else {
-        // Link new password credential
         const credential = EmailAuthProvider.credential(user.email!, passwordInput);
         await linkWithCredential(user, credential);
         showToast('Email & Password Login connected successfully! 🚀 Log in anytime with email + password.', 'success');
@@ -101,9 +107,7 @@ export function SettingsScreen({
           const provider = new GoogleAuthProvider();
           provider.addScope('profile');
           provider.addScope('email');
-          provider.setCustomParameters({
-            prompt: 'select_account'
-          });
+          provider.setCustomParameters({ prompt: 'select_account' });
           await reauthenticateWithPopup(user, provider);
           showToast('Security authorized! Retrying password setup...', 'info');
           if (hasPasswordProvider) {
@@ -117,7 +121,7 @@ export function SettingsScreen({
           setPasswordInput('');
         } catch (reauthErr: any) {
           console.error("Re-authentication fail:", reauthErr);
-          showToast(`Requires fresh login, bro! If popup was blocked or failed, please log out and log in with Google and set password instantly.`, 'error');
+          showToast(`Requires fresh login, bro! If popup was blocked, please log out and log in with Google to set password instantly.`, 'error');
         }
       } else if (err.code === 'auth/credential-already-in-use') {
         showToast('This email is already linked or in use by another account, bro.', 'error');
@@ -135,14 +139,41 @@ export function SettingsScreen({
     setIsPasswordActionLoading(true);
     try {
       await sendPasswordResetEmail(auth, user.email);
-       showToast('Password reset link sent to your email inbox! ✉️ Check your mail to set your password.', 'success');
+      showToast('Password reset link sent to your email inbox! ✉️ Check your mail to set your password.', 'success');
     } catch (err: any) {
-       showToast(`Could not send reset email: ${err.message}`, 'error');
+      showToast(`Could not send reset email: ${err.message}`, 'error');
     } finally {
-       setIsPasswordActionLoading(false);
+      setIsPasswordActionLoading(false);
     }
   };
-  
+
+  const handleActivateProCode = () => {
+    vibrate(VIBRATION_PATTERNS.NOTIFY);
+    const code = proCode.trim().toUpperCase();
+    if (code === 'PRO100' || code === 'NEXORA' || code === 'DEVELOPER') {
+      setSettings({ isPro: true });
+      showToast('Nexus Pro Unlocked! Welcome to the Elite Tier, Operative! 🚀', 'success');
+      setProCode('');
+    } else if (code === 'RESET') {
+      setSettings({ isPro: false });
+      showToast('Nexus Pro reset to Free Tier.', 'info');
+      setProCode('');
+    } else {
+      showToast('Invalid activation code, bro. Try "NEXORA" or "DEVELOPER" to test!', 'error');
+    }
+  };
+
+  const handleInlineFeedbackSubmit = () => {
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    if (!feedback.message.trim()) {
+      showToast('Please enter a detailed message first, bro!', 'error');
+      return;
+    }
+    onSubmitFeedback(feedback);
+    showToast('Transmission complete! Feedback logged securely at HQ. 📡', 'success');
+    setFeedback({ rating: 5, message: '', category: 'General' });
+  };
+
   const COLORS = [
     { name: 'Classic Blue', value: '#3b82f6' },
     { name: 'Sunset Orange', value: '#f97316' },
@@ -151,32 +182,40 @@ export function SettingsScreen({
     { name: 'Rose', value: '#f43f5e' },
   ];
 
+  // Map of categories on the Settings dashboard
+  const CATEGORIES = [
+    { id: 'account', label: 'Account', desc: 'Bio-ID, photo, and passwords', icon: User, color: 'text-amber-500 bg-amber-500/[0.06] border-amber-500/10' },
+    { id: 'notifications', label: 'Notifications', desc: 'Push schedules, sound packs', icon: Bell, color: 'text-orange-500 bg-orange-500/[0.06] border-orange-500/10' },
+    { id: 'goals', label: 'Goals', desc: 'Pushups, water, challenges', icon: Target, color: 'text-emerald-500 bg-emerald-500/[0.06] border-emerald-500/10' },
+    { id: 'appearance', label: 'Appearance', desc: 'Theme colors, interface, performance', icon: Palette, color: 'text-purple-500 bg-purple-500/[0.06] border-purple-500/10' },
+    { id: 'privacy', label: 'Privacy', desc: 'Cloaking feed, comment visibility', icon: Shield, color: 'text-rose-500 bg-rose-500/[0.06] border-rose-500/10' },
+    { id: 'language', label: 'Language & Units', desc: 'Metric format, display locales', icon: Globe, color: 'text-indigo-500 bg-indigo-500/[0.06] border-indigo-500/10' },
+    { id: 'install', label: 'Install Nexora', desc: 'PWA native client setup', icon: Smartphone, color: 'text-cyan-500 bg-cyan-500/[0.06] border-cyan-500/10' },
+    { id: 'backup', label: 'Backup & Sync', desc: 'Version snapshot, rollback protection', icon: RefreshCw, color: 'text-teal-500 bg-teal-500/[0.06] border-teal-500/10' },
+    { id: 'sound', label: 'Sound', desc: 'Lofi state, mascot audio packs', icon: Volume2, color: 'text-pink-500 bg-pink-500/[0.06] border-pink-500/10' },
+    { id: 'community', label: 'Community', desc: 'HQ feedback transmission center', icon: MessageSquare, color: 'text-amber-600 bg-amber-600/[0.06] border-amber-600/10' },
+    { id: 'premium', label: 'Premium', desc: 'Unlock architect mode & elite perks', icon: Sparkles, color: 'text-yellow-600 bg-yellow-500/[0.06] border-yellow-500/10' },
+    { id: 'about', label: 'About & Security', desc: 'Integrity tests, manifesto, session exit', icon: Info, color: 'text-slate-500 bg-slate-500/[0.06] border-slate-500/10' },
+  ];
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.05 }}
-      className="max-w-2xl mx-auto w-full space-y-8 pb-40"
+      className="max-w-2xl mx-auto w-full space-y-6 pb-40 px-3"
+      id="settings-master-container"
     >
-      {/* Header */}
-      <div className="flex items-center gap-4 sticky top-0 settings-header-bg z-40 py-4 px-2 -mx-2">
-        <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm text-blue-900 active:scale-95 transition-all">
-           <ChevronLeft size={24} />
-        </button>
-        <div>
-           <h2 className="text-3xl font-black text-blue-900 tracking-tight italic uppercase">System Settings</h2>
-           <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] opacity-60">Global Control Center</p>
-        </div>
-      </div>
-
       <AnimatePresence>
+        {/* Modals placed outside category routes */}
         {showPrivacyModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[500] flex items-center justify-center p-6">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white rounded-[32px] p-8 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden"
+              className="bg-white rounded-[32px] p-8 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden border border-[#E9E4D4]"
+              id="privacy-protocol-modal"
             >
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-600" />
               <div className="flex items-center gap-4">
@@ -208,8 +247,9 @@ export function SettingsScreen({
               </div>
 
               <button 
-                onClick={() => setShowPrivacyModal(false)}
-                className="w-full bg-blue-900 text-white py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-transform"
+                onClick={() => { vibrate(10); setShowPrivacyModal(false); }}
+                className="w-full bg-[#4F3F34] text-[#FCFAF6] py-4 rounded-2xl font-black shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-wider text-xs"
+                id="dismiss-privacy-modal-btn"
               >
                 DISMISS PROTOCOL
               </button>
@@ -223,7 +263,8 @@ export function SettingsScreen({
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white rounded-[32px] p-8 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden"
+              className="bg-white rounded-[32px] p-8 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden border border-[#E9E4D4]"
+              id="delete-account-modal"
             >
               <div className="absolute top-0 left-0 w-full h-2 bg-red-500" />
               <div className="flex items-center gap-4 text-red-600">
@@ -243,17 +284,20 @@ export function SettingsScreen({
 
               <div className="flex gap-3">
                 <button 
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 bg-gray-100 text-gray-500 py-4 rounded-2xl font-black shadow-sm active:scale-95 transition-transform"
+                  onClick={() => { vibrate(10); setShowDeleteConfirm(false); }}
+                  className="flex-1 bg-gray-100 text-gray-500 py-4 rounded-2xl font-black shadow-sm hover:bg-gray-200 active:scale-95 transition-all text-xs"
+                  id="cancel-delete-btn"
                 >
                   CANCEL
                 </button>
                 <button 
                   onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                     onDeleteAccount();
                     setShowDeleteConfirm(false);
                   }}
-                  className="flex-1 bg-red-600 text-white py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-transform"
+                  className="flex-1 bg-red-600 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-red-700 active:scale-95 transition-all text-xs"
+                  id="confirm-delete-btn"
                 >
                   DELETE DATA
                 </button>
@@ -261,942 +305,1100 @@ export function SettingsScreen({
             </motion.div>
           </div>
         )}
-
-        {showFeedbackModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[500] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white rounded-[32px] p-8 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden"
-            >
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-400 via-teal-500 to-blue-600" />
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
-                  <MessageSquare size={24} />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-black text-blue-900 leading-tight">Sync Feedback</h3>
-                  <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Direct Link to HQ</p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest block mb-2 px-1">Satisfaction Level</label>
-                  <div className="flex justify-between gap-2">
-                    {[1, 2, 3, 4, 5].map(num => (
-                      <button 
-                        key={num}
-                        onClick={() => setFeedback(prev => ({ ...prev, rating: num }))}
-                        className={`flex-1 py-3 rounded-xl font-black transition-all ${feedback.rating === num ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-blue-50 text-blue-900/40'}`}
-                      >
-                        {num}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest block mb-2 px-1">Data Category</label>
-                  <select 
-                    value={feedback.category}
-                    onChange={(e) => setFeedback(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full bg-blue-50 border-none rounded-xl py-3 px-4 font-bold text-blue-900 focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option>General</option>
-                    <option>Bug Report</option>
-                    <option>Feature Request</option>
-                    <option>UI/UX Design</option>
-                    <option>Motivation Sync</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest block mb-2 px-1">Detailed Log</label>
-                  <textarea 
-                    value={feedback.message}
-                    onChange={(e) => setFeedback(prev => ({ ...prev, message: e.target.value }))}
-                    placeholder="Tell us what's on your mind, bro..."
-                    className="w-full bg-blue-50 border-none rounded-2xl py-3 px-4 font-bold text-blue-900 min-h-[120px] focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setShowFeedbackModal(false)}
-                  className="flex-1 bg-gray-100 text-gray-500 py-4 rounded-2xl font-black shadow-sm active:scale-95 transition-transform"
-                >
-                  CANCEL
-                </button>
-                <button 
-                  onClick={() => {
-                    onSubmitFeedback(feedback);
-                    setShowFeedbackModal(false);
-                    setFeedback({ rating: 5, message: '', category: 'General' });
-                  }}
-                  disabled={!feedback.message.trim()}
-                  className="flex-[2] bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-transform disabled:opacity-50"
-                >
-                  TRANSMIT
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 gap-6">
-        {/* Architect Lab Section (Pro Only) */}
-        {isPro && (
-          <div className="glass-card p-6 space-y-4 relative overflow-hidden group border-2 border-indigo-400/30">
-            <div className="absolute top-0 right-0 p-8 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-indigo-500/20 transition-colors" />
-            
-            <div className="flex items-center gap-3 mb-2 relative z-10">
-              <div className="p-2 bg-indigo-500 text-white rounded-xl shadow-lg">
-                <Layout size={20} />
-              </div>
+      <AnimatePresence mode="wait">
+        {activeCategory === null ? (
+          /* ========================================================================= */
+          /*                       MAIN SETTINGS DASHBOARD SCREEN                       */
+          /* ========================================================================= */
+          <motion.div
+            key="settings-dashboard"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-6"
+          >
+            {/* Header */}
+            <div className="flex items-center gap-4 sticky top-0 bg-[#FAF7F2]/95 backdrop-blur-md z-40 py-4 px-2 -mx-2 border-b border-[#E9E4D4]/30">
+              <button 
+                onClick={onBack} 
+                className="p-3 bg-white rounded-2xl shadow-sm text-[#4F3F34] hover:scale-105 active:scale-95 transition-all border border-[#E9E4D4]"
+                id="settings-back-btn"
+              >
+                <ChevronLeft size={24} />
+              </button>
               <div>
-                <h3 className="font-black text-indigo-900 uppercase text-sm tracking-tight">Architect Lab</h3>
-                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">Master UI Reconfiguration</p>
+                <h2 className="text-3xl font-black text-[#4F3F34] tracking-tight uppercase">System Settings</h2>
+                <p className="text-[10px] font-black text-[#69C496] uppercase tracking-[0.3em] opacity-80">Global Control Center</p>
               </div>
             </div>
 
-            <p className="text-xs font-bold text-blue-900/60 leading-relaxed relative z-10">
-              Customize Nexora to your precision. Reorder navigation, hide sections, and craft your perfect flow. 🏗️
+            {/* Quick Account Profile Card at the Top */}
+            <div 
+              onClick={() => { vibrate(10); setActiveCategory('account'); }}
+              className="p-5 bg-white border border-[#E9E4D4] rounded-[2.5rem] shadow-sm hover:scale-[1.01] hover:border-[#69C496]/50 hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4"
+              id="dashboard-profile-banner"
+            >
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FAF7F2] to-[#E9E4D4] overflow-hidden shadow-inner border-2 border-white shrink-0 relative">
+                  {user?.photoURL ? (
+                    <img src={user.photoURL} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Bio" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[#4F3F34] font-black text-lg">U</div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-black text-[#69C496] uppercase tracking-widest leading-none">Logged Operative</p>
+                  <h3 className="font-black text-lg text-[#4F3F34] truncate mt-1">
+                    {settings.displayName || user?.displayName || 'Nexora Citizen'}
+                  </h3>
+                  <p className="text-[10px] text-[#4F3F34]/55 truncate">{user?.email || 'offline_node@citizen.nexora'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 ${isPro ? 'bg-amber-400 text-white shadow-lg shadow-amber-300/30' : 'bg-gray-100 text-gray-400'}`}>
+                  {isPro ? <><Crown size={10} /> Nexus Pro</> : 'Free Tier'}
+                </div>
+                <ChevronLeft size={16} className="rotate-180 text-[#4F3F34]/30" />
+              </div>
+            </div>
+
+            {/* Modern Settings Categories Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5" id="settings-grid">
+              {CATEGORIES.map((cat) => {
+                const IconComponent = cat.icon;
+                return (
+                  <motion.div
+                    key={cat.id}
+                    onClick={() => {
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                      setActiveCategory(cat.id);
+                    }}
+                    whileHover={{ scale: 1.015 }}
+                    whileTap={{ scale: 0.985 }}
+                    className="p-5 bg-white border border-[#E9E4D4] rounded-3xl shadow-sm hover:shadow-md hover:border-[#69C496]/50 transition-all cursor-pointer flex gap-4 text-left items-start select-none"
+                    id={`setting-card-${cat.id}`}
+                  >
+                    <div className={`p-3 rounded-2xl ${cat.color} shrink-0 border`}>
+                      <IconComponent size={20} className="stroke-[2.2]" />
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <h4 className="font-black text-[#4F3F34] text-[15px] tracking-tight flex items-center gap-1.5">
+                        {cat.label}
+                        {cat.id === 'premium' && !isPro && (
+                          <span className="text-[8px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase animate-pulse">
+                            Get
+                          </span>
+                        )}
+                        {cat.id === 'premium' && isPro && (
+                          <span className="text-[8px] bg-[#69C496] text-white px-1.5 py-0.5 rounded-full font-black uppercase">
+                            Active
+                          </span>
+                        )}
+                      </h4>
+                      <p className="text-xs font-bold text-[#4F3F34]/50 leading-snug">
+                        {cat.desc}
+                      </p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Version Badge Footer */}
+            <div className="text-center pt-8 pb-4 space-y-2">
+              <div className="flex justify-center gap-2">
+                <span className="px-3 py-1 bg-white border border-[#E9E4D4] rounded-full text-[8px] font-black text-[#4F3F34]/55 uppercase tracking-widest">
+                  v{currentAppVersion} ALPHA
+                </span>
+                <span className="px-3 py-1 bg-[#E8F5EE] border border-[#D0EFE0] rounded-full text-[8px] font-black text-[#69C496] uppercase tracking-widest">
+                  SECURE PROTOCOL
+                </span>
+              </div>
+              <p className="text-[10px] text-[#4F3F34]/40 font-bold italic">"Consistency creates gods, bro. Don't stop now."</p>
+            </div>
+          </motion.div>
+        ) : (
+          /* ========================================================================= */
+          /*                          DEDICATED SETTINGS PAGE                           */
+          /* ========================================================================= */
+          <motion.div
+            key={`category-${activeCategory}`}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-6"
+          >
+            {/* Dedicated Page Header */}
+            <div className="flex items-center gap-4 sticky top-0 bg-[#FAF7F2]/95 backdrop-blur-md z-40 py-4 px-2 -mx-2 border-b border-[#E9E4D4]/30">
+              <button 
+                onClick={() => { vibrate(10); setActiveCategory(null); }} 
+                className="p-3 bg-white rounded-2xl shadow-sm text-[#4F3F34] hover:scale-105 active:scale-95 transition-all border border-[#E9E4D4]"
+                id="subpage-back-btn"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <div className="min-w-0">
+                <p className="text-[9px] font-black text-[#69C496] uppercase tracking-widest leading-none">Settings Area</p>
+                <h2 className="text-2xl font-black text-[#4F3F34] tracking-tight uppercase truncate mt-0.5">
+                  {CATEGORIES.find(c => c.id === activeCategory)?.label}
+                </h2>
+              </div>
+            </div>
+
+            <p className="text-xs font-semibold text-[#4F3F34]/65 leading-relaxed bg-[#FAF7F2] p-4 rounded-2xl border border-[#E9E4D4]/50">
+              {CATEGORIES.find(c => c.id === activeCategory)?.desc}
             </p>
 
-            <button 
-              onClick={() => {
-                vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                onOpenArchitectLab();
-              }}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-indigo-200 transition-all active:scale-95 relative z-10"
-            >
-              <BoxSelect size={18} />
-              ENTER ARCHITECT MODE
-            </button>
-          </div>
-        )}
+            {/* Category Page Router Content */}
+            <div className="space-y-6">
+              
+              {/* === 1. ACCOUNT CATEGORY === */}
+              {activeCategory === 'account' && (
+                <div className="space-y-6" id="account-subpage">
+                  {/* Bio-ID and Photo */}
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-4 shadow-sm">
+                    <h3 className="font-black text-[#4F3F34] text-xs uppercase tracking-widest flex items-center gap-2">
+                      <User size={14} className="text-amber-500" /> Bio-ID Profile Setup
+                    </h3>
 
-        <div className="safe-glass gpu p-6 space-y-4">
-          <div className="flex items-center gap-3 mb-2">
-            <User size={18} className="text-blue-500" />
-            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Account & Identity</h3>
-          </div>
-          
-          <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl">
-              <div className="flex items-center gap-3">
-                 <div className="w-14 h-14 rounded-full bg-white overflow-hidden shadow-inner border-2 border-white">
-                    {user?.photoURL ? <img src={user.photoURL} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <div className="w-full h-full flex items-center justify-center text-blue-400 font-bold">U</div>}
-                 </div>
-                 <div>
-                    <input 
-                      type="text" 
-                      value={settings.displayName || ''} 
-                      onChange={(e) => setSettings({ displayName: e.target.value })}
-                      placeholder={user?.displayName || 'Nexora User'}
-                      className="font-black text-blue-900 bg-transparent border-none p-0 focus:ring-0 w-full text-lg leading-none"
-                    />
-                    <p className="text-[10px] text-blue-900/40 font-bold uppercase mt-1">{user?.email}</p>
-                 </div>
-              </div>
-              <div className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${isPro ? 'bg-yellow-400 text-white shadow-lg shadow-yellow-200' : 'bg-gray-100 text-gray-400'}`}>
-                {isPro ? <><Crown size={10} /> Nexus Pro</> : 'Free Tier'}
-              </div>
-          </div>
-        </div>
+                    <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-[#FAF7F2]/50 rounded-2xl border border-[#E9E4D4]/40">
+                      <div className="w-16 h-16 rounded-2xl bg-white overflow-hidden shadow-inner border-2 border-[#E9E4D4] shrink-0 relative flex items-center justify-center">
+                        {user?.photoURL ? (
+                          <img src={user.photoURL} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Avatar" />
+                        ) : (
+                          <span className="text-xl font-black text-[#4F3F34]">U</span>
+                        )}
+                      </div>
+                      <div className="flex-1 w-full space-y-1">
+                        <label className="text-[9px] font-black text-[#4F3F34]/40 uppercase tracking-widest block pl-0.5">Custom Display Name</label>
+                        <input 
+                          type="text" 
+                          value={settings.displayName || ''} 
+                          onChange={(e) => setSettings({ displayName: e.target.value })}
+                          placeholder={user?.displayName || 'Nexora User'}
+                          className="font-black text-[#4F3F34] bg-white border border-[#E9E4D4] rounded-xl py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#69C496] w-full text-sm shadow-sm"
+                        />
+                      </div>
+                    </div>
 
-        {/* Privacy & Content Visibility */}
-        <div className="safe-glass gpu p-6 space-y-4 animate-in slide-in-from-bottom duration-200">
-          <div className="flex items-center gap-3 mb-2">
-            <ShieldCheck size={18} className="text-emerald-500" />
-            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Privacy & Content Visibility</h3>
-          </div>
+                    <div className="grid grid-cols-2 gap-2.5 pt-1">
+                      <div className="p-3 bg-white border border-[#E9E4D4] rounded-2xl text-left">
+                        <span className="text-[8px] font-black text-[#4F3F34]/40 uppercase tracking-widest block">Registered Email</span>
+                        <span className="text-xs font-bold text-[#4F3F34] block truncate mt-0.5">{user?.email || 'Offline Node'}</span>
+                      </div>
+                      <div className="p-3 bg-white border border-[#E9E4D4] rounded-2xl text-left">
+                        <span className="text-[8px] font-black text-[#4F3F34]/40 uppercase tracking-widest block">Access Tier</span>
+                        <span className="text-xs font-black text-amber-600 uppercase tracking-wide block mt-0.5">
+                          {isPro ? '💎 Nexus Pro' : 'Free Tier'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-          <div className="p-4 bg-emerald-50/20 border border-emerald-100/30 rounded-2xl space-y-4">
-            {/* Setting 1: Profile Privacy Toggle */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-0.5 flex-1">
-                <h4 className="font-black text-blue-900 text-xs flex items-center gap-1.5 uppercase">
-                  <span>🔒 Profile Privacy</span>
-                  <span className={`text-[9px] px-1.5 py-0.5 text-white rounded-full font-black uppercase ${settings.profilePrivacy === "private" ? "bg-rose-500 text-white" : "bg-emerald-500 text-white"}`}>
-                    {settings.profilePrivacy === "private" ? "Cloaked" : "Public"}
-                  </span>
-                </h4>
-                <p className="text-[10px] text-blue-900/60 font-medium leading-normal">
-                  Cloak stats, daily streak values, and custom alien plant milestones from community inspection cards.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  vibrate(10);
-                  const nextVal = settings.profilePrivacy === "private" ? "public" : "private";
-                  setSettings({ profilePrivacy: nextVal });
-                  showToast(`Profile status updated to: ${nextVal.toUpperCase()}`, "success");
-                }}
-                className={`px-3 py-1.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all shrink-0 ${
-                  settings.profilePrivacy === "private"
-                    ? "bg-rose-500 hover:bg-rose-600 text-white"
-                    : "bg-emerald-500 hover:bg-emerald-600 text-white"
-                }`}
-              >
-                {settings.profilePrivacy === "private" ? "Private" : "Public"}
-              </button>
-            </div>
+                  {/* Security Credentials */}
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-4 shadow-sm">
+                    <h3 className="font-black text-[#4F3F34] text-xs uppercase tracking-widest flex items-center gap-2">
+                      <Lock size={14} className="text-blue-500" /> Security Credentials
+                    </h3>
 
-            <div className="border-t border-dashed border-blue-100/50 my-2" />
+                    <div className="p-4 bg-blue-50/20 border border-blue-50 rounded-2xl space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 bg-white rounded-xl border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 shadow-sm">
+                          <Key size={16} />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-black text-blue-900 text-xs">
+                            {hasPasswordProvider ? 'Direct Email Login Connected' : 'Email Password Protocol'}
+                          </h4>
+                          <p className="text-[10px] text-blue-900/60 font-semibold leading-relaxed mt-0.5">
+                            Set an offline password to sign in via credential triggers alongside your master Google Auth.
+                          </p>
+                        </div>
+                      </div>
 
-            {/* Setting 2: Feed Post Hiding Toggle */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-0.5 flex-1">
-                <h4 className="font-black text-blue-900 text-xs uppercase flex items-center gap-1.5">
-                  <EyeOff size={12} className="text-blue-500" />
-                  <span>Hide My Posts</span>
-                  {settings.hidePostsFromOthers && (
-                    <span className="text-[8px] px-1 bg-indigo-500 text-white rounded-full font-black uppercase">Hidden</span>
-                  )}
-                </h4>
-                <p className="text-[10px] text-blue-900/60 font-medium leading-normal">
-                  Dynamically exclude your published habit logs and questions from the general citizen feed of peer users.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  vibrate(10);
-                  const nextVal = !settings.hidePostsFromOthers;
-                  setSettings({ hidePostsFromOthers: nextVal });
-                  showToast(nextVal ? "Habit logs cloaked from public feed" : "Habit logs restored to public feed", "info");
-                  
-                  // Trigger background update for historical posts privacy so that Firebase is always synchronized:
-                  try {
-                    const triggerSync = (window as any)._nexora_sync_historical_posts;
-                    if (typeof triggerSync === "function") {
-                      triggerSync(nextVal);
-                    }
-                  } catch (e){}
-                }}
-                className={`px-3 py-1.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all shrink-0 ${
-                  settings.hidePostsFromOthers
-                    ? "bg-indigo-500 text-white shadow-sm"
-                    : "bg-slate-200 text-slate-600 hover:bg-slate-300"
-                }`}
-              >
-                {settings.hidePostsFromOthers ? "Enabled" : "Disabled"}
-              </button>
-            </div>
+                      <div className="border-t border-dashed border-blue-100/50 pt-3 space-y-3">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[9px] font-black text-blue-900/40 uppercase tracking-widest pl-1">
+                            {hasPasswordProvider ? 'Update Direct Password' : 'New Password (min 6 chars)'}
+                          </label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="password" 
+                              placeholder="Type security password"
+                              value={passwordInput}
+                              onChange={(e) => setPasswordInput(e.target.value)}
+                              disabled={isPasswordActionLoading}
+                              className="flex-1 bg-white text-blue-900 placeholder-blue-900/30 rounded-xl px-4 py-2.5 text-xs font-bold border border-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                            />
+                            <button
+                              onClick={handleSavePassword}
+                              disabled={isPasswordActionLoading}
+                              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-md shrink-0"
+                            >
+                              {isPasswordActionLoading ? 'Saving...' : 'Save'}
+                            </button>
+                          </div>
+                        </div>
 
-            <div className="border-t border-dashed border-blue-100/50 my-2" />
-
-            {/* Setting 3: Comments Hiding Toggle */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-0.5 flex-1">
-                <h4 className="font-black text-blue-900 text-xs uppercase flex items-center gap-1.5">
-                  <MessageSquareOff size={11} className="text-pink-500" />
-                  <span>Hide My Comments</span>
-                  {settings.hideCommentsFromOthers && (
-                    <span className="text-[8px] px-1 bg-pink-500 text-white rounded-full font-black uppercase">Cloaked</span>
-                  )}
-                </h4>
-                <p className="text-[10px] text-blue-900/60 font-medium leading-normal">
-                  Conceal comments from other community members under active feed discussion threads.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  vibrate(10);
-                  const nextVal = !settings.hideCommentsFromOthers;
-                  setSettings({ hideCommentsFromOthers: nextVal });
-                  showToast(nextVal ? "Comments cloaked from peer viewers" : "Comments visible to community", "info");
-                }}
-                className={`px-3 py-1.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all shrink-0 ${
-                  settings.hideCommentsFromOthers
-                    ? "bg-pink-500 text-white shadow-sm"
-                    : "bg-slate-200 text-slate-600 hover:bg-slate-300"
-                }`}
-              >
-                {settings.hideCommentsFromOthers ? "Enabled" : "Disabled"}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Security & Password Sync Center */}
-        <div className="safe-glass gpu p-6 space-y-4">
-          <div className="flex items-center gap-3 mb-2">
-            <Lock size={18} className="text-blue-500" />
-            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Security & Password Credentials</h3>
-          </div>
-          
-          <div className="p-4 bg-blue-50/40 rounded-2xl border border-blue-100/30 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                <Key size={18} />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-black text-blue-900 text-sm">
-                  {hasPasswordProvider ? 'Email Login is Connected ⚡' : 'Connect direct Email Log in'}
-                </h4>
-                <p className="text-[11px] text-blue-900/60 font-medium leading-relaxed mt-1">
-                  {hasPasswordProvider 
-                    ? 'Your Google account has a connected Email Password. You can log in with either Google or Email/Password, bro.'
-                    : 'Setting an email password lets you sign in directly using your email address and password, alongside your secure Google login!'
-                  }
-                </p>
-              </div>
-            </div>
-
-            <div className="border-t border-dashed border-blue-100/50 pt-3 space-y-3">
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest pl-1">
-                  {hasPasswordProvider ? 'Update Current Password' : 'Set New Account Password (min 6 characters)'}
-                </label>
-                <div className="flex gap-2">
-                  <input 
-                    type="password" 
-                    placeholder={hasPasswordProvider ? "Type a new password" : "Min 6 characters password"}
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    disabled={isPasswordActionLoading}
-                    className="flex-1 bg-white hover:bg-white text-blue-900 placeholder-blue-900/30 rounded-xl px-4 py-2.5 text-xs font-semibold border border-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-                  />
-                  <button
-                    onClick={handleSavePassword}
-                    disabled={isPasswordActionLoading}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-md shadow-blue-100 whitespace-nowrap shrink-0"
-                  >
-                    {isPasswordActionLoading ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between border-t border-dashed border-blue-100/50 pt-3">
-                <span className="text-[10px] text-blue-900/40 font-black uppercase tracking-widest">Alternative Reset Option</span>
-                <button
-                  onClick={handleSendResetEmail}
-                  disabled={isPasswordActionLoading}
-                  className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline transition-all"
-                >
-                  ✉️ Send Password Reset to Gmail
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="safe-glass gpu p-6 space-y-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Target size={18} className="text-blue-500" />
-            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Performance Goals</h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest px-2 flex items-center gap-2">
-                <Flame size={12} className="text-orange-500" /> Pushups Target
-              </label>
-              <div className="flex items-center gap-3 bg-blue-50/50 p-3 rounded-2xl">
-                 <button onClick={() => setSettings({ pushupsGoal: Math.max(1, (settings.pushupsGoal || 0) - 1) })} className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm text-blue-600 font-black">-</button>
-                 <span className="flex-1 text-center font-black text-blue-900">{settings.pushupsGoal}</span>
-                 <button onClick={() => setSettings({ pushupsGoal: (settings.pushupsGoal || 0) + 1 })} className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm text-blue-600 font-black">+</button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest px-2 flex items-center gap-2">
-                <Droplets size={12} className="text-blue-500" /> Water Goal (Liters)
-              </label>
-              <div className="flex items-center gap-3 bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50">
-                 <button onClick={() => setSettings({ waterGoal: Math.max(1, (settings.waterGoal || 0) - 1) })} className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm text-blue-600 font-black">-</button>
-                 <span className="flex-1 text-center font-black text-blue-900">{settings.waterGoal}L</span>
-                 <button onClick={() => setSettings({ waterGoal: (settings.waterGoal || 0) + 1 })} className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm text-blue-600 font-black">+</button>
-              </div>
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest px-2">Daily Challenge Target</label>
-              <div className="flex items-center gap-3 bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50">
-                 <button onClick={() => setSettings({ challengeCountGoal: Math.max(1, (settings.challengeCountGoal || 0) - 1) })} className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm text-blue-600 font-black">-</button>
-                 <span className="flex-1 text-center font-black text-blue-900">{settings.challengeCountGoal} Stages Per Day</span>
-                 <button onClick={() => setSettings({ challengeCountGoal: (settings.challengeCountGoal || 0) + 1 })} className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm text-blue-600 font-black">+</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Schedule & Timing */}
-        <div className="glass-card p-6 space-y-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Clock size={18} className="text-blue-500" />
-            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Schedule</h3>
-          </div>
-
-          <div className="space-y-4">
-            <div className="p-4 bg-blue-600 rounded-2xl text-white shadow-xl shadow-blue-100">
-               <div className="flex items-center gap-3 mb-2">
-                  <ShieldCheck size={16} />
-                  <p className="font-black text-[10px] uppercase tracking-widest">Automated Protocol Active</p>
-               </div>
-               <p className="text-[10px] font-bold leading-relaxed opacity-90">
-                 The Nexora notification schedule is now fully automated and fixed based on your timezone (Morning, Motivation at 12 PM, Afternoon, Evening). Stay focused, bro! 🔥
-               </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="safe-glass gpu p-6 space-y-6">
-          <div className="flex items-center gap-3 mb-2">
-            <ShieldCheck size={18} className="text-blue-500" />
-            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Protocol Integrity</h3>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3">
-             <div className="flex items-center justify-between p-4 bg-blue-50/30 rounded-2xl">
-                <div className="flex items-center gap-3">
-                  <div className="text-blue-500"><Zap size={14} /></div>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] font-black text-blue-900 uppercase tracking-tight">Performance Mode</span>
-                    <span className="text-[8px] font-bold text-blue-400 uppercase">Save battery & cool down phone</span>
+                        <div className="flex items-center justify-between border-t border-dashed border-blue-100/50 pt-3">
+                          <span className="text-[9px] text-blue-900/40 font-black uppercase tracking-widest">Self Reset Trigger</span>
+                          <button
+                            onClick={handleSendResetEmail}
+                            disabled={isPasswordActionLoading}
+                            className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline transition-all"
+                          >
+                            ✉️ Send Reset Link to Gmail
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setSettings({ performanceMode: !settings.performanceMode })}
-                  className={`w-11 h-6 rounded-full transition-all relative ${settings.performanceMode ? 'bg-orange-500' : 'bg-gray-200'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-all ${settings.performanceMode ? 'left-6' : 'left-1'}`} />
-                </button>
-             </div>
+              )}
 
-             <div className="p-4 bg-green-50/50 rounded-2xl border border-green-100">
-                <div className="flex items-center gap-2 mb-2">
-                   <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                   <span className="text-[9px] font-black text-green-700 uppercase tracking-widest">System Health: Optimal</span>
+              {/* === 2. NOTIFICATIONS CATEGORY === */}
+              {activeCategory === 'notifications' && (
+                <div className="space-y-6" id="notifications-subpage">
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-4 shadow-sm">
+                    {/* Master switch */}
+                    <div className="flex items-center justify-between p-4 bg-[#4F3F34] text-[#FCFAF6] rounded-2xl shadow-md">
+                      <div>
+                        <p className="font-black text-sm uppercase">Global Push State</p>
+                        <p className="text-[9px] text-[#69C496] font-black uppercase tracking-widest">Master Feed Toggle</p>
+                      </div>
+                      <button 
+                        onClick={() => setSettings({ notificationsEnabled: !settings.notificationsEnabled })}
+                        className={`w-14 h-8 rounded-full transition-all relative ${settings.notificationsEnabled ? 'bg-[#69C496]' : 'bg-black/20'}`}
+                      >
+                        <div className={`absolute top-1.5 w-5 h-5 rounded-full bg-white transition-all ${settings.notificationsEnabled ? 'left-7.5 shadow-md' : 'left-1.5'}`} />
+                      </button>
+                    </div>
+
+                    {settings.notificationsEnabled ? (
+                      <div className="space-y-4 pt-2">
+                        {/* Time setup */}
+                        <div className="space-y-1.5">
+                          <h4 className="text-[10px] font-black text-[#4F3F34]/40 uppercase tracking-widest pl-1">Daily Trigger Targets</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E9E4D4]/60">
+                              <label className="text-[8px] font-black uppercase text-[#4F3F34]/40 block mb-1">Morning Trigger</label>
+                              <input 
+                                type="time" 
+                                value={settings.reminderTime || '08:00'} 
+                                onChange={(e) => setSettings({ reminderTime: e.target.value })}
+                                className="w-full bg-transparent font-black text-[#4F3F34] outline-none text-xs"
+                              />
+                            </div>
+                            <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E9E4D4]/60">
+                              <label className="text-[8px] font-black uppercase text-[#4F3F34]/40 block mb-1">Evening Trigger</label>
+                              <input 
+                                type="time" 
+                                value={settings.reminderTime2 || '21:00'} 
+                                onChange={(e) => setSettings({ reminderTime2: e.target.value })}
+                                className="w-full bg-transparent font-black text-[#4F3F34] outline-none text-xs"
+                              />
+                            </div>
+                            <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E9E4D4]/60">
+                              <label className="text-[8px] font-black uppercase text-[#4F3F34]/40 block mb-1">Motivation Sync</label>
+                              <input 
+                                type="time" 
+                                value={settings.motivationTime || '12:00'} 
+                                onChange={(e) => setSettings({ motivationTime: e.target.value })}
+                                className="w-full bg-transparent font-black text-[#4F3F34] outline-none text-xs"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Frequency settings checkboxes */}
+                        <div className="space-y-2">
+                          <h4 className="text-[10px] font-black text-[#4F3F34]/40 uppercase tracking-widest pl-1">Frequency Channels</h4>
+                          {[
+                            { id: 'trophy', label: 'Trophy Earned Alerts', state: settings.badgeSettings?.trophyAlerts, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, trophyAlerts: v } })) },
+                            { id: 'challenge', label: 'Daily Challenge Reminders', state: settings.badgeSettings?.dailyChallenge, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, dailyChallenge: v } })) },
+                            { id: 'quest', label: 'New Quest Broadcasts', state: settings.badgeSettings?.dailyQuest, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, dailyQuest: v } })) },
+                            { id: 'urgency', label: 'Dynamic Urgency (Pester Mode)', state: settings.badgeSettings?.dynamicUrgency, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, dynamicUrgency: v } })) },
+                          ].map(b => (
+                            <div key={b.id} className="flex items-center justify-between p-3.5 bg-[#FAF7F2]/50 rounded-2xl border border-[#E9E4D4]/40 text-[#4F3F34]">
+                              <span className="text-[10px] font-black uppercase tracking-wider leading-none">{b.label}</span>
+                              <button 
+                                onClick={() => { vibrate(5); b.setter(!b.state); }}
+                                className={`w-9 h-5 rounded-full transition-all relative ${b.state ? 'bg-[#69C496]' : 'bg-gray-200'}`}
+                              >
+                                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${b.state ? 'left-5' : 'left-1'}`} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* FCM Token block */}
+                        {fcmError ? (
+                          <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center justify-between mt-2">
+                            <div className="flex items-center gap-3">
+                              <div className="bg-red-500 p-2 rounded-xl text-white shadow-sm shrink-0">
+                                <AlertCircle size={16} />
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-red-600 font-black uppercase">FCM Feed Synced Failed</p>
+                                <p className="text-[10px] text-red-900/60 font-bold leading-normal">System offline loop detected.</p>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={onRetryFCM} 
+                              className="p-2 px-3.5 bg-white text-red-500 rounded-xl shadow-sm border border-red-100 text-[10px] font-black uppercase active:scale-95 transition-transform"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        ) : !fcmToken && (
+                          <div className="p-4 bg-[#FAF7F2] border border-[#E9E4D4]/60 rounded-2xl flex items-center justify-between mt-2">
+                            <div className="flex items-center gap-3">
+                              <div className="bg-orange-500 p-2 rounded-xl text-white shadow-sm shrink-0">
+                                <Smartphone size={16} />
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-orange-600 font-black uppercase">Token Registry Pending</p>
+                                <p className="text-[10px] text-[#4F3F34]/50 font-bold leading-normal">Requesting secure browser key...</p>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={onRetryFCM} 
+                              className="p-2 px-3.5 bg-white text-orange-600 rounded-xl shadow-sm border border-[#E9E4D4] text-[10px] font-black uppercase active:scale-95 transition-all"
+                            >
+                              Sync
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-gray-50 rounded-2xl text-center border border-gray-100">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Broadcast Silenced</span>
+                        <p className="text-xs text-gray-500 font-medium leading-relaxed mt-1">Enable Push State above to activate time schedule controls and frequency channels, bro.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="text-[10px] font-bold text-green-900/60 leading-tight">
-                  All local data is validated against the Nexus HQ cloud every 5 seconds. Protocol stability is at 99.9%.
-                </p>
-             </div>
-          </div>
-        </div>
+              )}
 
-        <div className="safe-glass gpu p-6 space-y-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Palette size={18} className="text-blue-500" />
-            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">User Experience</h3>
-          </div>
+              {/* === 3. GOALS CATEGORY === */}
+              {activeCategory === 'goals' && (
+                <div className="space-y-6" id="goals-subpage">
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-5 shadow-sm">
+                    <h3 className="font-black text-[#4F3F34] text-xs uppercase tracking-widest flex items-center gap-2">
+                      <Target size={14} className="text-emerald-500" /> Biometrics Target Metrics
+                    </h3>
 
-          <div className="space-y-6">
-            {/* Theme Colors */}
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest">Interface Frequency (Theme)</p>
-              <div className="flex gap-4">
-                {COLORS.map(color => (
-                  <button 
-                    key={color.value}
-                    onClick={() => setSettings({ themeColor: color.value })}
-                    className={`w-10 h-10 rounded-full border-4 shadow-sm transition-all relative ${settings.themeColor === color.value ? 'scale-125 border-blue-200' : 'border-white hover:scale-110'}`}
-                    style={{ backgroundColor: color.value }}
-                  >
-                    {settings.themeColor === color.value && <div className="absolute inset-0 flex items-center justify-center text-white"><Check size={16} /></div>}
-                  </button>
-                ))}
-              </div>
-            </div>
+                    {/* Pushups Goal */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-[#4F3F34]/40 uppercase tracking-widest pl-2 flex items-center gap-2">
+                        <Flame size={12} className="text-orange-500" /> Daily Pushups Count
+                      </label>
+                      <div className="flex items-center justify-between bg-[#FAF7F2] p-4 rounded-2xl border border-[#E9E4D4]/40">
+                        <button 
+                          onClick={() => { vibrate(5); setSettings({ pushupsGoal: Math.max(1, (settings.pushupsGoal || 0) - 5) }); }} 
+                          className="w-10 h-10 flex items-center justify-center bg-white border border-[#E9E4D4] rounded-xl shadow-sm text-[#4F3F34] font-black text-lg active:scale-95 transition-transform"
+                        >-</button>
+                        <span className="text-xl font-black text-[#4F3F34]">{settings.pushupsGoal} reps</span>
+                        <button 
+                          onClick={() => { vibrate(5); setSettings({ pushupsGoal: (settings.pushupsGoal || 0) + 5 }); }} 
+                          className="w-10 h-10 flex items-center justify-center bg-white border border-[#E9E4D4] rounded-xl shadow-sm text-[#4F3F34] font-black text-lg active:scale-95 transition-transform"
+                        >+</button>
+                      </div>
+                    </div>
 
-            <div className="grid grid-cols-1 gap-3">
-              {[
-                { id: 'zen', label: 'Zen Mode (Background Lofi)', icon: <Sparkles size={14} />, state: settings.zenModeEnabled, setter: (v: boolean) => setSettings({ zenModeEnabled: v }) },
-                { id: 'quotes', label: 'Enable Daily Motivation Quotes', icon: <MessageSquare size={14} />, state: settings.showQuotes, setter: (v: boolean) => setSettings({ showQuotes: v }) },
-                { id: 'sounds', label: 'Audio Feedback (SFX)', icon: <Volume2 size={14} />, state: settings.soundEnabled, setter: (v: boolean) => setSettings({ soundEnabled: v }) },
-                { id: 'dog-pack', label: 'Mascot Audio: Dog Mode', icon: <Droplets size={14} />, state: settings.isDogSoundPackActive, setter: (v: boolean) => setSettings({ isDogSoundPackActive: v }) },
-              ].map(item => (
-                <div key={item.id} className="flex items-center justify-between p-4 bg-blue-50/30 rounded-2xl">
-                  <div className="flex items-center gap-3">
-                    <div className="text-blue-500">{item.icon}</div>
-                    <span className="text-[11px] font-black text-blue-900 uppercase tracking-tight">{item.label}</span>
-                  </div>
-                  <button 
-                    onClick={() => item.setter(!item.state)}
-                    className={`w-11 h-6 rounded-full transition-all relative ${item.state ? 'bg-blue-600' : 'bg-gray-200'}`}
-                  >
-                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-all ${item.state ? 'left-6' : 'left-1'}`} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+                    {/* Water Goal */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-[#4F3F34]/40 uppercase tracking-widest pl-2 flex items-center gap-2">
+                        <Droplets size={12} className="text-blue-500" /> Daily Hydration Goal
+                      </label>
+                      <div className="flex items-center justify-between bg-[#FAF7F2] p-4 rounded-2xl border border-[#E9E4D4]/40">
+                        <button 
+                          onClick={() => { vibrate(5); setSettings({ waterGoal: Math.max(1, (settings.waterGoal || 0) - 1) }); }} 
+                          className="w-10 h-10 flex items-center justify-center bg-white border border-[#E9E4D4] rounded-xl shadow-sm text-[#4F3F34] font-black text-lg active:scale-95 transition-transform"
+                        >-</button>
+                        <span className="text-xl font-black text-[#4F3F34]">{settings.waterGoal} Liters</span>
+                        <button 
+                          onClick={() => { vibrate(5); setSettings({ waterGoal: (settings.waterGoal || 0) + 1 }); }} 
+                          className="w-10 h-10 flex items-center justify-center bg-white border border-[#E9E4D4] rounded-xl shadow-sm text-[#4F3F34] font-black text-lg active:scale-95 transition-transform"
+                        >+</button>
+                      </div>
+                    </div>
 
-        <div className="safe-glass gpu p-6 space-y-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Bell size={18} className="text-blue-500" />
-            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Precision Notifications</h3>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-4 bg-blue-600 text-white rounded-2xl shadow-lg border-2 border-blue-400">
-               <div>
-                 <p className="font-black text-sm uppercase">Global Push State</p>
-                 <p className="text-[9px] opacity-70 font-bold uppercase tracking-widest">Master Switch</p>
-               </div>
-               <button 
-                  onClick={() => setSettings({ notificationsEnabled: !settings.notificationsEnabled })}
-                  className={`w-14 h-8 rounded-full transition-all relative ${settings.notificationsEnabled ? 'bg-white/20' : 'bg-black/20'}`}
-               >
-                  <div className={`absolute top-1.5 w-5 h-5 rounded-full bg-white transition-all ${settings.notificationsEnabled ? 'left-7.5' : 'left-1.5'}`} />
-               </button>
-            </div>
-
-            {settings.notificationsEnabled && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="space-y-4 pt-2"
-              >
-                {/* Manual Time Setup as requested */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-white p-3 rounded-xl border border-blue-100">
-                    <label className="text-[8px] font-black uppercase text-blue-400 block mb-1">Morning Trigger</label>
-                    <input 
-                      type="time" 
-                      value={settings.reminderTime || '08:00'} 
-                      onChange={(e) => setSettings({ reminderTime: e.target.value })}
-                      className="w-full bg-transparent font-black text-blue-900 outline-none uppercase text-xs"
-                    />
-                  </div>
-                  <div className="bg-white p-3 rounded-xl border border-blue-100">
-                    <label className="text-[8px] font-black uppercase text-blue-400 block mb-1">Evening Trigger</label>
-                    <input 
-                      type="time" 
-                      value={settings.reminderTime2 || '21:00'} 
-                      onChange={(e) => setSettings({ reminderTime2: e.target.value })}
-                      className="w-full bg-transparent font-black text-blue-900 outline-none uppercase text-xs"
-                    />
-                  </div>
-                  <div className="bg-white p-3 rounded-xl border border-blue-100 col-span-2">
-                    <label className="text-[8px] font-black uppercase text-blue-400 block mb-1">Motivation Sync</label>
-                    <input 
-                      type="time" 
-                      value={settings.motivationTime || '12:00'} 
-                      onChange={(e) => setSettings({ motivationTime: e.target.value })}
-                      className="w-full bg-transparent font-black text-blue-900 outline-none uppercase text-xs"
-                    />
+                    {/* Daily Challenge Targets */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-[#4F3F34]/40 uppercase tracking-widest pl-2">
+                        Daily Challenge Stages
+                      </label>
+                      <div className="flex items-center justify-between bg-[#FAF7F2] p-4 rounded-2xl border border-[#E9E4D4]/40">
+                        <button 
+                          onClick={() => { vibrate(5); setSettings({ challengeCountGoal: Math.max(1, (settings.challengeCountGoal || 0) - 1) }); }} 
+                          className="w-10 h-10 flex items-center justify-center bg-white border border-[#E9E4D4] rounded-xl shadow-sm text-[#4F3F34] font-black text-lg active:scale-95 transition-transform"
+                        >-</button>
+                        <span className="text-xl font-black text-[#4F3F34]">{settings.challengeCountGoal} Stages / Day</span>
+                        <button 
+                          onClick={() => { vibrate(5); setSettings({ challengeCountGoal: (settings.challengeCountGoal || 0) + 1 }); }} 
+                          className="w-10 h-10 flex items-center justify-center bg-white border border-[#E9E4D4] rounded-xl shadow-sm text-[#4F3F34] font-black text-lg active:scale-95 transition-transform"
+                        >+</button>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              )}
 
-                <div className="grid grid-cols-1 gap-2">
-                  {[
-                    { id: 'trophy', label: 'Trophy Alerts', state: settings.badgeSettings?.trophyAlerts, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, trophyAlerts: v } })) },
-                  { id: 'challenge', label: 'Daily Challenge Reminders', state: settings.badgeSettings?.dailyChallenge, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, dailyChallenge: v } })) },
-                  { id: 'quest', label: 'New Quest Alerts', state: settings.badgeSettings?.dailyQuest, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, dailyQuest: v } })) },
-                  { id: 'urgency', label: 'Dynamic Urgency (Pester Mode)', state: settings.badgeSettings?.dynamicUrgency, setter: (v: boolean) => setSettings(prev => ({ ...prev, badgeSettings: { ...prev.badgeSettings!, dynamicUrgency: v } })) },
-                ].map(b => (
-                  <div key={b.id} className="flex items-center justify-between p-3 px-4 bg-white rounded-xl border border-blue-50 text-blue-900">
-                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">{b.label}</span>
+              {/* === 4. APPEARANCE CATEGORY === */}
+              {activeCategory === 'appearance' && (
+                <div className="space-y-6" id="appearance-subpage">
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-6 shadow-sm">
+                    {/* Theme colors dots selector */}
+                    <div className="space-y-3">
+                      <h4 className="text-[10px] font-black text-[#4F3F34]/40 uppercase tracking-widest pl-1">
+                        Interface Frequency (Theme Accents)
+                      </h4>
+                      <div className="flex gap-4 p-4 bg-[#FAF7F2]/50 border border-[#E9E4D4]/30 rounded-2xl justify-center">
+                        {COLORS.map(color => (
+                          <button 
+                            key={color.value}
+                            onClick={() => { vibrate(10); setSettings({ themeColor: color.value }); }}
+                            className={`w-11 h-11 rounded-full border-4 shadow-sm transition-all relative ${settings.themeColor === color.value ? 'scale-110 border-white ring-4 ring-[#69C496]/50' : 'border-white hover:scale-105 hover:shadow-md'}`}
+                            style={{ backgroundColor: color.value }}
+                          >
+                            {settings.themeColor === color.value && (
+                              <div className="absolute inset-0 flex items-center justify-center text-white">
+                                <Check size={18} className="stroke-[3]" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Performance toggle */}
+                    <div className="flex items-center justify-between p-4 bg-[#FAF7F2]/50 border border-[#E9E4D4]/40 rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="text-[#69C496] shrink-0"><Zap size={16} /></div>
+                        <div>
+                          <span className="text-xs font-black text-[#4F3F34] uppercase tracking-tight block">Performance Mode</span>
+                          <span className="text-[8px] font-bold text-[#4F3F34]/50 uppercase tracking-wider block">Optimize frame rendering rates</span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => { vibrate(10); setSettings({ performanceMode: !settings.performanceMode }); }}
+                        className={`w-11 h-6 rounded-full transition-all relative ${settings.performanceMode ? 'bg-[#69C496]' : 'bg-gray-200'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-all ${settings.performanceMode ? 'left-6' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    {/* Architect Mode Button inside Appearance */}
+                    {isPro ? (
+                      <div className="p-4 bg-indigo-50/30 border border-indigo-100 rounded-2xl space-y-3 relative overflow-hidden">
+                        <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl" />
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-md shrink-0">
+                            <Layout size={16} />
+                          </div>
+                          <div className="text-left">
+                            <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block leading-none">Architect Lab</span>
+                            <span className="text-xs font-black text-indigo-900 mt-1 block">Full Interface Configurator</span>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-indigo-900/60 leading-normal font-bold">
+                          Rearrange main dashboard modules, hide sections, and customize Nexora layout parameters.
+                        </p>
+                        <button 
+                          onClick={() => { vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT); onOpenArchitectLab(); }}
+                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-black text-xs tracking-wider shadow-md hover:shadow-lg transition-all active:scale-95"
+                        >
+                          ENTER ARCHITECT LAB MODE
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-gray-50 border border-gray-200/50 rounded-2xl flex items-center justify-between gap-3 text-left">
+                        <div className="min-w-0">
+                          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block leading-none">Custom Layout Locked</span>
+                          <span className="text-xs font-black text-gray-500 mt-1 block">Architect Lab</span>
+                          <p className="text-[10px] text-gray-400 font-semibold leading-normal mt-0.5">Customizing workspace ordering and elements visibility is exclusive to Pro operatives.</p>
+                        </div>
+                        <button 
+                          onClick={() => { vibrate(10); setActiveCategory('premium'); }}
+                          className="bg-amber-500 hover:bg-amber-600 text-white p-2.5 px-3.5 rounded-xl font-black text-[10px] uppercase tracking-wider shrink-0 active:scale-95 transition-all"
+                        >
+                          Unlock
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* === 5. PRIVACY CATEGORY === */}
+              {activeCategory === 'privacy' && (
+                <div className="space-y-6" id="privacy-subpage">
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-4 shadow-sm text-left">
+                    <h3 className="font-black text-[#4F3F34] text-xs uppercase tracking-widest flex items-center gap-2">
+                      <Shield size={14} className="text-rose-500" /> Privacy & Cloaking Protocols
+                    </h3>
+
+                    <div className="space-y-3.5">
+                      {/* Profile Privacy Toggle */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-[#FAF7F2]/50 border border-[#E9E4D4]/40 rounded-2xl">
+                        <div className="space-y-0.5 flex-1">
+                          <h4 className="font-black text-[#4F3F34] text-xs uppercase flex items-center gap-1.5">
+                            <span>Profile Privacy State</span>
+                            <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase text-white ${settings.profilePrivacy === 'private' ? 'bg-rose-500' : 'bg-[#69C496]'}`}>
+                              {settings.profilePrivacy === 'private' ? 'Cloaked' : 'Public'}
+                            </span>
+                          </h4>
+                          <p className="text-[10px] text-[#4F3F34]/55 font-semibold leading-normal">
+                            Cloak your daily streak counters and alien plants milestones from other peer citizen inspections.
+                          </p>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            vibrate(10);
+                            const nextVal = settings.profilePrivacy === 'private' ? 'public' : 'private';
+                            setSettings({ profilePrivacy: nextVal });
+                            showToast(`Profile privacy set to ${nextVal.toUpperCase()}`, 'success');
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider text-white transition-all ${settings.profilePrivacy === 'private' ? 'bg-rose-500' : 'bg-[#69C496]'}`}
+                        >
+                          {settings.profilePrivacy === 'private' ? 'Private' : 'Public'}
+                        </button>
+                      </div>
+
+                      {/* Hide Posts Toggle */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-[#FAF7F2]/50 border border-[#E9E4D4]/40 rounded-2xl">
+                        <div className="space-y-0.5 flex-1">
+                          <h4 className="font-black text-[#4F3F34] text-xs uppercase flex items-center gap-1.5">
+                            <EyeOff size={12} className="text-blue-500" />
+                            <span>Hide My Feed Posts</span>
+                          </h4>
+                          <p className="text-[10px] text-[#4F3F34]/55 font-semibold leading-normal">
+                            Dynamically exclude your published habit records from the general collective community boards.
+                          </p>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            vibrate(10);
+                            const nextVal = !settings.hidePostsFromOthers;
+                            setSettings({ hidePostsFromOthers: nextVal });
+                            showToast(nextVal ? 'Posts cloaked from public' : 'Posts restored to public', 'info');
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${settings.hidePostsFromOthers ? 'bg-[#4F3F34] text-white' : 'bg-gray-100 text-gray-500'}`}
+                        >
+                          {settings.hidePostsFromOthers ? 'Enabled' : 'Disabled'}
+                        </button>
+                      </div>
+
+                      {/* Hide Comments Toggle */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-[#FAF7F2]/50 border border-[#E9E4D4]/40 rounded-2xl">
+                        <div className="space-y-0.5 flex-1">
+                          <h4 className="font-black text-[#4F3F34] text-xs uppercase flex items-center gap-1.5">
+                            <MessageSquareOff size={12} className="text-pink-500" />
+                            <span>Hide My Comments</span>
+                          </h4>
+                          <p className="text-[10px] text-[#4F3F34]/55 font-semibold leading-normal">
+                            Conceal comment triggers from other operatives under public chat discussion boards.
+                          </p>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            vibrate(10);
+                            const nextVal = !settings.hideCommentsFromOthers;
+                            setSettings({ hideCommentsFromOthers: nextVal });
+                            showToast(nextVal ? 'Comments hidden from other peers' : 'Comments visible to community', 'info');
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${settings.hideCommentsFromOthers ? 'bg-[#4F3F34] text-white' : 'bg-gray-100 text-gray-500'}`}
+                        >
+                          {settings.hideCommentsFromOthers ? 'Enabled' : 'Disabled'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-dashed border-[#E9E4D4] pt-4 mt-2">
+                      <button 
+                        onClick={() => { vibrate(10); setShowPrivacyModal(true); }}
+                        className="w-full bg-[#FAF7F2] hover:bg-[#E9E4D4]/30 text-[#4F3F34] py-3.5 rounded-xl border border-[#E9E4D4] text-xs font-black uppercase tracking-wider transition-all"
+                      >
+                        VIEW PRIVACY MANIFESTO DETAILS
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* === 6. LANGUAGE & UNITS CATEGORY === */}
+              {activeCategory === 'language' && (
+                <div className="space-y-6" id="language-subpage">
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-5 shadow-sm text-left">
+                    <h3 className="font-black text-[#4F3F34] text-xs uppercase tracking-widest flex items-center gap-2">
+                      <Globe size={14} className="text-indigo-500" /> Region & Localisation Parameters
+                    </h3>
+
+                    {/* Metric / Imperial toggle */}
+                    <div className="space-y-2">
+                      <h4 className="text-[10px] font-black text-[#4F3F34]/40 uppercase tracking-widest pl-1">
+                        Measurement Scale Systems
+                      </h4>
+                      <div className="flex bg-[#FAF7F2] p-1.5 rounded-2xl border border-[#E9E4D4]/40 justify-between items-center gap-4">
+                        <span className="text-xs font-black text-[#4F3F34] pl-2">System Standard</span>
+                        <div className="flex bg-white p-1 rounded-xl shadow-inner border border-[#E9E4D4]/30">
+                          <button 
+                            onClick={() => { vibrate(5); setSettings({ unitSystem: 'metric' }); }}
+                            className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${settings.unitSystem === 'metric' ? 'bg-[#4F3F34] text-[#FCFAF6] shadow-sm' : 'text-[#4F3F34]/50'}`}
+                          >Metric</button>
+                          <button 
+                            onClick={() => { vibrate(5); setSettings({ unitSystem: 'imperial' }); }}
+                            className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${settings.unitSystem === 'imperial' ? 'bg-[#4F3F34] text-[#FCFAF6] shadow-sm' : 'text-[#4F3F34]/50'}`}
+                          >Imperial</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Language selector (Mock) */}
+                    <div className="space-y-2">
+                      <h4 className="text-[10px] font-black text-[#4F3F34]/40 uppercase tracking-widest pl-1">
+                        Active App Language Locale
+                      </h4>
+                      <div className="relative">
+                        <select 
+                          value={selectedLanguage}
+                          onChange={(e) => {
+                            vibrate(10);
+                            setSelectedLanguage(e.target.value);
+                            showToast(`Language system remapped to: ${e.target.value.toUpperCase()}`, 'info');
+                          }}
+                          className="w-full bg-[#FAF7F2] border border-[#E9E4D4]/60 rounded-2xl py-3.5 px-4 font-black text-xs text-[#4F3F34] focus:outline-none focus:ring-2 focus:ring-[#69C496] appearance-none cursor-pointer"
+                        >
+                          <option value="en">🇺🇸 English (US) - Active</option>
+                          <option value="es">🇪🇸 Spanish (Castellano)</option>
+                          <option value="de">🇩🇪 German (Deutsch)</option>
+                          <option value="ja">🇯🇵 Japanese (日本語)</option>
+                          <option value="fr">🇫🇷 French (Français)</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-[#4F3F34]/40">
+                          <ChevronLeft size={16} className="rotate-270" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* === 7. INSTALL NEXORA CATEGORY === */}
+              {activeCategory === 'install' && (
+                <div className="space-y-6" id="install-subpage">
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-5 shadow-sm text-left animate-in fade-in duration-200">
+                    <div className="flex gap-4 items-start p-4 bg-indigo-50/20 border border-indigo-100/40 rounded-2xl">
+                      <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center border border-indigo-100 shadow-sm shrink-0">
+                        <span className="text-xl animate-bounce">📥</span>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-black text-blue-900 text-sm leading-snug">
+                          Run Nexora Directly as a Native Client App
+                        </h4>
+                        <p className="text-[10px] text-blue-950/60 leading-relaxed font-semibold">
+                          Bypass browser addresses, unlock fluid immersive borders, and optimize offline sync speeds.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="p-3 bg-[#FAF7F2]/50 rounded-xl border border-[#E9E4D4]/30 flex items-center gap-2">
+                        <span className="text-emerald-500 font-black text-xs">✓</span>
+                        <span className="text-[9px] text-[#4F3F34] font-black uppercase tracking-wide">60FPS Canvas Speeds</span>
+                      </div>
+                      <div className="p-3 bg-[#FAF7F2]/50 rounded-xl border border-[#E9E4D4]/30 flex items-center gap-2">
+                        <span className="text-emerald-500 font-black text-xs">✓</span>
+                        <span className="text-[9px] text-[#4F3F34] font-black uppercase tracking-wide">Fluid Native Docking</span>
+                      </div>
+                      <div className="p-3 bg-[#FAF7F2]/50 rounded-xl border border-[#E9E4D4]/30 flex items-center gap-2">
+                        <span className="text-emerald-500 font-black text-xs">✓</span>
+                        <span className="text-[9px] text-[#4F3F34] font-black uppercase tracking-wide">Zero Browser Frame bars</span>
+                      </div>
+                      <div className="p-3 bg-[#FAF7F2]/50 rounded-xl border border-[#E9E4D4]/30 flex items-center gap-2">
+                        <span className="text-emerald-500 font-black text-xs">✓</span>
+                        <span className="text-[9px] text-[#4F3F34] font-black uppercase tracking-wide">Active badge indicators</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      {isStandalone || (typeof localStorage !== 'undefined' && localStorage.getItem('nexora_pwa_installed') === 'true') ? (
+                        <div className="w-full bg-emerald-50/70 border border-emerald-200 text-emerald-800 rounded-2xl py-4 font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-inner">
+                          {!mascotError ? (
+                            <img
+                              src="/nexora-mascot.png"
+                              alt=""
+                              className="w-5 h-5 object-cover rounded-md border border-emerald-300 shrink-0"
+                              referrerPolicy="no-referrer"
+                              onError={() => setMascotError(true)}
+                            />
+                          ) : (
+                            <span className="text-emerald-600 font-extrabold text-sm">✓</span>
+                          )}
+                          <span>Nexora Native client is active</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            vibrate(VIBRATION_PATTERNS.CLICK);
+                            if (typeof onTriggerPwaInstall === 'function') {
+                              onTriggerPwaInstall();
+                            } else {
+                              showToast('No installer trigger found in sandbox context yet, bro.', 'error');
+                            }
+                          }}
+                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl py-4 font-black uppercase text-xs tracking-widest shadow-lg hover:translate-y-[-1px] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer transition-all"
+                        >
+                          {!mascotError ? (
+                            <img
+                              src="/nexora-mascot.png"
+                              alt=""
+                              className="w-5 h-5 object-cover rounded-md border border-white/20 animate-pulse shrink-0"
+                              referrerPolicy="no-referrer"
+                              onError={() => setMascotError(true)}
+                            />
+                          ) : (
+                            <Smartphone size={14} className="text-indigo-200" />
+                          )}
+                          <span>INSTALL CLIENT NOW</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* === 8. BACKUP & SYNC CATEGORY === */}
+              {activeCategory === 'backup' && (
+                <div className="space-y-6" id="backup-subpage">
+                  {/* System Version & Restore Snaps */}
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-4 shadow-sm text-left">
+                    <div className="flex justify-between items-start pb-2 border-b border-[#E9E4D4]/40">
+                      <div className="flex items-center gap-2">
+                        <RefreshCw size={15} className="text-[#69C496] animate-spin-slow shrink-0" />
+                        <div>
+                          <h4 className="font-black text-xs text-[#4F3F34] uppercase tracking-tight">Version Snapshot</h4>
+                          <span className="text-[8px] font-bold text-[#4F3F34]/40 uppercase tracking-widest block leading-none">Protection snapshot backup</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 bg-[#E8F5EE] border border-[#D0EFE0] rounded-lg text-[9px] font-black text-[#69C496] uppercase">
+                        v{currentAppVersion} Active
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] font-semibold text-[#4F3F34]/60 leading-normal">
+                      Nexora performs local automatic updates. If a recent version breaks any client-side records, rollback instantly using snapshot data here.
+                    </p>
+
+                    {rollbackBackupData ? (
+                      <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 space-y-2.5">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest block">Available Backup Snap</span>
+                            <span className="text-xs font-black text-emerald-900 mt-0.5 block">Config: v{rollbackBackupData.version || '2.0.0'}</span>
+                          </div>
+                          <span className="text-[8px] font-bold text-emerald-700 bg-emerald-100/50 px-2 py-0.5 rounded">
+                            {rollbackBackupData.backupTime ? new Date(rollbackBackupData.backupTime).toLocaleDateString() : 'Active'}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => { vibrate(15); onRollbackRestore(); }}
+                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-black text-[10px] tracking-widest uppercase transition-all"
+                        >
+                          RESTORE BACKUP v{rollbackBackupData.version}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E9E4D4]/40 text-center">
+                        <span className="text-[9px] font-black text-[#4F3F34]/40 uppercase tracking-widest block">No Local Safety Snapshot Found</span>
+                        <p className="text-[9px] text-[#4F3F34]/50 font-bold mt-0.5">Snapshots are populated securely before client update execution.</p>
+                      </div>
+                    )}
+
                     <button 
-                      onClick={() => b.setter(!b.state)}
-                      className={`w-9 h-5 rounded-full transition-all relative ${b.state ? 'bg-emerald-500' : 'bg-gray-200'}`}
+                      onClick={() => { vibrate(15); onSimulateUpdate(); }}
+                      className="w-full bg-[#4F3F34] text-[#FCFAF6] py-3.5 rounded-xl font-black text-[10px] tracking-widest uppercase hover:bg-[#3D2F26] transition-all"
                     >
-                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${b.state ? 'left-5' : 'left-1'}`} />
+                      🧪 Simulate Client Update (10s Timer)
                     </button>
                   </div>
-                ))}
-                </div>
-              </motion.div>
-            )}
 
-            {/*
-            <div className="flex items-center justify-between p-4 bg-orange-600 text-white rounded-2xl shadow-lg border-2 border-orange-400 mt-3 hover:translate-y-[-2px] transition-all cursor-pointer" onClick={() => setSettings({ isReelsDisabled: !settings.isReelsDisabled })}>
-               <div className="flex items-center gap-4">
-                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                    <Video size={18} />
-                 </div>
-                 <div>
-                   <p className="font-black text-sm uppercase">Nexora Reels Relay</p>
-                   <p className="text-[9px] opacity-70 font-bold uppercase tracking-widest">Main Media Feed Control</p>
-                 </div>
-               </div>
-               <div 
-                  className={`w-12 h-7 rounded-full transition-all relative ${!settings.isReelsDisabled ? 'bg-white' : 'bg-black/20'}`}
-               >
-                  <div className={`absolute top-1 w-5 h-5 rounded-full transition-all ${!settings.isReelsDisabled ? 'left-6 bg-orange-600' : 'left-1 bg-white/40'}`} />
-               </div>
-            </div>
-            */}
-
-            {fcmError && (
-              <div className="p-4 bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-between mt-4">
-                 <div className="flex items-center gap-3">
-                    <div className="bg-red-500 p-2 rounded-xl text-white">
-                       <AlertCircle size={16} />
+                  {/* Nexus Lab Test Tools */}
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-4 shadow-sm text-left">
+                    <h3 className="font-black text-[#4F3F34] text-xs uppercase tracking-widest flex items-center gap-2">
+                      <BrainCircuit size={14} className="text-purple-500" /> Nexus Debug Lab Tools
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button onClick={onSendTestNotification} className="p-3.5 bg-white border border-[#E9E4D4] rounded-2xl text-[9px] font-black text-[#4F3F34] uppercase tracking-wider hover:bg-[#FAF7F2] transition-all flex flex-col items-center gap-1.5 active:scale-95">
+                        <Smartphone size={14} className="text-blue-500" /> Push Alert Test
+                      </button>
+                      <button onClick={onSendMotivation} className="p-3.5 bg-white border border-[#E9E4D4] rounded-2xl text-[9px] font-black text-[#4F3F34] uppercase tracking-wider hover:bg-[#FAF7F2] transition-all flex flex-col items-center gap-1.5 active:scale-95">
+                        <Zap size={14} className="text-yellow-500" /> AI Motivation
+                      </button>
+                      <button onClick={onExportData} className="p-3.5 bg-white border border-[#E9E4D4] rounded-2xl text-[9px] font-black text-[#4F3F34] uppercase tracking-wider hover:bg-[#FAF7F2] transition-all flex flex-col items-center gap-1.5 active:scale-95">
+                        <Mail size={14} className="text-indigo-500" /> Export Records
+                      </button>
+                      <button onClick={onClearCache} className="p-3.5 bg-white border border-[#E9E4D4] rounded-2xl text-[9px] font-black text-[#4F3F34] uppercase tracking-wider hover:bg-[#FAF7F2] transition-all flex flex-col items-center gap-1.5 active:scale-95">
+                        <RefreshCw size={14} className="text-rose-500" /> Reset Caches
+                      </button>
                     </div>
-                    <div>
-                      <p className="text-[10px] text-red-600 font-black uppercase mb-1">Frequency Sync Error</p>
-                      <p className="text-[10px] text-red-900/60 font-medium">Worker thread disconnected, bro.</p>
-                    </div>
-                 </div>
-                 <button 
-                  onClick={() => {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    onRetryFCM();
-                  }} 
-                  className="p-3 bg-white text-red-500 rounded-2xl shadow-sm hover:rotate-180 transition-all duration-500 active:scale-90 flex items-center gap-2 border border-red-100"
-                >
-                   <RefreshCw size={16} />
-                   <span className="text-[8px] font-black uppercase">Retry</span>
-                 </button>
-              </div>
-            )}
-
-            {!fcmError && !settings.fcmToken && settings.notificationsEnabled && (
-              <div className="p-4 bg-blue-50 border-2 border-blue-100 rounded-2xl flex items-center justify-between mt-4">
-                 <div className="flex items-center gap-3">
-                    <div className="bg-blue-500 p-2 rounded-xl text-white">
-                       <Smartphone size={16} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-blue-600 font-black uppercase mb-1">Token Pending</p>
-                      <p className="text-[10px] text-blue-900/60 font-medium">System waiting for Browser ID...</p>
-                    </div>
-                 </div>
-                 <button 
-                   onClick={() => {
-                     vibrate(VIBRATION_PATTERNS.CLICK);
-                     onRetryFCM();
-                   }} 
-                   className="p-3 bg-white text-blue-500 rounded-2xl shadow-sm hover:bg-blue-50 transition-all active:scale-90 flex items-center gap-2 border border-blue-100 font-black text-[8px] uppercase"
-                 >
-                   <RefreshCw size={14} className="animate-spin-slow" />
-                   Manual Sync
-                 </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Global Units & Region */}
-        <div className="glass-card p-6 space-y-4">
-          <div className="flex items-center gap-3 mb-2">
-            <Globe size={18} className="text-blue-500" />
-            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Region & Units</h3>
-          </div>
-          
-          <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-             <div>
-               <p className="font-bold text-blue-900 text-sm">Measurement System</p>
-               <p className="text-[10px] text-blue-900/40 font-medium tracking-tight">Metric / Imperial toggle</p>
-             </div>
-             <div className="flex bg-white p-1 rounded-xl shadow-sm border border-blue-100">
-                <button 
-                  onClick={() => setSettings({ unitSystem: 'metric' })}
-                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${settings.unitSystem === 'metric' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'text-blue-900/40'}`}
-                >Metric</button>
-                <button 
-                  onClick={() => setSettings({ unitSystem: 'imperial' })}
-                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${settings.unitSystem === 'imperial' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'text-blue-900/40'}`}
-                >Imperial</button>
-             </div>
-          </div>
-        </div>
-
-        {/* Sync & Feedback Support */}
-        <div className="glass-card p-6 space-y-4 border-2 border-emerald-400 relative overflow-hidden group shadow-xl">
-          <div className="absolute top-0 right-0 p-12 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-500/20 transition-colors" />
-          
-          <div className="flex items-center gap-3 mb-2 relative z-10">
-            <div className="p-3 bg-emerald-500 text-white rounded-2xl shadow-lg rotate-3 group-hover:rotate-0 transition-transform">
-              <MessageSquare size={24} />
-            </div>
-            <div>
-              <h3 className="font-black text-emerald-900 uppercase text-lg tracking-tight">FEEDBACK CENTER</h3>
-              <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Transmit Field Reports to HQ</p>
-            </div>
-          </div>
-          
-          <div className="bg-white/60 backdrop-blur-sm p-5 rounded-2xl border border-emerald-100/50 relative z-10">
-             <p className="text-xs font-bold text-blue-900/70 leading-relaxed mb-4">
-               Transmitting your feedback helps the Nexora Team optimize the protocol for all warriors. Found a glitch? Want a new feature? Tell us directly, bro! 📡
-             </p>
-             <button 
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.NOTIFY);
-                  setShowFeedbackModal(true);
-                }}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-5 rounded-2xl font-black text-sm tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-emerald-200 transition-all active:scale-95 group/btn"
-             >
-                <div className="relative">
-                  <RefreshCw size={20} className="group-hover/btn:rotate-180 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-white rounded-full blur-md opacity-20" />
+                  </div>
                 </div>
-                SEND SYSTEM FEEDBACK
-             </button>
-          </div>
-        </div>
-
-        {/* Version Recovery & Rollback Section */}
-        <div className="glass-card p-6 space-y-4 border border-blue-100/60 relative overflow-hidden">
-          <div className="flex items-center justify-between pb-2 border-b border-blue-50">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl shadow-sm border border-blue-100">
-                <RefreshCw size={18} className="text-blue-500 animate-spin-slow" />
-              </div>
-              <div>
-                <h3 className="font-black text-blue-900 uppercase text-xs tracking-tight">System Version & Recovery</h3>
-                <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">Rollback Protection Engine</p>
-              </div>
-            </div>
-            <div className="px-2.5 py-1 bg-blue-50 rounded-lg border border-blue-100 text-[10px] font-black text-blue-800 animate-pulse">
-              Active: v{currentAppVersion}
-            </div>
-          </div>
-
-          <p className="text-xs font-bold text-blue-900/60 leading-relaxed">
-            Nexora features automatic client-side updates. If a new update breaks anything, you can immediately rollback to your previous configuration within 10 seconds of app load, or manually revert here.
-          </p>
-
-          {rollbackBackupData ? (
-            <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 text-left space-y-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest block">Available Rollback Snapshot</span>
-                  <span className="text-xs font-black text-emerald-900">Config: v{rollbackBackupData.version || '2.0.0'}</span>
-                </div>
-                <div className="text-[9px] font-bold text-emerald-800 bg-emerald-100/50 px-2 py-0.5 rounded-md">
-                  Saved: {rollbackBackupData.backupTime ? new Date(rollbackBackupData.backupTime).toLocaleString() : 'N/A'}
-                </div>
-              </div>
-              
-              <button
-                onClick={() => {
-                  vibrate(VIBRATION_PATTERNS.NOTIFY);
-                  onRollbackRestore();
-                }}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-black text-xs tracking-widest transition-all active:scale-95 shadow-md shadow-emerald-100 flex items-center justify-center gap-2"
-              >
-                <Check size={14} />
-                RESTORE PREVIOUS VERSION v{rollbackBackupData.version}
-              </button>
-            </div>
-          ) : (
-            <div className="p-4 bg-blue-50/30 rounded-2xl border border-blue-100/50 text-center">
-              <span className="text-[9px] font-black text-blue-900/40 uppercase tracking-widest block">No Previous Backup Detected</span>
-              <p className="text-[10px] font-medium text-blue-900/50 mt-1">A safety backup is formed automatically when updates are deployed.</p>
-            </div>
-          )}
-
-          <div className="pt-2">
-            <button
-              onClick={() => {
-                vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                onSimulateUpdate();
-              }}
-              className="w-full bg-blue-900 hover:bg-blue-950 text-white py-3.5 rounded-xl font-black text-xs tracking-widest shadow-lg shadow-blue-100 transition-all active:scale-95 flex items-center justify-center gap-2"
-            >
-              <Zap size={14} className="text-yellow-400 animate-pulse" />
-              SIMULATE NEW UPDATE & START 10s TIMER
-            </button>
-          </div>
-        </div>
-
-        {/* 📱 INTERACTIVE PWA APPLICATION INSTALLATION MASTER CENTER */}
-        <div className="safe-glass gpu p-6 space-y-5 animate-in slide-in-from-bottom duration-200">
-          <div className="flex items-center gap-3">
-            <Smartphone size={18} className="text-indigo-500" />
-            <div>
-              <span className="text-[9px] font-black tracking-widest text-indigo-500 uppercase block leading-none">
-                Progressive Web App
-              </span>
-              <h3 className="font-black text-blue-900 uppercase text-xs tracking-wider mt-1">
-                Install Nexora Citizen Client
-              </h3>
-            </div>
-          </div>
-
-          <div className="bg-indigo-50/30 border border-indigo-100/40 rounded-3xl p-5 space-y-4">
-            <div className="flex gap-4 items-start">
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-indigo-100 shadow-sm shrink-0">
-                <span className="text-2xl animate-bounce">📥</span>
-              </div>
-              <div className="space-y-1">
-                <h4 className="font-extrabold text-blue-900 text-sm leading-snug">
-                  Run Nexora Directly as a Native Desktop or Mobile App
-                </h4>
-                <p className="text-[10px] text-blue-950/60 leading-relaxed font-medium">
-                  Add Nexora to your home screen or dock to bypass browser shell chrome layouts, unlock fluid fullscreen navigation, and elevate offline biometrics sync performance.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1.5 font-sans">
-              <div className="p-3 bg-white/70 rounded-2xl border border-indigo-100/50 flex items-center gap-2.5">
-                <span className="text-emerald-500 font-extrabold text-xs">✓</span>
-                <span className="text-[10px] text-blue-900 font-extrabold uppercase tracking-wide">60FPS Canvas Speeds</span>
-              </div>
-              <div className="p-3 bg-white/70 rounded-2xl border border-indigo-100/50 flex items-center gap-2.5">
-                <span className="text-emerald-500 font-extrabold text-xs">✓</span>
-                <span className="text-[10px] text-blue-900 font-extrabold uppercase tracking-wide">Uncompromised Sync</span>
-              </div>
-              <div className="p-3 bg-white/70 rounded-2xl border border-indigo-100/50 flex items-center gap-2.5">
-                <span className="text-emerald-500 font-extrabold text-xs">✓</span>
-                <span className="text-[10px] text-blue-900 font-extrabold uppercase tracking-wide">Zero Browser Bars</span>
-              </div>
-              <div className="p-3 bg-white/70 rounded-2xl border border-indigo-100/50 flex items-center gap-2.5">
-                <span className="text-emerald-500 font-extrabold text-xs">✓</span>
-                <span className="text-[10px] text-blue-900 font-extrabold uppercase tracking-wide">App Badge Counts</span>
-              </div>
-            </div>
-
-            <div className="pt-2">
-              {isStandalone || (typeof localStorage !== "undefined" && localStorage.getItem("nexora_pwa_installed") === "true") ? (
-                <div className="w-full bg-emerald-50 bg-opacity-70 border border-emerald-200/50 text-emerald-800 rounded-2xl py-4 font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2">
-                  {!mascotError ? (
-                    <img
-                      src="/nexora-mascot.png"
-                      alt=""
-                      className="w-5 h-5 object-cover rounded-md border border-emerald-300"
-                      referrerPolicy="no-referrer"
-                      onError={() => setMascotError(true)}
-                    />
-                  ) : (
-                    <span className="text-emerald-600 font-extrabold text-sm">✓</span>
-                  )}
-                  <span>Nexora is already installed</span>
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    if (typeof onTriggerPwaInstall === "function") {
-                      onTriggerPwaInstall();
-                    } else {
-                      showToast("No installer registration hook detected yet.", "error");
-                    }
-                  }}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl py-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-indigo-100 transition-all hover:translate-y-[-1px] active:translate-y-[1px] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {!mascotError ? (
-                    <img
-                      src="/nexora-mascot.png"
-                      alt=""
-                      className="w-5 h-5 object-cover rounded-md border border-white/20 animate-pulse"
-                      referrerPolicy="no-referrer"
-                      onError={() => setMascotError(true)}
-                    />
-                  ) : (
-                    <Smartphone size={14} className="text-indigo-200" />
-                  )}
-                  <span>Install Nexora</span>
-                </button>
               )}
+
+              {/* === 9. SOUND CATEGORY === */}
+              {activeCategory === 'sound' && (
+                <div className="space-y-6" id="sound-subpage">
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-4 shadow-sm text-left">
+                    <h3 className="font-black text-[#4F3F34] text-xs uppercase tracking-widest flex items-center gap-2">
+                      <Volume2 size={14} className="text-pink-500" /> Soundscapes & Audio Signals
+                    </h3>
+
+                    <div className="space-y-2.5">
+                      {/* Sound pack items */}
+                      {[
+                        { id: 'zen', label: 'Zen Mode (Background Lofi)', icon: <Sparkles size={14} className="text-[#69C496]" />, state: settings.zenModeEnabled, setter: (v: boolean) => setSettings({ zenModeEnabled: v }) },
+                        { id: 'sounds', label: 'Audio Feedback Signals (SFX)', icon: <Volume2 size={14} className="text-pink-500" />, state: settings.soundEnabled, setter: (v: boolean) => setSettings({ soundEnabled: v }) },
+                        { id: 'dog-pack', label: 'Mascot Audio Soundpack: Dog Mode', icon: <Droplets size={14} className="text-blue-500" />, state: settings.isDogSoundPackActive, setter: (v: boolean) => setSettings({ isDogSoundPackActive: v }) },
+                        { id: 'quotes', label: 'Daily Motivational Audio Quotes', icon: <MessageSquare size={14} className="text-amber-500" />, state: settings.showQuotes, setter: (v: boolean) => setSettings({ showQuotes: v }) },
+                      ].map(item => (
+                        <div key={item.id} className="flex items-center justify-between p-4 bg-[#FAF7F2]/50 border border-[#E9E4D4]/40 rounded-2xl">
+                          <div className="flex items-center gap-3">
+                            <div className="shrink-0">{item.icon}</div>
+                            <span className="text-[11px] font-black text-[#4F3F34] uppercase tracking-tight leading-none">{item.label}</span>
+                          </div>
+                          <button 
+                            onClick={() => { vibrate(5); item.setter(!item.state); }}
+                            className={`w-11 h-6 rounded-full transition-all relative ${item.state ? 'bg-[#69C496]' : 'bg-gray-200'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-all ${item.state ? 'left-6' : 'left-1'}`} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* === 10. COMMUNITY CATEGORY === */}
+              {activeCategory === 'community' && (
+                <div className="space-y-6" id="community-subpage">
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-4 shadow-sm text-left">
+                    <h3 className="font-black text-[#4F3F34] text-xs uppercase tracking-widest flex items-center gap-2">
+                      <MessageSquare size={14} className="text-amber-500" /> Direct Transmission Feed back
+                    </h3>
+                    <p className="text-[11px] text-[#4F3F34]/60 leading-normal font-bold">
+                      Discovered a glitch, or want to suggest a feature? Submit report payloads directly to Nexora High Command.
+                    </p>
+
+                    <div className="space-y-3 pt-2">
+                      {/* Rating selection */}
+                      <div>
+                        <label className="text-[9px] font-black text-[#4F3F34]/40 uppercase tracking-widest block mb-2">Satisfaction Rating</label>
+                        <div className="flex gap-2">
+                          {[1, 2, 3, 4, 5].map(num => (
+                            <button 
+                              key={num}
+                              onClick={() => { vibrate(10); setFeedback(prev => ({ ...prev, rating: num })); }}
+                              className={`flex-1 py-3.5 rounded-xl font-black text-xs transition-all border ${feedback.rating === num ? 'bg-[#4F3F34] text-[#FCFAF6] border-[#4F3F34] shadow-md' : 'bg-[#FAF7F2] text-[#4F3F34]/40 border-[#E9E4D4]/50'}`}
+                            >
+                              {num} ★
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Category */}
+                      <div>
+                        <label className="text-[9px] font-black text-[#4F3F34]/40 uppercase tracking-widest block mb-2">Transmission Category</label>
+                        <select 
+                          value={feedback.category}
+                          onChange={(e) => setFeedback(prev => ({ ...prev, category: e.target.value }))}
+                          className="w-full bg-[#FAF7F2] border border-[#E9E4D4]/60 rounded-2xl py-3 px-4 font-black text-xs text-[#4F3F34] focus:outline-none focus:ring-2 focus:ring-[#69C496]"
+                        >
+                          <option>General</option>
+                          <option>Bug Report</option>
+                          <option>Feature Request</option>
+                          <option>UI/UX Design</option>
+                          <option>Motivation Sync</option>
+                        </select>
+                      </div>
+
+                      {/* Message */}
+                      <div>
+                        <label className="text-[9px] font-black text-[#4F3F34]/40 uppercase tracking-widest block mb-2">Report Logs</label>
+                        <textarea 
+                          value={feedback.message}
+                          onChange={(e) => setFeedback(prev => ({ ...prev, message: e.target.value }))}
+                          placeholder="What's on your mind, bro? Write details here..."
+                          className="w-full bg-[#FAF7F2] border border-[#E9E4D4]/60 rounded-2xl py-3 px-4 font-bold text-xs text-[#4F3F34] min-h-[120px] focus:outline-none focus:ring-2 focus:ring-[#69C496] placeholder-[#4F3F34]/30"
+                        />
+                      </div>
+
+                      <button 
+                        onClick={handleInlineFeedbackSubmit}
+                        disabled={!feedback.message.trim()}
+                        className="w-full bg-[#69C496] hover:bg-[#58B383] text-white py-4 rounded-2xl font-black text-xs tracking-widest uppercase shadow-md active:scale-95 transition-all disabled:opacity-40"
+                      >
+                        TRANSMIT PAYLOAD TO HQ
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* === 11. PREMIUM CATEGORY === */}
+              {activeCategory === 'premium' && (
+                <div className="space-y-6" id="premium-subpage">
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-4 shadow-sm text-left">
+                    <div className="p-5 bg-gradient-to-br from-[#4F3F34] to-[#2E241E] text-[#FCFAF6] rounded-3xl relative overflow-hidden shadow-lg">
+                      <div className="absolute top-0 right-0 p-8 bg-amber-500/10 rounded-full blur-2xl" />
+                      
+                      <div className="flex items-center gap-3">
+                        <div className="p-3 bg-amber-500 rounded-2xl text-white shadow-md">
+                          <Sparkles size={22} className="stroke-[2.2] fill-amber-300/30" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-black tracking-widest text-[#69C496] uppercase leading-none block">Operative Elite tier</span>
+                          <h3 className="text-xl font-black text-[#FCFAF6] mt-1 uppercase">Nexus Pro Membership</h3>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2.5 pt-4 border-t border-white/10 mt-4 text-xs font-bold text-[#FCFAF6]/80">
+                        <div className="flex items-center gap-2">
+                          <span className="text-amber-400">✦</span>
+                          <span>Architect Mode Layout config keys</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-amber-400">✦</span>
+                          <span>Unconstrained Alien plant growths & biometrics plots</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-amber-400">✦</span>
+                          <span>Infinite customized daily task plans</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-amber-400">✦</span>
+                          <span>Premium sound feedback bundles unlocked</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Activation entry codes */}
+                    <div className="p-4 bg-[#FAF7F2] border border-[#E9E4D4]/50 rounded-2xl space-y-3">
+                      <h4 className="text-[10px] font-black text-[#4F3F34]/50 uppercase tracking-widest">Activate Dev Promo Codes</h4>
+                      
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={proCode}
+                          onChange={(e) => setProCode(e.target.value)}
+                          placeholder="Type promo key e.g. NEXORA"
+                          className="flex-1 bg-white border border-[#E9E4D4] rounded-xl px-4 py-2.5 text-xs font-bold text-[#4F3F34] uppercase focus:outline-none focus:ring-2 focus:ring-[#69C496] placeholder-[#4F3F34]/20"
+                        />
+                        <button
+                          onClick={handleActivateProCode}
+                          className="bg-amber-500 hover:bg-amber-600 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-md shrink-0"
+                        >
+                          Activate
+                        </button>
+                      </div>
+                      <p className="text-[9px] text-[#4F3F34]/40 font-bold leading-normal">
+                        Type 'NEXORA' or 'DEVELOPER' to unlock Pro instantly, or type 'RESET' to return to free tier for sandboxing tests.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* === 12. ABOUT CATEGORY === */}
+              {activeCategory === 'about' && (
+                <div className="space-y-6" id="about-subpage">
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-4 shadow-sm text-left">
+                    <h3 className="font-black text-[#4F3F34] text-xs uppercase tracking-widest flex items-center gap-2">
+                      <Info size={14} className="text-blue-500" /> Nexora Intelligence Protocol
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 gap-2.5">
+                      <button 
+                        onClick={() => { vibrate(10); setShowPrivacyModal(true); }}
+                        className="flex items-center justify-between p-4 bg-[#FAF7F2] rounded-2xl border border-[#E9E4D4]/40 text-[#4F3F34] hover:bg-white transition-all group active:scale-95 text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          <ShieldCheck size={16} className="text-[#69C496]" />
+                          <span className="text-xs font-black uppercase tracking-tight">Privacy security Protocol</span>
+                        </div>
+                        <ChevronLeft size={16} className="rotate-180 text-[#4F3F34]/30 group-hover:text-[#4F3F34]" />
+                      </button>
+
+                      <button 
+                        onClick={onShowManifesto}
+                        className="flex items-center justify-between p-4 bg-[#FAF7F2] rounded-2xl border border-[#E9E4D4]/40 text-[#4F3F34] hover:bg-white transition-all group active:scale-95 text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          <BookOpen size={16} className="text-amber-500" />
+                          <span className="text-xs font-black uppercase tracking-tight">Nexora Manifesto v1.2</span>
+                        </div>
+                        <ChevronLeft size={16} className="rotate-180 text-[#4F3F34]/30 group-hover:text-[#4F3F34]" />
+                      </button>
+                    </div>
+
+                    <div className="p-4 bg-gray-50 rounded-2xl text-center border border-gray-100">
+                      <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                        Nexora works as an independent, offline-first citizen bio-enhancer. All local assets remain yours to customize.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Danger zone inside About */}
+                  <div className="bg-white border-2 border-red-100 rounded-[2.5rem] p-6 space-y-4 shadow-sm text-left">
+                    <h3 className="font-black text-red-600 text-xs uppercase tracking-widest flex items-center gap-2 pl-1">
+                      <AlertCircle size={14} /> Critical Security Danger Zone
+                    </h3>
+
+                    <button 
+                      onClick={() => { vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT); onLogout(); }}
+                      className="w-full py-4.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
+                    >
+                      <LogOut size={16} /> Terminate Active Session
+                    </button>
+
+                    <button 
+                      onClick={() => { vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT); setShowDeleteConfirm(true); }}
+                      className="w-full py-3.5 bg-white border border-red-200 text-red-500 rounded-2xl font-black uppercase text-[10px] tracking-wider flex items-center justify-center gap-2 hover:bg-red-50 transition-all active:scale-95"
+                    >
+                      <Trash2 size={14} /> Clear all bio-data & erase node
+                    </button>
+                    
+                    <p className="text-[9px] text-red-900/30 font-black text-center uppercase tracking-widest">
+                      Warning: termination suspends local background biometrics syncing protocols.
+                    </p>
+                  </div>
+                </div>
+              )}
+
             </div>
-          </div>
-        </div>
 
-        {/* Support & Dev Section */}
-        <div className="glass-card p-6 space-y-4">
-          <div className="flex items-center gap-3 mb-2">
-            <BrainCircuit size={18} className="text-blue-500" />
-            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Nexus Lab Tools</h3>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-3">
-             <button onClick={onSendTestNotification} className="p-4 bg-white border border-blue-100 rounded-2xl text-[10px] font-black text-blue-600 uppercase tracking-widest hover:bg-blue-50 transition-all flex flex-col items-center gap-2 active:scale-95">
-                <Smartphone size={16} /> Notification Test
-             </button>
-             <button onClick={onSendMotivation} className="p-4 bg-white border border-orange-100 rounded-2xl text-[10px] font-black text-orange-600 uppercase tracking-widest hover:bg-orange-50 transition-all flex flex-col items-center gap-2 active:scale-95">
-                <Zap size={16} /> AI Motivation
-             </button>
-             <button onClick={onExportData} className="p-4 bg-white border border-indigo-100 rounded-2xl text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:bg-indigo-50 transition-all flex flex-col items-center gap-2 active:scale-95">
-                <Mail size={16} /> Data Export
-             </button>
-             <button onClick={onClearCache} className="p-4 bg-white border border-neutral-100 rounded-2xl text-[10px] font-black text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-all flex flex-col items-center gap-2 active:scale-95">
-                <RefreshCw size={16} /> Clear Static
-             </button>
-             {/*
-                <button 
-                  onClick={() => {}} 
-                  className="p-4 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 hover:border-rose-300 rounded-2xl text-[10px] font-black text-rose-600 uppercase tracking-widest hover:from-rose-100 hover:to-pink-100 transition-all flex flex-col items-center gap-2 col-span-2 active:scale-95"
-                >
-                   <div className="flex items-center gap-2">
-                     <Sparkles size={16} className="text-rose-500 animate-pulse" />
-                     <span>Re-Run Onboarding Flow 🚀</span>
-                   </div>
-                </button>
-             */}
-          </div>
-        </div>
+            {/* Sub-page Save/Feedback Note */}
+            <div className="pt-4 text-center">
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#E8F5EE] border border-[#D0EFE0] rounded-full text-[9px] font-black text-[#69C496] uppercase tracking-wider">
+                <Check size={11} className="stroke-[3.5]" /> Changes Saved instantly at Nexus HQ
+              </span>
+            </div>
 
-        {/* Information Section */}
-        <div className="glass-card p-6 space-y-4">
-          <div className="flex items-center gap-3 mb-2">
-            <Info size={18} className="text-blue-500" />
-            <h3 className="font-black text-blue-900 uppercase text-[10px] tracking-widest">Nexora Intelligence</h3>
-          </div>
-          
-          <div className="grid grid-cols-1 gap-2">
-            <button 
-              onClick={() => setShowPrivacyModal(true)}
-              className="flex items-center justify-between p-4 bg-white rounded-2xl border border-blue-50 text-blue-900 hover:bg-blue-50 transition-all group active:scale-95"
-            >
-               <div className="flex items-center gap-3">
-                  <ShieldCheck size={16} className="text-blue-400" />
-                  <span className="text-xs font-black uppercase tracking-tight">Privacy Protocol</span>
-               </div>
-               <ChevronLeft size={16} className="rotate-180 opacity-20 group-hover:opacity-100 transition-opacity" />
-            </button>
-            <button 
-              onClick={onShowManifesto}
-              className="flex items-center justify-between p-4 bg-white rounded-2xl border border-blue-50 text-blue-900 hover:bg-blue-50 transition-all group active:scale-95"
-            >
-               <div className="flex items-center gap-3">
-                  <RefreshCw size={16} className="text-blue-400" />
-                  <span className="text-xs font-black uppercase tracking-tight">Nexora Manifesto v1.2</span>
-               </div>
-               <ChevronLeft size={16} className="rotate-180 opacity-20 group-hover:opacity-100 transition-opacity" />
-            </button>
-          </div>
-        </div>
-
-        {/* Danger Zone */}
-        <div className="glass-card p-6 border-2 border-red-50 space-y-4">
-           <button 
-             onClick={onLogout}
-             className="w-full py-5 bg-red-50 text-red-600 rounded-2xl font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-red-600 hover:text-white transition-all shadow-sm active:scale-95"
-           >
-             <LogOut size={18} /> Execute Logout Sequence
-           </button>
-
-           <button 
-             onClick={() => setShowDeleteConfirm(true)}
-             className="w-full py-4 bg-white border-2 border-red-100 text-red-500 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-red-50 transition-all active:scale-95"
-           >
-             <Trash2 size={16} /> Delete Account & Data
-           </button>
-           
-           <p className="text-[9px] text-red-900/20 font-black text-center mt-2 uppercase tracking-widest">Warning: Session termination will pause background syncing</p>
-        </div>
-
-        <div className="text-center space-y-3 pt-6">
-           <div className="flex justify-center gap-2">
-             <div className="px-3 py-1 bg-blue-50 rounded-full text-[8px] font-black text-blue-400 uppercase tracking-widest border border-blue-100">Alpha v1.2.0-Alpha</div>
-             <div className="px-3 py-1 bg-green-50 rounded-full text-[8px] font-black text-green-500 uppercase tracking-widest border border-green-100">Secure Protocol</div>
-           </div>
-           <p className="text-[10px] text-blue-500/40 font-bold italic">"Consistency creates gods, bro. Don't stop now."</p>
-           
-           <div className="flex justify-center gap-6 pt-4 grayscale opacity-20">
-              <ShieldCheck size={16} />
-              <Zap size={16} />
-              <Droplets size={16} />
-           </div>
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
 
-// Sub-components used in badges
+// Sub-components
 function Crown({ size, className }: { size: number, className?: string }) {
   return <Sparkles size={size} className={className} />;
 }
-
