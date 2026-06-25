@@ -330,29 +330,36 @@ export function LeaderboardScreen({
 
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-4xl shadow-inner shadow-black/40 animate-pulse">
-                {userRank > 0 && userRank <= 3 ? "🎁" : userRank >= 4 && userRank <= 6 ? "📦" : "🔒"}
+                {userRank > 0 && userRank <= 3 ? "🏆" : userRank >= 4 && userRank <= 10 ? "🥇" : userRank >= 11 && userRank <= 16 ? "🥈" : "🎗️"}
               </div>
               <div className="min-w-0 flex-1">
                 <h4 className="text-sm font-black uppercase tracking-tight truncate">
-                  {userRank > 0 && userRank <= 6 
+                  {userRank > 0 && userRank <= 16 
                     ? `Congratulations, bro!` 
-                    : `Unranked / Outside Top 6`}
+                    : userRank > 16 
+                      ? `Progress Recognition` 
+                      : `Unranked`}
                 </h4>
                 <p className="text-[11px] text-slate-300 font-medium leading-tight">
-                  {userRank > 0 && userRank <= 6 
-                    ? `You are Rank #${userRank} this week and eligible for special coins reward, bro!` 
-                    : `Reach Rank 1-6 this week to unlock gorgeous chests and earn raw coin items!`}
+                  {userRank === 1 
+                    ? `You are Rank #1! You've earned the ultimate weekly championship: 250 Coins, Golden Trophy, and +150 XP Bonus, bro! 🔥`
+                    : userRank > 1 && userRank <= 16
+                      ? `You are Rank #${userRank} this week and eligible for a special rebalanced coin reward, bro!` 
+                      : userRank > 16
+                        ? `You are Rank #${userRank}. Excellent routine consistency! Keep pushing to reach the Top 16 for raw coin rewards.`
+                        : `Complete your active habits to climb the ranks and unlock weekly chest rewards!`}
                 </p>
               </div>
             </div>
 
             {/* Reward Claim Parameters */}
-            {userRank > 0 && userRank <= 6 ? (
+            {userRank > 0 && userRank <= 16 ? (
               <div className="pt-2 border-t border-white/10 flex items-center justify-between">
                 <div>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Calculated Reward</p>
-                  <p className="text-md font-black text-yellow-400 flex items-center gap-1">
-                    🪙 +{userRank === 1 ? 500 : userRank === 2 ? 300 : userRank === 3 ? 200 : 50} Coins
+                  <p className="text-sm font-black text-yellow-400 flex flex-col leading-tight">
+                    <span>🪙 +{userRank === 1 ? 250 : userRank === 2 ? 200 : userRank === 3 ? 150 : userRank <= 10 ? 100 : 75} Coins</span>
+                    {userRank === 1 && <span className="text-[9px] text-amber-300 font-bold uppercase tracking-wider">+150 XP & Golden Trophy</span>}
                   </p>
                 </div>
                 {hasClaimedThisWeek ? (
@@ -363,24 +370,38 @@ export function LeaderboardScreen({
                 ) : (
                   <button
                     onClick={() => {
-                      const coins = userRank === 1 ? 500 : userRank === 2 ? 300 : userRank === 3 ? 200 : 50;
+                      const coins = userRank === 1 ? 250 : userRank === 2 ? 200 : userRank === 3 ? 150 : userRank <= 10 ? 100 : 75;
                       onClaimRankReward(userRank, coins);
                     }}
                     className="bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-yellow-950 font-black text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl shadow-lg ring-2 ring-yellow-400/30 border border-yellow-200/50 transition-all active:scale-95 duration-200"
                   >
-                    Claim Coins
+                    Claim Rewards
                   </button>
                 )}
               </div>
+            ) : userRank > 16 ? (
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Status Award</p>
+                  <p className="text-xs font-black text-emerald-400 uppercase tracking-wider">Progress Recognition Verified</p>
+                </div>
+                <div className="text-[10px] bg-white/15 px-3 py-1.5 rounded-xl text-slate-300 font-bold uppercase tracking-wider">
+                  Baseline Secured
+                </div>
+              </div>
             ) : (
-              <div className="pt-2 border-t border-white/10 grid grid-cols-2 gap-2 text-center">
+              <div className="pt-2 border-t border-white/10 grid grid-cols-3 gap-2 text-center">
                 <div className="bg-white/5 border border-white/10 rounded-xl p-2">
                   <p className="text-[8px] font-black text-yellow-400 uppercase">Top 1 - 3 Rewards</p>
-                  <p className="text-xs font-black text-white">Up to 500 🪙</p>
+                  <p className="text-[10px] font-black text-white">Up to 250 🪙</p>
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-xl p-2">
-                  <p className="text-[8px] font-black text-indigo-300 uppercase">Top 4 - 6 Rewards</p>
-                  <p className="text-xs font-black text-white font-black">50 🪙</p>
+                  <p className="text-[8px] font-black text-indigo-300 uppercase">Top 4 - 10 Rewards</p>
+                  <p className="text-[10px] font-black text-white">100 🪙</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-2">
+                  <p className="text-[8px] font-black text-slate-300 uppercase">Top 11 - 16 Rewards</p>
+                  <p className="text-[10px] font-black text-white">75 🪙</p>
                 </div>
               </div>
             )}

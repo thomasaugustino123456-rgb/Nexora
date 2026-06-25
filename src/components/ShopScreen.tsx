@@ -11,6 +11,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: "Protects your streak for 24 hours.",
     price: 6,
     coinPrice: 150,
+    rarity: "common",
     effect: "streak-protection",
     icon: "🛡️",
   },
@@ -20,44 +21,59 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: "Earn 2x points for all challenges today.",
     price: 14,
     coinPrice: 300,
+    rarity: "uncommon",
     effect: "double-points",
     icon: "⚡",
   },
+  {
+    id: "plant-recovery",
+    name: "Nano Fertilizer",
+    description: "Instantly restores 25% plant health.",
+    price: 8,
+    coinPrice: 200,
+    rarity: "uncommon",
+    effect: "power-up",
+    icon: "🧪",
+  },
+  {
+    id: "coin-magnet",
+    name: "Coin Magnet",
+    description: "Earn 30% more coins today.",
+    price: 15,
+    coinPrice: 400,
+    rarity: "uncommon",
+    effect: "power-up",
+    icon: "🧲",
+  },
+  {
+    id: "xp-boost",
+    name: "XP Overdrive",
+    description: "Triple XP for the next 3 challenges.",
+    price: 25,
+    coinPrice: 800,
+    rarity: "rare",
+    effect: "double-points",
+    icon: "🚀",
+  },
 
   // Mascot Skins (Hats/Accessories)
-  {
-    id: "skin-crown",
-    name: "Royal Crown",
-    description: "A majestic crown for your mascot.",
-    price: 28,
-    coinPrice: 750,
-    effect: "skin",
-    icon: "👑",
-  },
   {
     id: "skin-cool",
     name: "Cool Shades",
     description: "Some stylish sunglasses.",
     price: 12,
-    coinPrice: 375,
+    coinPrice: 120,
+    rarity: "common",
     effect: "skin",
     icon: "🕶️",
-  },
-  {
-    id: "skin-wizard",
-    name: "Wizard Hat",
-    description: "A magical hat for a magical bottle.",
-    price: 35,
-    coinPrice: 900,
-    effect: "skin",
-    icon: "🧙",
   },
   {
     id: "skin-artist",
     name: "Artist Beret",
     description: "For the creative souls.",
     price: 18,
-    coinPrice: 525,
+    coinPrice: 135,
+    rarity: "common",
     effect: "skin",
     icon: "🎨",
   },
@@ -66,25 +82,18 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: "Viking Helm",
     description: "For the warriors of consistency.",
     price: 25,
-    coinPrice: 675,
+    coinPrice: 150,
+    rarity: "common",
     effect: "skin",
     icon: "🪖",
-  },
-  {
-    id: "skin-space",
-    name: "Space Helmet",
-    description: "To the moon with your habits!",
-    price: 45,
-    coinPrice: 1200,
-    effect: "skin",
-    icon: "👨‍🚀",
   },
   {
     id: "skin-ninja",
     name: "Ninja Mask",
     description: "Silent but consistent.",
     price: 22,
-    coinPrice: 600,
+    coinPrice: 110,
+    rarity: "common",
     effect: "skin",
     icon: "🥷",
   },
@@ -93,47 +102,80 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: "Detective Hat",
     description: "Solving the mystery of productivity.",
     price: 16,
-    coinPrice: 450,
+    coinPrice: 95,
+    rarity: "common",
     effect: "skin",
     icon: "🕵️",
   },
+  {
+    id: "skin-crown",
+    name: "Royal Crown",
+    description: "A majestic crown for your mascot.",
+    price: 28,
+    coinPrice: 750,
+    rarity: "rare",
+    effect: "skin",
+    icon: "👑",
+  },
+  {
+    id: "skin-wizard",
+    name: "Wizard Hat",
+    description: "A magical hat for a magical bottle.",
+    price: 35,
+    coinPrice: 900,
+    rarity: "rare",
+    effect: "skin",
+    icon: "🧙",
+  },
+  {
+    id: "skin-space",
+    name: "Space Helmet",
+    description: "To the moon with your habits!",
+    price: 45,
+    coinPrice: 1200,
+    rarity: "rare",
+    effect: "skin",
+    icon: "👨‍🚀",
+  },
+  {
+    id: "skin-emperor",
+    name: "Golden Emperor Skin",
+    description: "Elite golden skin reflecting true daily discipline.",
+    price: 80,
+    coinPrice: 3500,
+    rarity: "epic",
+    effect: "skin",
+    icon: "👑✨",
+  },
+  {
+    id: "skin-voidwalker",
+    name: "Void Walker Skin",
+    description: "A legendary cosmic theme for long-term achievers.",
+    price: 95,
+    coinPrice: 4500,
+    rarity: "epic",
+    effect: "skin",
+    icon: "🌌👾",
+  },
+  {
+    id: "skin-godmode",
+    name: "Cosmic Overlord Skin",
+    description: "The ultimate mythical costume showing global mastery.",
+    price: 250,
+    coinPrice: 12000,
+    rarity: "legendary",
+    effect: "skin",
+    icon: "🪐🔱",
+  },
 
-  // New utility items
-  {
-    id: "plant-recovery",
-    name: "Nano Fertilizer",
-    description: "Instantly restores 25% plant health.",
-    price: 8,
-    coinPrice: 200,
-    effect: "power-up",
-    icon: "🧪",
-  },
-  {
-    id: "xp-boost",
-    name: "XP Overdrive",
-    description: "Triple XP for the next 3 challenges.",
-    price: 25,
-    coinPrice: 650,
-    effect: "double-points",
-    icon: "🚀",
-  },
-  {
-    id: "coin-magnet",
-    name: "Coin Magnet",
-    description: "Earn 30% more coins today.",
-    price: 15,
-    coinPrice: 400,
-    effect: "power-up",
-    icon: "🧲",
-  },
-
-  // Sound packs
+  // Sound packs & Music
   {
     id: "sound-dog",
     name: "Dog Sound Pack",
     description: "Make your mascot bark!",
     price: 5,
     coinPrice: 150,
+    rarity: "common",
     effect: "sound-pack",
     icon: "🐶",
   },
@@ -143,6 +185,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: "A royal announcement!",
     price: 2,
     coinPrice: 75,
+    rarity: "common",
     effect: "music",
     icon: "🎺",
   },
@@ -152,6 +195,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: "Get groovy!",
     price: 2,
     coinPrice: 75,
+    rarity: "common",
     effect: "music",
     icon: "🐒",
   },
@@ -161,6 +205,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: "A rhythmic delight.",
     price: 2,
     coinPrice: 75,
+    rarity: "common",
     effect: "music",
     icon: "🥁",
   },
@@ -170,6 +215,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: "A magical forest journey.",
     price: 2,
     coinPrice: 75,
+    rarity: "common",
     effect: "music",
     icon: "🌲",
   },
@@ -179,6 +225,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: "A cool urban beat.",
     price: 2,
     coinPrice: 75,
+    rarity: "common",
     effect: "music",
     icon: "🎧",
   },
@@ -188,6 +235,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: "Ready for the game!",
     price: 2,
     coinPrice: 75,
+    rarity: "common",
     effect: "music",
     icon: "🏀",
   },
@@ -197,17 +245,59 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: "A complex melody.",
     price: 2,
     coinPrice: 75,
+    rarity: "common",
     effect: "music",
     icon: "🧩",
   },
+  {
+    id: "music-epic-orchestra",
+    name: "Symphonic Anthem Pack",
+    description: "An epic, majestic full orchestra theme.",
+    price: 60,
+    coinPrice: 2500,
+    rarity: "epic",
+    effect: "music",
+    icon: "🎼🎭",
+  },
+  {
+    id: "badge-ultimate",
+    name: "Ultimate Mythic Emblem",
+    description: "Show off a prestigious shiny emblem beside your username.",
+    price: 300,
+    coinPrice: 15000,
+    rarity: "legendary",
+    effect: "power-up",
+    icon: "⚜️🏅",
+  },
 
   // Gifts
+  {
+    id: "gift-lucky",
+    name: "Lucky Clover",
+    description: "A small gift with big surprise potential.",
+    price: 5,
+    coinPrice: 150,
+    rarity: "common",
+    effect: "gift",
+    icon: "🍀",
+  },
+  {
+    id: "gift-party",
+    name: "Party Popper",
+    description: "Celebrate your progress with a surprise!",
+    price: 7,
+    coinPrice: 150,
+    rarity: "common",
+    effect: "gift",
+    icon: "🎉",
+  },
   {
     id: "gift-mystery",
     name: "Mystery Gift",
     description: "A surprise gift box! (Buy one, get one free!)",
     price: 8,
-    coinPrice: 225,
+    coinPrice: 250,
+    rarity: "uncommon",
     effect: "gift",
     icon: "🎁",
   },
@@ -217,35 +307,19 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: "A high-value surprise for your library.",
     price: 18,
     coinPrice: 450,
+    rarity: "uncommon",
     effect: "gift",
     icon: "💝",
   },
   {
     id: "gift-gold",
     name: "Golden Chest",
-    description: "Contains legendary items and rare skins.",
+    description: "Contains rare items and majestic skins.",
     price: 30,
-    coinPrice: 750,
+    coinPrice: 1000,
+    rarity: "rare",
     effect: "gift",
     icon: "💰",
-  },
-  {
-    id: "gift-lucky",
-    name: "Lucky Clover",
-    description: "A small gift with a big surprise potential.",
-    price: 5,
-    coinPrice: 150,
-    effect: "gift",
-    icon: "🍀",
-  },
-  {
-    id: "gift-party",
-    name: "Party Popper",
-    description: "Celebrate your progress with a surprise!",
-    price: 7,
-    coinPrice: 180,
-    effect: "gift",
-    icon: "🎉",
   },
   {
     id: "gift-diamond",
@@ -253,6 +327,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: "The ultimate gift for the most dedicated users.",
     price: 60,
     coinPrice: 1500,
+    rarity: "rare",
     effect: "gift",
     icon: "💎",
   },
@@ -469,61 +544,79 @@ function ShopItemCard({
 }) {
   const isFreeForPro = isPro && item.effect === "music";
 
+  // Rarity badges mapping
+  const rarityConfig = {
+    common: { bg: "bg-slate-100 text-slate-600 border-slate-200", label: "Common" },
+    uncommon: { bg: "bg-emerald-50 text-emerald-600 border-emerald-100", label: "Uncommon" },
+    rare: { bg: "bg-blue-50 text-blue-600 border-blue-100", label: "Rare" },
+    epic: { bg: "bg-purple-50 text-purple-700 border-purple-200", label: "Epic" },
+    legendary: { bg: "bg-amber-50 text-amber-700 border-amber-300 animate-pulse", label: "Legendary" },
+  };
+
+  const rarityName = item.rarity || "common";
+  const { bg: rarityBg, label: rarityLabel } = rarityConfig[rarityName];
+
   return (
     <div
       key={item.id}
-      className="glass-card p-5 flex items-center gap-4 hover:border-blue-300 transition-colors"
+      className={`glass-card p-5 flex flex-col justify-between gap-4 border hover:border-blue-300 transition-all duration-300 ${
+        rarityName === "epic" 
+          ? "ring-1 ring-purple-400/20 shadow-purple-500/5 shadow-md" 
+          : rarityName === "legendary"
+            ? "ring-2 ring-amber-400/30 shadow-amber-500/10 shadow-lg"
+            : ""
+      }`}
     >
-      <div className="text-4xl">{item.icon}</div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="font-bold text-blue-900 truncate">{item.name}</h3>
-          {item.effect === "gift" && (
-            <span className="px-2 py-0.5 bg-purple-100 text-purple-600 text-[8px] font-black uppercase rounded-full">
-              Surprise
+      <div className="flex items-start gap-4">
+        <div className="text-4xl p-2 bg-slate-50 rounded-xl">{item.icon}</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center flex-wrap gap-1.5 mb-1">
+            <h3 className="font-bold text-blue-950 text-sm truncate">{item.name}</h3>
+            <span className={`px-1.5 py-0.5 text-[8px] font-black uppercase rounded border ${rarityBg}`}>
+              {rarityLabel}
             </span>
-          )}
-          {isFreeForPro && (
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-[8px] font-black uppercase rounded-full">
-              Pro Free
-            </span>
-          )}
+            {isFreeForPro && (
+              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 text-[8px] font-black uppercase rounded-full">
+                Pro Free
+              </span>
+            )}
+          </div>
+          <p className="text-[10px] text-blue-900/40 font-medium leading-tight line-clamp-2">
+            {item.description}
+          </p>
         </div>
-        <p className="text-[10px] text-blue-900/40 font-medium leading-tight mb-2 line-clamp-2">
-          {item.description}
-        </p>
-        <div className="flex flex-col gap-2">
+      </div>
+      <div className="flex flex-col gap-1.5 mt-auto">
+        <button
+          onClick={() => onBuy(item, "streak")}
+          disabled={
+            (!isFreeForPro && streak < item.price) ||
+            purchasedItems.includes(item.id)
+          }
+          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-1.5 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
+        >
+          {purchasedItems.includes(item.id)
+            ? "Purchased"
+            : isFreeForPro
+              ? "Free"
+              : `${item.price} Streak`}
+        </button>
+        {item.coinPrice && (
           <button
-            onClick={() => onBuy(item, "streak")}
+            onClick={() => onBuy(item, "coins")}
             disabled={
-              (!isFreeForPro && streak < item.price) ||
+              (!isFreeForPro && coins < item.coinPrice) ||
               purchasedItems.includes(item.id)
             }
-            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
+            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-1.5 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
           >
             {purchasedItems.includes(item.id)
               ? "Purchased"
               : isFreeForPro
                 ? "Free"
-                : `${item.price} Streak`}
+                : `${item.coinPrice} Coins`}
           </button>
-          {item.coinPrice && (
-            <button
-              onClick={() => onBuy(item, "coins")}
-              disabled={
-                (!isFreeForPro && coins < item.coinPrice) ||
-                purchasedItems.includes(item.id)
-              }
-              className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg text-[10px] font-black transition-all active:scale-95 disabled:opacity-50"
-            >
-              {purchasedItems.includes(item.id)
-                ? "Purchased"
-                : isFreeForPro
-                  ? "Free"
-                  : `${item.coinPrice} Coins`}
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

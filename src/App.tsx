@@ -3205,11 +3205,30 @@ export default function App() {
 
     setStats((prev) => {
       const nextCoins = (prev.coins || 0) + rewardCoins;
+      let nextXP = prev.xp || 0;
+      let nextLevel = prev.level || Math.floor((prev.totalPoints || 0) / 100) + 1;
+      let nextTrophies = [...(prev.trophies || [])];
+      let msg = `Weekly Reward Claimed! +${rewardCoins} Coins! 🎁`;
+
+      if (rank === 1) {
+        nextXP += 150;
+        nextTrophies.push({
+          id: `weekly_championship_${Date.now()}`,
+          type: "golden" as const,
+          earnedDate: new Date().toISOString(),
+          lastUpdated: new Date().toISOString()
+        });
+        msg = `Championship Claimed! +250 Coins, Golden Trophy, & +150 XP Bonus! 🏆`;
+      }
+
       const next = {
         ...prev,
         coins: nextCoins,
+        xp: nextXP,
+        trophies: nextTrophies,
         lastRankRewardClaimWeek: startOfWeekStr
       };
+      
       try {
         localStorage.setItem("nexora_stats", JSON.stringify(next));
       } catch (err) {
@@ -3218,7 +3237,8 @@ export default function App() {
       return next;
     });
 
-    showToast(`Weekly Reward Claimed! +${rewardCoins} Coins! 🎁`, "success");
+    const isRankOne = rank === 1;
+    showToast(isRankOne ? "Championship Claimed! +250 Coins, Golden Trophy, & +150 XP Bonus! 🏆" : `Weekly Reward Claimed! +${rewardCoins} Coins! 🎁`, "success");
     vibrate(VIBRATION_PATTERNS.SUCCESS);
   };
 
@@ -3846,18 +3866,44 @@ export default function App() {
 
     if (isCustomPlan) {
       const totalPlanTasks = activeCustomPlan?.challenges.length || 1;
-      xpToAdd = Math.max(15, totalPlanTasks * 10);
-      coinsToAdd = Math.max(15, totalPlanTasks * 10);
+      if (totalPlanTasks <= 2) {
+        // Easy
+        coinsToAdd = 5;
+        xpToAdd = 10;
+      } else if (totalPlanTasks <= 4) {
+        // Medium
+        coinsToAdd = 10;
+        xpToAdd = 20;
+      } else {
+        // Hard
+        coinsToAdd = 15;
+        xpToAdd = 30;
+      }
       pointsToAdd = xpToAdd;
     } else {
-      const isDailyQuest =
-        progress.dailyQuestDone || challengeStep === dailyQuest;
-      pointsToAdd = isDailyQuest ? 25 : 15;
-      xpToAdd = isDailyQuest ? 50 : 30;
-      coinsToAdd = isDailyQuest ? 30 : 20;
+      // Official Daily Challenges Rebalance
+      // Easy: 'water', 'gratitude', 'bubbles' -> 10 Coins, 20 XP
+      // Hard: 'pushups', 'football', 'memory', 'reaction' -> 35 Coins, 70 XP
+      // Medium: others -> 20 Coins, 40 XP
+      const stepStr = challengeStep as string;
+      if (["water", "gratitude", "bubbles"].includes(stepStr)) {
+        coinsToAdd = 10;
+        xpToAdd = 20;
+      } else if (["pushups", "football", "memory", "reaction"].includes(stepStr)) {
+        coinsToAdd = 35;
+        xpToAdd = 70;
+      } else {
+        coinsToAdd = 20;
+        xpToAdd = 40;
+      }
+
+      const isDailyQuest = progress.dailyQuestDone || challengeStep === dailyQuest;
+      if (isDailyQuest) {
+        coinsToAdd += 15; // Daily Quest completion bonus
+        xpToAdd += 20;
+      }
 
       const sessionBonusMultiplier = completedTasks >= 3 ? 1.5 : 1.0;
-      pointsToAdd = Math.round(pointsToAdd * sessionBonusMultiplier);
       xpToAdd = Math.round(xpToAdd * sessionBonusMultiplier);
       coinsToAdd = Math.round(coinsToAdd * sessionBonusMultiplier);
 
@@ -3865,6 +3911,7 @@ export default function App() {
         xpToAdd += 10;
         coinsToAdd += 10;
       }
+      pointsToAdd = xpToAdd;
     }
 
     // CONSUMABLES AND MULTIPLIERS ENGINE
@@ -3896,6 +3943,114 @@ export default function App() {
     pointsToAdd = Math.round(pointsToAdd * xpMultiplier);
     xpToAdd = Math.round(xpToAdd * xpMultiplier);
     coinsToAdd = Math.round(coinsToAdd * coinMultiplier);
+
+    // PLANT GROWTH & HEALING PRE-CALCULATION
+    let plantBonusCoins = 0;
+    let plantBonusXP = 0;
+    let plantLevelUpMessage = "";
+    let plantBonusItems: any[] = [];
+    let updatedPlantState: any = null;
+    let plantType = "";
+
+    if (settings.plantState) {
+      plantType = settings.plantState.type;
+      let currentPoints = settings.plantState.growthPoints || 0;
+      let currentStage = settings.plantState.stage || 0;
+
+      // Calculate growth: +25% per full completion
+      let newPoints = currentPoints + 25;
+      let newStage = currentStage;
+      let newUnlocked = [...(settings.plantState?.unlockedTypes || ["sprout"])];
+
+      if (newPoints >= 100) {
+        if (currentStage < 50) { // Support levels up to 50
+          newStage = currentStage + 1;
+          newPoints = 0;
+          
+          // Determine milestone rewards
+          if (newStage === 1) {
+            plantBonusCoins += 10;
+          } else if (newStage === 2) {
+            plantBonusCoins += 15;
+          } else if (newStage === 3) {
+            plantBonusCoins += 20;
+          } else if (newStage === 4) {
+            plantBonusCoins += 25;
+          } else if (newStage === 5) {
+            plantBonusCoins += 100;
+            plantBonusXP += 100;
+          } else if (newStage === 10) {
+            plantBonusCoins += 250;
+            plantBonusItems.push({
+              id: `dec-goldchime-${Date.now()}`,
+              itemId: 'dec-goldchime',
+              name: 'Golden Chime',
+              icon: '🔔',
+              activated: false,
+              type: 'gift',
+              purchasedAt: new Date().toISOString()
+            });
+          } else if (newStage === 20) {
+            plantBonusCoins += 500;
+            plantBonusItems.push({
+              id: `garden-zen-${Date.now()}`,
+              itemId: 'garden-zen',
+              name: 'Zen Rock Garden',
+              icon: '🪨',
+              activated: false,
+              type: 'gift',
+              purchasedAt: new Date().toISOString()
+            });
+          } else if (newStage === 50) {
+            plantBonusCoins += 1000;
+            plantBonusItems.push({
+              id: `skin-emperor-${Date.now()}`,
+              itemId: 'skin-emperor',
+              name: 'Golden Emperor Skin',
+              icon: '👑✨',
+              activated: false,
+              type: 'skin',
+              purchasedAt: new Date().toISOString()
+            });
+          } else {
+            // General growth rewards
+            plantBonusCoins += 10;
+          }
+
+          plantLevelUpMessage = `LEVEL UP: Your ${plantType} reached Level ${newStage}! 🌿✨ (+${plantBonusCoins} Coins)`;
+
+          if (newStage === 5) {
+            const currentIdx = ECOSYSTEM_PATH.indexOf(plantType);
+            if (currentIdx !== -1 && currentIdx < ECOSYSTEM_PATH.length - 1) {
+              const nextType = ECOSYSTEM_PATH[currentIdx + 1];
+              if (!newUnlocked.includes(nextType)) {
+                newUnlocked.push(nextType);
+                plantLevelUpMessage += ` & NEW ECOSYSTEM UNLOCKED: ${nextType.toUpperCase()}! 🌿🏆`;
+                localStorage.setItem("nexora_new_plant_unlocked", "true");
+              }
+            }
+          }
+        } else {
+          newPoints = 100; // Cap at Legendary Level 50
+        }
+      }
+
+      updatedPlantState = {
+        ...settings.plantState,
+        stage: newStage,
+        growthPoints: newPoints,
+        unlockedTypes: newUnlocked,
+        health: 100,
+        isDead: false,
+        isThirsty: false,
+        lastCheckDate: new Date().toISOString(),
+        lastGrowthDate: new Date().toISOString(),
+      };
+    }
+
+    // Apply pre-calculated plant milestone bonuses
+    coinsToAdd += plantBonusCoins;
+    xpToAdd += plantBonusXP;
 
     // STRICT DAILY STREAK CALCULATION
     const yesterday = new Date();
@@ -3967,8 +4122,36 @@ export default function App() {
       let levelUpBonusCoins = 0;
       if (newLevel > oldLevel) {
         setShowLevelUp(newLevel);
-        levelUpBonusCoins = 50;
         vibrate(VIBRATION_PATTERNS.TROPHY);
+
+        // Tiered variety rewards for leveling up
+        if (newLevel <= 5) {
+          levelUpBonusCoins = 50;
+        } else if (newLevel <= 15) {
+          levelUpBonusCoins = 150;
+          // Award cosmetic item variety - Silver Profile Frame
+          plantBonusItems.push({
+            id: `frame-silver-${Date.now()}`,
+            itemId: 'frame-silver',
+            name: 'Silver Profile Frame',
+            icon: '🖼️',
+            activated: false,
+            type: 'power-up',
+            purchasedAt: new Date().toISOString()
+          });
+        } else {
+          levelUpBonusCoins = 300;
+          // Award Cosmic Skin
+          plantBonusItems.push({
+            id: `skin-cosmic-${Date.now()}`,
+            itemId: 'skin-cosmic',
+            name: 'Cosmic Skin',
+            icon: '🌌',
+            activated: false,
+            type: 'skin',
+            purchasedAt: new Date().toISOString()
+          });
+        }
       }
 
       let newTrophies = [...(prevStats.trophies || [])];
@@ -4077,68 +4260,32 @@ export default function App() {
       });
     }
 
+    if (plantBonusItems.length > 0) {
+      finalInventory = [...finalInventory, ...plantBonusItems];
+    }
+
     const settingsUpdate: any = {
       inventory: finalInventory,
     };
 
-    if (settings.plantState) {
-      const type = settings.plantState.type;
-      let currentPoints = settings.plantState.growthPoints || 0;
-      let currentStage = settings.plantState.stage || 0;
-      const wasDead = settings.plantState.isDead;
+    if (plantBonusItems.length > 0) {
+      const purchased = settings.purchasedItems || [];
+      const itemIdsToAdd = plantBonusItems.map(item => item.itemId);
+      settingsUpdate.purchasedItems = [...new Set([...purchased, ...itemIdsToAdd])];
+    }
 
-      // Calculate growth: +25% per full completion
-      let newPoints = currentPoints + 25;
-      let newStage = currentStage;
-      let newUnlocked = [...(settings.plantState?.unlockedTypes || ["sprout"])];
-
-      if (newPoints >= 100) {
-        if (currentStage < 5) {
-          newStage = currentStage + 1;
-          newPoints = 0;
-          showToast(
-            `LEVEL UP: Your ${type} reached Stage ${newStage}! 🌿✨`,
-            "success",
-          );
-
-          if (newStage === 5) {
-            const currentIdx = ECOSYSTEM_PATH.indexOf(type);
-            if (currentIdx !== -1 && currentIdx < ECOSYSTEM_PATH.length - 1) {
-              const nextType = ECOSYSTEM_PATH[currentIdx + 1];
-              if (!newUnlocked.includes(nextType)) {
-                newUnlocked.push(nextType);
-                showToast(
-                  `Congratulations! NEW ECOSYSTEM UNLOCKED: ${nextType.toUpperCase()}! 🌿🏆`,
-                  "success",
-                );
-                localStorage.setItem("nexora_new_plant_unlocked", "true");
-              }
-            }
-          }
-        } else {
-          newPoints = 100; // Cap at Legendary Stage 5
-        }
-      }
-
-      const updatedPlantState: PlantState = {
-        ...settings.plantState,
-        stage: newStage,
-        growthPoints: newPoints,
-        unlockedTypes: newUnlocked,
-        health: 100,
-        isDead: false,
-        isThirsty: false,
-        lastCheckDate: new Date().toISOString(),
-        lastGrowthDate: new Date().toISOString(),
-      };
-
+    if (settings.plantState && updatedPlantState) {
       settingsUpdate.plantState = updatedPlantState;
       settingsUpdate.plantsProgress = {
         ...(settings.plantsProgress || {}),
-        [type]: updatedPlantState,
+        [plantType]: updatedPlantState,
       };
 
-      if (wasDead) {
+      if (plantLevelUpMessage) {
+        showToast(plantLevelUpMessage, "success");
+      }
+
+      if (settings.plantState.isDead) {
         showToast("THE ECOSYSTEM HAS BEEN RESTORED! 🌿🔥", "success");
         vibrate(VIBRATION_PATTERNS.SUCCESS);
       }
