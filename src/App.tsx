@@ -3950,7 +3950,7 @@ export default function App() {
     let plantLevelUpMessage = "";
     let plantBonusItems: any[] = [];
     let updatedPlantState: any = null;
-    let plantType = "";
+    let plantType: PlantType = "sprout";
 
     if (settings.plantState) {
       plantType = settings.plantState.type;

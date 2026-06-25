@@ -98,9 +98,12 @@ export function useNexoraData(
     tiles: rawCachedGarden?.tiles || initialGardenDefault.tiles,
   };
 
-  const [settings, setSettings] = useState<UserSettings>(cachedSettings);
-  const [stats, setStats] = useState<UserStats>(cachedStats);
-  const [dailyProgress, setDailyProgress] = useState<DailyProgress>(
+  const currentUpdateSource = useRef<string>("Default Values");
+  const onboardingReasonRef = useRef<string>("Default Initialization");
+
+  const [settings, rawSetSettings] = useState<UserSettings>(cachedSettings);
+  const [stats, rawSetStats] = useState<UserStats>(cachedStats);
+  const [dailyProgress, rawSetDailyProgress] = useState<DailyProgress>(
     cachedProgress?.date === today
       ? cachedProgress
       : {
@@ -116,9 +119,58 @@ export function useNexoraData(
           customPlanCompleted: false,
         },
   );
-  const [gardenState, setGardenState] = useState<GardenState>(cachedGarden);
+  const [gardenState, rawSetGardenState] = useState<GardenState>(cachedGarden);
 
-  const [needsOnboarding, setNeedsOnboarding] = useState(!cachedOnboarding);
+  const [needsOnboarding, rawSetNeedsOnboarding] = useState(!cachedOnboarding);
+
+  const setSettings = useCallback((update: any) => {
+    rawSetSettings((prev) => {
+      const next = typeof update === "function" ? update(prev) : update;
+      console.log(`[STATE UPDATE INTERCEPT] [setSettings] Source: ${currentUpdateSource.current}`);
+      console.log(`[STATE UPDATE INTERCEPT] Old Settings:`, JSON.stringify(prev));
+      console.log(`[STATE UPDATE INTERCEPT] New Settings:`, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const setStats = useCallback((update: any) => {
+    rawSetStats((prev) => {
+      const next = typeof update === "function" ? update(prev) : update;
+      console.log(`[STATE UPDATE INTERCEPT] [setStats] Source: ${currentUpdateSource.current}`);
+      console.log(`[STATE UPDATE INTERCEPT] Old Stats:`, JSON.stringify(prev));
+      console.log(`[STATE UPDATE INTERCEPT] New Stats:`, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const setDailyProgress = useCallback((update: any) => {
+    rawSetDailyProgress((prev) => {
+      const next = typeof update === "function" ? update(prev) : update;
+      console.log(`[STATE UPDATE INTERCEPT] [setDailyProgress] Source: ${currentUpdateSource.current}`);
+      console.log(`[STATE UPDATE INTERCEPT] Old DailyProgress:`, JSON.stringify(prev));
+      console.log(`[STATE UPDATE INTERCEPT] New DailyProgress:`, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const setGardenState = useCallback((update: any) => {
+    rawSetGardenState((prev) => {
+      const next = typeof update === "function" ? update(prev) : update;
+      console.log(`[STATE UPDATE INTERCEPT] [setGardenState] Source: ${currentUpdateSource.current}`);
+      console.log(`[STATE UPDATE INTERCEPT] Old GardenState:`, JSON.stringify(prev));
+      console.log(`[STATE UPDATE INTERCEPT] New GardenState:`, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const setNeedsOnboarding = useCallback((update: any) => {
+    rawSetNeedsOnboarding((prev) => {
+      const next = typeof update === "function" ? update(prev) : update;
+      console.log(`[STATE UPDATE INTERCEPT] [setNeedsOnboarding] Transition: ${prev} -> ${next}. Reason: ${onboardingReasonRef.current}`);
+      return next;
+    });
+  }, []);
+
   const [authLoading, setAuthLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const dataLoadedFromFirestore = useRef(false);
@@ -127,6 +179,12 @@ export function useNexoraData(
   const lastSyncedRef = useRef<any>(null);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isStateLoadedRef = useRef(false);
+
+  const setIsStateLoaded = (val: boolean, reason: string) => {
+    isStateLoadedRef.current = val;
+    console.log(`[STATE LOADED REF CHANGE] isStateLoadedRef.current set to ${val}. Reason: ${reason}`);
+  };
+
   const hasMatchedHydratedStateRef = useRef(false);
   const hydratedStateRef = useRef<any>(null);
 
@@ -136,7 +194,7 @@ export function useNexoraData(
       console.log(`[PERSISTENCE AUDIT] AUTH RESOLVED - User UID: ${currentUser?.uid || "null"}, Email: ${currentUser?.email || "null"}`);
       const prevUserId = localStorage.getItem("nexora_cached_user");
 
-      isStateLoadedRef.current = false;
+      setIsStateLoaded(false, "Auth state listener triggered");
       hasMatchedHydratedStateRef.current = false;
       hydratedStateRef.current = null;
 
@@ -159,7 +217,7 @@ export function useNexoraData(
           dataLoadedFromFirestore.current = false;
           lastSyncedRef.current = null;
           lastLoadedUserIdRef.current = null;
-          isStateLoadedRef.current = false;
+          setIsStateLoaded(false, "Different user logged in, clearing cached state");
           hasMatchedHydratedStateRef.current = false;
           hydratedStateRef.current = null;
           setIsDataReady(false);
@@ -200,7 +258,7 @@ export function useNexoraData(
           setIsDataReady(false);
           lastSyncedRef.current = null;
           lastLoadedUserIdRef.current = null;
-          isStateLoadedRef.current = false;
+          setIsStateLoaded(false, "User explicit logout, clearing cached state");
           hasMatchedHydratedStateRef.current = false;
           hydratedStateRef.current = null;
 
@@ -230,7 +288,7 @@ export function useNexoraData(
         dataLoadedFromFirestore.current = false;
         lastLoadedUserIdRef.current = null;
         lastSyncedRef.current = null;
-        isStateLoadedRef.current = false;
+        setIsStateLoaded(false, "No user session exists");
         hasMatchedHydratedStateRef.current = false;
         hydratedStateRef.current = null;
         setNeedsOnboarding(false);
@@ -321,7 +379,7 @@ export function useNexoraData(
 
         hydratedStateRef.current = cachedObj;
         lastSyncedRef.current = cachedObj;
-        isStateLoadedRef.current = true;
+        setIsStateLoaded(true, "Offline mode detected with active cache, directly using cached state");
         console.log("[PERSISTENCE FIX]\nFirestore hydration complete\nSync gate unlocked\nBackground sync enabled");
 
         lastLoadedUserIdRef.current = user.uid;
@@ -416,7 +474,7 @@ export function useNexoraData(
 
           hydratedStateRef.current = cachedObj;
           lastSyncedRef.current = cachedObj;
-          isStateLoadedRef.current = true;
+          setIsStateLoaded(true, "Network loading timeout or primary connection failed, falling back to cache");
           console.log("[PERSISTENCE FIX]\nFirestore hydration complete\nSync gate unlocked\nBackground sync enabled (offline mode)");
 
           if (loadingTimeout) clearTimeout(loadingTimeout);
@@ -456,6 +514,17 @@ export function useNexoraData(
         if (docSnap.exists()) {
           const data = docSnap.data();
           console.log(`[PERSISTENCE AUDIT] User document found in Firestore. onboardingCompleted: ${data.onboardingCompleted}`);
+          console.log(`[PERSISTENCE AUDIT] COMPLETE FIRESTORE DOCUMENT:`, JSON.stringify(data));
+          
+          console.log(`%c=================== RUNTIME PROOF: USER DATA DIRECTLY FROM FIRESTORE ===================`, "color: #10B981; font-weight: bold; font-size: 14px;");
+          console.log(`UID: ${user.uid}`);
+          console.log(`Document Exists: true`);
+          console.log(`OnboardingCompleted: ${data.onboardingCompleted}`);
+          console.log(`Coins: ${data.stats?.coins ?? 0}`);
+          console.log(`XP: ${data.stats?.xp ?? 0}`);
+          console.log(`Username: ${data.displayName || 'Champion'}`);
+          console.log(`GardenState:`, JSON.stringify(data.garden || null));
+          console.log(`%c========================================================================================`, "color: #10B981; font-weight: bold; font-size: 14px;");
           
           firestoreSettings = {
             ...DEFAULT_SETTINGS,
@@ -491,20 +560,31 @@ export function useNexoraData(
           };
 
           if (data.onboardingCompleted === true) {
+            onboardingReasonRef.current = "User doc exists on Firestore and onboardingCompleted is true. Skipping onboarding.";
             setNeedsOnboarding(false);
             localStorage.setItem("nexora_onboarding_completed", "true");
           } else {
-            console.log("Hooks: User doc exists but onboarding is not completed. Showing onboarding.");
+            onboardingReasonRef.current = "User doc exists on Firestore but onboardingCompleted is false or missing. Showing onboarding.";
             setNeedsOnboarding(true);
           }
         } else {
           console.log(`[PERSISTENCE AUDIT] User document not found in Firestore for UID: ${user.uid}. Creating user as new.`);
+          console.log(`%c=================== RUNTIME PROOF: USER DATA DIRECTLY FROM FIRESTORE ===================`, "color: #EF4444; font-weight: bold; font-size: 14px;");
+          console.log(`UID: ${user.uid}`);
+          console.log(`Document Exists: false`);
+          console.log(`OnboardingCompleted: false`);
+          console.log(`Coins: 0`);
+          console.log(`XP: 0`);
+          console.log(`Username: Champion`);
+          console.log(`GardenState: null`);
+          console.log(`%c========================================================================================`, "color: #EF4444; font-weight: bold; font-size: 14px;");
+          
           const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
           if (onboardingComp) {
-            console.log("Hooks: User doc not found on Firestore, but onboarding completed locally. Skipping onboarding.");
+            onboardingReasonRef.current = "User doc not found on Firestore, but onboarding completed locally. Skipping onboarding.";
             setNeedsOnboarding(false);
           } else {
-            console.log("Hooks: User doc not found on Firestore. Introducing onboarding.");
+            onboardingReasonRef.current = "User doc not found on Firestore and onboarding not completed locally. Showing onboarding.";
             setNeedsOnboarding(true);
           }
         }
@@ -581,7 +661,7 @@ export function useNexoraData(
 
         // Successfully loaded. Safe to sync background changes now!
         dataLoadedFromFirestore.current = true;
-        isStateLoadedRef.current = true;
+        setIsStateLoaded(true, "Firestore profile, progress, and shop loaded successfully");
         hasMatchedHydratedStateRef.current = true;
         console.log("[PERSISTENCE FIX]\nFirestore hydration complete\nSync gate unlocked\nBackground sync enabled");
         lastLoadedUserIdRef.current = user.uid;
@@ -691,10 +771,15 @@ export function useNexoraData(
           !deepEqual(lastSyncedData.g, gardenState);
 
         if (coreChanged) {
-          console.log(`[PERSISTENCE AUDIT] Core fields changed. Writing updated settings, stats, and gardenState to: ${userRef.path}`);
-          await setDoc(
-            userRef,
-            {
+          console.log(`[PERSISTENCE AUDIT] Core fields changed. Initiating write for core document...`);
+          console.log(`[PERSISTENCE AUDIT] Exact Firestore path: ${userRef.path}`);
+          
+          try {
+            console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${userRef.path}`);
+            const preSnap = await getDoc(userRef);
+            console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${userRef.path}:`, preSnap.exists() ? JSON.stringify(preSnap.data()) : "Document does not exist");
+            
+            const writePayload = {
               displayName: settings.displayName || user.displayName || 'Champion',
               ...settings,
               uid: user.uid,
@@ -705,20 +790,38 @@ export function useNexoraData(
               isTodayCompleted: dailyProgress.completed,
               updatedAt: serverTimestamp(),
               onboardingCompleted: true,
-            },
-            { merge: true },
-          );
-          console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote core document to: ${userRef.path}`);
+            };
+            console.log(`[PERSISTENCE AUDIT] Write payload for core document:`, JSON.stringify(writePayload));
+            
+            await setDoc(userRef, writePayload, { merge: true });
+            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote core document to: ${userRef.path}`);
+            
+            console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${userRef.path}`);
+            const postSnap = await getDoc(userRef);
+            console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${userRef.path}:`, postSnap.exists() ? JSON.stringify(postSnap.data()) : "Document does not exist");
+          } catch (err: any) {
+            console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Failed to write core document to: ${userRef.path}. Error:`, err);
+          }
         }
 
         // 2. Sync progress always attempts, or can be throttled too
-        console.log(`[PERSISTENCE AUDIT] Writing progress document to: ${progressRef.path}`);
-        await setDoc(
-          progressRef,
-          dailyProgress,
-          { merge: true },
-        );
-        console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote progress document to: ${progressRef.path}`);
+        console.log(`[PERSISTENCE AUDIT] Initiating write for progress document...`);
+        console.log(`[PERSISTENCE AUDIT] Exact Firestore path: ${progressRef.path}`);
+        try {
+          console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${progressRef.path}`);
+          const preProgSnap = await getDoc(progressRef);
+          console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${progressRef.path}:`, preProgSnap.exists() ? JSON.stringify(preProgSnap.data()) : "Document does not exist");
+          
+          console.log(`[PERSISTENCE AUDIT] Write payload for progress document:`, JSON.stringify(dailyProgress));
+          await setDoc(progressRef, dailyProgress, { merge: true });
+          console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote progress document to: ${progressRef.path}`);
+          
+          console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${progressRef.path}`);
+          const postProgSnap = await getDoc(progressRef);
+          console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${progressRef.path}:`, postProgSnap.exists() ? JSON.stringify(postProgSnap.data()) : "Document does not exist");
+        } catch (err: any) {
+          console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Failed to write progress document to: ${progressRef.path}. Error:`, err);
+        }
 
         // 3. Leaderboard sync (only if streak, points, name or photo changed)
         const lbChanged =
@@ -729,10 +832,14 @@ export function useNexoraData(
           lastSyncedData.s?.profilePic !== settings.profilePic;
 
         if (lbChanged) {
-          console.log(`[PERSISTENCE AUDIT] Leaderboard relevant fields changed. Writing to: ${leaderboardRef.path}`);
-          await setDoc(
-            leaderboardRef,
-            {
+          console.log(`[PERSISTENCE AUDIT] Leaderboard relevant fields changed. Initiating write for leaderboard document...`);
+          console.log(`[PERSISTENCE AUDIT] Exact Firestore path: ${leaderboardRef.path}`);
+          try {
+            console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${leaderboardRef.path}`);
+            const preLbSnap = await getDoc(leaderboardRef);
+            console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${leaderboardRef.path}:`, preLbSnap.exists() ? JSON.stringify(preLbSnap.data()) : "Document does not exist");
+            
+            const writePayload = {
               uid: user.uid,
               displayName: settings.displayName || "Anonymous",
               photoURL: settings.profilePic || user.photoURL || "",
@@ -742,10 +849,18 @@ export function useNexoraData(
               weeklyPoints: stats.weeklyPoints || 0,
               level: stats.level || Math.floor((stats.totalPoints || 0) / 100) + 1,
               league: settings.league || "Bronze",
-            },
-            { merge: true },
-          );
-          console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote leaderboard document to: ${leaderboardRef.path}`);
+            };
+            console.log(`[PERSISTENCE AUDIT] Write payload for leaderboard document:`, JSON.stringify(writePayload));
+            
+            await setDoc(leaderboardRef, writePayload, { merge: true });
+            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote leaderboard document to: ${leaderboardRef.path}`);
+            
+            console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${leaderboardRef.path}`);
+            const postLbSnap = await getDoc(leaderboardRef);
+            console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${leaderboardRef.path}:`, postLbSnap.exists() ? JSON.stringify(postLbSnap.data()) : "Document does not exist");
+          } catch (err: any) {
+            console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Failed to write leaderboard document to: ${leaderboardRef.path}. Error:`, err);
+          }
         }
 
         lastSyncedRef.current = currentState;
@@ -860,9 +975,13 @@ export function useNexoraData(
       console.log(`[PERSISTENCE AUDIT] Target user document path: ${userRef.path}`);
       console.log(`[PERSISTENCE AUDIT] Target progress document path: ${progressRef.path}`);
 
-      await setDoc(
-        userRef,
-        {
+      // 1. Core Doc Force Write
+      try {
+        console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${userRef.path}`);
+        const preSnap = await getDoc(userRef);
+        console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${userRef.path}:`, preSnap.exists() ? JSON.stringify(preSnap.data()) : "Document does not exist");
+
+        const writePayload = {
           displayName: settings.displayName || user.displayName || 'Champion',
           ...settings,
           uid: user.uid,
@@ -873,21 +992,43 @@ export function useNexoraData(
           isTodayCompleted: dailyProgress.completed,
           updatedAt: serverTimestamp(),
           onboardingCompleted: true,
-        },
-        { merge: true },
-      );
-      console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote core document to: ${userRef.path}`);
+        };
+        console.log(`[PERSISTENCE AUDIT] Force sync payload for core document:`, JSON.stringify(writePayload));
 
-      await setDoc(
-        progressRef,
-        dailyProgress,
-        { merge: true },
-      );
-      console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote progress document to: ${progressRef.path}`);
+        await setDoc(userRef, writePayload, { merge: true });
+        console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote core document to: ${userRef.path}`);
 
-      await setDoc(
-        leaderboardRef,
-        {
+        console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${userRef.path}`);
+        const postSnap = await getDoc(userRef);
+        console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${userRef.path}:`, postSnap.exists() ? JSON.stringify(postSnap.data()) : "Document does not exist");
+      } catch (err: any) {
+        console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Force sync failed to write core document to: ${userRef.path}. Error:`, err);
+      }
+
+      // 2. Progress Doc Force Write
+      try {
+        console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${progressRef.path}`);
+        const preProgSnap = await getDoc(progressRef);
+        console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${progressRef.path}:`, preProgSnap.exists() ? JSON.stringify(preProgSnap.data()) : "Document does not exist");
+
+        console.log(`[PERSISTENCE AUDIT] Force sync payload for progress document:`, JSON.stringify(dailyProgress));
+        await setDoc(progressRef, dailyProgress, { merge: true });
+        console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote progress document to: ${progressRef.path}`);
+
+        console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${progressRef.path}`);
+        const postProgSnap = await getDoc(progressRef);
+        console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${progressRef.path}:`, postProgSnap.exists() ? JSON.stringify(postProgSnap.data()) : "Document does not exist");
+      } catch (err: any) {
+        console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Force sync failed to write progress document to: ${progressRef.path}. Error:`, err);
+      }
+
+      // 3. Leaderboard Doc Force Write
+      try {
+        console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${leaderboardRef.path}`);
+        const preLbSnap = await getDoc(leaderboardRef);
+        console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${leaderboardRef.path}:`, preLbSnap.exists() ? JSON.stringify(preLbSnap.data()) : "Document does not exist");
+
+        const writePayload = {
           uid: user.uid,
           displayName: settings.displayName || "Anonymous",
           photoURL: settings.profilePic || user.photoURL || "",
@@ -897,10 +1038,18 @@ export function useNexoraData(
           weeklyPoints: stats.weeklyPoints || 0,
           level: stats.level || Math.floor((stats.totalPoints || 0) / 100) + 1,
           league: settings.league || "Bronze",
-        },
-        { merge: true },
-      );
-      console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote leaderboard document to: ${leaderboardRef.path}`);
+        };
+        console.log(`[PERSISTENCE AUDIT] Force sync payload for leaderboard document:`, JSON.stringify(writePayload));
+
+        await setDoc(leaderboardRef, writePayload, { merge: true });
+        console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote leaderboard document to: ${leaderboardRef.path}`);
+
+        console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${leaderboardRef.path}`);
+        const postLbSnap = await getDoc(leaderboardRef);
+        console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${leaderboardRef.path}:`, postLbSnap.exists() ? JSON.stringify(postLbSnap.data()) : "Document does not exist");
+      } catch (err: any) {
+        console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Force sync failed to write leaderboard document to: ${leaderboardRef.path}. Error:`, err);
+      }
 
       console.log("Hooks: Manual/Force Sync complete ✅");
     } catch (e: any) {

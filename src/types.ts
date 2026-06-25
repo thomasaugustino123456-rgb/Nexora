@@ -145,6 +145,7 @@ export interface ShopItem {
   coinPrice?: number;
   effect: 'streak-protection' | 'double-points' | 'skin' | 'gift' | 'sound-pack' | 'music' | 'power-up';
   icon: string;
+  rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 }
 
 export interface LibraryItem {
