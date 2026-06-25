@@ -638,6 +638,14 @@ export default function App() {
 
       // If we were previously boosting or detected it was active but expired
       if (originalStatsBeforeProTest) {
+        if (
+          !originalStatsBeforeProTest ||
+          Object.keys(originalStatsBeforeProTest).length === 0
+        ) {
+          console.warn("Skipping Pro rollback because original stats are empty");
+          return;
+        }
+
         // Force rollback of stats
         setStats(originalStatsBeforeProTest);
         setOriginalStatsBeforeProTest(null);
