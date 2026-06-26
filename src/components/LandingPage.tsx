@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { motion, useScroll, useTransform } from 'motion/react';
-import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target, Crown, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
+import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target, Crown, Sparkles, X, ShieldCheck, Zap } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
 import { vibrate } from '../lib/vibrate';
@@ -16,6 +16,106 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
   const [view, setView] = useState<'home' | 'terms' | 'privacy' | 'support'>('home');
   const { scrollY } = useScroll();
   
+  // Mascot customization states
+  const [mascotTheme, setMascotTheme] = useState<string>('standard');
+  const [mascotHat, setMascotHat] = useState<string>('none');
+  const [mascotMood, setMascotMood] = useState<'happy' | 'angry' | 'boiling' | 'neutral' | 'surprised'>('happy');
+  const [mascotEffect, setMascotEffect] = useState<string>('none');
+  const [waterLogged, setWaterLogged] = useState<number>(1250);
+  const [pushupsLogged, setPushupsLogged] = useState<number>(30);
+  
+  // Interactive Breathing states
+  const [breathPhase, setBreathPhase] = useState<'Inhale' | 'Hold' | 'Exhale' | 'Ready'>('Ready');
+  const [breathPercent, setBreathPercent] = useState<number>(100);
+  const [breathingActive, setBreathingActive] = useState(false);
+  const breathIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Floating notifications feedback array
+  const [notifications, setNotifications] = useState<{ id: string; text: string }[]>([]);
+  const addNotification = (text: string) => {
+    const id = Math.random().toString();
+    setNotifications(prev => [...prev, { id, text }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 2500);
+  };
+
+  // Upgrade Modal State
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const startBreathingSim = () => {
+    if (breathingActive) {
+      setBreathingActive(false);
+      setBreathPhase('Ready');
+      setBreathPercent(100);
+      if (breathIntervalRef.current) {
+        clearInterval(breathIntervalRef.current);
+        breathIntervalRef.current = null;
+      }
+      addNotification("🌬️ Breathing simulator paused");
+      return;
+    }
+    vibrate(15);
+    setBreathingActive(true);
+    setMascotMood('neutral');
+    setBreathPhase('Inhale');
+    setBreathPercent(60);
+    addNotification("🌬️ Breathing simulator active! Synchronize now.");
+    
+    let tick = 0;
+    const interval = setInterval(() => {
+      tick = (tick + 1) % 12;
+      if (tick < 4) {
+        setBreathPhase('Inhale');
+        setBreathPercent(60 + (tick * 10)); // scales up
+      } else if (tick < 8) {
+        setBreathPhase('Hold');
+        setBreathPercent(100);
+      } else {
+        setBreathPhase('Exhale');
+        setBreathPercent(100 - ((tick - 8) * 10)); // scales down
+        setMascotMood('happy');
+      }
+    }, 1000);
+    breathIntervalRef.current = interval;
+  };
+
+  useEffect(() => {
+    return () => {
+      if (breathIntervalRef.current) clearInterval(breathIntervalRef.current);
+    };
+  }, []);
+
+  const applyPreset = (preset: 'hydration' | 'kinetic' | 'neural' | 'creative') => {
+    vibrate(15);
+    if (preset === 'hydration') {
+      setMascotTheme('ice');
+      setMascotMood('happy');
+      setMascotEffect('orbs');
+      setMascotHat('none');
+      setWaterLogged(prev => prev + 250);
+      addNotification("💧 Preset loaded: Glacier Ice theme & logged 250ml water!");
+    } else if (preset === 'kinetic') {
+      setMascotTheme('fire');
+      setMascotMood('surprised');
+      setMascotEffect('embers');
+      setMascotHat('viking');
+      setPushupsLogged(prev => prev + 10);
+      addNotification("🔥 Preset loaded: Volcanic Fire theme, Viking Helmet & +10 pushups!");
+    } else if (preset === 'neural') {
+      setMascotTheme('cosmic');
+      setMascotEffect('sparkles');
+      setMascotHat('wizard');
+      startBreathingSim();
+    } else if (preset === 'creative') {
+      setMascotTheme('neon');
+      setMascotMood('happy');
+      setMascotEffect('neon_glow');
+      setMascotHat('artist');
+      addNotification("🎨 Preset loaded: Electric Neon theme, Artist Beret & Glow active!");
+    }
+  };
+
   // Optimize scroll transforms by reducing their range and impact
   const bgOpacity = useTransform(scrollY, [0, 1000], [1, 0.8]);
   const heroY = useTransform(scrollY, [0, 500], [0, 40]);
@@ -26,6 +126,91 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
   return (
     <div className="min-h-screen bg-[#f4f8ff] flex flex-col items-center relative selection:bg-blue-100 selection:text-blue-900">
+      {/* Floating Interactive Live Notifications Stack */}
+      <div className="fixed top-24 right-6 z-50 flex flex-col gap-2 pointer-events-none max-w-sm">
+        <AnimatePresence>
+          {notifications.map(n => (
+            <motion.div
+              key={n.id}
+              initial={{ opacity: 0, x: 50, y: -10, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 30, scale: 0.9 }}
+              className="bg-blue-950/90 text-white text-xs font-black tracking-wide px-5 py-3.5 rounded-2xl border border-blue-800 shadow-2xl flex items-center gap-2 pointer-events-auto backdrop-blur-md"
+            >
+              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              {n.text}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {/* Premium Upgrade Features Modal */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative border border-blue-100"
+            >
+              <button
+                onClick={() => { vibrate(5); setShowUpgradeModal(false); }}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-blue-50 text-blue-900/60 transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-yellow-100 text-yellow-600 flex items-center justify-center shadow-lg shadow-yellow-500/10">
+                  <Crown size={32} fill="currentColor" />
+                </div>
+                <h3 className="text-2xl font-black text-blue-950 tracking-tight">Nexora Architect Elite</h3>
+                <p className="text-blue-950/60 text-sm">Unlock the ultimate customized lifestyle environment with exclusive creator rewards and skins.</p>
+                
+                <div className="w-full space-y-3 pt-4 text-left">
+                  {[
+                    "Unlocks all 8 Premium Mascot Skins (Cosmic, Gold, Neon...)",
+                    "Equip all 10+ legendary active Mascot hats & particles",
+                    "Advanced analytics dashboard & historic run charts",
+                    "Full Lofi Ambient Soundscapes soundboard integration",
+                    "Cloud Sync & real-time offline persistence engines"
+                  ].map((feat, idx) => (
+                    <div key={idx} className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <span className="text-sm text-blue-950/80 font-medium">{feat}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="w-full pt-6 space-y-3">
+                  <button
+                    onClick={() => {
+                      vibrate(25);
+                      setShowUpgradeModal(false);
+                      onGetStarted();
+                    }}
+                    className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-[0.99]"
+                  >
+                    Get Elite Access Now
+                  </button>
+                  <button
+                    onClick={() => { vibrate(5); setShowUpgradeModal(false); }}
+                    className="w-full text-blue-900/40 text-xs font-bold uppercase tracking-widest py-2 hover:text-blue-950"
+                  >
+                    Continue Sandbox Tour
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Animated Background Mesh with Scroll Interaction - Optimized for Performance */}
       <motion.div 
         style={{ opacity: bgOpacity }}
@@ -116,7 +301,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               vibrate(10);
-              console.log('Pro features coming soon!');
+              setShowUpgradeModal(true);
             }}
             className="hidden sm:flex items-center gap-2 text-red-500 font-black px-5 py-2.5 bg-white/60 backdrop-blur-md rounded-full border border-red-100 shadow-sm transition-all"
           >
@@ -155,7 +340,11 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5 }}
-              className="inline-flex items-center gap-3 bg-white/60 backdrop-blur-md text-blue-600 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] mb-8 border border-white/80 shadow-sm"
+              className="inline-flex items-center gap-3 bg-white/60 backdrop-blur-md text-blue-600 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] mb-8 border border-white/80 shadow-sm cursor-pointer hover:bg-white transition-all"
+              onClick={() => {
+                vibrate(10);
+                setShowUpgradeModal(true);
+              }}
             >
               <span className="flex h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse ring-4 ring-blue-100" />
               Next Evolution of Wellness
@@ -191,112 +380,298 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             </motion.button>
           </motion.div>
 
-          {/* Features Grid - Quick Preview */}
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 w-full"
-          >
-            {[
-              { icon: <Droplets />, color: 'blue', text: 'HYDRATION' },
-              { icon: <Flame />, color: 'orange', text: 'KINETIC' },
-              { icon: <Brain />, color: 'emerald', text: 'NEURAL' },
-              { icon: <Palette />, color: 'purple', text: 'CREATIVE' }
-            ].map((f, i) => (
-              <motion.div 
-                key={i}
-                whileHover={{ y: -8, scale: 1.05 }}
-                className="glass-card p-5 flex flex-col items-center gap-3 border border-white/60 bg-white/40 shadow-lg group"
-              >
-                <div className={`w-12 h-12 rounded-2xl bg-${f.color}-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-${f.color}-500/20 group-hover:rotate-12 transition-transform`}>
-                  {React.cloneElement(f.icon as React.ReactElement<any>, { size: 24, strokeWidth: 2.5 })}
-                </div>
-                <div className="text-[10px] font-black text-blue-950/70 tracking-[0.2em]">{f.text}</div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-
-        {/* Hero Illustration with Parallax */}
-        <motion.div 
-          style={{ y: heroY }}
-          initial={{ opacity: 0, scale: 0.4, rotate: -25 }}
-          animate={{ opacity: 1, scale: 1, rotate: 0 }}
-          transition={{ 
-            duration: 1.2, 
-            type: "spring", 
-            stiffness: 80, 
-            damping: 15,
-            delay: 0.3
-          }}
-          className="flex-1 w-full max-w-lg relative perspective-1000"
-        >
-          {/* Main Glowing Orb */}
-          <motion.div 
-            animate={{ 
-              scale: [1, 1.2, 1],
-              opacity: [0.2, 0.4, 0.2]
-            }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute inset-x-0 bottom-1/4 h-[80%] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.5)_0%,transparent_50%)]" 
-            style={{ willChange: 'transform, opacity' }}
-          />
-          
-          <div className="relative z-10">
-            <motion.div
-              animate={{ 
-                y: [0, -20, 0],
-                rotateZ: [0, 2, 0]
-              }}
-              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-              className="drop-shadow-[0_30px_30px_rgba(30,58,138,0.2)]"
-              style={{ willChange: 'transform' }}
+          {/* Features Grid - Quick Preview connected directly to active presets */}
+          <div className="space-y-3 w-full">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-blue-900/40 uppercase tracking-[0.25em]">Try interactive presets</span>
+              <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full animate-pulse">💡 Click any card below to test!</span>
+            </div>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full"
             >
-              <Mascot className="w-full h-auto" />
+              {[
+                { icon: <Droplets />, color: 'blue', text: 'HYDRATION', preset: 'hydration' as const },
+                { icon: <Flame />, color: 'orange', text: 'KINETIC', preset: 'kinetic' as const },
+                { icon: <Brain />, color: 'emerald', text: 'NEURAL', preset: 'neural' as const },
+                { icon: <Palette />, color: 'purple', text: 'CREATIVE', preset: 'creative' as const }
+              ].map((f, i) => (
+                <motion.button 
+                  key={i}
+                  whileHover={{ y: -6, scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => applyPreset(f.preset)}
+                  className="glass-card p-5 flex flex-col items-center gap-3 border border-white/60 bg-white/40 shadow-lg group text-center cursor-pointer hover:bg-white/80 transition-all outline-none"
+                >
+                  <div className={`w-12 h-12 rounded-2xl bg-${f.color}-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-${f.color}-500/20 group-hover:rotate-12 transition-transform`}>
+                    {React.cloneElement(f.icon as React.ReactElement<any>, { size: 24, strokeWidth: 2.5 })}
+                  </div>
+                  <div className="text-[10px] font-black text-blue-950/70 tracking-[0.2em]">{f.text}</div>
+                </motion.button>
+              ))}
             </motion.div>
           </div>
+        </div>
 
-          {/* Floating Data Indicators */}
+        {/* Hero Illustration with Parallax and NEW Interactive Sandbox Panel */}
+        <div className="flex-1 w-full max-w-lg flex flex-col items-center">
           <motion.div 
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 1, duration: 1 }}
-            className="absolute -top-10 -left-12 glass-card p-5 rounded-2xl shadow-2xl border border-white backdrop-blur-md z-20 hidden lg:block"
+            style={{ y: heroY }}
+            initial={{ opacity: 0, scale: 0.4, rotate: -25 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            transition={{ 
+              duration: 1.2, 
+              type: "spring", 
+              stiffness: 80, 
+              damping: 15,
+              delay: 0.3
+            }}
+            className="w-full relative perspective-1000"
           >
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping" />
-                <span className="text-xs font-black text-blue-950 tracking-widest">NEXO LINKED</span>
-              </div>
-              <div className="h-1.5 w-32 bg-blue-100 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: '85%' }}
-                  transition={{ duration: 2, delay: 1.5 }}
-                  className="h-full bg-blue-500 rounded-full"
+            {/* Main Glowing Orb */}
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.2, 0.4, 0.2]
+              }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-x-0 bottom-1/4 h-[80%] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.5)_0%,transparent_50%)]" 
+              style={{ willChange: 'transform, opacity' }}
+            />
+            
+            <div className="relative z-10">
+              <motion.div
+                animate={{ 
+                  y: [0, -12, 0],
+                  rotateZ: [0, 1.5, 0]
+                }}
+                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                className="drop-shadow-[0_30px_30px_rgba(30,58,138,0.2)]"
+                style={{ willChange: 'transform' }}
+              >
+                <Mascot 
+                  className="w-full h-auto cursor-pointer" 
+                  theme={mascotTheme}
+                  hat={mascotHat}
+                  mood={mascotMood}
+                  effect={mascotEffect}
+                  onClick={() => {
+                    vibrate(10);
+                    addNotification("✨ Hello! Tapped Nexo Mascot.");
+                  }}
                 />
-              </div>
+              </motion.div>
             </div>
+
+            {/* Floating Data Indicators synced with simulator states */}
+            <motion.div 
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1, duration: 1 }}
+              className="absolute -top-10 -left-12 glass-card p-5 rounded-2xl shadow-2xl border border-white backdrop-blur-md z-20 hidden lg:block"
+            >
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping" />
+                  <span className="text-xs font-black text-blue-950 tracking-widest uppercase">
+                    {breathingActive ? `NEURAL BREATH: ${breathPhase}` : "NEXO LINKED"}
+                  </span>
+                </div>
+                <div className="h-1.5 w-32 bg-blue-100 rounded-full overflow-hidden relative">
+                  <motion.div 
+                    animate={{ width: `${(waterLogged / 2000) * 100}%` }}
+                    transition={{ type: "spring", stiffness: 80 }}
+                    className="h-full bg-blue-500 rounded-full"
+                  />
+                  {breathingActive && (
+                    <motion.div 
+                      animate={{ scaleX: breathPercent / 100 }}
+                      className="absolute inset-0 bg-emerald-400 origin-left"
+                    />
+                  )}
+                </div>
+                <span className="text-[9px] font-black text-blue-900/60 tracking-wider">
+                  {breathingActive ? `SIMULATING PATTERN` : `WATER: ${waterLogged}ml / 2000ml`}
+                </span>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1.2, duration: 1 }}
+              className="absolute -bottom-6 -right-12 glass-card p-5 rounded-2xl shadow-2xl border border-white backdrop-blur-md z-20 hidden lg:block"
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1">STRENGTH STAT</span>
+                  <span className="text-3xl font-black text-blue-950 leading-none">{pushupsLogged} DONE</span>
+                </div>
+                <div className="w-12 h-12 bg-orange-100 text-orange-500 rounded-xl flex items-center justify-center">
+                  <Flame size={24} strokeWidth={3} />
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 1.2, duration: 1 }}
-            className="absolute -bottom-6 -right-12 glass-card p-5 rounded-2xl shadow-2xl border border-white backdrop-blur-md z-20 hidden lg:block"
+          {/* Interactive Live Sandbox Control Panel */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+            className="glass-card bg-white/70 backdrop-blur-md border border-white/80 rounded-3xl p-5 mt-6 shadow-xl space-y-5 w-full z-20 relative max-w-md"
           >
-            <div className="flex items-center gap-4">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1">CURRENT STREAK</span>
-                <span className="text-3xl font-black text-blue-950 leading-none">14 DAYS</span>
+            <div className="flex items-center justify-between border-b border-blue-100/50 pb-2">
+              <span className="text-xs font-black text-blue-950 uppercase tracking-widest flex items-center gap-1.5">
+                <Crown size={14} className="text-yellow-500 fill-yellow-500 animate-pulse" />
+                Nexo Live Sandbox
+              </span>
+              <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Interactive Live Preview</span>
+            </div>
+
+            {/* Custom Theme Skin Selectors */}
+            <div className="space-y-1.5">
+              <span className="text-[9px] font-black text-blue-900/50 uppercase tracking-widest">Select Premium Mascot Theme Skin:</span>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 'standard', color: 'bg-sky-400 border-sky-300', name: 'Classic' },
+                  { value: 'cosmic', color: 'bg-purple-500 border-purple-400', name: 'Cosmic' },
+                  { value: 'neon', color: 'bg-pink-500 border-pink-400', name: 'Neon' },
+                  { value: 'fire', color: 'bg-orange-500 border-orange-400', name: 'Fire' },
+                  { value: 'ice', color: 'bg-cyan-500 border-cyan-400', name: 'Ice' },
+                  { value: 'nature', color: 'bg-emerald-500 border-emerald-400', name: 'Nature' },
+                  { value: 'royal_gold', color: 'bg-yellow-500 border-yellow-400', name: 'Gold' },
+                ].map(th => (
+                  <button
+                    key={th.value}
+                    onClick={() => {
+                      vibrate(5);
+                      setMascotTheme(th.value);
+                      addNotification(`🎨 Equipped Skin: ${th.name}`);
+                    }}
+                    title={th.name}
+                    className={`h-6 px-2.5 rounded-full border text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 active:scale-95 ${
+                      mascotTheme === th.value 
+                        ? `${th.color} text-white shadow-md shadow-blue-500/10 scale-105` 
+                        : 'bg-white text-blue-900/60 hover:text-blue-950 border-blue-100'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${mascotTheme === th.value ? 'bg-white' : th.color.split(' ')[0]}`} />
+                    {th.name}
+                  </button>
+                ))}
               </div>
-              <div className="w-12 h-12 bg-orange-100 text-orange-500 rounded-xl flex items-center justify-center">
-                <Flame size={24} strokeWidth={3} />
+            </div>
+
+            {/* Equip Hats Selectors */}
+            <div className="space-y-1.5">
+              <span className="text-[9px] font-black text-blue-900/50 uppercase tracking-widest">Equip Accessory Hat:</span>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { id: 'none', label: '❌ None' },
+                  { id: 'crown', label: '👑 Crown' },
+                  { id: 'cool', label: '🕶️ Glasses' },
+                  { id: 'wizard', label: '🧙 Wizard' },
+                  { id: 'artist', label: '🎨 Beret' },
+                  { id: 'viking', label: '🪓 Viking' },
+                ].map(hatOption => (
+                  <button
+                    key={hatOption.id}
+                    onClick={() => {
+                      vibrate(5);
+                      setMascotHat(hatOption.id);
+                      addNotification(`🤠 Equipped Hat: ${hatOption.label.split(' ')[1] || 'None'}`);
+                    }}
+                    className={`py-1 px-2 rounded-xl text-[10px] font-bold border transition-all active:scale-95 ${
+                      mascotHat === hatOption.id
+                        ? 'bg-blue-600 text-white border-blue-500 shadow-md'
+                        : 'bg-white text-blue-950 hover:bg-blue-50 border-blue-100'
+                    }`}
+                  >
+                    {hatOption.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Special Particle Effects */}
+            <div className="space-y-1.5">
+              <span className="text-[9px] font-black text-blue-900/50 uppercase tracking-widest">Active Particle Environment Aura:</span>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { id: 'none', label: '❌ Clear' },
+                  { id: 'sparkles', label: '✨ Stars' },
+                  { id: 'embers', label: '🔥 Fire' },
+                  { id: 'orbs', label: '🔮 Orbs' },
+                  { id: 'neon_glow', label: '🌈 Glow' },
+                  { id: 'gold_dust', label: '⭐ Gold' },
+                ].map(effOption => (
+                  <button
+                    key={effOption.id}
+                    onClick={() => {
+                      vibrate(5);
+                      setMascotEffect(effOption.id);
+                      addNotification(`✨ Aura Set: ${effOption.label.split(' ')[1] || 'Clear'}`);
+                    }}
+                    className={`py-1 px-2 rounded-xl text-[10px] font-bold border transition-all active:scale-95 ${
+                      mascotEffect === effOption.id
+                        ? 'bg-blue-600 text-white border-blue-500 shadow-md'
+                        : 'bg-white text-blue-950 hover:bg-blue-50 border-blue-100'
+                    }`}
+                  >
+                    {effOption.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Live Interactive Ritual Simulators */}
+            <div className="space-y-2 pt-2 border-t border-blue-100/50">
+              <span className="text-[9px] font-black text-blue-900/50 uppercase tracking-widest block">Simulate App Habits:</span>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={() => {
+                    vibrate(10);
+                    setWaterLogged(prev => prev + 250);
+                    setMascotMood('happy');
+                    addNotification("💧 Drank +250ml water! Mascot sloshed!");
+                  }}
+                  className="flex-1 py-2 px-3 rounded-xl bg-cyan-50 hover:bg-cyan-100 border border-cyan-100 text-[10px] font-black text-cyan-800 uppercase tracking-wide flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <Droplets size={12} fill="currentColor" />
+                  Feed +250ml Water
+                </button>
+
+                <button
+                  onClick={() => {
+                    vibrate(15);
+                    setPushupsLogged(prev => prev + 5);
+                    setMascotMood('surprised');
+                    addNotification("🔥 Strength check! +5 pushups logged!");
+                  }}
+                  className="flex-1 py-2 px-3 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-100 text-[10px] font-black text-orange-800 uppercase tracking-wide flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <Flame size={12} fill="currentColor" />
+                  Do 5 Pushups
+                </button>
+
+                <button
+                  onClick={startBreathingSim}
+                  className={`flex-1 py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-wide flex items-center justify-center gap-1.5 transition-all ${
+                    breathingActive 
+                      ? 'bg-emerald-600 text-white border-emerald-500 animate-pulse'
+                      : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-100 text-emerald-800'
+                  }`}
+                >
+                  <Brain size={12} fill="currentColor" />
+                  {breathingActive ? breathPhase : "Breathe Live"}
+                </button>
               </div>
             </div>
           </motion.div>
-        </motion.div>
+        </div>
       </main>
 
       {/* Floating Section Dividers / Stats */}
