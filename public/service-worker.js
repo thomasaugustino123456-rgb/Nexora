@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexora-v6.0.0'; // Updated to ensure fresh cache bust with new icons and premium flow
+const CACHE_NAME = 'nexora-v7.1.0'; // Bumped cache name to bust old service worker cache and load new AI Mascot updates
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
