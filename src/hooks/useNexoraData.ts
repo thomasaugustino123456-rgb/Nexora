@@ -793,6 +793,19 @@ export function useNexoraData(
             };
             console.log(`[PERSISTENCE AUDIT] Write payload for core document:`, JSON.stringify(writePayload));
             
+            console.log("=== FIRESTORE WRITE DEBBUGGING LOGS ===");
+            console.log("1. Current authenticated uid:", user?.uid);
+            console.log("2. Current event: background sync");
+            console.log("3. JSON.stringify(stats):", JSON.stringify(stats));
+            console.log("4. JSON.stringify(lastSyncedRef.current?.st):", JSON.stringify(lastSyncedRef.current?.st));
+            console.log("5. Whether stats equals DEFAULT_STATS:", deepEqual(stats, DEFAULT_STATS));
+            console.log("6. Whether stats.xp == 0:", stats.xp === 0);
+            console.log("7. Whether stats.coins == 0:", stats.coins === 0);
+            console.log("8. Stack Trace:");
+            console.trace("Trace for Firestore setDoc write");
+            console.log("9. The exact writePayload being sent to Firestore:", JSON.stringify(writePayload));
+            console.log("======================================");
+
             await setDoc(userRef, writePayload, { merge: true });
             console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote core document to: ${userRef.path}`);
             
@@ -994,6 +1007,19 @@ export function useNexoraData(
           onboardingCompleted: true,
         };
         console.log(`[PERSISTENCE AUDIT] Force sync payload for core document:`, JSON.stringify(writePayload));
+
+        console.log("=== FIRESTORE WRITE DEBBUGGING LOGS ===");
+        console.log("1. Current authenticated uid:", user?.uid);
+        console.log("2. Current event: force sync");
+        console.log("3. JSON.stringify(stats):", JSON.stringify(stats));
+        console.log("4. JSON.stringify(lastSyncedRef.current?.st):", JSON.stringify(lastSyncedRef.current?.st));
+        console.log("5. Whether stats equals DEFAULT_STATS:", deepEqual(stats, DEFAULT_STATS));
+        console.log("6. Whether stats.xp == 0:", stats.xp === 0);
+        console.log("7. Whether stats.coins == 0:", stats.coins === 0);
+        console.log("8. Stack Trace:");
+        console.trace("Trace for Firestore setDoc write");
+        console.log("9. The exact writePayload being sent to Firestore:", JSON.stringify(writePayload));
+        console.log("======================================");
 
         await setDoc(userRef, writePayload, { merge: true });
         console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote core document to: ${userRef.path}`);

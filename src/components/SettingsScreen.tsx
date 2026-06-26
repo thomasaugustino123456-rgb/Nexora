@@ -33,6 +33,7 @@ interface SettingsScreenProps {
   showToast: (m: string, t?: 'success' | 'info' | 'error') => void;
   sendNotification: (title: string, body: string) => void;
   onOpenArchitectLab: () => void;
+  onOpenDeviceShowcase?: () => void;
   rollbackBackupData: any;
   onRollbackRestore: () => void;
   onSimulateUpdate: () => void;
@@ -47,6 +48,7 @@ export function SettingsScreen({
   onSendMotivation, onSendTestEmail, onClearCache, onExportData,
   onSubmitFeedback, onShowManifesto, showToast, sendNotification,
   onOpenArchitectLab,
+  onOpenDeviceShowcase,
   rollbackBackupData,
   onRollbackRestore,
   onSimulateUpdate,
@@ -195,6 +197,7 @@ export function SettingsScreen({
     { id: 'sound', label: 'Sound', desc: 'Lofi state, mascot audio packs', icon: Volume2, color: 'text-pink-500 bg-pink-500/[0.06] border-pink-500/10' },
     { id: 'community', label: 'Community', desc: 'HQ feedback transmission center', icon: MessageSquare, color: 'text-amber-600 bg-amber-600/[0.06] border-amber-600/10' },
     { id: 'premium', label: 'Premium', desc: 'Unlock architect mode & elite perks', icon: Sparkles, color: 'text-yellow-600 bg-yellow-500/[0.06] border-yellow-500/10' },
+    { id: 'device-showcase', label: 'Mockup Studio', desc: 'Frame screens in phone, tablet, laptop', icon: Smartphone, color: 'text-indigo-600 bg-indigo-600/[0.06] border-indigo-600/10' },
     { id: 'about', label: 'About & Security', desc: 'Integrity tests, manifesto, session exit', icon: Info, color: 'text-slate-500 bg-slate-500/[0.06] border-slate-500/10' },
   ];
 
@@ -374,7 +377,11 @@ export function SettingsScreen({
                     key={cat.id}
                     onClick={() => {
                       vibrate(VIBRATION_PATTERNS.CLICK);
-                      setActiveCategory(cat.id);
+                      if (cat.id === 'device-showcase') {
+                        onOpenDeviceShowcase?.();
+                      } else {
+                        setActiveCategory(cat.id);
+                      }
                     }}
                     whileHover={{ scale: 1.015 }}
                     whileTap={{ scale: 0.985 }}

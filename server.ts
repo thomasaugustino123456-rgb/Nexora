@@ -42,11 +42,68 @@ try {
 
   // Verify connection/permissions immediately on startup
   (async () => {
+    const logPath = path.join(process.cwd(), "public", "server-logs.txt");
+    const writeLog = (msg: string) => {
+      console.log(msg);
+      try {
+        fs.appendFileSync(logPath, msg + "\n", "utf8");
+      } catch (err) {}
+    };
+    
     try {
+      if (fs.existsSync(logPath)) {
+        fs.unlinkSync(logPath);
+      }
+    } catch (err) {}
+
+    writeLog("--- Starting Server Debug Log ---");
+    writeLog("Time: " + new Date().toISOString());
+
+    try {
+      writeLog("Verifying Firestore connection...");
       await db.collection("users").limit(1).get();
-      console.log("Firestore Admin: Startup connection verification successful.");
+      writeLog("Firestore Admin: Startup connection verification successful.");
+      
+      writeLog("Firestore Admin: Executing detailed user data dump...");
+      const usersSnap = await db.collection("users").get();
+      writeLog(`Found ${usersSnap.size} user documents.`);
+      
+      const results: any[] = [];
+      for (const doc of usersSnap.docs) {
+        const data = doc.data();
+        writeLog(`Processing user: ${doc.id} - email: ${data.email}`);
+        const docResult: any = {
+          uid: doc.id,
+          email: data.email,
+          displayName: data.displayName,
+          onboardingCompleted: data.onboardingCompleted,
+          stats: data.stats,
+          garden: data.garden,
+          updatedAt: data.updatedAt ? (data.updatedAt.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt) : null,
+          rawDoc: data
+        };
+        
+        // Check subcollection
+        const subStatsSnap = await db.collection("users").doc(doc.id).collection("stats").doc("main").get();
+        if (subStatsSnap.exists) {
+          docResult.subcollectionStatsMain = subStatsSnap.data();
+          writeLog(`Found subcollection stats/main for user ${doc.id}`);
+        } else {
+          docResult.subcollectionStatsMain = null;
+          writeLog(`No subcollection stats/main for user ${doc.id}`);
+        }
+        
+        results.push(docResult);
+      }
+      
+      const outputPath = path.join(process.cwd(), "public", "debug-data.json");
+      fs.writeFileSync(outputPath, JSON.stringify(results, null, 2), "utf8");
+      writeLog("Firestore Admin: User data dump written successfully to " + outputPath);
     } catch (e: any) {
-      console.error("Firestore Admin: Startup connection verification FAILED:", e.message);
+      writeLog("Firestore Admin: Startup connection verification FAILED: " + e.message);
+      if (e.stack) {
+        writeLog("Stack: " + e.stack);
+      }
     }
   })();
 } catch (err: any) {

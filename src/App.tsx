@@ -192,6 +192,7 @@ import { LeaderboardScreen } from "./components/LeaderboardScreen";
 import { ProgressScreen } from "./components/ProgressScreen";
 import { ProfileScreen } from "./components/ProfileScreen";
 import { SettingsScreen } from "./components/SettingsScreen";
+import { DeviceShowcase } from "./components/DeviceShowcase";
 import { SubscriptionScreen } from "./components/SubscriptionScreen";
 import { GalleryScreen } from "./components/GalleryScreen";
 import { NotebookScreen } from "./components/NotebookScreen";
@@ -5177,6 +5178,7 @@ export default function App() {
             (activeScreen as string) !== "hydration-detail" &&
             (activeScreen as string) !== "social" &&
             (activeScreen as string) !== "garden" &&
+            (activeScreen as string) !== "device-showcase" &&
             !showArchitectLab && (
               <header className="px-6 pt-8 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl border-b border-[#E9E4D4]/50">
                 <div className="flex items-center gap-3 select-none">
@@ -5590,8 +5592,31 @@ export default function App() {
                       currentAppVersion={currentAppVersion}
                       isStandalone={isStandalone}
                       onTriggerPwaInstall={handleInstallClick}
+                      onOpenDeviceShowcase={() => {
+                        vibrate(VIBRATION_PATTERNS.CLICK);
+                        setActiveScreen("device-showcase");
+                      }}
                     />
                   </Suspense>
+                </motion.div>
+              )}
+              {activeScreen === "device-showcase" && (
+                <motion.div
+                  key="device-showcase"
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  variants={pageVariants}
+                  transition={pageTransition}
+                  className="w-full"
+                >
+                  <DeviceShowcase
+                    userStats={stats}
+                    onBack={() => {
+                      vibrate(VIBRATION_PATTERNS.CLICK);
+                      setActiveScreen("settings");
+                    }}
+                  />
                 </motion.div>
               )}
               {activeScreen === "shop" && (
@@ -6599,6 +6624,7 @@ export default function App() {
             (activeScreen as string) !== "hydration-detail" &&
             (activeScreen as string) !== "social" &&
             (activeScreen as string) !== "garden" &&
+            (activeScreen as string) !== "device-showcase" &&
             !showArchitectLab && (
               <motion.div
                 initial={false}
