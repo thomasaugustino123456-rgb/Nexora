@@ -2408,6 +2408,32 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Automatic update reload logic with safety checks for active challenges (Official or User-Created)
+  useEffect(() => {
+    if (!updateInfo || !updateInfo.version) return;
+    
+    // Only auto-reload if the fetched version is indeed newer than the current version running
+    if (updateInfo.version === currentAppVersion) return;
+
+    // Check if the user is currently taking App Official Challenges or User Created Challenges plan
+    // If activeScreen is "challenge" or there's an active challengeStep, do NOT reload right now.
+    const isInChallenge = activeScreen === "challenge" || challengeStep !== null;
+
+    if (!isInChallenge) {
+      console.log(`PWA: Automatic Reload Triggered! Updating to v${updateInfo.version}`);
+      showToast("🚀 Installing Nexora Update... Reloading!", "info");
+      
+      // Delay slightly so the toast is visible to the user
+      const timeout = setTimeout(() => {
+        handleUpdate(updateInfo);
+      }, 1500);
+
+      return () => clearTimeout(timeout);
+    } else {
+      console.log("PWA: Update is pending but deferred because user is actively taking a challenge.");
+    }
+  }, [updateInfo, activeScreen, challengeStep]);
+
   const sendTestNotification = async () => {
     // Diagnose health first if needed
     try {
@@ -4618,7 +4644,7 @@ export default function App() {
                   <div className="relative w-20 h-20 shadow-md flex items-center justify-center bg-blue-950/40 rounded-[20px] border border-blue-500/20">
                     {!appMascotError ? (
                       <img 
-                        src="/nexora-mascot.png" 
+                        src="https://i.postimg.cc/FRpDjxfr/file-00000000ea80724689e362eb989b6932.png" 
                         alt="" 
                         className="w-full h-full object-cover rounded-[20px]" 
                         onError={() => setAppMascotError(true)}
@@ -4765,7 +4791,7 @@ export default function App() {
                   <div className="relative w-20 h-20 shadow-md flex items-center justify-center bg-blue-950/40 rounded-[20px] border border-blue-500/20">
                     {!appMascotError ? (
                       <img 
-                        src="/nexora-mascot.png" 
+                        src="https://i.postimg.cc/FRpDjxfr/file-00000000ea80724689e362eb989b6932.png" 
                         alt="" 
                         className="w-full h-full object-cover rounded-[20px]" 
                         onError={() => setAppMascotError(true)}
@@ -5021,7 +5047,7 @@ export default function App() {
                   <div className="relative w-24 h-24 drop-shadow-[0_0_20px_rgba(59,130,246,0.5)] flex items-center justify-center bg-blue-950/40 rounded-[24px] border border-blue-500/20">
                     {!appMascotError ? (
                       <img 
-                        src="/nexora-mascot.png" 
+                        src="https://i.postimg.cc/FRpDjxfr/file-00000000ea80724689e362eb989b6932.png" 
                         alt="" 
                         className="w-full h-full object-cover rounded-[24px] border-2 border-blue-400/40"
                         onError={() => setAppMascotError(true)}

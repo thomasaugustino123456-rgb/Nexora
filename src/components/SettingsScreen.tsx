@@ -1038,7 +1038,7 @@ export function SettingsScreen({
                         <div className="w-full bg-emerald-50/70 border border-emerald-200 text-emerald-800 rounded-2xl py-4 font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-inner">
                           {!mascotError ? (
                             <img
-                              src="/nexora-mascot.png"
+                              src="https://i.postimg.cc/FRpDjxfr/file-00000000ea80724689e362eb989b6932.png"
                               alt=""
                               className="w-5 h-5 object-cover rounded-md border border-emerald-300 shrink-0"
                               referrerPolicy="no-referrer"
@@ -1063,7 +1063,7 @@ export function SettingsScreen({
                         >
                           {!mascotError ? (
                             <img
-                              src="/nexora-mascot.png"
+                              src="https://i.postimg.cc/FRpDjxfr/file-00000000ea80724689e362eb989b6932.png"
                               alt=""
                               className="w-5 h-5 object-cover rounded-md border border-white/20 animate-pulse shrink-0"
                               referrerPolicy="no-referrer"
