@@ -969,11 +969,19 @@ OVERRIDE PROTOCOL: INCREASE HYDRATION FREQUENCY TO MAINTAIN COGNITIVE FLOW.`
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
+    
+    // Core fallback responses for Nexo Mascot
+    const fallbacks = [
+      "Yo bro! My cosmic neural link is offline right now, but I can tell you that Nexora is the ultimate system to level up your physical habits and grow a virtual ecosystem, bro! You should sign up right now so we can crush some daily habits together! 🚀",
+      "Consistency is key, champ! Every drop of water you drink and every push-up you smash gets us closer to an optimized state! Let's sign up and get this grind started! 💧💪",
+      "Staying hydrated is absolute prime status, beast! When you feed your virtual plants and complete your sessions, you gain massive XP! Let's go and get registered now! 🏆🌿",
+      "Nexo's core protocols are online, bro! I'm here to motivate you to finish your water goals, do your breathing routines, and stay consistent! Join the squad today and let's win! 🔥"
+    ];
+    const getRandomFallback = () => fallbacks[Math.floor(Math.random() * fallbacks.length)];
+
     if (!apiKey) {
       console.warn("AI Service: GEMINI_API_KEY missing. Using simulated response.");
-      return res.json({
-        text: "Yo bro! My cosmic neural link is offline right now, but I can tell you that Nexora is the ultimate system to level up your physical habits and grow a virtual ecosystem, bro! You should sign up right now so we can crush some daily habits together! 🚀"
-      });
+      return res.json({ text: getRandomFallback() });
     }
 
     try {
@@ -988,11 +996,23 @@ OVERRIDE PROTOCOL: INCREASE HYDRATION FREQUENCY TO MAINTAIN COGNITIVE FLOW.`
 
       const systemInstruction = `You are Nexora (or Nexo), a friendly, energetic water-bottle mascot for Nexora - a gamified productivity app that tracks water intake, push-ups, breathing sessions, and creative drawing with an active custom ecosystem. You use friendly, motivating language, often using terms like 'bro', 'beast', 'legend', 'champ', and 'let's go!'. Help the user understand what Nexora can do, give advice about hydration, physical consistency, and building habits. IMPORTANT: Keep your replies short (under 70 words), conversational, and extremely motivating. Answer the user directly with absolute positivity!`;
 
-      // Map client messages to Gemini API format
-      const formattedContents = messages.map((m: any) => ({
-        role: m.role === "model" ? "model" : "user",
-        parts: [{ text: m.content || m.text }]
-      }));
+      // Map client messages to Gemini API format, filtering empty or system cards
+      let formattedContents = messages
+        .filter((m: any) => m && (m.content || m.text))
+        .map((m: any) => ({
+          role: m.role === "model" ? "model" : "user",
+          parts: [{ text: m.content || m.text }]
+        }));
+
+      // Find the first index where the role is "user" to guarantee correct turn sequence
+      const firstUserIdx = formattedContents.findIndex(c => c.role === "user");
+      if (firstUserIdx !== -1) {
+        formattedContents = formattedContents.slice(firstUserIdx);
+      }
+
+      if (formattedContents.length === 0) {
+        return res.json({ text: "What's on your mind today, champ? Let's crush some habits! 💧" });
+      }
 
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
@@ -1010,7 +1030,21 @@ OVERRIDE PROTOCOL: INCREASE HYDRATION FREQUENCY TO MAINTAIN COGNITIVE FLOW.`
       res.json({ text: response.text });
     } catch (error: any) {
       console.error("Server Landing Chat failed:", error);
-      res.status(500).json({ error: "My speech processor glitched! Try sending that again, bro." });
+      try {
+        fs.writeFileSync(
+          path.join(process.cwd(), "public", "landing-chat-error.json"),
+          JSON.stringify({ message: error.message, stack: error.stack, error }, null, 2),
+          "utf8"
+        );
+      } catch (logErr) {
+        console.error("Failed to write error log file:", logErr);
+      }
+      
+      // Graceful fallback to guarantee the client's chatbot NEVER glitches out
+      console.warn("Using highly motivating fallback response due to API error.");
+      res.json({ 
+        text: getRandomFallback() 
+      });
     }
   });
 
