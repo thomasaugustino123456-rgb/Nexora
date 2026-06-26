@@ -5,6 +5,12 @@ import { Mascot } from './Mascot';
 import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
 import { vibrate } from '../lib/vibrate';
 import { MascotImage } from './MascotImage';
+import { ProgressiveImage } from './ProgressiveImage';
+
+import laptopMockup from '../assets/images/nexora_laptop_mockup_1782482220242.jpg';
+import phoneMockup from '../assets/images/nexora_phone_mockup_1782482234392.jpg';
+import tabletMockup from '../assets/images/nexora_tablet_mockup_1782482248569.jpg';
+import combinedMockup from '../assets/images/nexora_combined_mockup_1782482262347.jpg';
 
 const nexoraAppIcon = "https://res.cloudinary.com/ddtfq9acc/image/upload/q_auto/f_auto/v1780831447/file_00000000659471f48492f78ba083fafc_wt3p7m.png";
 
@@ -805,6 +811,127 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               </div>
               <h3 className="text-xl font-bold text-blue-900">Creative Drawing</h3>
               <p className="text-blue-900/60">Unleash your creativity and relax your mind with our built-in drawing canvas. A perfect way to unwind.</p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Devices Showcase Section */}
+      <section className="w-full bg-[#fafbfd] py-24 relative z-10 border-t border-b border-blue-100/50" id="device-experience-section">
+        <div className="max-w-6xl mx-auto px-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16 space-y-4"
+          >
+            <span className="text-blue-600 font-black text-xs tracking-[0.4em] uppercase">Multi-Device Synergy</span>
+            <h2 className="text-4xl md:text-5xl font-black text-blue-950 tracking-tighter">Nexora Across All Your Screens</h2>
+            <p className="text-lg text-blue-950/60 max-w-2xl mx-auto font-medium">
+              Seamlessly transition between interfaces. Nexora is designed to scale beautifully, bringing a native companion experience to whichever screen you prefer.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-12">
+            {/* Laptop Mockup */}
+            <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="bg-white p-6 rounded-3xl border border-blue-100/40 shadow-xl shadow-blue-900/5 flex flex-col space-y-5 group hover:-translate-y-1.5 transition-transform duration-300"
+            >
+              <ProgressiveImage 
+                src={laptopMockup} 
+                alt="Nexora Laptop Desktop Mockup" 
+                aspectRatioClass="aspect-[3/2]"
+                className="shadow-md rounded-2xl overflow-hidden border border-slate-100"
+              />
+              <div className="space-y-2.5">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full text-[10px] font-black uppercase tracking-wider">
+                  💻 Desktop Experience
+                </div>
+                <h3 className="text-xl font-black text-blue-950">Spacious Feature-Rich Dashboard</h3>
+                <p className="text-sm text-blue-950/60 leading-relaxed font-medium">
+                  Enjoy an expansive, high-fidelity workspace on your laptop or desktop monitor. View multiple companion widgets side-by-side, access comprehensive data visualizers, and manage your learning and habit schedules in a beautifully structured widescreen interface.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Phone Mockup */}
+            <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="bg-white p-6 rounded-3xl border border-blue-100/40 shadow-xl shadow-blue-900/5 flex flex-col space-y-5 group hover:-translate-y-1.5 transition-transform duration-300"
+            >
+              <ProgressiveImage 
+                src={phoneMockup} 
+                alt="Nexora Mobile Phone Mockup" 
+                aspectRatioClass="aspect-[3/2]"
+                className="shadow-md rounded-2xl overflow-hidden border border-slate-100"
+              />
+              <div className="space-y-2.5">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-sky-50 text-sky-700 rounded-full text-[10px] font-black uppercase tracking-wider">
+                  📱 Mobile Companion
+                </div>
+                <h3 className="text-xl font-black text-blue-950">Interactive Focus in Your Pocket</h3>
+                <p className="text-sm text-blue-950/60 leading-relaxed font-medium">
+                  Keep your rituals and mascot right in your pocket. The mobile layout is hyper-focused and perfectly compact—enabling immediate water logging, snappy push-up check-ins, micro-breathing sessions, and active floating notifications to keep you on track.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Tablet Mockup */}
+            <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="bg-white p-6 rounded-3xl border border-blue-100/40 shadow-xl shadow-blue-900/5 flex flex-col space-y-5 group hover:-translate-y-1.5 transition-transform duration-300"
+            >
+              <ProgressiveImage 
+                src={tabletMockup} 
+                alt="Nexora Tablet iPad Mockup" 
+                aspectRatioClass="aspect-[3/2]"
+                className="shadow-md rounded-2xl overflow-hidden border border-slate-100"
+              />
+              <div className="space-y-2.5">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider">
+                  平板 Versatile Tablet
+                </div>
+                <h3 className="text-xl font-black text-blue-950">The Harmonious Golden Canvas</h3>
+                <p className="text-sm text-blue-950/60 leading-relaxed font-medium">
+                  The ideal middle ground for mindful productivity. Utilize the generous tablet layout for immersive breathing animations, organic sketching on our creative drawing canvas, or managing interactive challenges in a comfortable, relaxed form factor.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Combined Mockup */}
+            <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="bg-white p-6 rounded-3xl border border-blue-100/40 shadow-xl shadow-blue-900/5 flex flex-col space-y-5 group hover:-translate-y-1.5 transition-transform duration-300"
+            >
+              <ProgressiveImage 
+                src={combinedMockup} 
+                alt="Nexora Synced Multi-Device Mockup" 
+                aspectRatioClass="aspect-[3/2]"
+                className="shadow-md rounded-2xl overflow-hidden border border-slate-100"
+              />
+              <div className="space-y-2.5">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-wider">
+                  🔄 Synced Ecosystem
+                </div>
+                <h3 className="text-xl font-black text-blue-950">Instant Cross-Platform Flow</h3>
+                <p className="text-sm text-blue-950/60 leading-relaxed font-medium">
+                  Your companion stays perfectly aligned on every device you own. Full Firestore cloud synchronization ensures that your daily streak, XP rewards, shop coins, and customized mascot skins are beautifully synced across all phone, tablet, and laptop screens.
+                </p>
+              </div>
             </motion.div>
           </div>
         </div>
