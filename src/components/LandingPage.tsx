@@ -7,10 +7,10 @@ import { vibrate } from '../lib/vibrate';
 import { MascotImage } from './MascotImage';
 import { ProgressiveImage } from './ProgressiveImage';
 
-const laptopMockup = "https://res.cloudinary.com/ddtfq9acc/image/upload/v1782483131/file_00000000523471f4a52cc74dc987076e_oz7hi8.png";
-const phoneMockup = "https://res.cloudinary.com/ddtfq9acc/image/upload/v1782483159/file_0000000063d471f48667d8802475ef0e_ytmlpw.png";
-const tabletMockup = "https://res.cloudinary.com/ddtfq9acc/image/upload/v1782483181/file_00000000352871f4b2fac6a36ed8b31f_djawfz.png";
-const combinedMockup = "https://res.cloudinary.com/ddtfq9acc/image/upload/v1782483209/file_0000000009c871f4a4d86809b9d548ea_rpn9kb.png";
+const laptopMockup = "https://i.postimg.cc/3rd9VmVD/file-00000000523471f4a52cc74dc987076e.png";
+const phoneMockup = "https://i.postimg.cc/NGm2K0rn/file-0000000063d471f48667d8802475ef0e.png";
+const tabletMockup = "https://i.postimg.cc/Dz4yRCrt/file-00000000352871f4b2fac6a36ed8b31f.png";
+const combinedMockup = "https://i.postimg.cc/k4crH8pk/file-0000000009c871f4a4d86809b9d548ea.png";
 
 const nexoraAppIcon = "https://res.cloudinary.com/ddtfq9acc/image/upload/q_auto/f_auto/v1780831447/file_00000000659471f48492f78ba083fafc_wt3p7m.png";
 
@@ -19,6 +19,15 @@ interface LandingPageProps {
 }
 
 export function LandingPage({ onGetStarted }: LandingPageProps) {
+  // Preload all device showcase images instantly
+  useEffect(() => {
+    const imagesToPreload = [laptopMockup, phoneMockup, tabletMockup, combinedMockup];
+    imagesToPreload.forEach(url => {
+      const img = new Image();
+      img.src = url;
+    });
+  }, []);
+
   const [view, setView] = useState<'home' | 'terms' | 'privacy' | 'support'>('home');
   const { scrollY } = useScroll();
   
