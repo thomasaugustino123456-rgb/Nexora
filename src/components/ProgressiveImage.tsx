@@ -7,9 +7,10 @@ interface ProgressiveImageProps {
   alt: string;
   className?: string;
   aspectRatioClass?: string;
+  plain?: boolean;
 }
 
-export function ProgressiveImage({ src, alt, className = "", aspectRatioClass = "aspect-[3/2]" }: ProgressiveImageProps) {
+export function ProgressiveImage({ src, alt, className = "", aspectRatioClass = "aspect-[3/2]", plain = false }: ProgressiveImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState(false);
 
@@ -26,7 +27,14 @@ export function ProgressiveImage({ src, alt, className = "", aspectRatioClass = 
   }, [src]);
 
   return (
-    <div className={`relative overflow-hidden bg-blue-950/5 rounded-2xl border border-blue-100/50 ${aspectRatioClass} ${className}`} id={`prog-img-${src.split("/").pop()?.split(".")[0] || "custom"}`}>
+    <div 
+      className={`relative overflow-hidden ${
+        plain 
+          ? "bg-transparent border-none shadow-none" 
+          : "bg-blue-950/5 rounded-2xl border border-blue-100/50"
+      } ${aspectRatioClass} ${className}`} 
+      id={`prog-img-${src.split("/").pop()?.split(".")[0] || "custom"}`}
+    >
       {/* Shimmer loading skeleton */}
       <AnimatePresence>
         {!isLoaded && (
@@ -34,7 +42,11 @@ export function ProgressiveImage({ src, alt, className = "", aspectRatioClass = 
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-blue-50/50 to-blue-100/30 animate-pulse z-10"
+            className={`absolute inset-0 flex flex-col items-center justify-center ${
+              plain 
+                ? "bg-transparent" 
+                : "bg-gradient-to-br from-blue-50/50 to-blue-100/30"
+            } animate-pulse z-10`}
           >
             <div className="relative">
               {/* Spinning active ring */}
@@ -42,7 +54,7 @@ export function ProgressiveImage({ src, alt, className = "", aspectRatioClass = 
               <ImageIcon className="w-5 h-5 text-blue-500/40 absolute inset-0 m-auto" />
             </div>
             <span className="text-[10px] font-black text-blue-500/40 tracking-wider uppercase mt-3 animate-pulse">
-              Optimizing Image...
+              Optimizing...
             </span>
           </motion.div>
         )}
@@ -58,17 +70,19 @@ export function ProgressiveImage({ src, alt, className = "", aspectRatioClass = 
           alt={alt}
           loading="lazy"
           referrerPolicy="no-referrer"
-          className="w-full h-full object-cover relative z-0"
+          className="w-full h-full object-contain relative z-0"
         />
       ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-400 gap-2">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-400 gap-2 rounded-2xl">
           <ImageIcon className="w-8 h-8 text-slate-300" />
           <span className="text-xs font-semibold">Image failed to load</span>
         </div>
       )}
 
       {/* Ambient gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-blue-950/5 via-transparent to-transparent pointer-events-none" />
+      {!plain && (
+        <div className="absolute inset-0 bg-gradient-to-t from-blue-950/5 via-transparent to-transparent pointer-events-none" />
+      )}
     </div>
   );
 }
