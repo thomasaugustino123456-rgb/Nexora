@@ -961,6 +961,59 @@ OVERRIDE PROTOCOL: INCREASE HYDRATION FREQUENCY TO MAINTAIN COGNITIVE FLOW.`
     }
   });
 
+  // Server-Side Gemini API Proxy for Landing Page AI Companion Chat
+  app.post("/api/gemini/landing-chat", async (req, res) => {
+    const { messages } = req.body;
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "Messages array is required" });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("AI Service: GEMINI_API_KEY missing. Using simulated response.");
+      return res.json({
+        text: "Yo bro! My cosmic neural link is offline right now, but I can tell you that Nexora is the ultimate system to level up your physical habits and grow a virtual ecosystem, bro! You should sign up right now so we can crush some daily habits together! 🚀"
+      });
+    }
+
+    try {
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const systemInstruction = `You are Nexora (or Nexo), a friendly, energetic water-bottle mascot for Nexora - a gamified productivity app that tracks water intake, push-ups, breathing sessions, and creative drawing with an active custom ecosystem. You use friendly, motivating language, often using terms like 'bro', 'beast', 'legend', 'champ', and 'let's go!'. Help the user understand what Nexora can do, give advice about hydration, physical consistency, and building habits. IMPORTANT: Keep your replies short (under 70 words), conversational, and extremely motivating. Answer the user directly with absolute positivity!`;
+
+      // Map client messages to Gemini API format
+      const formattedContents = messages.map((m: any) => ({
+        role: m.role === "model" ? "model" : "user",
+        parts: [{ text: m.content || m.text }]
+      }));
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: formattedContents,
+        config: {
+          systemInstruction: systemInstruction,
+          temperature: 0.8,
+        }
+      });
+
+      if (!response || !response.text) {
+        throw new Error("Empty response from Gemini API");
+      }
+
+      res.json({ text: response.text });
+    } catch (error: any) {
+      console.error("Server Landing Chat failed:", error);
+      res.status(500).json({ error: "My speech processor glitched! Try sending that again, bro." });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
