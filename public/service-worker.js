@@ -51,53 +51,57 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate event - cleaning up old caches
+// Activate event - cleaning up old caches and taking control immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            console.log('Service Worker: Clearing old cache');
-            return caches.delete(cache);
-          }
-        })
-      );
-    })
+    Promise.all([
+      self.clients.claim(),
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cache) => {
+            if (cache !== CACHE_NAME) {
+              console.log('Service Worker: Clearing old cache:', cache);
+              return caches.delete(cache);
+            }
+          })
+        );
+      })
+    ])
   );
 });
 
-// Fetch event - network-first for navigation, cache-first for others
+// Fetch event - Network-First strategy to ensure latest assets are always loaded
 self.addEventListener('fetch', (event) => {
-  // EXCLUDE API calls from service worker interception
-  if (event.request.url.includes('/api/')) {
+  // EXCLUDE API calls and non-GET requests from service worker interception completely
+  if (event.request.url.includes('/api/') || event.request.method !== 'GET') {
     return;
   }
 
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match('/');
-      })
-    );
-    return;
-  }
-
+  // Network-First Strategy
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).then((fetchResponse) => {
-        // Optionally cache new assets on the fly
-        return caches.open(CACHE_NAME).then((cache) => {
-          if (event.request.url.startsWith('http') && event.request.method === 'GET') {
-            cache.put(event.request, fetchResponse.clone());
+    fetch(event.request)
+      .then((networkResponse) => {
+        // Only cache successful GET responses from our own origin or trusted CDNs
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            if (event.request.url.startsWith('http')) {
+              cache.put(event.request, responseClone);
+            }
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // Fallback to cache if network is offline or fails
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
           }
-          return fetchResponse;
+          // If no cache match, fallback to the root index.html
+          return caches.match('/');
         });
-      }).catch(() => {
-        // Fallback if both cache and network fail
-        return caches.match('/');
-      });
-    })
+      })
   );
 });
 

@@ -11,6 +11,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Nexora">
     <link rel="apple-touch-icon" href="/nexora-mascot.png">
+    <script>
+      // Early capture of beforeinstallprompt to prevent missing it before React loads
+      window.deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window.deferredPrompt = e;
+        console.log("PWA: Early deferredPrompt captured in index.html");
+      });
+    </script>
   </head>
   <body>
     <div id="root">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
-import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target, Crown, Sparkles, X, ShieldCheck, Zap, MessageSquare, Send } from 'lucide-react';
+import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target, Crown, Sparkles, X, ShieldCheck, Zap, MessageSquare, Send, Smartphone, Download, Share, HelpCircle } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
 import { vibrate } from '../lib/vibrate';
@@ -57,6 +57,61 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
   // AI Chat Assistant States
   const [isChatOpen, setIsChatOpen] = useState(false);
+  
+  // PWA Install Prompt State
+  const [pwaPrompt, setPwaPrompt] = useState<any>(null);
+  const [isPwaInstalled, setIsPwaInstalled] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+      setIsPwaInstalled(!!isStandalone);
+
+      const handleBeforeInstall = (e: Event) => {
+        e.preventDefault();
+        setPwaPrompt(e);
+        console.log("PWA: captured beforeinstallprompt inside LandingPage state!");
+      };
+
+      const handleAppInstalledEvent = () => {
+        setIsPwaInstalled(true);
+        console.log("PWA: appinstalled event handled in LandingPage");
+      };
+
+      window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.addEventListener('appinstalled', handleAppInstalledEvent);
+
+      if ((window as any).deferredPrompt) {
+        setPwaPrompt((window as any).deferredPrompt);
+      }
+
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+        window.removeEventListener('appinstalled', handleAppInstalledEvent);
+      };
+    }
+  }, []);
+
+  const handleInstallPWA = async () => {
+    vibrate(15);
+    const activePrompt = pwaPrompt || (window as any).deferredPrompt;
+    if (activePrompt) {
+      activePrompt.prompt();
+      try {
+        const { outcome } = await activePrompt.userChoice;
+        if (outcome === 'accepted') {
+          setPwaPrompt(null);
+          (window as any).deferredPrompt = null;
+          setIsPwaInstalled(true);
+        }
+      } catch (err) {
+        console.error("Error invoking PWA install prompt:", err);
+      }
+    } else {
+      setShowInstallGuide(true);
+    }
+  };
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'model'; content: string }[]>([
     {
@@ -299,6 +354,82 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         )}
       </AnimatePresence>
 
+      {/* PWA Install Instruction Guide Modal */}
+      <AnimatePresence>
+        {showInstallGuide && (
+          <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md flex items-center justify-center z-50 p-4 font-sans">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative border border-blue-100 max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                onClick={() => { vibrate(5); setShowInstallGuide(false); }}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-blue-50 text-blue-900/60 transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/10">
+                  <Download size={32} />
+                </div>
+                <h3 className="text-2xl font-black text-blue-950 tracking-tight">Install Nexora App</h3>
+                <p className="text-blue-950/60 text-sm">Add Nexora to your Home Screen to unlock a full-screen, native application experience with offline capability and instant loads!</p>
+                
+                <div className="w-full space-y-4 pt-4 text-left">
+                  {/* iOS/Safari instructions */}
+                  <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100/60 space-y-2">
+                    <h4 className="font-extrabold text-amber-900 text-sm flex items-center gap-2">
+                      <span className="text-lg">🍎</span> Apple iPhone & iPad (Safari)
+                    </h4>
+                    <p className="text-xs text-amber-800/80 leading-[1.5] font-semibold">
+                      1. Open this page in your official <span className="underline font-bold">Safari browser</span>.<br/>
+                      2. Tap the <span className="font-extrabold inline-flex items-center gap-1 bg-amber-100/50 px-1.5 py-0.5 rounded text-amber-950"><Share size={12} /> Share</span> button at the bottom navigation bar.<br/>
+                      3. Scroll down and tap <span className="font-extrabold text-amber-950">"Add to Home Screen"</span>.<br/>
+                      4. Confirm by tapping <span className="font-extrabold text-amber-950">"Add"</span> in the top right corner!
+                    </p>
+                  </div>
+
+                  {/* Android/Chrome instructions */}
+                  <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/60 space-y-2">
+                    <h4 className="font-extrabold text-emerald-900 text-sm flex items-center gap-2">
+                      <span className="text-lg">🤖</span> Android Devices (Chrome)
+                    </h4>
+                    <p className="text-xs text-emerald-800/80 leading-[1.5] font-semibold">
+                      1. Open the browser menu by tapping the <span className="font-extrabold text-emerald-950 font-bold">three dots (⋮)</span> in the top-right corner.<br/>
+                      2. Tap <span className="font-extrabold text-emerald-950 font-bold">"Add to Home screen"</span> or <span className="font-extrabold text-emerald-950 font-bold">"Install app"</span>.<br/>
+                      3. Confirm the installation in the prompt!
+                    </p>
+                  </div>
+
+                  {/* Desktop Chrome/Edge instructions */}
+                  <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/60 space-y-2">
+                    <h4 className="font-extrabold text-blue-950 text-sm flex items-center gap-2">
+                      <span className="text-lg">💻</span> Desktop (Chrome / Edge / Safari)
+                    </h4>
+                    <p className="text-xs text-blue-900/80 leading-[1.5] font-semibold">
+                      1. Click the <span className="font-extrabold text-blue-950 inline-flex items-center gap-1 bg-blue-100/50 px-1.5 py-0.5 rounded"><Download size={12} /> Install Icon</span> in the address bar (right of URL).<br/>
+                      2. Or click the menu button (three dots) and choose <span className="font-extrabold text-blue-950 font-bold">"Save and share" → "Install Nexora"</span>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="w-full pt-4">
+                  <button
+                    onClick={() => { vibrate(5); setShowInstallGuide(false); }}
+                    className="w-full bg-blue-950 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg hover:shadow-xl transition-all active:scale-[0.99] cursor-pointer"
+                  >
+                    Got It, Let's Go!
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Animated Background Mesh with Scroll Interaction - Optimized for Performance */}
       <motion.div 
         style={{ opacity: bgOpacity }}
@@ -396,6 +527,17 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             <Crown size={16} fill="currentColor" />
             <span className="text-[10px] uppercase tracking-[0.2em]">Upgrade</span>
           </motion.button>
+          {!isPwaInstalled && (
+            <motion.button 
+              whileHover={{ scale: 1.05, y: -1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleInstallPWA}
+              className="flex items-center gap-1.5 text-blue-600 bg-blue-50/80 hover:bg-blue-100/90 border border-blue-100 font-black px-3.5 py-2 rounded-full shadow-sm transition-all text-xs tracking-wider cursor-pointer"
+            >
+              <Smartphone size={13} />
+              <span>INSTALL</span>
+            </motion.button>
+          )}
           <button 
             onClick={() => {
               vibrate(10);
@@ -465,6 +607,15 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             >
               <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
               START FLOWING <ArrowRight size={28} className="group-hover:translate-x-2 transition-transform duration-500" />
+            </motion.button>
+            <motion.button 
+              whileHover={{ scale: 1.02, y: -4 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleInstallPWA}
+              className="group relative bg-white hover:bg-slate-50 text-blue-600 border-2 border-blue-100 px-10 py-6 rounded-2xl font-black text-xl shadow-[0_15px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_25px_45px_rgba(0,0,0,0.08)] transition-all flex items-center justify-center gap-3 overflow-hidden cursor-pointer"
+            >
+              <Smartphone size={24} className="group-hover:scale-110 transition-transform" />
+              INSTALL APP
             </motion.button>
           </motion.div>
 
