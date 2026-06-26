@@ -14,16 +14,6 @@
     
     <!-- Preload the premium app mascot image so it loads immediately at extreme speed -->
     <link rel="preload" as="image" href="https://i.postimg.cc/FRpDjxfr/file-00000000ea80724689e362eb989b6932.png" fetchpriority="high">
-    
-    <script>
-      // Early capture of beforeinstallprompt to prevent missing it before React loads
-      window.deferredPrompt = null;
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        window.deferredPrompt = e;
-        console.log("PWA: Early deferredPrompt captured in index.html");
-      });
-    </script>
   </head>
   <body>
     <div id="root"></div>

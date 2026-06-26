@@ -1962,19 +1962,19 @@ export default function App() {
     };
   }, [user]);
 
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallButton, setShowInstallButton] = useState(false);
-  const [showIOSInstallGuide, setShowIOSInstallGuide] = useState(false);
-  const [showInstallPopup, setShowInstallPopup] = useState(false);
+  
+  
+  
+  
   const [appMascotError, setAppMascotError] = useState(false);
 
   // Advanced PWA Master Installation Prompter States - Completely Disabled as requested
-  const [isStandalone, setIsStandalone] = useState(false);
-  const [pwaInstalled, setPwaInstalled] = useState<boolean>(false);
-  const [showPwaBanner, setShowPwaBanner] = useState(false);
-  const [pwaDismissedLanding, setPwaDismissedLanding] = useState(false);
-  const [pwaDismissedAuth, setPwaDismissedAuth] = useState(false);
-  const [pwaDismissedMain, setPwaDismissedMain] = useState(false);
+  
+  
+  
+  
+  
+  
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState("");
@@ -1992,7 +1992,7 @@ export default function App() {
         // Safari fallback detection
         (window.navigator.userAgent.includes("Safari") && !window.navigator.userAgent.includes("Chrome") && (window.navigator as any).standalone) ||
         document.referrer.includes("android-app://");
-      setIsStandalone(standalone);
+      
 
       // Show beautiful install popup after visiting multiple times if not standalone and not dismissed
       const isInstalled = standalone || localStorage.getItem("nexora_pwa_installed") === "true";
@@ -2002,11 +2002,11 @@ export default function App() {
       const isDismissed24h = lastDismissedAt && (Date.now() - parseInt(lastDismissedAt, 10)) < (24 * 60 * 60 * 1000);
 
       // Check if browser supports installation
-      const supportsInstall = !!(deferredPrompt || (window as any).deferredPrompt || ('BeforeInstallPromptEvent' in window));
+      const supportsInstall = !!(((window as any).deferredPrompt) || (window as any).deferredPrompt || ('BeforeInstallPromptEvent' in window));
 
       if (!isInstalled && !isDismissed && !isDismissed24h && visits >= 2 && supportsInstall) {
         setTimeout(() => {
-          setShowInstallPopup(true);
+          
         }, 2000);
       }
     };
@@ -2020,34 +2020,24 @@ export default function App() {
 
   useEffect(() => {
     // If running in standalone (PWA already installed and active), do not show.
-    if (isStandalone || pwaInstalled) {
-      setShowPwaBanner(false);
-      return;
-    }
-    
+        
     // Check if user has already marked app as installed in localStorage
     const isInstalled = localStorage.getItem("nexora_pwa_installed") === "true";
     if (isInstalled) {
-      setShowPwaBanner(false);
+      
       return;
     }
 
     // Determine if dismissed on current screen / context
-    let isDismissedOnCurrentScreen = pwaDismissedMain;
-    if (!user) {
-      isDismissedOnCurrentScreen = showAuth ? pwaDismissedAuth : pwaDismissedLanding;
-    }
-
-    // Show the installation encouragement banner
-    setShowPwaBanner(!isDismissedOnCurrentScreen);
-  }, [user, showAuth, needsOnboarding, isStandalone, pwaInstalled, activeScreen, challengeStep, pwaDismissedLanding, pwaDismissedAuth, pwaDismissedMain]);
+    
+  }, [user, showAuth, needsOnboarding, activeScreen, challengeStep]);
 
   // "when I click the Cancel button supposed it have to appear again when the user go to another section of the app"
   // Reset dismiss states on screen transition so the banner can appear again in other sections
   useEffect(() => {
-    setPwaDismissedLanding(false);
-    setPwaDismissedAuth(false);
-    setPwaDismissedMain(false);
+    
+    
+    
   }, [activeScreen, showAuth]);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(() => {
@@ -2766,24 +2756,24 @@ export default function App() {
   useEffect(() => {
     // If the prompt was captured early by main.tsx, use it immediately
     if ((window as any).deferredPrompt) {
-      setDeferredPrompt((window as any).deferredPrompt);
-      setShowInstallButton(true);
-      console.log("PWA: Early captured deferredPrompt loaded into state");
+      
+      
+      console.log("PWA: Early captured ((window as any).deferredPrompt) loaded into state");
     }
 
     const handleBeforeInstallPrompt = (e: any) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
       // Stash the event so it can be triggered later.
-      setDeferredPrompt(e);
+      
       (window as any).deferredPrompt = e;
       
       // Automatic uninstallation detection: if promptable, app is not installed
       localStorage.setItem("nexora_pwa_installed", "false");
-      setPwaInstalled(false);
+      
 
       // Update UI notify the user they can install the PWA
-      setShowInstallButton(true);
+      
       console.log("PWA: beforeinstallprompt event fired, reset installation state");
 
       // Check auto trigger
@@ -2794,7 +2784,7 @@ export default function App() {
       const isDismissed = sessionStorage.getItem("nexora_install_prompt_dismissed") === "true";
 
       if (visits >= 2 && !isDismissed && !isDismissed24h) {
-        setShowInstallPopup(true);
+        
       }
     };
 
@@ -2802,10 +2792,10 @@ export default function App() {
     const handleCustomPromptEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail) {
-        setDeferredPrompt(customEvent.detail);
+        
         localStorage.setItem("nexora_pwa_installed", "false");
-        setPwaInstalled(false);
-        setShowInstallButton(true);
+        
+        
         console.log("PWA: Custom pre-load prompt event handled, reset installation state");
 
         // Check auto trigger
@@ -2816,7 +2806,7 @@ export default function App() {
         const isDismissed = sessionStorage.getItem("nexora_install_prompt_dismissed") === "true";
 
         if (visits >= 2 && !isDismissed && !isDismissed24h) {
-          setShowInstallPopup(true);
+          
         }
       }
     };
@@ -2824,8 +2814,8 @@ export default function App() {
     const handleAppInstalled = () => {
       console.log("PWA: appinstalled event fired");
       localStorage.setItem("nexora_pwa_installed", "true");
-      setPwaInstalled(true);
-      setShowPwaBanner(false);
+      
+      
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -2887,52 +2877,7 @@ export default function App() {
 
   // Daily Reminder Timer removed from here and moved after customPlans definition
 
-  const handleInstallClick = async () => {
-    if (settings.soundEnabled) {
-      try { play("challenge_unlock"); } catch (e) {}
-    }
-
-    const activePrompt = deferredPrompt || (window as any).deferredPrompt;
-    if (activePrompt) {
-      try {
-        console.log("PWA: Triggering native deferred prompt on click");
-        // Trigger native prompt synchronously inside user gesture!
-        activePrompt.prompt();
-        const { outcome } = await activePrompt.userChoice;
-        console.log(`PWA: User response to the install prompt: ${outcome}`);
-        
-        if (outcome === "accepted") {
-          setDeferredPrompt(null);
-          (window as any).deferredPrompt = null;
-          setShowInstallButton(false);
-          localStorage.setItem("nexora_pwa_installed", "true");
-          setPwaInstalled(true);
-          setShowPwaBanner(false);
-          showToast("🎉 Nexora successfully installed to your Home Screen!", "success");
-        } else {
-          showToast("Nexora PWA installation cancelled.", "info");
-        }
-        return;
-      } catch (err) {
-        console.error("Error showing PWA install prompt:", err);
-      }
-    }
-
-    // Fallback: This is when activePrompt is null (e.g., iPhone/iPad Safari or browsers without beforeinstallprompt support).
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isSafariBrowser = /Safari/.test(navigator.userAgent) && !/Chrome|CriOS|FxiOS|OPiOS|mercury/.test(navigator.userAgent);
-
-    if (isIOSDevice) {
-      if (isSafariBrowser) {
-        setShowIOSInstallGuide(true);
-      } else {
-        showToast("To install Nexora on iOS, please open this app in the official Safari browser and choose 'Add to Home Screen'.", "info");
-      }
-    } else {
-      showToast("To install Nexora, select 'Add to Home Screen' or the install option from your browser's menu.", "info");
-    }
-  };
-
+  
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("success") === "true") {
@@ -4554,57 +4499,7 @@ export default function App() {
   if (!user) {
     return (
       <div className="min-h-screen w-full flex flex-col relative overflow-x-hidden">
-        {/* Beautiful PWA Global Banner */}
-        <AnimatePresence>
-          {showPwaBanner && (
-            <motion.div
-              initial={{ height: 0, opacity: 0, y: -20 }}
-              animate={{ height: "auto", opacity: 1, y: 0 }}
-              exit={{ height: 0, opacity: 0, y: -20 }}
-              className="w-full bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white overflow-hidden z-[400] relative shadow-md border-b border-indigo-500/30"
-            >
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3.5 px-6 max-w-7xl mx-auto w-full text-xs font-semibold">
-                <div className="flex items-center gap-3.5 text-center md:text-left flex-1">
-                  <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg shrink-0 shadow-inner animate-bounce">
-                    📲
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="font-black uppercase tracking-[0.14em] text-[10px] text-indigo-200">
-                      NATIVE APPLICATION INSTALLER
-                    </p>
-                    <p className="font-extrabold text-white text-xs sm:text-sm">
-                      Running on Phone/Tablet? Install Nexora client now for fluid 60FPS biometric tracking, offline storage sync, and custom badge counts!
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 w-full md:w-auto justify-center md:justify-end">
-                  <button
-                    onClick={() => {
-                      vibrate(10);
-                      handleInstallClick();
-                    }}
-                    className="flex-1 md:flex-initial px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-md hover:scale-[1.02] cursor-pointer"
-                  >
-                    Install Now
-                  </button>
-                  <button
-                    onClick={() => {
-                      vibrate(5);
-                      setPwaDismissedLanding(true);
-                      setPwaDismissedAuth(true);
-                      setPwaDismissedMain(true);
-                      showToast("Installation message dismissed.", "info");
-                    }}
-                    className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-indigo-100 rounded-xl font-extrabold uppercase text-[10px] tracking-widest transition-all cursor-pointer border border-white/10"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        
 
         <ErrorBoundary>
           {showAuth ? (
@@ -4631,76 +4526,7 @@ export default function App() {
         </ErrorBoundary>
 
         {/* Global PWA overlays rendered dynamically in front of Authentication screens */}
-        <AnimatePresence>
-          {showInstallPopup && (
-            <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0, y: 30 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.9, opacity: 0, y: 30 }}
-                className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 shadow-[0_0_50px_rgba(59,130,246,0.25)] relative overflow-hidden"
-              >
-                <div className="flex flex-col items-center text-center space-y-4">
-                  <div className="relative w-20 h-20 shadow-md flex items-center justify-center bg-blue-950/40 rounded-[20px] border border-blue-500/20">
-                    {!appMascotError ? (
-                      <img 
-                        src="https://i.postimg.cc/FRpDjxfr/file-00000000ea80724689e362eb989b6932.png" 
-                        alt="" 
-                        className="w-full h-full object-cover rounded-[20px]" 
-                        onError={() => setAppMascotError(true)}
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <Smartphone size={32} className="text-blue-400" />
-                    )}
-                  </div>
-                  <h3 className="text-2xl font-black text-white">Install Nexora</h3>
-                  <p className="text-blue-200/70 text-xs">Access fluid device analytics, custom icon, widget options, and home screen badges.</p>
-                </div>
-                <div className="flex flex-col gap-2.5">
-                  <button
-                    onClick={() => {
-                      setShowInstallPopup(false);
-                      handleInstallClick();
-                    }}
-                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 font-black py-3.5 rounded-2xl cursor-pointer"
-                  >
-                    Install Now
-                  </button>
-                  <button 
-                    onClick={() => {
-                      localStorage.setItem("nexora_install_modal_dismissed_at", Date.now().toString());
-                      setShowInstallPopup(false);
-                    }} 
-                    className="w-full text-xs text-blue-300 cursor-pointer"
-                  >
-                    Maybe Later
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-
-          {showIOSInstallGuide && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
-              <div className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 text-center">
-                <div className="flex flex-col items-center space-y-4">
-                  <span className="text-4xl animate-bounce">📱</span>
-                  <h3 className="text-2xl font-black">Safari iOS Setup</h3>
-                </div>
-                <p className="text-sm text-blue-200">To run Nexora as a standalone fullscreen app on your Apple device:</p>
-                <div className="text-left space-y-3 bg-[#081225]/80 p-4 rounded-xl text-xs">
-                  <p><b className="text-blue-400">1.</b> Tap share icon at the bottom of Safari.</p>
-                  <p><b className="text-blue-400">2.</b> Scroll and tap <b>"Add to Home Screen"</b>.</p>
-                  <p><b className="text-blue-400">3.</b> Tap <b>"Add"</b> in top-right corner.</p>
-                </div>
-                <button onClick={() => setShowIOSInstallGuide(false)} className="w-full bg-blue-600 py-3 rounded-xl font-bold cursor-pointer">
-                  Got It
-                </button>
-              </div>
-            </div>
-          )}
-        </AnimatePresence>
+        
       </div>
     );
   }
@@ -4708,57 +4534,7 @@ export default function App() {
   if (needsOnboarding) {
     return (
       <div className="min-h-screen w-full flex flex-col relative overflow-x-hidden bg-gradient-to-b from-[#0A1733] to-[#040B1A]">
-        {/* Beautiful PWA Global Banner */}
-        <AnimatePresence>
-          {showPwaBanner && (
-            <motion.div
-              initial={{ height: 0, opacity: 0, y: -20 }}
-              animate={{ height: "auto", opacity: 1, y: 0 }}
-              exit={{ height: 0, opacity: 0, y: -20 }}
-              className="w-full bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white overflow-hidden z-[400] relative shadow-md border-b border-indigo-500/30"
-            >
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3.5 px-6 max-w-7xl mx-auto w-full text-xs font-semibold">
-                <div className="flex items-center gap-3.5 text-center md:text-left flex-1 animate-pulse">
-                  <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg shrink-0 shadow-inner">
-                    📲
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="font-black uppercase tracking-[0.14em] text-[10px] text-indigo-200">
-                      NATIVE APPLICATION INSTALLATION READY
-                    </p>
-                    <p className="font-extrabold text-white text-xs sm:text-sm">
-                      Mischievous browser tabs keeping you slow? Install Nexora client now for fluid 60FPS biometric tracking, offline storage sync, and custom badge counts!
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 w-full md:w-auto justify-center md:justify-end">
-                  <button
-                    onClick={() => {
-                      vibrate(10);
-                      handleInstallClick();
-                    }}
-                    className="flex-1 md:flex-initial px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-md hover:scale-[1.02] cursor-pointer"
-                  >
-                    Install Now
-                  </button>
-                  <button
-                    onClick={() => {
-                      vibrate(5);
-                      setPwaDismissedLanding(true);
-                      setPwaDismissedAuth(true);
-                      setPwaDismissedMain(true);
-                      showToast("Installation message dismissed.", "info");
-                    }}
-                    className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-indigo-100 rounded-xl font-extrabold uppercase text-[10px] tracking-widest transition-all cursor-pointer border border-white/10"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        
 
         <Suspense
           fallback={
@@ -4778,76 +4554,7 @@ export default function App() {
           />
         </Suspense>
 
-        <AnimatePresence>
-          {showInstallPopup && (
-            <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0, y: 30 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.9, opacity: 0, y: 30 }}
-                className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 shadow-[0_0_50px_rgba(59,130,246,0.25)] relative overflow-hidden"
-              >
-                <div className="flex flex-col items-center text-center space-y-4">
-                  <div className="relative w-20 h-20 shadow-md flex items-center justify-center bg-blue-950/40 rounded-[20px] border border-blue-500/20">
-                    {!appMascotError ? (
-                      <img 
-                        src="https://i.postimg.cc/FRpDjxfr/file-00000000ea80724689e362eb989b6932.png" 
-                        alt="" 
-                        className="w-full h-full object-cover rounded-[20px]" 
-                        onError={() => setAppMascotError(true)}
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <Smartphone size={32} className="text-blue-400" />
-                    )}
-                  </div>
-                  <h3 className="text-2xl font-black text-white">Install Nexora</h3>
-                  <p className="text-blue-200/70 text-xs">Access fluid device analytics, custom icon, widget options, and home screen badges.</p>
-                </div>
-                <div className="flex flex-col gap-2.5">
-                  <button
-                    onClick={() => {
-                      setShowInstallPopup(false);
-                      handleInstallClick();
-                    }}
-                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 font-black py-3.5 rounded-2xl cursor-pointer"
-                  >
-                    Install Now
-                  </button>
-                  <button 
-                    onClick={() => {
-                      localStorage.setItem("nexora_install_modal_dismissed_at", Date.now().toString());
-                      setShowInstallPopup(false);
-                    }} 
-                    className="w-full text-xs text-blue-300 cursor-pointer"
-                  >
-                    Maybe Later
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-
-          {showIOSInstallGuide && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[99999] flex items-center justify-center p-6">
-              <div className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 text-center">
-                <div className="flex flex-col items-center space-y-4">
-                  <span className="text-4xl animate-bounce">📱</span>
-                  <h3 className="text-2xl font-black">Safari iOS Setup</h3>
-                </div>
-                <p className="text-sm text-blue-200">To run Nexora as a standalone fullscreen app on your Apple device:</p>
-                <div className="text-left space-y-3 bg-[#081225]/80 p-4 rounded-xl text-xs">
-                  <p><b className="text-blue-400">1.</b> Tap share icon at the bottom of Safari.</p>
-                  <p><b className="text-blue-400">2.</b> Scroll and tap <b>"Add to Home Screen"</b>.</p>
-                  <p><b className="text-blue-400">3.</b> Tap <b>"Add"</b> in top-right corner.</p>
-                </div>
-                <button onClick={() => setShowIOSInstallGuide(false)} className="w-full bg-blue-600 py-3 rounded-xl font-bold cursor-pointer">
-                  Got It
-                </button>
-              </div>
-            </div>
-          )}
-        </AnimatePresence>
+        
       </div>
     );
   }
@@ -4922,57 +4629,7 @@ export default function App() {
       </div>
       */}
 
-        {/* PWA Banners and Step-by-Step iOS Install guide */}
-        <AnimatePresence>
-          {showPwaBanner && (
-            <motion.div
-              initial={{ height: 0, opacity: 0, y: -20 }}
-              animate={{ height: "auto", opacity: 1, y: 0 }}
-              exit={{ height: 0, opacity: 0, y: -20 }}
-              className="w-full bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white overflow-hidden z-[400] relative shadow-md border-b border-indigo-500/30"
-            >
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3.5 px-6 max-w-7xl mx-auto w-full text-xs font-semibold">
-                <div className="flex items-center gap-3.5 text-center md:text-left flex-1">
-                  <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg shrink-0 shadow-inner animate-bounce">
-                    📲
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="font-black uppercase tracking-[0.14em] text-[10px] text-indigo-200">
-                      Progressive Web App Recommendation
-                    </p>
-                    <p className="font-extrabold text-white text-xs sm:text-sm">
-                      Install Nexora as a Native App for fluid 60FPS canvas tracking, offline database backup, and real-time biometric goals!
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 w-full md:w-auto justify-center md:justify-end">
-                  <button
-                    onClick={() => {
-                      vibrate(10);
-                      handleInstallClick();
-                    }}
-                    className="flex-1 md:flex-initial px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-md hover:scale-[1.02] cursor-pointer"
-                  >
-                    Install Now
-                  </button>
-                  <button
-                    onClick={() => {
-                      vibrate(5);
-                      setPwaDismissedMain(true);
-                      setPwaDismissedLanding(true);
-                      setPwaDismissedAuth(true);
-                      showToast("Installation banner dismissed for this screen.", "info");
-                    }}
-                    className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-indigo-100 rounded-xl font-extrabold uppercase text-[10px] tracking-widest transition-all cursor-pointer border border-white/10"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        
 
         {/* Offline Indicator handled elegantly via status banner above */}
 
@@ -5028,137 +4685,11 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* Beautiful Premium PWA Install Popup */}
-        <AnimatePresence>
-          {showInstallPopup && (
-            <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[600] flex items-center justify-center p-6">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0, y: 30 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.9, opacity: 0, y: 30 }}
-                className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-md w-full space-y-6 shadow-[0_0_50px_rgba(59,130,246,0.25)] relative overflow-hidden"
-              >
-                {/* Decorative glowing gradient inside card */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-
-                <div className="flex flex-col items-center text-center space-y-4">
-                  {/* Master Logo Icon */}
-                  <div className="relative w-24 h-24 drop-shadow-[0_0_20px_rgba(59,130,246,0.5)] flex items-center justify-center bg-blue-950/40 rounded-[24px] border border-blue-500/20">
-                    {!appMascotError ? (
-                      <img 
-                        src="https://i.postimg.cc/FRpDjxfr/file-00000000ea80724689e362eb989b6932.png" 
-                        alt="" 
-                        className="w-full h-full object-cover rounded-[24px] border-2 border-blue-400/40"
-                        onError={() => setAppMascotError(true)}
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <Smartphone size={36} className="text-blue-400" />
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="text-3xl font-black tracking-tight text-white font-sans">
-                      Install Nexora
-                    </h3>
-                    <p className="text-blue-200/70 font-medium text-sm">
-                      Get the full experience directly on your device.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Benefits checklist */}
-                <div className="bg-[#081225]/80 border border-blue-900/40 rounded-2xl p-5 space-y-3">
-                  <div className="flex items-center gap-3 text-sm text-blue-100 font-medium">
-                    <span className="text-emerald-400 font-bold text-lg">✓</span>
-                    <span>Faster loading</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-blue-100 font-medium">
-                    <span className="text-emerald-400 font-bold text-lg">✓</span>
-                    <span>Fullscreen experience</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-blue-100 font-medium">
-                    <span className="text-emerald-400 font-bold text-lg">✓</span>
-                    <span>Quick access from home screen</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-blue-100 font-medium">
-                    <span className="text-emerald-400 font-bold text-lg">✓</span>
-                    <span>Better performance</span>
-                  </div>
-                </div>
-
-                {/* Main Action Buttons */}
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={() => {
-                      setShowInstallPopup(false);
-                      handleInstallClick();
-                    }}
-                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
-                  >
-                    Install Now
-                  </button>
-                  <button
-                    onClick={() => {
-                      localStorage.setItem("nexora_install_modal_dismissed_at", Date.now().toString());
-                      setShowInstallPopup(false);
-                    }}
-                    className="w-full bg-transparent hover:bg-blue-950/40 text-blue-300 border border-blue-900/50 py-3.5 rounded-2xl font-black text-sm active:scale-[0.98] transition-all"
-                  >
-                    Maybe Later
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+        
 
         {/* Beautiful Premium Download Progress Modal removed */}
 
-        {/* Beautiful Custom iOS Setup / Walkthrough Guide */}
-        <AnimatePresence>
-          {showIOSInstallGuide && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[650] flex items-center justify-center p-6">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                className="bg-[#0A1733] border border-blue-500/30 text-white rounded-[32px] p-8 max-w-sm w-full space-y-6 shadow-2xl relative overflow-hidden text-center"
-              >
-                {/* Decorative top header */}
-                <div className="flex flex-col items-center space-y-4">
-                  <span className="text-4xl">📱</span>
-                  <h3 className="text-2xl font-black text-white px-2">Safari iOS Setup</h3>
-                </div>
-
-                <p className="text-sm text-blue-200/80 font-medium">To run Nexora as a standalone fullscreen app on your Apple device:</p>
-
-                <div className="text-left space-y-4 bg-[#081225]/80 border border-blue-900/40 rounded-2xl p-5 text-sm">
-                  <div className="flex gap-3">
-                    <span className="text-blue-400 font-black">1.</span>
-                    <span className="text-blue-100">Click the share icon (square with upward arrow) at the bottom of Safari.</span>
-                  </div>
-                  <div className="flex gap-3">
-                    <span className="text-blue-400 font-black">2.</span>
-                    <span className="text-blue-100">Scroll down and tap <strong>"Add to Home Screen"</strong> from the menu.</span>
-                  </div>
-                  <div className="flex gap-3">
-                    <span className="text-blue-400 font-black">3.</span>
-                    <span className="text-blue-100">Confirm the name and tap <strong>"Add"</strong> in the top-right corner.</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setShowIOSInstallGuide(false)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-black shadow-lg"
-                >
-                  Done
-                </button>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+        
 
         {/* Global Notifications for Pro Test */}
         <AnimatePresence>
@@ -5616,8 +5147,8 @@ export default function App() {
                       onRollbackRestore={handleRollbackRestore}
                       onSimulateUpdate={handleSimulateNewUpdate}
                       currentAppVersion={currentAppVersion}
-                      isStandalone={isStandalone}
-                      onTriggerPwaInstall={handleInstallClick}
+                      
+                      
                       onOpenDeviceShowcase={() => {
                         vibrate(VIBRATION_PATTERNS.CLICK);
                         setActiveScreen("device-showcase");
