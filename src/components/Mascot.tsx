@@ -378,7 +378,7 @@ export const Mascot = React.memo(({
           </g>
 
           {/* GLASS SHELL OUTER CONTOUR */}
-          <ellipse cx="250" cy="350" rx="190" ry="160" fill="url(#glass-grad-std)" fillOpacity="0.15" stroke={themeConfig.borderColor} strokeWidth="5" />
+          <ellipse cx="250" cy="350" rx="190" ry="160" fill={`url(#${themeConfig.glassGrad})`} fillOpacity="0.15" stroke={themeConfig.borderColor} strokeWidth="5" />
           
           {/* Ear contours */}
           <path d="M 120,230 C 100,170 110,140 120,130 C 140,130 160,170 180,200" fill="none" stroke={themeConfig.borderColor} strokeWidth="5" strokeLinecap="round" />

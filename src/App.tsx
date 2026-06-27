@@ -4745,9 +4745,13 @@ export default function App() {
                     onClick={handleLogoTap}
                     className="relative group p-0.5 rounded-2xl bg-[#69C496]/10 border border-[#69C496]/30 shadow-sm transition-all hover:scale-105 duration-300 cursor-pointer"
                   >
-                    <MascotImage
-                      alt="Nexora Logo"
-                      className="w-14 h-14 object-cover rounded-[15px] pointer-events-none"
+                    <Mascot
+                      className="w-14 h-14 pointer-events-none"
+                      mood={globalMascotMood}
+                      hat={settings.activeHat || "none"}
+                      theme={settings.activeSkin || "standard"}
+                      performanceMode={settings.performanceMode}
+                      soundPack={settings.isDogSoundPackActive ? "dog" : "cat"}
                     />
                     <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
