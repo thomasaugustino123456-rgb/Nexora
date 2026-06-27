@@ -7,12 +7,17 @@ import { vibrate } from '../lib/vibrate';
 import { MascotImage } from './MascotImage';
 import { ProgressiveImage } from './ProgressiveImage';
 
-const laptopMockup = "https://i.postimg.cc/3rd9VmVD/file-00000000523471f4a52cc74dc987076e.png";
-const phoneMockup = "https://i.postimg.cc/NGm2K0rn/file-0000000063d471f48667d8802475ef0e.png";
-const tabletMockup = "https://i.postimg.cc/Dz4yRCrt/file-00000000352871f4b2fac6a36ed8b31f.png";
-const combinedMockup = "https://i.postimg.cc/k4crH8pk/file-0000000009c871f4a4d86809b9d548ea.png";
+import laptopMockupImg from '../assets/images/nexora_laptop_mockup_1782482220242.jpg';
+import phoneMockupImg from '../assets/images/nexora_phone_mockup_1782482234392.jpg';
+import tabletMockupImg from '../assets/images/nexora_tablet_mockup_1782482248569.jpg';
+import combinedMockupImg from '../assets/images/nexora_combined_mockup_1782482262347.jpg';
 
-const nexoraAppIcon = "https://res.cloudinary.com/ddtfq9acc/image/upload/q_auto/f_auto/v1780831447/file_00000000659471f48492f78ba083fafc_wt3p7m.png";
+const laptopMockup = laptopMockupImg;
+const phoneMockup = phoneMockupImg;
+const tabletMockup = tabletMockupImg;
+const combinedMockup = combinedMockupImg;
+
+const nexoraAppIcon = "/nexora-mascot.png";
 
 interface LandingPageProps {
   onGetStarted: () => void;

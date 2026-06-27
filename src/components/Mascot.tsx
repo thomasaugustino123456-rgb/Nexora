@@ -364,6 +364,17 @@ export const Mascot = React.memo(({
             ) : (
               <path d="M 238 326 Q 250 332 262 326" fill="none" stroke="#1E293B" strokeWidth="4" strokeLinecap="round" />
             )}
+            
+            {/* Signature Glowing "N" Logo on stomach */}
+            <g transform="translate(236.5, 380) scale(0.6)" opacity="0.95">
+              <path 
+                d="M 0 0 L 10 0 L 30 40 L 30 0 L 45 0 L 45 60 L 30 60 L 10 20 L 10 60 L 0 60 Z" 
+                fill="#FFFFFF" 
+                style={{
+                  filter: 'drop-shadow(0 0 6px rgba(255, 255, 255, 0.95))'
+                }}
+              />
+            </g>
           </g>
 
           {/* GLASS SHELL OUTER CONTOUR */}
