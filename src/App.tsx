@@ -218,8 +218,9 @@ import { NavButton } from "./components/NavButton";
 import { SplashScreen } from "./components/SplashScreen";
 import { useNexoraData } from "./hooks/useNexoraData";
 import { MascotImage } from "./components/MascotImage";
+import nexoraAppIconImg from "./assets/images/nexora_app_icon.png";
 
-const nexoraAppIcon = "/nexora-mascot.png";
+const nexoraAppIcon = nexoraAppIconImg;
 
 const detectLowEndDevice = (): boolean => {
   if (typeof navigator === "undefined") return false;
