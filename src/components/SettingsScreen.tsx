@@ -192,7 +192,6 @@ export function SettingsScreen({
     { id: 'appearance', label: 'Appearance', desc: 'Theme colors, interface, performance', icon: Palette, color: 'text-purple-500 bg-purple-500/[0.06] border-purple-500/10' },
     { id: 'privacy', label: 'Privacy', desc: 'Cloaking feed, comment visibility', icon: Shield, color: 'text-rose-500 bg-rose-500/[0.06] border-rose-500/10' },
     { id: 'language', label: 'Language & Units', desc: 'Metric format, display locales', icon: Globe, color: 'text-indigo-500 bg-indigo-500/[0.06] border-indigo-500/10' },
-    { id: 'install', label: 'Install Nexora', desc: 'PWA native client setup', icon: Smartphone, color: 'text-cyan-500 bg-cyan-500/[0.06] border-cyan-500/10' },
     { id: 'backup', label: 'Backup & Sync', desc: 'Version snapshot, rollback protection', icon: RefreshCw, color: 'text-teal-500 bg-teal-500/[0.06] border-teal-500/10' },
     { id: 'sound', label: 'Sound', desc: 'Lofi state, mascot audio packs', icon: Volume2, color: 'text-pink-500 bg-pink-500/[0.06] border-pink-500/10' },
     { id: 'community', label: 'Community', desc: 'HQ feedback transmission center', icon: MessageSquare, color: 'text-amber-600 bg-amber-600/[0.06] border-amber-600/10' },
@@ -996,89 +995,7 @@ export function SettingsScreen({
                 </div>
               )}
 
-              {/* === 7. INSTALL NEXORA CATEGORY === */}
-              {activeCategory === 'install' && (
-                <div className="space-y-6" id="install-subpage">
-                  <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-5 shadow-sm text-left animate-in fade-in duration-200">
-                    <div className="flex gap-4 items-start p-4 bg-indigo-50/20 border border-indigo-100/40 rounded-2xl">
-                      <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center border border-indigo-100 shadow-sm shrink-0">
-                        <span className="text-xl animate-bounce">📥</span>
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="font-black text-blue-900 text-sm leading-snug">
-                          Run Nexora Directly as a Native Client App
-                        </h4>
-                        <p className="text-[10px] text-blue-950/60 leading-relaxed font-semibold">
-                          Bypass browser addresses, unlock fluid immersive borders, and optimize offline sync speeds.
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div className="p-3 bg-[#FAF7F2]/50 rounded-xl border border-[#E9E4D4]/30 flex items-center gap-2">
-                        <span className="text-emerald-500 font-black text-xs">✓</span>
-                        <span className="text-[9px] text-[#4F3F34] font-black uppercase tracking-wide">60FPS Canvas Speeds</span>
-                      </div>
-                      <div className="p-3 bg-[#FAF7F2]/50 rounded-xl border border-[#E9E4D4]/30 flex items-center gap-2">
-                        <span className="text-emerald-500 font-black text-xs">✓</span>
-                        <span className="text-[9px] text-[#4F3F34] font-black uppercase tracking-wide">Fluid Native Docking</span>
-                      </div>
-                      <div className="p-3 bg-[#FAF7F2]/50 rounded-xl border border-[#E9E4D4]/30 flex items-center gap-2">
-                        <span className="text-emerald-500 font-black text-xs">✓</span>
-                        <span className="text-[9px] text-[#4F3F34] font-black uppercase tracking-wide">Zero Browser Frame bars</span>
-                      </div>
-                      <div className="p-3 bg-[#FAF7F2]/50 rounded-xl border border-[#E9E4D4]/30 flex items-center gap-2">
-                        <span className="text-emerald-500 font-black text-xs">✓</span>
-                        <span className="text-[9px] text-[#4F3F34] font-black uppercase tracking-wide">Active badge indicators</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-2">
-                      {isStandalone || (typeof localStorage !== 'undefined' && localStorage.getItem('nexora_pwa_installed') === 'true') ? (
-                        <div className="w-full bg-emerald-50/70 border border-emerald-200 text-emerald-800 rounded-2xl py-4 font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-inner">
-                          {!mascotError ? (
-                            <img
-                              src="https://i.postimg.cc/FRpDjxfr/file-00000000ea80724689e362eb989b6932.png"
-                              alt=""
-                              className="w-5 h-5 object-cover rounded-md border border-emerald-300 shrink-0"
-                              referrerPolicy="no-referrer"
-                              onError={() => setMascotError(true)}
-                            />
-                          ) : (
-                            <span className="text-emerald-600 font-extrabold text-sm">✓</span>
-                          )}
-                          <span>Nexora Native client is active</span>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            vibrate(VIBRATION_PATTERNS.CLICK);
-                            if (typeof onTriggerPwaInstall === 'function') {
-                              onTriggerPwaInstall();
-                            } else {
-                              showToast('No installer trigger found in sandbox context yet, bro.', 'error');
-                            }
-                          }}
-                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl py-4 font-black uppercase text-xs tracking-widest shadow-lg hover:translate-y-[-1px] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer transition-all"
-                        >
-                          {!mascotError ? (
-                            <img
-                              src="https://i.postimg.cc/FRpDjxfr/file-00000000ea80724689e362eb989b6932.png"
-                              alt=""
-                              className="w-5 h-5 object-cover rounded-md border border-white/20 animate-pulse shrink-0"
-                              referrerPolicy="no-referrer"
-                              onError={() => setMascotError(true)}
-                            />
-                          ) : (
-                            <Smartphone size={14} className="text-indigo-200" />
-                          )}
-                          <span>INSTALL CLIENT NOW</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* === 8. BACKUP & SYNC CATEGORY === */}
               {activeCategory === 'backup' && (
