@@ -379,8 +379,7 @@ export function useNexoraData(
 
         hydratedStateRef.current = cachedObj;
         lastSyncedRef.current = cachedObj;
-        setIsStateLoaded(true, "Offline mode detected with active cache, directly using cached state");
-        console.log("[PERSISTENCE FIX]\nFirestore hydration complete\nSync gate unlocked\nBackground sync enabled");
+        console.log("[PERSISTENCE FIX]\nFirestore hydration started (offline bypass). Waiting for React state flush to unlock sync gate.");
 
         lastLoadedUserIdRef.current = user.uid;
         return;
@@ -474,8 +473,7 @@ export function useNexoraData(
 
           hydratedStateRef.current = cachedObj;
           lastSyncedRef.current = cachedObj;
-          setIsStateLoaded(true, "Network loading timeout or primary connection failed, falling back to cache");
-          console.log("[PERSISTENCE FIX]\nFirestore hydration complete\nSync gate unlocked\nBackground sync enabled (offline mode)");
+          console.log("[PERSISTENCE FIX]\nNetwork loading timeout or primary connection failed, falling back to cache. Waiting for React state flush to unlock sync gate.");
 
           if (loadingTimeout) clearTimeout(loadingTimeout);
           isLoaderResolved = true;
@@ -659,11 +657,9 @@ export function useNexoraData(
           console.warn("Hooks: Error fetching history list from firestore:", historyErr);
         }
 
-        // Successfully loaded. Safe to sync background changes now!
+        // Successfully loaded. Wait for deepEqual matching to unlock the sync gate!
         dataLoadedFromFirestore.current = true;
-        setIsStateLoaded(true, "Firestore profile, progress, and shop loaded successfully");
-        hasMatchedHydratedStateRef.current = true;
-        console.log("[PERSISTENCE FIX]\nFirestore hydration complete\nSync gate unlocked\nBackground sync enabled");
+        console.log("[PERSISTENCE FIX]\nFirestore load complete. Waiting for React state matching to unlock sync gate.");
         lastLoadedUserIdRef.current = user.uid;
         if (loadingTimeout) clearTimeout(loadingTimeout);
         isLoaderResolved = true;
@@ -722,6 +718,9 @@ export function useNexoraData(
     if (deepEqual(currentState, hydratedStateRef.current)) {
       console.log(`[PERSISTENCE AUDIT] State matches loaded Firestore data. Ready to handle future user mutations.`);
       hasMatchedHydratedStateRef.current = true;
+      setIsStateLoaded(true, "Current state matched hydrated Firestore state. Sync gate unlocked.");
+    } else {
+      console.log(`[PERSISTENCE AUDIT] Waiting for React in-memory states to flush and match hydrated Firestore/Cache values...`);
     }
   }, [settings, stats, dailyProgress, gardenState, user, isDataReady]);
 
@@ -777,8 +776,25 @@ export function useNexoraData(
           try {
             console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${userRef.path}`);
             const preSnap = await getDoc(userRef);
-            console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${userRef.path}:`, preSnap.exists() ? JSON.stringify(preSnap.data()) : "Document does not exist");
+            const dbData = preSnap.exists() ? preSnap.data() : null;
+            console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${userRef.path}:`, dbData ? JSON.stringify(dbData) : "Document does not exist");
             
+            // CRITICAL DEFENSIVE GUARD: Never let uninitialized/empty stats overwrite positive Firestore stats
+            if (dbData && dbData.stats) {
+              const dbStats = dbData.stats;
+              const dbHasProgress = (dbStats.xp > 0 || dbStats.coins > 0 || (dbStats.totalPoints || 0) > 0);
+              const localIsEmpty = (stats.xp === 0 && stats.coins === 0 && (stats.totalPoints || 0) === 0);
+
+              if (dbHasProgress && localIsEmpty) {
+                console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered! Attempted to overwrite positive Firestore stats (XP: ${dbStats.xp}, Coins: ${dbStats.coins}) with empty local stats in syncData. Aborting write to prevent data loss.`);
+                // Trigger emergency recovery: update local state to match database
+                setStats(dbStats);
+                if (dbData.settings) setSettings(dbData.settings);
+                if (dbData.garden) setGardenState(dbData.garden);
+                return;
+              }
+            }
+
             const writePayload = {
               displayName: settings.displayName || user.displayName || 'Champion',
               ...settings,
@@ -977,6 +993,10 @@ export function useNexoraData(
 
   const forceSyncData = useCallback(async () => {
     if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
+    if (!isStateLoadedRef.current || !hasMatchedHydratedStateRef.current) {
+      console.warn(`[PERSISTENCE AUDIT] forceSyncData called but hydration is not complete. Blocking write to prevent data loss.`);
+      return;
+    }
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     if (quotaExceededRef.current) return;
     try {
@@ -992,7 +1012,24 @@ export function useNexoraData(
       try {
         console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${userRef.path}`);
         const preSnap = await getDoc(userRef);
-        console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${userRef.path}:`, preSnap.exists() ? JSON.stringify(preSnap.data()) : "Document does not exist");
+        const dbData = preSnap.exists() ? preSnap.data() : null;
+        console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${userRef.path}:`, dbData ? JSON.stringify(dbData) : "Document does not exist");
+
+        // CRITICAL DEFENSIVE GUARD: Never let uninitialized/empty stats overwrite positive Firestore stats
+        if (dbData && dbData.stats) {
+          const dbStats = dbData.stats;
+          const dbHasProgress = (dbStats.xp > 0 || dbStats.coins > 0 || (dbStats.totalPoints || 0) > 0);
+          const localIsEmpty = (stats.xp === 0 && stats.coins === 0 && (stats.totalPoints || 0) === 0);
+
+          if (dbHasProgress && localIsEmpty) {
+            console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered! Attempted to overwrite positive Firestore stats (XP: ${dbStats.xp}, Coins: ${dbStats.coins}) with empty local stats in forceSyncData. Aborting write to prevent data loss.`);
+            // Trigger emergency recovery: update local state to match database
+            setStats(dbStats);
+            if (dbData.settings) setSettings(dbData.settings);
+            if (dbData.garden) setGardenState(dbData.garden);
+            return;
+          }
+        }
 
         const writePayload = {
           displayName: settings.displayName || user.displayName || 'Champion',
