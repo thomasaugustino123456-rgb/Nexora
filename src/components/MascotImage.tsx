@@ -1,7 +1,6 @@
 import React from 'react';
-import nexoraAppIconImg from '../assets/images/nexora_app_icon.png';
 
-const nexoraAppIcon = nexoraAppIconImg;
+const nexoraAppIcon = '/nexora_mascot_logo.png';
 
 interface MascotImageProps {
   className?: string;

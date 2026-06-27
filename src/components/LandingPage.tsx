@@ -11,14 +11,13 @@ import laptopMockupImg from '../assets/images/nexora_laptop_mockup_1782482220242
 import phoneMockupImg from '../assets/images/nexora_phone_mockup_1782482234392.jpg';
 import tabletMockupImg from '../assets/images/nexora_tablet_mockup_1782482248569.jpg';
 import combinedMockupImg from '../assets/images/nexora_combined_mockup_1782482262347.jpg';
-import nexoraAppIconImg from '../assets/images/nexora_app_icon.png';
 
 const laptopMockup = laptopMockupImg;
 const phoneMockup = phoneMockupImg;
 const tabletMockup = tabletMockupImg;
 const combinedMockup = combinedMockupImg;
 
-const nexoraAppIcon = nexoraAppIconImg;
+const nexoraAppIcon = '/nexora_mascot_logo.png';
 
 interface LandingPageProps {
   onGetStarted: () => void;

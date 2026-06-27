@@ -13,9 +13,7 @@ import { Mascot, MascotMood } from "./Mascot";
 import { ArrowLeft } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
 import { MascotImage } from "./MascotImage";
-import nexoraAppIconImg from "../assets/images/nexora_app_icon.png";
-
-const nexoraAppIcon = nexoraAppIconImg;
+const nexoraAppIcon = "/nexora_mascot_logo.png";
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
