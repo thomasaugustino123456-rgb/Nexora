@@ -327,8 +327,8 @@ export function useNexoraData(
     let loadingTimeout: NodeJS.Timeout | null = null;
     
     const timeoutDuration = hasCache 
-      ? (navigator.onLine ? 3000 : 500) 
-      : 12000; // 12 seconds max for new/uncached connections to prevent infinite splash hang
+      ? (navigator.onLine ? 5000 : 500) 
+      : (navigator.onLine ? 25000 : 1000); // 25 seconds max for online, 1 second for offline to prevent infinite splash hang
       
     loadingTimeout = setTimeout(() => {
       if (!isLoaderResolved) {

@@ -61,9 +61,11 @@ export const trackEvent = async (eventName: string, params?: any) => {
   }
 };
 
-export const db = initializeFirestore(app, {
+const isIframe = typeof window !== 'undefined' && window.self !== window.top;
+
+export const db = initializeFirestore(app, isIframe ? {
   experimentalForceLongPolling: true,
-}, databaseId === "(default)" ? undefined : databaseId);
+} : {}, databaseId === "(default)" ? undefined : databaseId);
 
 // Persistence is key for offline/slow networks/multiple preview windows
 if (typeof window !== 'undefined') {
