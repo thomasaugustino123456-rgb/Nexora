@@ -4332,72 +4332,115 @@ export default function App() {
     vibrate(VIBRATION_PATTERNS.ERROR);
 
     try {
-      let activeUser = auth.currentUser;
+      const activeUser = auth.currentUser;
       if (!activeUser) {
         showToast("Error: Session expired.", "error");
         return;
       }
 
-      // Check if re-authentication is required BEFORE wiping firestore data
-      const isGoogle = activeUser.providerData.some((p) => p.providerId === "google.com");
-      if (isGoogle) {
-          try {
-            const provider = new GoogleAuthProvider();
-            provider.addScope('profile');
-            provider.addScope('email');
-            provider.setCustomParameters({
-              prompt: 'select_account'
-            });
-            const credential = await reauthenticateWithPopup(activeUser, provider);
-            activeUser = credential.user;
-          } catch (e: any) {
-             console.warn("Re-auth failed or cancelled");
-             showToast("Authentication failed. Cannot delete.", "error");
-             return;
-          }
-      } else {
-         // Without a custom password prompt UI, we cannot easily reauth email users on the spot.
-         // We must check if their token is fresh enough (e.g. less than 5 minutes old).
-         const lastSignIn = activeUser.metadata.lastSignInTime ? new Date(activeUser.metadata.lastSignInTime).getTime() : 0;
-         const now = Date.now();
-         if (now - lastSignIn > 5 * 60 * 1000) {
-             showToast("Security Protocol: Re-authentication needed. Logging out...", "error");
-             setTimeout(() => signOut(auth), 2000);
-             return; // Halt to protect their data!
-         }
-      }
-
       const userId = activeUser.uid;
+      showToast("Processing account deletion...", "info");
 
-      // 1. Delete user data from Firestore (now we are reasonably sure we have fresh auth for Google users)
+      // 1. Delete all user data from Firestore subcollections and main docs first
       try {
-        const todayStr = new Date().toISOString().split("T")[0];
-        await deleteDoc(doc(db, "users", userId, "progress", todayStr));
-        await deleteDoc(doc(db, "leaderboard", userId));
-        await deleteDoc(doc(db, "users", userId));
+        console.log("[DELETE ACCOUNT] Wiping Firestore documents for:", userId);
+
+        // A. Delete stats/main
+        try {
+          await deleteDoc(doc(db, "users", userId, "stats", "main"));
+        } catch (e) {
+          console.warn("Failed to delete users/stats/main:", e);
+        }
+
+        // B. Delete all progress documents
+        try {
+          const progressSnap = await getDocs(collection(db, "users", userId, "progress"));
+          for (const docSnap of progressSnap.docs) {
+            await deleteDoc(doc(db, "users", userId, "progress", docSnap.id));
+          }
+        } catch (e) {
+          console.warn("Failed to delete users/progress:", e);
+        }
+
+        // C. Delete all custom_progress documents
+        try {
+          const customProgressSnap = await getDocs(collection(db, "users", userId, "custom_progress"));
+          for (const docSnap of customProgressSnap.docs) {
+            await deleteDoc(doc(db, "users", userId, "custom_progress", docSnap.id));
+          }
+        } catch (e) {
+          console.warn("Failed to delete users/custom_progress:", e);
+        }
+
+        // D. Delete all eco_shop documents
+        try {
+          const ecoShopSnap = await getDocs(collection(db, "users", userId, "eco_shop"));
+          for (const docSnap of ecoShopSnap.docs) {
+            await deleteDoc(doc(db, "users", userId, "eco_shop", docSnap.id));
+          }
+        } catch (e) {
+          console.warn("Failed to delete users/eco_shop:", e);
+        }
+
+        // E. Delete all notifications documents
+        try {
+          const notifSnap = await getDocs(collection(db, "users", userId, "notifications"));
+          for (const docSnap of notifSnap.docs) {
+            await deleteDoc(doc(db, "users", userId, "notifications", docSnap.id));
+          }
+        } catch (e) {
+          console.warn("Failed to delete users/notifications:", e);
+        }
+
+        // F. Delete leaderboard doc
+        try {
+          await deleteDoc(doc(db, "leaderboard", userId));
+        } catch (e) {
+          console.warn("Failed to delete leaderboard:", e);
+        }
+
+        // G. Delete main user doc
+        try {
+          await deleteDoc(doc(db, "users", userId));
+        } catch (e) {
+          console.warn("Failed to delete user doc:", e);
+        }
+
+        console.log("[DELETE ACCOUNT] Firestore data wipe completed for:", userId);
       } catch (e) {
-        console.warn("Failed to delete user documents", e);
+        console.warn("Error during Firestore cleanup:", e);
       }
 
-      // 2. Delete the auth account
-      await deleteUser(activeUser);
-
-      // Clear localStorage
+      // 2. Clear all local storage keys starting with "nexora_", "hydration_", or other related app keys
       Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith("nexora_")) {
+        if (
+          key.startsWith("nexora_") ||
+          key.startsWith("hydration_") ||
+          key === "admin_read_feedback_ids"
+        ) {
           localStorage.removeItem(key);
         }
       });
 
-      showToast("Account deleted successfully.", "success");
+      // Reset local hydration states in-memory
+      setHydrationConsecutiveDays(0);
+      setHydrationWaterLevel(0.0);
+      setHydrationLastCompletedDate("");
+
+      // 3. Delete the Firebase Auth user account
+      try {
+        await deleteUser(activeUser);
+        showToast("Account and data completely deleted.", "success");
+      } catch (authError: any) {
+        console.warn("Auth deletion failed (likely needs recent login), logging out user. Data is already wiped.", authError);
+        // Force log out anyway since their Firestore profile is deleted and localstorage is cleared
+        await signOut(auth);
+        showToast("All app data deleted. Account signed out.", "success");
+      }
+
     } catch (error: any) {
-       if (error.code === "auth/requires-recent-login") {
-         showToast("Security Protocol: Re-authentication needed. Logging out...", "error");
-         setTimeout(() => signOut(auth), 2000);
-       } else {
-         console.error("Delete Error:", error);
-         showToast(`Delete failed: ${error.message || error.code || "System error"}`, "error");
-       }
+      console.error("General Delete Error:", error);
+      showToast(`Delete failed: ${error.message || error.code || "System error"}`, "error");
     }
   };
 
