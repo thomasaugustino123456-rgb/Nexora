@@ -17,6 +17,7 @@ const __dirname = typeof __filename !== 'undefined'
 
 // Initialize Firebase Admin
 let db: admin.firestore.Firestore;
+let hasFirestoreAccess = true;
 try {
   const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
   const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
@@ -104,10 +105,13 @@ try {
       if (e.stack) {
         writeLog("Stack: " + e.stack);
       }
+      hasFirestoreAccess = false;
+      writeLog("Firestore Admin: Setting hasFirestoreAccess = false to bypass server-side Firestore operations.");
     }
   })();
 } catch (err: any) {
   console.error("Firebase Admin Initialization Failed:", err.message);
+  hasFirestoreAccess = false;
 }
 
 const MOTIVATIONAL_QUOTES = [
@@ -170,7 +174,7 @@ const startScheduler = () => {
   }, 86400000); // Daily cleanup
 
   setInterval(async () => {
-    if (!db) return;
+    if (!db || !hasFirestoreAccess) return;
     
     const now = new Date();
     try {
@@ -508,13 +512,13 @@ const startScheduler = () => {
         }
       }
     } catch (error: any) {
-      if (error.message.includes("PERMISSION_DENIED")) {
+      if (error && error.message && error.message.includes("PERMISSION_DENIED")) {
         console.warn("[V3 Scheduler] Permission Denied. Skipping scheduler ticks.");
       } else {
         console.error("[V3 Scheduler] Unexpected Error:", error);
       }
     }
-  }, 6000); // Check precisely every 1 minute
+  }, 60000); // Check precisely every 1 minute
 };
 
 // Version Watcher (Automatic Update Notifications)
@@ -530,6 +534,11 @@ const startVersionWatcher = () => {
 
         if (lastKnownVersion && lastKnownVersion !== newVersion) {
           console.log(`Version Watcher: New version detected! ${newVersion}. Broadcasting...`);
+          if (!hasFirestoreAccess) {
+            console.log("Version Watcher: Firestore access is disabled, skipping update broadcast.");
+            lastKnownVersion = newVersion;
+            return;
+          }
           // Only fetch 200 users to alert about updates to avoid total quota drain on broadcast
           const usersSnapshot = await db.collection("users")
             .where("notificationsEnabled", "==", true)
@@ -616,9 +625,11 @@ async function startServer() {
   app.get("/api/health", async (req, res) => {
     let firebaseStatus = "unknown";
     try {
-      if (db) {
+      if (db && hasFirestoreAccess) {
         await db.collection("users").limit(1).get();
         firebaseStatus = "connected";
+      } else if (db && !hasFirestoreAccess) {
+        firebaseStatus = "disabled_by_verification_failure";
       } else {
         firebaseStatus = "not_initialized";
       }
@@ -670,11 +681,15 @@ async function startServer() {
         
         if (userId) {
           console.log(`Unlocking Pro for user: ${userId}`);
-          await db.collection("users").doc(userId).update({
-            isPro: true,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-          });
-          console.log(`Successfully updated user ${userId} to Pro.`);
+          if (db && hasFirestoreAccess) {
+            await db.collection("users").doc(userId).update({
+              isPro: true,
+              updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+            console.log(`Successfully updated user ${userId} to Pro.`);
+          } else {
+            console.warn(`Could not update user ${userId} to Pro: Firestore access is disabled.`);
+          }
         }
       }
 
