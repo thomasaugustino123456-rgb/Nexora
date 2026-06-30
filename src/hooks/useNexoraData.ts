@@ -332,15 +332,33 @@ export function useNexoraData(
       
     loadingTimeout = setTimeout(() => {
       if (!isLoaderResolved) {
-        if (hasCache) {
-          console.warn("Hooks: Loading timeout reached, letting user open with cached local data.");
-          setIsDataReady(true);
-          setLoading(false);
-        } else {
-          console.warn("Hooks: Connection timeout on uncached session, setting loadError.");
-          setLoadError("We couldn't connect to our servers to load your profile. Please check your internet connection and try again.");
-          setLoading(false);
+        console.warn("Hooks: Loading timeout reached. Falling back to local offline states to prevent infinite hang.");
+        
+        // If there's no cache, initialize with default offline states to allow playability
+        if (!hasCache) {
+          setSettings(DEFAULT_SETTINGS);
+          setStats(DEFAULT_STATS);
+          const currentProgress = {
+            date: today,
+            completed: false,
+            pushupsDone: false,
+            waterDrank: 0,
+            breathingDone: false,
+            drawingDone: false,
+            footballDone: false,
+            bubblesDone: false,
+            completionsCount: 0,
+            nextRestorationTime: null,
+          };
+          setDailyProgress(currentProgress);
+          setGardenState(createInitialGardenState());
         }
+
+        const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
+        setNeedsOnboarding(!onboardingComp);
+        setIsDataReady(true);
+        setLoading(false);
+        showToast("Slow connection detected. Running in offline backup mode! 📡", "info");
       }
     }, timeoutDuration);
 
