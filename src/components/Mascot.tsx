@@ -94,12 +94,36 @@ export const Mascot = React.memo(({
       50% { opacity: 0.9; }
       100% { transform: translateY(-120px) scale(1.1) rotate(180deg); opacity: 0; }
     }
+    @keyframes waveTranslation {
+      0% { transform: translateX(0px); }
+      100% { transform: translateX(-300px); }
+    }
+    @keyframes waveTranslationDouble {
+      0% { transform: translateX(-150px); }
+      100% { transform: translateX(150px); }
+    }
+    @keyframes riseBubble {
+      0% { transform: translateY(50px) scale(0.7); opacity: 0; }
+      20% { opacity: 0.8; }
+      80% { opacity: 0.5; }
+      100% { transform: translateY(-160px) scale(1.1); opacity: 0; }
+    }
     .anim-mascot-idle {
       animation: mascotFloat 3.8s ease-in-out infinite;
       transform-origin: center bottom;
     }
     .anim-sparkle {
       animation: riseSparkle 4.2s ease-in-out infinite;
+    }
+    .anim-wave-1 {
+      animation: waveTranslation 4.5s linear infinite;
+    }
+    .anim-wave-2 {
+      animation: waveTranslationDouble 6.5s linear infinite;
+    }
+    .anim-bubble-bg {
+      animation: riseBubble 4s ease-in-out infinite;
+      transform-origin: center;
     }
   `, []);
 
@@ -290,20 +314,36 @@ export const Mascot = React.memo(({
             {/* Clear Liquid Inner Glow */}
             <rect x="0" y="0" width="500" height="650" fill="#F8FAFC" fillOpacity="0.3" />
             
-            {/* Moving water body inside */}
-            <g transform={`translate(0, 120)`}>
-              <ellipse cx="250" cy="230" rx="180" ry="150" fill={`url(#${themeConfig.gradId})`} />
-              {/* Ears Fill */}
-              <path d="M 120,110 C 100,50 110,20 120,10 C 140,10 160,50 180,80 Z" fill={`url(#${themeConfig.gradId})`} />
-              <path d="M 380,110 C 400,50 390,20 380,10 C 360,10 340,50 320,80 Z" fill={`url(#${themeConfig.gradId})`} />
+            {/* Animated sloshing water waves */}
+            <g transform="translate(0, 180)">
+              {/* Secondary Background Waver (Adds parallax depth to active water) */}
+              <g className="anim-wave-2" opacity="0.45">
+                <path 
+                  d="M -300,10 Q -225,-5 -150,10 T 0,10 T 150,10 T 300,10 T 450,10 T 600,10 T 750,10 T 900,10 L 900,600 L -300,600 Z" 
+                  fill={`url(#${themeConfig.gradId})`} 
+                />
+              </g>
+
+              {/* Main Foreground Waving Body */}
+              <g className="anim-wave-1">
+                <path 
+                  d="M -300,20 Q -225,5 -150,20 T 0,20 T 150,20 T 300,20 T 450,20 T 600,20 T 750,20 T 900,20 L 900,600 L -300,600 Z" 
+                  fill={`url(#${themeConfig.gradId})`} 
+                />
+              </g>
             </g>
 
-            {/* Bubble details for fire/boiling theme */}
-            {(theme === 'fire' || theme === 'boiling') && !performanceMode && (
-              <g fill="#FFFFFF" fillOpacity="0.4">
-                <circle cx="210" cy="380" r="4" className="anim-sparkle" style={{ animationDelay: '0.2s', animationDuration: '2.5s' }} />
-                <circle cx="280" cy="340" r="6" className="anim-sparkle" style={{ animationDelay: '1.1s', animationDuration: '3.2s' }} />
-                <circle cx="330" cy="410" r="5" className="anim-sparkle" style={{ animationDelay: '0.6s', animationDuration: '2.8s' }} />
+            {/* Ears Fill */}
+            <path d="M 120,230 C 100,170 110,140 120,130 C 140,130 160,170 180,200 Z" fill={`url(#${themeConfig.gradId})`} />
+            <path d="M 380,230 C 400,170 390,140 380,130 C 360,130 340,170 320,200 Z" fill={`url(#${themeConfig.gradId})`} />
+
+            {/* Seamless Water Bubble Emitters (gentle, matching theme) */}
+            {!performanceMode && (
+              <g fill="#FFFFFF" fillOpacity="0.6">
+                <circle cx="160" cy="350" r="5" className="anim-bubble-bg" style={{ animationDelay: '0s', animationDuration: '4.5s' }} />
+                <circle cx="210" cy="430" r="3.5" className="anim-bubble-bg" style={{ animationDelay: '1.2s', animationDuration: '3.8s' }} />
+                <circle cx="340" cy="390" r="4.5" className="anim-bubble-bg" style={{ animationDelay: '0.6s', animationDuration: '4.2s' }} />
+                <circle cx="280" cy="470" r="3" className="anim-bubble-bg" style={{ animationDelay: '2.1s', animationDuration: '3.5s' }} />
               </g>
             )}
           </g>
@@ -379,6 +419,12 @@ export const Mascot = React.memo(({
 
           {/* GLASS SHELL OUTER CONTOUR */}
           <ellipse cx="250" cy="350" rx="190" ry="160" fill={`url(#${themeConfig.glassGrad})`} fillOpacity="0.15" stroke={themeConfig.borderColor} strokeWidth="5" />
+          
+          {/* Side Floating Hands / Handles */}
+          <g stroke={themeConfig.borderColor} strokeWidth="5" fill={`url(#${themeConfig.glassGrad})`}>
+            <ellipse cx="60" cy="330" rx="15" ry="30" transform="rotate(-15, 60, 330)" />
+            <ellipse cx="440" cy="330" rx="15" ry="30" transform="rotate(15, 440, 330)" />
+          </g>
           
           {/* Ear contours */}
           <path d="M 120,230 C 100,170 110,140 120,130 C 140,130 160,170 180,200" fill="none" stroke={themeConfig.borderColor} strokeWidth="5" strokeLinecap="round" />
