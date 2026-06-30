@@ -224,7 +224,11 @@ export function useNexoraData(
           setLoading(true);
 
           Object.keys(localStorage).forEach((key) => {
-            if (key.startsWith("nexora_") && key !== "nexora_cached_user") {
+            if (
+              (key.startsWith("nexora_") && key !== "nexora_cached_user") ||
+              key.startsWith("hydration_") ||
+              key === "admin_read_feedback_ids"
+            ) {
                localStorage.removeItem(key);
             }
           });
@@ -263,7 +267,11 @@ export function useNexoraData(
           hydratedStateRef.current = null;
 
           Object.keys(localStorage).forEach((key) => {
-            if (key.startsWith("nexora_")) {
+            if (
+              (key.startsWith("nexora_") && key !== "nexora_cached_user") ||
+              key.startsWith("hydration_") ||
+              key === "admin_read_feedback_ids"
+            ) {
               localStorage.removeItem(key);
             }
           });
@@ -575,14 +583,11 @@ export function useNexoraData(
             tiles: data.garden?.tiles || initialGardenDb.tiles,
           };
 
-          if (data.onboardingCompleted === true) {
-            onboardingReasonRef.current = "User doc exists on Firestore and onboardingCompleted is true. Skipping onboarding.";
-            setNeedsOnboarding(false);
-            localStorage.setItem("nexora_onboarding_completed", "true");
-          } else {
-            onboardingReasonRef.current = "User doc exists on Firestore but onboardingCompleted is false or missing. Showing onboarding.";
-            setNeedsOnboarding(true);
-          }
+          // If they already have a document in Firestore, they have an existing account!
+          // We bypass onboarding completely to make sure they are not taken to the onboarding pages.
+          onboardingReasonRef.current = "User doc exists on Firestore. Skipping onboarding.";
+          setNeedsOnboarding(false);
+          localStorage.setItem("nexora_onboarding_completed", "true");
         } else {
           console.log(`[PERSISTENCE AUDIT] User document not found in Firestore for UID: ${user.uid}. Creating user as new.`);
           console.log(`%c=================== RUNTIME PROOF: USER DATA DIRECTLY FROM FIRESTORE ===================`, "color: #EF4444; font-weight: bold; font-size: 14px;");
@@ -595,6 +600,61 @@ export function useNexoraData(
           console.log(`GardenState: null`);
           console.log(`%c========================================================================================`, "color: #EF4444; font-weight: bold; font-size: 14px;");
           
+          // Clear any stale localstorage caches from other users immediately
+          // to prevent leaks before we save the new user's data!
+          Object.keys(localStorage).forEach((key) => {
+            if (
+              (key.startsWith("nexora_") && key !== "nexora_cached_user") ||
+              key.startsWith("hydration_") ||
+              key === "admin_read_feedback_ids"
+            ) {
+              localStorage.removeItem(key);
+            }
+          });
+
+          firestoreSettings = {
+            ...DEFAULT_SETTINGS,
+            displayName: user.displayName || 'Champion',
+          };
+          firestoreStats = DEFAULT_STATS;
+          firestoreProgress = {
+            date: today,
+            completed: false,
+            pushupsDone: false,
+            waterDrank: 0,
+            breathingDone: false,
+            drawingDone: false,
+            footballDone: false,
+            bubblesDone: false,
+            completionsCount: 0,
+            nextRestorationTime: null,
+          } as DailyProgress;
+          firestoreGarden = createInitialGardenState();
+
+          const hydratedObj = {
+            s: firestoreSettings,
+            st: firestoreStats,
+            p: {
+              c: firestoreProgress.completed,
+              cc: firestoreProgress.completionsCount,
+              d: firestoreProgress.date,
+            },
+            g: firestoreGarden,
+          };
+
+          hydratedStateRef.current = hydratedObj;
+          lastSyncedRef.current = hydratedObj;
+
+          setSettings(firestoreSettings);
+          setStats(firestoreStats);
+          setDailyProgress(firestoreProgress);
+          setGardenState(firestoreGarden);
+
+          localStorage.setItem("nexora_settings", JSON.stringify(firestoreSettings));
+          localStorage.setItem("nexora_stats", JSON.stringify(firestoreStats));
+          localStorage.setItem("nexora_progress", JSON.stringify(firestoreProgress));
+          localStorage.setItem("nexora_garden", JSON.stringify(firestoreGarden));
+
           const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
           if (onboardingComp) {
             onboardingReasonRef.current = "User doc not found on Firestore, but onboarding completed locally. Skipping onboarding.";

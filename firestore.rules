@@ -300,7 +300,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isOwner(userId) || isAdmin() || (isAuthenticated() && (!('profilePrivacy' in resource.data) || resource.data.profilePrivacy != 'private'));
       allow create: if isOwner(userId) && isValidUserCreate(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
       allow update: if isOwner(userId) && isValidUserUpdate(request.resource.data) && 
                     (!('role' in request.resource.data) || request.resource.data.role == resource.data.role || isAdmin()) &&
@@ -313,7 +313,7 @@ service cloud.firestore {
       }
 
       match /stats/main {
-        allow read: if isAuthenticated();
+        allow read: if isOwner(userId) || isAdmin() || (isAuthenticated() && (!('profilePrivacy' in get(/databases/$(database)/documents/users/$(userId)).data) || get(/databases/$(database)/documents/users/$(userId)).data.profilePrivacy != 'private'));
         allow create: if isOwner(userId) && isValidStatsCreate(request.resource.data);
         allow update: if isOwner(userId) && isValidStatsUpdate(request.resource.data);
         allow delete: if isOwner(userId) || isAdmin();

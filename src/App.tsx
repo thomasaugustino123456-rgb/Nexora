@@ -391,8 +391,22 @@ export default function App() {
   });
   const [pendingHydrationCoinsAdded, setPendingHydrationCoinsAdded] = useState<boolean>(false);
 
+  // Reload hydration state when the logged-in user changes to prevent cross-account leaks
+  useEffect(() => {
+    if (!user) {
+      setHydrationConsecutiveDays(0);
+      setHydrationWaterLevel(0.0);
+      setHydrationLastCompletedDate('');
+    } else {
+      setHydrationConsecutiveDays(parseInt(localStorage.getItem('hydration_consecutive_days') || '0', 10));
+      setHydrationWaterLevel(parseFloat(localStorage.getItem('hydration_water_level') || '0.0'));
+      setHydrationLastCompletedDate(localStorage.getItem('hydration_last_completed_date') || '');
+    }
+  }, [user]);
+
   // 2-Day Inactivity Check & Reset
   useEffect(() => {
+    if (!user) return;
     const lastCompleted = localStorage.getItem('hydration_last_completed_date');
     if (lastCompleted) {
       const lastDate = new Date(lastCompleted);
@@ -413,7 +427,7 @@ export default function App() {
         showToast("⚠️ Inactivity detected! High-water challenge streak & bottle level reset to 0.", "error");
       }
     }
-  }, []);
+  }, [user]);
 
   const triggerWaterChallengeCompletion = () => {
     const todayStr = new Date().toISOString().split('T')[0];
