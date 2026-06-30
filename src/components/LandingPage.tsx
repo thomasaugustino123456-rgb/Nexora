@@ -935,7 +935,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 <ProgressiveImage 
                   src={combinedMockup} 
                   alt="Nexora Synced Multi-Device Mockup" 
-                  aspectRatioClass="aspect-[16/10]"
+                  aspectRatioClass=""
                   plain={true}
                   className="w-full h-auto transition-transform duration-500 hover:scale-[1.02]"
                 />
@@ -953,7 +953,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           </div>
 
           {/* 3-Column Responsive Grid for individual devices */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-16 pt-8 border-t border-blue-100/30">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-16 pt-8 border-t border-blue-100/30 items-start">
             {/* Laptop Mockup */}
             <motion.div 
               initial={{ opacity: 0, y: 40 }}
@@ -962,11 +962,11 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="flex flex-col space-y-5 text-center md:text-left"
             >
-              <div className="w-full">
+              <div className="w-full flex justify-center md:justify-start">
                 <ProgressiveImage 
                   src={laptopMockup} 
                   alt="Nexora Laptop Desktop Mockup" 
-                  aspectRatioClass="aspect-[4/3]"
+                  aspectRatioClass=""
                   plain={true}
                   className="w-full h-auto transition-transform duration-500 hover:scale-[1.03]"
                 />
@@ -990,11 +990,11 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="flex flex-col space-y-5 text-center md:text-left"
             >
-              <div className="w-full">
+              <div className="w-full flex justify-center md:justify-start">
                 <ProgressiveImage 
                   src={tabletMockup} 
                   alt="Nexora Tablet iPad Mockup" 
-                  aspectRatioClass="aspect-[4/3]"
+                  aspectRatioClass=""
                   plain={true}
                   className="w-full h-auto transition-transform duration-500 hover:scale-[1.03]"
                 />
@@ -1018,13 +1018,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="flex flex-col space-y-5 text-center md:text-left"
             >
-              <div className="w-full">
+              <div className="w-full flex justify-center">
                 <ProgressiveImage 
                   src={phoneMockup} 
                   alt="Nexora Mobile Phone Mockup" 
-                  aspectRatioClass="aspect-[4/3]"
+                  aspectRatioClass=""
                   plain={true}
-                  className="w-full h-auto transition-transform duration-500 hover:scale-[1.03]"
+                  className="w-full max-w-[280px] h-auto transition-transform duration-500 hover:scale-[1.03]"
                 />
               </div>
               <div className="space-y-2.5">
