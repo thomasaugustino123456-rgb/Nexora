@@ -13,10 +13,10 @@ import tabletMockupImg from '../assets/images/nexora_tablet_mockup_1782482248569
 import combinedMockupImg from '../assets/images/nexora_combined_mockup_1782482262347.jpg';
 import nexoraAppIconImg from '../assets/images/nexora_app_icon.png';
 
-const laptopMockup = laptopMockupImg;
-const phoneMockup = phoneMockupImg;
-const tabletMockup = tabletMockupImg;
-const combinedMockup = combinedMockupImg;
+const laptopMockup = "https://res.cloudinary.com/ddtfq9acc/image/upload/v1782483131/file_00000000523471f4a52cc74dc987076e_oz7hi8.png";
+const phoneMockup = "https://res.cloudinary.com/ddtfq9acc/image/upload/v1782483159/file_0000000063d471f48667d8802475ef0e_ytmlpw.png";
+const tabletMockup = "https://res.cloudinary.com/ddtfq9acc/image/upload/v1782483181/file_00000000352871f4b2fac6a36ed8b31f_djawfz.png";
+const combinedMockup = "https://res.cloudinary.com/ddtfq9acc/image/upload/v1782483209/file_0000000009c871f4a4d86809b9d548ea_rpn9kb.png";
 
 const nexoraAppIcon = nexoraAppIconImg;
 
