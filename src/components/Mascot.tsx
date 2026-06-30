@@ -33,6 +33,7 @@ export const Mascot = React.memo(({
 }: MascotProps) => {
   const { play } = useSound();
   const [tilt, setTilt] = useState(0);
+  const [clickTriggered, setClickTriggered] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Mouse tilt effect (for desktop)
@@ -54,7 +55,17 @@ export const Mascot = React.memo(({
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [performanceMode]);
 
+  useEffect(() => {
+    if (clickTriggered) {
+      const timer = setTimeout(() => {
+        setClickTriggered(false);
+      }, 1800);
+      return () => clearTimeout(timer);
+    }
+  }, [clickTriggered]);
+
   const handleMascotClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    setClickTriggered(true);
     // Play sweet meow or woof bark based on soundpack and mood
     try {
       if (soundPack === 'dog') {
@@ -108,6 +119,24 @@ export const Mascot = React.memo(({
       80% { opacity: 0.5; }
       100% { transform: translateY(-160px) scale(1.1); opacity: 0; }
     }
+    @keyframes jumpSqueeze {
+      0% { transform: scale(1) translateY(0); }
+      15% { transform: scale(1.15, 0.8) translateY(0); } /* Squeeze down before jump */
+      35% { transform: scale(0.88, 1.25) translateY(-50px); } /* Jump up (stretch) */
+      65% { transform: scale(1.12, 0.88) translateY(8px); } /* Land & squash */
+      80% { transform: scale(0.98, 1.02) translateY(-2px); } /* Subtle bounce */
+      100% { transform: scale(1) translateY(0); } /* Reset to normal */
+    }
+    @keyframes waterSlosh {
+      0% { transform: translate(0, 330px) skewX(0deg) scaleY(1); }
+      15% { transform: translate(0, 290px) skewX(-16deg) scaleY(1.2); }
+      30% { transform: translate(0, 350px) skewX(14deg) scaleY(0.8); }
+      45% { transform: translate(0, 315px) skewX(-9deg) scaleY(1.1); }
+      60% { transform: translate(0, 338px) skewX(6deg) scaleY(0.95); }
+      75% { transform: translate(0, 326px) skewX(-3deg) scaleY(1.04); }
+      90% { transform: translate(0, 331px) skewX(1deg) scaleY(0.99); }
+      100% { transform: translate(0, 330px) skewX(0deg) scaleY(1); }
+    }
     .anim-mascot-idle {
       animation: mascotFloat 3.8s ease-in-out infinite;
       transform-origin: center bottom;
@@ -124,6 +153,13 @@ export const Mascot = React.memo(({
     .anim-bubble-bg {
       animation: riseBubble 4s ease-in-out infinite;
       transform-origin: center;
+    }
+    .anim-jump-squeeze {
+      animation: jumpSqueeze 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+      transform-origin: center bottom;
+    }
+    .anim-water-slosh {
+      animation: waterSlosh 1.8s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
     }
   `, []);
 
@@ -284,8 +320,8 @@ export const Mascot = React.memo(({
           {/* Mask matching the iconic Mascot Jar shape */}
           <clipPath id="mascot-body-mask">
             <ellipse cx="250" cy="350" rx="190" ry="160" />
-            <path d="M 120,230 C 100,170 110,140 120,130 C 140,130 160,170 180,200 Z" />
-            <path d="M 380,230 C 400,170 390,140 380,130 C 360,130 340,170 320,200 Z" />
+            <path d="M 130,220 C 115,190 120,175 130,165 C 142,165 152,185 165,205 Z" />
+            <path d="M 370,220 C 385,190 380,175 370,165 C 358,165 348,185 335,205 Z" />
           </clipPath>
         </defs>
 
@@ -306,8 +342,11 @@ export const Mascot = React.memo(({
           />
         )}
 
-        {/* Mascot Body Group (Floating & Tiltable) */}
-        <g className={performanceMode ? '' : 'anim-mascot-idle'} style={{ transformOrigin: '250px 480px' }}>
+        {/* Mascot Body Group (Floating & Tiltable + Jump Squeeze on click) */}
+        <g 
+          className={clickTriggered ? 'anim-jump-squeeze' : (performanceMode ? '' : 'anim-mascot-idle')} 
+          style={{ transformOrigin: '250px 510px' }}
+        >
           
           {/* LIQUID SHAPE & JAR INTERIOR */}
           <g clipPath="url(#mascot-body-mask)">
@@ -315,7 +354,10 @@ export const Mascot = React.memo(({
             <rect x="0" y="0" width="500" height="650" fill="#F8FAFC" fillOpacity="0.3" />
             
             {/* Animated sloshing water waves */}
-            <g transform="translate(0, 180)">
+            <g 
+              transform={clickTriggered ? undefined : "translate(0, 330)"} 
+              className={clickTriggered ? 'anim-water-slosh' : ''}
+            >
               {/* Secondary Background Waver (Adds parallax depth to active water) */}
               <g className="anim-wave-2" opacity="0.45">
                 <path 
@@ -332,10 +374,6 @@ export const Mascot = React.memo(({
                 />
               </g>
             </g>
-
-            {/* Ears Fill */}
-            <path d="M 120,230 C 100,170 110,140 120,130 C 140,130 160,170 180,200 Z" fill={`url(#${themeConfig.gradId})`} />
-            <path d="M 380,230 C 400,170 390,140 380,130 C 360,130 340,170 320,200 Z" fill={`url(#${themeConfig.gradId})`} />
 
             {/* Seamless Water Bubble Emitters (gentle, matching theme) */}
             {!performanceMode && (
@@ -427,8 +465,8 @@ export const Mascot = React.memo(({
           </g>
           
           {/* Ear contours */}
-          <path d="M 120,230 C 100,170 110,140 120,130 C 140,130 160,170 180,200" fill="none" stroke={themeConfig.borderColor} strokeWidth="5" strokeLinecap="round" />
-          <path d="M 380,230 C 400,170 390,140 380,130 C 360,130 340,170 320,200" fill="none" stroke={themeConfig.borderColor} strokeWidth="5" strokeLinecap="round" />
+          <path d="M 130,220 C 115,190 120,175 130,165 C 142,165 152,185 165,205 Z" fill={`url(#${themeConfig.glassGrad})`} fillOpacity="0.15" stroke={themeConfig.borderColor} strokeWidth="5" strokeLinecap="round" />
+          <path d="M 370,220 C 385,190 380,175 370,165 C 358,165 348,185 335,205 Z" fill={`url(#${themeConfig.glassGrad})`} fillOpacity="0.15" stroke={themeConfig.borderColor} strokeWidth="5" strokeLinecap="round" />
 
           {/* Lid/Bottle Opening Neck */}
           <ellipse cx="250" cy="130" rx="32" ry="9" fill="rgba(255,255,255,0.2)" stroke={themeConfig.borderColor} strokeWidth="5" />

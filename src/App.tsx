@@ -220,7 +220,7 @@ import { useNexoraData } from "./hooks/useNexoraData";
 import { MascotImage } from "./components/MascotImage";
 import nexoraAppIconImg from "./assets/images/nexora_app_icon.png";
 
-const nexoraAppIcon = nexoraAppIconImg;
+const nexoraAppIcon = "/nexora_mascot_logo.png";
 
 const detectLowEndDevice = (): boolean => {
   if (typeof navigator === "undefined") return false;
@@ -564,6 +564,17 @@ export default function App() {
   };
 
   const handleLogoTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Play sweet mascot sound
+    try {
+      if (settings.isDogSoundPackActive) {
+        play("dogHappy");
+      } else {
+        play("catHappy");
+      }
+    } catch (err) {
+      console.warn("Mascot click sound deferred:", err);
+    }
+
     const rect = e.currentTarget.getBoundingClientRect();
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300;

@@ -1,7 +1,4 @@
 import React from 'react';
-import nexoraAppIconImg from '../assets/images/nexora_app_icon.png';
-
-const nexoraAppIcon = nexoraAppIconImg;
 
 interface MascotImageProps {
   className?: string;
@@ -21,7 +18,7 @@ export function MascotImage({ className = "w-16 h-16 rounded-2xl", alt = "Nexora
       }}
     >
       <img 
-        src={nexoraAppIcon} 
+        src="/nexora_mascot_logo.png" 
         alt={alt}
         className="w-full h-full object-contain filter drop-shadow-[0_4px_10px_rgba(59,130,246,0.2)] select-none"
         style={{
