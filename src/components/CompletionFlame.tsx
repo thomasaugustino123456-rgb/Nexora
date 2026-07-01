@@ -1,38 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   motion,
   AnimatePresence,
-  useSpring,
-  useTransform,
-  animate,
 } from "motion/react";
 import { ChevronRight, Flame, Sparkles } from "lucide-react";
 import { useSound } from "../hooks/useSound";
-
-const AnimatedNumber = ({
-  value,
-  isNewStreak,
-}: {
-  value: number;
-  isNewStreak: boolean;
-}) => {
-  const [displayValue, setDisplayValue] = useState(
-    isNewStreak ? (value > 0 ? value - 1 : 0) : value,
-  );
-
-  useEffect(() => {
-    if (!isNewStreak) return;
-
-    const controls = animate(displayValue, value, {
-      duration: 1.2,
-      ease: [0.34, 1.56, 0.64, 1], // Custom bouncy ease
-      onUpdate: (latest) => setDisplayValue(Math.floor(latest)),
-    });
-    return () => controls.stop();
-  }, [value, isNewStreak]);
-
-  return <>{displayValue}</>;
-};
 
 interface CompletionFlameProps {
   streak: number;
@@ -51,224 +23,292 @@ export function CompletionFlame({
 }: CompletionFlameProps) {
   const { play } = useSound();
   const [showContent, setShowContent] = useState(false);
-  const [isBouncing, setIsBouncing] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(isNewStreak ? streak - 1 : streak);
   const [showContinue, setShowContinue] = useState(false);
-  const perfMode = settings?.performanceMode;
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const playRisingSound = () => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      oscillator.type = 'triangle';
+      oscillator.frequency.setValueAtTime(100, ctx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.8);
+
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.1);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      oscillator.start();
+      oscillator.stop(ctx.currentTime + 0.8);
+    } catch (e) {
+      console.warn("Audio synthesis failed:", e);
+    }
+  };
+
+  const triggerHaptic = (duration: number) => {
+    if ("vibrate" in navigator) {
+      navigator.vibrate(duration);
+    }
+  };
+
+  const executeChallengeWin = (newStreak?: number) => {
+    setIsAnimating(true);
+    
+    // 350ms: Ultra-light warning tick (compression tension)
+    setTimeout(() => triggerHaptic(12), 350);
+
+    // 850ms: Rising sound + Heavy impact pulse + Text update (launch peak)
+    setTimeout(() => {
+      playRisingSound();
+      triggerHaptic(45);
+      if (newStreak !== undefined) {
+        setCurrentStreak(newStreak);
+      } else {
+        setCurrentStreak(streak);
+      }
+    }, 850);
+  };
 
   useEffect(() => {
-    // 1. Initial sequence
+    // Expose to window for developer-callable testing as requested
+    (window as any).executeChallengeWin = (num?: number) => {
+      executeChallengeWin(num);
+    };
+
     const timer = setTimeout(() => {
       setShowContent(true);
-      if (settings?.soundEnabled !== false) {
-        play("flame_complete");
-      }
-      setIsBouncing(isNewStreak);
       if (isNewStreak) {
-        setTimeout(() => setIsBouncing(false), 800);
+        executeChallengeWin();
+      } else {
+        setCurrentStreak(streak);
       }
-    }, 50);
+    }, 100);
 
-    // Delay before they can click continue to ensure they hear/see the glory
-    const btnTimer = setTimeout(() => setShowContinue(true), 4800);
-
-    // Ambient fire loop - separated to avoid restarts
-    let fireLoop: NodeJS.Timeout;
-    if (settings?.soundEnabled !== false) {
-      fireLoop = setInterval(() => {
-        play("fire_ambient");
-      }, 5000);
-    }
+    const btnTimer = setTimeout(() => setShowContinue(true), 4500);
 
     return () => {
       clearTimeout(timer);
       clearTimeout(btnTimer);
-      if (fireLoop) clearInterval(fireLoop);
+      delete (window as any).executeChallengeWin;
     };
-  }, [play, isNewStreak, settings?.soundEnabled]); // Removed showContent from deps
+  }, [isNewStreak, streak]);
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-blue-900/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+    <div className="fixed inset-0 z-[1000] bg-[#131f24] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+      <style>{`
+        .flame-svg-wrapper {
+          width: 200px;
+          height: 240px;
+          position: relative;
+        }
+
+        .glow-bloom {
+          transform-origin: 100px 145px;
+          opacity: 0;
+        }
+        .auto-animate .glow-bloom {
+          animation: energyBloom 1.7s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        .flame-container {
+          transform-origin: 100px 215px;
+          opacity: 0;
+          transform: scale(0);
+        }
+
+        .auto-animate .flame-container {
+          animation: superSqueezeToFlame 1.7s cubic-bezier(0.25, 1, 0.4, 1) forwards,
+                     duolingoIdleBounce 2.4s ease-in-out infinite 1.7s;
+        }
+
+        .gloss-shine {
+          transform: translateX(-160px) rotate(-25px);
+        }
+        .auto-animate .gloss-shine {
+          animation: glossSweep 0.65s cubic-bezier(0.3, 0.8, 0.4, 1) forwards;
+          animation-delay: 1.55s;
+        }
+
+        .streak-text-milestone {
+          color: #ff9600;
+          font-size: 5rem;
+          font-weight: 900;
+          margin-top: -10px;
+          opacity: 0;
+          transform: scale(0.4);
+          font-style: italic;
+          line-height: 1;
+        }
+
+        .auto-animate .streak-text-milestone {
+          animation: textPopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+          animation-delay: 0.9s;
+        }
+
+        .spark-milestone { opacity: 0; }
+        .auto-animate .spark-milestone {
+          animation: ascendParticleMilestone 2.2s linear infinite;
+          transform-origin: bottom center;
+        }
+        .auto-animate .spark-1 { animation-delay: 1.6s; }
+        .auto-animate .spark-2 { animation-delay: 2.0s; }
+        .auto-animate .spark-3 { animation-delay: 2.4s; }
+
+        @keyframes superSqueezeToFlame {
+          0% { transform: scale(0, 0); opacity: 0; }
+          15% { transform: scale(0.6, 0.04); opacity: 1; }
+          38% { transform: scale(0.35, 0.35) translateY(12px); }
+          48% { transform: scale(0.55, 0.16) translateY(16px); }
+          58% { transform: scale(0.65, 1.7) translateY(-32px); }
+          70% { transform: scale(1.24, 0.88) translateY(4px); }
+          84% { transform: scale(0.96, 1.03) translateY(-2px); }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        @keyframes energyBloom {
+          0% { transform: scale(0.2); opacity: 0; }
+          50% { opacity: 0.2; }
+          58% { transform: scale(1.4); opacity: 0.7; }
+          100% { transform: scale(1); opacity: 0.3; }
+        }
+
+        @keyframes duolingoIdleBounce {
+          0%, 100% { transform: scale(1) translateY(0); }
+          50% { transform: scale(1.03, 0.97) translateY(-6px); }
+        }
+
+        @keyframes glossSweep {
+          0% { transform: translateX(-160px) translateY(-50px) rotate(-25px); opacity: 0; }
+          20% { opacity: 0.7; }
+          80% { opacity: 0.7; }
+          100% { transform: translateX(210px) translateY(50px) rotate(-25px); opacity: 0; }
+        }
+
+        @keyframes textPopIn {
+          0% { opacity: 0; transform: scale(0.4) translateY(10px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes ascendParticleMilestone {
+          0% { transform: translateY(190px) translateX(0) scale(0.4); opacity: 0; }
+          25% { opacity: 1; }
+          85% { opacity: 0.7; }
+          100% { transform: translateY(30px) translateX(-30px) scale(0); opacity: 0; }
+        }
+      `}</style>
+
       <AnimatePresence>
         {showContent && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center"
+            className={`flex flex-col items-center justify-center ${isAnimating ? 'auto-animate' : ''}`}
           >
-            {/* Background Glow */}
-            {!perfMode && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 0.3, scale: 1.8 }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  repeatType: "mirror",
-                }}
-                className="absolute w-72 h-72 bg-orange-600 rounded-full blur-[130px] pointer-events-none"
-              />
-            )}
-
-            {/* The Flame Animation */}
-            <motion.div
-              initial={{ scale: 0, y: 100 }}
-              animate={{
-                scale: isBouncing ? [1, 1.25, 1] : 1,
-                y: 0,
-              }}
-              transition={{
-                y: { type: "spring", damping: 10, stiffness: 200 },
-                scale: { type: "tween", duration: 0.6, ease: "easeOut" }
-              }}
-              className="relative w-64 h-64 mb-6 flex items-center justify-center"
-            >
-              <svg
-                viewBox="0 0 200 200"
-                className="w-full h-full drop-shadow-[0_0_40px_rgba(255,100,0,0.7)]"
-              >
+            <div className="flame-svg-wrapper">
+              <svg viewBox="0 0 200 250" width="100%" height="100%">
                 <defs>
-                  <linearGradient
-                    id="duoFlame"
-                    x1="0%"
-                    y1="0%"
-                    x2="0%"
-                    y2="100%"
-                  >
-                    <stop offset="0%" stopColor="#FFD54F" />
-                    <stop offset="50%" stopColor="#FFB300" />
-                    <stop offset="100%" stopColor="#FF6D00" />
+                  <mask id="flameMask">
+                    <path d="M100,30 C135,75 165,110 165,150 C165,190 135,215 100,215 C65,215 35,190 35,150 C35,105 60,85 75,60 C85,42 92,33 100,30 Z" fill="#FFFFFF"/>
+                  </mask>
+                  <linearGradient id="bgGlow" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stopColor="#FF4B4B" stopOpacity="0"/>
+                    <stop offset="100%" stopColor="#FF9600" stopOpacity="0.4"/>
+                  </linearGradient>
+                  <linearGradient id="outerFlame" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stopColor="#FF4B4B"/>
+                    <stop offset="60%" stopColor="#FF9600"/>
+                    <stop offset="100%" stopColor="#FFD000"/>
+                  </linearGradient>
+                  <linearGradient id="innerFlame" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stopColor="#FF9600"/>
+                    <stop offset="50%" stopColor="#FFD000"/>
+                    <stop offset="100%" stopColor="#FFFF80"/>
                   </linearGradient>
                 </defs>
 
-                <motion.path
-                  d="M100,180 C140,180 170,140 170,100 C170,40 100,10 100,10 C100,10 30,40 30,100 C30,140 60,180 100,180 Z"
-                  fill="url(#duoFlame)"
-                  animate={
-                    !perfMode
-                      ? {
-                          scaleY: [1, 1.04, 1],
-                          scaleX: [1, 0.98, 1],
-                        }
-                      : {}
-                  }
-                  transition={{
-                    type: "tween",
-                    duration: 0.7,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                />
+                <circle className="glow-bloom" cx="100" cy="145" r="75" fill="url(#bgGlow)" />
 
-                <motion.path
-                  d="M100,165 C125,165 145,140 145,110 C145,80 100,50 100,50 C100,50 55,80 55,110 C55,140 75,165 100,165 Z"
-                  fill="#FFF"
-                  opacity="0.3"
-                  animate={
-                    !perfMode
-                      ? {
-                          y: [0, 4, 0],
-                        }
-                      : {}
-                  }
-                  transition={{
-                    type: "tween",
-                    duration: 0.9,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                />
+                <g className="flame-container">
+                  <path d="M100,30 C135,75 165,110 165,150 C165,190 135,215 100,215 C65,215 35,190 35,150 C35,105 60,85 75,60 C85,42 92,33 100,30 Z" fill="url(#outerFlame)" />
+                  <g mask="url(#flameMask)">
+                    <rect className="gloss-shine" x="-50" y="20" width="45" height="250" fill="#FFFFFF" opacity="0.3" />
+                  </g>
+                  <path d="M100,75 C122,105 140,125 140,155 C140,180 122,195 100,195 C78,195 60,180 60,155 C60,125 80,110 90,95 C95,87 97,80 100,75 Z" fill="url(#innerFlame)" />
+                  <ellipse cx="100" cy="160" rx="16" ry="24" fill="#FFFFFF" opacity="0.32" />
+                </g>
+
+                <circle className="spark-milestone spark-1" cx="95" cy="0" r="3.5" fill="#FFD000" />
+                <circle className="spark-milestone spark-2" cx="115" cy="0" r="2.5" fill="#FFFF80" />
+                <circle className="spark-milestone spark-3" cx="85" cy="0" r="4" fill="#FF4B4B" />
               </svg>
+            </div>
 
-              {/* Day Number with Count-Up Animation */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4 }}
-                className="absolute inset-0 flex items-center justify-center pt-8"
-              >
-                <div className="text-8xl font-black text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] italic">
-                  <AnimatedNumber value={streak} isNewStreak={isNewStreak} />
-                </div>
-              </motion.div>
-            </motion.div>
+            <div className="streak-text-milestone">
+              {currentStreak}
+            </div>
 
-            {/* Labels */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="space-y-2 mb-12"
+              transition={{ delay: 1.2 }}
+              className="mt-8 space-y-2"
             >
               <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">
                 DAY STREAK!
               </h2>
-              <p className="text-orange-300 font-bold tracking-widest text-sm uppercase">
+              <p className="text-orange-400 font-bold tracking-widest text-sm uppercase">
                 Challenge Complete • {xpEarned} XP Earned
               </p>
             </motion.div>
 
-            {/* Features Staggered */}
-            <div className="flex gap-4 mb-16">
+            <div className="flex gap-4 mt-8">
               {[
-                {
-                  icon: <Flame className="text-orange-500" />,
-                  label: "On Fire",
-                },
-                {
-                  icon: <Sparkles className="text-yellow-400" />,
-                  label: "Legendary",
-                },
+                { icon: <Flame className="text-orange-500" />, label: "On Fire" },
+                { icon: <Sparkles className="text-yellow-400" />, label: "Legendary" },
               ].map((item, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.8 + i * 0.1 }}
-                  className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl flex items-center gap-3 border border-white/10"
+                  transition={{ delay: 1.5 + i * 0.1 }}
+                  className="bg-white/5 backdrop-blur-md px-6 py-3 rounded-2xl flex items-center gap-3 border border-white/10"
                 >
                   {item.icon}
-                  <span className="text-white font-black uppercase text-xs tracking-widest">
+                  <span className="text-white font-black uppercase text-[10px] tracking-widest">
                     {item.label}
                   </span>
                 </motion.div>
               ))}
             </div>
 
-            {/* Continue Button */}
             <AnimatePresence>
               {showContinue && (
                 <motion.button
-                  key="continue-btn"
                   initial={{ opacity: 0, scale: 0.8, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  transition={{ delay: 0.2 }}
                   onClick={() => {
                     play("nav_switch");
                     onContinue();
                   }}
-                  className="group relative bg-orange-500 hover:bg-orange-600 px-12 py-5 rounded-[2rem] flex items-center gap-4 transition-all shadow-[0_20px_40px_rgba(249,115,22,0.4)] mt-12"
+                  className="group relative bg-[#58cc02] hover:bg-[#46a302] px-12 py-5 rounded-[2rem] flex items-center gap-4 transition-all shadow-[0_8px_0_#46a302] mt-16 active:translate-y-1 active:shadow-none"
                 >
                   <span className="text-white font-black text-xl italic uppercase tracking-tighter">
-                    Continue to Trophy Reward
+                    Continue to Reward
                   </span>
                   <div className="bg-white/20 p-2 rounded-xl group-hover:translate-x-2 transition-transform">
                     <ChevronRight className="text-white" size={24} />
-                  </div>
-
-                  {/* Shine effect */}
-                  <div className="absolute inset-0 rounded-[2rem] overflow-hidden pointer-events-none">
-                    <motion.div
-                      animate={{ x: ["-100%", "200%"] }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "linear",
-                      }}
-                      className="w-1/2 h-full bg-white/20 skew-x-12"
-                    />
                   </div>
                 </motion.button>
               )}
