@@ -189,82 +189,62 @@ export function useNexoraData(
   const hydratedStateRef = useRef<any>(null);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setAuthLoading(false);
-      console.log(`[PERSISTENCE AUDIT] AUTH RESOLVED - User UID: ${currentUser?.uid || "null"}, Email: ${currentUser?.email || "null"}`);
-      const prevUserId = localStorage.getItem("nexora_cached_user");
+    let loadingTimeout: NodeJS.Timeout | null = null;
+    let isLoaderResolved = false;
 
-      setIsStateLoaded(false, "Auth state listener triggered");
+    const getDocWithCacheFallback = async (docRef: any) => {
+      try {
+        return await getDoc(docRef);
+      } catch (e: any) {
+        console.warn(`[PERSISTENCE FIX] getDoc failed for ${docRef.path}, trying cache fallback:`, e);
+        try {
+          return await getDocFromCache(docRef);
+        } catch (cacheErr) {
+          console.warn(`[PERSISTENCE FIX] getDocFromCache failed for ${docRef.path}:`, cacheErr);
+          throw e;
+        }
+      }
+    };
+
+    const getDocsWithCacheFallback = async (queryRef: any) => {
+      try {
+        return await getDocs(queryRef);
+      } catch (e: any) {
+        console.warn(`[PERSISTENCE FIX] getDocs failed, trying cache fallback:`, e);
+        try {
+          return await getDocsFromCache(queryRef);
+        } catch (cacheErr) {
+          console.warn(`[PERSISTENCE FIX] getDocsFromCache failed:`, cacheErr);
+          throw e;
+        }
+      }
+    };
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      console.log(`[STARTUP] AUTH STATE RESOLVED - User UID: ${currentUser?.uid || "null"}`);
+      setAuthLoading(false);
+
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+        loadingTimeout = null;
+      }
+      isLoaderResolved = false;
+
+      // Always reset the state loading guards upon an auth state transition to prevent syncing stale data
+      setIsStateLoaded(false, "Auth state changed");
       hasMatchedHydratedStateRef.current = false;
       hydratedStateRef.current = null;
 
-      if (currentUser) {
-        console.log(`[PERSISTENCE AUDIT] AUTH UID: ${currentUser.uid}`);
-        console.log(`[PERSISTENCE AUDIT] FIRESTORE DOCUMENT PATH BEING LOADED: users/${currentUser.uid}`);
-        const hasCache = localStorage.getItem("nexora_onboarding_completed") === "true";
-        if (prevUserId !== currentUser.uid || !hasCache) {
-          // New / different user, or cache cleared (e.g. after explicit logout).
-          // Force safe transition loading state before fetching Firestore settings
-          // and prevent flashing onboarding screens or wiping user data!
-          setLoading(true);
-          setIsDataReady(false);
-          setNeedsOnboarding(false);
-        }
-
-        if (prevUserId && prevUserId !== currentUser.uid) {
-          console.log("Hooks: Different user detected, resetting caches in-memory and locally.");
-          // Clear sync blockers and caches first
-          dataLoadedFromFirestore.current = false;
-          lastSyncedRef.current = null;
-          lastLoadedUserIdRef.current = null;
-          setIsStateLoaded(false, "Different user logged in, clearing cached state");
-          hasMatchedHydratedStateRef.current = false;
-          hydratedStateRef.current = null;
-          setIsDataReady(false);
-          setLoading(true);
-
-          Object.keys(localStorage).forEach((key) => {
-            if (
-              (key.startsWith("nexora_") && key !== "nexora_cached_user") ||
-              key.startsWith("hydration_") ||
-              key === "admin_read_feedback_ids"
-            ) {
-               localStorage.removeItem(key);
-            }
-          });
-          setSettings(DEFAULT_SETTINGS);
-          setStats(DEFAULT_STATS);
-          setDailyProgress({
-            date: today,
-            completed: false,
-            pushupsDone: false,
-            waterDrank: 0,
-            breathingDone: false,
-            drawingDone: false,
-            footballDone: false,
-            bubblesDone: false,
-            completionsCount: 0,
-            nextRestorationTime: null,
-          });
-          setGardenState(createInitialGardenState());
-          setNeedsOnboarding(false);
-        }
-        localStorage.setItem("nexora_cached_user", currentUser.uid);
-        setUser(currentUser);
-      } else {
-        // Only clear caches if they actually had an active user before (explicit sign out).
-        // This prevents erasing local caches/onboarding flags during transient startup initialization.
+      if (!currentUser) {
+        // Handle User Explicit Logout or Missing Session
+        const prevUserId = localStorage.getItem("nexora_cached_user");
         if (prevUserId) {
           console.log("Hooks: User explicit logout, clearing caches.");
           
-          // CRITICAL: Block any sync during state resets
           dataLoadedFromFirestore.current = false;
           setIsDataReady(false);
           lastSyncedRef.current = null;
           lastLoadedUserIdRef.current = null;
-          setIsStateLoaded(false, "User explicit logout, clearing cached state");
-          hasMatchedHydratedStateRef.current = false;
-          hydratedStateRef.current = null;
 
           Object.keys(localStorage).forEach((key) => {
             if (
@@ -292,86 +272,104 @@ export function useNexoraData(
           setGardenState(createInitialGardenState());
         }
         setUser(null);
-        setIsDataReady(false); // DO NOT allow ready state without user
+        setIsDataReady(false);
         dataLoadedFromFirestore.current = false;
         lastLoadedUserIdRef.current = null;
         lastSyncedRef.current = null;
-        setIsStateLoaded(false, "No user session exists");
-        hasMatchedHydratedStateRef.current = false;
-        hydratedStateRef.current = null;
         setNeedsOnboarding(false);
         setLoading(false);
+        return;
       }
-    });
 
-    return unsubscribeAuth;
-  }, []);
+      // We have a logged-in user!
+      const prevUserId = localStorage.getItem("nexora_cached_user");
+      const hasCache = localStorage.getItem("nexora_onboarding_completed") === "true";
 
-  // Separate effect for standardizing firestore loaders to prevent leaks (Optimized with safety timeout & prevents default overwrite on network errors)
-  useEffect(() => {
-    if (!user) {
-      setIsDataReady(false);
-      setLoading(false);
-      return;
-    }
+      setUser(currentUser);
+      localStorage.setItem("nexora_cached_user", currentUser.uid);
 
-    if (lastLoadedUserIdRef.current === user.uid && dataLoadedFromFirestore.current) {
-      console.log("Hooks: User already loaded, avoiding redundant loadData trigger.");
-      return;
-    }
+      // Handle Switch User Cleanup
+      if (prevUserId && prevUserId !== currentUser.uid) {
+        console.log("Hooks: Different user detected, resetting caches in-memory and locally.");
+        dataLoadedFromFirestore.current = false;
+        lastSyncedRef.current = null;
+        lastLoadedUserIdRef.current = null;
+        setIsDataReady(false);
+        setLoading(true);
 
-    // Force loading state for non-cached or newly logged-in sessions to let Firestore data resolve
-    // this completely prevents existing users from flashing onboarding screens during transitional sign-ins!
-    const hasCache = localStorage.getItem("nexora_onboarding_completed") === "true";
-    if (!hasCache) {
-      setLoading(true);
-      setIsDataReady(false);
-    }
+        Object.keys(localStorage).forEach((key) => {
+          if (
+            (key.startsWith("nexora_") && key !== "nexora_cached_user") ||
+            key.startsWith("hydration_") ||
+            key === "admin_read_feedback_ids"
+          ) {
+             localStorage.removeItem(key);
+          }
+        });
+        setSettings(DEFAULT_SETTINGS);
+        setStats(DEFAULT_STATS);
+        setDailyProgress({
+          date: today,
+          completed: false,
+          pushupsDone: false,
+          waterDrank: 0,
+          breathingDone: false,
+          drawingDone: false,
+          footballDone: false,
+          bubblesDone: false,
+          completionsCount: 0,
+          nextRestorationTime: null,
+        });
+        setGardenState(createInitialGardenState());
+        setNeedsOnboarding(false);
+      }
 
-    let isLoaderResolved = false;
-
-    // Safety timeout: if Firestore takes too long (or user is offline), immediately resolve with either the local cached data
-    // or a clean Connection Failed screen rather than hanging forever!
-    let loadingTimeout: NodeJS.Timeout | null = null;
-    
-    const timeoutDuration = hasCache 
-      ? (navigator.onLine ? 5000 : 500) 
-      : (navigator.onLine ? 25000 : 1000); // 25 seconds max for online, 1 second for offline to prevent infinite splash hang
-      
-    loadingTimeout = setTimeout(() => {
-      if (!isLoaderResolved) {
-        console.warn("Hooks: Loading timeout reached. Falling back to local offline states to prevent infinite hang.");
-        
-        // If there's no cache, initialize with default offline states to allow playability
-        if (!hasCache) {
-          setSettings(DEFAULT_SETTINGS);
-          setStats(DEFAULT_STATS);
-          const currentProgress = {
-            date: today,
-            completed: false,
-            pushupsDone: false,
-            waterDrank: 0,
-            breathingDone: false,
-            drawingDone: false,
-            footballDone: false,
-            bubblesDone: false,
-            completionsCount: 0,
-            nextRestorationTime: null,
-          };
-          setDailyProgress(currentProgress);
-          setGardenState(createInitialGardenState());
-        }
-
-        const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
-        setNeedsOnboarding(!onboardingComp);
+      // Prevent redundant loads if this user's data is already successfully fetched
+      if (lastLoadedUserIdRef.current === currentUser.uid && dataLoadedFromFirestore.current) {
+        console.log("Hooks: User already loaded, avoiding redundant loadData trigger.");
         setIsDataReady(true);
         setLoading(false);
-        showToast("Slow connection detected. Running in offline backup mode! 📡", "info");
+        return;
       }
-    }, timeoutDuration);
 
-    const loadData = async () => {
-      // If offline and cache is present, bypass Firestore completely for instant rendering
+      // Set loading and ready transitions
+      setLoading(true);
+      setIsDataReady(false);
+
+      // Setup the deterministic safety loading timeout duration
+      const timeoutDuration = hasCache 
+        ? (navigator.onLine ? 5000 : 500) 
+        : (navigator.onLine ? 25000 : 1000);
+
+      loadingTimeout = setTimeout(() => {
+        if (!isLoaderResolved) {
+          console.warn("Hooks: Loading timeout reached. Falling back to local offline states to prevent infinite hang.");
+          if (!hasCache) {
+            setSettings(DEFAULT_SETTINGS);
+            setStats(DEFAULT_STATS);
+            setDailyProgress({
+              date: today,
+              completed: false,
+              pushupsDone: false,
+              waterDrank: 0,
+              breathingDone: false,
+              drawingDone: false,
+              footballDone: false,
+              bubblesDone: false,
+              completionsCount: 0,
+              nextRestorationTime: null,
+            });
+            setGardenState(createInitialGardenState());
+          }
+          const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
+          setNeedsOnboarding(!onboardingComp);
+          setIsDataReady(true);
+          setLoading(false);
+          showToast("Slow connection detected. Running in offline backup mode! 📡", "info");
+        }
+      }, timeoutDuration);
+
+      // Offline Cache Bypass
       if (!navigator.onLine && hasCache) {
         console.log("Hooks: Offline mode detected with active cache. Directly using cached state.");
         setNeedsOnboarding(false);
@@ -405,119 +403,41 @@ export function useNexoraData(
 
         hydratedStateRef.current = cachedObj;
         lastSyncedRef.current = cachedObj;
-        console.log("[PERSISTENCE FIX]\nFirestore hydration started (offline bypass). Waiting for React state flush to unlock sync gate.");
+        lastLoadedUserIdRef.current = currentUser.uid;
 
-        lastLoadedUserIdRef.current = user.uid;
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+          loadingTimeout = null;
+        }
+        isLoaderResolved = true;
         return;
       }
 
-      const userDocRef = doc(db, "users", user.uid);
-      const progressDocRef = doc(db, "users", user.uid, "progress", today);
-      const ecoShopRef = collection(db, "users", user.uid, "eco_shop");
+      // Initiate Core Firestore Reads
+      const userDocRef = doc(db, "users", currentUser.uid);
+      const progressDocRef = doc(db, "users", currentUser.uid, "progress", today);
+      const ecoShopRef = collection(db, "users", currentUser.uid, "eco_shop");
 
-      console.log(`[PERSISTENCE AUDIT] [READ START] Initiated Firestore read for user UID: ${user.uid}`);
-      console.log(`[PERSISTENCE AUDIT] User document path: ${userDocRef.path}`);
-      console.log(`[PERSISTENCE AUDIT] Progress document path: ${progressDocRef.path}`);
-
-      const getDocWithCacheFallback = async (docRef: any) => {
-        try {
-          return await getDoc(docRef);
-        } catch (e: any) {
-          console.warn(`[PERSISTENCE FIX] getDoc failed for ${docRef.path}, trying cache fallback:`, e);
-          try {
-            return await getDocFromCache(docRef);
-          } catch (cacheErr) {
-            console.warn(`[PERSISTENCE FIX] getDocFromCache failed for ${docRef.path}:`, cacheErr);
-            throw e;
-          }
-        }
-      };
-
-      const getDocsWithCacheFallback = async (queryRef: any) => {
-        try {
-          return await getDocs(queryRef);
-        } catch (e: any) {
-          console.warn(`[PERSISTENCE FIX] getDocs failed, trying cache fallback:`, e);
-          try {
-            return await getDocsFromCache(queryRef);
-          } catch (cacheErr) {
-            console.warn(`[PERSISTENCE FIX] getDocsFromCache failed:`, cacheErr);
-            throw e;
-          }
-        }
-      };
+      console.log(`[PERSISTENCE AUDIT] [READ START] Initiated Firestore read for user UID: ${currentUser.uid}`);
 
       try {
-        const timeoutDuration = hasCache ? 15000 : 25000;
+        const networkTimeoutDuration = hasCache ? 15000 : 25000;
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Firebase network timed out (${timeoutDuration / 1000}s)`)), timeoutDuration)
+          setTimeout(() => reject(new Error(`Firebase network timed out (${networkTimeoutDuration / 1000}s)`)), networkTimeoutDuration)
         );
 
-        let docSnap, progressSnap, ecoSnap;
-        try {
-          const fetchPromise = Promise.all([
-            getDocWithCacheFallback(userDocRef),
-            getDocWithCacheFallback(progressDocRef),
-            getDocsWithCacheFallback(ecoShopRef),
-          ]);
+        const fetchPromise = Promise.all([
+          getDocWithCacheFallback(userDocRef),
+          getDocWithCacheFallback(progressDocRef),
+          getDocsWithCacheFallback(ecoShopRef),
+        ]);
 
-          [docSnap, progressSnap, ecoSnap] = (await Promise.race([
-            fetchPromise,
-            timeoutPromise,
-          ])) as [any, any, any];
-          
-          console.log(`[PERSISTENCE AUDIT] [READ SUCCESS] Core Firestore data loaded successfully for UID: ${user.uid}`);
-        } catch (fetchErr) {
-          console.error(`[PERSISTENCE AUDIT] [READ FAILURE] Failed fetching Firestore data for UID: ${user.uid}. Error:`, fetchErr);
-          
-          // Regardless of hasCache, we should fallback gracefully to avoid blocking the user with a hard Connection Failed screen!
-          console.warn("Hooks: Primary connection fetch timed out or failed. Falling back to local states to preserve offline playability.");
+        const [docSnap, progressSnap, ecoSnap] = (await Promise.race([
+          fetchPromise,
+          timeoutPromise,
+        ])) as [any, any, any];
 
-          const currentProgress = cachedProgress?.date === today ? cachedProgress : {
-            date: today,
-            completed: false,
-            pushupsDone: false,
-            waterDrank: 0,
-            breathingDone: false,
-            drawingDone: false,
-            footballDone: false,
-            bubblesDone: false,
-            completionsCount: 0,
-            nextRestorationTime: null,
-          };
-
-          const cachedObj = {
-            s: cachedSettings,
-            st: cachedStats,
-            p: {
-              c: currentProgress.completed,
-              cc: currentProgress.completionsCount,
-              d: currentProgress.date,
-            },
-            g: cachedGarden,
-          };
-
-          hydratedStateRef.current = cachedObj;
-          lastSyncedRef.current = cachedObj;
-          console.log("[PERSISTENCE FIX]\nNetwork loading timeout or primary connection failed, falling back to cache. Waiting for React state flush to unlock sync gate.");
-
-          if (loadingTimeout) clearTimeout(loadingTimeout);
-          isLoaderResolved = true;
-
-          // Set client state to cached or default local states so the app is instantly usable
-          setSettings(cachedSettings);
-          setStats(cachedStats);
-          setDailyProgress(currentProgress);
-          setGardenState(cachedGarden);
-
-          const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
-          setNeedsOnboarding(!onboardingComp);
-          setIsDataReady(true);
-          setLoading(false);
-          
-          showToast("Running offline. Your progress will be synced when connection is restored! 📡", "info");
-          return;
-        }
+        console.log(`[PERSISTENCE AUDIT] [READ SUCCESS] Core Firestore data loaded successfully for UID: ${currentUser.uid}`);
 
         let firestoreSettings = DEFAULT_SETTINGS;
         let firestoreStats = DEFAULT_STATS;
@@ -538,18 +458,7 @@ export function useNexoraData(
         if (docSnap.exists()) {
           const data = docSnap.data();
           console.log(`[PERSISTENCE AUDIT] User document found in Firestore. onboardingCompleted: ${data.onboardingCompleted}`);
-          console.log(`[PERSISTENCE AUDIT] COMPLETE FIRESTORE DOCUMENT:`, JSON.stringify(data));
-          
-          console.log(`%c=================== RUNTIME PROOF: USER DATA DIRECTLY FROM FIRESTORE ===================`, "color: #10B981; font-weight: bold; font-size: 14px;");
-          console.log(`UID: ${user.uid}`);
-          console.log(`Document Exists: true`);
-          console.log(`OnboardingCompleted: ${data.onboardingCompleted}`);
-          console.log(`Coins: ${data.stats?.coins ?? 0}`);
-          console.log(`XP: ${data.stats?.xp ?? 0}`);
-          console.log(`Username: ${data.displayName || 'Champion'}`);
-          console.log(`GardenState:`, JSON.stringify(data.garden || null));
-          console.log(`%c========================================================================================`, "color: #10B981; font-weight: bold; font-size: 14px;");
-          
+
           firestoreSettings = {
             ...DEFAULT_SETTINGS,
             ...data,
@@ -568,6 +477,7 @@ export function useNexoraData(
             },
             trophies: data.stats?.trophies || [],
           };
+
           const initialGardenDb = createInitialGardenState();
           firestoreGarden = {
             ...initialGardenDb,
@@ -583,7 +493,6 @@ export function useNexoraData(
             tiles: data.garden?.tiles || initialGardenDb.tiles,
           };
 
-          // If they already have a document in Firestore, read onboarding status
           const hasCompletedOnboardingDb = data.onboardingCompleted === true;
           setNeedsOnboarding(!hasCompletedOnboardingDb);
           if (hasCompletedOnboardingDb) {
@@ -594,19 +503,9 @@ export function useNexoraData(
             onboardingReasonRef.current = "User doc exists on Firestore with onboardingCompleted=false. Showing onboarding.";
           }
         } else {
-          console.log(`[PERSISTENCE AUDIT] User document not found in Firestore for UID: ${user.uid}. Creating user as new.`);
-          console.log(`%c=================== RUNTIME PROOF: USER DATA DIRECTLY FROM FIRESTORE ===================`, "color: #EF4444; font-weight: bold; font-size: 14px;");
-          console.log(`UID: ${user.uid}`);
-          console.log(`Document Exists: false`);
-          console.log(`OnboardingCompleted: false`);
-          console.log(`Coins: 0`);
-          console.log(`XP: 0`);
-          console.log(`Username: Champion`);
-          console.log(`GardenState: null`);
-          console.log(`%c========================================================================================`, "color: #EF4444; font-weight: bold; font-size: 14px;");
-          
-          // Clear any stale localstorage caches from other users immediately
-          // to prevent leaks before we save the new user's data!
+          // New Profile Path
+          console.log(`[PERSISTENCE AUDIT] User document not found in Firestore for UID: ${currentUser.uid}. Creating user as new.`);
+
           Object.keys(localStorage).forEach((key) => {
             if (
               (key.startsWith("nexora_") && key !== "nexora_cached_user") ||
@@ -619,7 +518,7 @@ export function useNexoraData(
 
           firestoreSettings = {
             ...DEFAULT_SETTINGS,
-            displayName: user.displayName || 'Champion',
+            displayName: currentUser.displayName || 'Champion',
           };
           firestoreStats = DEFAULT_STATS;
           firestoreProgress = {
@@ -636,30 +535,6 @@ export function useNexoraData(
           } as DailyProgress;
           firestoreGarden = createInitialGardenState();
 
-          const hydratedObj = {
-            s: firestoreSettings,
-            st: firestoreStats,
-            p: {
-              c: firestoreProgress.completed,
-              cc: firestoreProgress.completionsCount,
-              d: firestoreProgress.date,
-            },
-            g: firestoreGarden,
-          };
-
-          hydratedStateRef.current = hydratedObj;
-          lastSyncedRef.current = hydratedObj;
-
-          setSettings(firestoreSettings);
-          setStats(firestoreStats);
-          setDailyProgress(firestoreProgress);
-          setGardenState(firestoreGarden);
-
-          localStorage.setItem("nexora_settings", JSON.stringify(firestoreSettings));
-          localStorage.setItem("nexora_stats", JSON.stringify(firestoreStats));
-          localStorage.setItem("nexora_progress", JSON.stringify(firestoreProgress));
-          localStorage.setItem("nexora_garden", JSON.stringify(firestoreGarden));
-
           const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
           if (onboardingComp) {
             onboardingReasonRef.current = "User doc not found on Firestore, but onboarding completed locally. Skipping onboarding.";
@@ -669,12 +544,11 @@ export function useNexoraData(
             setNeedsOnboarding(true);
           }
 
-          // Securely create a brand-new user profile in Firestore exactly once now
           const initialProfile = {
-            displayName: firestoreSettings.displayName || user.displayName || 'Champion',
+            displayName: firestoreSettings.displayName || currentUser.displayName || 'Champion',
             ...firestoreSettings,
-            uid: user.uid,
-            email: user.email || `${user.uid}@nexora.app`,
+            uid: currentUser.uid,
+            email: currentUser.email || `${currentUser.uid}@nexora.app`,
             role: 'user',
             stats: firestoreStats,
             garden: firestoreGarden,
@@ -684,22 +558,19 @@ export function useNexoraData(
             onboardingCompleted: onboardingComp,
           };
 
-          console.log(`[PERSISTENCE AUDIT] Writing brand-new user document to Firestore for UID: ${user.uid}`);
+          console.log(`[PERSISTENCE AUDIT] Writing brand-new user document to Firestore for UID: ${currentUser.uid}`);
           await setDoc(userDocRef, initialProfile);
-          console.log(`[PERSISTENCE AUDIT] Successfully created brand-new user document for UID: ${user.uid}`);
+          console.log(`[PERSISTENCE AUDIT] Successfully created brand-new user document for UID: ${currentUser.uid}`);
         }
 
         if (progressSnap.exists()) {
           const pData = progressSnap.data();
-          console.log(`[PERSISTENCE AUDIT] Progress document found for today: ${today}. Completed: ${pData.completed}`);
           if (pData.date === today) {
             firestoreProgress = {
               ...firestoreProgress,
               ...pData,
             };
           }
-        } else {
-          console.log(`[PERSISTENCE AUDIT] Progress document not found for today: ${today}`);
         }
 
         const ecoIds = ecoSnap.docs.map((d) => d.id);
@@ -711,14 +582,6 @@ export function useNexoraData(
             ]),
           ];
         }
-
-        console.log(`[PERSISTENCE AUDIT] AUTH UID: ${user.uid}`);
-        console.log(`[PERSISTENCE AUDIT] FIRESTORE DOCUMENT PATH: users/${user.uid}`);
-        console.log(`[PERSISTENCE AUDIT] ONBOARDING STATUS: ${docSnap.exists() ? (docSnap.data().onboardingCompleted ? "Completed" : "Not Completed") : "Not Found"}`);
-        console.log(`[PERSISTENCE AUDIT] LOADED XP: ${firestoreStats.xp}`);
-        console.log(`[PERSISTENCE AUDIT] LOADED COINS: ${firestoreStats.coins}`);
-        console.log(`[PERSISTENCE AUDIT] LOADED STREAK: ${firestoreStats.streak}`);
-        console.log(`[PERSISTENCE AUDIT] LOADED GARDEN STATE:`, JSON.stringify(firestoreGarden));
 
         const hydratedObj = {
           s: firestoreSettings,
@@ -734,7 +597,7 @@ export function useNexoraData(
         hydratedStateRef.current = hydratedObj;
         lastSyncedRef.current = hydratedObj;
 
-        // Save to state and local cache immediately
+        // Perform atomic hydration of local states
         setSettings(firestoreSettings);
         setStats(firestoreStats);
         setDailyProgress(firestoreProgress);
@@ -747,7 +610,7 @@ export function useNexoraData(
         localStorage.setItem("nexora_garden", JSON.stringify(firestoreGarden));
 
         try {
-          const progressCollRef = collection(db, "users", user.uid, "progress");
+          const progressCollRef = collection(db, "users", currentUser.uid, "progress");
           const historySnap = await getDocsWithCacheFallback(progressCollRef) as any;
           historySnap.forEach((doc: any) => {
             const hData = doc.data() as any;
@@ -759,46 +622,38 @@ export function useNexoraData(
           console.warn("Hooks: Error fetching history list from firestore:", historyErr);
         }
 
-        // Successfully loaded. Wait for deepEqual matching to unlock the sync gate!
         dataLoadedFromFirestore.current = true;
-        console.log("[PERSISTENCE FIX]\nFirestore load complete. Waiting for React state matching to unlock sync gate.");
-        lastLoadedUserIdRef.current = user.uid;
-        if (loadingTimeout) clearTimeout(loadingTimeout);
+        lastLoadedUserIdRef.current = currentUser.uid;
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+          loadingTimeout = null;
+        }
         isLoaderResolved = true;
         setIsDataReady(true);
         setLoading(false);
       } catch (err: any) {
-        console.error(`[PERSISTENCE AUDIT] [LOAD FAILURE] Error during user data initialization for UID ${user.uid}:`, err);
-        const isOfflineReason = !navigator.onLine || err?.message?.includes("offline") || err?.message?.includes("timed out") || err?.code === "unavailable";
-        if (isOfflineReason) {
-          console.warn("Hooks: Firestore backend unreachable.");
-        } else {
-          console.error("Hooks: Error loading initial user data: ", err);
-        }
-
+        console.error(`[PERSISTENCE AUDIT] [LOAD FAILURE] Error during user data initialization for UID ${currentUser.uid}:`, err);
         if (!isLoaderResolved) {
-          if (loadingTimeout) clearTimeout(loadingTimeout);
+          if (loadingTimeout) {
+            clearTimeout(loadingTimeout);
+            loadingTimeout = null;
+          }
           isLoaderResolved = true;
 
-          // Rather than showing a hard Connection Failed blocking screen, we always boot into the offline-playable app!
-          console.warn("Hooks: Resolving load data from final catch-block with local states fallback.");
-          
           const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
           setNeedsOnboarding(!onboardingComp);
           setIsDataReady(true);
           setLoading(false);
-          
           showToast("Running in local offline mode. Progress will sync when possible! 📡", "info");
         }
       }
-    };
-
-    loadData();
+    });
 
     return () => {
+      unsubscribeAuth();
       if (loadingTimeout) clearTimeout(loadingTimeout);
     };
-  }, [user]);
+  }, []);
 
   // Check if current state matches hydrated state to set hasMatchedHydratedStateRef
   useEffect(() => {
