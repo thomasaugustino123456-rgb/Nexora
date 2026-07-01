@@ -823,14 +823,12 @@ export default function App() {
   const onFinishWalkthrough = async () => {
     setShowWalkthrough(false);
     onUpdateSettings({ isWalkthroughCompleted: true });
-    // Bonus for finishing + permanent flag persistence
-    if (user) {
-      await updateDoc(doc(db, "users", user.uid), {
-        coins: increment(50),
-        totalPoints: increment(10),
-        isWalkthroughCompleted: true,
-      });
-    }
+    // Bonus for finishing in-memory which background sync will persist to database correctly
+    onUpdateStats((prev) => ({
+      ...prev,
+      coins: prev.coins + 50,
+      totalPoints: prev.totalPoints + 10,
+    }));
     showToast("WELCOME CACHE RECEIVED: +50 COINS! 🚀", "success");
     vibrate(VIBRATION_PATTERNS.SUCCESS);
   };

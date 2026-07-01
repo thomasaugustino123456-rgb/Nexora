@@ -173,6 +173,7 @@ export function useNexoraData(
 
   const [authLoading, setAuthLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const dataLoadedFromFirestore = useRef(false);
   const lastLoadedUserIdRef = useRef<string | null>(null);
   const quotaExceededRef = useRef(false);
@@ -234,6 +235,7 @@ export function useNexoraData(
       setIsStateLoaded(false, "Auth state changed");
       hasMatchedHydratedStateRef.current = false;
       hydratedStateRef.current = null;
+      setIsHydrated(false);
 
       if (!currentUser) {
         // Handle User Explicit Logout or Missing Session
@@ -365,6 +367,7 @@ export function useNexoraData(
           setNeedsOnboarding(!onboardingComp);
           setIsDataReady(true);
           setLoading(false);
+          setIsHydrated(true);
           showToast("Slow connection detected. Running in offline backup mode! 📡", "info");
         }
       }, timeoutDuration);
@@ -404,6 +407,7 @@ export function useNexoraData(
         hydratedStateRef.current = cachedObj;
         lastSyncedRef.current = cachedObj;
         lastLoadedUserIdRef.current = currentUser.uid;
+        setIsHydrated(true);
 
         if (loadingTimeout) {
           clearTimeout(loadingTimeout);
@@ -519,6 +523,7 @@ export function useNexoraData(
           firestoreSettings = {
             ...DEFAULT_SETTINGS,
             displayName: currentUser.displayName || 'Champion',
+            profilePic: currentUser.photoURL || "",
           };
           firestoreStats = DEFAULT_STATS;
           firestoreProgress = {
@@ -602,6 +607,7 @@ export function useNexoraData(
         setStats(firestoreStats);
         setDailyProgress(firestoreProgress);
         setGardenState(firestoreGarden);
+        setIsHydrated(true);
 
         localStorage.setItem("nexora_settings", JSON.stringify(firestoreSettings));
         localStorage.setItem("nexora_stats", JSON.stringify(firestoreStats));
@@ -644,6 +650,7 @@ export function useNexoraData(
           setNeedsOnboarding(!onboardingComp);
           setIsDataReady(true);
           setLoading(false);
+          setIsHydrated(true);
           showToast("Running in local offline mode. Progress will sync when possible! 📡", "info");
         }
       }
@@ -657,29 +664,16 @@ export function useNexoraData(
 
   // Check if current state matches hydrated state to set hasMatchedHydratedStateRef
   useEffect(() => {
-    if (!user || !isDataReady || !dataLoadedFromFirestore.current || !hydratedStateRef.current) return;
+    if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
 
     if (hasMatchedHydratedStateRef.current) return;
 
-    const currentState = {
-      s: settings,
-      st: stats,
-      p: {
-        c: dailyProgress.completed,
-        cc: dailyProgress.completionsCount,
-        d: dailyProgress.date,
-      },
-      g: gardenState,
-    };
-
-    if (deepEqual(currentState, hydratedStateRef.current)) {
-      console.log(`[PERSISTENCE AUDIT] State matches loaded Firestore data. Ready to handle future user mutations.`);
+    if (isHydrated) {
+      console.log(`[PERSISTENCE AUDIT] State hydration complete (React flushed memory states). Unlocking sync gate.`);
       hasMatchedHydratedStateRef.current = true;
-      setIsStateLoaded(true, "Current state matched hydrated Firestore state. Sync gate unlocked.");
-    } else {
-      console.log(`[PERSISTENCE AUDIT] Waiting for React in-memory states to flush and match hydrated Firestore/Cache values...`);
+      setIsStateLoaded(true, "State hydration complete via flushed isHydrated state");
     }
-  }, [settings, stats, dailyProgress, gardenState, user, isDataReady]);
+  }, [isHydrated, user, isDataReady]);
 
   // Background Sync Effect with Aggressive Throttling (Optimized)
   useEffect(() => {
