@@ -583,11 +583,16 @@ export function useNexoraData(
             tiles: data.garden?.tiles || initialGardenDb.tiles,
           };
 
-          // If they already have a document in Firestore, they have an existing account!
-          // We bypass onboarding completely to make sure they are not taken to the onboarding pages.
-          onboardingReasonRef.current = "User doc exists on Firestore. Skipping onboarding.";
-          setNeedsOnboarding(false);
-          localStorage.setItem("nexora_onboarding_completed", "true");
+          // If they already have a document in Firestore, read onboarding status
+          const hasCompletedOnboardingDb = data.onboardingCompleted === true;
+          setNeedsOnboarding(!hasCompletedOnboardingDb);
+          if (hasCompletedOnboardingDb) {
+            localStorage.setItem("nexora_onboarding_completed", "true");
+            onboardingReasonRef.current = "User doc exists on Firestore with onboardingCompleted=true. Skipping onboarding.";
+          } else {
+            localStorage.removeItem("nexora_onboarding_completed");
+            onboardingReasonRef.current = "User doc exists on Firestore with onboardingCompleted=false. Showing onboarding.";
+          }
         } else {
           console.log(`[PERSISTENCE AUDIT] User document not found in Firestore for UID: ${user.uid}. Creating user as new.`);
           console.log(`%c=================== RUNTIME PROOF: USER DATA DIRECTLY FROM FIRESTORE ===================`, "color: #EF4444; font-weight: bold; font-size: 14px;");
