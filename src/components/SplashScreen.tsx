@@ -35,7 +35,7 @@ export function SplashScreen() {
             className="w-full h-full rounded-[48px] overflow-hidden shadow-[0_15px_30px_rgba(0,0,0,0.6)] border-4 border-blue-500/45 bg-[#081225] flex items-center justify-center p-3"
           >
             <img 
-              src="/nexora_mascot_new.png" 
+              src="/nexora_mascot_logo.png" 
               alt="Nexora Mascot Logo" 
               className="w-full h-full object-contain p-1 select-none pointer-events-none"
               style={{ imageRendering: "auto" }}

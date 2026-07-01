@@ -55,7 +55,7 @@ export function CompletionFlame({
     }
   };
 
-  const triggerHaptic = (duration: number) => {
+  const triggerHaptic = (duration: number | number[]) => {
     if ("vibrate" in navigator) {
       navigator.vibrate(duration);
     }
@@ -64,10 +64,10 @@ export function CompletionFlame({
   const executeChallengeWin = (newStreak?: number) => {
     setIsAnimating(true);
     
-    // 350ms: Ultra-light warning tick (compression tension)
+    // 1. 350ms: Ultra-light warning tick (compression tension)
     setTimeout(() => triggerHaptic(12), 350);
 
-    // 850ms: Rising sound + Heavy impact pulse + Text update (launch peak)
+    // 2. 850ms: Rising sound + Heavy impact pulse (launch peak)
     setTimeout(() => {
       playRisingSound();
       triggerHaptic(45);
@@ -77,6 +77,11 @@ export function CompletionFlame({
         setCurrentStreak(streak);
       }
     }, 850);
+
+    // 3. 1450ms: Double success 'heartbeat' (settling glory)
+    setTimeout(() => {
+      triggerHaptic([30, 50, 30]);
+    }, 1450);
   };
 
   useEffect(() => {

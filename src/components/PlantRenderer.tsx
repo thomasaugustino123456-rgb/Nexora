@@ -106,6 +106,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
       case 'luck-clover': return { primary: '#FBBF24', secondary: '#B45309', accent: '#FEF3C7' };
       case 'luck-orchid': return { primary: '#818CF8', secondary: '#4338CA', accent: '#E0E7FF' };
       case 'luck-cactus': return { primary: '#22C55E', secondary: '#15803D', accent: '#F43F5E' };
+      case 'premium-cactus': return { primary: '#4CAF50', secondary: '#388E3C', accent: '#FF4081' };
       case 'zen': return { primary: '#4CAF50', secondary: '#388E3C', accent: '#2E7D32' };
       case 'desert': return { primary: '#81C784', secondary: '#43A047', accent: '#FB8C00' };
       case 'tropical': return { primary: '#00C853', secondary: '#00E676', accent: '#FF4081' };
@@ -2131,6 +2132,154 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
     );
   };
 
+  const renderPremiumCactus = () => {
+    return (
+      <g className="run-growth">
+        <defs>
+          <linearGradient id="potLight" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#FF8A65"/><stop offset="100%" stopColor="#E64A19"/></linearGradient>
+          <linearGradient id="potDark" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#E64A19"/><stop offset="100%" stopColor="#BF360C"/></linearGradient>
+          
+          <linearGradient id="cactusLight" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#4CAF50"/><stop offset="100%" stopColor="#388E3C"/></linearGradient>
+          <linearGradient id="cactusDark" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#388E3C"/><stop offset="100%" stopColor="#2E7D32"/></linearGradient>
+          
+          <linearGradient id="flowerGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stopColor="#FF4081"/><stop offset="100%" stopColor="#FF80AB"/></linearGradient>
+        </defs>
+
+        {/* Sparkle Layer */}
+        {stage >= 5 && (
+          <motion.g 
+            className="bloom-sparkle" 
+            fill="#FF80AB"
+            initial={{ scale: 0.4, opacity: 0 }}
+            animate={{ scale: 1.5, opacity: [0, 0.9, 0] }}
+            transition={{ duration: 1.1, repeat: Infinity, repeatDelay: 1 }}
+          >
+            <circle cx="100" cy="25" r="4"/><circle cx="70" cy="45" r="3"/><circle cx="130" cy="45" r="3"/>
+            <circle cx="80" cy="20" r="2.5"/><circle cx="120" cy="20" r="2.5"/>
+          </motion.g>
+        )}
+
+        <g stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round" strokeLinecap="round">
+          {/* Left Branch Arm Path Outline */}
+          {stage >= 2 && (
+            <motion.path 
+              initial={{ scale: 0, rotate: 20 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 100 }}
+              className="cactus-arm-left" 
+              d="M75,130 C50,130 45,100 45,90 C45,75 60,75 60,90 C60,105 70,110 75,110" 
+              fill="none"
+            />
+          )}
+          
+          {/* Right Branch Arm Path Outline */}
+          {stage >= 3 && (
+            <motion.path 
+              initial={{ scale: 0, rotate: -20 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 100 }}
+              className="cactus-arm-right" 
+              d="M125,105 C130,105 140,100 140,85 C140,70 155,70 155,85 C155,100 150,120 125,120" 
+              fill="none"
+            />
+          )}
+
+          {/* Main Vertical Spine Trunk Outline */}
+          {stage >= 1 && (
+            <motion.path 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 100 }}
+              className="cactus-trunk" 
+              d="M75,175 C75,100 72,50 100,50 C128,50 125,100 125,175 Z" 
+              fill="none"
+            />
+          )}
+
+          {/* Top Flower Petal Structure Outline */}
+          {stage >= 4 && (
+            <motion.g 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 100 }}
+              className="cactus-flower"
+            >
+              <path d="M100,50 C85,45 80,25 100,25 C120,25 115,45 100,50 Z" fill="none" />
+              <path d="M100,50 C90,40 100,15 100,15 C100,15 110,40 100,50 Z" fill="none" />
+            </motion.g>
+          )}
+
+          {/* Static Potted Base Outline Geometry */}
+          <path d="M60,175 L140,175 L130,230 L70,230 Z" fill="none" />
+          <rect x="52" y="162" width="96" height="14" rx="4" fill="none" />
+          <ellipse cx="100" cy="164" rx="42" ry="5" fill="none" />
+        </g>
+
+        {/* COLOR FILL REVENUE CORE LAYER */}
+        
+        {/* Left Arm Color Fill Modules */}
+        {stage >= 2 && (
+          <motion.g 
+            initial={{ scale: 0, rotate: 20 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 100 }}
+          >
+            <path d="M75,130 C50,130 45,100 45,90 C45,75 60,75 60,90 C60,105 70,110 75,110" fill="url(#cactusLight)" />
+            <path d="M60,90 C60,105 70,110 75,110 L75,130 C58,130 57,110 57,90 Z" fill="url(#cactusDark)" />
+          </motion.g>
+        )}
+
+        {/* Right Arm Color Fill Modules */}
+        {stage >= 3 && (
+          <motion.g 
+            initial={{ scale: 0, rotate: -20 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 100 }}
+          >
+            <path d="M125,105 C130,105 140,100 140,85 C140,70 155,70 155,85 C155,100 150,120 125,120" fill="url(#cactusDark)" />
+          </motion.g>
+        )}
+
+        {/* Main Trunk Split-Shading Elements */}
+        {stage >= 1 && (
+          <motion.g 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 100 }}
+          >
+            <path d="M100,52 C76,52 77,100 77,173 L100,173 Z" fill="url(#cactusLight)" />
+            <path d="M100,52 C124,52 123,100 123,173 L100,173 Z" fill="url(#cactusDark)" />
+            
+            {/* Clean Cartoon Ridge Rib Lines */}
+            <path d="M88,65 C86,100 88,140 90,173" fill="none" stroke="#388E3C" strokeWidth="3.5" strokeLinecap="round" />
+            <path d="M112,65 C114,100 112,140 110,173" fill="none" stroke="#2E7D32" strokeWidth="3.5" strokeLinecap="round" />
+          </motion.g>
+        )}
+
+        {/* Flower Shading Core Overlay */}
+        {stage >= 4 && (
+          <motion.g 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 100 }}
+            fill="url(#flowerGrad)"
+          >
+            <path d="M100,50 C85,45 80,25 100,25 C120,25 115,45 100,50 Z" />
+            <path d="M100,50 C90,40 100,15 100,15 C100,15 110,40 100,50 Z" opacity="0.9"/>
+            <circle cx="100" cy="40" r="3.5" fill="#FFEB3B" />
+          </motion.g>
+        )}
+
+        {/* Terracotta Planter Shading Core Array */}
+        <ellipse cx="100" cy="164" rx="40" ry="4" fill="#5C4033" />
+        <path d="M54,164 L100,164 L100,174 L54,174 Z" fill="url(#potLight)" />
+        <path d="M100,164 L146,164 L146,174 L100,174 Z" fill="url(#potDark)" />
+        <path d="M100,177 L62,177 L71,228 L100,228 Z" fill="url(#potLight)" />
+        <path d="M100,177 L138,177 L129,228 L100,228 Z" fill="url(#potDark)" />
+      </g>
+    );
+  };
+
   const renderLuckCactus = () => {
     return (
       <g>
@@ -2223,6 +2372,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
       case 'luck-clover': return renderLuckClover();
       case 'luck-orchid': return renderLuckOrchid();
       case 'luck-cactus': return renderLuckCactus();
+      case 'premium-cactus': return renderPremiumCactus();
       case 'zen': return renderZen();
       case 'desert': return renderDesert();
       case 'tropical': return renderTropical();

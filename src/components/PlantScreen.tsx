@@ -57,6 +57,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   const [step, setStep] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [showGarden, setShowGarden] = useState(false);
+  const [showGardenScreen, setShowGardenScreen] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showShop, setShowShop] = useState(false);
@@ -112,7 +113,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     'luck-fern': { name: "Golden Fortune Fern", description: "An epic high-gloss emerald fern that refracts golden dust into your workspace!" },
     'luck-clover': { name: "Emerald Aura Clover", description: "The legendary clover of golden aura. Brings unparalleled focus and good vibes." },
     'luck-orchid': { name: "Astra Velvet Orchid", description: "The crown jewel of botanical matrixes. A deep velvet flower humming with violet electricity!" },
-    'luck-cactus': { name: "Solar Mystic Cactus", description: "An epic desert survivor with a fiery coral flower. Thrives elegantly on sheer focus power." }
+    'luck-cactus': { name: "Solar Mystic Cactus", description: "An epic desert survivor with a fiery coral flower. Thrives elegantly on sheer focus power." },
+    'premium-cactus': { name: "Superior Desert Cactus", description: "A high-tier succulent engineered for extreme resilience and elegance." }
   };
 
   const cozySeedsList = [
@@ -125,7 +127,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     { id: 'luck-fern', name: 'Golden Fortune Fern', rarity: 'Epic', emoji: '🌿' },
     { id: 'luck-clover', name: 'Emerald Aura Clover', rarity: 'Legendary', emoji: '🍀' },
     { id: 'luck-orchid', name: 'Astra Velvet Orchid', rarity: 'Legendary', emoji: '🌌' },
-    { id: 'luck-cactus', name: 'Solar Mystic Cactus', rarity: 'Epic', emoji: '🌵' }
+    { id: 'luck-cactus', name: 'Solar Mystic Cactus', rarity: 'Epic', emoji: '🌵' },
+    { id: 'premium-cactus', name: 'Superior Desert Cactus', rarity: 'Legendary', emoji: '🏜️' }
   ];
 
   const onboardingSteps = [
@@ -207,7 +210,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     }
   };
 
-  const ECOSYSTEM_PATH: PlantType[] = ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano', 'boredFlower', 'mourningSprout', 'breezeTulip', 'happyTulip', 'distressedRose'];
+  const ECOSYSTEM_PATH: PlantType[] = ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano', 'boredFlower', 'mourningSprout', 'breezeTulip', 'happyTulip', 'distressedRose', 'premium-cactus'];
   const unlocked = plantState.unlockedTypes || ['sprout'];
   const isForestActive = settings.activeEcosystemItemIds?.includes('eco_forest_01');
 
@@ -223,8 +226,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
           <span className="font-black text-blue-900 text-sm uppercase">{ecosystemInfo[plantState.type]?.name || "Plant"}</span>
         </div>
         <button 
-          onClick={() => { vibrate(5); setShowGarden(!showGarden); }}
-          className={`p-2 transition-colors ${showGarden ? 'text-green-500' : 'text-blue-900/40'}`}
+          onClick={() => { vibrate(5); setShowGardenScreen(true); }}
+          className={`p-2 transition-colors ${showGardenScreen ? 'text-green-500' : 'text-blue-900/40'}`}
           title="My Cozy Sanctuary Garden"
         >
           <Flower2 size={24} />
@@ -754,6 +757,43 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
 
         {onboardingCompleted && (
           <div className="w-full max-w-sm space-y-4">
+            <div className="w-full bg-white/30 backdrop-blur-sm rounded-[2.5rem] p-6 border border-white/40 shadow-inner">
+               <div className="flex items-center justify-between mb-4 px-2">
+                 <h3 className="text-[10px] font-black text-blue-900/40 uppercase tracking-[0.2em]">Plant Collection</h3>
+                 <span className="text-[9px] font-black text-green-500 uppercase">{unlocked.length}/{ECOSYSTEM_PATH.length}</span>
+               </div>
+               <div className="flex overflow-x-auto pb-2 gap-3 no-scrollbar snap-x">
+                  {ECOSYSTEM_PATH.map((type) => {
+                     const isUnlocked = unlocked.includes(type);
+                     const isActive = plantState.type === type;
+                     const plantData = settings.plantsProgress?.[type] || { stage: 0 };
+                     return (
+                        <motion.button
+                          key={type}
+                          whileTap={isUnlocked ? { scale: 0.9 } : {}}
+                          onClick={() => { if(isUnlocked) { vibrate(10); onSwitchType(type); } }}
+                          className={`flex-shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center relative transition-all snap-center ${
+                            isUnlocked 
+                              ? isActive ? 'bg-green-500 text-white shadow-lg' : 'bg-white/80 border border-white shadow-sm'
+                              : 'bg-gray-200/50 opacity-40 grayscale'
+                          }`}
+                        >
+                           <div className="scale-[0.18]">
+                              <PlantRenderer 
+                                type={type} 
+                                stage={isUnlocked ? (plantData.stage || (isActive ? plantState.stage : 1)) : 1} 
+                                isThirsty={false} 
+                                isDead={false} 
+                              />
+                           </div>
+                           {!isUnlocked && <Lock size={12} className="absolute inset-0 m-auto text-blue-900/40" />}
+                           {isActive && <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border border-white flex items-center justify-center text-[8px] text-white">✓</div>}
+                        </motion.button>
+                     )
+                  })}
+               </div>
+            </div>
+
             {plantState.isDead ? (
               <button 
                 onClick={() => { vibrate(10); onRecover(); }}
@@ -809,7 +849,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
             )}
             
             <button 
-              onClick={() => { vibrate(5); setShowGarden(true); }}
+              onClick={() => { vibrate(5); setShowGardenScreen(true); }}
               className="w-full py-4 bg-white/40 hover:bg-white/60 border border-white/60 rounded-2xl text-[10px] font-black uppercase text-blue-900/60 tracking-widest"
             >
               Enter Garden Room
@@ -834,7 +874,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
         </div>
       </div>
       <AnimatePresence>
-        {showGarden && (
+        {showGardenScreen && (
           <motion.div
             initial={{ opacity: 0, x: '100vw' }}
             animate={{ opacity: 1, x: 0 }}
@@ -843,7 +883,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
             className="fixed inset-0 bg-white z-[300] overflow-y-auto"
           >
             <GardenScreen 
-              onBack={() => setShowGarden(false)}
+              onBack={() => setShowGardenScreen(false)}
               gardenState={gardenState}
               setGardenState={setGardenState}
               stats={stats}
