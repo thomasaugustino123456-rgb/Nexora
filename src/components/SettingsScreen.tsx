@@ -345,8 +345,8 @@ export function SettingsScreen({
             >
               <div className="flex items-center gap-4 min-w-0">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FAF7F2] to-[#E9E4D4] overflow-hidden shadow-inner border-2 border-white shrink-0 relative">
-                  {user?.photoURL ? (
-                    <img src={user.photoURL} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Bio" />
+                  {(settings.profilePic || user?.photoURL) ? (
+                    <img src={settings.profilePic || user?.photoURL || ""} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Bio" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-[#4F3F34] font-black text-lg">U</div>
                   )}
@@ -473,8 +473,8 @@ export function SettingsScreen({
 
                     <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-[#FAF7F2]/50 rounded-2xl border border-[#E9E4D4]/40">
                       <div className="w-16 h-16 rounded-2xl bg-white overflow-hidden shadow-inner border-2 border-[#E9E4D4] shrink-0 relative flex items-center justify-center">
-                        {user?.photoURL ? (
-                          <img src={user.photoURL} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Avatar" />
+                        {(settings.profilePic || user?.photoURL) ? (
+                          <img src={settings.profilePic || user?.photoURL || ""} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Avatar" />
                         ) : (
                           <span className="text-xl font-black text-[#4F3F34]">U</span>
                         )}
@@ -485,7 +485,7 @@ export function SettingsScreen({
                           type="text" 
                           value={settings.displayName || ''} 
                           onChange={(e) => setSettings({ displayName: e.target.value })}
-                          placeholder={user?.displayName || 'Nexora User'}
+                          placeholder={settings.displayName || user?.displayName || 'Nexora User'}
                           className="font-black text-[#4F3F34] bg-white border border-[#E9E4D4] rounded-xl py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#69C496] w-full text-sm shadow-sm"
                         />
                       </div>

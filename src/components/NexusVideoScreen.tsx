@@ -377,6 +377,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
           <div className="fixed inset-0 z-[200]">
             <NexoraStudio 
                user={user}
+               settings={settings}
                onBack={() => setIsStudioOpen(false)} 
                onPost={async (data) => {
                   if (!user) return;

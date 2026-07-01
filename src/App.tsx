@@ -4887,9 +4887,9 @@ export default function App() {
                         : "text-[#4F3F34]/70 bg-white hover:bg-slate-50 border-[#E9E4D4]"
                     }`}
                   >
-                    {settings.profilePic ? (
+                    {(settings.profilePic || user?.photoURL) ? (
                       <img
-                        src={settings.profilePic}
+                        src={settings.profilePic || user?.photoURL || ""}
                         alt="Profile"
                         className="w-[18px] h-[18px] rounded-full object-cover border border-[#E9E4D4]"
                         referrerPolicy="no-referrer"

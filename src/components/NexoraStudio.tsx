@@ -15,11 +15,12 @@ interface NexoraStudioProps {
   onBack: () => void;
   onPost?: (videoData: any) => void;
   user: any;
+  settings?: any;
 }
 
 type StudioStage = 1 | 2 | 3;
 
-export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
+export function NexoraStudio({ onBack, onPost, user, settings }: NexoraStudioProps) {
   const [stage, setStage] = useState<StudioStage>(1);
   const [capturedMedia, setCapturedMedia] = useState<{
     url: string, 
@@ -945,7 +946,7 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                       </div>
                     )}
                     <div className="absolute bottom-8 left-6 right-6 text-white">
-                       <p className="text-[10px] font-black italic mb-1 uppercase tracking-widest">@{user?.displayName?.replace(/\s+/g, '')}</p>
+                       <p className="text-[10px] font-black italic mb-1 uppercase tracking-widest">@{(settings?.displayName || user?.displayName || 'Champion').replace(/\s+/g, '')}</p>
                        <p className="text-[8px] opacity-60 leading-none">{caption || 'Nexora Studio Release'}</p>
                     </div>
                   </div>
@@ -1019,8 +1020,8 @@ export function NexoraStudio({ onBack, onPost, user }: NexoraStudioProps) {
                               trimStart: m.trimStart || 0
                             })),
                             caption,
-                            userName: user?.displayName || 'Anonymous',
-                            userPhoto: user?.photoURL || '',
+                            userName: settings?.displayName || user?.displayName || 'Anonymous',
+                            userPhoto: settings?.profilePic || user?.photoURL || '',
                             quality,
                             platform: 'nexora',
                             type: mainMedia?.type || 'video',
