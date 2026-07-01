@@ -663,6 +663,25 @@ export function useNexoraData(
             onboardingReasonRef.current = "User doc not found on Firestore and onboarding not completed locally. Showing onboarding.";
             setNeedsOnboarding(true);
           }
+
+          // Securely create a brand-new user profile in Firestore exactly once now
+          const initialProfile = {
+            displayName: firestoreSettings.displayName || user.displayName || 'Champion',
+            ...firestoreSettings,
+            uid: user.uid,
+            email: user.email || `${user.uid}@nexora.app`,
+            role: 'user',
+            stats: firestoreStats,
+            garden: firestoreGarden,
+            isTodayCompleted: false,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            onboardingCompleted: onboardingComp,
+          };
+
+          console.log(`[PERSISTENCE AUDIT] Writing brand-new user document to Firestore for UID: ${user.uid}`);
+          await setDoc(userDocRef, initialProfile);
+          console.log(`[PERSISTENCE AUDIT] Successfully created brand-new user document for UID: ${user.uid}`);
         }
 
         if (progressSnap.exists()) {
@@ -858,16 +877,35 @@ export function useNexoraData(
             console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${userRef.path}:`, dbData ? JSON.stringify(dbData) : "Document does not exist");
             
             // CRITICAL DEFENSIVE GUARD: Never let uninitialized/empty stats overwrite positive Firestore stats
-            if (dbData && dbData.stats) {
-              const dbStats = dbData.stats;
-              const dbHasProgress = (dbStats.xp > 0 || dbStats.coins > 0 || (dbStats.totalPoints || 0) > 0);
-              const localIsEmpty = (stats.xp === 0 && stats.coins === 0 && (stats.totalPoints || 0) === 0);
+            if (dbData) {
+              const dbStats = dbData.stats || {};
+              const dbGarden = dbData.garden || {};
+              const dbSettings = dbData.settings || dbData;
 
-              if (dbHasProgress && localIsEmpty) {
-                console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered! Attempted to overwrite positive Firestore stats (XP: ${dbStats.xp}, Coins: ${dbStats.coins}) with empty local stats in syncData. Aborting write to prevent data loss.`);
+              const dbHasProgress = (dbStats.xp > 0 || dbStats.coins > 0 || (dbStats.totalPoints || 0) > 0 || (dbStats.streak || 0) > 0);
+              const dbHasGarden = (dbGarden.tiles && dbGarden.tiles.length > 0) || (dbGarden.inventory && Object.keys(dbGarden.inventory).length > 0);
+              const dbHasSettings = (dbSettings.displayName && dbSettings.displayName !== "Nexora User" && dbSettings.displayName !== "Champion");
+
+              const localIsEmptyStats = (stats.xp === 0 && stats.coins === 0 && (stats.totalPoints || 0) === 0 && (stats.streak || 0) === 0);
+              const localIsEmptyGarden = !gardenState.tiles || gardenState.tiles.length === 0;
+              const localIsEmptySettings = !settings.displayName || settings.displayName === "Nexora User" || settings.displayName === "Champion";
+
+              if (
+                (dbHasProgress && localIsEmptyStats) ||
+                (dbHasGarden && localIsEmptyGarden) ||
+                (dbHasSettings && localIsEmptySettings)
+              ) {
+                console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in syncData! Attempted to overwrite positive Firestore data with empty local states. DB Stats Has Progress: ${dbHasProgress}, Local Is Empty Stats: ${localIsEmptyStats}. DB Garden Has Data: ${dbHasGarden}, Local Is Empty Garden: ${localIsEmptyGarden}. DB Settings Has Info: ${dbHasSettings}, Local Is Empty Settings: ${localIsEmptySettings}. Aborting write to prevent data loss.`);
+                
                 // Trigger emergency recovery: update local state to match database
-                setStats(dbStats);
-                if (dbData.settings) setSettings(dbData.settings);
+                if (dbData.stats) setStats(dbData.stats);
+                if (dbData.settings || dbData.displayName) {
+                  setSettings({
+                    ...DEFAULT_SETTINGS,
+                    ...dbData,
+                    ...dbData.settings,
+                  });
+                }
                 if (dbData.garden) setGardenState(dbData.garden);
                 return;
               }
@@ -1094,16 +1132,35 @@ export function useNexoraData(
         console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${userRef.path}:`, dbData ? JSON.stringify(dbData) : "Document does not exist");
 
         // CRITICAL DEFENSIVE GUARD: Never let uninitialized/empty stats overwrite positive Firestore stats
-        if (dbData && dbData.stats) {
-          const dbStats = dbData.stats;
-          const dbHasProgress = (dbStats.xp > 0 || dbStats.coins > 0 || (dbStats.totalPoints || 0) > 0);
-          const localIsEmpty = (stats.xp === 0 && stats.coins === 0 && (stats.totalPoints || 0) === 0);
+        if (dbData) {
+          const dbStats = dbData.stats || {};
+          const dbGarden = dbData.garden || {};
+          const dbSettings = dbData.settings || dbData;
 
-          if (dbHasProgress && localIsEmpty) {
-            console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered! Attempted to overwrite positive Firestore stats (XP: ${dbStats.xp}, Coins: ${dbStats.coins}) with empty local stats in forceSyncData. Aborting write to prevent data loss.`);
+          const dbHasProgress = (dbStats.xp > 0 || dbStats.coins > 0 || (dbStats.totalPoints || 0) > 0 || (dbStats.streak || 0) > 0);
+          const dbHasGarden = (dbGarden.tiles && dbGarden.tiles.length > 0) || (dbGarden.inventory && Object.keys(dbGarden.inventory).length > 0);
+          const dbHasSettings = (dbSettings.displayName && dbSettings.displayName !== "Nexora User" && dbSettings.displayName !== "Champion");
+
+          const localIsEmptyStats = (stats.xp === 0 && stats.coins === 0 && (stats.totalPoints || 0) === 0 && (stats.streak || 0) === 0);
+          const localIsEmptyGarden = !gardenState.tiles || gardenState.tiles.length === 0;
+          const localIsEmptySettings = !settings.displayName || settings.displayName === "Nexora User" || settings.displayName === "Champion";
+
+          if (
+            (dbHasProgress && localIsEmptyStats) ||
+            (dbHasGarden && localIsEmptyGarden) ||
+            (dbHasSettings && localIsEmptySettings)
+          ) {
+            console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in forceSyncData! Attempted to overwrite positive Firestore data with empty local states. DB Stats Has Progress: ${dbHasProgress}, Local Is Empty Stats: ${localIsEmptyStats}. DB Garden Has Data: ${dbHasGarden}, Local Is Empty Garden: ${localIsEmptyGarden}. DB Settings Has Info: ${dbHasSettings}, Local Is Empty Settings: ${localIsEmptySettings}. Aborting write to prevent data loss.`);
+            
             // Trigger emergency recovery: update local state to match database
-            setStats(dbStats);
-            if (dbData.settings) setSettings(dbData.settings);
+            if (dbData.stats) setStats(dbData.stats);
+            if (dbData.settings || dbData.displayName) {
+              setSettings({
+                ...DEFAULT_SETTINGS,
+                ...dbData,
+                ...dbData.settings,
+              });
+            }
             if (dbData.garden) setGardenState(dbData.garden);
             return;
           }
