@@ -421,6 +421,8 @@ export function useNexoraData(
       const userDocRef = doc(db, "users", currentUser.uid);
       const progressDocRef = doc(db, "users", currentUser.uid, "progress", today);
       const ecoShopRef = collection(db, "users", currentUser.uid, "eco_shop");
+      const rewardsDocRef = doc(db, "users", currentUser.uid, "rewards", "main");
+      const plantSectionDocRef = doc(db, "users", currentUser.uid, "plant_section", "main");
 
       console.log(`[PERSISTENCE AUDIT] [READ START] Initiated Firestore read for user UID: ${currentUser.uid}`);
 
@@ -434,12 +436,14 @@ export function useNexoraData(
           getDocWithCacheFallback(userDocRef),
           getDocWithCacheFallback(progressDocRef),
           getDocsWithCacheFallback(ecoShopRef),
+          getDocWithCacheFallback(rewardsDocRef),
+          getDocWithCacheFallback(plantSectionDocRef),
         ]);
 
-        const [docSnap, progressSnap, ecoSnap] = (await Promise.race([
+        const [docSnap, progressSnap, ecoSnap, rewardsSnap, plantSectionSnap] = (await Promise.race([
           fetchPromise,
           timeoutPromise,
-        ])) as [any, any, any];
+        ])) as [any, any, any, any, any];
 
         console.log(`[PERSISTENCE AUDIT] [READ SUCCESS] Core Firestore data loaded successfully for UID: ${currentUser.uid}`);
 
@@ -459,12 +463,17 @@ export function useNexoraData(
         } as DailyProgress;
         let firestoreGarden = createInitialGardenState();
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          console.log(`[PERSISTENCE AUDIT] User document found in Firestore. onboardingCompleted: ${data.onboardingCompleted}`);
+        const hasRewards = rewardsSnap && rewardsSnap.exists();
+        const hasPlantSection = plantSectionSnap && plantSectionSnap.exists();
+
+        if (docSnap.exists() || hasRewards || hasPlantSection) {
+          const data = docSnap.exists() ? docSnap.data() : {};
+          console.log(`[PERSISTENCE AUDIT] User core or sub-documents found in Firestore. docSnap.exists: ${docSnap.exists()}, hasRewards: ${hasRewards}, hasPlantSection: ${hasPlantSection}`);
 
           firestoreSettings = {
             ...DEFAULT_SETTINGS,
+            displayName: currentUser.displayName || data.displayName || 'Champion',
+            profilePic: currentUser.photoURL || data.profilePic || "",
             ...data,
             plantState: {
               ...DEFAULT_SETTINGS.plantState,
@@ -497,7 +506,84 @@ export function useNexoraData(
             tiles: data.garden?.tiles || initialGardenDb.tiles,
           };
 
-          const hasCompletedOnboardingDb = data.onboardingCompleted === true;
+          // Merge Rewards data if it exists
+          if (hasRewards) {
+            const rewardsData = rewardsSnap.data();
+            console.log(`[PERSISTENCE AUDIT] Loading rewards from dedicated path /rewards/main...`);
+            firestoreStats = {
+              ...firestoreStats,
+              ...rewardsData,
+              pointsByCategory: {
+                ...firestoreStats.pointsByCategory,
+                ...(rewardsData.pointsByCategory || {}),
+              },
+              trophies: [
+                ...new Set([
+                  ...(firestoreStats.trophies || []),
+                  ...(rewardsData.trophies || []),
+                ]),
+              ],
+            };
+          }
+
+          // Merge Plant Section data if it exists
+          if (hasPlantSection) {
+            const plantSecData = plantSectionSnap.data();
+            console.log(`[PERSISTENCE AUDIT] Loading plant section from dedicated path /plant_section/main...`);
+            if (plantSecData.plantOnboardingCompleted !== undefined) {
+              firestoreSettings.plantOnboardingCompleted = plantSecData.plantOnboardingCompleted;
+            }
+            if (plantSecData.plantState) {
+              firestoreSettings.plantState = {
+                ...firestoreSettings.plantState,
+                ...plantSecData.plantState,
+              };
+            }
+            if (plantSecData.purchasedEcosystemItemIds) {
+              firestoreSettings.purchasedEcosystemItemIds = [
+                ...new Set([
+                  ...(firestoreSettings.purchasedEcosystemItemIds || []),
+                  ...(plantSecData.purchasedEcosystemItemIds || []),
+                ]),
+              ];
+            }
+            if (plantSecData.gardenState) {
+              firestoreGarden = {
+                ...firestoreGarden,
+                ...plantSecData.gardenState,
+                mascotState: {
+                  ...firestoreGarden.mascotState,
+                  ...(plantSecData.gardenState.mascotState || {}),
+                },
+                inventory: {
+                  ...firestoreGarden.inventory,
+                  ...(plantSecData.gardenState.inventory || {}),
+                },
+                tiles: plantSecData.gardenState.tiles || firestoreGarden.tiles,
+              };
+            }
+          }
+
+          // Write back core document if it did not exist but sub-documents existed
+          if (!docSnap.exists()) {
+            console.log(`[PERSISTENCE AUDIT] Core document was missing, but rewards/plant data existed. Recreating core document...`);
+            const initialProfile = {
+              displayName: firestoreSettings.displayName,
+              ...firestoreSettings,
+              uid: currentUser.uid,
+              email: currentUser.email || `${currentUser.uid}@nexora.app`,
+              role: 'user',
+              stats: firestoreStats,
+              garden: firestoreGarden,
+              isTodayCompleted: false,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+              onboardingCompleted: true,
+            };
+            await setDoc(userDocRef, initialProfile);
+          }
+
+          const hasCompletedOnboardingDb = (data.onboardingCompleted === true) || hasRewards || hasPlantSection;
           setNeedsOnboarding(!hasCompletedOnboardingDb);
           if (hasCompletedOnboardingDb) {
             localStorage.setItem("nexora_onboarding_completed", "true");
@@ -563,9 +649,36 @@ export function useNexoraData(
             onboardingCompleted: onboardingComp,
           };
 
+          const initialRewards = {
+            uid: currentUser.uid,
+            userName: firestoreSettings.displayName || currentUser.displayName || 'Champion',
+            streak: firestoreStats.streak || 0,
+            bestStreak: firestoreStats.bestStreak || 0,
+            xp: firestoreStats.xp || 0,
+            coins: firestoreStats.coins || 0,
+            weeklyPoints: firestoreStats.weeklyPoints || 0,
+            weeklyXP: firestoreStats.weeklyXP || 0,
+            totalPoints: firestoreStats.totalPoints || 0,
+            trophies: firestoreStats.trophies || [],
+            pointsByCategory: firestoreStats.pointsByCategory || { physical: 0, mental: 0, creative: 0 },
+            updatedAt: serverTimestamp(),
+            finishedAt: new Date().toISOString(),
+          };
+
+          const initialPlantSection = {
+            uid: currentUser.uid,
+            plantOnboardingCompleted: firestoreSettings.plantOnboardingCompleted || false,
+            plantState: firestoreSettings.plantState || null,
+            gardenState: firestoreGarden || null,
+            purchasedEcosystemItemIds: firestoreSettings.purchasedEcosystemItemIds || [],
+            updatedAt: serverTimestamp(),
+          };
+
           console.log(`[PERSISTENCE AUDIT] Writing brand-new user document to Firestore for UID: ${currentUser.uid}`);
           await setDoc(userDocRef, initialProfile);
-          console.log(`[PERSISTENCE AUDIT] Successfully created brand-new user document for UID: ${currentUser.uid}`);
+          await setDoc(rewardsDocRef, initialRewards);
+          await setDoc(plantSectionDocRef, initialPlantSection);
+          console.log(`[PERSISTENCE AUDIT] Successfully created brand-new user document and sub-documents for UID: ${currentUser.uid}`);
         }
 
         if (progressSnap.exists()) {
@@ -662,18 +775,34 @@ export function useNexoraData(
     };
   }, []);
 
-  // Check if current state matches hydrated state to set hasMatchedHydratedStateRef
+  // Safe State Matching Gate: ensure React state matches the loaded/hydrated Firestore data
+  // before unlocking the sync gate. This prevents empty default states from overwriting database records.
   useEffect(() => {
     if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
-
     if (hasMatchedHydratedStateRef.current) return;
 
-    if (isHydrated) {
-      console.log(`[PERSISTENCE AUDIT] State hydration complete (React flushed memory states). Unlocking sync gate.`);
-      hasMatchedHydratedStateRef.current = true;
-      setIsStateLoaded(true, "State hydration complete via flushed isHydrated state");
+    if (isHydrated && hydratedStateRef.current) {
+      const currentObj = {
+        s: settings,
+        st: stats,
+        g: gardenState,
+      };
+
+      const dbObj = {
+        s: hydratedStateRef.current.s,
+        st: hydratedStateRef.current.st,
+        g: hydratedStateRef.current.g,
+      };
+
+      if (deepEqual(currentObj, dbObj)) {
+        console.log(`[PERSISTENCE AUDIT] Memory state matches hydrated database state perfectly. Unlocking sync gate safely.`);
+        hasMatchedHydratedStateRef.current = true;
+        setIsStateLoaded(true, "State matching complete");
+      } else {
+        console.log(`[PERSISTENCE AUDIT] Memory state does not match hydrated database state yet. Keeping sync gate locked.`);
+      }
     }
-  }, [isHydrated, user, isDataReady]);
+  }, [isHydrated, user, isDataReady, settings, stats, gardenState]);
 
   // Background Sync Effect with Aggressive Throttling (Optimized)
   useEffect(() => {
@@ -777,6 +906,35 @@ export function useNexoraData(
               updatedAt: serverTimestamp(),
               onboardingCompleted: true,
             };
+
+            const rewardsPayload = {
+              uid: user.uid,
+              userName: settings.displayName || user.displayName || 'Champion',
+              streak: stats.streak || 0,
+              bestStreak: stats.bestStreak || 0,
+              xp: stats.xp || 0,
+              coins: stats.coins || 0,
+              weeklyPoints: stats.weeklyPoints || 0,
+              weeklyXP: stats.weeklyXP || 0,
+              totalPoints: stats.totalPoints || 0,
+              trophies: stats.trophies || [],
+              pointsByCategory: stats.pointsByCategory || { physical: 0, mental: 0, creative: 0 },
+              updatedAt: serverTimestamp(),
+              finishedAt: new Date().toISOString(),
+            };
+
+            const plantSectionPayload = {
+              uid: user.uid,
+              plantOnboardingCompleted: settings.plantOnboardingCompleted || false,
+              plantState: settings.plantState || null,
+              gardenState: gardenState || null,
+              purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
+              updatedAt: serverTimestamp(),
+            };
+
+            const rewardsDocRef = doc(db, "users", user.uid, "rewards", "main");
+            const plantSectionDocRef = doc(db, "users", user.uid, "plant_section", "main");
+
             console.log(`[PERSISTENCE AUDIT] Write payload for core document:`, JSON.stringify(writePayload));
             
             console.log("=== FIRESTORE WRITE DEBBUGGING LOGS ===");
@@ -794,6 +952,12 @@ export function useNexoraData(
 
             await setDoc(userRef, writePayload, { merge: true });
             console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote core document to: ${userRef.path}`);
+
+            await setDoc(rewardsDocRef, rewardsPayload, { merge: true });
+            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote rewards subdocument to: ${rewardsDocRef.path}`);
+
+            await setDoc(plantSectionDocRef, plantSectionPayload, { merge: true });
+            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote plant section subdocument to: ${plantSectionDocRef.path}`);
             
             console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${userRef.path}`);
             const postSnap = await getDoc(userRef);
@@ -1032,6 +1196,35 @@ export function useNexoraData(
           updatedAt: serverTimestamp(),
           onboardingCompleted: true,
         };
+
+        const rewardsPayload = {
+          uid: user.uid,
+          userName: settings.displayName || user.displayName || 'Champion',
+          streak: stats.streak || 0,
+          bestStreak: stats.bestStreak || 0,
+          xp: stats.xp || 0,
+          coins: stats.coins || 0,
+          weeklyPoints: stats.weeklyPoints || 0,
+          weeklyXP: stats.weeklyXP || 0,
+          totalPoints: stats.totalPoints || 0,
+          trophies: stats.trophies || [],
+          pointsByCategory: stats.pointsByCategory || { physical: 0, mental: 0, creative: 0 },
+          updatedAt: serverTimestamp(),
+          finishedAt: new Date().toISOString(),
+        };
+
+        const plantSectionPayload = {
+          uid: user.uid,
+          plantOnboardingCompleted: settings.plantOnboardingCompleted || false,
+          plantState: settings.plantState || null,
+          gardenState: gardenState || null,
+          purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
+          updatedAt: serverTimestamp(),
+        };
+
+        const rewardsDocRef = doc(db, "users", user.uid, "rewards", "main");
+        const plantSectionDocRef = doc(db, "users", user.uid, "plant_section", "main");
+
         console.log(`[PERSISTENCE AUDIT] Force sync payload for core document:`, JSON.stringify(writePayload));
 
         console.log("=== FIRESTORE WRITE DEBBUGGING LOGS ===");
@@ -1049,6 +1242,12 @@ export function useNexoraData(
 
         await setDoc(userRef, writePayload, { merge: true });
         console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote core document to: ${userRef.path}`);
+
+        await setDoc(rewardsDocRef, rewardsPayload, { merge: true });
+        console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote rewards subdocument to: ${rewardsDocRef.path}`);
+
+        await setDoc(plantSectionDocRef, plantSectionPayload, { merge: true });
+        console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote plant section subdocument to: ${plantSectionDocRef.path}`);
 
         console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${userRef.path}`);
         const postSnap = await getDoc(userRef);
