@@ -238,13 +238,13 @@ export const Mascot = React.memo(({
       default:
         return {
           gradId: 'mascot-grad-std',
-          stop0: '#38BDF8',
-          stop100: '#1E40AF',
+          stop0: '#BAE6FD',
+          stop100: '#7DD3FC',
           glassGrad: 'glass-grad-std',
           glassStop0: '#FFFFFF',
-          glassStop100: '#B3E5FF',
-          borderColor: '#38BDF8',
-          shadowColor: 'rgba(56, 189, 248, 0.25)'
+          glassStop100: '#E0F2FE',
+          borderColor: '#7DD3FC',
+          shadowColor: 'rgba(125, 211, 252, 0.25)'
         };
     }
   }, [theme]);
@@ -305,6 +305,26 @@ export const Mascot = React.memo(({
           overflow: 'visible'
         }}
       >
+        {/* CUTE HALO (New Design Feature) */}
+        <motion.g 
+          animate={{ 
+            y: [0, -8, 0],
+            opacity: [0.7, 0.9, 0.7],
+            scale: [1, 1.05, 1]
+          }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          transform={`translate(${tilt * 0.5}, -10)`}
+          style={{ transformOrigin: '250px 90px' }}
+        >
+          <ellipse 
+            cx="250" cy="90" rx="80" ry="20" 
+            fill="none" 
+            stroke="#BAE6FD" 
+            strokeWidth="8" 
+            style={{ filter: 'drop-shadow(0 0 12px #7DD3FC)' }}
+          />
+        </motion.g>
+
         <defs>
           <linearGradient id={themeConfig.gradId} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor={themeConfig.stop0} />

@@ -18,7 +18,7 @@ export function MascotImage({ className = "w-16 h-16 rounded-2xl", alt = "Nexora
       }}
     >
       <img 
-        src="/nexora_mascot_logo.png" 
+        src="/nexora_mascot_new.png" 
         alt={alt}
         className="w-full h-full object-contain filter drop-shadow-[0_4px_10px_rgba(59,130,246,0.2)] select-none"
         style={{

@@ -4,7 +4,7 @@ import { Jimp } from 'jimp';
 
 async function generatePWAIcons() {
   try {
-    const sourceJpg = path.resolve('src/assets/images/nexora_mascot_logo_1781981236517.jpg');
+    const sourceJpg = path.resolve('public/nexora_mascot_new.png');
     
     if (!fs.existsSync(sourceJpg)) {
       console.error('Source official mascot JPG not found at', sourceJpg);
