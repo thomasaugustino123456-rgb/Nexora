@@ -6,6 +6,7 @@ import { analyzeNoteMood } from '../services/aiService';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { SocialCircle, Screen } from '../types';
 import { NexusLinkRenderer } from './NexusLinkRenderer';
+import { MascotV2 } from './MascotV2';
 
 const Typewriter = ({ text }: { text: string }) => {
   const [displayedText, setDisplayedText] = useState("");
@@ -97,7 +98,12 @@ export function NotebookScreen({
                <ArrowLeft size={24} />
             </button>
             <div>
-               <h2 className="text-3xl font-black text-blue-900 tracking-tight leading-none italic">Brain Dump</h2>
+               <div className="flex items-center gap-3">
+                  <h2 className="text-3xl font-black text-blue-900 tracking-tight leading-none italic">Brain Dump</h2>
+                  <div className="w-12 h-12 -mt-2 -mb-2 overflow-visible flex items-center justify-center select-none">
+                     <MascotV2 className="w-full h-full" isSmiling={true} />
+                  </div>
+               </div>
                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] mt-1">Mental Nexus Storage</p>
             </div>
          </div>
@@ -111,9 +117,13 @@ export function NotebookScreen({
 
       <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4 custom-scrollbar">
          {entries.length === 0 && !isCreating ? (
-           <div className="h-full flex flex-col items-center justify-center opacity-20 space-y-4 pointer-events-none grayscale">
-              <Brain size={120} />
-              <p className="font-black uppercase tracking-[0.5em] text-xs">Awaiting Genius Output...</p>
+           <div className="h-full flex flex-col items-center justify-center space-y-4 py-12">
+              <div className="w-32 h-32 relative">
+                <MascotV2 className="w-full h-full" isSmiling={false} />
+              </div>
+              <p className="font-black uppercase tracking-[0.3em] text-[10px] text-blue-900/40 text-center">
+                No brain dumps yet, bro!<br/>Tap the '+' button above to manifest your first thought!
+              </p>
            </div>
          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

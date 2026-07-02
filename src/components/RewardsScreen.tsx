@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
 import { UserStats } from "../types";
+import { MascotV2 } from "./MascotV2";
 
 interface RewardsScreenProps {
   stats: UserStats;
@@ -370,6 +371,27 @@ export function RewardsScreen({
           animation-delay: 0.9s;
         }
 
+        /* DUOLINGO STYLE MASCOT CELEBRATION */
+        .mascot-celebrate {
+          position: absolute;
+          top: 20px;
+          left: 50%;
+          transform: translateX(-50%) scale(0);
+          width: 130px;
+          height: 130px;
+          z-index: 90;
+          pointer-events: none;
+          opacity: 0;
+          transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.4);
+        }
+        .tap-3 .mascot-celebrate {
+          animation: mascotPopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.3) forwards;
+          animation-delay: 0.9s;
+        }
+        @keyframes mascotPopIn {
+          100% { opacity: 1; transform: translateX(-50%) scale(1); }
+        }
+
         /* =======================================================
            THE REWARD PHYSICS & VANISH MATRIX
            ======================================================= */
@@ -420,7 +442,7 @@ export function RewardsScreen({
         }
 
         @keyframes counterPopIn {
-          100% { opacity: 1; transform: scale(1) translateY(120px); } 
+          100% { opacity: 1; transform: scale(1) translateY(185px); } 
         }
 
         /* 3D COIN SETTLEMENT KINETICS */
@@ -500,6 +522,11 @@ export function RewardsScreen({
           {/* Big Core Total Counter */}
           <div className="reward-counter" id="coinCounter">
             +{coinsAdded}
+          </div>
+
+          {/* Duolingo style Mascot celebrating! */}
+          <div className="mascot-celebrate">
+            <MascotV2 className="w-full h-full" isSmiling={true} />
           </div>
 
           {/* Spinning Background Glow */}

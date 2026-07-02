@@ -26,7 +26,7 @@ import { signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';
-import { Mascot } from './Mascot';
+import { MascotV2 } from './MascotV2';
 import { AnimatedBell } from './AnimatedBell';
 
 interface OnboardingProps {
@@ -390,12 +390,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
         
         {/* Animated Mascot Frame */}
         {step < 16 && (
-          <div className="flex justify-center h-48 sm:h-56 w-full relative mb-1">
-            <Mascot 
-              mood={mascotMood} 
-              effect={mascotEffect}
-              className="h-full w-auto max-w-[200px]"
-              theme="standard"
+          <div className="flex justify-center h-44 sm:h-48 w-full relative mb-1">
+            <MascotV2 
+              className="h-full w-auto max-w-[160px]"
+              isSmiling={step === 1 ? (introStep === 0 || introStep === 1 || introStep === 2 || introStep === 3) : (step === 5 || step === 6 || step === 8 || step === 11 || step === 12 || step === 13 || step === 15)}
             />
           </div>
         )}
@@ -1011,12 +1009,10 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
               className="flex flex-col items-center w-full"
             >
               {/* Excited Mascot renders at the top of the card when completing onboarding */}
-              <div className="flex justify-center h-48 sm:h-56 w-full relative mb-1">
-                <Mascot 
-                  mood={mascotMood} 
-                  effect={mascotEffect}
-                  className="h-full w-auto max-w-[200px]"
-                  theme="standard"
+              <div className="flex justify-center h-44 sm:h-48 w-full relative mb-1">
+                <MascotV2 
+                  className="h-full w-auto max-w-[160px]"
+                  isSmiling={true}
                 />
               </div>
 
