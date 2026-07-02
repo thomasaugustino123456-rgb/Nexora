@@ -58,6 +58,34 @@ const SOUNDS = {
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775215716/mixkit-medieval-show-fanfare-announcement-226_mxkbi8.wav",
   trophy_triplets:
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775223058/mixkit-funky-triplets-1141_yeizgw.mp3",
+  bubble_gum_pop: "",
+  slime_squish: "",
+  fire_spark: "",
+  lunar_hum: "",
+  silk_rustle: "",
+  dream_chord: "",
+  lotus_splash: "",
+  fern_rustle: "",
+  clover_shine: "",
+  orchid_spark: "",
+  cactus_prick: "",
+  cactus_bloom: "",
+  bamboo_knock: "",
+  star_chime: "",
+  sprout_pop: "",
+  zen_gong: "",
+  desert_wind: "",
+  tropical_chirp: "",
+  forest_rustle: "",
+  meadow_breeze: "",
+  crystal_ting: "",
+  volcano_rumble: "",
+  flower_sigh: "",
+  sprout_cry: "",
+  tulip_breeze: "",
+  tulip_laugh: "",
+  rose_sigh: "",
+  shroom_glow: "",
 };
 
 // Advanced Audio Engine
@@ -238,6 +266,233 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
       osc.start(now);
       osc.stop(now + 0.25);
+    } else if (soundKey === "bubble_gum_pop") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(1100, now + 0.1);
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.15, now + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else if (soundKey === "slime_squish") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.linearRampToValueAtTime(60, now + 0.18);
+      gainNode.gain.setValueAtTime(0.12, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+      osc.start(now);
+      osc.stop(now + 0.18);
+    } else if (soundKey === "fire_spark") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(800, now);
+      osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+      gainNode.gain.setValueAtTime(0.08, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else if (soundKey === "lunar_hum") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.setValueAtTime(440, now + 0.1);
+      gainNode.gain.setValueAtTime(0.1, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    } else if (soundKey === "silk_rustle") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(1200, now);
+      osc.frequency.exponentialRampToValueAtTime(400, now + 0.12);
+      gainNode.gain.setValueAtTime(0.05, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } else if (soundKey === "dream_chord") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(329.63, now); // E4
+      osc.frequency.setValueAtTime(392.00, now + 0.08); // G4
+      osc.frequency.setValueAtTime(523.25, now + 0.16); // C5
+      osc.frequency.setValueAtTime(659.25, now + 0.24); // E5
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.1, now + 0.05);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+      osc.start(now);
+      osc.stop(now + 0.55);
+    } else if (soundKey === "lotus_splash") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(900, now + 0.15);
+      gainNode.gain.setValueAtTime(0.08, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else if (soundKey === "fern_rustle") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(150, now + 0.1);
+      gainNode.gain.setValueAtTime(0.06, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    } else if (soundKey === "clover_shine") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(1760, now + 0.15);
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.08, now + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } else if (soundKey === "orchid_spark") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(783.99, now); // G5
+      osc.frequency.setValueAtTime(1046.50, now + 0.06); // C6
+      gainNode.gain.setValueAtTime(0.1, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else if (soundKey === "cactus_prick") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(1500, now);
+      osc.frequency.setValueAtTime(100, now + 0.02);
+      gainNode.gain.setValueAtTime(0.12, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+      osc.start(now);
+      osc.stop(now + 0.04);
+    } else if (soundKey === "cactus_bloom") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(261.63, now);
+      osc.frequency.linearRampToValueAtTime(523.25, now + 0.25);
+      gainNode.gain.setValueAtTime(0.1, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } else if (soundKey === "bamboo_knock") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(380, now);
+      gainNode.gain.setValueAtTime(0.15, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    } else if (soundKey === "star_chime") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(987.77, now); // B5
+      osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+      gainNode.gain.setValueAtTime(0.12, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+      osc.start(now);
+      osc.stop(now + 0.45);
+    } else if (soundKey === "sprout_pop") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+      gainNode.gain.setValueAtTime(0.15, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    } else if (soundKey === "zen_gong") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(110, now);
+      gainNode.gain.setValueAtTime(0.2, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+      osc.start(now);
+      osc.stop(now + 1.2);
+    } else if (soundKey === "desert_wind") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(130, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.5);
+      gainNode.gain.setValueAtTime(0.05, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } else if (soundKey === "tropical_chirp") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(900, now);
+      osc.frequency.linearRampToValueAtTime(1500, now + 0.08);
+      gainNode.gain.setValueAtTime(0.08, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    } else if (soundKey === "forest_rustle") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+      gainNode.gain.setValueAtTime(0.05, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else if (soundKey === "meadow_breeze") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(200, now);
+      osc.frequency.exponentialRampToValueAtTime(100, now + 0.4);
+      gainNode.gain.setValueAtTime(0.06, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else if (soundKey === "crystal_ting") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(2048, now);
+      gainNode.gain.setValueAtTime(0.12, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    } else if (soundKey === "volcano_rumble") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(55, now);
+      osc.frequency.linearRampToValueAtTime(30, now + 0.8);
+      gainNode.gain.setValueAtTime(0.2, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+      osc.start(now);
+      osc.stop(now + 0.8);
+    } else if (soundKey === "flower_sigh") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(200, now + 0.4);
+      gainNode.gain.setValueAtTime(0.1, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else if (soundKey === "sprout_cry") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.linearRampToValueAtTime(150, now + 0.6);
+      gainNode.gain.setValueAtTime(0.08, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    } else if (soundKey === "tulip_breeze") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(350, now);
+      osc.frequency.linearRampToValueAtTime(450, now + 0.15);
+      gainNode.gain.setValueAtTime(0.08, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else if (soundKey === "tulip_laugh") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.setValueAtTime(800, now + 0.05);
+      gainNode.gain.setValueAtTime(0.1, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else if (soundKey === "rose_sigh") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(350, now);
+      osc.frequency.linearRampToValueAtTime(200, now + 0.45);
+      gainNode.gain.setValueAtTime(0.08, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+      osc.start(now);
+      osc.stop(now + 0.45);
+    } else if (soundKey === "shroom_glow") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.35);
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.12, now + 0.05);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
     } else if (soundKey === "continue" || soundKey === "challenge_unlock" || soundKey === "flame_complete") {
       osc.type = "triangle";
       osc.frequency.setValueAtTime(261.63, now); // C4

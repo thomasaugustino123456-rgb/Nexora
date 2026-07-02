@@ -25,7 +25,7 @@ export interface PlacedHouseItem {
   room: number;
 }
 
-export type PlantType = 'zen' | 'desert' | 'tropical' | 'forest' | 'meadow' | 'crystal' | 'volcano' | 'sprout' | 'boredFlower' | 'mourningSprout' | 'breezeTulip' | 'happyTulip' | 'distressedRose' | 'slime-berry' | 'solar-flare-pea' | 'moon-sprout' | 'star-silk-leaf' | 'dream-shroom' | 'luck-lotus' | 'luck-fern' | 'luck-clover' | 'luck-orchid' | 'luck-cactus' | 'premium-cactus';
+export type PlantType = 'zen' | 'desert' | 'tropical' | 'forest' | 'meadow' | 'crystal' | 'volcano' | 'sprout' | 'boredFlower' | 'mourningSprout' | 'breezeTulip' | 'happyTulip' | 'distressedRose' | 'slime-berry' | 'solar-flare-pea' | 'moon-sprout' | 'star-silk-leaf' | 'dream-shroom' | 'luck-lotus' | 'luck-fern' | 'luck-clover' | 'luck-orchid' | 'luck-cactus' | 'premium-cactus' | 'lucky-bamboo' | 'cosmic-star-flower' | 'bubble-gum-succulent' | 'neon-mushroom';
 
 export interface PlantState {
   type: PlantType;

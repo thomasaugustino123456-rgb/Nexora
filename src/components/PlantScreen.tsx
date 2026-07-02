@@ -114,7 +114,11 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     'luck-clover': { name: "Emerald Aura Clover", description: "The legendary clover of golden aura. Brings unparalleled focus and good vibes." },
     'luck-orchid': { name: "Astra Velvet Orchid", description: "The crown jewel of botanical matrixes. A deep velvet flower humming with violet electricity!" },
     'luck-cactus': { name: "Solar Mystic Cactus", description: "An epic desert survivor with a fiery coral flower. Thrives elegantly on sheer focus power." },
-    'premium-cactus': { name: "Superior Desert Cactus", description: "A high-tier succulent engineered for extreme resilience and elegance." }
+    'premium-cactus': { name: "Superior Desert Cactus", description: "A high-tier succulent engineered for extreme resilience and elegance." },
+    'lucky-bamboo': { name: "Lucky Bamboo Sprout", description: "A sacred botanical wonder of vertical expansion and organic flexibility." },
+    'cosmic-star-flower': { name: "Premium Cosmic Star-Flower", description: "A divine celestial flora of vibrant magenta and deep royal purple, blooming with beautiful neon starburst energy." },
+    'bubble-gum-succulent': { name: "The Bubble-Gum Succulent", description: "A delightfully sweet radial succulent that blooms with rich bubble-gum and grape petals under focus energy!" },
+    'neon-mushroom': { name: "Premium Living Neon Mushroom", description: "A bioluminescent neon fungal marvel that glows vibrantly and sways dynamically in your workspace!" }
   };
 
   const cozySeedsList = [
@@ -128,7 +132,11 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     { id: 'luck-clover', name: 'Emerald Aura Clover', rarity: 'Legendary', emoji: '🍀' },
     { id: 'luck-orchid', name: 'Astra Velvet Orchid', rarity: 'Legendary', emoji: '🌌' },
     { id: 'luck-cactus', name: 'Solar Mystic Cactus', rarity: 'Epic', emoji: '🌵' },
-    { id: 'premium-cactus', name: 'Superior Desert Cactus', rarity: 'Legendary', emoji: '🏜️' }
+    { id: 'premium-cactus', name: 'Superior Desert Cactus', rarity: 'Legendary', emoji: '🏜️' },
+    { id: 'lucky-bamboo', name: 'Lucky Bamboo Sprout', rarity: 'Legendary', emoji: '🎋' },
+    { id: 'cosmic-star-flower', name: 'Premium Cosmic Star-Flower', rarity: 'Legendary', emoji: '⭐' },
+    { id: 'bubble-gum-succulent', name: 'The Bubble-Gum Succulent', rarity: 'Legendary', emoji: '🍥' },
+    { id: 'neon-mushroom', name: 'Premium Living Neon Mushroom', rarity: 'Legendary', emoji: '🍄' }
   ];
 
   const onboardingSteps = [
@@ -210,7 +218,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
     }
   };
 
-  const ECOSYSTEM_PATH: PlantType[] = ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano', 'boredFlower', 'mourningSprout', 'breezeTulip', 'happyTulip', 'distressedRose', 'premium-cactus'];
+  const ECOSYSTEM_PATH: PlantType[] = ['sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano', 'boredFlower', 'mourningSprout', 'breezeTulip', 'happyTulip', 'distressedRose', 'premium-cactus', 'lucky-bamboo', 'cosmic-star-flower', 'bubble-gum-succulent', 'neon-mushroom'];
   const unlocked = plantState.unlockedTypes || ['sprout'];
   const isForestActive = settings.activeEcosystemItemIds?.includes('eco_forest_01');
 

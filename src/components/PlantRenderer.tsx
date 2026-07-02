@@ -69,20 +69,45 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
 
   const handlePlantClick = () => {
     if (isDead) return;
+    if (isShaking) return;
 
-    if (type === 'mourningSprout') {
-      if (isShaking) return;
-      setIsShaking(true);
-      play('dogHungry'); // A whimper-like sound for the sad plant
-      setTimeout(() => setIsShaking(false), 1000);
-      return;
-    }
+    setIsShaking(true);
 
-    if (type !== 'boredFlower') return;
-    
-    setClickCount(prev => prev + 1);
-    play('water'); // Lighter sound for the flower
-    setTimeout(() => setClickCount(0), 1000);
+    const plantClickSounds: Record<PlantType, string> = {
+      'bubble-gum-succulent': 'bubble_gum_pop',
+      'neon-mushroom': 'shroom_glow',
+      'slime-berry': 'slime_squish',
+      'solar-flare-pea': 'fire_spark',
+      'moon-sprout': 'lunar_hum',
+      'star-silk-leaf': 'silk_rustle',
+      'dream-shroom': 'dream_chord',
+      'luck-lotus': 'lotus_splash',
+      'luck-fern': 'fern_rustle',
+      'luck-clover': 'clover_shine',
+      'luck-orchid': 'orchid_spark',
+      'luck-cactus': 'cactus_prick',
+      'premium-cactus': 'cactus_bloom',
+      'lucky-bamboo': 'bamboo_knock',
+      'cosmic-star-flower': 'star_chime',
+      'sprout': 'sprout_pop',
+      'zen': 'zen_gong',
+      'desert': 'desert_wind',
+      'tropical': 'tropical_chirp',
+      'forest': 'forest_rustle',
+      'meadow': 'meadow_breeze',
+      'crystal': 'crystal_ting',
+      'volcano': 'volcano_rumble',
+      'boredFlower': 'flower_sigh',
+      'mourningSprout': 'sprout_cry',
+      'breezeTulip': 'tulip_breeze',
+      'happyTulip': 'tulip_laugh',
+      'distressedRose': 'rose_sigh',
+    };
+
+    const soundKey = plantClickSounds[type] || 'water';
+    play(soundKey as any);
+
+    setTimeout(() => setIsShaking(false), 1000);
   };
 
   const getPlantColors = () => {
@@ -107,6 +132,10 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
       case 'luck-orchid': return { primary: '#818CF8', secondary: '#4338CA', accent: '#E0E7FF' };
       case 'luck-cactus': return { primary: '#22C55E', secondary: '#15803D', accent: '#F43F5E' };
       case 'premium-cactus': return { primary: '#4CAF50', secondary: '#388E3C', accent: '#FF4081' };
+      case 'lucky-bamboo': return { primary: '#34D399', secondary: '#059669', accent: '#FDE047' };
+      case 'cosmic-star-flower': return { primary: '#F43F5E', secondary: '#6B21A8', accent: '#22D3EE' };
+      case 'bubble-gum-succulent': return { primary: '#FF69B4', secondary: '#4B0082', accent: '#FDE047' };
+      case 'neon-mushroom': return { primary: '#ADFF2F', secondary: '#1E1B4B', accent: '#EA580C' };
       case 'zen': return { primary: '#4CAF50', secondary: '#388E3C', accent: '#2E7D32' };
       case 'desert': return { primary: '#81C784', secondary: '#43A047', accent: '#FB8C00' };
       case 'tropical': return { primary: '#00C853', secondary: '#00E676', accent: '#FF4081' };
@@ -2280,6 +2309,746 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
     );
   };
 
+  const renderLuckyBamboo = () => {
+    return (
+      <g className="run-growth">
+        <defs>
+          <linearGradient id="bambooLight" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#A7F3D0"/><stop offset="100%" stopColor="#34D399"/>
+          </linearGradient>
+          <linearGradient id="bambooDark" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#059669"/><stop offset="100%" stopColor="#064E3B"/>
+          </linearGradient>
+
+          <linearGradient id="goldJoint" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#FDE047"/><stop offset="100%" stopColor="#CA8A04"/>
+          </linearGradient>
+          
+          <linearGradient id="potLight" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#FF8A65"/><stop offset="100%" stopColor="#E64A19"/>
+          </linearGradient>
+          <linearGradient id="potDark" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#E64A19"/><stop offset="100%" stopColor="#BF360C"/>
+          </linearGradient>
+        </defs>
+
+        {/* Step 1: Magic Maturity Energy Ring (Fires at peak growth) */}
+        {stage >= 5 && (
+          <motion.circle 
+            className="bloom-ring" 
+            cx="100" 
+            cy="70" 
+            r="32" 
+            fill="none" 
+            stroke="#FDE047" 
+            strokeWidth="8"
+            initial={{ scale: 0.2, opacity: 0 }}
+            animate={{ scale: [0.2, 1.5], opacity: [0, 0.8, 0] }}
+            transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 1.5, ease: "easeOut" }}
+          />
+        )}
+
+        {/* MASTER OUTER STICKER OUTLINE OUTLINE LAYER */}
+        <g stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round" strokeLinecap="round">
+          
+          {/* Master Stalk Assembly */}
+          {stage >= 1 && (
+            <motion.g 
+              className="bamboo-stalk-group"
+              initial={{ scaleY: 0, scaleX: 0.5, opacity: 0 }}
+              animate={{ scaleY: 1, scaleX: 1, opacity: 1 }}
+              transition={{ duration: 1.2, ease: [0.25, 1, 0.4, 1] }}
+              style={{ transformOrigin: "100px 170px" }}
+            >
+              
+              {/* Segment 1: Fixed Lower Trunk Base */}
+              <path d="M86,170 L114,170 L112,125 L88,125 Z" fill="none" />
+              
+              {/* THE FLEXIBLE MOVING UPPER ASSEMBLY */}
+              {stage >= 2 && (
+                <motion.g 
+                  className="upper-stem"
+                  initial={{ rotate: -12, skewX: -8 }}
+                  animate={{ rotate: 0, skewX: 0 }}
+                  transition={{ duration: 1.6, ease: [0.36, 0.07, 0.19, 0.97] }}
+                  style={{ transformOrigin: "100px 125px" }}
+                >
+                  {/* Segment 2: Middle Trunk Structure */}
+                  <path d="M88,125 L112,125 L110,85 L90,85 Z" fill="none" />
+                  
+                  {/* Segment 3: Crown Head Nodes */}
+                  {stage >= 3 && (
+                    <path d="M90,85 L110,85 L106,60 L94,60 Z" fill="none" />
+                  )}
+
+                  {/* Crown Top Swooping Foliage Leaves */}
+                  {stage >= 4 && (
+                    <motion.g 
+                      className="bamboo-leaves"
+                      initial={{ scale: 0, rotate: -20 }}
+                      animate={{ scale: 1, rotate: [0, 3, 0] }}
+                      transition={{ 
+                        scale: { duration: 0.75, ease: [0.175, 0.885, 0.32, 1.4] },
+                        rotate: { repeat: Infinity, duration: 4, ease: "easeInOut", delay: 1.5 }
+                      }}
+                      style={{ transformOrigin: "88px 65px" }}
+                    >
+                      <path d="M95,60 C70,55 50,25 45,20 C45,20 70,30 95,60 Z" fill="none" />
+                      <path d="M105,60 C130,55 150,25 155,20 C155,20 130,30 105,60 Z" fill="none" />
+                      <path d="M100,60 C100,60 90,30 100,10 C110,30 100,60 100,60 Z" fill="none" />
+                    </motion.g>
+                  )}
+                </motion.g>
+              )}
+            </motion.g>
+          )}
+
+          {/* Static Clay Base Pot Outline Structure */}
+          <g className="pot-group">
+            <path d="M60,175 L140,175 L130,230 L70,230 Z" fill="none" />
+            <rect x="52" y="162" width="96" height="14" rx="4" fill="none" />
+            <ellipse cx="100" cy="164" rx="42" ry="5" fill="none" />
+          </g>
+        </g>
+
+        {/* COLOURED VECTOR FILL CORES */}
+        {stage >= 1 && (
+          <motion.g 
+            className="bamboo-stalk-group"
+            initial={{ scaleY: 0, scaleX: 0.5, opacity: 0 }}
+            animate={{ scaleY: 1, scaleX: 1, opacity: 1 }}
+            transition={{ duration: 1.2, ease: [0.25, 1, 0.4, 1] }}
+            style={{ transformOrigin: "100px 170px" }}
+          >
+            {/* Segment 1 Color Fills */}
+            <path d="M86,170 L100,170 L100,125 L88,125 Z" fill="url(#bambooLight)" />
+            <path d="M100,170 L114,170 L112,125 L100,125 Z" fill="url(#bambooDark)" />
+
+            {stage >= 2 && (
+              <motion.g 
+                className="upper-stem"
+                initial={{ rotate: -12, skewX: -8 }}
+                animate={{ rotate: 0, skewX: 0 }}
+                transition={{ duration: 1.6, ease: [0.36, 0.07, 0.19, 0.97] }}
+                style={{ transformOrigin: "100px 125px" }}
+              >
+                {/* Segment 2 Color Fills */}
+                <path d="M88,125 L100,125 L100,85 L90,85 Z" fill="url(#bambooLight)" />
+                <path d="M100,125 L112,125 L110,85 L100,85 Z" fill="url(#bambooDark)" />
+                
+                {/* Segment 3 Color Fills */}
+                {stage >= 3 && (
+                  <>
+                    <path d="M90,85 L100,85 L100,60 L94,60 Z" fill="url(#bambooLight)" />
+                    <path d="M100,85 L110,85 L106,60 L100,60 Z" fill="url(#bambooDark)" />
+                  </>
+                )}
+
+                {/* Crown Swooping Leaves Split Colors */}
+                {stage >= 4 && (
+                  <motion.g 
+                    className="bamboo-leaves"
+                    initial={{ scale: 0, rotate: -20 }}
+                    animate={{ scale: 1, rotate: [0, 3, 0] }}
+                    transition={{ 
+                      scale: { duration: 0.75, ease: [0.175, 0.885, 0.32, 1.4] },
+                      rotate: { repeat: Infinity, duration: 4, ease: "easeInOut", delay: 1.5 }
+                    }}
+                    style={{ transformOrigin: "88px 65px" }}
+                  >
+                    <path d="M95,60 C70,55 50,25 45,20 C45,20 70,30 95,60 Z" fill="url(#bambooLight)" />
+                    <path d="M105,60 C130,55 150,25 155,20 C155,20 130,30 105,60 Z" fill="url(#bambooDark)" />
+                    <path d="M100,60 C100,60 90,30 100,10 Z" fill="url(#bambooLight)" />
+                    <path d="M100,60 C100,60 110,30 100,10 Z" fill="url(#bambooDark)" />
+                  </motion.g>
+                )}
+              </motion.g>
+            )}
+
+            {/* Shiny Golden Split Connector Ring Joints */}
+            {stage >= 2 && (
+              <rect x="86.5" y="123" width="27" height="4" fill="url(#goldJoint)" stroke="#0F172A" strokeWidth="1.5" />
+            )}
+            {stage >= 3 && (
+              <rect x="88.5" y="83" width="23" height="4" fill="url(#goldJoint)" stroke="#0F172A" strokeWidth="1.5" />
+            )}
+          </motion.g>
+        )}
+
+        {/* Static Solid Earth Clay Pot Rendering Core */}
+        <ellipse cx="100" cy="164" rx="40" ry="4" fill="#5C4033" />
+        <path d="M54,164 L100,164 L100,174 L54,174 Z" fill="url(#potLight)" />
+        <path d="M100,164 L146,164 L146,174 L100,174 Z" fill="url(#potDark)" />
+        <path d="M100,177 L62,177 L71,228 L100,228 Z" fill="url(#potLight)" />
+        <path d="M100,177 L138,177 L129,228 L100,228 Z" fill="url(#potDark)" />
+      </g>
+    );
+  };
+
+  const renderCosmicStarFlower = () => {
+    return (
+      <g className="run-growth">
+        <defs>
+          <linearGradient id="stemLight" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stopColor="#10B981"/><stop offset="100%" stopColor="#34D399"/>
+          </linearGradient>
+          
+          <linearGradient id="petalLight" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#F43F5E"/><stop offset="100%" stopColor="#D946EF"/>
+          </linearGradient>
+          <linearGradient id="petalDark" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#C084FC"/><stop offset="100%" stopColor="#6B21A8"/>
+          </linearGradient>
+
+          <linearGradient id="coreGold" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#FDE047"/><stop offset="100%" stopColor="#EAB308"/>
+          </linearGradient>
+
+          <linearGradient id="rimTeal" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#22D3EE"/><stop offset="100%" stopColor="#0891B2"/>
+          </linearGradient>
+          <linearGradient id="potPurpleLight" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#8B5CF6"/><stop offset="100%" stopColor="#6D28D9"/>
+          </linearGradient>
+          <linearGradient id="potPurpleDark" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#4C1D95"/><stop offset="100%" stopColor="#2E1065"/>
+          </linearGradient>
+        </defs>
+
+        {/* Step 1: Glowing Magic Starburst Particle Fields */}
+        {stage >= 5 && (
+          <motion.g 
+            className="cosmic-sparks"
+            initial={{ scale: 0.3, opacity: 0 }}
+            animate={{ scale: [0.3, 1.5, 1.2], opacity: [0, 1, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
+            style={{ transformOrigin: "100px 85px" }}
+          >
+            <circle cx="100" cy="50" r="5" fill="#FDE047"/>
+            <path d="M60,75 L50,70 M140,75 L150,70 M100,40 L100,25" stroke="#22D3EE" strokeWidth="3" strokeLinecap="round"/>
+            <circle cx="65" cy="110" r="3.5" fill="#FFF"/>
+            <circle cx="135" cy="110" r="3.5" fill="#FDE047"/>
+          </motion.g>
+        )}
+
+        {/* STICKER BOUNDARY OUTLINE SYSTEM */}
+        <g stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round" strokeLinecap="round">
+          {stage >= 1 && (
+            <motion.g 
+              className="main-stem-group"
+              initial={{ scaleY: 0, scaleX: 0.4, opacity: 0 }}
+              animate={{ scaleY: 1, scaleX: 1, opacity: 1 }}
+              transition={{ duration: 1.2, ease: [0.25, 1, 0.4, 1] }}
+              style={{ transformOrigin: "100px 172px" }}
+            >
+              {/* Curved Thick Trunk Path */}
+              <path d="M100,172 C95,140 105,115 100,85" fill="none" stroke="url(#stemLight)" strokeWidth="12" />
+              
+              {/* Side Stem Foliage Support Wings */}
+              {stage >= 2 && (
+                <>
+                  <path d="M96,140 C80,140 75,125 75,125 C75,125 88,125 96,140 Z" fill="#10B981" />
+                  <path d="M104,125 C120,125 125,110 125,110 C125,110 112,110 104,125 Z" fill="#047857" />
+                </>
+              )}
+
+              {/* COMPOSITE SPIRAL BLOOM HEAD ASSEMBLY */}
+              {stage >= 3 && (
+                <motion.g 
+                  className="flower-head"
+                  initial={{ scale: 0, rotate: -90 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ duration: 0.9, ease: [0.175, 0.885, 0.32, 1.35] }}
+                  style={{ transformOrigin: "100px 85px" }}
+                >
+                  {/* Individual Cartoon Star Petal Loops */}
+                  <path d="M100,85 C80,55 60,65 70,85 C80,105 100,85 100,85 Z" fill="none" />
+                  <path d="M100,85 C120,55 140,65 130,85 C120,105 100,85 100,85 Z" fill="none" />
+                  <path d="M100,85 C70,95 75,120 100,110 C125,120 130,95 100,85 Z" fill="none" />
+                  <path d="M100,85 C100,50 85,35 100,35 C115,35 100,50 100,85 Z" fill="none" />
+                  
+                  {/* Center Glow Button Core */}
+                  <circle cx="100" cy="85" r="14" fill="none" />
+                </motion.g>
+              )}
+            </motion.g>
+          )}
+
+          {/* Polished Split-Color Pot Geometry */}
+          <g className="pot-container-group">
+            <path d="M60,175 L140,175 L130,230 L70,230 Z" fill="none" />
+            <rect x="52" y="162" width="96" height="14" rx="4" fill="none" />
+            <ellipse cx="100" cy="164" rx="42" ry="5" fill="none" />
+          </g>
+        </g>
+
+        {/* COLOURED VECTOR FILL CORES */}
+        {stage >= 1 && (
+          <motion.g 
+            className="main-stem-group"
+            initial={{ scaleY: 0, scaleX: 0.4, opacity: 0 }}
+            animate={{ scaleY: 1, scaleX: 1, opacity: 1 }}
+            transition={{ duration: 1.2, ease: [0.25, 1, 0.4, 1] }}
+            style={{ transformOrigin: "100px 172px" }}
+          >
+            {/* Flower Head Core Shading Overlays */}
+            {stage >= 3 && (
+              <motion.g 
+                className="flower-head"
+                initial={{ scale: 0, rotate: -90 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ duration: 0.9, ease: [0.175, 0.885, 0.32, 1.35] }}
+                style={{ transformOrigin: "100px 85px" }}
+              >
+                <path d="M100,85 C80,55 60,65 70,85 C80,105 100,85 100,85 Z" fill="url(#petalLight)" />
+                <path d="M100,85 C120,55 140,65 130,85 C120,105 100,85 100,85 Z" fill="url(#petalDark)" />
+                <path d="M100,85 C70,95 75,120 100,110 Z" fill="url(#petalLight)" />
+                <path d="M100,85 C130,95 125,120 100,110 Z" fill="url(#petalDark)" />
+                <path d="M100,85 C100,50 85,35 100,35 Z" fill="url(#petalLight)" />
+                <path d="M100,85 C100,50 115,35 100,35 Z" fill="url(#petalDark)" />
+                
+                {/* Core Center Seed Core */}
+                <circle cx="100" cy="85" r="12" fill="url(#coreGold)" />
+
+                {/* THE CARTOON FACE LAYER */}
+                <motion.g 
+                  className="plant-face" 
+                  fill="#0F172A" 
+                  stroke="none"
+                  animate={{ y: [0, 1, 0], scaleY: [1, 0.98, 1], scaleX: [1, 1.02, 1] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  style={{ transformOrigin: "100px 88px" }}
+                >
+                  {/* Left Eye (Chunky pill shape) */}
+                  <motion.rect 
+                    className="eye-left" 
+                    x="90" y="82" width="4" height="6" rx="2" 
+                    animate={{ scaleY: [1, 1, 0.1, 1, 1, 0.1, 1, 1] }}
+                    transition={{ 
+                      times: [0, 0.45, 0.46, 0.47, 0.98, 0.99, 0.995, 1],
+                      duration: 4, 
+                      repeat: Infinity, 
+                      ease: "linear" 
+                    }}
+                    style={{ transformOrigin: "92px 85px" }}
+                  />
+                  {/* Right Eye (Chunky pill shape) */}
+                  <motion.rect 
+                    className="eye-right" 
+                    x="106" y="82" width="4" height="6" rx="2" 
+                    animate={{ scaleY: [1, 1, 0.1, 1, 1, 0.1, 1, 1] }}
+                    transition={{ 
+                      times: [0, 0.45, 0.46, 0.47, 0.98, 0.99, 0.995, 1],
+                      duration: 4, 
+                      repeat: Infinity, 
+                      ease: "linear" 
+                    }}
+                    style={{ transformOrigin: "108px 85px" }}
+                  />
+                  
+                  {/* Left Cheek Blush (Soft transparent pink) */}
+                  <circle cx="87" cy="89" r="2" fill="#F43F5E" opacity="0.5" />
+                  {/* Right Cheek Blush (Soft transparent pink) */}
+                  <circle cx="113" cy="89" r="2" fill="#F43F5E" opacity="0.5" />
+
+                  {/* Tiny Happy Curved Mouth Center */}
+                  <path d="M98,89 C98,91 102,91 102,89 C102,90 98,90 98,89 Z" stroke="#0F172A" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                </motion.g>
+
+                <circle cx="97" cy="81" r="2.5" fill="#FFF" opacity="0.4"/>
+              </motion.g>
+            )}
+          </motion.g>
+        )}
+
+        {/* Polished Pot Multi-Color Core Profiles */}
+        <ellipse cx="100" cy="164" rx="40" ry="4" fill="#451A03" />
+        <path d="M54,164 L146,164 L146,174 L54,174 Z" fill="url(#rimTeal)" />
+        <path d="M100,177 L62,177 L71,228 L100,228 Z" fill="url(#potPurpleLight)" />
+        <path d="M100,177 L138,177 L129,228 L100,228 Z" fill="url(#potPurpleDark)" />
+      </g>
+    );
+  };
+
+  const renderBubbleGumSucculent = () => {
+    return (
+      <g className="run-growth">
+        <defs>
+          <linearGradient id="bubblegumPink" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#FF69B4"/><stop offset="100%" stopColor="#FF1493"/>
+          </linearGradient>
+          <linearGradient id="grapePurple" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#9370DB"/><stop offset="100%" stopColor="#4B0082"/>
+          </linearGradient>
+
+          <linearGradient id="rimYellow" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#FDE047"/><stop offset="100%" stopColor="#EAB308"/>
+          </linearGradient>
+          <linearGradient id="potCharcoalLight" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#4B5563"/><stop offset="100%" stopColor="#374151"/>
+          </linearGradient>
+          <linearGradient id="potCharcoalDark" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#1F2937"/><stop offset="100%" stopColor="#111827"/>
+          </linearGradient>
+        </defs>
+
+        {/* Pop Sparkle Asset Backdrops */}
+        {stage >= 5 && (
+          <motion.g 
+            className="pop-sparkles"
+            initial={{ scale: 0.4, opacity: 0 }}
+            animate={{ scale: [0.4, 1.4], opacity: [0, 1, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
+            style={{ transformOrigin: "100px 125px" }}
+          >
+            <circle cx="100" cy="75" r="4.5" fill="#FDE047"/>
+            <circle cx="55" cy="125" r="3.5" fill="#22D3EE"/>
+            <circle cx="145" cy="125" r="3.5" fill="#FF69B4"/>
+            <path d="M55,90 L45,85 M145,90 L155,85" stroke="#FFF" strokeWidth="3" strokeLinecap="round"/>
+          </motion.g>
+        )}
+
+        {/* STICKER FRAME OUTLINE SYSTEM */}
+        <g stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round" strokeLinecap="round">
+          {stage >= 1 && (
+            <motion.g 
+              className="succulent-master-group"
+              initial={{ scaleY: 0, scaleX: 0, opacity: 0 }}
+              animate={{ 
+                scaleY: [0, 0.1, 1.4, 0.85, 1],
+                scaleX: [0, 0.5, 0.7, 1.15, 1],
+                y: [0, 0, -12, 2, 0],
+                opacity: 1 
+              }}
+              transition={{ duration: 1.5, ease: [0.25, 1, 0.4, 1], delay: 0.2 }}
+              style={{ transformOrigin: "100px 172px" }}
+            >
+              {/* Under-Trunk Base Stem Supporting Cluster Block */}
+              <path d="M86,172 C80,145 120,145 114,172 Z" fill="#4B0082" />
+
+              {/* RADIAL BLOOM HEAD */}
+              {stage >= 3 && (
+                <motion.g 
+                  className="rosette-bloom"
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: [0, 1.32, 1], rotate: [-45, 10, 0] }}
+                  transition={{ duration: 1.0, ease: [0.175, 0.885, 0.32, 1.4], delay: 1.1 }}
+                  style={{ transformOrigin: "100px 125px" }}
+                >
+                  {/* Giant Outer Fat Leaves Loops */}
+                  <path d="M100,125 C65,115 55,150 75,160 C95,170 100,125 100,125 Z" fill="none" />
+                  <path d="M100,125 C135,115 145,150 125,160 C105,170 100,125 100,125 Z" fill="none" />
+                  <path d="M100,125 C60,110 65,80 85,90 C105,100 100,125 100,125 Z" fill="none" />
+                  <path d="M100,125 C140,110 135,80 115,90 C95,100 100,125 100,125 Z" fill="none" />
+                  <path d="M100,125 C100,80 80,70 100,70 C120,70 100,80 100,125 Z" fill="none" />
+
+                  {/* Inside Head Central Face Canvas Core */}
+                  <circle cx="100" cy="125" r="16" fill="none" />
+                </motion.g>
+              )}
+            </motion.g>
+          )}
+
+          {/* Polished Pot Geometry Containers */}
+          <g className="pot-group">
+            <path d="M60,175 L140,175 L130,230 L70,230 Z" fill="none" />
+            <rect x="52" y="162" width="96" height="14" rx="4" fill="none" />
+            <ellipse cx="100" cy="164" rx="42" ry="5" fill="none" />
+          </g>
+        </g>
+
+        {/* COLOURED PROFILE CORES & CHARACTER LAYERS */}
+        {stage >= 1 && (
+          <motion.g 
+            className="succulent-master-group"
+            initial={{ scaleY: 0, scaleX: 0, opacity: 0 }}
+            animate={{ 
+              scaleY: [0, 0.1, 1.4, 0.85, 1],
+              scaleX: [0, 0.5, 0.7, 1.15, 1],
+              y: [0, 0, -12, 2, 0],
+              opacity: 1 
+            }}
+            transition={{ duration: 1.5, ease: [0.25, 1, 0.4, 1], delay: 0.2 }}
+            style={{ transformOrigin: "100px 172px" }}
+          >
+            {stage >= 3 && (
+              <motion.g 
+                className="rosette-bloom"
+                initial={{ scale: 0, rotate: -45 }}
+                animate={{ scale: [0, 1.32, 1], rotate: [-45, 10, 0] }}
+                transition={{ duration: 1.0, ease: [0.175, 0.885, 0.32, 1.4], delay: 1.1 }}
+                style={{ transformOrigin: "100px 125px" }}
+              >
+                {/* Petal Vector Split Color Shading Handles */}
+                <path d="M100,125 C65,115 55,150 75,160 Z" fill="url(#bubblegumPink)" />
+                <path d="M100,125 C100,125 95,170 75,160 C75,160 85,160 100,125 Z" fill="url(#grapePurple)" />
+                
+                <path d="M100,125 C135,115 145,150 125,160 Z" fill="url(#grapePurple)" />
+                <path d="M100,125 C100,125 105,170 125,160 C125,160 115,160 100,125 Z" fill="url(#bubblegumPink)" />
+
+                <path d="M100,125 C60,110 65,80 85,90 Z" fill="url(#bubblegumPink)" />
+                <path d="M100,125 C100,125 105,100 85,90 Z" fill="url(#grapePurple)" />
+
+                <path d="M100,125 C140,110 135,80 115,90 Z" fill="url(#grapePurple)" />
+                <path d="M100,125 C100,125 95,100 115,90 Z" fill="url(#bubblegumPink)" />
+
+                <path d="M100,125 C100,80 80,70 100,70 Z" fill="url(#bubblegumPink)" />
+                <path d="M100,125 C100,80 120,70 100,70 Z" fill="url(#grapePurple)" />
+
+                {/* Core Baby Face Ring Background Base */}
+                <circle cx="100" cy="125" r="14" fill="url(#bubblegumPink)" />
+
+                {/* THE BABY-PROPORTION SUCCULENT CHARACTER FACE */}
+                <g fill="#0F172A" stroke="none">
+                  {/* Left Eye (Chunky pill shape) */}
+                  <motion.rect 
+                    className="eye-left" 
+                    x="90" y="123" width="4" height="6" rx="2" 
+                    animate={{ scaleY: [1, 1, 0.1, 1, 1, 0.1, 1, 1] }}
+                    transition={{ 
+                      times: [0, 0.46, 0.47, 0.48, 0.98, 0.99, 0.995, 1],
+                      duration: 4, 
+                      repeat: Infinity, 
+                      ease: "linear" 
+                    }}
+                    style={{ transformOrigin: "92px 125px" }}
+                  />
+                  {/* Right Eye (Chunky pill shape) */}
+                  <motion.rect 
+                    className="eye-right" 
+                    x="106" y="123" width="4" height="6" rx="2" 
+                    animate={{ scaleY: [1, 1, 0.1, 1, 1, 0.1, 1, 1] }}
+                    transition={{ 
+                      times: [0, 0.46, 0.47, 0.48, 0.98, 0.99, 0.995, 1],
+                      duration: 4, 
+                      repeat: Infinity, 
+                      ease: "linear" 
+                    }}
+                    style={{ transformOrigin: "108px 125px" }}
+                  />
+                  
+                  {/* Soft Kawaii transparent cheek blushing nodes */}
+                  <circle cx="86" cy="129" r="2.5" fill="#FF1493" opacity="0.6"/>
+                  <circle cx="114" cy="129" r="2.5" fill="#FF1493" opacity="0.6"/>
+
+                  {/* Cute tiny cat-shaped open smirk mouth layout */}
+                  <path d="M98,129 Q100,131 102,129" stroke="#0F172A" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+                </g>
+              </motion.g>
+            )}
+          </motion.g>
+        )}
+
+        {/* Premium Pot Core Color Distributions */}
+        <ellipse cx="100" cy="164" rx="40" ry="4" fill="#451A03" />
+        <path d="M54,164 L146,164 L146,174 L54,174 Z" fill="url(#rimYellow)" />
+        <path d="M100,177 L62,177 L71,228 L100,228 Z" fill="url(#potCharcoalLight)" />
+        <path d="M100,177 L138,177 L129,228 L100,228 Z" fill="url(#potCharcoalDark)" />
+      </g>
+    );
+  };
+
+  const renderNeonMushroom = () => {
+    return (
+      <g className="run-growth">
+        <defs>
+          <linearGradient id="stalkLight" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#FFFDF2"/><stop offset="100%" stopColor="#FEF08A"/>
+          </linearGradient>
+          <linearGradient id="stalkDark" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#FEF08A"/><stop offset="100%" stopColor="#EAB308"/>
+          </linearGradient>
+          <linearGradient id="capIndigoLight" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stopColor="#1E1B4B"/><stop offset="100%" stopColor="#312E81"/>
+          </linearGradient>
+          <linearGradient id="capIndigoDark" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stopColor="#0F172A"/><stop offset="100%" stopColor="#1E1B4B"/>
+          </linearGradient>
+          <linearGradient id="neonLime" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ADFF2F"/><stop offset="100%" stopColor="#00FF00"/>
+          </linearGradient>
+
+          {/* POT GRADIENTS */}
+          <linearGradient id="rimTangerine" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#FB923C"/><stop offset="100%" stopColor="#EA580C"/>
+          </linearGradient>
+          <linearGradient id="potVelvetLight" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#8B5CF6"/><stop offset="100%" stopColor="#6D28D9"/>
+          </linearGradient>
+          <linearGradient id="potVelvetDark" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#4C1D95"/><stop offset="100%" stopColor="#2E1065"/>
+          </linearGradient>
+        </defs>
+
+        {/* Background Magic Glow Sparks */}
+        {stage >= 5 && (
+          <motion.g 
+            className="glow-sparks"
+            initial={{ scale: 0.3, opacity: 0 }}
+            animate={{ scale: [0.3, 1.5], opacity: [0, 1, 0] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }}
+            style={{ transformOrigin: "100px 75px" }}
+          >
+            <circle cx="50" cy="50" r="4" fill="#00FF00"/>
+            <circle cx="150" cy="50" r="4" fill="#22D3EE"/>
+            <circle cx="100" cy="25" r="5" fill="#ADFF2F"/>
+            <path d="M40,35 L50,42 M160,35 L150,42" stroke="#ADFF2F" strokeWidth="3" strokeLinecap="round"/>
+          </motion.g>
+        )}
+
+        {/* LAYER 1: POT BACKGROUND & DIRT (BEHIND THE PLANT) */}
+        <g stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round" strokeLinecap="round">
+          <ellipse cx="100" cy="164" rx="42" ry="5" fill="#131f24" />
+        </g>
+        <ellipse cx="100" cy="165" rx="40" ry="4" fill="#3B2314" />
+
+        {/* LAYER 2: THE PLANT CHARACTER SYSTEM */}
+        {stage >= 1 && (
+          <g>
+            {/* Black Outlines for Mushroom */}
+            <g stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round" strokeLinecap="round">
+              <motion.g 
+                className="mushroom-stalk"
+                initial={{ scaleY: 0, scaleX: 0.5, opacity: 0 }}
+                animate={{ 
+                  scaleY: [0, 0.4, 1.32, 0.94, 1],
+                  scaleX: [0.5, 1.3, 0.8, 1.1, 1],
+                  y: [0, 0, -6, 1, 0],
+                  opacity: 1 
+                }}
+                transition={{ duration: 1.3, ease: [0.25, 1, 0.4, 1], delay: 0.2 }}
+                style={{ transformOrigin: "100px 172px" }}
+              >
+                <path d="M84,172 C81,120 85,95 90,85 L110,85 C115,95 119,120 116,172" fill="none" />
+                
+                {stage >= 3 && (
+                  <motion.g 
+                    className="mushroom-cap"
+                    initial={{ scale: 0, scaleY: 1.8, y: 20 }}
+                    animate={{ 
+                      scale: [0, 1.3, 0.96, 1],
+                      scaleY: [1.8, 0.8, 1.04, 1],
+                      y: [20, -4, 1, 0],
+                      rotate: [0, 2.5, 0]
+                    }}
+                    transition={{
+                      scale: { duration: 0.95, ease: [0.175, 0.885, 0.32, 1.4], delay: 1.1 },
+                      scaleY: { duration: 0.95, ease: [0.175, 0.885, 0.32, 1.4], delay: 1.1 },
+                      y: { duration: 0.95, ease: [0.175, 0.885, 0.32, 1.4], delay: 1.1 },
+                      rotate: { duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2.05 }
+                    }}
+                    style={{ transformOrigin: "100px 85px" }}
+                  >
+                    <path d="M45,85 C45,40 70,30 100,30 C130,30 155,40 155,85 C155,95 140,95 100,95 C60,95 45,95 45,85 Z" fill="none" />
+                    <path d="M45,85 C60,95 100,95 100,95 C100,95 140,95 155,85" fill="none" />
+                    <circle cx="100" cy="48" r="11" fill="none"/>
+                    <circle cx="70" cy="68" r="7" fill="none"/>
+                    <circle cx="130" cy="68" r="7" fill="none"/>
+                  </motion.g>
+                )}
+              </motion.g>
+            </g>
+
+            {/* Color Fills for Mushroom */}
+            <motion.g 
+              className="mushroom-stalk"
+              initial={{ scaleY: 0, scaleX: 0.5, opacity: 0 }}
+              animate={{ 
+                scaleY: [0, 0.4, 1.32, 0.94, 1],
+                scaleX: [0.5, 1.3, 0.8, 1.1, 1],
+                y: [0, 0, -6, 1, 0],
+                opacity: 1 
+              }}
+              transition={{ duration: 1.3, ease: [0.25, 1, 0.4, 1], delay: 0.2 }}
+              style={{ transformOrigin: "100px 172px" }}
+            >
+              <path d="M84,172 C81,120 85,95 90,85 L100,85 L100,172 Z" fill="url(#stalkLight)" />
+              <path d="M100,172 L100,85 L110,85 C115,95 119,120 116,172 Z" fill="url(#stalkDark)" />
+
+              {/* High-Fidelity Expression Face Layer */}
+              <g fill="#0F172A" stroke="none">
+                <motion.rect 
+                  className="eye-left" 
+                  x="88" y="126" width="6" height="10" rx="3" 
+                  animate={{ scaleY: [1, 1, 0.1, 1, 1, 0.1, 1, 1] }}
+                  transition={{ 
+                    times: [0, 0.46, 0.47, 0.48, 0.98, 0.99, 0.995, 1],
+                    duration: 4.2, 
+                    repeat: Infinity, 
+                    ease: "linear" 
+                  }}
+                  style={{ transformOrigin: "91px 132px" }}
+                />
+                <motion.rect 
+                  className="eye-right" 
+                  x="106" y="126" width="6" height="10" rx="3" 
+                  animate={{ scaleY: [1, 1, 0.1, 1, 1, 0.1, 1, 1] }}
+                  transition={{ 
+                    times: [0, 0.46, 0.47, 0.48, 0.98, 0.99, 0.995, 1],
+                    duration: 4.2, 
+                    repeat: Infinity, 
+                    ease: "linear" 
+                  }}
+                  style={{ transformOrigin: "109px 132px" }}
+                />
+                <circle cx="83" cy="138" r="3" fill="#FB923C" opacity="0.75" />
+                <circle cx="117" cy="138" r="3" fill="#FB923C" opacity="0.75" />
+                <path d="M98,136 Q100,139 102,136" stroke="#0F172A" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+              </g>
+              
+              {/* Dynamic Shimmering Pupil Sparkles */}
+              <g fill="#FFFFFF" stroke="none">
+                <circle cx="90" cy="129" r="1.5" />
+                <circle cx="108" cy="129" r="1.5" />
+              </g>
+
+              {/* Umbrella Mushroom Cap Fills */}
+              {stage >= 3 && (
+                <motion.g 
+                  className="mushroom-cap"
+                  initial={{ scale: 0, scaleY: 1.8, y: 20 }}
+                  animate={{ 
+                    scale: [0, 1.3, 0.96, 1],
+                    scaleY: [1.8, 0.8, 1.04, 1],
+                    y: [20, -4, 1, 0],
+                    rotate: [0, 2.5, 0]
+                  }}
+                  transition={{
+                    scale: { duration: 0.95, ease: [0.175, 0.885, 0.32, 1.4], delay: 1.1 },
+                    scaleY: { duration: 0.95, ease: [0.175, 0.885, 0.32, 1.4], delay: 1.1 },
+                    y: { duration: 0.95, ease: [0.175, 0.885, 0.32, 1.4], delay: 1.1 },
+                    rotate: { duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2.05 }
+                  }}
+                  style={{ transformOrigin: "100px 85px" }}
+                >
+                  <path d="M45,85 C45,40 70,30 100,30 L100,95 C60,95 45,95 45,85 Z" fill="url(#capIndigoLight)" />
+                  <path d="M100,30 C130,30 155,40 155,85 C155,95 140,95 100,95 Z" fill="url(#capIndigoDark)" />
+                  <path d="M45,85 C60,92 100,92 100,85 Z" fill="#1E1B4B" />
+                  <path d="M100,85 C100,92 140,92 155,85 Z" fill="#0F172A" />
+                  <circle cx="100" cy="48" r="9.5" fill="url(#neonLime)" stroke="#0F172A" strokeWidth="1.5" />
+                  <circle cx="70" cy="68" r="5.5" fill="url(#neonLime)" stroke="#0F172A" strokeWidth="1.5" />
+                  <circle cx="130" cy="68" r="5.5" fill="url(#neonLime)" stroke="#0F172A" strokeWidth="1.5" />
+                </motion.g>
+              )}
+            </motion.g>
+          </g>
+        )}
+
+        {/* LAYER 3: POT FOREGROUND (IN FRONT OF THE PLANT BASE) */}
+        {/* Black Outlines for Pot Front Components */}
+        <g stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round" strokeLinecap="round">
+          <path d="M60,175 L140,175 L130,230 L70,230 Z" fill="none" />
+          <rect x="52" y="162" width="96" height="14" rx="4" fill="none" />
+        </g>
+
+        {/* High-Contrast Color Fills for Pot Front Components */}
+        <path d="M54,164 L146,164 L146,174 L54,174 Z" fill="url(#rimTangerine)" /> 
+        <path d="M100,177 L62,177 L71,228 L100,228 Z" fill="url(#potVelvetLight)" />
+        <path d="M100,177 L138,177 L129,228 L100,228 Z" fill="url(#potVelvetDark)" />
+      </g>
+    );
+  };
+
   const renderLuckCactus = () => {
     return (
       <g>
@@ -2373,6 +3142,10 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
       case 'luck-orchid': return renderLuckOrchid();
       case 'luck-cactus': return renderLuckCactus();
       case 'premium-cactus': return renderPremiumCactus();
+      case 'lucky-bamboo': return renderLuckyBamboo();
+      case 'cosmic-star-flower': return renderCosmicStarFlower();
+      case 'bubble-gum-succulent': return renderBubbleGumSucculent();
+      case 'neon-mushroom': return renderNeonMushroom();
       case 'zen': return renderZen();
       case 'desert': return renderDesert();
       case 'tropical': return renderTropical();
