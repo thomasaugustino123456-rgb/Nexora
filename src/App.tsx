@@ -201,6 +201,7 @@ import { ArchitectLab } from "./components/ArchitectLab";
 import { NexusVision } from "./components/NexusVision";
 import { DeepChecklist } from "./components/DeepChecklist";
 import { CompletionFlame } from "./components/CompletionFlame";
+import { RewardsScreen } from "./components/RewardsScreen";
 import { TrophyRewardsScreen } from "./components/TrophyRewardsScreen";
 import { AdminPanel } from "./components/AdminPanel";
 import { HydrationDetailPage } from "./components/HydrationDetailPage";
@@ -619,6 +620,7 @@ export default function App() {
   const [notifications, setNotifications] = useState<NexusNotification[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [showCompletionFlame, setShowCompletionFlame] = useState(false);
+  const [showRewardsScreen, setShowRewardsScreen] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showArchitectLab, setShowArchitectLab] = useState(false);
   const [proTestMessage, setProTestMessage] = useState<string | null>(null);
@@ -6167,6 +6169,18 @@ export default function App() {
               isNewStreak={isNewStreak}
               onContinue={() => {
                 setShowCompletionFlame(false);
+                setShowRewardsScreen(true);
+              }}
+            />
+          )}
+
+          {showRewardsScreen && (
+            <RewardsScreen
+              stats={stats}
+              onUpdateStats={onUpdateStats}
+              settings={settings}
+              onFinish={() => {
+                setShowRewardsScreen(false);
                 setActiveScreen("trophy-rewards");
               }}
             />
