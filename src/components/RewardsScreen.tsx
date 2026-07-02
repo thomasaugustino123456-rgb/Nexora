@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronRight, Sparkles, Award } from "lucide-react";
+import { ChevronRight, Sparkles } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
 import { UserStats } from "../types";
 
@@ -114,7 +114,6 @@ export function RewardsScreen({
 
       } else if (type === "launch") {
         // Tap 3 (Immediate): Cinematic swoosh + shatter/pop blast
-        // Swoosh noise setup
         const bufferSize = ctx.sampleRate * 0.5; // 0.5 seconds
         const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -176,11 +175,9 @@ export function RewardsScreen({
 
       } else if (type === "coin") {
         // High register crystal coin chime hitting a solid surface (ping!)
-        // Pitch escalates for each coin (0 to 4)
         const baseFreqs = [987.77, 1109.73, 1318.51, 1479.98, 1661.22]; // B5, C#6, E6, F#6, G#6
         const f = baseFreqs[coinIndex] || 1318.51;
 
-        // Multi-partial metallic chime synthesis (fundamental + high partials)
         const partials = [1.0, 2.2, 3.4, 4.8];
         const partialGains = [0.18, 0.08, 0.04, 0.02];
 
@@ -193,7 +190,6 @@ export function RewardsScreen({
 
           gainNode.gain.setValueAtTime(0, now);
           gainNode.gain.linearRampToValueAtTime(partialGains[index], now + 0.005);
-          // Exponential decay, fundamental decays slower than high partials
           const decay = 0.4 / mult;
           gainNode.gain.exponentialRampToValueAtTime(0.0001, now + decay);
 
@@ -213,17 +209,22 @@ export function RewardsScreen({
 
     const nextTap = tapCount + 1;
     setTapCount(nextTap);
-    vibrate(15);
 
     if (nextTap === 1) {
+      // Tap 1: not heavy vibration
+      vibrate(12);
       playSoundEffect("thud1");
       setStatusText("2 Taps Remaining...");
       setStatusColor("#788f9a");
     } else if (nextTap === 2) {
+      // Tap 2: Not that heavy but still can be felt
+      vibrate(25);
       playSoundEffect("thud2");
       setStatusText("FINAL TAP INITIALIZED!!!");
       setStatusColor("#FF9600");
     } else if (nextTap === 3) {
+      // Tap 3: Heavy vibration!
+      vibrate([65, 45, 65]);
       playSoundEffect("launch");
       setStatusText("Protocol Rewards Disbursed!");
       setStatusColor("#FFD000");
@@ -239,14 +240,19 @@ export function RewardsScreen({
   };
 
   const animateCoinCounter = () => {
-    // Coins appear 1050ms after the tap-3 transition triggers (perfectly synced with cinematicCoin1-5 animations)
+    // Coins appear 1050ms after the tap-3 transition triggers
     setTimeout(() => {
+      // Vibration when the coins appear
+      vibrate([45, 60, 45]);
+
       let currentCoins = 0;
       const interval = setInterval(() => {
         currentCoins++;
         setCoinsAdded(currentCoins);
         playSoundEffect("coin", currentCoins - 1);
-        vibrate(8);
+
+        // Vibration when the counter increases!
+        vibrate(12);
 
         // Increment user's actual coins count in the backend on each step!
         onUpdateStats((prev) => ({
@@ -271,8 +277,8 @@ export function RewardsScreen({
       <style>{`
         /* THE MASTER VIEWPORT CONTAINER */
         .chest-stage {
-          width: 260px;
-          height: 260px;
+          width: 300px;
+          height: 300px;
           position: relative;
           cursor: pointer;
           user-select: none;
@@ -282,8 +288,8 @@ export function RewardsScreen({
         /* SPINNING BACKGROUND GLOW */
         .reward-glow {
           position: absolute;
-          top: -20px;
-          left: -20px;
+          top: 0px;
+          left: 0px;
           width: 300px;
           height: 300px;
           opacity: 0;
@@ -296,13 +302,14 @@ export function RewardsScreen({
           animation-delay: 0.48s;
         }
 
-        /* CORE JUMP MESH */
+        /* CORE JUMP MESH - HOUSES THE SVG ILLUSTRATION */
         .box-mesh {
           width: 100%;
           height: 100%;
-          transform-origin: 100px 160px;
+          transform-origin: 150px 270px; /* Anchored at the bottom center of the SVG */
           position: relative;
           z-index: 2;
+          overflow: visible;
         }
 
         /* 3-TAP JUMP PHYSICS + VANISH TRIGGER */
@@ -310,21 +317,22 @@ export function RewardsScreen({
         .tap-2 .box-mesh { animation: popJump2 0.6s ease-in-out forwards; }
         .tap-3 .box-mesh { animation: finalLaunchOpenVanish 1.3s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
 
-        .box-lid { transform-origin: 100px 75px; }
+        /* INNER SVG COMPONENT ANIMATIONS */
+        .box-lid { transform-origin: 150px 145px; } /* Anchored at the lid hinge */
         .tap-3 .box-lid { animation: lidSpringBack 0.52s cubic-bezier(0.175, 0.885, 0.32, 1.4) forwards; animation-delay: 0.48s; }
 
-        .box-lock { transform-origin: 100px 112px; }
+        .box-lock { transform-origin: 150px 150px; }
         .tap-3 .box-lock { animation: lockSnapFall 0.45s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards; animation-delay: 0.48s; }
 
         /* =======================================================
-           3D CINEMATIC COIN PHYSICS (Slightly lowered to frame center)
+           3D CINEMATIC COIN PHYSICS 
            ======================================================= */
         .coin-wrapper {
           position: absolute;
-          top: 80px;
-          left: 105px;
-          width: 46px;
-          height: 46px;
+          top: 100px;
+          left: 125px;
+          width: 50px;
+          height: 50px;
           opacity: 0;
           z-index: 10;
           pointer-events: none;
@@ -344,7 +352,7 @@ export function RewardsScreen({
         /* REWARD COUNTER POP */
         .reward-counter {
           position: absolute;
-          top: -60px;
+          top: -40px;
           font-size: 3.5rem;
           font-weight: 900;
           color: #FFD000;
@@ -383,12 +391,10 @@ export function RewardsScreen({
 
         /* THE LAUNCH + EXPLOSIVE VORTEX VANISH */
         @keyframes finalLaunchOpenVanish {
-          0% { transform: scale(1) translateY(0); filter: brightness(1); opacity: 1; }
+          0% { transform: scale(1) translateY(0) opacity(1); filter: brightness(1); }
           10% { transform: scale(1.35, 0.55) translateY(12px); }
           32% { transform: scale(0.76, 1.35) translateY(-100px); }
-          48% { transform: scale(1.45, 0.55) translateY(0); filter: brightness(1.2); } /* Slams down open */
-          
-          /* THE SUCK OUT / VANISH SEQUENCE: Starts around 0.85s */
+          48% { transform: scale(1.45, 0.55) translateY(0); filter: brightness(1.2); } 
           65% { transform: scale(1.6, 0.3) translateY(15px); opacity: 1; filter: brightness(2); }
           78% { transform: scale(0.05, 2.5) translateY(-40px); opacity: 0.3; }
           85% { transform: scale(0) translateY(-60px); opacity: 0; }
@@ -402,7 +408,7 @@ export function RewardsScreen({
 
         @keyframes lockSnapFall {
           0% { transform: scale(1) translateY(0); opacity: 1; }
-          100% { transform: translateY(80px) rotate(-45deg); opacity: 0; }
+          100% { transform: translateY(100px) rotate(-45deg); opacity: 0; }
         }
 
         @keyframes glowBurst { 100% { opacity: 0.55; transform: scale(1.3); } }
@@ -414,48 +420,48 @@ export function RewardsScreen({
         }
 
         @keyframes counterPopIn {
-          100% { opacity: 1; transform: scale(1) translateY(100px); } /* Shifts down gracefully when box clears */
+          100% { opacity: 1; transform: scale(1) translateY(120px); } 
         }
 
-        /* 3D COIN DROP SETTLES CENTER GRID INSTEAD */
+        /* 3D COIN SETTLEMENT KINETICS */
         @keyframes cinematicCoin1 {
           0% { transform: translate(0, 0) scale(0.3) rotate(0deg); opacity: 0; }
-          35% { transform: translate(-90px, -140px) scale(2.4) rotate(-60deg); opacity: 1; }
-          65% { transform: translate(-100px, 10px) scale(1) rotate(-110deg); opacity: 1; }
-          82% { transform: translate(-105px, -10px) scale(1.05) rotate(-130deg); opacity: 1; }
-          100% { transform: translate(-102px, 0px) scale(1) rotate(-120deg); opacity: 1; }
+          35% { transform: translate(-100px, -150px) scale(2.4) rotate(-60deg); opacity: 1; }
+          65% { transform: translate(-110px, 10px) scale(1) rotate(-110deg); opacity: 1; }
+          82% { transform: translate(-115px, -10px) scale(1.05) rotate(-130deg); opacity: 1; }
+          100% { transform: translate(-112px, 0px) scale(1) rotate(-120deg); opacity: 1; }
         }
         @keyframes cinematicCoin2 {
           0% { transform: translate(0, 0) scale(0.3) rotate(0deg); opacity: 0; }
-          35% { transform: translate(-45px, -170px) scale(2.5) rotate(-30deg); opacity: 1; }
-          65% { transform: translate(-50px, 15px) scale(1) rotate(-70deg); opacity: 1; }
-          82% { transform: translate(-53px, -5px) scale(1.05) rotate(-85deg); opacity: 1; }
-          100% { transform: translate(-51px, 5px) scale(1) rotate(-80deg); opacity: 1; }
+          35% { transform: translate(-50px, -180px) scale(2.5) rotate(-30deg); opacity: 1; }
+          65% { transform: translate(-55px, 15px) scale(1) rotate(-70deg); opacity: 1; }
+          82% { transform: translate(-58px, -5px) scale(1.05) rotate(-85deg); opacity: 1; }
+          100% { transform: translate(-56px, 5px) scale(1) rotate(-80deg); opacity: 1; }
         }
         @keyframes cinematicCoin3 {
           0% { transform: translate(0, 0) scale(0.3) rotate(0deg); opacity: 0; }
-          35% { transform: translate(0px, -190px) scale(2.7) rotate(0deg); opacity: 1; }
+          35% { transform: translate(0px, -200px) scale(2.7) rotate(0deg); opacity: 1; }
           65% { transform: translate(0px, 20px) scale(1) rotate(0deg); opacity: 1; }
           82% { transform: translate(0px, -2px) scale(1.05) rotate(5deg); opacity: 1; }
           100% { transform: translate(0px, 10px) scale(1) rotate(0deg); opacity: 1; }
         }
         @keyframes cinematicCoin4 {
           0% { transform: translate(0, 0) scale(0.3) rotate(0deg); opacity: 0; }
-          35% { transform: translate(45px, -170px) scale(2.5) rotate(30deg); opacity: 1; }
-          65% { transform: translate(50px, 15px) scale(1) rotate(70deg); opacity: 1; }
-          82% { transform: translate(53px, -5px) scale(1.05) rotate(85deg); opacity: 1; }
-          100% { transform: translate(51px, 5px) scale(1) rotate(80deg); opacity: 1; }
+          35% { transform: translate(50px, -180px) scale(2.5) rotate(30deg); opacity: 1; }
+          65% { transform: translate(55px, 15px) scale(1) rotate(70deg); opacity: 1; }
+          82% { transform: translate(58px, -5px) scale(1.05) rotate(85deg); opacity: 1; }
+          100% { transform: translate(56px, 5px) scale(1) rotate(80deg); opacity: 1; }
         }
         @keyframes cinematicCoin5 {
           0% { transform: translate(0, 0) scale(0.3) rotate(0deg); opacity: 0; }
-          35% { transform: translate(90px, -140px) scale(2.4) rotate(60deg); opacity: 1; }
-          65% { transform: translate(100px, 10px) scale(1) rotate(110deg); opacity: 1; }
-          82% { transform: translate(105px, -10px) scale(1.05) rotate(130deg); opacity: 1; }
-          100% { transform: translate(102px, 0px) scale(1) rotate(120deg); opacity: 1; }
+          35% { transform: translate(100px, -150px) scale(2.4) rotate(60deg); opacity: 1; }
+          65% { transform: translate(110px, 10px) scale(1) rotate(110deg); opacity: 1; }
+          82% { transform: translate(115px, -10px) scale(1.05) rotate(130deg); opacity: 1; }
+          100% { transform: translate(112px, 0px) scale(1) rotate(120deg); opacity: 1; }
         }
       `}</style>
 
-      <div className="relative z-10 w-full max-w-lg flex flex-col items-center justify-between min-h-[80vh]">
+      <div className="relative z-10 w-full max-w-lg flex flex-col items-center justify-between min-h-[85vh]">
         {/* Top Header */}
         <div className="space-y-3 mt-4">
           <p className="text-yellow-500 font-black uppercase tracking-[0.4em] text-xs flex items-center justify-center gap-1">
@@ -497,98 +503,147 @@ export function RewardsScreen({
           </div>
 
           {/* Spinning Background Glow */}
-          <svg className="reward-glow" viewBox="0 0 200 200">
+          <svg className="reward-glow" viewBox="0 0 300 300">
             <g fill="#FFD000" opacity="0.3">
-              <path d="M100,100 L80,0 L120,0 Z"/>
-              <path d="M100,100 L200,80 L200,120 Z"/>
-              <path d="M100,100 L120,200 L80,200 Z"/>
-              <path d="M100,100 L0,120 L0,80 Z"/>
-              <path d="M100,100 L170,30 L140,15 Z"/>
-              <path d="M100,100 L170,170 L185,140 Z"/>
+              <path d="M150,150 L120,0 L180,0 Z"/>
+              <path d="M150,150 L300,120 L300,180 Z"/>
+              <path d="M150,150 L180,300 L120,300 Z"/>
+              <path d="M150,150 L0,180 L0,120 Z"/>
+              <path d="M150,150 L255,45 L210,22 Z"/>
+              <path d="M150,150 L255,255 L277,210 Z"/>
+              <path d="M150,150 L45,255 L90,277 Z"/>
+              <path d="M150,150 L45,45 L22,90 Z"/>
             </g>
           </svg>
 
           {/* COIN VECTOR MESHES */}
           <div className="coin-wrapper" id="coin1">
             <svg viewBox="0 0 40 40">
-              <circle cx="20" cy="20" r="18" fill="#FF9600" stroke="#0F172A" strokeWidth="3.5"/>
-              <circle cx="20" cy="20" r="14" fill="#FFD000"/>
-              <path d="M14,14 L26,14 L26,18 L20,18 L20,22 L26,22 L26,26 L14,26 Z" fill="#FF9600" opacity="0.3"/>
+              <circle cx="20" cy="20" r="18" fill="#FF9600" stroke="#4A1C00" strokeWidth="3"/>
+              <circle cx="20" cy="20" r="13" fill="#FFD000"/>
+              <path d="M14,14 L26,14 L26,18 L20,18 L20,22 L26,22 L26,26 L14,26 Z" fill="#FF9600" opacity="0.4"/>
               <rect x="18" y="10" width="4" height="20" rx="2" fill="#FFF" opacity="0.5"/>
             </svg>
           </div>
           <div className="coin-wrapper" id="coin2">
             <svg viewBox="0 0 40 40">
-              <circle cx="20" cy="20" r="18" fill="#FF9600" stroke="#0F172A" strokeWidth="3.5"/>
-              <circle cx="20" cy="20" r="14" fill="#FFD000"/>
-              <path d="M14,14 L26,14 L26,18 L20,18 L20,22 L26,22 L26,26 L14,26 Z" fill="#FF9600" opacity="0.3"/>
+              <circle cx="20" cy="20" r="18" fill="#FF9600" stroke="#4A1C00" strokeWidth="3"/>
+              <circle cx="20" cy="20" r="13" fill="#FFD000"/>
+              <path d="M14,14 L26,14 L26,18 L20,18 L20,22 L26,22 L26,26 L14,26 Z" fill="#FF9600" opacity="0.4"/>
               <rect x="18" y="10" width="4" height="20" rx="2" fill="#FFF" opacity="0.5"/>
             </svg>
           </div>
           <div className="coin-wrapper" id="coin3">
             <svg viewBox="0 0 40 40">
-              <circle cx="20" cy="20" r="18" fill="#FF9600" stroke="#0F172A" strokeWidth="3.5"/>
-              <circle cx="20" cy="20" r="14" fill="#FFD000"/>
-              <path d="M14,14 L26,14 L26,18 L20,18 L20,22 L26,22 L26,26 L14,26 Z" fill="#FF9600" opacity="0.3"/>
+              <circle cx="20" cy="20" r="18" fill="#FF9600" stroke="#4A1C00" strokeWidth="3"/>
+              <circle cx="20" cy="20" r="13" fill="#FFD000"/>
+              <path d="M14,14 L26,14 L26,18 L20,18 L20,22 L26,22 L26,26 L14,26 Z" fill="#FF9600" opacity="0.4"/>
               <rect x="18" y="10" width="4" height="20" rx="2" fill="#FFF" opacity="0.5"/>
             </svg>
           </div>
           <div className="coin-wrapper" id="coin4">
             <svg viewBox="0 0 40 40">
-              <circle cx="20" cy="20" r="18" fill="#FF9600" stroke="#0F172A" strokeWidth="3.5"/>
-              <circle cx="20" cy="20" r="14" fill="#FFD000"/>
-              <path d="M14,14 L26,14 L26,18 L20,18 L20,22 L26,22 L26,26 L14,26 Z" fill="#FF9600" opacity="0.3"/>
+              <circle cx="20" cy="20" r="18" fill="#FF9600" stroke="#4A1C00" strokeWidth="3"/>
+              <circle cx="20" cy="20" r="13" fill="#FFD000"/>
+              <path d="M14,14 L26,14 L26,18 L20,18 L20,22 L26,22 L26,26 L14,26 Z" fill="#FF9600" opacity="0.4"/>
               <rect x="18" y="10" width="4" height="20" rx="2" fill="#FFF" opacity="0.5"/>
             </svg>
           </div>
           <div className="coin-wrapper" id="coin5">
             <svg viewBox="0 0 40 40">
-              <circle cx="20" cy="20" r="18" fill="#FF9600" stroke="#0F172A" strokeWidth="3.5"/>
-              <circle cx="20" cy="20" r="14" fill="#FFD000"/>
-              <path d="M14,14 L26,14 L26,18 L20,18 L20,22 L26,22 L26,26 L14,26 Z" fill="#FF9600" opacity="0.3"/>
+              <circle cx="20" cy="20" r="18" fill="#FF9600" stroke="#4A1C00" strokeWidth="3"/>
+              <circle cx="20" cy="20" r="13" fill="#FFD000"/>
+              <path d="M14,14 L26,14 L26,18 L20,18 L20,22 L26,22 L26,26 L14,26 Z" fill="#FF9600" opacity="0.4"/>
               <rect x="18" y="10" width="4" height="20" rx="2" fill="#FFF" opacity="0.5"/>
             </svg>
           </div>
 
-          {/* Main Chest Mesh */}
-          <svg className="box-mesh" viewBox="0 0 200 200">
+          {/* PURE SVG 3D CHEST ILLUSTRATION (Replaces the broken image) */}
+          <svg className="box-mesh" viewBox="0 0 300 300">
             <defs>
-              <linearGradient id="chestnutWood" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FF6B4A"/>
-                <stop offset="100%" stopColor="#D84324"/>
+              <linearGradient id="woodGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#9C441E"/>
+                <stop offset="100%" stopColor="#58240D"/>
               </linearGradient>
-              <linearGradient id="cartoonGold" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FFD000"/>
-                <stop offset="100%" stopColor="#FF9600"/>
+              <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#FFE866"/>
+                <stop offset="40%" stopColor="#FFB700"/>
+                <stop offset="100%" stopColor="#D96800"/>
               </linearGradient>
-              <linearGradient id="silverLock" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#F8FAFC"/>
-                <stop offset="100%" stopColor="#94A3B8"/>
+              <linearGradient id="darkGold" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#FFB700"/>
+                <stop offset="100%" stopColor="#A64B00"/>
               </linearGradient>
             </defs>
 
-            {/* BASE */}
+            {/* CHEST BASE */}
             <g className="box-base">
-              <rect x="30" y="75" width="140" height="85" rx="14" fill="url(#chestnutWood)" stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round"/>
-              <path d="M34,125 L166,125 L166,146 C166,154 154,156 146,156 L54,156 C46,156 34,154 34,146 Z" fill="#0F172A" opacity="0.14" />
-              <rect x="30" y="82" width="20" height="78" rx="4" fill="url(#cartoonGold)" stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round"/>
-              <rect x="150" y="82" width="20" height="78" rx="4" fill="url(#cartoonGold)" stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round"/>
+              {/* Main Wood Box Body */}
+              <path d="M30,145 L270,145 L255,255 C255,265 245,275 230,275 L70,275 C55,275 45,265 45,255 Z" fill="url(#woodGrad)" stroke="#301000" strokeWidth="6" strokeLinejoin="round"/>
+              
+              {/* Wood Plank Lines */}
+              <path d="M35,180 L265,180 M40,215 L260,215 M43,245 L257,245" stroke="#3A1705" strokeWidth="4" strokeLinecap="round" opacity="0.7"/>
+
+              {/* Vertical Gold Straps */}
+              <path d="M65,145 L105,145 L95,275 L60,275 Z" fill="url(#goldGrad)" stroke="#301000" strokeWidth="5" strokeLinejoin="round"/>
+              <path d="M195,145 L235,145 L240,275 L205,275 Z" fill="url(#goldGrad)" stroke="#301000" strokeWidth="5" strokeLinejoin="round"/>
+              
+              {/* Bottom Horizontal Bumper */}
+              <rect x="40" y="245" width="220" height="30" rx="8" fill="url(#goldGrad)" stroke="#301000" strokeWidth="5" strokeLinejoin="round"/>
+              
+              {/* Bottom Corner Feet */}
+              <rect x="35" y="240" width="40" height="40" rx="10" fill="url(#goldGrad)" stroke="#301000" strokeWidth="5"/>
+              <rect x="225" y="240" width="40" height="40" rx="10" fill="url(#goldGrad)" stroke="#301000" strokeWidth="5"/>
+              
+              {/* Rivets */}
+              <circle cx="55" cy="260" r="5" fill="#FFD000" stroke="#301000" strokeWidth="2"/>
+              <circle cx="245" cy="260" r="5" fill="#FFD000" stroke="#301000" strokeWidth="2"/>
+              
+              {/* Sparkle Stars */}
+              <path d="M85,210 Q85,220 95,220 Q85,220 85,230 Q85,220 75,220 Q85,220 85,210 Z" fill="#FFE866"/>
+              <path d="M215,200 Q215,210 225,210 Q215,210 215,220 Q215,210 205,210 Q215,210 215,200 Z" fill="#FFE866"/>
             </g>
 
-            {/* LID */}
+            {/* CHEST LID */}
             <g className="box-lid">
-              <path d="M30,75 L45,45 L155,45 L170,75 Z" fill="url(#chestnutWood)" stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round"/>
-              <path d="M30,75 L45,45 L62,45 L48,75 Z" fill="url(#cartoonGold)" stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round"/>
-              <path d="M170,75 L155,45 L138,45 L152,75 Z" fill="url(#cartoonGold)" stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round"/>
-              <rect x="24" y="71" width="152" height="13" rx="5" fill="url(#cartoonGold)" stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round"/>
-              <rect x="85" y="71" width="30" height="25" rx="4" fill="url(#cartoonGold)" stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round"/>
+              {/* Rounded Wood Dome */}
+              <path d="M30,145 C30,30 270,30 270,145 Z" fill="url(#woodGrad)" stroke="#301000" strokeWidth="6" strokeLinejoin="round"/>
+              
+              {/* Curved Wood Lines */}
+              <path d="M40,110 Q150,90 260,110 M55,75 Q150,50 245,75 M85,45 Q150,30 215,45" stroke="#3A1705" strokeWidth="4" strokeLinecap="round" opacity="0.7"/>
+
+              {/* Top Curved Gold Straps */}
+              <path d="M65,145 L105,145 C105,75 145,50 150,50 C120,50 65,70 65,145 Z" fill="url(#goldGrad)" stroke="#301000" strokeWidth="5" strokeLinejoin="round"/>
+              <path d="M235,145 L195,145 C195,75 155,50 150,50 C180,50 235,70 235,145 Z" fill="url(#goldGrad)" stroke="#301000" strokeWidth="5" strokeLinejoin="round"/>
+              
+              {/* Center Top Sparkle */}
+              <path d="M150,60 Q150,75 170,75 Q150,75 150,90 Q150,75 130,75 Q150,75 150,60 Z" fill="#FFE866"/>
+              
+              {/* Lid Horizontal Lip Rim */}
+              <rect x="20" y="125" width="260" height="25" rx="8" fill="url(#goldGrad)" stroke="#301000" strokeWidth="6" strokeLinejoin="round"/>
+              
+              {/* Rivets on Lid Rim */}
+              <circle cx="50" cy="137" r="5" fill="#FFD000" stroke="#301000" strokeWidth="2"/>
+              <circle cx="85" cy="137" r="5" fill="#FFD000" stroke="#301000" strokeWidth="2"/>
+              <circle cx="215" cy="137" r="5" fill="#FFD000" stroke="#301000" stroke-width="2"/>
+              <circle cx="250" cy="137" r="5" fill="#FFD000" stroke="#301000" strokeWidth="2"/>
             </g>
 
-            {/* LOCK */}
+            {/* CHEST LOCK */}
             <g className="box-lock">
-              <rect x="94" y="112" width="12" height="15" fill="url(#silverLock)" stroke="#0F172A" strokeWidth="4.5" strokeLinejoin="round"/>
-              <circle cx="100" cy="112" r="15" fill="url(#silverLock)" stroke="#0F172A" strokeWidth="4.5" />
-              <circle cx="100" cy="112" r="4" fill="#0F172A" />
+              {/* U-Shackle */}
+              <path d="M125,145 C125,110 175,110 175,145" fill="none" stroke="url(#darkGold)" strokeWidth="16" strokeLinecap="round"/>
+              <path d="M125,145 C125,110 175,110 175,145" fill="none" stroke="#301000" strokeWidth="22" strokeLinecap="round" opacity="0.3"/> {/* Shadow layer */}
+
+              {/* Main Padlock Body */}
+              <ellipse cx="150" cy="170" rx="42" ry="36" fill="url(#goldGrad)" stroke="#301000" strokeWidth="5"/>
+              
+              {/* Padlock Inner Ring/Depth */}
+              <ellipse cx="150" cy="170" rx="32" ry="26" fill="none" stroke="#FFE866" strokeWidth="3" opacity="0.6"/>
+              
+              {/* Keyhole */}
+              <circle cx="150" cy="162" r="7" fill="#301000"/>
+              <path d="M145,162 L155,162 L158,180 L142,180 Z" fill="#301000"/>
             </g>
           </svg>
         </div>
