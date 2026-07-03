@@ -34,22 +34,29 @@ export function CompletionFlame({
         audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
       const ctx = audioCtxRef.current;
-      const oscillator = ctx.createOscillator();
+      const osc = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
       const gainNode = ctx.createGain();
 
-      oscillator.type = 'triangle';
-      oscillator.frequency.setValueAtTime(100, ctx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.8);
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(110, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + 1.3);
+
+      filter.type = "lowpass";
+      filter.Q.setValueAtTime(3, ctx.currentTime);
+      filter.frequency.setValueAtTime(140, ctx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(1500, ctx.currentTime + 1.3);
 
       gainNode.gain.setValueAtTime(0, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.1);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+      gainNode.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 0.3); // Gentle soft volume
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.3);
 
-      oscillator.connect(gainNode);
+      osc.connect(filter);
+      filter.connect(gainNode);
       gainNode.connect(ctx.destination);
 
-      oscillator.start();
-      oscillator.stop(ctx.currentTime + 0.8);
+      osc.start();
+      osc.stop(ctx.currentTime + 1.3);
     } catch (e) {
       console.warn("Audio synthesis failed:", e);
     }
@@ -67,21 +74,21 @@ export function CompletionFlame({
     // 1. 350ms: Ultra-light warning tick (compression tension)
     setTimeout(() => triggerHaptic(12), 350);
 
-    // 2. 850ms: Rising sound + Heavy impact pulse (launch peak)
+    // 2. 1300ms: Soft rising sound + Heavy impact pulse (Perfect sync with flame climax)
     setTimeout(() => {
       playRisingSound();
-      triggerHaptic(45);
+      triggerHaptic(50);
       if (newStreak !== undefined) {
         setCurrentStreak(newStreak);
       } else {
         setCurrentStreak(streak);
       }
-    }, 850);
+    }, 1300);
 
-    // 3. 1450ms: Double success 'heartbeat' (settling glory)
+    // 3. 1900ms: Double success 'heartbeat' (settling glory)
     setTimeout(() => {
-      triggerHaptic([30, 50, 30]);
-    }, 1450);
+      triggerHaptic([35, 60, 35]);
+    }, 1900);
   };
 
   useEffect(() => {
@@ -157,7 +164,7 @@ export function CompletionFlame({
 
         .auto-animate .streak-text-milestone {
           animation: textPopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-          animation-delay: 0.9s;
+          animation-delay: 1.3s;
         }
 
         .spark-milestone { opacity: 0; }

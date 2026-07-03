@@ -236,7 +236,7 @@ export function XpRewardsScreen({
         const targetX = Math.cos(angle) * distance;
         const targetY = Math.sin(angle) * distance - 50;
 
-        const baseSize = 10 + Math.random() * 12;
+        const baseSize = 7 + Math.random() * 8; // Tidy premium size
         const color = Math.random() > 0.5 ? "#00f0ff" : "#bd00ff";
 
         newGems.push({
@@ -268,8 +268,8 @@ export function XpRewardsScreen({
       {/* COGNITIVE SCOPED STYLES FROM HTML DESIGN SHEET */}
       <style>{`
         .chest-stage-xp {
-          width: 320px;
-          height: 320px;
+          width: 360px;
+          height: 360px;
           position: relative;
           cursor: pointer;
           user-select: none;
@@ -284,7 +284,7 @@ export function XpRewardsScreen({
         .jump-glow-xp {
           position: absolute;
           bottom: 25px;
-          width: 170px;
+          width: 200px;
           height: 20px;
           background: radial-gradient(ellipse at center, rgba(0, 183, 255, 0.8) 0%, rgba(0, 183, 255, 0) 70%);
           filter: blur(8px);
@@ -298,8 +298,8 @@ export function XpRewardsScreen({
         .burst-aura-xp {
           position: absolute;
           bottom: 100px;
-          width: 150px;
-          height: 150px;
+          width: 180px;
+          height: 180px;
           background: radial-gradient(circle, rgba(0, 240, 255, 0.9) 0%, rgba(189, 0, 255, 0) 70%);
           border-radius: 50%;
           filter: blur(15px);
@@ -314,8 +314,8 @@ export function XpRewardsScreen({
 
         /* MAIN RIGID WRAPPER */
         .chest-wrapper-xp {
-          width: 200px;
-          height: 180px;
+          width: 240px;
+          height: 216px;
           position: relative;
           z-index: 3;
           transform-origin: center bottom; 
@@ -442,19 +442,19 @@ export function XpRewardsScreen({
           position: absolute;
           bottom: 45%;
           font-weight: 900;
-          font-size: 56px;
+          font-size: 34px; /* Reduced for clean premium sizing */
           color: #00f0ff;
-          text-shadow: 0 0 35px rgba(0, 240, 255, 1), 0 0 5px #000;
+          text-shadow: 0 0 20px rgba(0, 240, 255, 0.8), 0 0 5px #000;
           z-index: 5;
           pointer-events: none;
           animation: massiveFloatXpPermanent 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
 
         @keyframes massiveFloatXpPermanent {
-          0% { transform: scale(0.2) translateY(60px); opacity: 0; }
-          25% { transform: scale(2.4) translateY(0); opacity: 1; } 
-          50% { transform: scale(2.0) translateY(-10px); opacity: 1; }
-          100% { transform: scale(1.8) translateY(-20px); opacity: 1; }
+          0% { transform: scale(0.5) translateY(40px); opacity: 0; }
+          25% { transform: scale(1.3) translateY(0); opacity: 1; } 
+          50% { transform: scale(1.15) translateY(-8px); opacity: 1; }
+          100% { transform: scale(1.0) translateY(-15px); opacity: 1; }
         }
       `}</style>
 
