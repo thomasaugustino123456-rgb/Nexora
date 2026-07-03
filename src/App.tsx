@@ -370,6 +370,8 @@ export default function App() {
     forceSyncData,
   } = useNexoraData(DEFAULT_SETTINGS, DEFAULT_STATS, showToast);
 
+  const [splashFinished, setSplashFinished] = useState(false);
+
   // Performance-optimized animation configs for page transitions
   const pageVariants = {
     initial: settings.performanceMode ? { opacity: 0 } : { opacity: 0, x: 15 },
@@ -4555,26 +4557,31 @@ export default function App() {
     );
   }
 
-  if (loading || authLoading) {
-      if (loadError) {
-        return (
-          <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white">
-            <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mb-6">
-              <AlertCircle size={32} />
-            </div>
-            <h1 className="text-2xl font-black mb-4">Connection Failed</h1>
-            <p className="text-slate-400 max-w-sm mb-8">{loadError}</p>
-            <button 
-               onClick={() => window.location.reload()}
-               className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl transition-all"
-            >
-               Retry Connection
-            </button>
+  if (!splashFinished) {
+    if (loadError) {
+      return (
+        <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white">
+          <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mb-6">
+            <AlertCircle size={32} />
           </div>
-        );
-      }
-      return <SplashScreen />;
+          <h1 className="text-2xl font-black mb-4">Connection Failed</h1>
+          <p className="text-slate-400 max-w-sm mb-8">{loadError}</p>
+          <button 
+             onClick={() => window.location.reload()}
+             className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl transition-all"
+          >
+             Retry Connection
+          </button>
+        </div>
+      );
     }
+    return (
+      <SplashScreen 
+        isReady={!loading && !authLoading && isDataReady} 
+        onFinish={() => setSplashFinished(true)} 
+      />
+    );
+  }
 
   if (!user) {
     return (
