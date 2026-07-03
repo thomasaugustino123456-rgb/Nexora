@@ -6179,6 +6179,7 @@ export default function App() {
               stats={stats}
               onUpdateStats={onUpdateStats}
               settings={settings}
+              isCustomPlan={activeCustomPlan !== null}
               onFinish={() => {
                 setShowRewardsScreen(false);
                 setActiveScreen("trophy-rewards");

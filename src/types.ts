@@ -224,6 +224,7 @@ export interface UserStats {
   gratitudeEntries?: GratitudeEntry[];
   waterDrank?: number;
   lifetimeWaterCompletions?: number;
+  hasClaimedXpChest?: boolean;
 }
 
 export interface LeaderboardEntry {

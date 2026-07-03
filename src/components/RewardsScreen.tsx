@@ -4,12 +4,14 @@ import { ChevronRight, Sparkles } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
 import { UserStats } from "../types";
 import { MascotV2 } from "./MascotV2";
+import { XpRewardsScreen } from "./XpRewardsScreen";
 
 interface RewardsScreenProps {
   stats: UserStats;
   onUpdateStats: (newStats: Partial<UserStats> | ((prev: UserStats) => UserStats)) => void;
   settings?: any;
   onFinish: () => void;
+  isCustomPlan?: boolean;
 }
 
 export function RewardsScreen({
@@ -17,13 +19,26 @@ export function RewardsScreen({
   onUpdateStats,
   settings,
   onFinish,
+  isCustomPlan,
 }: RewardsScreenProps) {
+  const [currentStage, setCurrentStage] = useState<'coins' | 'xp'>('coins');
   const [tapCount, setTapCount] = useState(0);
   const [coinsAdded, setCoinsAdded] = useState(0);
   const [showNext, setShowNext] = useState(false);
   const [statusText, setStatusText] = useState("Tap the Box 3 Times to Open");
   const [statusColor, setStatusColor] = useState("#788f9a");
   const audioCtxRef = useRef<AudioContext | null>(null);
+
+  if (currentStage === "xp") {
+    return (
+      <XpRewardsScreen
+        stats={stats}
+        onUpdateStats={onUpdateStats}
+        settings={settings}
+        onFinish={onFinish}
+      />
+    );
+  }
 
   // Clean up AudioContext on unmount
   useEffect(() => {
@@ -703,11 +718,16 @@ export function RewardsScreen({
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   vibrate(20);
-                  onFinish();
+                  const shouldShowXp = !isCustomPlan && !stats.hasClaimedXpChest;
+                  if (shouldShowXp) {
+                    setCurrentStage("xp");
+                  } else {
+                    onFinish();
+                  }
                 }}
                 className="px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl shadow-yellow-500/20 flex items-center gap-2 border-2 border-yellow-300 transition-all cursor-pointer relative z-[1001]"
               >
-                Continue to Trophies
+                {!isCustomPlan && !stats.hasClaimedXpChest ? "Continue to Magical Chest" : "Continue to Trophies"}
                 <ChevronRight size={18} />
               </motion.button>
             )}
