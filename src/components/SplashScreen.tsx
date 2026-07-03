@@ -11,11 +11,11 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
   const [isMinTimePassed, setIsMinTimePassed] = useState(false);
   const [farewellStarted, setFarewellStarted] = useState(false);
 
-  // Guarantee approximately 1 second minimum display time so the premium animation is never skipped instantly
+  // Guarantee approximately 400ms minimum display time so the premium animation is never skipped instantly
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsMinTimePassed(true);
-    }, 1000);
+    }, 400);
     return () => clearTimeout(timer);
   }, []);
 
@@ -26,22 +26,22 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
 
       // Stage 1: The mascot tilts, smiles, and winks immediately (T = 0ms)
 
-      // Stage 2: Smoothly shrink the mascot and pop the "Nexora" brand logo with soft elastic curve (T = 300ms)
+      // Stage 2: Smoothly shrink the mascot and pop the "Nexora" brand logo with soft elastic curve (T = 150ms)
       const tPop = setTimeout(() => {
         setShowText(true);
-      }, 300);
+      }, 150);
 
-      // Stage 3: Initiate the smooth fade out of the entire splash container (T = 650ms)
+      // Stage 3: Initiate the smooth fade out of the entire splash container (T = 350ms)
       const tExit = setTimeout(() => {
         setExitSplash(true);
-      }, 650);
+      }, 350);
 
-      // Stage 4: Immediately unmount the splash and render the fully hydrated application (T = 850ms)
+      // Stage 4: Immediately unmount the splash and render the fully hydrated application (T = 500ms)
       const tFinish = setTimeout(() => {
         if (onFinish) {
           onFinish();
         }
-      }, 850);
+      }, 500);
 
       return () => {
         clearTimeout(tPop);
@@ -57,10 +57,10 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
       const t1 = setTimeout(() => {
         setFarewellStarted(true);
         setShowText(true);
-      }, 1200);
+      }, 500);
       const t2 = setTimeout(() => {
         setExitSplash(true);
-      }, 1800);
+      }, 900);
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
