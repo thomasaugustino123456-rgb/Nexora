@@ -4577,7 +4577,7 @@ export default function App() {
     }
     return (
       <SplashScreen 
-        isReady={!loading && !authLoading && isDataReady} 
+        isReady={!loading && !authLoading && (!user || isDataReady)} 
         onFinish={() => setSplashFinished(true)} 
       />
     );
