@@ -9,9 +9,9 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
   const [showText, setShowText] = useState(false);
   const [exitSplash, setExitSplash] = useState(false);
   const [isMinTimePassed, setIsMinTimePassed] = useState(false);
-  const [farewellStarted, setFarewellStarted] = useState(false);
 
-  // Guarantee approximately 300ms minimum display time so the premium animation is never skipped instantly
+  // Extremely short minimum display time (e.g., 300ms) to prevent visual jarring or flashing 
+  // on ultra-fast network connections, while ensuring a rapid entrance.
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsMinTimePassed(true);
@@ -19,63 +19,46 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
     return () => clearTimeout(timer);
   }, []);
 
-  // Synchronize the exit timeline with the real application loading state once minimum display time is met
+  // Snappy, non-artificial transition synchronized with the actual loading state
   useEffect(() => {
-    if (isReady && isMinTimePassed && !farewellStarted) {
-      setFarewellStarted(true);
+    if (isReady && isMinTimePassed) {
+      // Stage 1: Instantly trigger the elastic mascot -> brand-text morph
+      setShowText(true);
 
-      // Stage 1: The mascot tilts, smiles, and winks immediately (T = 0ms)
-
-      // Stage 2: Smoothly shrink the mascot and pop the "Nexora" brand logo with soft elastic curve (T = 120ms)
-      const tPop = setTimeout(() => {
-        setShowText(true);
-      }, 120);
-
-      // Stage 3: Initiate the smooth fade out of the entire splash container (T = 280ms)
-      const tExit = setTimeout(() => {
+      // Stage 2: Hold brand-text briefly then initiate rapid fade-out
+      const fadeTimer = setTimeout(() => {
         setExitSplash(true);
-      }, 280);
+      }, 150);
 
-      // Stage 4: Immediately unmount the splash and render the fully hydrated application (T = 450ms)
-      const tFinish = setTimeout(() => {
+      // Stage 3: Complete fade-out and unmount to immediately open the app
+      const finishTimer = setTimeout(() => {
         if (onFinish) {
           onFinish();
         }
-      }, 450);
+      }, 350);
 
       return () => {
-        clearTimeout(tPop);
-        clearTimeout(tExit);
-        clearTimeout(tFinish);
+        clearTimeout(fadeTimer);
+        clearTimeout(finishTimer);
       };
     }
-  }, [isReady, isMinTimePassed, farewellStarted, onFinish]);
+  }, [isReady, isMinTimePassed, onFinish]);
 
-  // Handle automatic transition when used as a standard Suspense fallback without an external state coordinator
+  // Fallback for automatic transition when no external controller is present
   useEffect(() => {
     if (!onFinish) {
       const t1 = setTimeout(() => {
-        setFarewellStarted(true);
         setShowText(true);
       }, 400);
       const t2 = setTimeout(() => {
         setExitSplash(true);
-      }, 700);
+      }, 600);
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
       };
     }
   }, [onFinish]);
-
-  // Morph the mouth path smoothly for a happy, slightly wider smile upon farewell
-  const mouthPathOuter = farewellStarted 
-    ? "M182,196 Q200,204 218,196 Q200,238 182,196 Z" 
-    : "M188,198 Q200,208 212,198 Q200,228 188,198 Z";
-
-  const mouthPathInner = farewellStarted
-    ? "M186,206 Q200,202 214,206 Q200,232 186,206 Z"
-    : "M192,208 Q200,202 208,208 Q200,224 192,208 Z";
 
   return (
     <div 
@@ -92,7 +75,7 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
           /* Subtle premium radial gradient to match the richness of the original mascot asset */
           background: radial-gradient(circle at center, #10a3ff 0%, #0088ee 100%);
           opacity: 1;
-          transition: opacity 0.17s cubic-bezier(0.25, 1, 0.5, 1), transform 0.17s cubic-bezier(0.25, 1, 0.5, 1);
+          transition: opacity 0.2s cubic-bezier(0.25, 1, 0.5, 1), transform 0.2s cubic-bezier(0.25, 1, 0.5, 1);
           pointer-events: all;
           will-change: opacity, transform;
         }
@@ -114,10 +97,9 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
           opacity: 1;
           transform: scale(1);
           transform-origin: center center;
-          transition: transform 0.45s cubic-bezier(0.6, -0.28, 0.735, 0.045), opacity 0.35s ease;
+          transition: transform 0.25s cubic-bezier(0.6, -0.28, 0.735, 0.045), opacity 0.2s ease;
           animation: facialBreathing 2.4s infinite ease-in-out;
           will-change: transform, opacity;
-          z-index: 2;
         }
 
         /* CRITICAL FIX: Explicit local center pinning for flawless synchronized blinking */
@@ -135,33 +117,9 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
         .mascot-mouth {
           transform-origin: 200px 205px;
           animation: mouthReact 4s infinite ease-in-out;
-          transition: d 0.2s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
-        /* Dynamic Tilt & Scale on Farewell */
-        .face-container.farewell-active {
-          animation: farewellTilt 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
-        }
-
-        /* Farewell Wink overriding regular blink */
-        .left-eye.wink-active {
-          animation: winkAnimation 0.35s ease-in-out forwards !important;
-        }
-
-        /* Stage 2: Clean Elastic Brand Logotype & Glow */
-        .brand-glow {
-          position: absolute;
-          width: 300px;
-          height: 300px;
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 70%);
-          opacity: 0;
-          transform: scale(0.6);
-          transition: transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease;
-          pointer-events: none;
-          z-index: 1;
-          will-change: transform, opacity;
-        }
-
+        /* Stage 2: Clean Elastic Brand Logotype */
         .brand-text {
           position: absolute;
           font-size: 62px;
@@ -173,8 +131,7 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
           opacity: 0;
           transform: scale(0.7);
           /* High-end cinematic snap curve */
-          transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease;
-          z-index: 3;
+          transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
           will-change: transform, opacity;
         }
 
@@ -183,12 +140,8 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
            ========================================= */
         #splashScreen.show-text .face-container {
           opacity: 0;
-          transform: scale(0.3) translateY(40px);
+          transform: scale(0.35) translateY(40px);
           pointer-events: none;
-        }
-        #splashScreen.show-text .brand-glow {
-          opacity: 1;
-          transform: scale(1.15);
         }
         #splashScreen.show-text .brand-text {
           opacity: 1;
@@ -196,7 +149,7 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
         }
         #splashScreen.exit-splash {
           opacity: 0;
-          transform: scale(1.03);
+          transform: scale(1.02);
           pointer-events: none;
         }
 
@@ -220,27 +173,14 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
           0%, 40%, 44%, 52%, 56%, 100% { transform: scale(1); }
           42%, 54% { transform: scale(1.15, 0.75); }
         }
-
-        /* Gentle head tilt during farewell */
-        @keyframes farewellTilt {
-          0% { transform: rotate(0deg) scale(1); }
-          100% { transform: rotate(7deg) scale(1.04); }
-        }
-
-        /* Instant elastic wink animation */
-        @keyframes winkAnimation {
-          0% { transform: scaleY(1); }
-          40% { transform: scaleY(0.08); }
-          100% { transform: scaleY(1); }
-        }
       `}</style>
 
       <div className="splash-content">
         {/* Synchronized Facial Matrix */}
-        <div className={`face-container ${farewellStarted ? 'farewell-active' : ''}`}>
+        <div className="face-container">
           <svg viewBox="0 0 400 400" width="100%" height="100%">
-            {/* Left Eye Vector (Winks during farewell) */}
-            <g className={`left-eye ${farewellStarted ? 'wink-active' : ''}`}>
+            {/* Left Eye Vector */}
+            <g className="left-eye">
               <circle cx="135" cy="180" r="25" fill="#031b33" />
               <circle cx="135" cy="180" r="22" fill="#002d5a" />
               <circle cx="127" cy="171" r="8.5" fill="#ffffff" />
@@ -258,22 +198,19 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
             {/* Dynamic Interlinked Mouth Vector */}
             <g className="mascot-mouth">
               <path 
-                d={mouthPathOuter} 
+                d="M188,198 Q200,208 212,198 Q200,228 188,198 Z" 
                 fill="#b3243d" 
                 stroke="#031b33" 
                 strokeWidth="4.5" 
                 strokeLinejoin="round" 
               />
               <path 
-                d={mouthPathInner} 
+                d="M192,208 Q200,202 208,208 Q200,224 192,208 Z" 
                 fill="#ff6b8b" 
               />
             </g>
           </svg>
         </div>
-
-        {/* Premium Soft Radial Ambient Glow */}
-        <div className="brand-glow" />
 
         {/* Premium Text Typography Target */}
         <div className="brand-text">nexora</div>
