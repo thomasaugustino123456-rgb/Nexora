@@ -87,18 +87,6 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
     }
     if (!skipped) {
       showToast('Step Complete! Keep going, bro! 🔥', 'success');
-      
-      // Attempt Loot Drop
-      const drop = calculateLootDrop(gardenState.lastSeedDropAt);
-      if (drop.triggered) {
-        onLootFound(drop);
-        const newState = {
-          ...gardenState,
-          pendingLootSeed: drop,
-          lastSeedDropAt: Date.now(),
-        };
-        setGardenState(newState);
-      }
     }
     const updates: Partial<DailyProgress> = {};
     if (step === 'pushups') {

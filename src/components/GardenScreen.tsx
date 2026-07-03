@@ -86,8 +86,8 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
       // Check if chosen pod matches correctPodIndex
       if (podIdx === correctPodIndex) {
         // Correct Choice! Winner! Only ONE pod shows a plant seed upon success
-        // 60% chance for custom dynamic Luck Seed, 40% standard seed
-        const isLuckMaterialized = Math.random() < 0.6;
+        // 15% chance for custom dynamic Luck Seed, 85% standard seed
+        const isLuckMaterialized = Math.random() < 0.15;
         let chosenId = '';
         
         if (isLuckMaterialized) {
@@ -460,7 +460,16 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
                       {tile.growthStage === "Seed" ? '🌱' : 
                        tile.growthStage === "Sprout" ? '🌿' : 
                        tile.growthStage === "Bud" ? '🍀' : 
-                       (tile.plantId === 'dream-shroom' ? '🍄' : '🌸')}
+                       (tile.plantId === 'slime-berry' ? '🍇🟢' :
+                        tile.plantId === 'solar-flare-pea' ? '🌻🔥' :
+                        tile.plantId === 'moon-sprout' ? '🌌🌙' :
+                        tile.plantId === 'star-silk-leaf' ? '💮⭐' :
+                        tile.plantId === 'dream-shroom' ? '🍄✨' :
+                        tile.plantId === 'luck-lotus' ? '🪷✨' :
+                        tile.plantId === 'luck-fern' ? '🪴🌟' :
+                        tile.plantId === 'luck-clover' ? '🍀💎' :
+                        tile.plantId === 'luck-orchid' ? '🌺🌸' :
+                        tile.plantId === 'luck-cactus' ? '🌵☀️' : '🌸')}
                     </div>
                     <span className="text-[8px] font-black text-stone-500 uppercase truncate max-w-[70px]">
                       {archetype.name}

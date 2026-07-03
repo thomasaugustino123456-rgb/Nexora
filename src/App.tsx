@@ -178,7 +178,7 @@ import {
 
 import { CelebrationModal } from "./components/CelebrationModal";
 import { playLootSound } from "./components/LootCard";
-import { addSeedToInventory } from "./types/garden";
+import { addSeedToInventory, calculateLootDrop } from "./types/garden";
 import { startPreloading } from "./lib/preloader";
 
 import { GardenScreen } from "./components/GardenScreen";
@@ -884,8 +884,6 @@ export default function App() {
     resetAll: boolean;
     message: string;
   } | null>(null);
-  const [foundLoot, setFoundLoot] = useState<LootDropResult | null>(null);
-
   // --- VERSION ROLLBACK & RECOVERY ENGINE STATES & HANDLERS ---
   const [rollbackCountdown, setRollbackCountdown] = useState<number | null>(null);
   const [rollbackBackupData, setRollbackBackupData] = useState<any>(null);
@@ -4299,6 +4297,19 @@ export default function App() {
 
     onUpdateSettings(settingsUpdate);
 
+    // Attempt Loot Drop upon finishing the entire Official challenge task flow!
+    if (!isCustomPlan) {
+      const drop = calculateLootDrop(gardenState?.lastSeedDropAt);
+      if (drop.triggered) {
+        const newState = {
+          ...gardenState,
+          pendingLootSeed: drop,
+          lastSeedDropAt: Date.now(),
+        };
+        setGardenState(newState);
+      }
+    }
+
     setSessionXP(xpToAdd);
     setSessionStreak(finalStreakShow);
 
@@ -6133,7 +6144,7 @@ export default function App() {
                       isCustomPlan={activeCustomPlan !== null}
                       gardenState={gardenState}
                       setGardenState={setGardenState}
-                      onLootFound={setFoundLoot}
+                      onLootFound={() => {}}
                       onCompleteWaterChallenge={triggerWaterChallengeCompletion}
                     />
                   </Suspense>
@@ -6185,10 +6196,6 @@ export default function App() {
                 setActiveScreen("trophy-rewards");
               }}
             />
-          )}
-
-          {foundLoot && (
-            <LootCard loot={foundLoot} onCollect={() => setFoundLoot(null)} />
           )}
 
           {decayAlert && (
@@ -6803,223 +6810,25 @@ export default function App() {
           {/* CELESTIAL GOLDEN SEED DROP CELEBRATION OVERLAY */}
           <AnimatePresence>
             {gardenState?.pendingLootSeed && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/85 backdrop-blur-md z-[9999] flex items-center justify-center p-6"
-              >
-                {/* Golden glowing background animations */}
-                <div className="absolute w-96 h-96 bg-amber-500/20 rounded-full blur-[80px] pointer-events-none" />
-                
-                <motion.div
-                  initial={{ scale: 0.85, y: 50 }}
-                  animate={{ scale: 1, y: 0 }}
-                  exit={{ scale: 0.8, y: 30 }}
-                  transition={{ type: "spring", damping: 15 }}
-                  className="w-full max-w-sm bg-stone-900 border-4 border-[#FBBF24] rounded-[3.5rem] p-8 text-center shadow-[0_0_60px_rgba(245,158,11,0.5)] relative overflow-hidden group select-none"
-                >
-                  {/* Majestic overlay shine scan */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-amber-500/10 via-transparent to-transparent pointer-events-none" />
-                  
-                  <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black uppercase text-[#FBBF24] tracking-[0.25em] mb-2 px-3 py-1 bg-amber-500/10 rounded-full border border-amber-500/20">
-                      ✨ Celestial Drop Secured ✨
-                    </span>
-
-                    {/* Glorious Pulsing Seed Render */}
-                    <div className="relative my-8 w-24 h-24 flex items-center justify-center bg-amber-500/10 rounded-[2rem] border-2 border-amber-400/30">
-                      <div className="absolute inset-0 bg-amber-400/10 rounded-[2rem] blur-md scale-115 animate-pulse" />
-                      <span className="text-6xl filter drop-shadow-[0_8px_16px_rgba(245,158,11,0.6)] animate-bounce duration-1000">
-                        {gardenState.pendingLootSeed.seedId === 'slime-berry' ? '🟢' :
-                         gardenState.pendingLootSeed.seedId === 'solar-flare-pea' ? '🔥' :
-                         gardenState.pendingLootSeed.seedId === 'moon-sprout' ? '🌙' :
-                         gardenState.pendingLootSeed.seedId === 'star-silk-leaf' ? '⭐' : '🍄'}
-                      </span>
-                    </div>
-
-                    <h2 className="text-2xl font-black text-white uppercase tracking-tight italic">
-                      {gardenState.pendingLootSeed.seedName}
-                    </h2>
-                    
-                    <span className={`text-[9px] font-black border px-3 py-0.5 mt-2 rounded-full uppercase tracking-widest ${
-                      gardenState.pendingLootSeed.rarity === 'Legendary' ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' :
-                      gardenState.pendingLootSeed.rarity === 'Epic' ? 'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/30' :
-                      gardenState.pendingLootSeed.rarity === 'Rare' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
-                      'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                    }`}>
-                      {gardenState.pendingLootSeed.rarity} Rarity Sprout
-                    </span>
-
-                    <p className="text-[11px] text-stone-400 font-bold mt-6 leading-relaxed px-4">
-                      Congratulations, warrior! Your flawless routine streak has manifested a rare seed from the celestial cosmos!
-                    </p>
-
-                    {/* INTERACTIVE COMPLIANT BUTTONS */}
-                    <div className="w-full mt-8 space-y-3">
-                      
-                      {/* BUTTON 2: Instant Plant in Garden */}
-                      <button
-                        onClick={() => {
-                          const loot = gardenState.pendingLootSeed;
-                          if (!loot || !loot.seedId) return;
-                          
-                          vibrate([15, 10, 15]);
-                          playLootSound('success');
-                          
-                          // Check if grid has empty space
-                          const firstEmpty = gardenState.tiles.find(t => !t.plantId);
-                          if (firstEmpty) {
-                            const updatedTiles = gardenState.tiles.map(t => {
-                              if (t.tileIndex === firstEmpty.tileIndex) {
-                                return {
-                                  ...t,
-                                  plantId: loot.seedId,
-                                  growthStage: "Seed" as const,
-                                  waterCount: 0,
-                                  plantedAt: Date.now()
-                                };
-                              }
-                              return t;
-                            });
-
-                            setGardenState({
-                              ...gardenState,
-                              tiles: updatedTiles,
-                              pendingLootSeed: null,
-                              lastSeedDropAt: Date.now()
-                            });
-                            showToast(`Instantly planted ${loot.seedName} in soil tile #${firstEmpty.tileIndex + 1}! 🦊✨`, 'success');
-                          } else {
-                            // Backup inventory deposit
-                            const added = addSeedToInventory(gardenState, loot.seedId);
-                            setGardenState({
-                              ...added,
-                              pendingLootSeed: null,
-                              lastSeedDropAt: Date.now()
-                            });
-                            showToast(`Full garden! Saved ${loot.seedName} direct to inventory vault! 🎒`, 'success');
-                          }
-                          
-                          // Instantly go to garden screen
-                          setActiveScreen("garden");
-                        }}
-                        className="w-full py-4 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-stone-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-amber-500/20 active:scale-95 transition-transform flex items-center justify-center gap-2 border border-white/20"
-                      >
-                        <span>Instant Plant & Open Garden 🌸</span>
-                      </button>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        {/* BUTTON 1: Save Seed Photo */}
-                        <button
-                          onClick={() => {
-                            vibrate(10);
-                            playLootSound('click');
-                            const loot = gardenState?.pendingLootSeed;
-                            if (!loot) return;
-
-                            try {
-                              const canvas = document.createElement('canvas');
-                              canvas.width = 600;
-                              canvas.height = 600;
-                              const ctx = canvas.getContext('2d');
-                              if (!ctx) return;
-
-                              // Create pristine gold/dark theme canvas
-                              const grad = ctx.createLinearGradient(0, 0, 0, 600);
-                              grad.addColorStop(0, '#1C1917');
-                              grad.addColorStop(1, '#0C0A09');
-                              ctx.fillStyle = grad;
-                              ctx.fillRect(0, 0, 600, 600);
-
-                              // Double borders
-                              ctx.strokeStyle = '#F59E0B';
-                              ctx.lineWidth = 10;
-                              ctx.strokeRect(25, 25, 550, 550);
-                              ctx.strokeStyle = '#D97706';
-                              ctx.lineWidth = 3;
-                              ctx.strokeRect(38, 38, 524, 524);
-
-                              // Banner
-                              ctx.font = '900 24px sans-serif';
-                              ctx.fillStyle = '#FBBF24';
-                              ctx.textAlign = 'center';
-                              ctx.fillText('NEXORA CELESTIAL REPUTATION', 300, 100);
-
-                              ctx.font = '700 13px sans-serif';
-                              ctx.fillStyle = '#78716C';
-                              ctx.fillText('HABIT COMPLIANCE VERIFIED REWARD', 300, 130);
-
-                              // Big central emoji
-                              ctx.font = '110px sans-serif';
-                              const mapping: Record<string, string> = {
-                                'slime-berry': '🟢',
-                                'solar-flare-pea': '🔥',
-                                'moon-sprout': '🌙',
-                                'star-silk-leaf': '⭐',
-                                'dream-shroom': '🍄'
-                              };
-                              ctx.fillText(mapping[loot.seedId || ''] || '🌱', 300, 280);
-
-                              // Seed details
-                              ctx.font = '900 36px sans-serif';
-                              ctx.fillStyle = '#FFFFFF';
-                              ctx.fillText(loot.seedName || 'Celestial Seed', 300, 380);
-
-                              ctx.font = '900 16px sans-serif';
-                              ctx.fillStyle = loot.rarity === 'Legendary' ? '#F43F5E' :
-                                              loot.rarity === 'Epic' ? '#D946EF' :
-                                              loot.rarity === 'Rare' ? '#3B82F6' : '#10B981';
-                              ctx.fillText(`${loot.rarity} Rarity`, 300, 420);
-
-                              // Verification
-                              ctx.font = '500 12px sans-serif';
-                              ctx.fillStyle = '#A8A29E';
-                              ctx.fillText(`Certificate ID: NX-${loot.seedId}-${Date.now().toString().slice(-6)}`, 300, 480);
-                              ctx.fillText(`Compliant Date: ${new Date().toLocaleDateString()}`, 300, 505);
-
-                              const a = document.createElement('a');
-                              a.download = `nexora_seed_${loot.seedId}.png`;
-                              a.href = canvas.toDataURL('image/png');
-                              a.click();
-                              showToast('Saved Seed Photo Certificate directly to your files! 📸👍', 'success');
-                            } catch (e) {
-                              console.error(e);
-                              showToast('Download succeeded (Text ID)! 💾', 'success');
-                            }
-                          }}
-                          className="py-3 bg-stone-800 hover:bg-stone-750 text-amber-200 border border-amber-500/25 rounded-xl font-bold text-[10px] uppercase tracking-wider active:scale-95 transition-transform flex items-center justify-center gap-1"
-                        >
-                          <Download size={12} /> Save Photo 📸
-                        </button>
-
-                        {/* Dismiss Button */}
-                        <button
-                          onClick={() => {
-                            vibrate(10);
-                            playLootSound('woosh');
-                            
-                            // Stash seed in static inventory vault securely
-                            const loot = gardenState.pendingLootSeed;
-                            if (loot && loot.seedId) {
-                              const withInv = addSeedToInventory(gardenState, loot.seedId);
-                              setGardenState({
-                                ...withInv,
-                                pendingLootSeed: null
-                              });
-                            }
-                            showToast("Deposited seed nicely into inventory bank! 🎒", "success");
-                          }}
-                          className="py-3 bg-stone-900 hover:bg-stone-850 text-stone-400 border border-stone-800 rounded-xl font-bold text-[10px] uppercase tracking-wider active:scale-95 transition-transform"
-                        >
-                          Send to Vault
-                        </button>
-                      </div>
-
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
+              <LootCard
+                loot={gardenState.pendingLootSeed}
+                onCollect={() => {
+                  const seedId = gardenState.pendingLootSeed?.seedId;
+                  if (seedId) {
+                    const updatedState = addSeedToInventory(gardenState, seedId);
+                    setGardenState({
+                      ...updatedState,
+                      pendingLootSeed: null,
+                    });
+                    showToast(`Saved ${gardenState.pendingLootSeed?.seedName} direct to inventory vault! 🎒🌱`, 'success');
+                  } else {
+                    setGardenState({
+                      ...gardenState,
+                      pendingLootSeed: null,
+                    });
+                  }
+                }}
+              />
             )}
           </AnimatePresence>
 

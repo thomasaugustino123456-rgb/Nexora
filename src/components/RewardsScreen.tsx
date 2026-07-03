@@ -29,6 +29,15 @@ export function RewardsScreen({
   const [statusColor, setStatusColor] = useState("#788f9a");
   const audioCtxRef = useRef<AudioContext | null>(null);
 
+  // Clean up AudioContext on unmount
+  useEffect(() => {
+    return () => {
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
+      }
+    };
+  }, []);
+
   if (currentStage === "xp") {
     return (
       <XpRewardsScreen
@@ -39,15 +48,6 @@ export function RewardsScreen({
       />
     );
   }
-
-  // Clean up AudioContext on unmount
-  useEffect(() => {
-    return () => {
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
-      }
-    };
-  }, []);
 
   // Web Audio Synthesis for AAA juicy SFX
   const playSoundEffect = (type: "thud1" | "thud2" | "launch" | "coin", coinIndex = 0) => {
