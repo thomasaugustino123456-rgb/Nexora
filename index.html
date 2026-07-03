@@ -18,6 +18,22 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      (function initBulletproofSplash() {
+        const splashScreen = document.getElementById('splashScreen');
+        if (splashScreen) {
+          setTimeout(() => { splashScreen.classList.add('show-text'); }, 2800);
+          setTimeout(() => {
+            splashScreen.classList.add('exit-splash');
+            setTimeout(() => { splashScreen.style.display = 'none'; }, 1000);
+          }, 4500);
+          splashScreen.addEventListener('click', () => {
+            splashScreen.classList.add('exit-splash');
+            setTimeout(() => { splashScreen.style.display = 'none'; }, 600);
+          });
+        }
+      })();
+    </script>
   </body>
 </html>
 
