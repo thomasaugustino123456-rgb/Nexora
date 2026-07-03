@@ -6,6 +6,22 @@ import { UserStats } from "../types";
 import { MascotV2 } from "./MascotV2";
 import { XpRewardsScreen } from "./XpRewardsScreen";
 
+const CHEST_SOUNDS = {
+  reveal: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088376/mixkit-game-experience-level-increased-2062_cyf4kz.wav",
+  click: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088375/mixkit-quick-win-video-game-notification-269_ec7wwz.wav",
+  land: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088375/mixkit-martial-arts-punch-2052_l0noe5.wav"
+};
+
+const playChestAudio = (type: "reveal" | "click" | "land", soundEnabled?: boolean) => {
+  if (soundEnabled === false) return;
+  try {
+    const audio = new Audio(CHEST_SOUNDS[type]);
+    audio.play().catch(e => console.warn("Chest sound play failed:", e));
+  } catch (err) {
+    console.warn("Chest audio error:", err);
+  }
+};
+
 interface RewardsScreenProps {
   stats: UserStats;
   onUpdateStats: (newStats: Partial<UserStats> | ((prev: UserStats) => UserStats)) => void;
@@ -227,23 +243,40 @@ export function RewardsScreen({
     setTapCount(nextTap);
 
     if (nextTap === 1) {
-      // Tap 1: not heavy vibration
-      vibrate(12);
+      // Tap 1: Play click, strong vibration, and schedule landing sound
+      vibrate(100);
+      playChestAudio("click", settings?.soundEnabled);
       playSoundEffect("thud1");
       setStatusText("2 Taps Remaining...");
       setStatusColor("#788f9a");
+      setTimeout(() => {
+        playChestAudio("land", settings?.soundEnabled);
+        vibrate(60);
+      }, 300);
     } else if (nextTap === 2) {
-      // Tap 2: Not that heavy but still can be felt
-      vibrate(25);
+      // Tap 2: Play click, even stronger vibration, and schedule landing sound
+      vibrate(130);
+      playChestAudio("click", settings?.soundEnabled);
       playSoundEffect("thud2");
       setStatusText("FINAL TAP INITIALIZED!!!");
       setStatusColor("#FF9600");
+      setTimeout(() => {
+        playChestAudio("land", settings?.soundEnabled);
+        vibrate(90);
+      }, 430);
     } else if (nextTap === 3) {
-      // Tap 3: Heavy vibration!
-      vibrate([65, 45, 65]);
+      // Tap 3: Play click & reveal, massive vibration, and schedule landing sound on impact
+      vibrate([180, 50, 180]);
+      playChestAudio("click", settings?.soundEnabled);
+      playChestAudio("reveal", settings?.soundEnabled);
       playSoundEffect("launch");
       setStatusText("Protocol Rewards Disbursed!");
       setStatusColor("#FFD000");
+
+      setTimeout(() => {
+        playChestAudio("land", settings?.soundEnabled);
+        vibrate(220);
+      }, 620);
 
       // Dim out instruction text
       setTimeout(() => {
@@ -267,8 +300,8 @@ export function RewardsScreen({
         setCoinsAdded(currentCoins);
         playSoundEffect("coin", currentCoins - 1);
 
-        // Vibration when the counter increases!
-        vibrate(12);
+        // Increased vibration when the counter increases!
+        vibrate(35);
 
         // Increment user's actual coins count in the backend on each step!
         onUpdateStats((prev) => ({

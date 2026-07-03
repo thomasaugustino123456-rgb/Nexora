@@ -4,6 +4,22 @@ import { ChevronRight, Sparkles } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
 import { UserStats } from "../types";
 
+const CHEST_SOUNDS = {
+  reveal: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088376/mixkit-game-experience-level-increased-2062_cyf4kz.wav",
+  click: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088375/mixkit-quick-win-video-game-notification-269_ec7wwz.wav",
+  land: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088375/mixkit-martial-arts-punch-2052_l0noe5.wav"
+};
+
+const playChestAudio = (type: "reveal" | "click" | "land", soundEnabled?: boolean) => {
+  if (soundEnabled === false) return;
+  try {
+    const audio = new Audio(CHEST_SOUNDS[type]);
+    audio.play().catch(e => console.warn("Chest sound play failed:", e));
+  } catch (err) {
+    console.warn("Chest audio error:", err);
+  }
+};
+
 interface XpRewardsScreenProps {
   stats: UserStats;
   onUpdateStats: (newStats: Partial<UserStats> | ((prev: UserStats) => UserStats)) => void;
@@ -155,23 +171,38 @@ export function XpRewardsScreen({
     setClickCount(nextCount);
 
     if (nextCount === 1) {
-      // Click 1: Heavy but lightweight vibration (crisp dual pulse)
-      vibrate([40, 20, 30]);
+      // Click 1: Play click, strong vibration, and schedule landing sound on landing impact
+      vibrate([100, 30, 80]);
+      playChestAudio("click", settings?.soundEnabled);
       playSoundEffect("tap", 1);
       setStatusText("3 Taps Left... Feel the Magic!");
       setStatusColor("#00f0ff");
+      setTimeout(() => {
+        playChestAudio("land", settings?.soundEnabled);
+        vibrate(90);
+      }, 400);
     } else if (nextCount === 2) {
-      // Click 2: Slightly heavier dual pulse
-      vibrate([45, 20, 35]);
+      // Click 2: Play click, stronger vibration, and schedule landing sound
+      vibrate([120, 30, 100]);
+      playChestAudio("click", settings?.soundEnabled);
       playSoundEffect("tap", 2);
       setStatusText("2 Taps Left... Energy is Surging!");
       setStatusColor("#a832fc");
+      setTimeout(() => {
+        playChestAudio("land", settings?.soundEnabled);
+        vibrate(110);
+      }, 450);
     } else if (nextCount === 3) {
-      // Click 3: Intense buildup pulses
-      vibrate([50, 15, 45, 15, 40]);
+      // Click 3: Play click, intense buildup vibration, and schedule landing sound
+      vibrate([150, 25, 130, 25, 120]);
+      playChestAudio("click", settings?.soundEnabled);
       playSoundEffect("tap", 3);
       setStatusText("FINAL TAP DEPLOYMENT INITIALIZED!!!");
       setStatusColor("#ff00d0");
+      setTimeout(() => {
+        playChestAudio("land", settings?.soundEnabled);
+        vibrate(140);
+      }, 500);
     } else if (nextCount === 4) {
       setSystemLock(true);
       executeEpicFinalLaunch();
@@ -179,17 +210,21 @@ export function XpRewardsScreen({
   };
 
   const executeEpicFinalLaunch = () => {
-    // 1. Play massive launch chime + laser sweep
+    // 1. Play massive launch chime + laser sweep + Sound 1 (reveal) + Sound 2 (click/launch)
     playSoundEffect("epic_launch");
+    playChestAudio("click", settings?.soundEnabled);
+    playChestAudio("reveal", settings?.soundEnabled);
 
     // 2. Heavy explosion vibration so the user REALLY feels it!
-    vibrate([80, 50, 100, 50, 150, 40, 200]);
+    vibrate([200, 50, 250, 50, 300, 40, 350]);
 
     setStatusText("XP Core Harvest Transferred!");
     setStatusColor("#00f0ff");
 
     // 3. Exact frame of landing impact is 680ms
     setTimeout(() => {
+      playChestAudio("land", settings?.soundEnabled);
+      vibrate(220);
       setShowXpText(true);
 
       // Populate magical crystals
