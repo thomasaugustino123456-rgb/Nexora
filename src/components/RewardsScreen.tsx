@@ -313,6 +313,17 @@ export function RewardsScreen({
           overflow: visible;
         }
 
+        /* Playful Idle Attractor Jump (Subtle bounce) */
+        @keyframes idleBounce {
+          0%, 100% { transform: scale(1) translateY(0); }
+          50% { transform: scale(1.04, 0.96) translateY(0); }
+          75% { transform: scale(0.96, 1.04) translateY(-14px); }
+          85% { transform: scale(1.02, 0.98) translateY(0); }
+        }
+        .chest-stage-idle .box-mesh {
+          animation: idleBounce 2.0s ease-in-out infinite;
+        }
+
         /* 3-TAP JUMP PHYSICS + VANISH TRIGGER */
         .tap-1 .box-mesh { animation: popJump1 0.45s ease-in-out forwards; }
         .tap-2 .box-mesh { animation: popJump2 0.6s ease-in-out forwards; }
@@ -374,12 +385,12 @@ export function RewardsScreen({
         /* DUOLINGO STYLE MASCOT CELEBRATION */
         .mascot-celebrate {
           position: absolute;
-          top: 20px;
-          left: 50%;
-          transform: translateX(-50%) scale(0);
-          width: 130px;
-          height: 130px;
-          z-index: 90;
+          bottom: -15px;
+          right: -45px;
+          transform: scale(0);
+          width: 105px;
+          height: 105px;
+          z-index: 5; /* under the coins (which have z-index: 10) */
           pointer-events: none;
           opacity: 0;
           transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.4);
@@ -389,7 +400,7 @@ export function RewardsScreen({
           animation-delay: 0.9s;
         }
         @keyframes mascotPopIn {
-          100% { opacity: 1; transform: translateX(-50%) scale(1); }
+          100% { opacity: 1; transform: scale(1); }
         }
 
         /* =======================================================
@@ -516,7 +527,7 @@ export function RewardsScreen({
           id="pwaChest"
           onClick={handleChestClick}
           className={`chest-stage select-none ${
-            tapCount === 1 ? "tap-1" : tapCount === 2 ? "tap-2" : tapCount >= 3 ? "tap-3" : ""
+            tapCount === 1 ? "tap-1" : tapCount === 2 ? "tap-2" : tapCount >= 3 ? "tap-3" : "chest-stage-idle"
           }`}
         >
           {/* Big Core Total Counter */}
