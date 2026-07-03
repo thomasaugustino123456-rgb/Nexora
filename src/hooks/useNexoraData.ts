@@ -335,18 +335,51 @@ export function useNexoraData(
       }
 
       // Set loading and ready transitions
-      setLoading(true);
-      setIsDataReady(false);
+      if (hasCache) {
+        console.log("Hooks: Fast path. We have active cache. Instantly starting the app with cached state.");
+        setLoading(false);
+        setIsDataReady(true);
+        setNeedsOnboarding(false);
+
+        const currentProgress = cachedProgress?.date === today ? cachedProgress : {
+          date: today,
+          completed: false,
+          pushupsDone: false,
+          waterDrank: 0,
+          breathingDone: false,
+          drawingDone: false,
+          footballDone: false,
+          bubblesDone: false,
+          completionsCount: 0,
+          nextRestorationTime: null,
+        };
+
+        const cachedObj = {
+          s: cachedSettings,
+          st: cachedStats,
+          p: {
+            c: currentProgress.completed,
+            cc: currentProgress.completionsCount,
+            d: currentProgress.date,
+          },
+          g: cachedGarden,
+        };
+
+        hydratedStateRef.current = cachedObj;
+        lastSyncedRef.current = cachedObj;
+        lastLoadedUserIdRef.current = currentUser.uid;
+        setIsHydrated(true);
+      } else {
+        setLoading(true);
+        setIsDataReady(false);
+      }
 
       // Setup the deterministic safety loading timeout duration
-      const timeoutDuration = hasCache 
-        ? (navigator.onLine ? 5000 : 500) 
-        : (navigator.onLine ? 25000 : 1000);
-
-      loadingTimeout = setTimeout(() => {
-        if (!isLoaderResolved) {
-          console.warn("Hooks: Loading timeout reached. Falling back to local offline states to prevent infinite hang.");
-          if (!hasCache) {
+      if (!hasCache) {
+        const timeoutDuration = 3000; // Snappy 3s timeout for new users
+        loadingTimeout = setTimeout(() => {
+          if (!isLoaderResolved) {
+            console.warn("Hooks: Loading timeout reached. Falling back to local offline states to prevent infinite hang.");
             setSettings(DEFAULT_SETTINGS);
             setStats(DEFAULT_STATS);
             setDailyProgress({
@@ -362,15 +395,15 @@ export function useNexoraData(
               nextRestorationTime: null,
             });
             setGardenState(createInitialGardenState());
+            const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
+            setNeedsOnboarding(!onboardingComp);
+            setIsDataReady(true);
+            setLoading(false);
+            setIsHydrated(true);
+            showToast("Slow connection detected. Running in offline backup mode! 📡", "info");
           }
-          const onboardingComp = localStorage.getItem("nexora_onboarding_completed") === "true";
-          setNeedsOnboarding(!onboardingComp);
-          setIsDataReady(true);
-          setLoading(false);
-          setIsHydrated(true);
-          showToast("Slow connection detected. Running in offline backup mode! 📡", "info");
-        }
-      }, timeoutDuration);
+        }, timeoutDuration);
+      }
 
       // Offline Cache Bypass
       if (!navigator.onLine && hasCache) {
@@ -427,7 +460,7 @@ export function useNexoraData(
       console.log(`[PERSISTENCE AUDIT] [READ START] Initiated Firestore read for user UID: ${currentUser.uid}`);
 
       try {
-        const networkTimeoutDuration = hasCache ? 15000 : 25000;
+        const networkTimeoutDuration = hasCache ? 5000 : 8000;
         const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error(`Firebase network timed out (${networkTimeoutDuration / 1000}s)`)), networkTimeoutDuration)
         );
