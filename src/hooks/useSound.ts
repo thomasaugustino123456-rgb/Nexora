@@ -131,6 +131,10 @@ if (typeof window !== "undefined") {
 if (typeof window !== "undefined") {
   Object.entries(SOUNDS).forEach(async ([key, url]) => {
     if (!key.startsWith("music")) {
+      if (!url) {
+        // Skip empty URLs to avoid redundant requests and console warnings
+        return;
+      }
       try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -533,20 +537,22 @@ export function useSound() {
       if (!buffer && !soundKey.startsWith("music")) {
         // Try decoding now if it was fetched but not decoded
         const url = SOUNDS[soundKey];
-        try {
-          const resp = await fetch(url);
-          if (resp.ok) {
-            const contentType = resp.headers.get("content-type") || "";
-            if (!contentType.includes("text/html")) {
-              const ab = await resp.arrayBuffer();
-              if (ab.byteLength > 0) {
-                buffer = await ctx.decodeAudioData(ab);
-                bufferCache[soundKey] = buffer;
+        if (url) {
+          try {
+            const resp = await fetch(url);
+            if (resp.ok) {
+              const contentType = resp.headers.get("content-type") || "";
+              if (!contentType.includes("text/html")) {
+                const ab = await resp.arrayBuffer();
+                if (ab.byteLength > 0) {
+                  buffer = await ctx.decodeAudioData(ab);
+                  bufferCache[soundKey] = buffer;
+                }
               }
             }
+          } catch (fetchErr) {
+            console.warn(`Audio: On-demand fetch/decode failed for ${soundKey}:`, fetchErr);
           }
-        } catch (fetchErr) {
-          console.warn(`Audio: On-demand fetch/decode failed for ${soundKey}:`, fetchErr);
         }
       }
 

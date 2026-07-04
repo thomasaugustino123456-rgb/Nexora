@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, enableMultiTabIndexedDbPersistence } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import { getAnalytics, logEvent, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 import firebaseConfigData from './firebase-applet-config.json';
@@ -63,26 +63,12 @@ export const trackEvent = async (eventName: string, params?: any) => {
 
 const isIframe = typeof window !== 'undefined' && window.self !== window.top;
 
-export const db = initializeFirestore(app, isIframe ? {
-  experimentalForceLongPolling: true,
-} : {}, databaseId === "(default)" ? undefined : databaseId);
-
-// Persistence is key for offline/slow networks/multiple preview windows
-if (typeof window !== 'undefined') {
-  try {
-    enableMultiTabIndexedDbPersistence(db).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn("Firestore Multi-Tab Persistence: Multiple tabs open, state synchronization active.");
-      } else if (err.code === 'unimplemented') {
-        console.warn("Firestore Multi-Tab Persistence: The current browser doesn't support all of the features required to enable active synchronization.");
-      } else {
-        console.warn("Firestore Multi-Tab Persistence failed safely:", err);
-      }
-    });
-  } catch (err) {
-    console.warn("Caught synchronous exception while enabling Firestore Multi-Tab Persistence:", err);
-  }
-}
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+  }),
+  ...(isIframe ? { experimentalForceLongPolling: true } : {}),
+}, databaseId === "(default)" ? undefined : databaseId);
 
 export const auth = getAuth(app);
 
