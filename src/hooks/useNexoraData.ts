@@ -616,11 +616,11 @@ export function useNexoraData(
             await setDoc(userDocRef, initialProfile);
           }
 
-          const hasCompletedOnboardingDb = (data.onboardingCompleted === true) || hasRewards || hasPlantSection;
+          const hasCompletedOnboardingDb = (data.onboardingCompleted === true) || docSnap.exists() || hasRewards || hasPlantSection;
           setNeedsOnboarding(!hasCompletedOnboardingDb);
           if (hasCompletedOnboardingDb) {
             localStorage.setItem("nexora_onboarding_completed", "true");
-            onboardingReasonRef.current = "User doc exists on Firestore with onboardingCompleted=true. Skipping onboarding.";
+            onboardingReasonRef.current = "User doc exists on Firestore with onboardingCompleted=true or document exists. Skipping onboarding.";
           } else {
             localStorage.removeItem("nexora_onboarding_completed");
             onboardingReasonRef.current = "User doc exists on Firestore with onboardingCompleted=false. Showing onboarding.";
