@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, disableNetwork } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import { getAnalytics, logEvent, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 import { 
@@ -83,13 +83,6 @@ export const db = initializeFirestore(app, {
   }),
   ...(isIframe ? { experimentalForceLongPolling: true } : {}),
 }, databaseId === "(default)" ? undefined : databaseId);
-
-// Since the user requested "Do not connect to Firestore Yet", we put Firestore in offline-only fallback mode.
-// This allows local state/caching to continue working flawlessly via Firestore offline-cache,
-// without attempting any actual backend connection or throwing remote permission errors.
-disableNetwork(db).catch(err => {
-  console.warn("Firestore: Failed to set offline-only fallback mode:", err);
-});
 
 export type FirebaseUser = any;
 

@@ -73,7 +73,9 @@ service cloud.firestore {
              (!('pushMotivationEnabled' in data) || data.pushMotivationEnabled is bool) &&
              (!('unitSystem' in data) || (data.unitSystem is string && data.unitSystem.size() <= 20)) &&
              (!('profilePic' in data) || (data.profilePic is string && data.profilePic.size() <= 1048576)) && // 1MB limit
+             (!('accountName' in data) || (data.accountName is string && data.accountName.size() <= 100)) &&
              (!('gender' in data) || (data.gender is string && data.gender.size() <= 50)) &&
+             (!('time' in data) || (data.time is string && data.time.size() <= 50)) &&
              (!('source' in data) || (data.source is string && data.source.size() <= 50)) &&
              (!('timezone' in data) || (data.timezone is string && data.timezone.size() <= 50)) &&
              (!('settings' in data) || data.settings is map) &&
