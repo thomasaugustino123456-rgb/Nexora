@@ -136,6 +136,9 @@ export interface UserSettings {
   activeGardenTheme?: string;
   activeBgEffect?: string;
   proTestingItems?: { itemId: string; expiresAt: string; originalEquipped?: string }[];
+  accountName?: string;
+  email?: string;
+  time?: string;
 }
 
 export interface ShopItem {

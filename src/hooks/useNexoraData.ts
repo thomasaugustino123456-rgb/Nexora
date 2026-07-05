@@ -204,14 +204,20 @@ export function useNexoraData(
             if (!userDocSnap.exists()) {
               console.log(`[FIRESTORE] User not found in DB. Creating new user document at ${userDocRef.path}`);
               
+              const accountNameVal = currentUser.displayName || currentUser.email?.split('@')[0] || "Champion";
               const newUserData = {
                 name: currentUser.displayName || "Champion",
                 displayName: currentUser.displayName || "Champion",
                 email: currentUser.email || "",
                 photoFileName: currentUser.photoURL || "",
+                "Photo file name": currentUser.photoURL || "",
                 profilePic: currentUser.photoURL || "",
                 location: "",
+                "Location": "",
                 time: new Date().toISOString(),
+                "Time": new Date().toISOString(),
+                accountName: accountNameVal,
+                "Account name": accountNameVal,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
                 role: "user",
@@ -227,7 +233,7 @@ export function useNexoraData(
               console.log(`[FIRESTORE] Loaded existing user document data:`, docData);
               
               // If a user is already registered but isn't in the database, add them there when they log in. 
-              // Add all necessary fields into their document: name, email, Photo file name, Location, Time.
+              // Add all necessary fields into their document: name, email, Photo file name, Location, Time, Account name.
               const updates: any = {};
               let needsUpdate = false;
               
@@ -239,16 +245,28 @@ export function useNexoraData(
                 updates.email = currentUser.email || "";
                 needsUpdate = true;
               }
-              if (docData.photoFileName === undefined) {
-                updates.photoFileName = docData.profilePic || currentUser.photoURL || "";
+              if (docData.photoFileName === undefined || docData["Photo file name"] === undefined) {
+                const picUrl = docData.profilePic || currentUser.photoURL || "";
+                updates.photoFileName = picUrl;
+                updates["Photo file name"] = picUrl;
                 needsUpdate = true;
               }
-              if (docData.location === undefined) {
-                updates.location = "";
+              if (docData.location === undefined || docData["Location"] === undefined) {
+                const locVal = docData.location || "";
+                updates.location = locVal;
+                updates["Location"] = locVal;
                 needsUpdate = true;
               }
-              if (docData.time === undefined) {
-                updates.time = new Date().toISOString();
+              if (docData.time === undefined || docData["Time"] === undefined) {
+                const timeVal = docData.time || new Date().toISOString();
+                updates.time = timeVal;
+                updates["Time"] = timeVal;
+                needsUpdate = true;
+              }
+              if (docData.accountName === undefined || docData["Account name"] === undefined) {
+                const actName = docData.accountName || currentUser.displayName || currentUser.email?.split('@')[0] || "Champion";
+                updates.accountName = actName;
+                updates["Account name"] = actName;
                 needsUpdate = true;
               }
               
@@ -265,7 +283,10 @@ export function useNexoraData(
                 ...(docData.settings || {}),
                 displayName: docData.name || docData.displayName || (docData.settings?.displayName) || currentUser.displayName || "Champion",
                 profilePic: docData.photoFileName || docData.profilePic || (docData.settings?.profilePic) || currentUser.photoURL || "",
-                location: docData.location || (docData.settings?.location) || "",
+                location: docData.location || docData["Location"] || (docData.settings?.location) || "",
+                accountName: docData.accountName || docData["Account name"] || (docData.settings?.accountName) || currentUser.displayName || currentUser.email?.split('@')[0] || "Champion",
+                email: docData.email || (docData.settings?.email) || currentUser.email || "",
+                time: docData.time || docData["Time"] || (docData.settings?.time) || new Date().toISOString()
               };
               
               const mappedStats = {

@@ -289,6 +289,9 @@ const DEFAULT_SETTINGS: UserSettings = {
     isThirsty: false,
     unlockedTypes: ["sprout"],
   },
+  accountName: "",
+  email: "",
+  time: "",
 };
 
 const DEFAULT_STATS: UserStats = {
@@ -1383,11 +1386,27 @@ export default function App() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleUpdateProfile = async (name: string, photoURL: string, location: string) => {
+  const handleUpdateProfile = async (
+    name: string,
+    photoURL: string,
+    location: string,
+    extraFields?: { accountName?: string; email?: string }
+  ) => {
     if (!user) return;
     try {
+      const finalAccountName = extraFields?.accountName || settings.accountName || name || user.displayName || user.email?.split('@')[0] || "Champion";
+      const finalEmail = extraFields?.email || settings.email || user.email || "";
+      const finalTime = settings.time || new Date().toISOString();
+
       // Update local state first
-      onUpdateSettings({ displayName: name, profilePic: photoURL, location });
+      onUpdateSettings({
+        displayName: name,
+        profilePic: photoURL,
+        location,
+        accountName: finalAccountName,
+        email: finalEmail,
+        time: finalTime
+      });
 
       // Update Firestore user document
       const userDocRef = doc(db, "users", user.uid);
@@ -1395,9 +1414,15 @@ export default function App() {
         name: name,
         displayName: name,
         photoFileName: photoURL,
+        "Photo file name": photoURL,
         profilePic: photoURL,
         location: location,
-        time: new Date().toISOString(),
+        "Location": location,
+        time: finalTime,
+        "Time": finalTime,
+        accountName: finalAccountName,
+        "Account name": finalAccountName,
+        email: finalEmail,
         updatedAt: serverTimestamp(),
       }, { merge: true });
 

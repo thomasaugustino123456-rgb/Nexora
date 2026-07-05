@@ -46,7 +46,12 @@ export function ProfileScreen({
   user: FirebaseUser | null;
   setActiveScreen: (screen: Screen) => void;
   circles: SocialCircle[];
-  onUpdateProfile: (name: string, photo: string, location: string) => void;
+  onUpdateProfile: (
+    name: string,
+    photo: string,
+    location: string,
+    extraFields?: { accountName?: string; email?: string }
+  ) => void;
   deleteAccount: () => Promise<void>;
 }) {
   const [showArchitect, setShowArchitect] = useState(false);
@@ -64,13 +69,30 @@ export function ProfileScreen({
   const [editLocation, setEditLocation] = useState(
       settings.location || "",
   );
+  const [editAccountName, setEditAccountName] = useState(
+    settings.accountName || user?.displayName || user?.email?.split('@')[0] || "Champion",
+  );
+  const [editEmail, setEditEmail] = useState(
+    settings.email || user?.email || "",
+  );
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setEditName(settings.displayName || user?.displayName || "Nexora User");
     setEditPhoto(settings.profilePic || user?.photoURL || "");
     setEditLocation(settings.location || "");
-  }, [settings.displayName, settings.profilePic, settings.location, user]);
+    setEditAccountName(
+      settings.accountName || user?.displayName || user?.email?.split('@')[0] || "Champion",
+    );
+    setEditEmail(settings.email || user?.email || "");
+  }, [
+    settings.displayName,
+    settings.profilePic,
+    settings.location,
+    settings.accountName,
+    settings.email,
+    user
+  ]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -137,7 +159,10 @@ export function ProfileScreen({
   };
 
   const saveProfile = () => {
-    onUpdateProfile(editName, editPhoto, editLocation);
+    onUpdateProfile(editName, editPhoto, editLocation, {
+      accountName: editAccountName,
+      email: editEmail
+    });
     setIsEditing(false);
   };
 
@@ -179,26 +204,66 @@ export function ProfileScreen({
 
         <div className="text-center space-y-2">
           {isEditing ? (
-            <div className="flex flex-col items-center gap-2">
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="text-4xl font-black text-blue-900 tracking-tight leading-none text-center bg-blue-50 border-none rounded-2xl p-2 w-full max-w-sm focus:ring-2 focus:ring-blue-400"
-              />
-              <input
-                type="text"
-                value={editLocation}
-                onChange={(e) => setEditLocation(e.target.value)}
-                className="text-lg text-blue-700 tracking-tight text-center bg-blue-50 border-none rounded-2xl p-2 w-full max-w-xs focus:ring-2 focus:ring-blue-400"
-                placeholder="Enter Location"
-              />
-              <button
-                onClick={saveProfile}
-                className="bg-blue-600 text-white px-6 py-2 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100"
-              >
-                Sync Changes
-              </button>
+            <div className="w-full max-w-2xl mx-auto bg-blue-50/50 border border-blue-100/50 p-6 rounded-[2rem] space-y-4">
+              <h3 className="text-xs font-black text-blue-950/40 uppercase tracking-widest text-center">Edit Registry Fields</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest block pl-2">Full Name</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full text-xs font-bold text-blue-900 bg-white border border-blue-100/80 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                    placeholder="Enter Full Name"
+                  />
+                </div>
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest block pl-2">Account Name</label>
+                  <input
+                    type="text"
+                    value={editAccountName}
+                    onChange={(e) => setEditAccountName(e.target.value)}
+                    className="w-full text-xs font-bold text-blue-900 bg-white border border-blue-100/80 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                    placeholder="Enter Account Name"
+                  />
+                </div>
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest block pl-2">Email Address</label>
+                  <input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="w-full text-xs font-bold text-blue-900 bg-white border border-blue-100/80 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                    placeholder="Enter Email Address"
+                  />
+                </div>
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest block pl-2">Current Location</label>
+                  <input
+                    type="text"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    className="w-full text-xs font-bold text-blue-900 bg-white border border-blue-100/80 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                    placeholder="Enter Location"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="bg-slate-100 text-slate-700 px-5 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveProfile}
+                  className="bg-blue-600 text-white px-5 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-md hover:bg-blue-700 transition-colors"
+                >
+                  Sync Changes
+                </button>
+              </div>
             </div>
           ) : (
             <h2
@@ -230,6 +295,99 @@ export function ProfileScreen({
               {isEditing ? "Cancel Edit" : "Edit Page"}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Detailed Profile Information Card */}
+      <div className="glass-card p-8 space-y-6">
+        <div className="flex items-center justify-between border-b border-blue-50 pb-4">
+          <div>
+            <h3 className="text-xs font-black text-blue-900/30 uppercase tracking-[0.25em] mb-1">
+              Profile Registry Documents
+            </h3>
+            <p className="text-[10px] uppercase font-black text-blue-500 tracking-wider">
+              Connected Profile & Credentials
+            </p>
+          </div>
+          <button
+            onClick={() => setIsEditing(!isEditing)}
+            className="text-[9px] font-black text-blue-900/50 uppercase tracking-widest px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full hover:bg-blue-100 transition-all"
+          >
+            {isEditing ? "Cancel Edit" : "Edit Details"}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-slate-50/50 border border-slate-100/50 rounded-2xl">
+              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold">@</div>
+              <div>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Account Handle</span>
+                <span className="text-xs font-black text-blue-900">{settings.accountName || "No Handle"}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-slate-50/50 border border-slate-100/50 rounded-2xl">
+              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                <MessageSquare size={18} />
+              </div>
+              <div>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Email Address</span>
+                <span className="text-xs font-black text-blue-900">{settings.email || user?.email || "No Email Associated"}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-slate-50/50 border border-slate-100/50 rounded-2xl">
+              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                <Globe size={18} />
+              </div>
+              <div>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Location</span>
+                <span className="text-xs font-black text-blue-900">{settings.location || "Not Specified"}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-slate-50/50 border border-slate-100/50 rounded-2xl">
+              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                <Clock size={18} />
+              </div>
+              <div>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Registered Time</span>
+                <span className="text-xs font-black text-blue-900">
+                  {settings.time ? new Date(settings.time).toLocaleString() : "Not Registered"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Display Photo Info */}
+        <div className="p-3 bg-slate-50/50 border border-slate-100/50 rounded-2xl flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Camera size={18} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Photo File Source</span>
+              <span className="text-[10px] font-mono font-bold text-slate-600 truncate block">
+                {settings.profilePic ? (settings.profilePic.startsWith("data:") ? `Local Base64 Image (${Math.round(settings.profilePic.length / 1024)} KB)` : settings.profilePic) : "Default Mascot Icon"}
+              </span>
+            </div>
+          </div>
+          {settings.profilePic && (
+            <button
+              onClick={() => {
+                if (confirm("Reset profile picture to default?")) {
+                  onUpdateProfile(settings.displayName || "Champion", "", settings.location || "");
+                }
+              }}
+              className="text-[8px] font-black text-red-500 uppercase tracking-widest px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg flex-shrink-0"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
