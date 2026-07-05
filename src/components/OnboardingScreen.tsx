@@ -22,8 +22,7 @@ import {
   FlameKindling
 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
-import { db, auth } from '../firebase';
+import { db, auth, signOut } from '../firebase';
 import { UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';
 import { MascotV2 } from './MascotV2';
@@ -349,11 +348,150 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
       {/* Dynamic Celebration Confetti on completion */}
       {step === 17 && <ConfettiEffect />}
 
-      {/* Decorative Warm Ambient Background Blobs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-[#69C496]/8 rounded-full blur-[100px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-[#BACBBF]/15 rounded-full blur-[120px]" />
-        <div className="absolute top-[40%] left-[60%] w-[200px] h-[200px] bg-[#7D6B58]/4 rounded-full blur-[80px]" />
+      {/* Decorative Warm Ambient Background Blobs - Idea 2 & 3 Combined: Animated Fluid Blobs, Zen Micro-Particles & Concentric Rings (Highly Optimized for Mobile Devices) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {/* Subtle dot matrix grid mesh for architectural elegance */}
+        <div 
+          className="absolute inset-0 opacity-[0.03]" 
+          style={{ 
+            backgroundImage: 'radial-gradient(#4F3F34 1.5px, transparent 1.5px)', 
+            backgroundSize: '28px 28px' 
+          }} 
+        />
+
+        {/* Soft Mint Green Blob (Hardware-Accelerated) */}
+        <motion.div 
+          className="absolute rounded-full bg-[#69C496] opacity-[0.12] blur-[80px]"
+          style={{ 
+            width: '45vw', 
+            height: '45vw', 
+            minWidth: '280px', 
+            minHeight: '280px', 
+            top: '-5%', 
+            left: '-5%',
+            willChange: 'transform'
+          }}
+          animate={{
+            x: [0, 30, -20, 0],
+            y: [0, -20, 30, 0],
+            scale: [1, 1.1, 0.95, 1],
+          }}
+          transition={{
+            duration: 25,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+        
+        {/* Soft Sunlight Gold/Amber Blob (Hardware-Accelerated) */}
+        <motion.div 
+          className="absolute rounded-full bg-[#F59E0B] opacity-[0.07] blur-[90px]"
+          style={{ 
+            width: '40vw', 
+            height: '40vw', 
+            minWidth: '250px', 
+            minHeight: '250px', 
+            bottom: '-5%', 
+            right: '-5%',
+            willChange: 'transform'
+          }}
+          animate={{
+            x: [0, -30, 30, 0],
+            y: [0, 30, -20, 0],
+            scale: [1, 0.9, 1.1, 1],
+          }}
+          transition={{
+            duration: 30,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+
+        {/* Soft Wellness Clay/Rose Blob (Hardware-Accelerated) */}
+        <motion.div 
+          className="absolute rounded-full bg-[#F43F5E] opacity-[0.05] blur-[80px]"
+          style={{ 
+            width: '35vw', 
+            height: '35vw', 
+            minWidth: '220px', 
+            minHeight: '220px', 
+            top: '40%', 
+            left: '50%',
+            willChange: 'transform'
+          }}
+          animate={{
+            x: [0, 20, -30, 0],
+            y: [0, 40, -25, 0],
+            scale: [1, 1.15, 0.9, 1],
+          }}
+          transition={{
+            duration: 22,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+
+        {/* Floating Zen Micro-particles representing breathing/mindfulness energy */}
+        {/* Optimized: Only 6 particles, no expensive box-shadows, pure transform transitions */}
+        {[
+          { id: 1, size: 6, x: "15%", y: "75%", color: "#69C496", dur: 14, delay: 0 },
+          { id: 2, size: 8, x: "85%", y: "25%", color: "#F59E0B", dur: 18, delay: 1 },
+          { id: 3, size: 5, x: "38%", y: "65%", color: "#3B82F6", dur: 12, delay: 2 },
+          { id: 4, size: 7, x: "75%", y: "80%", color: "#F43F5E", dur: 16, delay: 0.5 },
+          { id: 5, size: 9, x: "20%", y: "30%", color: "#69C496", dur: 20, delay: 3 },
+          { id: 6, size: 6, x: "65%", y: "18%", color: "#F59E0B", dur: 15, delay: 1.5 }
+        ].map((p) => (
+          <motion.div
+            key={p.id}
+            className="absolute rounded-full opacity-[0.4]"
+            style={{
+              width: p.size,
+              height: p.size,
+              left: p.x,
+              top: p.y,
+              backgroundColor: p.color,
+              willChange: 'transform, opacity'
+            }}
+            animate={{
+              y: [0, -90, 0],
+              x: [0, 15, -15, 0],
+              opacity: [0.15, 0.6, 0.15],
+              scale: [0.9, 1.2, 0.9],
+            }}
+            transition={{
+              duration: p.dur,
+              repeat: Infinity,
+              delay: p.delay,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+
+        {/* Pulsating Zen Concentric Rings in the bottom left (Extremely low paint cost) */}
+        <motion.div 
+          className="absolute rounded-full border border-[#7D6B58]/10"
+          style={{ 
+            width: '160px', 
+            height: '160px', 
+            bottom: '10%', 
+            left: '10%',
+            willChange: 'transform'
+          }}
+          animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.3, 0.15] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div 
+          className="absolute rounded-full border border-[#7D6B58]/5"
+          style={{ 
+            width: '260px', 
+            height: '260px', 
+            bottom: '5%', 
+            left: '5%',
+            willChange: 'transform' 
+          }}
+          animate={{ scale: [1, 1.05, 1], opacity: [0.1, 0.2, 0.1] }}
+          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        />
       </div>
 
       {/* Back Button */}

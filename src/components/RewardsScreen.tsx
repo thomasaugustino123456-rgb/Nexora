@@ -711,7 +711,7 @@ export function RewardsScreen({
               {/* Rivets on Lid Rim */}
               <circle cx="50" cy="137" r="5" fill="#FFD000" stroke="#301000" strokeWidth="2"/>
               <circle cx="85" cy="137" r="5" fill="#FFD000" stroke="#301000" strokeWidth="2"/>
-              <circle cx="215" cy="137" r="5" fill="#FFD000" stroke="#301000" stroke-width="2"/>
+              <circle cx="215" cy="137" r="5" fill="#FFD000" stroke="#301000" strokeWidth="2"/>
               <circle cx="250" cy="137" r="5" fill="#FFD000" stroke="#301000" strokeWidth="2"/>
             </g>
 

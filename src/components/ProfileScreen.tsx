@@ -21,7 +21,7 @@ import {
   Layout,
   Book,
 } from "lucide-react";
-import { User as FirebaseUser } from "firebase/auth";
+import { FirebaseUser } from "../firebase";
 import { UserSettings, UserStats, SocialCircle, Screen } from "../types";
 import { LeagueIcon } from "./LeaderboardScreen";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
@@ -36,6 +36,7 @@ export function ProfileScreen({
   setActiveScreen,
   circles,
   onUpdateProfile,
+  deleteAccount,
 }: {
   settings: UserSettings;
   setSettings: (
@@ -45,7 +46,8 @@ export function ProfileScreen({
   user: FirebaseUser | null;
   setActiveScreen: (screen: Screen) => void;
   circles: SocialCircle[];
-  onUpdateProfile: (name: string, photo: string) => void;
+  onUpdateProfile: (name: string, photo: string, location: string) => void;
+  deleteAccount: () => Promise<void>;
 }) {
   const [showArchitect, setShowArchitect] = useState(false);
   const currentXP = stats.xp || 0;
@@ -59,12 +61,16 @@ export function ProfileScreen({
   const [editPhoto, setEditPhoto] = useState(
     settings.profilePic || user?.photoURL || "",
   );
+  const [editLocation, setEditLocation] = useState(
+      settings.location || "",
+  );
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setEditName(settings.displayName || user?.displayName || "Nexora User");
     setEditPhoto(settings.profilePic || user?.photoURL || "");
-  }, [settings.displayName, settings.profilePic, user]);
+    setEditLocation(settings.location || "");
+  }, [settings.displayName, settings.profilePic, settings.location, user]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -120,6 +126,7 @@ export function ProfileScreen({
             onUpdateProfile(
               editName || settings.displayName || "Pioneer",
               dataUrl,
+              editLocation,
             );
           }
         };
@@ -130,7 +137,7 @@ export function ProfileScreen({
   };
 
   const saveProfile = () => {
-    onUpdateProfile(editName, editPhoto);
+    onUpdateProfile(editName, editPhoto, editLocation);
     setIsEditing(false);
   };
 
@@ -178,6 +185,13 @@ export function ProfileScreen({
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 className="text-4xl font-black text-blue-900 tracking-tight leading-none text-center bg-blue-50 border-none rounded-2xl p-2 w-full max-w-sm focus:ring-2 focus:ring-blue-400"
+              />
+              <input
+                type="text"
+                value={editLocation}
+                onChange={(e) => setEditLocation(e.target.value)}
+                className="text-lg text-blue-700 tracking-tight text-center bg-blue-50 border-none rounded-2xl p-2 w-full max-w-xs focus:ring-2 focus:ring-blue-400"
+                placeholder="Enter Location"
               />
               <button
                 onClick={saveProfile}
@@ -350,11 +364,10 @@ export function ProfileScreen({
             onClick={() => {
               if (
                 confirm(
-                  "Are you sure? This will clear all data and refresh the app.",
+                  "Are you sure? This will permanently delete your account and all data.",
                 )
               ) {
-                localStorage.clear();
-                window.location.reload();
+                deleteAccount();
               }
             }}
             className="glass-card p-6 flex flex-col items-center text-center gap-4 hover:border-red-400 group transition-all"
@@ -364,10 +377,10 @@ export function ProfileScreen({
             </div>
             <div>
               <p className="font-black text-blue-900 text-[10px] uppercase tracking-widest">
-                Master Reset
+                Delete Account
               </p>
               <p className="text-[8px] text-blue-400 font-bold uppercase mt-1">
-                Force Frequency Sync
+                Permanent Removal
               </p>
             </div>
           </button>

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { auth } from "../firebase";
-import {
+import { 
+  auth, 
+  db,
   GoogleAuthProvider,
   signInWithPopup,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
-} from "firebase/auth";
+} from "../firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { motion, useAnimationControls } from "motion/react";
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Mascot, MascotMood } from "./Mascot";
@@ -158,7 +160,20 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
 
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+            name: 'Champion',
+            displayName: 'Champion',
+            email: email,
+            photoFileName: '',
+            profilePic: '',
+            location: '',
+            time: new Date().toISOString(),
+            uid: userCredential.user.uid,
+            role: 'user',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -247,7 +262,20 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     });
 
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      await setDoc(doc(db, "users", result.user.uid), {
+          name: result.user.displayName || 'Champion',
+          displayName: result.user.displayName || 'Champion',
+          email: result.user.email || '',
+          photoFileName: result.user.photoURL || '',
+          profilePic: result.user.photoURL || '',
+          location: '',
+          time: new Date().toISOString(),
+          uid: result.user.uid,
+          role: 'user',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+      }, { merge: true });
       setIsSuccess(true);
       triggerJump();
     } catch (err: any) {

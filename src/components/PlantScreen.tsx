@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Droplets, Info, RefreshCw, Sparkles, Sprout, Target, Trophy, Play, X, Lock, ShoppingBag, Package, Trash2, Power, PowerOff, Flower2, Map } from 'lucide-react';
 import { Mascot } from './Mascot';
@@ -12,8 +12,7 @@ import { PlantShop, EcosystemItem, SHOP_ITEMS } from './PlantShop';
 import { VIDEO_URLS } from '../constants/videos';
 import { ForestBackdrop } from './ForestBackdrop';
 import { GardenScreen } from './GardenScreen';
-
-const VideoPlayer = lazy(() => import('./VideoPlayer').then(m => ({ default: m.VideoPlayer })));
+import { VideoPlayer } from './VideoPlayer';
 
 interface PlantScreenProps {
   plantState: PlantState;
@@ -718,9 +717,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
                     <X size={24} />
                   </button>
                 </div>
-                <Suspense fallback={<div className="aspect-video bg-white/5 rounded-2xl flex items-center justify-center text-white/20 text-xs font-black uppercase tracking-widest animate-pulse">Loading Video...</div>}>
-                  <VideoPlayer url={VIDEO_URLS.PLANT_TUTORIAL} />
-                </Suspense>
+                <VideoPlayer url={VIDEO_URLS.PLANT_TUTORIAL} />
                 <p className="text-[10px] text-white/40 font-bold text-center uppercase tracking-widest px-8">
                   Learn how to master your garden and keep your level 5 legendary plants alive, bro!
                 </p>

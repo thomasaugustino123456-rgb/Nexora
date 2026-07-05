@@ -303,9 +303,26 @@
         "createdAt": { "type": "string" }
       },
       "required": ["reporterId", "reportedUserId", "contentId", "reason", "createdAt"]
+    },
+    "UserOnboarding": {
+      "title": "UserOnboarding",
+      "description": "Onboarding completion statuses for different app sections",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "newUsersOnboardingCompleted": { "type": "boolean" },
+        "appIntroductionOnboardingCompleted": { "type": "boolean" },
+        "plantSectionOnboardingCompleted": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid"]
     }
   },
   "firestore": {
+    "/onboardingID/{userId}": {
+      "schema": { "$ref": "UserOnboarding" },
+      "description": "Onboarding completion states for the user"
+    },
     "/users/{userId}": {
       "schema": { "$ref": "UserProfile" },
       "description": "User profile and settings documents"

@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { User as FirebaseUser } from 'firebase/auth';
+import { FirebaseUser } from '../firebase';
 import { LeaderboardEntry, UserSettings, UserStats } from '../types';
 import { Mascot } from './Mascot';
 

@@ -80,6 +80,7 @@ export interface UserSettings {
   inventory?: LibraryItem[];
   isDogSoundPackActive?: boolean;
   league?: string;
+  location?: string;
   timezone?: string;
   fcmToken?: string;
   badgeSettings?: BadgeSettings;

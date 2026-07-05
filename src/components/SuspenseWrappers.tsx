@@ -1,45 +1,24 @@
-import React, { Suspense, lazy } from 'react';
-
-const WhatIsNewModal = lazy(() => import('./WhatIsNewModal'));
-const HappyMascot_Lazy = lazy(() => import('./FeedbackUI').then(m => ({ default: m.HappyMascot })));
-const LevelUpCelebration_Lazy = lazy(() => import('./FeedbackUI').then(m => ({ default: m.LevelUpCelebration })));
-const CoinAnimation_Lazy = lazy(() => import('./FeedbackUI').then(m => ({ default: m.CoinAnimation })));
-import MascotAI from './MascotAI';
+import React from 'react';
+import WhatIsNewModal from './WhatIsNewModal';
+import { HappyMascot as HappyMascot_Direct, LevelUpCelebration as LevelUpCelebration_Direct, CoinAnimation as CoinAnimation_Direct } from './FeedbackUI';
+import { MascotAI } from './MascotAI';
 
 export function WhatIsNewModalWrapper(props: any) {
-  return (
-    <Suspense fallback={null}>
-      <WhatIsNewModal {...props} />
-    </Suspense>
-  );
+  return <WhatIsNewModal {...props} />;
 }
 
 export function HappyMascot(props: any) {
-  return (
-    <Suspense fallback={null}>
-      <HappyMascot_Lazy {...props} />
-    </Suspense>
-  );
+  return <HappyMascot_Direct {...props} />;
 }
 
 export function LevelUpCelebration(props: any) {
-  return (
-    <Suspense fallback={null}>
-      <LevelUpCelebration_Lazy {...props} />
-    </Suspense>
-  );
+  return <LevelUpCelebration_Direct {...props} />;
 }
 
 export function CoinAnimation(props: any) {
-  return (
-    <Suspense fallback={null}>
-      <CoinAnimation_Lazy {...props} />
-    </Suspense>
-  );
+  return <CoinAnimation_Direct {...props} />;
 }
 
 export function MascotAIWrapper(props: any) {
-  return (
-    <MascotAI {...props} />
-  );
+  return <MascotAI {...props} />;
 }

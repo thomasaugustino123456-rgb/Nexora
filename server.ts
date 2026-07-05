@@ -101,12 +101,8 @@ try {
       fs.writeFileSync(outputPath, JSON.stringify(results, null, 2), "utf8");
       writeLog("Firestore Admin: User data dump written successfully to " + outputPath);
     } catch (e: any) {
-      writeLog("Firestore Admin: Startup connection verification FAILED: " + e.message);
-      if (e.stack) {
-        writeLog("Stack: " + e.stack);
-      }
+      writeLog("Firestore Admin: Offline / local-fallback mode active. (Awaiting new Firebase SDK credentials)");
       hasFirestoreAccess = false;
-      writeLog("Firestore Admin: Setting hasFirestoreAccess = false to bypass server-side Firestore operations.");
     }
   })();
 } catch (err: any) {

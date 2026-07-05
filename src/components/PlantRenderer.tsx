@@ -152,7 +152,7 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
 
   const renderSprout = () => (
     <motion.g
-      whileTap={{ scale: 0.9, rotate: [0, -4, 4, 0] }}
+      whileTap={{ scale: 0.9, rotate: [-5, 5] }}
       transition={{ type: "spring", stiffness: 400, damping: 10 }}
     >
       {/* Terracotta Pot with Adorable Anime Smiley Face */}
@@ -3174,7 +3174,10 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
           opacity: 1,
           ...(isShaking ? { x: [-2, 2, -2, 2, 0] } : (isDead ? { y: 2, scale: 0.98 } : {}))
         }}
-        transition={{ type: 'spring', stiffness: 150, damping: 20 }}
+        transition={{
+          default: { type: 'spring', stiffness: 150, damping: 20 },
+          x: { type: 'keyframes', ease: 'easeInOut', duration: 0.5 }
+        }}
         onClick={handlePlantClick}
         style={{
           filter: activeColor ? `drop-shadow(0 0 15px ${plantColors[activeColor]}88)` : 'none'

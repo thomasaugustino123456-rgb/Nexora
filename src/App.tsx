@@ -121,17 +121,15 @@ import {
   handleFirestoreError,
   OperationType,
   trackEvent,
-} from "./firebase";
-import {
   onAuthStateChanged,
-  User as FirebaseUser,
+  FirebaseUser,
   signOut,
   deleteUser,
   reauthenticateWithPopup,
   GoogleAuthProvider,
   setPersistence,
   browserLocalPersistence,
-} from "firebase/auth";
+} from "./firebase";
 import {
   doc,
   getDoc,
@@ -400,6 +398,7 @@ export default function App() {
       setHydrationConsecutiveDays(0);
       setHydrationWaterLevel(0.0);
       setHydrationLastCompletedDate('');
+      setSplashFinished(false);
     } else {
       setHydrationConsecutiveDays(parseInt(localStorage.getItem('hydration_consecutive_days') || '0', 10));
       setHydrationWaterLevel(parseFloat(localStorage.getItem('hydration_water_level') || '0.0'));
@@ -1205,23 +1204,29 @@ export default function App() {
     const q = query(
       notifRef,
       where("read", "==", false),
-      orderBy("createdAt", "desc"),
-      limit(1),
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
-        const notifId = snapshot.docs[0].id;
+        const notifs = snapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() }) as SystemNotification,
+        );
+
+        // Sort in memory to bypass composite/collectionGroup index constraints
+        notifs.sort((a, b) => {
+          const timeA = a.createdAt ? (typeof a.createdAt === "string" ? new Date(a.createdAt).getTime() : (typeof a.createdAt === "object" && a.createdAt && "seconds" in a.createdAt ? (a.createdAt as any).seconds * 1000 : 0)) : 0;
+          const timeB = b.createdAt ? (typeof b.createdAt === "string" ? new Date(b.createdAt).getTime() : (typeof b.createdAt === "object" && b.createdAt && "seconds" in b.createdAt ? (b.createdAt as any).seconds * 1000 : 0)) : 0;
+          return timeB - timeA;
+        });
+
+        const activeNotif = notifs[0];
+        const notifId = activeNotif.id;
         // Check if user dismissed it locally in this session/browser
         if (localStorage.getItem(`nexora_system_notif_dismissed_${notifId}`)) {
           return;
         }
 
-        const notifData = {
-          id: notifId,
-          ...snapshot.docs[0].data(),
-        } as SystemNotification;
-        setActiveSystemNotification(notifData);
+        setActiveSystemNotification(activeNotif);
         vibrate(VIBRATION_PATTERNS.NOTIFY);
       }
     });
@@ -1378,16 +1383,23 @@ export default function App() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleUpdateProfile = async (name: string, photoURL: string) => {
+  const handleUpdateProfile = async (name: string, photoURL: string, location: string) => {
     if (!user) return;
     try {
       // Update local state first
-      onUpdateSettings({ displayName: name, profilePic: photoURL });
+      onUpdateSettings({ displayName: name, profilePic: photoURL, location });
 
-      // Update Firebase Auth if photoURL is provided
-      if (photoURL && !photoURL.startsWith("data:")) {
-        // This would usually be a URL from storage, but if they upload as base64 we just keep it in settings
-      }
+      // Update Firestore user document
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, {
+        name: name,
+        displayName: name,
+        photoFileName: photoURL,
+        profilePic: photoURL,
+        location: location,
+        time: new Date().toISOString(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
 
       // Sync to leaderboard immediately
       const leaderboardRef = doc(db, "leaderboard", user.uid);
@@ -1927,13 +1939,17 @@ export default function App() {
     // Fetch Notifications
     const qNotifs = query(
       collection(db, "users", user.uid, "notifications"),
-      orderBy("createdAt", "desc"),
-      limit(20),
     );
     const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
       const notifs = snapshot.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() }) as NexusNotification,
       );
+      // Sort in memory to bypass index constraints
+      notifs.sort((a, b) => {
+        const timeA = a.createdAt ? (typeof a.createdAt === "string" ? new Date(a.createdAt).getTime() : (typeof a.createdAt === "object" && a.createdAt && "seconds" in a.createdAt ? (a.createdAt as any).seconds * 1000 : 0)) : 0;
+        const timeB = b.createdAt ? (typeof b.createdAt === "string" ? new Date(b.createdAt).getTime() : (typeof b.createdAt === "object" && b.createdAt && "seconds" in b.createdAt ? (b.createdAt as any).seconds * 1000 : 0)) : 0;
+        return timeB - timeA;
+      });
       setNotifications(notifs);
       setUnreadNotifCount(notifs.filter((n) => !n.isRead).length);
     });
@@ -1941,12 +1957,14 @@ export default function App() {
     // Fetch Circles
     const qCircles = query(
       collection(db, "circles"),
-      orderBy("memberCount", "desc"),
     );
     const unsubCircles = onSnapshot(qCircles, (snapshot) => {
       const circlesData = snapshot.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() }) as SocialCircle,
       );
+      // Sort in memory to bypass index constraints
+      circlesData.sort((a, b) => (b.memberCount || 0) - (a.memberCount || 0));
+      setCircles(circlesData);
       if (circlesData.length === 0) {
         setCircles([
           {
@@ -2716,14 +2734,14 @@ export default function App() {
         try {
           const userRef = doc(db, "users", user.uid);
           const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-          await updateDoc(userRef, {
+          await setDoc(userRef, {
             fcmToken: fcmToken,
             notificationsEnabled: true,
             timezone: tz,
             "settings.fcmToken": fcmToken,
             "settings.notificationsEnabled": true,
             "settings.timezone": tz,
-          });
+          }, { merge: true });
           console.log("FCM: Token and Timezone saved to Firestore.");
         } catch (e) {
           console.error("FCM: Failed to save token:", e);
@@ -2929,7 +2947,6 @@ export default function App() {
       const q = query(
         collection(db, "customPlans"),
         where("userId", "==", user.uid),
-        orderBy("createdAt", "desc"),
       );
       const unsubscribe = onSnapshot(
         q,
@@ -2937,6 +2954,12 @@ export default function App() {
           const plans = snapshot.docs.map(
             (doc) => ({ id: doc.id, ...doc.data() }) as CustomPlan,
           );
+          // Sort in memory to bypass composite index constraints
+          plans.sort((a, b) => {
+            const timeA = a.createdAt ? (typeof a.createdAt === "string" ? new Date(a.createdAt).getTime() : (typeof a.createdAt === "object" && a.createdAt && "seconds" in a.createdAt ? (a.createdAt as any).seconds * 1000 : 0)) : 0;
+            const timeB = b.createdAt ? (typeof b.createdAt === "string" ? new Date(b.createdAt).getTime() : (typeof b.createdAt === "object" && b.createdAt && "seconds" in b.createdAt ? (b.createdAt as any).seconds * 1000 : 0)) : 0;
+            return timeB - timeA;
+          });
           setCustomPlans(plans);
         },
         (error) => {
@@ -4324,10 +4347,7 @@ export default function App() {
   const handleLogout = async () => {
     vibrate(VIBRATION_PATTERNS.CLICK);
     try {
-      showToast("Syncing data with server...", "info");
-      await forceSyncData();
       await signOut(auth);
-      // Hook handles state cleanup via onAuthStateChanged
       showToast("Logout successful.", "success");
     } catch (error) {
       console.error("Error signing out:", error);
@@ -4336,36 +4356,29 @@ export default function App() {
   };
 
   const handleDeleteAccount = async () => {
-    console.log("handleDeleteAccount clicked, user:", user);
-    if (!user) {
-      console.warn("handleDeleteAccount: No user found!");
-      showToast("Error: No user session found.", "error");
+    vibrate(VIBRATION_PATTERNS.ERROR);
+    const activeUser = auth.currentUser;
+    if (!activeUser) {
+      showToast("No active session.", "error");
       return;
     }
-    vibrate(VIBRATION_PATTERNS.ERROR);
+
+    const userId = activeUser.uid;
+    showToast("Processing account deletion...", "info");
 
     try {
-      const activeUser = auth.currentUser;
-      if (!activeUser) {
-        showToast("Error: Session expired.", "error");
-        return;
-      }
-
-      const userId = activeUser.uid;
-      showToast("Processing account deletion...", "info");
-
-      // 1. Delete all user data from Firestore subcollections and main docs first
+      // 1. Delete user data from Firestore
       try {
         console.log("[DELETE ACCOUNT] Wiping Firestore documents for:", userId);
 
-        // A. Delete stats/main
+        // Delete stats/main
         try {
           await deleteDoc(doc(db, "users", userId, "stats", "main"));
         } catch (e) {
           console.warn("Failed to delete users/stats/main:", e);
         }
 
-        // B. Delete all progress documents
+        // Delete all progress documents
         try {
           const progressSnap = await getDocs(collection(db, "users", userId, "progress"));
           for (const docSnap of progressSnap.docs) {
@@ -4375,7 +4388,7 @@ export default function App() {
           console.warn("Failed to delete users/progress:", e);
         }
 
-        // C. Delete all custom_progress documents
+        // Delete all custom_progress documents
         try {
           const customProgressSnap = await getDocs(collection(db, "users", userId, "custom_progress"));
           for (const docSnap of customProgressSnap.docs) {
@@ -4385,7 +4398,7 @@ export default function App() {
           console.warn("Failed to delete users/custom_progress:", e);
         }
 
-        // D. Delete all eco_shop documents
+        // Delete all eco_shop documents
         try {
           const ecoShopSnap = await getDocs(collection(db, "users", userId, "eco_shop"));
           for (const docSnap of ecoShopSnap.docs) {
@@ -4395,7 +4408,7 @@ export default function App() {
           console.warn("Failed to delete users/eco_shop:", e);
         }
 
-        // E. Delete all notifications documents
+        // Delete all notifications documents
         try {
           const notifSnap = await getDocs(collection(db, "users", userId, "notifications"));
           for (const docSnap of notifSnap.docs) {
@@ -4405,14 +4418,14 @@ export default function App() {
           console.warn("Failed to delete users/notifications:", e);
         }
 
-        // F. Delete leaderboard doc
+        // Delete leaderboard doc
         try {
           await deleteDoc(doc(db, "leaderboard", userId));
         } catch (e) {
           console.warn("Failed to delete leaderboard:", e);
         }
 
-        // G. Delete main user doc
+        // Delete main user doc /users/{{uid}}
         try {
           await deleteDoc(doc(db, "users", userId));
         } catch (e) {
@@ -4424,7 +4437,7 @@ export default function App() {
         console.warn("Error during Firestore cleanup:", e);
       }
 
-      // 2. Clear all local storage keys starting with "nexora_", "hydration_", or other related app keys
+      // 2. Clear all local storage keys starting with nexora_ or hydration_
       Object.keys(localStorage).forEach((key) => {
         if (
           key.startsWith("nexora_") ||
@@ -4435,25 +4448,22 @@ export default function App() {
         }
       });
 
-      // Reset local hydration states in-memory
-      setHydrationConsecutiveDays(0);
-      setHydrationWaterLevel(0.0);
-      setHydrationLastCompletedDate("");
+      // Reset local garden states in-memory
+      setSettings(DEFAULT_SETTINGS);
+      setStats(DEFAULT_STATS);
 
       // 3. Delete the Firebase Auth user account
       try {
         await deleteUser(activeUser);
-        showToast("Account and data completely deleted.", "success");
+        showToast("Account and all data completely deleted.", "success");
       } catch (authError: any) {
-        console.warn("Auth deletion failed (likely needs recent login), logging out user. Data is already wiped.", authError);
-        // Force log out anyway since their Firestore profile is deleted and localstorage is cleared
+        console.warn("Auth deletion failed (needs recent login), signing out. Data is already wiped.", authError);
         await signOut(auth);
-        showToast("All app data deleted. Account signed out.", "success");
+        showToast("All data deleted. Signed out successfully.", "success");
       }
-
     } catch (error: any) {
       console.error("General Delete Error:", error);
-      showToast(`Delete failed: ${error.message || error.code || "System error"}`, "error");
+      showToast(`Delete failed: ${error.message || "System error"}`, "error");
     }
   };
 
@@ -5154,6 +5164,7 @@ export default function App() {
                       setActiveScreen={setActiveScreen}
                       circles={circles}
                       onUpdateProfile={handleUpdateProfile}
+                      deleteAccount={handleDeleteAccount}
                     />
                   </Suspense>
                 </motion.div>

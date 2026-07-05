@@ -176,9 +176,9 @@ export const MascotV2 = React.memo(({ className, isSmiling }: MascotV2Props) => 
             
             {/* Text Lines on Pages */}
             <line x1="-30" y1="-20" x2="20" y2="-25" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" opacity="0.8"/>
-            <line x1="-25" y1="-10" x2="25" y2="-15" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
-            <line x1="-20" y1="0" x2="30" y2="-5" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
-            <line x1="-15" y1="10" x2="15" y2="5" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+            <line x1="-25" y1="-10" x2="25" y2="-15" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" opacity="0.8"/>
+            <line x1="-20" y1="0" x2="30" y2="-5" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" opacity="0.8"/>
+            <line x1="-15" y1="10" x2="15" y2="5" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" opacity="0.8"/>
             
             {/* Left Arm holding the left side of the book */}
             <ellipse cx="-45" cy="-5" rx="22" ry="28" fill="url(#handGlow)" stroke="#0088ff" strokeWidth="2" transform="rotate(-20 -45 -5)"/>

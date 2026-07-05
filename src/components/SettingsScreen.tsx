@@ -7,8 +7,7 @@ import {
   ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle, Video,
   Layout, BoxSelect, Lock, Key, EyeOff, MessageSquareOff
 } from 'lucide-react';
-import { User as FirebaseUser, EmailAuthProvider, linkWithCredential, updatePassword, sendPasswordResetEmail, GoogleAuthProvider, reauthenticateWithPopup } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, FirebaseUser, EmailAuthProvider, linkWithCredential, updatePassword, sendPasswordResetEmail, GoogleAuthProvider, reauthenticateWithPopup } from '../firebase';
 import { UserSettings } from '../types';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 

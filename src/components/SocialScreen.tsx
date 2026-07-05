@@ -137,7 +137,7 @@ import {
   SocialComment,
   NexusNotification,
 } from "../types";
-import { User as FirebaseUser } from "firebase/auth";
+import { FirebaseUser } from "../firebase";
 import {
   collection,
   collectionGroup,
