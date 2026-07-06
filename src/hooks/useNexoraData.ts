@@ -11,6 +11,7 @@ import {
   getDocsFromCache,
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../firebase";
+import { getSupabase } from "../lib/supabase";
 import { UserSettings, UserStats, DailyProgress } from "../types";
 import { GardenState, createInitialGardenState } from "../types/garden";
 
@@ -171,6 +172,24 @@ export function useNexoraData(
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const dataLoadedFromFirestore = useRef(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await getSupabase().auth.getSession();
+        const currentUser = session?.user || null;
+        setUser(currentUser);
+        setAuthLoading(false);
+        setIsDataReady(true);
+        setLoading(false);
+      } catch (error) {
+        setAuthLoading(false);
+        setIsDataReady(true);
+        setLoading(false);
+      }
+    };
+    checkAuth();
+  }, []);
   const lastLoadedUserIdRef = useRef<string | null>(null);
   const quotaExceededRef = useRef(false);
   const lastSyncedRef = useRef<any>(null);
