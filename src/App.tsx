@@ -292,6 +292,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   accountName: "",
   email: "",
   time: "",
+  profilePrivacy: "private",
 };
 
 const DEFAULT_STATS: UserStats = {

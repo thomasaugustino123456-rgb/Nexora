@@ -196,7 +196,7 @@ export function useNexoraData(
         const loadOrCreateUser = async () => {
           try {
             setAuthLoading(true);
-            const userDocRef = doc(db, "Users", currentUser.uid);
+            const userDocRef = doc(db, "users", currentUser.uid);
             const userDocSnap = await getDoc(userDocRef);
             
             let docData: any = null;
@@ -221,7 +221,11 @@ export function useNexoraData(
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
                 role: "user",
-                settings: DEFAULT_SETTINGS,
+                profilePrivacy: "private",
+                settings: {
+                  ...DEFAULT_SETTINGS,
+                  profilePrivacy: "private"
+                },
                 stats: DEFAULT_STATS,
                 garden: createInitialGardenState()
               };
@@ -267,6 +271,10 @@ export function useNexoraData(
                 const actName = docData.accountName || currentUser.displayName || currentUser.email?.split('@')[0] || "Champion";
                 updates.accountName = actName;
                 updates["Account name"] = actName;
+                needsUpdate = true;
+              }
+              if (docData.profilePrivacy === undefined) {
+                updates.profilePrivacy = "private";
                 needsUpdate = true;
               }
               
@@ -447,8 +455,8 @@ export function useNexoraData(
       if (lastSyncedRef.current && deepEqual(currentState, lastSyncedRef.current)) return;
 
       try {
-        const userRef = doc(db, "Users", user.uid);
-        const progressRef = doc(db, "Users", user.uid, "progress", today);
+        const userRef = doc(db, "users", user.uid);
+        const progressRef = doc(db, "users", user.uid, "progress", today);
         const leaderboardRef = doc(db, "leaderboard", user.uid);
 
         console.log(`[PERSISTENCE AUDIT] AUTH UID ON SAVE: ${user.uid}`);
@@ -559,8 +567,8 @@ export function useNexoraData(
               updatedAt: serverTimestamp(),
             };
 
-            const rewardsDocRef = doc(db, "Users", user.uid, "rewards", "main");
-            const plantSectionDocRef = doc(db, "Users", user.uid, "plant_section", "main");
+            const rewardsDocRef = doc(db, "users", user.uid, "rewards", "main");
+            const plantSectionDocRef = doc(db, "users", user.uid, "plant_section", "main");
             const onboardingDocRef = doc(db, "onboardingID", user.uid);
 
             console.log(`[PERSISTENCE AUDIT] Write payload for core document:`, JSON.stringify(writePayload));
@@ -769,8 +777,8 @@ export function useNexoraData(
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     if (quotaExceededRef.current) return;
     try {
-      const userRef = doc(db, "Users", user.uid);
-      const progressRef = doc(db, "Users", user.uid, "progress", today);
+      const userRef = doc(db, "users", user.uid);
+      const progressRef = doc(db, "users", user.uid, "progress", today);
       const leaderboardRef = doc(db, "leaderboard", user.uid);
 
       console.log(`[PERSISTENCE AUDIT] [WRITE START] Initiating FORCE SYNC for user UID: ${user.uid}`);
@@ -870,8 +878,8 @@ export function useNexoraData(
           updatedAt: serverTimestamp(),
         };
 
-        const rewardsDocRef = doc(db, "Users", user.uid, "rewards", "main");
-        const plantSectionDocRef = doc(db, "Users", user.uid, "plant_section", "main");
+        const rewardsDocRef = doc(db, "users", user.uid, "rewards", "main");
+        const plantSectionDocRef = doc(db, "users", user.uid, "plant_section", "main");
         const onboardingDocRef = doc(db, "onboardingID", user.uid);
 
         console.log(`[PERSISTENCE AUDIT] Force sync payload for core document:`, JSON.stringify(writePayload));
