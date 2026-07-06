@@ -161,19 +161,29 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     try {
       if (isSignUp) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await setDoc(doc(db, "users", userCredential.user.uid), {
+        const signUpData = {
             name: 'Champion',
             displayName: 'Champion',
+            "Name": 'Champion',
             email: email,
+            "Email": email,
             photoFileName: '',
+            "Photo file name": '',
             profilePic: '',
+            "Profile image": '',
             location: '',
+            "Location": '',
             time: new Date().toISOString(),
+            "Time": new Date().toISOString(),
             uid: userCredential.user.uid,
             role: 'user',
+            accountName: 'Champion',
+            "Account name": 'Champion',
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-        });
+        };
+        await setDoc(doc(db, "users", userCredential.user.uid), signUpData);
+        await setDoc(doc(db, "user", userCredential.user.uid), signUpData);
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -263,19 +273,29 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
 
     try {
       const result = await signInWithPopup(auth, provider);
-      await setDoc(doc(db, "users", result.user.uid), {
+      const googleUserData = {
           name: result.user.displayName || 'Champion',
           displayName: result.user.displayName || 'Champion',
-          email: result.user.email || '',
+          "Name": result.user.displayName || 'Champion',
+          email: result.user.email || `${result.user.uid}@nexora.app`,
+          "Email": result.user.email || `${result.user.uid}@nexora.app`,
           photoFileName: result.user.photoURL || '',
+          "Photo file name": result.user.photoURL || '',
           profilePic: result.user.photoURL || '',
+          "Profile image": result.user.photoURL || '',
           location: '',
+          "Location": '',
           time: new Date().toISOString(),
+          "Time": new Date().toISOString(),
           uid: result.user.uid,
           role: 'user',
+          accountName: result.user.displayName || 'Champion',
+          "Account name": result.user.displayName || 'Champion',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-      }, { merge: true });
+      };
+      await setDoc(doc(db, "users", result.user.uid), googleUserData, { merge: true });
+      await setDoc(doc(db, "user", result.user.uid), googleUserData, { merge: true });
       setIsSuccess(true);
       triggerJump();
     } catch (err: any) {

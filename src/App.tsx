@@ -1411,21 +1411,30 @@ export default function App() {
 
       // Update Firestore user document
       const userDocRef = doc(db, "users", user.uid);
-      await setDoc(userDocRef, {
+      const userSingularDocRef = doc(db, "user", user.uid);
+      const updatePayload = {
+        uid: user.uid,
+        role: "user",
         name: name,
+        "Name": name,
         displayName: name,
         photoFileName: photoURL,
         "Photo file name": photoURL,
         profilePic: photoURL,
+        "Profile image": photoURL,
         location: location,
         "Location": location,
         time: finalTime,
         "Time": finalTime,
         accountName: finalAccountName,
         "Account name": finalAccountName,
-        email: finalEmail,
+        email: finalEmail || `${user.uid}@nexora.app`,
+        "Email": finalEmail || `${user.uid}@nexora.app`,
         updatedAt: serverTimestamp(),
-      }, { merge: true });
+      };
+      
+      await setDoc(userDocRef, updatePayload, { merge: true });
+      await setDoc(userSingularDocRef, updatePayload, { merge: true });
 
       // Sync to leaderboard immediately
       const leaderboardRef = doc(db, "leaderboard", user.uid);

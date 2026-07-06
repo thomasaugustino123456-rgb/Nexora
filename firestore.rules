@@ -390,8 +390,91 @@ service cloud.firestore {
       }
     }
 
+    match /user/{userId} {
+      allow read: if isOwner(userId) || isAdmin() || (isAuthenticated() && (!('profilePrivacy' in resource.data) || resource.data.profilePrivacy != 'private'));
+      allow create: if isOwner(userId) && isValidUserCreate(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isOwner(userId) && isValidUserUpdate(request.resource.data) && 
+                    (!('role' in request.resource.data) || request.resource.data.role == resource.data.role || isAdmin()) &&
+                    (!('isPro' in request.resource.data) || request.resource.data.isPro == resource.data.isPro || isAdmin());
+      allow delete: if isOwner(userId) || isAdmin();
+      
+      match /private/data {
+        allow read, write: if isOwner(userId);
+        allow create, update: if isValidPrivateData(request.resource.data);
+      }
+
+      match /stats/main {
+        allow read: if isOwner(userId) || isAdmin() || (isAuthenticated() && (!('profilePrivacy' in get(/databases/$(database)/documents/user/$(userId)).data) || get(/databases/$(database)/documents/user/$(userId)).data.profilePrivacy != 'private'));
+        allow create: if isOwner(userId) && isValidStatsCreate(request.resource.data);
+        allow update: if isOwner(userId) && isValidStatsUpdate(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+      
+      match /progress/{date} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidProgressCreate(request.resource.data);
+        allow update: if isOwner(userId) && isValidProgressUpdate(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /settings/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /custom_progress/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /rewards/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /plant_section/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /onboarding/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /shop/purchases {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidShopPurchases(request.resource.data);
+        allow update: if isOwner(userId) && isValidShopPurchases(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+      
+      match /library/trophies {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidLibraryTrophies(request.resource.data);
+        allow update: if isOwner(userId) && isValidLibraryTrophies(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /music/purchased {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /eco_shop/{shopId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /notifications/{notifId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isAuthenticated() || isAdmin();
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
     match /customPlans/{planId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidCustomPlan(request.resource.data);
       allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidCustomPlan(request.resource.data);
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());

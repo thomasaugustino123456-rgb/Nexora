@@ -175,6 +175,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
   };
 
   useEffect(() => {
+    if (!user) return;
     let q = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'), limit(30));
     console.log("Firestore Audit: Querying collection 'social_videos' in NexusVideoScreen...");
     const unsub = onSnapshot(q, (snapshot) => {
@@ -185,7 +186,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
       handleFirestoreError(err, OperationType.GET, 'social_videos');
     });
     return unsub;
-  }, []);
+  }, [user]);
 
   const uploadWithProgress = async (storage: any, path: string, blob: Blob): Promise<string> => {
     const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');

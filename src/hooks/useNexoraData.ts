@@ -197,18 +197,32 @@ export function useNexoraData(
           try {
             setAuthLoading(true);
             const userDocRef = doc(db, "users", currentUser.uid);
-            const userDocSnap = await getDoc(userDocRef);
+            const userSingularDocRef = doc(db, "user", currentUser.uid);
+            let userDocSnap = await getDoc(userDocRef);
             
             let docData: any = null;
             
             if (!userDocSnap.exists()) {
-              console.log(`[FIRESTORE] User not found in DB. Creating new user document at ${userDocRef.path}`);
+              console.log(`[FIRESTORE] User not found at '${userDocRef.path}'. Checking fallback '${userSingularDocRef.path}'...`);
+              const userSingularSnap = await getDoc(userSingularDocRef);
+              if (userSingularSnap.exists()) {
+                console.log(`[FIRESTORE] User document found in Legacy '/user' path! Restoring profile from fallback...`);
+                userDocSnap = userSingularSnap;
+                docData = userSingularSnap.data();
+                // Backfill the '/users' collection immediately
+                await setDoc(userDocRef, docData);
+              }
+            }
+            
+            if (!userDocSnap.exists()) {
+              console.log(`[FIRESTORE] User not found in DB. Creating new user document at ${userDocRef.path} and ${userSingularDocRef.path}`);
               
               const accountNameVal = currentUser.displayName || currentUser.email?.split('@')[0] || "Champion";
               const newUserData = {
+                uid: currentUser.uid,
                 name: currentUser.displayName || "Champion",
                 displayName: currentUser.displayName || "Champion",
-                email: currentUser.email || "",
+                email: currentUser.email || `${currentUser.uid}@nexora.app`,
                 photoFileName: currentUser.photoURL || "",
                 "Photo file name": currentUser.photoURL || "",
                 profilePic: currentUser.photoURL || "",
@@ -231,6 +245,7 @@ export function useNexoraData(
               };
               
               await setDoc(userDocRef, newUserData);
+              await setDoc(userSingularDocRef, newUserData);
               docData = newUserData;
             } else {
               docData = userDocSnap.data();
@@ -241,18 +256,23 @@ export function useNexoraData(
               const updates: any = {};
               let needsUpdate = false;
               
-              if (docData.name === undefined) {
-                updates.name = docData.displayName || currentUser.displayName || "Champion";
+              if (docData.name === undefined || docData["Name"] === undefined) {
+                const nameVal = docData.name || docData.displayName || currentUser.displayName || "Champion";
+                updates.name = nameVal;
+                updates["Name"] = nameVal;
                 needsUpdate = true;
               }
-              if (docData.email === undefined) {
-                updates.email = currentUser.email || "";
+              if (docData.email === undefined || docData["Email"] === undefined) {
+                const emailVal = docData.email || currentUser.email || `${currentUser.uid}@nexora.app`;
+                updates.email = emailVal;
+                updates["Email"] = emailVal;
                 needsUpdate = true;
               }
-              if (docData.photoFileName === undefined || docData["Photo file name"] === undefined) {
+              if (docData.photoFileName === undefined || docData["Photo file name"] === undefined || docData["Profile image"] === undefined) {
                 const picUrl = docData.profilePic || currentUser.photoURL || "";
                 updates.photoFileName = picUrl;
                 updates["Photo file name"] = picUrl;
+                updates["Profile image"] = picUrl;
                 needsUpdate = true;
               }
               if (docData.location === undefined || docData["Location"] === undefined) {
@@ -281,6 +301,7 @@ export function useNexoraData(
               if (needsUpdate) {
                 console.log(`[FIRESTORE] Backfilling missing profile fields for existing user doc:`, updates);
                 await setDoc(userDocRef, updates, { merge: true });
+                await setDoc(userSingularDocRef, updates, { merge: true });
                 docData = { ...docData, ...updates };
               }
             }
