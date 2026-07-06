@@ -7,7 +7,10 @@ import {
   ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle, Video,
   Layout, BoxSelect, Lock, Key, EyeOff, MessageSquareOff
 } from 'lucide-react';
-import { auth, FirebaseUser, EmailAuthProvider, linkWithCredential, updatePassword, sendPasswordResetEmail, GoogleAuthProvider, reauthenticateWithPopup } from '../firebase';
+// import { auth, FirebaseUser, EmailAuthProvider, linkWithCredential, updatePassword, sendPasswordResetEmail, GoogleAuthProvider, reauthenticateWithPopup } from '../firebase';
+// FirebaseUser is now defined locally or imported elsewhere, check imports
+type FirebaseUser = any; // Temporary fix
+
 import { UserSettings } from '../types';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 
@@ -73,79 +76,18 @@ export function SettingsScreen({
   // Selected language state (Mock)
   const [selectedLanguage, setSelectedLanguage] = React.useState('en');
 
-  const hasPasswordProvider = user?.providerData?.some(
-    (provider) => provider.providerId === 'password'
-  );
+  // const hasPasswordProvider = user?.providerData?.some(
+  //   (provider) => provider.providerId === 'password'
+  // );
 
   const handleSavePassword = async () => {
-    vibrate(15);
-    if (!passwordInput || passwordInput.length < 6) {
-      showToast('Password should be at least 6 characters, bro!', 'error');
-      return;
-    }
-    
-    if (!user) {
-      showToast('No active user session detected, bro.', 'error');
-      return;
-    }
-
-    setIsPasswordActionLoading(true);
-    try {
-      if (hasPasswordProvider) {
-        await updatePassword(user, passwordInput);
-        showToast('Password updated successfully! 🔥', 'success');
-      } else {
-        const credential = EmailAuthProvider.credential(user.email!, passwordInput);
-        await linkWithCredential(user, credential);
-        showToast('Email & Password Login connected successfully! 🚀 Log in anytime with email + password.', 'success');
-      }
-      setPasswordInput('');
-    } catch (err: any) {
-      console.error("Password action failed:", err);
-      if (err.code === 'auth/requires-recent-login') {
-        showToast('Requires recent login! Autocompleting security protocol via Google...', 'info');
-        try {
-          const provider = new GoogleAuthProvider();
-          provider.addScope('profile');
-          provider.addScope('email');
-          provider.setCustomParameters({ prompt: 'select_account' });
-          await reauthenticateWithPopup(user, provider);
-          showToast('Security authorized! Retrying password setup...', 'info');
-          if (hasPasswordProvider) {
-            await updatePassword(user, passwordInput);
-            showToast('Password updated successfully! 🔥', 'success');
-          } else {
-            const credential = EmailAuthProvider.credential(user.email!, passwordInput);
-            await linkWithCredential(user, credential);
-            showToast('Email & Password Login connected successfully! 🚀 Log in anytime with email + password.', 'success');
-          }
-          setPasswordInput('');
-        } catch (reauthErr: any) {
-          console.error("Re-authentication fail:", reauthErr);
-          showToast(`Requires fresh login, bro! If popup was blocked, please log out and log in with Google to set password instantly.`, 'error');
-        }
-      } else if (err.code === 'auth/credential-already-in-use') {
-        showToast('This email is already linked or in use by another account, bro.', 'error');
-      } else {
-        showToast(`Failed: ${err.message}`, 'error');
-      }
-    } finally {
-      setIsPasswordActionLoading(false);
-    }
+    // vibrate(15);
+    // showToast('Firebase Auth is disabled. Transitioning to Supabase.', 'info');
   };
 
   const handleSendResetEmail = async () => {
-    vibrate(15);
-    if (!user || !user.email) return;
-    setIsPasswordActionLoading(true);
-    try {
-      await sendPasswordResetEmail(auth, user.email);
-      showToast('Password reset link sent to your email inbox! ✉️ Check your mail to set your password.', 'success');
-    } catch (err: any) {
-      showToast(`Could not send reset email: ${err.message}`, 'error');
-    } finally {
-      setIsPasswordActionLoading(false);
-    }
+    // vibrate(15);
+    // showToast('Firebase Auth is disabled. Transitioning to Supabase.', 'info');
   };
 
   const handleActivateProCode = () => {

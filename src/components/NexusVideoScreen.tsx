@@ -138,7 +138,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
   const isReelsDisabled = settings.isReelsDisabled || false;
 
   useEffect(() => {
-    if (!selectedVideo) return;
+    if (!selectedVideo || !user) return;
     const qComments = query(collection(db, 'social_videos', selectedVideo.id, 'comments'), orderBy('createdAt', 'asc'));
     const unsubComments = onSnapshot(qComments, (snapshot) => {
       setVideoComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -146,7 +146,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
       handleFirestoreError(err, OperationType.GET, `social_videos/${selectedVideo.id}/comments`);
     });
     return () => unsubComments();
-  }, [selectedVideo]);
+  }, [selectedVideo, user]);
 
   const handlePostVideoComment = async () => {
     if (!newVideoComment.trim() || !selectedVideo || !user) return;

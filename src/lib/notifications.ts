@@ -1,5 +1,5 @@
 import { getToken, onMessage } from 'firebase/messaging';
-import { messaging, auth, db } from '../firebase';
+import { messaging, db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 
 export const VAPID_KEY = 'BF2tHGVbbJHc3wxlE98atQFPU1TRqX3shN0bhSsaNf-UxdDxgoj25zLhpttoeDsrjQ8l24cnysfF-eyzH3P7baw'; // Standard fallback

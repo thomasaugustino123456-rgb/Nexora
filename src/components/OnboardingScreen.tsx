@@ -22,7 +22,7 @@ import {
   FlameKindling
 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
-import { db, auth, signOut } from '../firebase';
+import { db } from '../firebase';
 import { UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';
 import { MascotV2 } from './MascotV2';
@@ -132,7 +132,8 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
 
   const handleComplete = async () => {
     try {
-      const user = auth.currentUser;
+      // const user = auth.currentUser;
+      const user = null; // Placeholder
       const updates: any = { onboardingCompleted: true };
       
       const safeName = (name && typeof name === 'string') ? name.trim() : '';
@@ -229,7 +230,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
         setIntroStep(prev => prev - 1);
       } else {
         try {
-          await signOut(auth);
+          // await signOut(auth);
         } catch (error) {
           console.error("Error signing out:", error);
         }

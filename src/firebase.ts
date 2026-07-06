@@ -2,21 +2,6 @@ import { initializeApp } from 'firebase/app';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import { getAnalytics, logEvent, isSupported as isAnalyticsSupported } from 'firebase/analytics';
-import { 
-  getAuth, 
-  onAuthStateChanged as fbOnAuthStateChanged, 
-  signOut as fbSignOut, 
-  signInWithEmailAndPassword as fbSignInWithEmailAndPassword, 
-  createUserWithEmailAndPassword as fbCreateUserWithEmailAndPassword, 
-  signInWithPopup as fbSignInWithPopup, 
-  sendPasswordResetEmail as fbSendPasswordResetEmail, 
-  updatePassword as fbUpdatePassword, 
-  linkWithCredential as fbLinkWithCredential, 
-  reauthenticateWithPopup as fbReauthenticateWithPopup,
-  GoogleAuthProvider,
-  EmailAuthProvider,
-  deleteUser as fbDeleteUser
-} from 'firebase/auth';
 import firebaseConfigData from './firebase-applet-config.json';
 
 const firebaseConfig = {
@@ -84,63 +69,6 @@ export const db = initializeFirestore(app, {
   ...(isIframe ? { experimentalForceLongPolling: true } : {}),
 }, databaseId === "(default)" ? undefined : databaseId);
 
-export type FirebaseUser = any;
-
-export const auth = getAuth(app);
-
-export const onAuthStateChanged = (authInstance: any, callback: any) => {
-  return fbOnAuthStateChanged(authInstance, (user) => {
-    if (user) {
-      localStorage.setItem("nexora_cached_user", user.uid);
-    } else {
-      localStorage.removeItem("nexora_cached_user");
-    }
-    callback(user);
-  });
-};
-
-export const signOut = async (authInstance: any) => {
-  localStorage.removeItem("nexora_cached_user");
-  return fbSignOut(authInstance);
-};
-
-export const deleteUser = async (userInstance: any) => {
-  return fbDeleteUser(userInstance);
-};
-
-export const signInWithEmailAndPassword = async (authInstance: any, email: string, password?: string) => {
-  return fbSignInWithEmailAndPassword(authInstance, email, password || "");
-};
-
-export const createUserWithEmailAndPassword = async (authInstance: any, email: string, password?: string) => {
-  return fbCreateUserWithEmailAndPassword(authInstance, email, password || "");
-};
-
-export const signInWithPopup = async (authInstance: any, provider?: any) => {
-  return fbSignInWithPopup(authInstance, provider);
-};
-
-export const sendPasswordResetEmail = async (authInstance: any, email: string) => {
-  return fbSendPasswordResetEmail(authInstance, email);
-};
-
-export const updatePassword = async (userInstance: any, password: string) => {
-  return fbUpdatePassword(userInstance, password);
-};
-
-export const linkWithCredential = async (userInstance: any, credential: any) => {
-  return fbLinkWithCredential(userInstance, credential);
-};
-
-export const reauthenticateWithPopup = async (userInstance: any, provider: any) => {
-  return fbReauthenticateWithPopup(userInstance, provider);
-};
-
-export { GoogleAuthProvider, EmailAuthProvider };
-
-export const setPersistence = async () => {};
-export const browserLocalPersistence = {};
-
 // Messaging is only supported in some browsers
 export const messaging = async () => {
   try {
@@ -164,37 +92,11 @@ export interface FirestoreErrorInfo {
   error: string;
   operationType: OperationType;
   path: string | null;
-  authInfo: {
-    userId: string | undefined;
-    email: string | null | undefined;
-    emailVerified: boolean | undefined;
-    isAnonymous: boolean | undefined;
-    tenantId: string | null | undefined;
-    providerInfo: {
-      providerId: string;
-      displayName: string | null;
-      email: string | null;
-      photoUrl: string | null;
-    }[];
-  }
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth?.currentUser?.uid,
-      email: auth?.currentUser?.email,
-      emailVerified: auth?.currentUser?.emailVerified,
-      isAnonymous: auth?.currentUser?.isAnonymous,
-      tenantId: auth?.currentUser?.tenantId,
-      providerInfo: auth?.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
     operationType,
     path
   }

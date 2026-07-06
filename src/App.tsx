@@ -115,18 +115,17 @@ import {
   eachDayOfInterval,
 } from "date-fns";
 import {
-  auth,
   db,
   messaging,
   handleFirestoreError,
   OperationType,
   trackEvent,
-  onAuthStateChanged,
-  FirebaseUser,
-  signOut,
-  deleteUser,
-  reauthenticateWithPopup,
-  GoogleAuthProvider,
+  // onAuthStateChanged,
+  // FirebaseUser,
+  // signOut,
+  // deleteUser,
+  // reauthenticateWithPopup,
+  // GoogleAuthProvider,
   setPersistence,
   browserLocalPersistence,
 } from "./firebase";
@@ -1987,6 +1986,12 @@ export default function App() {
       });
       setNotifications(notifs);
       setUnreadNotifCount(notifs.filter((n) => !n.isRead).length);
+    }, (err) => {
+      try {
+        handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/notifications`);
+      } catch (e) {
+        console.error("Firestore global notifications error:", e);
+      }
     });
 
     // Fetch Circles
@@ -2019,6 +2024,12 @@ export default function App() {
       } else {
         setCircles(circlesData);
       }
+    }, (err) => {
+      try {
+        handleFirestoreError(err, OperationType.LIST, "circles");
+      } catch (e) {
+        console.error("Firestore circles error:", e);
+      }
     });
 
     // Fetch Posts
@@ -2032,6 +2043,12 @@ export default function App() {
         (doc) => ({ id: doc.id, ...doc.data() }) as Post,
       );
       setPosts(postsData);
+    }, (err) => {
+      try {
+        handleFirestoreError(err, OperationType.LIST, "posts");
+      } catch (e) {
+        console.error("Firestore posts error:", e);
+      }
     });
 
     return () => {

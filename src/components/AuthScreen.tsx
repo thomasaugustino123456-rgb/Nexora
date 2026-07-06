@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { 
-  auth, 
-  db,
-  GoogleAuthProvider,
-  signInWithPopup,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-} from "../firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { getSupabase } from "../lib/supabase";
+
 import { motion, useAnimationControls } from "motion/react";
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Mascot, MascotMood } from "./Mascot";
@@ -160,7 +152,12 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
 
     try {
       if (isSignUp) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        
+        if (!data.user) throw new Error("No user returned");
+
+        const supabase = getSupabase();
         const signUpData = {
             name: 'Champion',
             displayName: 'Champion',
@@ -175,41 +172,24 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
             "Location": '',
             time: new Date().toISOString(),
             "Time": new Date().toISOString(),
-            uid: userCredential.user.uid,
+            uid: data.user.id,
             role: 'user',
             accountName: 'Champion',
             "Account name": 'Champion',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
         };
-        await setDoc(doc(db, "users", userCredential.user.uid), signUpData);
-        await setDoc(doc(db, "user", userCredential.user.uid), signUpData);
+        await supabase.from("users").upsert(signUpData);
+        await supabase.from("user").upsert(signUpData);
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
       }
       setIsSuccess(true);
       triggerJump();
     } catch (err: any) {
-      console.warn("Handled email auth error info:", err.code, err.message);
-      if (
-        err.code === "auth/invalid-credential" ||
-        err.code === "auth/user-not-found" ||
-        err.code === "auth/wrong-password"
-      ) {
-        setError(
-          "Invalid email or password. (Hint: If you originally signed in with Google, click the Google button below first, then visit System Settings to set an Email Password!)",
-        );
-      } else if (err.code === "auth/email-already-in-use") {
-        setError(
-          "An account with this email already exists. (If you originally used Google, please sign in using Google and set your password in System Settings!)",
-        );
-      } else if (err.code === "auth/weak-password") {
-        setError("Password should be at least 6 characters.");
-      } else if (err.code === "auth/operation-not-allowed") {
-        setError("Email/Password login is not enabled for this application.");
-      } else {
-        setError(`Error: ${err.code} - ${err.message}`);
-      }
+      console.warn("Handled email auth error info:", err.message);
+      setError(`Auth error: ${err.message}`);
     } finally {
       setIsSigningIn(false);
     }
@@ -228,22 +208,17 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
 
     setIsResettingPassword(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
       setResetSuccessMessage(
-        "Reset request submitted! ✉️ If you set a password before, please check your email inbox (including spam folder) for the reset link! • IF YOU JOINED VIA GOOGLE and never set a password, Firebase will not actually send an email (for security reasons). In this case, log in with Google once (e.g., on your laptop), go to Settings ⚙️ and set an Email Password. After that, you can log in on any phone or device with your email + password instantly! 🚀",
+        "Reset request submitted! ✉️ Check your email inbox for the reset link! 🚀",
       );
       triggerJump();
     } catch (err: any) {
       console.warn("Forgot password request failed:", err);
-      if (err.code === "auth/user-not-found") {
-        setError(
-          "No direct email/password account was found for this email. If you signed up using Google, log in with Google first, then visit System Settings to set your direct Email password! ⚡",
-        );
-      } else if (err.code === "auth/invalid-email") {
-        setError("Please enter a valid email address.");
-      } else {
-        setError(`Failed to send password reset: ${err.message}`);
-      }
+      setError(`Failed to send password reset: ${err.message}`);
     } finally {
       setIsResettingPassword(false);
     }
@@ -264,68 +239,18 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
       return;
     }
 
-    const provider = new GoogleAuthProvider();
-    provider.addScope("profile");
-    provider.addScope("email");
-    provider.setCustomParameters({
-      prompt: "select_account",
-    });
-
     try {
-      const result = await signInWithPopup(auth, provider);
-      const googleUserData = {
-          name: result.user.displayName || 'Champion',
-          displayName: result.user.displayName || 'Champion',
-          "Name": result.user.displayName || 'Champion',
-          email: result.user.email || `${result.user.uid}@nexora.app`,
-          "Email": result.user.email || `${result.user.uid}@nexora.app`,
-          photoFileName: result.user.photoURL || '',
-          "Photo file name": result.user.photoURL || '',
-          profilePic: result.user.photoURL || '',
-          "Profile image": result.user.photoURL || '',
-          location: '',
-          "Location": '',
-          time: new Date().toISOString(),
-          "Time": new Date().toISOString(),
-          uid: result.user.uid,
-          role: 'user',
-          accountName: result.user.displayName || 'Champion',
-          "Account name": result.user.displayName || 'Champion',
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-      };
-      await setDoc(doc(db, "users", result.user.uid), googleUserData, { merge: true });
-      await setDoc(doc(db, "user", result.user.uid), googleUserData, { merge: true });
-      setIsSuccess(true);
-      triggerJump();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: `${window.location.origin}/auth/callback`
+        }
+      });
+      if (error) throw error;
+      // Redirect happens automatically
     } catch (err: any) {
-      console.warn("Handled Google auth status:", err.code, err.message);
-      if (
-        err.code === "auth/cancelled-popup-request" ||
-        err.code === "auth/popup-closed-by-user"
-      ) {
-        console.log("Sign in popup closed by user (cancelled).");
-      } else if (err.code === "auth/unauthorized-domain") {
-        setError(
-          "Google Sign-In blocked by domain restrictions. Please verify that this hostname is added to the Authorized Domains list in the Firebase Console.",
-        );
-      } else if (err.code === "auth/operation-not-allowed") {
-        setError(
-          'Google Sign-In is not enabled for this application in the Firebase Console.',
-        );
-      } else if (
-        err.code === "auth/invalid-credential" &&
-        err.message.includes("oauth2/v1/userinfo")
-      ) {
-        setError(
-          'Google Auth Context Error: Sign-in validation failed.',
-        );
-      } else {
-        console.warn("Error signing in with Google:", err);
-        setError(
-          `Failed to sign in with Google: ${err.message}. If this persists, clear cookies or check Firebase config.`,
-        );
-      }
+      console.warn("Error signing in with Google:", err);
+      setError(`Failed to sign in with Google: ${err.message}`);
     } finally {
       setIsSigningIn(false);
     }

@@ -175,6 +175,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
 
   // Real-time Firestore document sync
   useEffect(() => {
+    if (!user) return;
     const qVideos = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'));
     console.log("Firestore Audit: Querying collection 'social_videos' in TikTokReels...");
     const unsub = onSnapshot(qVideos, (snapshot) => {
@@ -210,10 +211,11 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
       console.warn("Failed loading physical reels from Firestore:", err);
     });
     return () => unsub();
-  }, []);
+  }, [user]);
 
   // Sync comments in real-time for active reel
   useEffect(() => {
+    if (!user) return;
     const activeReel = reelsList[currentIndex];
     if (!activeReel?.id || activeReel.id.startsWith('reef')) return;
     
@@ -237,7 +239,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
       console.warn("Failed loading comments dynamically:", err);
     });
     return () => unsubComments();
-  }, [currentIndex, reelsList]);
+  }, [currentIndex, reelsList, user]);
 
   // Start webcam feed for the staging creator step
   useEffect(() => {

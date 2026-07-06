@@ -10,7 +10,7 @@ import {
   getDocFromCache,
   getDocsFromCache,
 } from "firebase/firestore";
-import { auth, db, handleFirestoreError, OperationType, onAuthStateChanged, FirebaseUser } from "../firebase";
+import { db, handleFirestoreError, OperationType } from "../firebase";
 import { UserSettings, UserStats, DailyProgress } from "../types";
 import { GardenState, createInitialGardenState } from "../types/garden";
 
@@ -186,6 +186,7 @@ export function useNexoraData(
   const hasMatchedHydratedStateRef = useRef(false);
   const hydratedStateRef = useRef<any>(null);
 
+  /*
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       console.log(`[STARTUP] AUTH STATE RESOLVED - User UID: ${currentUser?.uid || "null"}`);
@@ -414,6 +415,7 @@ export function useNexoraData(
 
     return () => unsubscribeAuth();
   }, []);
+  */
   // Safe State Matching Gate: ensure React state matches the loaded/hydrated Firestore data
   // before unlocking the sync gate. This prevents empty default states from overwriting database records.
   useEffect(() => {
@@ -477,6 +479,7 @@ export function useNexoraData(
 
       try {
         const userRef = doc(db, "users", user.uid);
+        const userSingularRef = doc(db, "user", user.uid);
         const progressRef = doc(db, "users", user.uid, "progress", today);
         const leaderboardRef = doc(db, "leaderboard", user.uid);
 
@@ -609,6 +612,9 @@ export function useNexoraData(
 
             await setDoc(userRef, writePayload, { merge: true });
             console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote core document to: ${userRef.path}`);
+
+            await setDoc(userSingularRef, writePayload, { merge: true });
+            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote singular core document to: ${userSingularRef.path}`);
 
             await setDoc(rewardsDocRef, rewardsPayload, { merge: true });
             console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote rewards subdocument to: ${rewardsDocRef.path}`);

@@ -10,7 +10,6 @@ import {
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from "./Trophies";
 import { useSound } from "../hooks/useSound";
 import { TrophyType } from "../types";
-import { auth } from "../firebase";
 import { vibrate } from "../lib/vibrate";
 
 interface TrophyRewardsScreenProps {
@@ -189,7 +188,8 @@ export function TrophyRewardsScreen({
                         (window.location.pathname === "/"
                           ? ""
                           : window.location.pathname);
-                      const shareUrl = `${baseUrl}?user=${auth.currentUser?.uid || ""}`;
+                      // const shareUrl = `${baseUrl}?user=${auth.currentUser?.uid || ""}`;
+                      const shareUrl = `${baseUrl}`;
                       const shareText = `Bro, check my discipline stats! I just earned a ${trophyType.toUpperCase()} trophy on Nexora! 🏆🚀`;
 
                       if (navigator.share) {
