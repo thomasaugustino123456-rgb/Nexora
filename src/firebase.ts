@@ -1,24 +1,20 @@
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { initializeFirestore, memoryLocalCache } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence, User } from 'firebase/auth';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import { getAnalytics, logEvent, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 import firebaseConfigData from './firebase-applet-config.json';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAcgcLykBAYF75aeN4kfwgAnwHZuWKk5_Q",
-  authDomain: "nexora-2-26605.firebaseapp.com",
-  projectId: "nexora-2-26605",
-  storageBucket: "nexora-2-26605.firebasestorage.app",
-  messagingSenderId: "10386801037",
-  appId: "1:10386801037:web:7334f8fc655a2f89107dc4",
-  measurementId: "G-TDN7Y2K7DG"
-};
+const firebaseConfig = firebaseConfigData;
 
 console.log("Firebase Initialization: Using project", firebaseConfig.projectId);
 const databaseId = "(default)";
 console.log("Firestore Initialization: Using database", databaseId);
 
 const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export { onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence };
+export type FirebaseUser = User;
 
 // Initialize Analytics lazily
 export const analytics = async () => {
@@ -63,9 +59,7 @@ export const trackEvent = async (eventName: string, params?: any) => {
 const isIframe = typeof window !== 'undefined' && window.self !== window.top;
 
 export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager(),
-  }),
+  localCache: memoryLocalCache(),
   ...(isIframe ? { experimentalForceLongPolling: true } : {}),
 }, databaseId === "(default)" ? undefined : databaseId);
 

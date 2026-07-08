@@ -22,7 +22,7 @@ import {
   FlameKindling
 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';
 import { MascotV2 } from './MascotV2';
@@ -132,8 +132,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
 
   const handleComplete = async () => {
     try {
-      // const user = auth.currentUser;
-      const user = null; // Placeholder
+      const user = auth.currentUser;
       const updates: any = { onboardingCompleted: true };
       
       const safeName = (name && typeof name === 'string') ? name.trim() : '';
@@ -172,6 +171,19 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
         try {
           await setDoc(doc(db, 'users', user.uid), updates, { merge: true });
           console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote initial user doc on onboarding completion to: users/${user.uid}`);
+          
+          // Also save to onboardingID and subcollection onboarding/main to be extremely safe and permanent
+          const onboardingPayload = {
+            uid: user.uid,
+            newUsersOnboardingCompleted: true,
+            appIntroductionOnboardingCompleted: true,
+            plantSectionOnboardingCompleted: false,
+            updatedAt: new Date(),
+          };
+          
+          await setDoc(doc(db, 'onboardingID', user.uid), onboardingPayload, { merge: true });
+          await setDoc(doc(db, 'users', user.uid, 'onboarding', 'main'), onboardingPayload, { merge: true });
+          console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Wrote onboardingID and onboarding/main in Firestore`);
         } catch (err: any) {
           console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Onboarding setDoc failed for user UID: ${user.uid}. Error:`, err);
         }

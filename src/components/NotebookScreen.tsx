@@ -7,6 +7,8 @@ import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { SocialCircle, Screen } from '../types';
 import { NexusLinkRenderer } from './NexusLinkRenderer';
 import { MascotV2 } from './MascotV2';
+import { db, auth } from '../firebase';
+import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 const Typewriter = ({ text }: { text: string }) => {
   const [displayedText, setDisplayedText] = useState("");
@@ -68,6 +70,22 @@ export function NotebookScreen({
     }
     
     setStats({ ...stats, gratitudeEntries: newEntries });
+
+    // Sync to notebooks Firestore collection under user UID
+    const user = auth.currentUser;
+    if (user) {
+      const noteDocRef = doc(db, "notebooks", user.uid);
+      setDoc(noteDocRef, {
+        userId: user.uid,
+        userName: user.displayName || "Champion",
+        userEmail: user.email || `${user.uid}@nexora.app`,
+        notes: newEntries,
+        updatedAt: serverTimestamp(),
+      }, { merge: true }).catch((err) => {
+        console.error("Failed to write to notebooks collection", err);
+      });
+    }
+
     setActiveNote(newEntry);
     setIsCreating(false);
     showToast('Manifest Saved! 📓', 'success');
@@ -241,6 +259,22 @@ export function NotebookScreen({
                     onClick={() => {
                       const newEntries = entries.filter((e: any) => e.id !== activeNote?.id);
                       setStats({ ...stats, gratitudeEntries: newEntries });
+                      
+                      // Update notebooks Firestore collection under user UID
+                      const user = auth.currentUser;
+                      if (user) {
+                        const noteDocRef = doc(db, "notebooks", user.uid);
+                        setDoc(noteDocRef, {
+                          userId: user.uid,
+                          userName: user.displayName || "Champion",
+                          userEmail: user.email || `${user.uid}@nexora.app`,
+                          notes: newEntries,
+                          updatedAt: serverTimestamp(),
+                        }, { merge: true }).catch((err) => {
+                          console.error("Failed to update notes in notebooks collection after deletion", err);
+                        });
+                      }
+
                       setIsCreating(false);
                       showToast('Note Deleted', 'info');
                     }}

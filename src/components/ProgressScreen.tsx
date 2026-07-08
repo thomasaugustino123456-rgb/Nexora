@@ -397,10 +397,10 @@ export function ProgressScreen({
              <p className="text-[10px] font-black text-[#4F3F34]/60 uppercase tracking-widest mb-4">Highest Artifacts (Tap to view big)</p>
              <div className="flex flex-wrap gap-3">
                 {stats.trophies.map(t => (
-                  <button 
+                  <div 
                     key={t.id} 
                     onClick={() => setSelectedTrophy(t)}
-                    className="px-4 py-3 bg-[#FCFAF6] hover:bg-white active:scale-95 transition-all rounded-2xl border border-[#E9E4D4] flex items-center gap-3 min-w-[155px] shadow-sm text-left group relative pr-10"
+                    className="px-4 py-3 bg-[#FCFAF6] hover:bg-white active:scale-95 transition-all rounded-2xl border border-[#E9E4D4] flex items-center gap-3 min-w-[155px] shadow-sm text-left group relative pr-10 cursor-pointer"
                   >
                     <div className={`w-3 h-3 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.15)] flex-shrink-0 ${
                       t.type === 'golden' ? 'bg-amber-400 animate-pulse' : 
@@ -432,7 +432,7 @@ export function ProgressScreen({
                     >
                       <Trash2 size={13} />
                     </button>
-                  </button>
+                  </div>
                 ))}
              </div>
           </div>

@@ -1,10 +1,10 @@
 {
-  "projectId": "nexora-43c0d",
-  "appId": "1:381191066676:web:9999cb6edfb16c98796661",
-  "apiKey": "AIzaSyAIIcC87Q9wUPPVYzAz1cmLacD5UvB-95E",
-  "authDomain": "nexora-43c0d.firebaseapp.com",
+  "projectId": "nexora-bdd1d",
+  "appId": "1:1038081323866:web:f216aa2136c6c7e761b963",
+  "apiKey": "AIzaSyAQkPQqVyHhzw-nkBiLpsAZ_ZatNQsvYrU",
+  "authDomain": "nexora-bdd1d.firebaseapp.com",
   "firestoreDatabaseId": "(default)",
-  "storageBucket": "nexora-43c0d.firebasestorage.app",
-  "messagingSenderId": "381191066676",
-  "measurementId": "G-909LKP3XWK"
+  "storageBucket": "nexora-bdd1d.firebasestorage.app",
+  "messagingSenderId": "1038081323866",
+  "measurementId": "G-VFCPEEVJSL"
 }

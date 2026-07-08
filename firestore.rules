@@ -76,6 +76,15 @@ service cloud.firestore {
              (!('accountName' in data) || (data.accountName is string && data.accountName.size() <= 100)) &&
              (!('gender' in data) || (data.gender is string && data.gender.size() <= 50)) &&
              (!('time' in data) || (data.time is string && data.time.size() <= 50)) &&
+             (!('Name' in data) || (data.Name is string && data.Name.size() <= 100)) &&
+             (!('Email' in data) || (data.Email is string && isValidEmail(data.Email))) &&
+             (!('Email address' in data) || (data['Email address'] is string && isValidEmail(data['Email address']))) &&
+             (!('Photo file name' in data) || (data['Photo file name'] is string && data['Photo file name'].size() <= 1048576)) &&
+             (!('Profile image' in data) || (data['Profile image'] is string && data['Profile image'].size() <= 1048576)) &&
+             (!('Location' in data) || (data.Location is string && data.Location.size() <= 200)) &&
+             (!('Time' in data) || (data.Time is string && data.Time.size() <= 50)) &&
+             (!('Date' in data) || (data.Date is string && data.Date.size() <= 50)) &&
+             (!('date' in data) || (data.date is string && data.date.size() <= 50)) &&
              (!('source' in data) || (data.source is string && data.source.size() <= 50)) &&
              (!('timezone' in data) || (data.timezone is string && data.timezone.size() <= 50)) &&
              (!('settings' in data) || data.settings is map) &&
@@ -94,6 +103,7 @@ service cloud.firestore {
              (!('profilePrivacy' in data) || (data.profilePrivacy is string && data.profilePrivacy in ['public', 'private'])) &&
              (!('hidePostsFromOthers' in data) || data.hidePostsFromOthers is bool) &&
              (!('hideCommentsFromOthers' in data) || data.hideCommentsFromOthers is bool) &&
+             (!('spaceHouseUnlocked' in data) || data.spaceHouseUnlocked is bool) &&
              (!('plantState' in data) || (
                data.plantState is map &&
                data.plantState.stage is number &&
@@ -197,17 +207,10 @@ service cloud.firestore {
     }
 
     function isValidCustomPlan(data) {
-      return data.keys().hasAll(['id', 'userId', 'name', 'challenges', 'days', 'createdAt']) &&
+      return data.keys().hasAll(['id', 'userId', 'name']) &&
              data.id is string && data.id.size() <= 50 &&
              data.userId is string && data.userId == request.auth.uid &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.challenges is list && data.challenges.size() > 0 && data.challenges.size() <= 20 &&
-             data.days is list && data.days.size() > 0 && data.days.size() <= 7 &&
-             data.createdAt is string && data.createdAt.size() <= 40 &&
-             (!('reminderTime' in data) || (data.reminderTime is string && data.reminderTime.size() <= 10) || data.reminderTime == null) &&
-             (!('reminderTime2' in data) || (data.reminderTime2 is string && data.reminderTime2.size() <= 10) || data.reminderTime2 == null) &&
-             (!('icon' in data) || (data.icon is string && data.icon.size() <= 50)) &&
-             (!('color' in data) || (data.color is string && data.color.size() <= 50));
+             data.name is string && data.name.size() > 0 && data.name.size() < 100;
     }
 
     function isValidCircle(data) {
@@ -308,7 +311,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin() || (isAuthenticated() && (!('profilePrivacy' in resource.data) || resource.data.profilePrivacy != 'private'));
+      allow read: if isAuthenticated() || isAdmin();
       allow create: if isOwner(userId) && isValidUserCreate(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
       allow update: if isOwner(userId) && isValidUserUpdate(request.resource.data) && 
                     (!('role' in request.resource.data) || request.resource.data.role == resource.data.role || isAdmin()) &&
@@ -321,7 +324,7 @@ service cloud.firestore {
       }
 
       match /stats/main {
-        allow read: if isOwner(userId) || isAdmin() || (isAuthenticated() && (!('profilePrivacy' in get(/databases/$(database)/documents/users/$(userId)).data) || get(/databases/$(database)/documents/users/$(userId)).data.profilePrivacy != 'private'));
+        allow read: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && isValidStatsCreate(request.resource.data);
         allow update: if isOwner(userId) && isValidStatsUpdate(request.resource.data);
         allow delete: if isOwner(userId) || isAdmin();
@@ -391,7 +394,7 @@ service cloud.firestore {
     }
 
     match /user/{userId} {
-      allow read: if isOwner(userId) || isAdmin() || (isAuthenticated() && (!('profilePrivacy' in resource.data) || resource.data.profilePrivacy != 'private'));
+      allow read: if isAuthenticated() || isAdmin();
       allow create: if isOwner(userId) && isValidUserCreate(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
       allow update: if isOwner(userId) && isValidUserUpdate(request.resource.data) && 
                     (!('role' in request.resource.data) || request.resource.data.role == resource.data.role || isAdmin()) &&
@@ -404,7 +407,7 @@ service cloud.firestore {
       }
 
       match /stats/main {
-        allow read: if isOwner(userId) || isAdmin() || (isAuthenticated() && (!('profilePrivacy' in get(/databases/$(database)/documents/user/$(userId)).data) || get(/databases/$(database)/documents/user/$(userId)).data.profilePrivacy != 'private'));
+        allow read: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && isValidStatsCreate(request.resource.data);
         allow update: if isOwner(userId) && isValidStatsUpdate(request.resource.data);
         allow delete: if isOwner(userId) || isAdmin();
@@ -539,16 +542,16 @@ service cloud.firestore {
     }
 
     match /social_videos/{videoId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create: if isAuthenticated() && isValidVideo(request.resource.data);
       allow update: if isAuthenticated() && (
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy', 'commentCount', 'saves', 'savedBy', 'repostCount'])) ||
         (resource.data.userId == request.auth.uid && isValidVideo(request.resource.data))
       );
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-
+ 
       match /comments/{commentId} {
-        allow read: if isAuthenticated();
+        allow read: if true;
         allow create: if isAuthenticated() && isValidVideoComment(request.resource.data);
         allow update: if isAuthenticated() && (
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy'])) ||
@@ -570,6 +573,62 @@ service cloud.firestore {
                     request.resource.data.reason.size() < 1000;
       allow read: if isAdmin();
       allow update, delete: if false;
+    }
+
+    // ===============================================================
+    // Challenges Path (User finished challenges & counters)
+    // ===============================================================
+    match /challenges/{userId} {
+      allow read: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+    }
+
+    // ===============================================================
+    // Rewards Path (Coins, Streaks, XP, Points)
+    // ===============================================================
+    match /rewards/{userId} {
+      allow read: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+    }
+
+    // ===============================================================
+    // Plants Path (User plants, garden, seeds, luck seed drops)
+    // ===============================================================
+    match /plants/{userId} {
+      allow read: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+    }
+
+    // ===============================================================
+    // Stats Path (User stats, progress, daily updates)
+    // ===============================================================
+    match /stats/{userId} {
+      allow read: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+    }
+
+    // ===============================================================
+    // Shop Purchases Path (Skins, music, items, house items bought)
+    // ===============================================================
+    match /shop_purchases/{userId} {
+      allow read: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+    }
+
+    // ===============================================================
+    // Library Path (User library inventory, sketches, saved media, archive)
+    // ===============================================================
+    match /library/{userId} {
+      allow read: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+    }
+
+    // ===============================================================
+    // Notebooks Path (User notebooks, notes, gratitude entries)
+    // ===============================================================
+    match /notebooks/{userId} {
+      allow read: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
     }
   }
 }

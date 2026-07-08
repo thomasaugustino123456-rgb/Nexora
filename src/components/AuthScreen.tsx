@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { getSupabase } from "../lib/supabase";
+import { auth, db } from "../firebase";
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  sendPasswordResetEmail, 
+  GoogleAuthProvider, 
+  signInWithPopup 
+} from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 import { motion, useAnimationControls } from "motion/react";
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
@@ -152,12 +160,8 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
 
     try {
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
-        if (!data.user) throw new Error("No user returned");
-
-        const supabase = getSupabase();
         const signUpData = {
             name: 'Champion',
             displayName: 'Champion',
@@ -172,18 +176,20 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
             "Location": '',
             time: new Date().toISOString(),
             "Time": new Date().toISOString(),
-            uid: data.user.id,
+            date: new Date().toISOString(),
+            "Date": new Date().toISOString(),
+            "Email address": email,
+            uid: userCredential.user.uid,
             role: 'user',
             accountName: 'Champion',
             "Account name": 'Champion',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
         };
-        await supabase.from("users").upsert(signUpData);
-        await supabase.from("user").upsert(signUpData);
+        await setDoc(doc(db, "users", userCredential.user.uid), signUpData);
+        await setDoc(doc(db, "user", userCredential.user.uid), signUpData);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        await signInWithEmailAndPassword(auth, email, password);
       }
       setIsSuccess(true);
       triggerJump();
@@ -208,10 +214,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
 
     setIsResettingPassword(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
+      await sendPasswordResetEmail(auth, email);
       setResetSuccessMessage(
         "Reset request submitted! ✉️ Check your email inbox for the reset link! 🚀",
       );
@@ -239,15 +242,43 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
       return;
     }
 
+    const provider = new GoogleAuthProvider();
+    provider.addScope("profile");
+    provider.addScope("email");
+    provider.setCustomParameters({
+      prompt: "select_account",
+    });
+
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-            redirectTo: `${window.location.origin}/auth/callback`
-        }
-      });
-      if (error) throw error;
-      // Redirect happens automatically
+      const result = await signInWithPopup(auth, provider);
+      const googleUserData = {
+          name: result.user.displayName || 'Champion',
+          displayName: result.user.displayName || 'Champion',
+          "Name": result.user.displayName || 'Champion',
+          email: result.user.email || `${result.user.uid}@nexora.app`,
+          "Email": result.user.email || `${result.user.uid}@nexora.app`,
+          photoFileName: result.user.photoURL || '',
+          "Photo file name": result.user.photoURL || '',
+          profilePic: result.user.photoURL || '',
+          "Profile image": result.user.photoURL || '',
+          location: '',
+          "Location": '',
+          time: new Date().toISOString(),
+          "Time": new Date().toISOString(),
+          date: new Date().toISOString(),
+          "Date": new Date().toISOString(),
+          "Email address": result.user.email || `${result.user.uid}@nexora.app`,
+          uid: result.user.uid,
+          role: 'user',
+          accountName: result.user.displayName || 'Champion',
+          "Account name": result.user.displayName || 'Champion',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+      };
+      await setDoc(doc(db, "users", result.user.uid), googleUserData, { merge: true });
+      await setDoc(doc(db, "user", result.user.uid), googleUserData, { merge: true });
+      setIsSuccess(true);
+      triggerJump();
     } catch (err: any) {
       console.warn("Error signing in with Google:", err);
       setError(`Failed to sign in with Google: ${err.message}`);

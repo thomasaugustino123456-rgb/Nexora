@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Heart, MessageSquare, Share2, Plus, Sparkles, Camera, ArrowLeft, RefreshCw, Check, Film, Upload, Trash2, ArrowUpDown, ChevronDown, ChevronUp, AlertCircle, Smile, X, Scissors, Volume2, Sliders, Type, Mic, Music, VolumeX, Volume1 } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { db } from '../firebase';
-import { collection, onSnapshot, addDoc, updateDoc, doc, increment, query, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, doc, increment, query, orderBy, limit, where } from 'firebase/firestore';
 
 interface VideoItem {
   id: string;
@@ -176,7 +176,7 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
   // Real-time Firestore document sync
   useEffect(() => {
     if (!user) return;
-    const qVideos = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'));
+    const qVideos = query(collection(db, 'social_videos'), where('userId', '==', user.uid));
     console.log("Firestore Audit: Querying collection 'social_videos' in TikTokReels...");
     const unsub = onSnapshot(qVideos, (snapshot) => {
       console.log(`Firestore Audit: Collection 'social_videos' queried. Retrieved ${snapshot.size} documents.`);
@@ -203,8 +203,14 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
           mediaSequence: data.mediaSequence || [],
           audioUrl: data.audioUrl || undefined,
           isAuthorized: data.isAuthorized ?? true,
-          type: detectedType
+          type: detectedType,
+          createdAt: data.createdAt
         };
+      });
+      dbVideos.sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
       });
       setReelsList(dbVideos.length > 0 ? [...dbVideos, ...STOCK_REELS] : STOCK_REELS);
     }, (err) => {

@@ -120,20 +120,20 @@ import {
   handleFirestoreError,
   OperationType,
   trackEvent,
-  // onAuthStateChanged,
-  // FirebaseUser,
-  // signOut,
-  // deleteUser,
-  // reauthenticateWithPopup,
-  // GoogleAuthProvider,
+  auth,
+  onAuthStateChanged,
+  signOut,
+  deleteUser,
+  reauthenticateWithPopup,
+  GoogleAuthProvider,
   setPersistence,
   browserLocalPersistence,
 } from "./firebase";
 import {
   doc,
   getDoc,
-  setDoc,
-  updateDoc,
+  setDoc as firestoreSetDoc,
+  updateDoc as firestoreUpdateDoc,
   getDocFromServer,
   deleteDoc,
   collection,
@@ -144,9 +144,47 @@ import {
   serverTimestamp,
   where,
   getDocs,
-  addDoc,
+  addDoc as firestoreAddDoc,
   increment,
+  arrayUnion,
 } from "firebase/firestore";
+
+function cleanPayload<T>(obj: T): T {
+  if (obj === null || obj === undefined) return null as any;
+  if (typeof obj !== "object") return obj;
+  if (obj instanceof Date) return obj as any;
+  if (
+    (obj as any)._methodName || 
+    (obj as any).constructor?.name?.includes('FieldValue') ||
+    (obj as any)._sentinel ||
+    typeof (obj as any).isEqual === 'function'
+  ) {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(cleanPayload) as any;
+  }
+  const cleaned: any = {};
+  for (const key of Object.keys(obj)) {
+    const val = (obj as any)[key];
+    if (val !== undefined) {
+      cleaned[key] = cleanPayload(val);
+    }
+  }
+  return cleaned;
+}
+
+const setDoc = (reference: any, data: any, options?: any) => {
+  return firestoreSetDoc(reference, cleanPayload(data), options);
+};
+
+const updateDoc = (reference: any, data: any) => {
+  return firestoreUpdateDoc(reference, cleanPayload(data));
+};
+
+const addDoc = (reference: any, data: any) => {
+  return firestoreAddDoc(reference, cleanPayload(data));
+};
 import { getToken, onMessage } from "firebase/messaging";
 import { AuthScreen } from "./components/AuthScreen";
 import { LandingPage } from "./components/LandingPage";
@@ -274,7 +312,6 @@ const DEFAULT_SETTINGS: UserSettings = {
   mascotPinnedItemId: null,
   spaceOnboardingCompleted: false,
   plantOnboardingCompleted: false,
-  isWalkthroughCompleted: false,
   performanceMode: detectLowEndDevice(),
   lowPowerMode: detectLowEndDevice(),
   plantState: {
@@ -406,6 +443,7 @@ export default function App() {
       setHydrationConsecutiveDays(parseInt(localStorage.getItem('hydration_consecutive_days') || '0', 10));
       setHydrationWaterLevel(parseFloat(localStorage.getItem('hydration_water_level') || '0.0'));
       setHydrationLastCompletedDate(localStorage.getItem('hydration_last_completed_date') || '');
+      setSplashFinished(false);
     }
   }, [user]);
 
@@ -727,117 +765,6 @@ export default function App() {
     type: "success" | "error" | "info";
   } | null>(null);
   const [showFeedbackPrompt, setShowFeedbackPrompt] = useState(false);
-  const [showWalkthrough, setShowWalkthrough] = useState(false);
-  const [walkthroughStep, setWalkthroughStep] = useState(0);
-
-  const WALKTHROUGH_STEPS: {
-    screen: Screen;
-    title: string;
-    message: string;
-    mood: MascotMood;
-  }[] = [
-    {
-      screen: "home",
-      title: "HOME SECTION",
-      message:
-        "Yo bro! This is your Dashboard. Track your Daily Protocol and active Quests here. Consistency is your weapon.",
-      mood: "happy",
-    },
-    {
-      screen: "progress",
-      title: "PROGRESS SECTION",
-      message:
-        "Analyze your gains! Check your streaks, level up, and view your Trophy collection. Real power is documented here.",
-      mood: "surprised",
-    },
-    {
-      screen: "leaderboard",
-      title: "RANK SECTION",
-      message:
-        "See where you stand among other legends. Rise through the ranks by staying consistent every single day.",
-      mood: "boiling",
-    },
-    {
-      screen: "profile",
-      title: "PROFILE SECTION",
-      message:
-        "Your identity in the Nexora system. Customize your avatar and check your permanent record here.",
-      mood: "happy",
-    },
-    {
-      screen: "library",
-      title: "LIBRARY SECTION",
-      message:
-        "Your arsenal of power-ups and unlocked gear. Equip yourself for the mission from your stored assets.",
-      mood: "happy",
-    },
-    {
-      screen: "notebook",
-      title: "NOTEBOOK SECTION",
-      message:
-        "Log your mental updates. Discipline requires a sharp mind. Use this for reflection and focus.",
-      mood: "neutral",
-    },
-    {
-      screen: "nexus-vision",
-      title: "PLANT SECTION",
-      message:
-        "Your mental ecosystem. Growing your plant correlates with your real-world discipline. Keep it alive!",
-      mood: "happy",
-    },
-    {
-      screen: "subscription",
-      title: "SUBSCRIPTION SECTION",
-      message:
-        "Unlock elite protocols. Pro status grants you advanced artillery and exclusive system access.",
-      mood: "surprised",
-    },
-    {
-      screen: "settings",
-      title: "SETTINGS SECTION",
-      message:
-        "Finalize your setup. Adjust notifications and sync your feedback directly to HQ. You are ready.",
-      mood: "happy",
-    },
-  ];
-
-  // WALKTHROUGH TRIGGER
-  useEffect(() => {
-    if (!isDataReady || !user || settings.isWalkthroughCompleted) return;
-
-    const timer = setTimeout(() => {
-      setShowWalkthrough(true);
-      setWalkthroughStep(0);
-      setActiveScreen("home");
-      vibrate(VIBRATION_PATTERNS.NOTIFY);
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [isDataReady, user, settings.isWalkthroughCompleted]);
-
-  const onNextWalkthroughStep = () => {
-    if (walkthroughStep < WALKTHROUGH_STEPS.length - 1) {
-      const nextStep = walkthroughStep + 1;
-      setWalkthroughStep(nextStep);
-      setActiveScreen(WALKTHROUGH_STEPS[nextStep].screen);
-      vibrate(VIBRATION_PATTERNS.CLICK);
-    } else {
-      onFinishWalkthrough();
-    }
-  };
-
-  const onFinishWalkthrough = async () => {
-    setShowWalkthrough(false);
-    onUpdateSettings({ isWalkthroughCompleted: true });
-    // Bonus for finishing in-memory which background sync will persist to database correctly
-    onUpdateStats((prev) => ({
-      ...prev,
-      coins: prev.coins + 50,
-      totalPoints: prev.totalPoints + 10,
-    }));
-    showToast("WELCOME CACHE RECEIVED: +50 COINS! 🚀", "success");
-    vibrate(VIBRATION_PATTERNS.SUCCESS);
-  };
 
   // Space House Unlock Logic
   const isSpaceHouseUnlocked = useMemo(() => {
@@ -1425,10 +1352,13 @@ export default function App() {
         "Location": location,
         time: finalTime,
         "Time": finalTime,
+        date: settings.date || new Date().toISOString(),
+        "Date": settings.date || new Date().toISOString(),
         accountName: finalAccountName,
         "Account name": finalAccountName,
         email: finalEmail || `${user.uid}@nexora.app`,
         "Email": finalEmail || `${user.uid}@nexora.app`,
+        "Email address": finalEmail || `${user.uid}@nexora.app`,
         updatedAt: serverTimestamp(),
       };
       
@@ -1548,6 +1478,26 @@ export default function App() {
     onUpdateSettings({
       purchasedHouseItemIds: [...(settings.purchasedHouseItemIds || []), id],
     });
+
+    if (user) {
+      const purchaseRef = doc(db, "shop_purchases", user.uid);
+      setDoc(purchaseRef, {
+        userId: user.uid,
+        userName: settings.displayName || user.displayName || "Champion",
+        userEmail: user.email || `${user.uid}@nexora.app`,
+        purchases: arrayUnion({
+          itemId: item.id,
+          itemName: item.name,
+          itemIcon: item.icon || "🏠",
+          price: currency === "coins" ? item.coinPrice : item.price,
+          currency: currency,
+          itemType: "house_item",
+          purchasedAt: new Date().toISOString(),
+        }),
+        updatedAt: serverTimestamp()
+      }, { merge: true }).catch((err) => console.error("Failed to save house item purchase:", err));
+    }
+
     showToast(`Purchased ${item.name}! 🏠`, "success");
     vibrate(VIBRATION_PATTERNS.SUCCESS);
     if (settings.soundEnabled) play("coin");
@@ -1577,6 +1527,38 @@ export default function App() {
         await setDoc(itemRef, {
           purchasedAt: new Date().toISOString(),
         });
+
+        // 1. Log to global shop_purchases collection under user UID
+        const purchaseRef = doc(db, "shop_purchases", user.uid);
+        setDoc(purchaseRef, {
+          userId: user.uid,
+          userName: settings.displayName || user.displayName || "Champion",
+          userEmail: user.email || `${user.uid}@nexora.app`,
+          purchases: arrayUnion({
+            itemId: item.id,
+            itemName: item.name,
+            itemIcon: item.icon || "🌿",
+            price: item.price,
+            currency: "coins",
+            itemType: "ecosystem_item",
+            purchasedAt: new Date().toISOString(),
+          }),
+          updatedAt: serverTimestamp()
+        }, { merge: true }).catch((err) => console.error("Failed to save ecosystem purchase to shop_purchases:", err));
+
+        // 2. Log to global plants collection under user UID
+        const plantRef = doc(db, "plants", user.uid);
+        setDoc(plantRef, {
+          userId: user.uid,
+          userName: settings.displayName || user.displayName || "Champion",
+          userEmail: user.email || `${user.uid}@nexora.app`,
+          lastEcosystemItemId: item.id,
+          lastEcosystemItemName: item.name,
+          lastEcosystemItemType: "purchased_ecosystem_item",
+          lastEcosystemItemAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true }).catch((err) => console.error("Failed to write to plants collection:", err));
+
       } catch (e) {
         console.error("Ecosystem item sync failed:", e);
       }
@@ -1994,9 +1976,10 @@ export default function App() {
       }
     });
 
-    // Fetch Circles
+    // Fetch Circles (Filter by user UID for strict privacy)
     const qCircles = query(
       collection(db, "circles"),
+      where("ownerId", "==", user.uid)
     );
     const unsubCircles = onSnapshot(qCircles, (snapshot) => {
       const circlesData = snapshot.docs.map(
@@ -2032,17 +2015,21 @@ export default function App() {
       }
     });
 
-    // Fetch Posts
+    // Fetch Posts (Filter by user UID for strict privacy)
     const qPosts = query(
       collection(db, "posts"),
-      orderBy("createdAt", "desc"),
-      limit(50),
+      where("userId", "==", user.uid)
     );
     const unsubPosts = onSnapshot(qPosts, (snapshot) => {
       const postsData = snapshot.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() }) as Post,
       );
-      setPosts(postsData);
+      postsData.sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+      });
+      setPosts(postsData.slice(0, 50));
     }, (err) => {
       try {
         handleFirestoreError(err, OperationType.LIST, "posts");
@@ -2784,6 +2771,7 @@ export default function App() {
     if (user && fcmToken) {
       const saveToken = async () => {
         try {
+          /*
           const userRef = doc(db, "users", user.uid);
           const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
           await setDoc(userRef, {
@@ -2795,6 +2783,9 @@ export default function App() {
             "settings.timezone": tz,
           }, { merge: true });
           console.log("FCM: Token and Timezone saved to Firestore.");
+          */
+          console.log("FCM: Token saving to Firestore is temporarily disabled.");
+
         } catch (e) {
           console.error("FCM: Failed to save token:", e);
         }
@@ -3321,6 +3312,28 @@ export default function App() {
     const isRankOne = rank === 1;
     showToast(isRankOne ? "Championship Claimed! +250 Coins, Golden Trophy, & +150 XP Bonus! 🏆" : `Weekly Reward Claimed! +${rewardCoins} Coins! 🎁`, "success");
     vibrate(VIBRATION_PATTERNS.SUCCESS);
+
+    // 2. Log Weekly Leaderboard Rewards to global "rewards" collection
+    const rewardDocRef = doc(db, "rewards", user.uid);
+    setDoc(rewardDocRef, {
+      userId: user.uid,
+      userName: settings.displayName || user.displayName || "Champion",
+      userEmail: user.email || `${user.uid}@nexora.app`,
+      coins: stats.coins + rewardCoins,
+      streak: stats.streak || 0,
+      xp: stats.xp + (isRankOne ? 150 : 0),
+      points: (stats.totalPoints || 0) + (isRankOne ? 150 : 0),
+      lastRewardReceivedAt: serverTimestamp(),
+      lastRewardSource: `weekly_leaderboard_reward_rank_${rank}`,
+      updatedAt: serverTimestamp(),
+    }, { merge: true }).catch((err) => {
+      console.error("Failed to save weekly reward claim to global rewards collection", err);
+      try {
+        handleFirestoreError(err, OperationType.WRITE, `rewards/${user.uid}`);
+      } catch (e) {
+        console.error("Firestore error handled:", e);
+      }
+    });
   };
 
   useEffect(() => {
@@ -4298,6 +4311,44 @@ export default function App() {
             console.error("LB sync error", e);
           }
         });
+
+        // 1. Log Finished Challenge to the new global "challenges" collection under user UID
+        const challengeDocRef = doc(db, "challenges", user.uid);
+        setDoc(challengeDocRef, {
+          userId: user.uid,
+          userName: settings.displayName || user.displayName || "Champion",
+          userEmail: user.email || `${user.uid}@nexora.app`,
+          counter: updatedStats.totalCompletedDays || 1,
+          lastChallengeId: isCustomPlan ? (activeCustomPlan?.id || "custom") : (challengeStep || "official"),
+          lastChallengeName: isCustomPlan ? (activeCustomPlan?.name || "Custom Plan") : (challengeStep || "Official Daily Challenge"),
+          lastChallengeType: isCustomPlan ? "user_created_plan" : "official_challenge",
+          lastCompletedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true }).catch((err) => {
+          console.error("Failed to save to global challenges collection", err);
+        });
+
+        // 2. Log Rewards (Coins, Streaks, XP, Points) to the new global "rewards" collection under user UID
+        const rewardDocRef = doc(db, "rewards", user.uid);
+        setDoc(rewardDocRef, {
+          userId: user.uid,
+          userName: settings.displayName || user.displayName || "Champion",
+          userEmail: user.email || `${user.uid}@nexora.app`,
+          coins: updatedStats.coins || 0,
+          streak: updatedStats.streak || 0,
+          xp: updatedStats.xp || 0,
+          points: updatedStats.totalPoints || 0,
+          lastRewardReceivedAt: serverTimestamp(),
+          lastRewardSource: isCustomPlan ? "custom_plan_completion" : "official_challenge_completion",
+          updatedAt: serverTimestamp(),
+        }, { merge: true }).catch((err) => {
+          console.error("Failed to save to global rewards collection", err);
+          try {
+            handleFirestoreError(err, OperationType.WRITE, `rewards/${user.uid}`);
+          } catch (e) {
+            console.error("Firestore error handled:", e);
+          }
+        });
       }
 
       return updatedStats;
@@ -4680,7 +4731,7 @@ export default function App() {
     );
   }
 
-  if (needsOnboarding) {
+  if (needsOnboarding && isDataReady && !loading) {
     return (
       <div className="min-h-screen w-full flex flex-col relative overflow-x-hidden bg-gradient-to-b from-[#0A1733] to-[#040B1A]">
         
@@ -5436,6 +5487,25 @@ export default function App() {
                             ],
                           };
                         });
+
+                        if (user) {
+                          const purchaseRef = doc(db, "shop_purchases", user.uid);
+                          setDoc(purchaseRef, {
+                            userId: user.uid,
+                            userName: settings.displayName || user.displayName || "Champion",
+                            userEmail: user.email || `${user.uid}@nexora.app`,
+                            purchases: arrayUnion({
+                              itemId: item.id,
+                              itemName: item.name,
+                              itemIcon: item.icon || "🛒",
+                              price: currency === "coins" ? (item.coinPrice || 0) : (item.price || 0),
+                              currency: currency,
+                              itemType: item.effect || "shop_item",
+                              purchasedAt: new Date().toISOString(),
+                            }),
+                            updatedAt: serverTimestamp()
+                          }, { merge: true }).catch((err) => console.error("Failed to save shop purchase to shop_purchases:", err));
+                        }
 
                         setStats((prev) => ({
                           ...prev,
@@ -6555,99 +6625,7 @@ export default function App() {
           </AnimatePresence>
 
           {/* Nexora Navigation Protocol (Walkthrough) */}
-          <AnimatePresence>
-            {showWalkthrough && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[120] flex items-end justify-center p-6 overflow-hidden"
-              >
-                {/* Overlay with focus effect */}
-                <div className="absolute inset-0 bg-blue-950/40 backdrop-blur-[2px]" />
-
-                <motion.div
-                  key={walkthroughStep}
-                  initial={{ y: 100, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 100, opacity: 0 }}
-                  className="bg-white rounded-[3rem] p-8 w-full max-w-sm shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] border-4 border-blue-400 relative z-10"
-                >
-                  {/* Connector Line (Pointing to content) */}
-                  <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                    <div className="w-1 h-16 bg-gradient-to-t from-blue-400 to-transparent" />
-                    <div className="w-3 h-3 rounded-full bg-blue-400 animate-ping absolute top-0" />
-                  </div>
-
-                  {/* Protocol Progress Bar */}
-                  <div className="absolute top-0 left-0 w-full h-2 flex gap-1 px-8 pt-4">
-                    {WALKTHROUGH_STEPS.map((_, idx) => (
-                      <div
-                        key={idx}
-                        className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${idx <= walkthroughStep ? "bg-blue-500" : "bg-blue-100"}`}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="flex flex-col items-center text-center gap-6 mt-4">
-                    {/* Real App Mascot */}
-                    <div className="relative group">
-                      <div className="w-32 h-32 bg-blue-50/50 rounded-full flex items-center justify-center p-4 border-2 border-blue-100 relative shadow-[inset_0_2px_10px_rgba(59,130,246,0.1)]">
-                        <Mascot
-                          mood={WALKTHROUGH_STEPS[walkthroughStep].mood}
-                          theme={
-                            settings.activeSkin === "none"
-                              ? "standard"
-                              : settings.activeSkin
-                          }
-                          hat={settings.activeHat}
-                          performanceMode={settings.performanceMode}
-                          className="w-full h-full scale-110"
-                        />
-                        {/* Aura pulse */}
-                        <div className="absolute inset-0 rounded-full border-2 border-blue-400/20 animate-ping" />
-                      </div>
-                      <div className="absolute -bottom-2 -right-4 bg-blue-600 text-white text-[11px] font-black px-3 py-1.5 rounded-2xl border-2 border-white uppercase shadow-lg shadow-blue-500/30">
-                        NEXORA AI
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <h2 className="text-2xl font-black text-blue-900 leading-tight uppercase tracking-tighter italic">
-                        {WALKTHROUGH_STEPS[walkthroughStep].title}
-                      </h2>
-                      <p className="text-blue-900/70 font-bold text-base leading-snug">
-                        "{WALKTHROUGH_STEPS[walkthroughStep].message}"
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={onNextWalkthroughStep}
-                      className="w-full bg-blue-500 hover:bg-blue-600 text-white py-5 rounded-[2rem] font-black text-lg shadow-[0_15px_30px_-5px_rgba(59,130,246,0.4)] transition-all active:scale-95 flex items-center justify-center gap-3 active:shadow-none"
-                    >
-                      {walkthroughStep === WALKTHROUGH_STEPS.length - 1 ? (
-                        <>
-                          FINISH MISSION{" "}
-                          <Check className="w-6 h-6 stroke-[4]" />
-                        </>
-                      ) : (
-                        <>
-                          ENCRYPT & NEXT{" "}
-                          <ChevronRight className="w-6 h-6 stroke-[4]" />
-                        </>
-                      )}
-                    </button>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">
-                        PHASE {walkthroughStep + 1} // 09
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Removed by request */}
 
           {/* Smart Feedback Mascot Bubble */}
           <AnimatePresence>
@@ -6890,6 +6868,22 @@ export default function App() {
                       ...updatedState,
                       pendingLootSeed: null,
                     });
+
+                    // Log lucky seed drop to plants collection under user UID
+                    if (user) {
+                      const plantRef = doc(db, "plants", user.uid);
+                      setDoc(plantRef, {
+                        userId: user.uid,
+                        userName: settings.displayName || user.displayName || "Champion",
+                        userEmail: user.email || `${user.uid}@nexora.app`,
+                        lastLuckySeedId: seedId,
+                        lastLuckySeedName: gardenState.pendingLootSeed?.seedName || "Unknown Seed",
+                        lastLuckySeedType: "lucky_seed_drop",
+                        lastLuckySeedAt: serverTimestamp(),
+                        updatedAt: serverTimestamp(),
+                      }, { merge: true }).catch((err) => console.error("Failed to log lucky seed drop:", err));
+                    }
+
                     showToast(`Saved ${gardenState.pendingLootSeed?.seedName} direct to inventory vault! 🎒🌱`, 'success');
                   } else {
                     setGardenState({

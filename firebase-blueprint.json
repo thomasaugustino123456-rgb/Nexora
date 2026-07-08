@@ -428,6 +428,116 @@
     "/reports/{reportId}": {
       "schema": { "$ref": "UserReport" },
       "description": "User feedback and reports"
+    },
+    "/challenges/{userId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "userName": { "type": "string" },
+          "userEmail": { "type": "string" },
+          "counter": { "type": "number" },
+          "lastChallengeId": { "type": "string" },
+          "lastChallengeName": { "type": "string" },
+          "lastChallengeType": { "type": "string" },
+          "lastCompletedAt": { "type": "string" },
+          "updatedAt": { "type": "string" }
+        }
+      },
+      "description": "User completed challenges summary and last challenge details"
+    },
+    "/rewards/{userId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "userName": { "type": "string" },
+          "userEmail": { "type": "string" },
+          "coins": { "type": "number" },
+          "streak": { "type": "number" },
+          "xp": { "type": "number" },
+          "points": { "type": "number" },
+          "lastRewardReceivedAt": { "type": "string" },
+          "lastRewardSource": { "type": "string" },
+          "updatedAt": { "type": "string" }
+        }
+      },
+      "description": "User rewards (Coins, Streaks, XP, Points) and history synced under user UID"
+    },
+
+    "/plants/{userId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "userName": { "type": "string" },
+          "userEmail": { "type": "string" },
+          "plantState": { "type": "object" },
+          "plantsProgress": { "type": "object" },
+          "gardenState": { "type": "object" },
+          "seedsInventory": { "type": "object" },
+          "purchasedEcosystemItemIds": { "type": "array" },
+          "lastLuckySeedDrop": { "type": "object" },
+          "updatedAt": { "type": "string" }
+        }
+      },
+      "description": "User plants, garden grids, seeds inventory, and plant sections"
+    },
+    "/stats/{userId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "userName": { "type": "string" },
+          "userEmail": { "type": "string" },
+          "stats": { "type": "object" },
+          "dailyProgress": { "type": "object" },
+          "updatedAt": { "type": "string" }
+        }
+      },
+      "description": "User statistics, streaks, and progress records"
+    },
+    "/shop_purchases/{userId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "userName": { "type": "string" },
+          "userEmail": { "type": "string" },
+          "purchases": { "type": "array" },
+          "updatedAt": { "type": "string" }
+        }
+      },
+      "description": "User purchases history from the Shop and Merchant section synced under user UID"
+    },
+    "/library/{userId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "userName": { "type": "string" },
+          "userEmail": { "type": "string" },
+          "inventory": { "type": "array" },
+          "savedVideos": { "type": "array" },
+          "savedDrawings": { "type": "array" },
+          "savedChallengeIds": { "type": "array" },
+          "updatedAt": { "type": "string" }
+        }
+      },
+      "description": "User library collection with skin inventories, sketches, saved media clips"
+    },
+    "/notebooks/{userId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "userName": { "type": "string" },
+          "userEmail": { "type": "string" },
+          "notes": { "type": "array" },
+          "updatedAt": { "type": "string" }
+        }
+      },
+      "description": "User written notebooks and brain dumps synced under user UID"
     }
   }
 }

@@ -215,22 +215,22 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
         return (
           <div key="stats" className="glass-card p-6 flex flex-col gap-6 border-[#E9E4D4]/50 shadow-[0_8px_30px_rgb(79,63,52,0.04)] rounded-[24px] transition-all">
             {/* Bento Stats Grid */}
-            <div className="flex flex-col md:flex-row items-stretch justify-between gap-6 w-full">
-              <div className="grid grid-cols-3 gap-3 md:gap-6 flex-1">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 w-full">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 flex-1 w-full">
                 {/* Streak Metric */}
                 <motion.div 
                   id="metric-streak"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className="flex flex-col items-center justify-center p-2 rounded-xl bg-orange-500/[0.04] border border-orange-500/10 shadow-sm select-none cursor-pointer min-w-0 flex-1 mx-0.5"
+                  className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-orange-500/[0.04] border border-orange-500/12 shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5"
                 >
-                  <span className="text-[8px] font-black text-orange-600/60 uppercase tracking-widest text-center block mb-1">Streak</span>
-                  <div className="flex flex-col items-center gap-1 w-full">
-                    <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/10 flex-shrink-0">
-                      <Flame size={13} strokeWidth={2.2} />
+                  <span className="text-[9px] font-black text-orange-600/70 uppercase tracking-widest text-center block mb-1.5">Streak</span>
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/15 flex-shrink-0">
+                      <Flame size={14} strokeWidth={2.2} />
                     </div>
-                    <span className="text-[11px] sm:text-xs md:text-sm font-black text-[#4F3F34] tracking-tight truncate max-w-full block text-center">
+                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible">
                       {stats.streak}
                     </span>
                   </div>
@@ -242,14 +242,14 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className="flex flex-col items-center justify-center p-2 rounded-xl bg-blue-500/[0.04] border border-blue-500/10 shadow-sm select-none cursor-pointer min-w-0 flex-1 mx-0.5"
+                  className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-blue-500/[0.04] border border-blue-500/12 shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5"
                 >
-                  <span className="text-[8px] font-black text-[#69C496]/80 uppercase tracking-widest text-center block mb-1">XP</span>
-                  <div className="flex flex-col items-center gap-1 w-full">
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#69C496] to-[#58B383] flex items-center justify-center text-white shadow-md shadow-[#69C496]/10 flex-shrink-0">
-                      <Star size={13} strokeWidth={2.2} />
+                  <span className="text-[9px] font-black text-blue-600/70 uppercase tracking-widest text-center block mb-1.5">XP</span>
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#69C496] to-[#58B383] flex items-center justify-center text-white shadow-md shadow-[#69C496]/15 flex-shrink-0">
+                      <Star size={14} strokeWidth={2.2} />
                     </div>
-                    <span className="text-[11px] sm:text-xs md:text-sm font-black text-[#4F3F34] tracking-tight truncate max-w-full block text-center">
+                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible">
                       {stats.xp || 0}
                     </span>
                   </div>
@@ -261,14 +261,14 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className="flex flex-col items-center justify-center p-2 rounded-xl bg-amber-500/[0.04] border border-amber-500/10 shadow-sm select-none cursor-pointer min-w-0 flex-1 mx-0.5"
+                  className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-amber-500/[0.04] border border-amber-500/12 shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5"
                 >
-                  <span className="text-[8px] font-black text-amber-600/60 uppercase tracking-widest text-center block mb-1">Coins</span>
-                  <div className="flex flex-col items-center gap-1 w-full">
-                    <div className="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-500/10 flex-shrink-0">
-                      <Coins size={13} strokeWidth={2.2} />
+                  <span className="text-[9px] font-black text-amber-600/70 uppercase tracking-widest text-center block mb-1.5">Coins</span>
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-500/15 flex-shrink-0">
+                      <Coins size={14} strokeWidth={2.2} />
                     </div>
-                    <span className="text-[11px] sm:text-xs md:text-sm font-black text-[#4F3F34] tracking-tight truncate max-w-full block text-center">
+                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible">
                       {stats.coins || 0}
                     </span>
                   </div>
@@ -276,7 +276,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
               </div>
 
               {/* Quick Actions Toolbar */}
-              <div className="flex items-center justify-start md:justify-end gap-3 px-1">
+              <div className="flex items-center justify-center sm:justify-end gap-3 px-1 w-full sm:w-auto flex-shrink-0">
                 <button 
                   onClick={() => {
                     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);

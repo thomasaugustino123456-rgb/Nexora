@@ -123,7 +123,6 @@ export interface UserSettings {
   };
   lastFeedbackPromptDate?: string;
   feedbackSubmitted?: boolean;
-  isWalkthroughCompleted?: boolean;
   readBookIds?: string[];
   bookClaimTimestamps?: Record<string, number>;
   profilePrivacy?: "public" | "private";
@@ -139,6 +138,9 @@ export interface UserSettings {
   accountName?: string;
   email?: string;
   time?: string;
+  date?: string;
+  Date?: string;
+  "Email address"?: string;
 }
 
 export interface ShopItem {

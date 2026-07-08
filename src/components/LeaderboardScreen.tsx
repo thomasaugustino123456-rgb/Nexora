@@ -234,7 +234,7 @@ export function LeaderboardScreen({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
       transition={{ duration: 0.35 }}
-      className="flex flex-col min-h-screen bg-gradient-to-b from-[#F3F7FA] via-white to-white pb-32 overflow-x-hidden"
+      className="flex flex-col w-full pb-32"
     >
       {/* 1. Header Navigation - Styled like the high-contrast archives bar */}
       <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-slate-100 shadow-sm">
@@ -263,14 +263,14 @@ export function LeaderboardScreen({
           </div>
         </div>
         
-        <div className="flex items-center gap-5 overflow-x-auto py-2 px-1 no-scrollbar">
+        <div className="flex flex-wrap items-center justify-center gap-4 py-3 px-1">
           {LEAGUES.map((l, i) => {
             const isActive = l === currentLeague;
             const isCompleted = i < leagueIndex;
             return (
-              <div key={l} className="flex flex-col items-center gap-2 flex-shrink-0 relative">
+              <div key={l} className="flex flex-col items-center gap-2 relative">
                 <div className="relative">
-                  <LeagueIcon league={l} active={isActive || isCompleted} className="w-15 h-15 transition-transform duration-300 hover:scale-110" />
+                  <LeagueIcon league={l} active={isActive || isCompleted} className="w-13 h-13 transition-transform duration-300 hover:scale-110" />
                   {isCompleted && (
                     <div className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full p-1 border border-white text-white shadow-md">
                       <CheckCircle2 size={11} className="fill-emerald-500 text-white" />
@@ -282,7 +282,7 @@ export function LeaderboardScreen({
                     </div>
                   )}
                 </div>
-                <span className={`text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-blue-900 font-extrabold' : 'text-slate-400'}`}>
+                <span className={`text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-blue-900 font-extrabold' : 'text-slate-400'}`}>
                   {l}
                 </span>
               </div>
@@ -313,34 +313,34 @@ export function LeaderboardScreen({
 
       {/* Dynamic Prize Chest and Claim Panel */}
       <div className="px-6 py-2">
-        <div className="bg-gradient-to-r from-blue-950 via-indigo-950 to-slate-900 text-white rounded-[2rem] p-5 shadow-2xl relative overflow-hidden border-2 border-indigo-500/30">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <TrophyIcon size={120} className="text-yellow-400 rotate-12" />
+        <div className="bg-slate-50 border-2 border-slate-100 text-slate-800 rounded-[2rem] p-5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-5">
+            <TrophyIcon size={120} className="text-yellow-600 rotate-12" />
           </div>
 
           <div className="relative z-10 space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">
                 Weekly Prize Chest
               </span>
-              <span className="text-[10px] bg-indigo-500/20 text-indigo-200 border border-indigo-400/20 px-2.5 py-1 rounded-full font-black uppercase">
+              <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full font-black uppercase">
                 Reset Weekly
               </span>
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-4xl shadow-inner shadow-black/40 animate-pulse">
+              <div className="w-16 h-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-4xl shadow-sm animate-pulse">
                 {userRank > 0 && userRank <= 3 ? "🏆" : userRank >= 4 && userRank <= 10 ? "🥇" : userRank >= 11 && userRank <= 16 ? "🥈" : "🎗️"}
               </div>
               <div className="min-w-0 flex-1">
-                <h4 className="text-sm font-black uppercase tracking-tight truncate">
+                <h4 className="text-sm font-black uppercase tracking-tight truncate text-slate-800">
                   {userRank > 0 && userRank <= 16 
                     ? `Congratulations, bro!` 
                     : userRank > 16 
                       ? `Progress Recognition` 
                       : `Unranked`}
                 </h4>
-                <p className="text-[11px] text-slate-300 font-medium leading-tight">
+                <p className="text-[11px] text-slate-500 font-medium leading-tight">
                   {userRank === 1 
                     ? `You are Rank #1! You've earned the ultimate weekly championship: 250 Coins, Golden Trophy, and +150 XP Bonus, bro! 🔥`
                     : userRank > 1 && userRank <= 16
@@ -354,17 +354,17 @@ export function LeaderboardScreen({
 
             {/* Reward Claim Parameters */}
             {userRank > 0 && userRank <= 16 ? (
-              <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+              <div className="pt-2 border-t border-slate-150 flex items-center justify-between">
                 <div>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Calculated Reward</p>
-                  <p className="text-sm font-black text-yellow-400 flex flex-col leading-tight">
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Calculated Reward</p>
+                  <p className="text-sm font-black text-amber-600 flex flex-col leading-tight">
                     <span>🪙 +{userRank === 1 ? 250 : userRank === 2 ? 200 : userRank === 3 ? 150 : userRank <= 10 ? 100 : 75} Coins</span>
-                    {userRank === 1 && <span className="text-[9px] text-amber-300 font-bold uppercase tracking-wider">+150 XP & Golden Trophy</span>}
+                    {userRank === 1 && <span className="text-[9px] text-amber-600 font-bold uppercase tracking-wider">+150 XP & Golden Trophy</span>}
                   </p>
                 </div>
                 {hasClaimedThisWeek ? (
-                  <div className="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 px-4 py-2 rounded-xl text-xs font-black uppercase shadow-lg">
-                    <CheckCircle2 size={14} className="text-emerald-400" />
+                  <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-2 rounded-xl text-xs font-black uppercase shadow-sm">
+                    <CheckCircle2 size={14} className="text-emerald-500" />
                     <span>Claimed</span>
                   </div>
                 ) : (
@@ -380,28 +380,28 @@ export function LeaderboardScreen({
                 )}
               </div>
             ) : userRank > 16 ? (
-              <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+              <div className="pt-2 border-t border-slate-150 flex items-center justify-between">
                 <div>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Status Award</p>
-                  <p className="text-xs font-black text-emerald-400 uppercase tracking-wider">Progress Recognition Verified</p>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Status Award</p>
+                  <p className="text-xs font-black text-emerald-600 uppercase tracking-wider">Progress Recognition Verified</p>
                 </div>
-                <div className="text-[10px] bg-white/15 px-3 py-1.5 rounded-xl text-slate-300 font-bold uppercase tracking-wider">
+                <div className="text-[10px] bg-slate-100 px-3 py-1.5 rounded-xl text-slate-600 font-bold uppercase tracking-wider border border-slate-150">
                   Baseline Secured
                 </div>
               </div>
             ) : (
-              <div className="pt-2 border-t border-white/10 grid grid-cols-3 gap-2 text-center">
-                <div className="bg-white/5 border border-white/10 rounded-xl p-2">
-                  <p className="text-[8px] font-black text-yellow-400 uppercase">Top 1 - 3 Rewards</p>
-                  <p className="text-[10px] font-black text-white">Up to 250 🪙</p>
+              <div className="pt-2 border-t border-slate-150 grid grid-cols-3 gap-2 text-center">
+                <div className="bg-white border border-slate-200 rounded-xl p-2">
+                  <p className="text-[8px] font-black text-yellow-600 uppercase">Top 1 - 3 Rewards</p>
+                  <p className="text-[10px] font-black text-slate-800">Up to 250 🪙</p>
                 </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-2">
-                  <p className="text-[8px] font-black text-indigo-300 uppercase">Top 4 - 10 Rewards</p>
-                  <p className="text-[10px] font-black text-white">100 🪙</p>
+                <div className="bg-white border border-slate-200 rounded-xl p-2">
+                  <p className="text-[8px] font-black text-blue-600 uppercase">Top 4 - 10 Rewards</p>
+                  <p className="text-[10px] font-black text-slate-800">100 🪙</p>
                 </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-2">
-                  <p className="text-[8px] font-black text-slate-300 uppercase">Top 11 - 16 Rewards</p>
-                  <p className="text-[10px] font-black text-white">75 🪙</p>
+                <div className="bg-white border border-slate-200 rounded-xl p-2">
+                  <p className="text-[8px] font-black text-slate-500 uppercase">Top 11 - 16 Rewards</p>
+                  <p className="text-[10px] font-black text-slate-800">75 🪙</p>
                 </div>
               </div>
             )}
@@ -469,7 +469,7 @@ export function LeaderboardScreen({
 
                     {/* Profile Picture / Avatar */}
                     <div className="relative">
-                      {entry.photoURL ? (
+                      {isCurrentUser && entry.photoURL ? (
                         <img 
                           src={entry.photoURL} 
                           alt={entry.displayName} 
@@ -478,8 +478,8 @@ export function LeaderboardScreen({
                           loading="lazy" 
                         />
                       ) : (
-                        <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm bg-gradient-to-tr from-blue-100 to-indigo-150 text-blue-700 ring-2 ring-white/35 shadow-sm">
-                          {(entry.displayName || 'U').charAt(0).toUpperCase()}
+                        <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm bg-gradient-to-tr from-slate-100 to-slate-250 text-slate-500 ring-2 ring-white/35 shadow-sm">
+                          👤
                         </div>
                       )}
                       {isTop3 && (
@@ -492,14 +492,16 @@ export function LeaderboardScreen({
                     {/* Name and Level Details */}
                     <div className="flex-1 min-w-0">
                       <h4 className={`font-black text-sm uppercase tracking-wide truncate ${textColor}`}>
-                        {entry.displayName || "Nexora Champion"}
+                        {isCurrentUser ? (entry.displayName || "Nexora Champion") : `Competitor #${rank}`}
                         {isCurrentUser && <span className="ml-1.5 font-bold text-[8px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">You</span>}
                       </h4>
                       
                       <div className="flex items-center gap-2 mt-1">
-                        <div className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-150">
-                          Lvl {entry.level || 1}
-                        </div>
+                        {isCurrentUser && (
+                          <div className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-150">
+                            Lvl {entry.level || 1}
+                          </div>
+                        )}
 
                         <div className="flex items-center gap-1.5 text-[10px] font-black tracking-tight">
                           <Flame size={11} className="text-orange-500" />

@@ -1,17 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { User as FirebaseUser } from "firebase/auth";
 import {
   doc,
   getDoc,
   getDocs,
-  setDoc,
+  setDoc as firestoreSetDoc,
   serverTimestamp,
   onSnapshot,
   collection,
   getDocFromCache,
   getDocsFromCache,
 } from "firebase/firestore";
-import { db, handleFirestoreError, OperationType } from "../firebase";
-import { getSupabase } from "../lib/supabase";
+import { db, auth, handleFirestoreError, OperationType, onAuthStateChanged } from "../firebase";
 import { UserSettings, UserStats, DailyProgress } from "../types";
 import { GardenState, createInitialGardenState } from "../types/garden";
 
@@ -40,6 +40,36 @@ function deepEqual(a: any, b: any): boolean {
   }
   return a !== a && b !== b;
 }
+
+function cleanPayload<T>(obj: T): T {
+  if (obj === null || obj === undefined) return null as any;
+  if (typeof obj !== "object") return obj;
+  if (obj instanceof Date) return obj as any;
+  // Preserve Firestore FieldValue and special database objects
+  if (
+    (obj as any)._methodName || 
+    (obj as any).constructor?.name?.includes('FieldValue') ||
+    (obj as any)._sentinel ||
+    typeof (obj as any).isEqual === 'function'
+  ) {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(cleanPayload) as any;
+  }
+  const cleaned: any = {};
+  for (const key of Object.keys(obj)) {
+    const val = (obj as any)[key];
+    if (val !== undefined) {
+      cleaned[key] = cleanPayload(val);
+    }
+  }
+  return cleaned;
+}
+
+const setDoc = (reference: any, data: any, options?: any) => {
+  return firestoreSetDoc(reference, cleanPayload(data), options);
+};
 
 const today = new Date().toISOString().split("T")[0];
 
@@ -72,8 +102,8 @@ export function useNexoraData(
   // This provides instant 100ms startup and bulletproof offline support.
   // Otherwise, we keep the splash loader active (loading = true) until we resolve user state from Firestore,
   // preventing user onboarding flashes/redirection glitches on slow connections.
-  const [loading, setLoading] = useState(cachedUserId ? (cachedOnboarding ? false : true) : false);
-  const [isDataReady, setIsDataReady] = useState(cachedUserId ? (cachedOnboarding ? true : false) : false);
+  const [loading, setLoading] = useState(true);
+  const [isDataReady, setIsDataReady] = useState(false);
 
   const cachedSettings = getCachedJson("nexora_settings", DEFAULT_SETTINGS);
   const cachedStats = getCachedJson("nexora_stats", DEFAULT_STATS);
@@ -173,23 +203,6 @@ export function useNexoraData(
   const [isHydrated, setIsHydrated] = useState(false);
   const dataLoadedFromFirestore = useRef(false);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await getSupabase().auth.getSession();
-        const currentUser = session?.user || null;
-        setUser(currentUser);
-        setAuthLoading(false);
-        setIsDataReady(true);
-        setLoading(false);
-      } catch (error) {
-        setAuthLoading(false);
-        setIsDataReady(true);
-        setLoading(false);
-      }
-    };
-    checkAuth();
-  }, []);
   const lastLoadedUserIdRef = useRef<string | null>(null);
   const quotaExceededRef = useRef(false);
   const lastSyncedRef = useRef<any>(null);
@@ -205,197 +218,324 @@ export function useNexoraData(
   const hasMatchedHydratedStateRef = useRef(false);
   const hydratedStateRef = useRef<any>(null);
 
-  /*
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+    let loadTimeout: any = null;
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       console.log(`[STARTUP] AUTH STATE RESOLVED - User UID: ${currentUser?.uid || "null"}`);
       setUser(currentUser);
 
       if (currentUser) {
-        // Run async load or create routine
-        const loadOrCreateUser = async () => {
-          try {
-            setAuthLoading(true);
-            const userDocRef = doc(db, "users", currentUser.uid);
-            const userSingularDocRef = doc(db, "user", currentUser.uid);
-            let userDocSnap = await getDoc(userDocRef);
-            
-            let docData: any = null;
-            
-            if (!userDocSnap.exists()) {
-              console.log(`[FIRESTORE] User not found at '${userDocRef.path}'. Checking fallback '${userSingularDocRef.path}'...`);
-              const userSingularSnap = await getDoc(userSingularDocRef);
-              if (userSingularSnap.exists()) {
-                console.log(`[FIRESTORE] User document found in Legacy '/user' path! Restoring profile from fallback...`);
-                userDocSnap = userSingularSnap;
-                docData = userSingularSnap.data();
-                // Backfill the '/users' collection immediately
-                await setDoc(userDocRef, docData);
-              }
+        localStorage.setItem("nexora_cached_user", currentUser.uid);
+        
+        let isTimeoutActive = false;
+        if (loadTimeout) clearTimeout(loadTimeout);
+        loadTimeout = setTimeout(() => {
+          if (dataLoadedFromFirestore.current) return;
+          console.warn("[PERSISTENCE TIMEOUT] Firestore load timed out after 8.5 seconds. Activating Offline Cache Mode with Write Lock to protect user data.");
+          isTimeoutActive = true;
+          blockAllWritesRef.current = true;
+          dataLoadedFromFirestore.current = true;
+          setIsHydrated(true);
+          setIsStateLoaded(true, "Offline Fallback Timeout activated");
+          hasMatchedHydratedStateRef.current = true;
+          setNeedsOnboarding(false);
+          setAuthLoading(false);
+          setIsDataReady(true);
+          setLoading(false);
+        }, 8500);
+
+        try {
+          setAuthLoading(true);
+          const userDocRef = doc(db, "users", currentUser.uid);
+          const userSingularDocRef = doc(db, "user", currentUser.uid);
+          let userDocSnap = await getDoc(userDocRef);
+          
+          let docData: any = null;
+          
+          if (!userDocSnap.exists()) {
+            console.log(`[FIRESTORE] User not found at '${userDocRef.path}'. Checking fallback '${userSingularDocRef.path}'...`);
+            const userSingularSnap = await getDoc(userSingularDocRef);
+            if (userSingularSnap.exists()) {
+              console.log(`[FIRESTORE] User document found in Legacy '/user' path! Restoring profile from fallback...`);
+              userDocSnap = userSingularSnap;
+              docData = userSingularSnap.data();
+              // Backfill the '/users' collection immediately
+              await setDoc(userDocRef, docData);
             }
+          }
+          
+          if (!userDocSnap.exists()) {
+            console.log(`[FIRESTORE] User not found in DB. Creating new user document at ${userDocRef.path} and ${userSingularDocRef.path}`);
             
-            if (!userDocSnap.exists()) {
-              console.log(`[FIRESTORE] User not found in DB. Creating new user document at ${userDocRef.path} and ${userSingularDocRef.path}`);
-              
-              const accountNameVal = currentUser.displayName || currentUser.email?.split('@')[0] || "Champion";
-              const newUserData = {
-                uid: currentUser.uid,
-                name: currentUser.displayName || "Champion",
-                displayName: currentUser.displayName || "Champion",
-                email: currentUser.email || `${currentUser.uid}@nexora.app`,
-                photoFileName: currentUser.photoURL || "",
-                "Photo file name": currentUser.photoURL || "",
-                profilePic: currentUser.photoURL || "",
-                location: "",
-                "Location": "",
-                time: new Date().toISOString(),
-                "Time": new Date().toISOString(),
-                accountName: accountNameVal,
-                "Account name": accountNameVal,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-                role: "user",
-                profilePrivacy: "private",
-                settings: {
-                  ...DEFAULT_SETTINGS,
-                  profilePrivacy: "private"
-                },
-                stats: DEFAULT_STATS,
-                garden: createInitialGardenState()
-              };
-              
-              await setDoc(userDocRef, newUserData);
-              await setDoc(userSingularDocRef, newUserData);
-              docData = newUserData;
-            } else {
-              docData = userDocSnap.data();
-              console.log(`[FIRESTORE] Loaded existing user document data:`, docData);
-              
-              // If a user is already registered but isn't in the database, add them there when they log in. 
-              // Add all necessary fields into their document: name, email, Photo file name, Location, Time, Account name.
-              const updates: any = {};
-              let needsUpdate = false;
-              
-              if (docData.name === undefined || docData["Name"] === undefined) {
-                const nameVal = docData.name || docData.displayName || currentUser.displayName || "Champion";
-                updates.name = nameVal;
-                updates["Name"] = nameVal;
-                needsUpdate = true;
-              }
-              if (docData.email === undefined || docData["Email"] === undefined) {
-                const emailVal = docData.email || currentUser.email || `${currentUser.uid}@nexora.app`;
-                updates.email = emailVal;
-                updates["Email"] = emailVal;
-                needsUpdate = true;
-              }
-              if (docData.photoFileName === undefined || docData["Photo file name"] === undefined || docData["Profile image"] === undefined) {
-                const picUrl = docData.profilePic || currentUser.photoURL || "";
-                updates.photoFileName = picUrl;
-                updates["Photo file name"] = picUrl;
-                updates["Profile image"] = picUrl;
-                needsUpdate = true;
-              }
-              if (docData.location === undefined || docData["Location"] === undefined) {
-                const locVal = docData.location || "";
-                updates.location = locVal;
-                updates["Location"] = locVal;
-                needsUpdate = true;
-              }
-              if (docData.time === undefined || docData["Time"] === undefined) {
-                const timeVal = docData.time || new Date().toISOString();
-                updates.time = timeVal;
-                updates["Time"] = timeVal;
-                needsUpdate = true;
-              }
-              if (docData.accountName === undefined || docData["Account name"] === undefined) {
-                const actName = docData.accountName || currentUser.displayName || currentUser.email?.split('@')[0] || "Champion";
-                updates.accountName = actName;
-                updates["Account name"] = actName;
-                needsUpdate = true;
-              }
-              if (docData.profilePrivacy === undefined) {
-                updates.profilePrivacy = "private";
-                needsUpdate = true;
-              }
-              
-              if (needsUpdate) {
-                console.log(`[FIRESTORE] Backfilling missing profile fields for existing user doc:`, updates);
-                await setDoc(userDocRef, updates, { merge: true });
-                await setDoc(userSingularDocRef, updates, { merge: true });
-                docData = { ...docData, ...updates };
-              }
-            }
-            
-            if (docData) {
-              const mappedSettings = {
+            const accountNameVal = currentUser.displayName || currentUser.email?.split('@')[0] || "Champion";
+            const newUserData = {
+              uid: currentUser.uid,
+              name: currentUser.displayName || "Champion",
+              displayName: currentUser.displayName || "Champion",
+              "Name": currentUser.displayName || "Champion",
+              email: currentUser.email || `${currentUser.uid}@nexora.app`,
+              "Email": currentUser.email || `${currentUser.uid}@nexora.app`,
+              "Email address": currentUser.email || `${currentUser.uid}@nexora.app`,
+              photoFileName: currentUser.photoURL || "",
+              "Photo file name": currentUser.photoURL || "",
+              profilePic: currentUser.photoURL || "",
+              "Profile image": currentUser.photoURL || "",
+              location: "",
+              "Location": "",
+              time: new Date().toISOString(),
+              "Time": new Date().toISOString(),
+              date: new Date().toISOString(),
+              "Date": new Date().toISOString(),
+              accountName: accountNameVal,
+              "Account name": accountNameVal,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+              role: "user",
+              profilePrivacy: "private",
+              settings: {
                 ...DEFAULT_SETTINGS,
-                ...(docData.settings || {}),
-                displayName: docData.name || docData.displayName || (docData.settings?.displayName) || currentUser.displayName || "Champion",
-                profilePic: docData.photoFileName || docData.profilePic || (docData.settings?.profilePic) || currentUser.photoURL || "",
-                location: docData.location || docData["Location"] || (docData.settings?.location) || "",
-                accountName: docData.accountName || docData["Account name"] || (docData.settings?.accountName) || currentUser.displayName || currentUser.email?.split('@')[0] || "Champion",
-                email: docData.email || (docData.settings?.email) || currentUser.email || "",
-                time: docData.time || docData["Time"] || (docData.settings?.time) || new Date().toISOString()
-              };
-              
-              const mappedStats = {
-                ...DEFAULT_STATS,
-                ...(docData.stats || {}),
-              };
-              
-              const mappedGarden = {
-                ...createInitialGardenState(),
-                ...(docData.garden || {}),
-              };
-              
-              rawSetSettings(mappedSettings);
-              rawSetStats(mappedStats);
-              rawSetGardenState(mappedGarden);
-              
-              localStorage.setItem("nexora_settings", JSON.stringify(mappedSettings));
-              localStorage.setItem("nexora_stats", JSON.stringify(mappedStats));
-              localStorage.setItem("nexora_garden", JSON.stringify(mappedGarden));
-              
-              hydratedStateRef.current = {
-                s: mappedSettings,
-                st: mappedStats,
-                g: mappedGarden
-              };
-              
-              lastSyncedRef.current = {
-                s: mappedSettings,
-                st: mappedStats,
-                p: {
-                  c: dailyProgress.completed,
-                  cc: dailyProgress.completionsCount,
-                  d: dailyProgress.date,
-                },
-                g: mappedGarden
-              };
+                profilePrivacy: "private",
+                onboardingCompleted: false
+              },
+              stats: DEFAULT_STATS,
+              garden: createInitialGardenState()
+            };
+            
+            await setDoc(userDocRef, newUserData);
+            await setDoc(userSingularDocRef, newUserData);
+            docData = newUserData;
+          } else {
+            docData = userDocSnap.data();
+            console.log(`[FIRESTORE] Loaded existing user document data:`, docData);
+            
+            // Backfill profile fields if missing
+            const updates: any = {};
+            let needsUpdate = false;
+            
+            if (docData.name === undefined || docData["Name"] === undefined) {
+              const nameVal = docData.name || docData.displayName || currentUser.displayName || "Champion";
+              updates.name = nameVal;
+              updates["Name"] = nameVal;
+              needsUpdate = true;
+            }
+            if (docData.email === undefined || docData["Email"] === undefined) {
+              const emailVal = docData.email || currentUser.email || `${currentUser.uid}@nexora.app`;
+              updates.email = emailVal;
+              updates["Email"] = emailVal;
+              needsUpdate = true;
+            }
+            if (docData.photoFileName === undefined || docData["Photo file name"] === undefined || docData["Profile image"] === undefined) {
+              const picUrl = docData.profilePic || currentUser.photoURL || "";
+              updates.photoFileName = picUrl;
+              updates["Photo file name"] = picUrl;
+              updates["Profile image"] = picUrl;
+              needsUpdate = true;
+            }
+            if (docData.location === undefined || docData["Location"] === undefined) {
+              const locVal = docData.location || "";
+              updates.location = locVal;
+              updates["Location"] = locVal;
+              needsUpdate = true;
+            }
+            if (docData.time === undefined || docData["Time"] === undefined) {
+              const timeVal = docData.time || new Date().toISOString();
+              updates.time = timeVal;
+              updates["Time"] = timeVal;
+              needsUpdate = true;
+            }
+            if (docData.accountName === undefined || docData["Account name"] === undefined) {
+              const actName = docData.accountName || currentUser.displayName || currentUser.email?.split('@')[0] || "Champion";
+              updates.accountName = actName;
+              updates["Account name"] = actName;
+              needsUpdate = true;
+            }
+            if (docData.profilePrivacy === undefined) {
+              updates.profilePrivacy = "private";
+              needsUpdate = true;
             }
             
-            dataLoadedFromFirestore.current = true;
-            setIsHydrated(true);
-            setIsStateLoaded(true, "Auth state resolved with loaded Firestore data");
-            hasMatchedHydratedStateRef.current = true;
-            setNeedsOnboarding(false);
-          } catch (error) {
-            handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
+            if (needsUpdate) {
+              console.log(`[FIRESTORE] Backfilling missing profile fields for existing user doc:`, updates);
+              await setDoc(userDocRef, updates, { merge: true });
+              await setDoc(userSingularDocRef, updates, { merge: true });
+              docData = { ...docData, ...updates };
+            }
+          }
+          
+          if (docData) {
+            // Robust multi-layered onboarding status check
+            let onboardingData: any = null;
+            try {
+              const onboardingIDRef = doc(db, "onboardingID", currentUser.uid);
+              const onboardingIDSnap = await getDoc(onboardingIDRef);
+              if (onboardingIDSnap.exists()) {
+                onboardingData = onboardingIDSnap.data();
+                console.log(`[FIRESTORE] Loaded dedicated onboardingID data:`, onboardingData);
+              } else {
+                // Check users subcollection onboarding/main
+                const onboardingSubdocRef = doc(db, "users", currentUser.uid, "onboarding", "main");
+                const onboardingSubdocSnap = await getDoc(onboardingSubdocRef);
+                if (onboardingSubdocSnap.exists()) {
+                  onboardingData = onboardingSubdocSnap.data();
+                  console.log(`[FIRESTORE] Loaded users/${currentUser.uid}/onboarding/main data:`, onboardingData);
+                }
+              }
+            } catch (onboardingErr) {
+              console.error("[FIRESTORE] Error reading dedicated onboarding documents:", onboardingErr);
+            }
+
+            const finalOnboardingCompleted = 
+              (onboardingData?.newUsersOnboardingCompleted === true) || 
+              (docData.onboardingCompleted === true) || 
+              (docData.settings?.onboardingCompleted === true) || 
+              false;
+              
+            const finalPlantOnboardingCompleted = 
+              (onboardingData?.plantSectionOnboardingCompleted === true) || 
+              (docData.plantOnboardingCompleted === true) || 
+              (docData.settings?.plantOnboardingCompleted === true) || 
+              false;
+              
+            const finalSpaceOnboardingCompleted = 
+              (docData.spaceOnboardingCompleted === true) ||
+              (docData.settings?.spaceOnboardingCompleted === true) ||
+              false;
+
+            const mappedSettings = {
+              ...DEFAULT_SETTINGS,
+              ...(docData.settings || {}),
+              
+              // Apply root-level or nested settings fields that may have been saved flatly
+              onboardingCompleted: finalOnboardingCompleted,
+              plantOnboardingCompleted: finalPlantOnboardingCompleted,
+              spaceOnboardingCompleted: finalSpaceOnboardingCompleted,
+              spaceHouseUnlocked: docData.spaceHouseUnlocked ?? docData.settings?.spaceHouseUnlocked ?? DEFAULT_SETTINGS.spaceHouseUnlocked,
+              hasEnteredGarden: docData.hasEnteredGarden ?? docData.settings?.hasEnteredGarden ?? DEFAULT_SETTINGS.hasEnteredGarden,
+              isReelsDisabled: docData.isReelsDisabled ?? docData.settings?.isReelsDisabled ?? DEFAULT_SETTINGS.isReelsDisabled,
+              joinedCircleIds: docData.joinedCircleIds ?? docData.settings?.joinedCircleIds ?? DEFAULT_SETTINGS.joinedCircleIds,
+              notifEnabledCircleIds: docData.notifEnabledCircleIds ?? docData.settings?.notifEnabledCircleIds ?? DEFAULT_SETTINGS.notifEnabledCircleIds,
+              workType: docData.workType ?? docData.settings?.workType ?? DEFAULT_SETTINGS.workType,
+              energyPeak: docData.energyPeak ?? docData.settings?.energyPeak ?? DEFAULT_SETTINGS.energyPeak,
+              priorityFocus: docData.priorityFocus ?? docData.settings?.priorityFocus ?? DEFAULT_SETTINGS.priorityFocus,
+              commitmentLevel: docData.commitmentLevel ?? docData.settings?.commitmentLevel ?? DEFAULT_SETTINGS.commitmentLevel,
+              archivedOfficialChallenges: docData.archivedOfficialChallenges ?? docData.settings?.archivedOfficialChallenges ?? DEFAULT_SETTINGS.archivedOfficialChallenges,
+              isPro: docData.isPro ?? docData.settings?.isPro ?? DEFAULT_SETTINGS.isPro,
+              lowPowerMode: docData.lowPowerMode ?? docData.settings?.lowPowerMode ?? DEFAULT_SETTINGS.lowPowerMode,
+              performanceMode: docData.performanceMode ?? docData.settings?.performanceMode ?? DEFAULT_SETTINGS.performanceMode,
+              soundEnabled: docData.soundEnabled ?? docData.settings?.soundEnabled ?? DEFAULT_SETTINGS.soundEnabled,
+              notificationsEnabled: docData.notificationsEnabled ?? docData.settings?.notificationsEnabled ?? DEFAULT_SETTINGS.notificationsEnabled,
+              showQuotes: docData.showQuotes ?? docData.settings?.showQuotes ?? DEFAULT_SETTINGS.showQuotes,
+              pushupsGoal: docData.pushupsGoal ?? docData.settings?.pushupsGoal ?? DEFAULT_SETTINGS.pushupsGoal,
+              waterGoal: docData.waterGoal ?? docData.settings?.waterGoal ?? DEFAULT_SETTINGS.waterGoal,
+              activeHat: docData.activeHat ?? docData.settings?.activeHat ?? DEFAULT_SETTINGS.activeHat,
+              activeSkin: docData.activeSkin ?? docData.settings?.activeSkin ?? DEFAULT_SETTINGS.activeSkin,
+              themeColor: docData.themeColor ?? docData.settings?.themeColor ?? DEFAULT_SETTINGS.themeColor,
+              activeMascotSkin: docData.activeMascotSkin ?? docData.settings?.activeMascotSkin ?? DEFAULT_SETTINGS.activeMascotSkin,
+              activeMascotEffect: docData.activeMascotEffect ?? docData.settings?.activeMascotEffect ?? DEFAULT_SETTINGS.activeMascotEffect,
+              activeProfileFrame: docData.activeProfileFrame ?? docData.settings?.activeProfileFrame ?? DEFAULT_SETTINGS.activeProfileFrame,
+              activeAppTheme: docData.activeAppTheme ?? docData.settings?.activeAppTheme ?? DEFAULT_SETTINGS.activeAppTheme,
+              
+              displayName: docData.name || docData.displayName || (docData.settings?.displayName) || currentUser.displayName || "Champion",
+              profilePic: docData.photoFileName || docData.profilePic || (docData.settings?.profilePic) || currentUser.photoURL || "",
+              location: docData.location || docData["Location"] || (docData.settings?.location) || "",
+              accountName: docData.accountName || docData["Account name"] || (docData.settings?.accountName) || currentUser.displayName || currentUser.email?.split('@')[0] || "Champion",
+              email: docData.email || (docData.settings?.email) || currentUser.email || "",
+              time: docData.time || docData["Time"] || (docData.settings?.time) || new Date().toISOString()
+            };
             
-            // Fallback to local storage if offline/error so app continues functioning
-            dataLoadedFromFirestore.current = true;
-            setIsHydrated(true);
-            setIsStateLoaded(true, "Auth load failed, fallback to local cache");
-            hasMatchedHydratedStateRef.current = true;
-            setNeedsOnboarding(false);
-          } finally {
+            const mappedStats = {
+              ...DEFAULT_STATS,
+              ...(docData.stats || {}),
+            };
+            
+            const mappedGarden = {
+              ...createInitialGardenState(),
+              ...(docData.garden || {}),
+            };
+            
+            rawSetSettings(mappedSettings);
+            rawSetStats(mappedStats);
+            rawSetGardenState(mappedGarden);
+            
+            localStorage.setItem("nexora_settings", JSON.stringify(mappedSettings));
+            localStorage.setItem("nexora_stats", JSON.stringify(mappedStats));
+            localStorage.setItem("nexora_garden", JSON.stringify(mappedGarden));
+            
+            hydratedStateRef.current = {
+              s: mappedSettings,
+              st: mappedStats,
+              g: mappedGarden
+            };
+            
+            // Load Today's Progress if it exists
+            try {
+              const progressRef = doc(db, "users", currentUser.uid, "progress", today);
+              const progressSnap = await getDoc(progressRef);
+              if (progressSnap.exists()) {
+                const progData = progressSnap.data() as DailyProgress;
+                rawSetDailyProgress(progData);
+                localStorage.setItem("nexora_progress", JSON.stringify(progData));
+              } else {
+                const initialProgress = {
+                  date: today,
+                  completed: false,
+                  pushupsDone: false,
+                  waterDrank: 0,
+                  breathingDone: false,
+                  drawingDone: false,
+                  footballDone: false,
+                  bubblesDone: false,
+                  completionsCount: 0,
+                  customPlanCompleted: false,
+                  nextRestorationTime: null,
+                };
+                rawSetDailyProgress(initialProgress);
+                localStorage.setItem("nexora_progress", JSON.stringify(initialProgress));
+              }
+            } catch (pErr) {
+              console.error("[FIRESTORE] Error loading progress data:", pErr);
+            }
+
+            lastSyncedRef.current = {
+              s: mappedSettings,
+              st: mappedStats,
+              p: {
+                c: dailyProgress.completed,
+                cc: dailyProgress.completionsCount,
+                d: dailyProgress.date,
+              },
+              g: mappedGarden
+            };
+            
+            setNeedsOnboarding(!finalOnboardingCompleted);
+            if (finalOnboardingCompleted) {
+              localStorage.setItem("nexora_onboarding_completed", "true");
+            } else {
+              localStorage.removeItem("nexora_onboarding_completed");
+            }
+          }
+          
+          dataLoadedFromFirestore.current = true;
+          setIsHydrated(true);
+          setIsStateLoaded(false, "Auth state resolved with loaded Firestore data. Waiting for state matching.");
+          hasMatchedHydratedStateRef.current = false;
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
+          
+          // Fallback to local storage if offline/error so app continues functioning
+          dataLoadedFromFirestore.current = true;
+          setIsHydrated(true);
+          setIsStateLoaded(true, "Auth load failed, fallback to local cache");
+          hasMatchedHydratedStateRef.current = true;
+          setNeedsOnboarding(false);
+        } finally {
+          if (loadTimeout) clearTimeout(loadTimeout);
+          if (!isTimeoutActive) {
             setAuthLoading(false);
             setIsDataReady(true);
             setLoading(false);
           }
-        };
-        
-        loadOrCreateUser();
+        }
       } else {
         console.log(`[STARTUP] AUTH STATE RESOLVED - User logged out. Resetting local state.`);
         setUser(null);
@@ -420,21 +560,23 @@ export function useNexoraData(
         localStorage.removeItem("nexora_garden");
         localStorage.removeItem("nexora_progress");
         localStorage.removeItem("nexora_cached_user");
+        localStorage.removeItem("nexora_onboarding_completed");
 
         dataLoadedFromFirestore.current = false;
         setIsHydrated(false);
         setIsStateLoaded(false, "No user session");
         hasMatchedHydratedStateRef.current = false;
-        setNeedsOnboarding(false);
+        setNeedsOnboarding(true);
         setAuthLoading(false);
         setIsDataReady(true);
         setLoading(false);
       }
     });
-
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (loadTimeout) clearTimeout(loadTimeout);
+    };
   }, []);
-  */
   // Safe State Matching Gate: ensure React state matches the loaded/hydrated Firestore data
   // before unlocking the sync gate. This prevents empty default states from overwriting database records.
   useEffect(() => {
@@ -567,6 +709,7 @@ export function useNexoraData(
               location: settings.location || '',
               time: new Date().toISOString(),
               ...settings,
+              settings: settings,
               uid: user.uid,
               email: user.email || `${user.uid}@nexora.app`,
               role: 'user',
@@ -574,7 +717,7 @@ export function useNexoraData(
               garden: gardenState,
               isTodayCompleted: dailyProgress.completed,
               updatedAt: serverTimestamp(),
-              onboardingCompleted: true,
+              onboardingCompleted: settings.onboardingCompleted || false,
             };
 
             const rewardsPayload = {
@@ -605,7 +748,6 @@ export function useNexoraData(
             const onboardingPayload = {
               uid: user.uid,
               newUsersOnboardingCompleted: settings.onboardingCompleted || false,
-              appIntroductionOnboardingCompleted: settings.isWalkthroughCompleted || false,
               plantSectionOnboardingCompleted: settings.plantOnboardingCompleted || false,
               updatedAt: serverTimestamp(),
             };
@@ -613,6 +755,7 @@ export function useNexoraData(
             const rewardsDocRef = doc(db, "users", user.uid, "rewards", "main");
             const plantSectionDocRef = doc(db, "users", user.uid, "plant_section", "main");
             const onboardingDocRef = doc(db, "onboardingID", user.uid);
+            const onboardingSubdocRef = doc(db, "users", user.uid, "onboarding", "main");
 
             console.log(`[PERSISTENCE AUDIT] Write payload for core document:`, JSON.stringify(writePayload));
             
@@ -643,7 +786,55 @@ export function useNexoraData(
 
             await setDoc(onboardingDocRef, onboardingPayload, { merge: true });
             console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote onboarding subdocument to: ${onboardingDocRef.path}`);
+
+            await setDoc(onboardingSubdocRef, onboardingPayload, { merge: true });
+            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote onboarding subcollection document to: ${onboardingSubdocRef.path}`);
             
+            // 1. Plants Collection Sync
+            const plantsDocRef = doc(db, "plants", user.uid);
+            const plantsPayload = {
+              userId: user.uid,
+              userName: settings.displayName || user.displayName || 'Champion',
+              userEmail: user.email || `${user.uid}@nexora.app`,
+              plantState: settings.plantState || null,
+              plantsProgress: settings.plantsProgress || {},
+              gardenState: gardenState || null,
+              seedsInventory: gardenState?.inventory || {},
+              purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
+              lastLuckySeedDrop: gardenState?.pendingLootSeed || null,
+              updatedAt: serverTimestamp()
+            };
+            await setDoc(plantsDocRef, plantsPayload, { merge: true });
+            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote plants collection to: ${plantsDocRef.path}`);
+
+            // 2. Stats Collection Sync
+            const statsDocRef = doc(db, "stats", user.uid);
+            const statsPayload = {
+              userId: user.uid,
+              userName: settings.displayName || user.displayName || 'Champion',
+              userEmail: user.email || `${user.uid}@nexora.app`,
+              stats: stats,
+              dailyProgress: dailyProgress,
+              updatedAt: serverTimestamp()
+            };
+            await setDoc(statsDocRef, statsPayload, { merge: true });
+            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote stats collection to: ${statsDocRef.path}`);
+
+            // 3. Library Collection Sync
+            const libraryDocRef = doc(db, "library", user.uid);
+            const libraryPayload = {
+              userId: user.uid,
+              userName: settings.displayName || user.displayName || 'Champion',
+              userEmail: user.email || `${user.uid}@nexora.app`,
+              inventory: settings.inventory || [],
+              savedVideos: [],
+              savedDrawings: stats.drawings || [],
+              savedChallengeIds: settings.savedChallengeIds || [],
+              updatedAt: serverTimestamp()
+            };
+            await setDoc(libraryDocRef, libraryPayload, { merge: true });
+            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote library collection to: ${libraryDocRef.path}`);
+
             console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${userRef.path}`);
             const postSnap = await getDoc(userRef);
             console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${userRef.path}:`, postSnap.exists() ? JSON.stringify(postSnap.data()) : "Document does not exist");
@@ -881,6 +1072,7 @@ export function useNexoraData(
           location: settings.location || '',
           time: new Date().toISOString(),
           ...settings,
+          settings: settings,
           uid: user.uid,
           email: user.email || `${user.uid}@nexora.app`,
           role: 'user',
@@ -888,7 +1080,7 @@ export function useNexoraData(
           garden: gardenState,
           isTodayCompleted: dailyProgress.completed,
           updatedAt: serverTimestamp(),
-          onboardingCompleted: true,
+          onboardingCompleted: settings.onboardingCompleted || false,
         };
 
         const rewardsPayload = {
@@ -919,7 +1111,6 @@ export function useNexoraData(
         const onboardingPayload = {
           uid: user.uid,
           newUsersOnboardingCompleted: settings.onboardingCompleted || false,
-          appIntroductionOnboardingCompleted: settings.isWalkthroughCompleted || false,
           plantSectionOnboardingCompleted: settings.plantOnboardingCompleted || false,
           updatedAt: serverTimestamp(),
         };
@@ -927,6 +1118,7 @@ export function useNexoraData(
         const rewardsDocRef = doc(db, "users", user.uid, "rewards", "main");
         const plantSectionDocRef = doc(db, "users", user.uid, "plant_section", "main");
         const onboardingDocRef = doc(db, "onboardingID", user.uid);
+        const onboardingSubdocRef = doc(db, "users", user.uid, "onboarding", "main");
 
         console.log(`[PERSISTENCE AUDIT] Force sync payload for core document:`, JSON.stringify(writePayload));
 
@@ -954,6 +1146,54 @@ export function useNexoraData(
 
         await setDoc(onboardingDocRef, onboardingPayload, { merge: true });
         console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote onboarding subdocument to: ${onboardingDocRef.path}`);
+
+        await setDoc(onboardingSubdocRef, onboardingPayload, { merge: true });
+        console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote onboarding subcollection document to: ${onboardingSubdocRef.path}`);
+
+        // 1. Plants Collection Sync
+        const plantsDocRef = doc(db, "plants", user.uid);
+        const plantsPayload = {
+          userId: user.uid,
+          userName: settings.displayName || user.displayName || 'Champion',
+          userEmail: user.email || `${user.uid}@nexora.app`,
+          plantState: settings.plantState || null,
+          plantsProgress: settings.plantsProgress || {},
+          gardenState: gardenState || null,
+          seedsInventory: gardenState?.inventory || {},
+          purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
+          lastLuckySeedDrop: gardenState?.pendingLootSeed || null,
+          updatedAt: serverTimestamp()
+        };
+        await setDoc(plantsDocRef, plantsPayload, { merge: true });
+        console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote plants collection to: ${plantsDocRef.path}`);
+
+        // 2. Stats Collection Sync
+        const statsDocRef = doc(db, "stats", user.uid);
+        const statsPayload = {
+          userId: user.uid,
+          userName: settings.displayName || user.displayName || 'Champion',
+          userEmail: user.email || `${user.uid}@nexora.app`,
+          stats: stats,
+          dailyProgress: dailyProgress,
+          updatedAt: serverTimestamp()
+        };
+        await setDoc(statsDocRef, statsPayload, { merge: true });
+        console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote stats collection to: ${statsDocRef.path}`);
+
+        // 3. Library Collection Sync
+        const libraryDocRef = doc(db, "library", user.uid);
+        const libraryPayload = {
+          userId: user.uid,
+          userName: settings.displayName || user.displayName || 'Champion',
+          userEmail: user.email || `${user.uid}@nexora.app`,
+          inventory: settings.inventory || [],
+          savedVideos: [],
+          savedDrawings: stats.drawings || [],
+          savedChallengeIds: settings.savedChallengeIds || [],
+          updatedAt: serverTimestamp()
+        };
+        await setDoc(libraryDocRef, libraryPayload, { merge: true });
+        console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote library collection to: ${libraryDocRef.path}`);
 
         console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${userRef.path}`);
         const postSnap = await getDoc(userRef);

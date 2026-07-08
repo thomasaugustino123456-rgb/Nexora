@@ -76,9 +76,9 @@ export function SettingsScreen({
   // Selected language state (Mock)
   const [selectedLanguage, setSelectedLanguage] = React.useState('en');
 
-  // const hasPasswordProvider = user?.providerData?.some(
-  //   (provider) => provider.providerId === 'password'
-  // );
+  const hasPasswordProvider = user?.providerData?.some(
+    (provider) => provider.providerId === 'password'
+  );
 
   const handleSavePassword = async () => {
     // vibrate(15);

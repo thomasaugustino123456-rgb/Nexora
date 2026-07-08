@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Video, Plus, Search, X, MessageSquare, Heart, RefreshCw, Send, User, Trash2, Bookmark, Flag, EyeOff, Share2, Award, Zap, History, Camera } from 'lucide-react';
 import { FirebaseUser } from '../firebase';
-import { doc, collection, query, orderBy, onSnapshot, setDoc, updateDoc, increment, addDoc, deleteDoc, getDoc, limit } from 'firebase/firestore';
+import { doc, collection, query, orderBy, onSnapshot, setDoc, updateDoc, increment, addDoc, deleteDoc, getDoc, limit, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { NexusVideo, UserSettings, UserStats, Screen } from '../types';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
@@ -176,11 +176,17 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
 
   useEffect(() => {
     if (!user) return;
-    let q = query(collection(db, 'social_videos'), orderBy('createdAt', 'desc'), limit(30));
+    let q = query(collection(db, 'social_videos'), where('userId', '==', user.uid));
     console.log("Firestore Audit: Querying collection 'social_videos' in NexusVideoScreen...");
     const unsub = onSnapshot(q, (snapshot) => {
       console.log(`Firestore Audit: Collection 'social_videos' in NexusVideoScreen queried. Returned ${snapshot.size} documents.`);
-      setVideos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NexusVideo)));
+      const mapped = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NexusVideo));
+      mapped.sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+      });
+      setVideos(mapped.slice(0, 30));
     }, (err) => {
       console.error("Videos query error:", err);
       handleFirestoreError(err, OperationType.GET, 'social_videos');

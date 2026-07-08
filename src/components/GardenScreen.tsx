@@ -105,6 +105,26 @@ export const GardenScreen: React.FC<GardenScreenProps> = ({
           const added = addSeedToInventory(activeGarden, chosenId);
           dispatchUpdate(added);
 
+          // Log materialized seed to global plants collection under user UID
+          import('../firebase').then(({ auth, db }) => {
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+              import('firebase/firestore').then(({ doc, setDoc, serverTimestamp }) => {
+                const plantRef = doc(db, "plants", currentUser.uid);
+                setDoc(plantRef, {
+                  userId: currentUser.uid,
+                  userName: currentUser.displayName || 'Champion',
+                  userEmail: currentUser.email || `${currentUser.uid}@nexora.app`,
+                  lastLuckySeedId: chosenId,
+                  lastLuckySeedName: archetype.name,
+                  lastLuckySeedType: isLuckMaterialized ? "lucky_seed_materialized" : "standard_seed_materialized",
+                  lastLuckySeedAt: serverTimestamp(),
+                  updatedAt: serverTimestamp(),
+                }, { merge: true }).catch((err) => console.error("Failed to log seed discovery to plants collection:", err));
+              });
+            }
+          });
+
           setRevealedSeed(archetype);
           setGuessStatus('revealed');
           vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { UserStats, UserSettings } from '../types';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
 import { Mascot } from './Mascot';
@@ -90,6 +90,9 @@ export function PublicRankView({ userId, onClose }: PublicRankViewProps) {
 
   const { stats, settings } = data;
   const latestTrophy = stats.trophies?.[0];
+  const isOwner = auth.currentUser?.uid === userId;
+  const displayName = isOwner ? settings.displayName : "Competitor";
+  const activeHat = isOwner ? settings.activeHat : "none";
 
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-blue-50 to-white z-[2000] overflow-y-auto">
@@ -97,14 +100,14 @@ export function PublicRankView({ userId, onClose }: PublicRankViewProps) {
         <button onClick={onClose} className="absolute left-6 top-8 p-3 bg-white shadow-lg rounded-2xl text-blue-900 active:scale-90 transition-all">
           <ArrowLeft size={24} />
         </button>
-
+ 
         <div className="mt-12 mb-8 text-center space-y-2">
-           <h2 className="text-3xl font-black text-blue-900 italic uppercase italic tracking-tighter">
-             {settings.displayName}'s Rank
+           <h2 className="text-3xl font-black text-blue-900 italic uppercase tracking-tighter">
+             {displayName}'s Rank
            </h2>
            <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">Nexora Elite Profile</p>
         </div>
-
+ 
         {/* Level & Trophy Section */}
         <div className="w-full glass-card p-8 flex flex-col items-center gap-6 relative overflow-hidden">
            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500" />
@@ -112,17 +115,19 @@ export function PublicRankView({ userId, onClose }: PublicRankViewProps) {
            <div className="w-48 h-48 relative">
               <Mascot 
                 mood="happy" 
-                hat={settings.activeHat} 
+                hat={activeHat} 
                 className="w-full h-full drop-shadow-2xl" 
               />
            </div>
-
-           <div className="flex flex-col items-center gap-2">
-              <div className="text-5xl font-black text-blue-900">LV.{stats.level || 1}</div>
-              <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest">Current Prestige</p>
-           </div>
+ 
+           {isOwner && (
+             <div className="flex flex-col items-center gap-2">
+                <div className="text-5xl font-black text-blue-900">LV.{stats.level || 1}</div>
+                <p className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest">Current Prestige</p>
+             </div>
+           )}
         </div>
-
+ 
         <div className="grid grid-cols-2 gap-4 w-full mt-6">
            <div className="glass-card p-6 flex flex-col items-center gap-2">
               <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white">
@@ -140,8 +145,8 @@ export function PublicRankView({ userId, onClose }: PublicRankViewProps) {
               <p className="text-[8px] font-black text-blue-900/40 uppercase tracking-widest">Total Points</p>
            </div>
         </div>
-
-        {latestTrophy && (
+ 
+        {isOwner && latestTrophy && (
           <div className="w-full mt-6 glass-card p-8 flex flex-col items-center gap-4 bg-emerald-50/30 border-2 border-emerald-100">
              <div className="w-32 h-32">
                 {latestTrophy.type === 'golden' && <GoldenTrophy />}
