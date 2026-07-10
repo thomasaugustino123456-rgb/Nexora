@@ -861,16 +861,86 @@ async function startServer() {
       return res.status(400).json({ error: "Content is required" });
     }
 
+    // Helper for keyword-based offline/fallback mood analysis
+    const getKeywordBasedMoodAnalysis = (t: string, c: string) => {
+      const fullText = `${t} ${c}`.toLowerCase();
+      
+      if (/\b(sad|depress|lonely|down|cry|blue|grief|hurt|pain|broken|heartbroken)\b/.test(fullText)) {
+        return {
+          mood: "Melancholic & Reflective",
+          neural_insight: "Processing difficult emotions through writing decreases amygdala activation and reduces cognitive load.",
+          biological_recommendation: "Drink a glass of water, step away from the screen, and do a 1-minute calming breathing session, bro."
+        };
+      }
+      
+      if (/\b(tired|sleep|exhaust|burn|weary|drain|fatigue|sleepy|lazy|exhausted|burnout)\b/.test(fullText)) {
+        return {
+          mood: "Fatigued & Low Energy",
+          neural_insight: "Your neural systems are signaling a depletion in glycogen; writing allows executive memory offloading.",
+          biological_recommendation: "Stand up, stretch your arms high for 15 seconds, and hydrate to refresh your biological state, legend."
+        };
+      }
+      
+      if (/\b(anxious|stress|worry|panic|scare|fear|tension|overwhelm|nervous|stressed|frightened)\b/.test(fullText)) {
+        return {
+          mood: "Stressed & Overstimulated",
+          neural_insight: "Journaling complex concerns serves as a protective cognitive download, stabilizing your nervous system.",
+          biological_recommendation: "Inhale slowly for 4 seconds, hold for 4, exhale for 4 (box breathing) to regulate heart rate, champ."
+        };
+      }
+      
+      if (/\b(happy|excite|great|good|proud|awesome|win|accomplish|joy|glad|success|celebrate|superb)\b/.test(fullText)) {
+        return {
+          mood: "Elevated & Motivated",
+          neural_insight: "Documenting high-dopamine states hardwires neural reward pathways and sustains long-term consistency.",
+          biological_recommendation: "Do 5 quick push-ups to anchor this peak physical and mental momentum, absolute legend!"
+        };
+      }
+      
+      if (/\b(angry|frustrat|mad|annoy|hate|furious|irritate|rage|anger)\b/.test(fullText)) {
+        return {
+          mood: "Intense & Restless",
+          neural_insight: "Cathartic writing down-regulates elevated cortisol levels and allows logic centers to regain command.",
+          biological_recommendation: "Complete a 1-minute deep breathing session right now to release residual nervous tension, king."
+        };
+      }
+      
+      if (/\b(work|focus|study|code|learn|read|project|build|plan|goal|task|create|design)\b/.test(fullText)) {
+        return {
+          mood: "Focused & Analytical",
+          neural_insight: "Mapping out logical tasks structures fronto-striatal networks, accelerating productivity flow states.",
+          biological_recommendation: "Drink 200ml of water right now to optimize mental performance and eliminate cognitive fatigue, beast."
+        };
+      }
+
+      // Default introspective mood fallback
+      return {
+        mood: "Introspective & Focused",
+        neural_insight: "Translating your internal stream of consciousness into written form reinforces cognitive stability and focus.",
+        biological_recommendation: "Do a quick 1-minute deep breathing session to ground your attention, champ."
+      };
+    };
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.warn("AI Service: GEMINI_API_KEY missing. Using simulated response.");
-      return res.json({
-        mood: "Calm & Reflective",
-        neural_insight: "Writing down your ideas fosters cognitive stability and creative focus, bro.",
-        biological_recommendation: "Take 3 deep breaths then write down your next target milestone."
-      });
+      return res.json(getKeywordBasedMoodAnalysis(title || "", content));
     }
 
+    const prompt = `
+      Analyze this brain dump/note:
+      Title: ${title || "Untitled Note"}
+      Content: ${content}
+      
+      Return a JSON object:
+      {
+        "mood": "Short mood description",
+        "neural_insight": "One sentence psychological insight",
+        "biological_recommendation": "One physical action to take based on this mood"
+      }
+    `;
+
+    // 1. First Attempt: Use gemini-3.5-flash
     try {
       const ai = new GoogleGenAI({
         apiKey,
@@ -880,35 +950,47 @@ async function startServer() {
           }
         }
       });
-      const prompt = `
-        Analyze this brain dump/note:
-        Title: ${title || "Untitled Note"}
-        Content: ${content}
-        
-        Return a JSON object:
-        {
-          "mood": "Short mood description",
-          "neural_insight": "One sentence psychological insight",
-          "biological_recommendation": "One physical action to take based on this mood"
-        }
-      `;
-
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
         contents: prompt,
         config: { responseMimeType: "application/json" }
       });
 
-      if (!response || !response.text) {
-        throw new Error("Empty response from Gemini API");
+      if (response && response.text) {
+        const cleanText = response.text.trim();
+        return res.json(JSON.parse(cleanText));
       }
-
-      const cleanText = response.text.trim();
-      res.json(JSON.parse(cleanText));
     } catch (error: any) {
-      console.error("Server Note Analysis failed:", error);
-      res.status(500).json({ error: "Neural link interrupted. Please try again, bro." });
+      console.warn("[MODEL FALLBACK] Primary model (gemini-3.5-flash) failed, attempting gemini-3.1-flash-lite. Error:", error.message || error);
     }
+
+    // 2. Second Attempt: Fallback to gemini-3.1-flash-lite
+    try {
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-flash-lite",
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+
+      if (response && response.text) {
+        const cleanText = response.text.trim();
+        return res.json(JSON.parse(cleanText));
+      }
+    } catch (fallbackError: any) {
+      console.error("[MODEL FALLBACK FAILED] Secondary model (gemini-3.1-flash-lite) also failed. Error:", fallbackError.message || fallbackError);
+    }
+
+    // 3. Elegant Local Graceful Fallback: Never fail, guarantee a valid JSON response
+    console.warn("[EMERGENCY FALLBACK] Using dynamic keyword-based mood analysis.");
+    return res.json(getKeywordBasedMoodAnalysis(title || "", content));
   });
 
   // Server-Side Gemini API Proxy for Habits Pattern Analysis
@@ -918,50 +1000,85 @@ async function startServer() {
       return res.status(400).json({ error: "Stats and history are required" });
     }
 
+    // Helper for stats-based offline/fallback habit analysis
+    const getKeywordBasedHabitsAnalysis = (s: any, h: any[]) => {
+      const streak = s?.streak || 0;
+      const xp = s?.xp || 0;
+      const level = s?.level || 1;
+      const waterDrank = s?.waterDrank || 0;
+      
+      let biologicalStatus = "ASCENDING STATUS";
+      let patternInsight = "YOUR NEURAL CIRCUITS SHOW STRONG ADAPTABILITY THROUGH INTEGRATED HABIT ENGAGEMENT.";
+      let overrideProtocol = "HYDRATE FREQUENTLY TO KEEP COGNITIVE RECEPTORS OPERATING AT OPTIMUM FREQUENCY.";
+      
+      if (streak >= 7) {
+        biologicalStatus = "PRIME STREAK VELOCITY";
+        patternInsight = `SENSATIONAL STREAK OF ${streak} DAYS DETECTED. YOUR BASAL GANGLIA IS LOCKING IN THE REWARD MECHANISM FOR ULTIMATE COGNITIVE DENSITY, BRO.`;
+        overrideProtocol = "EXECUTE ONE BREATHING ROUTINE IMMEDIATELY AFTER HARD INTENSITY WORKOUTS TO EXPEDITE SYSTEM RECOVERY.";
+      } else if (streak >= 3) {
+        biologicalStatus = "BIOLOGICALLY STABILIZED";
+        patternInsight = `STREAK OF ${streak} DETECTED. NEURAL PLASTICITY IS INCREASING AS DAILY REPETITIONS GRADUALLY SHIFT FROM CONSCIOUS EFFORT TO AUTOMATIC HABIT FLOW.`;
+        overrideProtocol = "DRINK 250ML OF COLD WATER TO TRIGGER A METABOLIC SURGE AND ELEVATE MENTAL SPEED.";
+      } else if (streak === 0) {
+        biologicalStatus = "REGEN INITIALIZATION REQUIRED";
+        patternInsight = "STREAK RESET TO ZERO. RE-ALIGNING COGNITIVE PRIORITY MODULES. START WITH THE EASIEST HABITS (WATER & BREATHING) TO BUILD INITIAL ACCELERATION.";
+        overrideProtocol = "CHALLENGE YOURSELF TO COMPLETE THE WATER GOAL FOR 3 CONSECUTIVE DAYS TO ESTABLISH AN UNBREAKABLE MOMENTUM.";
+      }
+      
+      if (waterDrank > 2000) {
+        biologicalStatus = "HYDRO-MAXIMIZED COGNITION";
+        patternInsight = `OUTSTANDING WATER INTAKE OF ${waterDrank}ML. CELLULAR HYDRATION LEVELS ARE AT PEAK DENSITY, MAXIMIZING SYNAPTIC TRANSMISSION VELOCITY.`;
+        overrideProtocol = "CONTINUE THIS INTENSITY PROTOCOL AND INCORPORATE 10 PUSHUPS TO AMPLIFY BLOOD PRESSURE FLOW.";
+      }
+      
+      return `NEXUS VISION PROTOCOL: BIOLOGICAL OPTIMIZATION COMPLETED.
+
+BIOLOGICAL STATUS: ${biologicalStatus}
+
+PATTERN INSIGHT: ${patternInsight}
+
+OVERRIDE PROTOCOL: ${overrideProtocol}`;
+    };
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.warn("AI Service: GEMINI_API_KEY missing. Using simulated response.");
       return res.json({
-        analysis: `NEXUS VISION PROTOCOL: SIMULATED ANALYSIS.
-        
-BIOLOGICAL STATUS: ASCENDING.
-
-PATTERN INSIGHT: YOUR MOMENTUM INDICATES HIGH NEURAL PLASTICITY. STREAK OF ${stats.streak || 0} IS OPTIMAL.
-
-OVERRIDE PROTOCOL: INCREASE HYDRATION FREQUENCY TO MAINTAIN COGNITIVE FLOW.`
+        analysis: getKeywordBasedHabitsAnalysis(stats, history)
       });
     }
 
+    const summary = history.slice(-7).map((h: any) => ({
+      date: h.date,
+      completed: h.completed,
+      tasks: {
+        pushups: h.pushupsDone,
+        water: h.waterDrank,
+        breathing: h.breathingDone,
+        writing: h.drawingDone,
+        football: h.footballDone
+      }
+    }));
+
+    const prompt = `
+      You are Nexora Vision, a futuristic biological optimization AI.
+      Analyze the following user habit data from the last 7 days:
+      ${JSON.stringify(summary)}
+      
+      Total XP: ${stats.xp}
+      Streak: ${stats.streak}
+      
+      Provide a "Nexus Optimization Protocol" in an authoritative, futuristic, and encouraging tone.
+      Include:
+      1. A "Current Biological Status" (e.g. Optimized, Fatigued, Ascending).
+      2. One specific insight about their patterns.
+      3. One "Override Protocol" (a suggested habit shift).
+      
+      Keep it short (max 100 words), use uppercase for emphasis, and sound like a high-end AI assistant.
+    `;
+
+    // 1. First Attempt: Use gemini-3.5-flash
     try {
-      const summary = history.slice(-7).map((h: any) => ({
-        date: h.date,
-        completed: h.completed,
-        tasks: {
-          pushups: h.pushupsDone,
-          water: h.waterDrank,
-          breathing: h.breathingDone,
-          writing: h.drawingDone,
-          football: h.footballDone
-        }
-      }));
-
-      const prompt = `
-        You are Nexora Vision, a futuristic biological optimization AI.
-        Analyze the following user habit data from the last 7 days:
-        ${JSON.stringify(summary)}
-        
-        Total XP: ${stats.xp}
-        Streak: ${stats.streak}
-        
-        Provide a "Nexus Optimization Protocol" in an authoritative, futuristic, and encouraging tone.
-        Include:
-        1. A "Current Biological Status" (e.g. Optimized, Fatigued, Ascending).
-        2. One specific insight about their patterns.
-        3. One "Override Protocol" (a suggested habit shift).
-        
-        Keep it short (max 100 words), use uppercase for emphasis, and sound like a high-end AI assistant.
-      `;
-
       const ai = new GoogleGenAI({
         apiKey,
         httpOptions: {
@@ -975,15 +1092,40 @@ OVERRIDE PROTOCOL: INCREASE HYDRATION FREQUENCY TO MAINTAIN COGNITIVE FLOW.`
         contents: prompt,
       });
 
-      if (!response || !response.text) {
-        throw new Error("Empty response from Gemini API");
+      if (response && response.text) {
+        return res.json({ analysis: response.text });
       }
-
-      res.json({ analysis: response.text });
     } catch (error: any) {
-      console.error("Server Habit Analysis failed:", error);
-      res.status(500).json({ error: "Neural link interrupted. Please try again, bro." });
+      console.warn("[MODEL FALLBACK] Habits Primary model (gemini-3.5-flash) failed, attempting gemini-3.1-flash-lite. Error:", error.message || error);
     }
+
+    // 2. Second Attempt: Fallback to gemini-3.1-flash-lite
+    try {
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-flash-lite",
+        contents: prompt,
+      });
+
+      if (response && response.text) {
+        return res.json({ analysis: response.text });
+      }
+    } catch (fallbackError: any) {
+      console.error("[MODEL FALLBACK FAILED] Habits Secondary model (gemini-3.1-flash-lite) also failed. Error:", fallbackError.message || fallbackError);
+    }
+
+    // 3. Elegant Local Graceful Fallback: Never fail, guarantee a valid JSON response
+    console.warn("[EMERGENCY FALLBACK] Using dynamic stats-based habits analysis.");
+    return res.json({
+      analysis: getKeywordBasedHabitsAnalysis(stats, history)
+    });
   });
 
   // Server-Side Gemini API Proxy for Landing Page AI Companion Chat

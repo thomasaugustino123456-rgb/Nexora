@@ -160,7 +160,29 @@ service cloud.firestore {
              (!('footballDone' in data) || data.footballDone is bool) &&
              (!('bubblesDone' in data) || data.bubblesDone is bool) &&
              (!('dailyQuestDone' in data) || data.dailyQuestDone is bool) &&
+             (!('customPlanCompleted' in data) || data.customPlanCompleted is bool) &&
+             (!('nextRestorationTime' in data) || (data.nextRestorationTime is string || data.nextRestorationTime == null)) &&
              (!('completionsCount' in data) || (data.completionsCount is number && data.completionsCount >= 0));
+    }
+
+    function hasProgress(data) {
+      return data != null && (
+        ('completed' in data && data.completed == true) ||
+        ('pushupsDone' in data && data.pushupsDone == true) ||
+        ('breathingDone' in data && data.breathingDone == true) ||
+        ('drawingDone' in data && data.drawingDone == true) ||
+        ('footballDone' in data && data.footballDone == true) ||
+        ('bubblesDone' in data && data.bubblesDone == true) ||
+        ('completionsCount' in data && data.completionsCount > 0) ||
+        ('waterDrank' in data && data.waterDrank > 0) ||
+        ('customPlanCompleted' in data && data.customPlanCompleted == true) ||
+        ('dailyQuestDone' in data && data.dailyQuestDone == true) ||
+        ('memoryDone' in data && data.memoryDone == true) ||
+        ('gratitudeDone' in data && data.gratitudeDone == true) ||
+        ('reactionDone' in data && data.reactionDone == true) ||
+        ('meditationDone' in data && data.meditationDone == true) ||
+        ('writingDone' in data && data.writingDone == true)
+      );
     }
 
     function isValidProgressCreate(data) {
@@ -168,7 +190,9 @@ service cloud.firestore {
     }
 
     function isValidProgressUpdate(data) {
-      return isValidProgressFields(data);
+      return isValidProgressFields(data) &&
+             // CRITICAL SERVER-SIDE SECURITY GUARD: Prevent overwriting completed/active progress with empty state
+             (!(resource.data != null && hasProgress(resource.data)) || hasProgress(data));
     }
 
     function isValidPrivateData(data) {
@@ -314,8 +338,14 @@ service cloud.firestore {
       allow read: if isAuthenticated() || isAdmin();
       allow create: if isOwner(userId) && isValidUserCreate(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
       allow update: if isOwner(userId) && isValidUserUpdate(request.resource.data) && 
-                    (!('role' in request.resource.data) || request.resource.data.role == resource.data.role || isAdmin()) &&
-                    (!('isPro' in request.resource.data) || request.resource.data.isPro == resource.data.isPro || isAdmin());
+                    (!('role' in request.resource.data) || 
+                     (!('role' in resource.data) && request.resource.data.role == 'user') ||
+                     (request.resource.data.role == resource.data.role) || 
+                     isAdmin()) &&
+                    (!('isPro' in request.resource.data) || 
+                     (!('isPro' in resource.data) && request.resource.data.isPro == false) ||
+                     (request.resource.data.isPro == resource.data.isPro) || 
+                     isAdmin());
       allow delete: if isOwner(userId) || isAdmin();
       
       match /private/data {
@@ -397,8 +427,14 @@ service cloud.firestore {
       allow read: if isAuthenticated() || isAdmin();
       allow create: if isOwner(userId) && isValidUserCreate(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
       allow update: if isOwner(userId) && isValidUserUpdate(request.resource.data) && 
-                    (!('role' in request.resource.data) || request.resource.data.role == resource.data.role || isAdmin()) &&
-                    (!('isPro' in request.resource.data) || request.resource.data.isPro == resource.data.isPro || isAdmin());
+                    (!('role' in request.resource.data) || 
+                     (!('role' in resource.data) && request.resource.data.role == 'user') ||
+                     (request.resource.data.role == resource.data.role) || 
+                     isAdmin()) &&
+                    (!('isPro' in request.resource.data) || 
+                     (!('isPro' in resource.data) && request.resource.data.isPro == false) ||
+                     (request.resource.data.isPro == resource.data.isPro) || 
+                     isAdmin());
       allow delete: if isOwner(userId) || isAdmin();
       
       match /private/data {

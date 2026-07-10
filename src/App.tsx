@@ -2118,9 +2118,9 @@ export default function App() {
   // "when I click the Cancel button supposed it have to appear again when the user go to another section of the app"
   // Reset dismiss states on screen transition so the banner can appear again in other sections
   useEffect(() => {
-    
-    
-    
+    console.log(`[PWA] Navigation transition detected to screen: ${activeScreen}. Resetting install prompt dismiss state to allow it to reappear.`);
+    sessionStorage.removeItem("nexora_install_prompt_dismissed");
+    localStorage.removeItem("nexora_install_modal_dismissed_at");
   }, [activeScreen, showAuth]);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(() => {

@@ -67,11 +67,238 @@ function cleanPayload<T>(obj: T): T {
   return cleaned;
 }
 
-const setDoc = (reference: any, data: any, options?: any) => {
-  return firestoreSetDoc(reference, cleanPayload(data), options);
-};
-
 const today = new Date().toISOString().split("T")[0];
+
+// ============================================================================
+// Robust Bi-Directional State Merging Functions to Prevent Data Loss
+// ============================================================================
+
+function mergeStats(dbStats: UserStats, localStats: UserStats, defaultStats: UserStats): UserStats {
+  const localHasProgress = (localStats.xp > 0 || localStats.coins > 0 || (localStats.totalPoints || 0) > 0 || (localStats.streak || 0) > 0);
+  if (!localHasProgress) {
+    return { ...defaultStats, ...dbStats };
+  }
+
+  const merged: UserStats = {
+    ...defaultStats,
+    ...localStats,
+    ...dbStats, // dbStats is spread last so that unhandled positive remote fields are preserved
+
+    streak: Math.max(dbStats.streak || 0, localStats.streak || 0),
+    bestStreak: Math.max(dbStats.bestStreak || 0, localStats.bestStreak || 0),
+    totalPoints: Math.max(dbStats.totalPoints || 0, localStats.totalPoints || 0),
+    xp: Math.max(dbStats.xp || 0, localStats.xp || 0),
+    level: Math.max(dbStats.level || 1, localStats.level || 1),
+    coins: Math.max(dbStats.coins || 0, localStats.coins || 0),
+    gems: Math.max(dbStats.gems || 0, localStats.gems || 0),
+    totalCompletedDays: Math.max(dbStats.totalCompletedDays || 0, localStats.totalCompletedDays || 0),
+    weeklyPoints: Math.max(dbStats.weeklyPoints || 0, localStats.weeklyPoints || 0),
+    weeklyXP: Math.max(dbStats.weeklyXP || 0, localStats.weeklyXP || 0),
+    
+    lastCompletedDate: (dbStats.lastCompletedDate || "") > (localStats.lastCompletedDate || "")
+      ? dbStats.lastCompletedDate
+      : localStats.lastCompletedDate,
+    lastActiveDate: (dbStats.lastActiveDate || "") > (localStats.lastActiveDate || "")
+      ? dbStats.lastActiveDate
+      : localStats.lastActiveDate,
+    lastGiftDate: (dbStats.lastGiftDate || "") > (localStats.lastGiftDate || "")
+      ? dbStats.lastGiftDate
+      : localStats.lastGiftDate,
+  };
+
+  // Merge trophies array uniquely by id
+  const dbTrophies = dbStats.trophies || [];
+  const localTrophies = localStats.trophies || [];
+  const trophyMap = new Map<string, any>();
+  dbTrophies.forEach(t => trophyMap.set(t.id, t));
+  localTrophies.forEach(t => {
+    const existing = trophyMap.get(t.id);
+    if (!existing || (t.lastUpdated || "") > (existing.lastUpdated || "")) {
+      trophyMap.set(t.id, t);
+    }
+  });
+  merged.trophies = Array.from(trophyMap.values());
+
+  // Merge pointsByCategory (take the maximum of each category)
+  const dbPointsCat = dbStats.pointsByCategory || { physical: 0, mental: 0, creative: 0 };
+  const localPointsCat = localStats.pointsByCategory || { physical: 0, mental: 0, creative: 0 };
+  merged.pointsByCategory = {
+    physical: Math.max(dbPointsCat.physical || 0, localPointsCat.physical || 0),
+    mental: Math.max(dbPointsCat.mental || 0, localPointsCat.mental || 0),
+    creative: Math.max(dbPointsCat.creative || 0, localPointsCat.creative || 0),
+  };
+
+  // Merge lists uniquely
+  merged.drawings = Array.from(new Set([...(dbStats.drawings || []), ...(localStats.drawings || [])]));
+  merged.unlockedHats = Array.from(new Set([...(dbStats.unlockedHats || []), ...(localStats.unlockedHats || [])]));
+
+  // Merge gratitude entries uniquely by id
+  const dbGratitude = dbStats.gratitudeEntries || [];
+  const localGratitude = localStats.gratitudeEntries || [];
+  const gratitudeMap = new Map<string, any>();
+  dbGratitude.forEach(g => gratitudeMap.set(g.id, g));
+  localGratitude.forEach(g => gratitudeMap.set(g.id, g)); // local wins or just keeps
+  merged.gratitudeEntries = Array.from(gratitudeMap.values());
+
+  return merged;
+}
+
+function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, defaultSettings: UserSettings): UserSettings {
+  const localHasSettings = (localSettings.displayName && localSettings.displayName !== "Nexora User" && localSettings.displayName !== "Champion") || localSettings.onboardingCompleted;
+  if (!localHasSettings) {
+    return { ...defaultSettings, ...dbSettings };
+  }
+
+  const merged: UserSettings = {
+    ...defaultSettings,
+    ...localSettings,
+    ...dbSettings, // dbSettings wins by default for general/unhandled settings
+
+    onboardingCompleted: dbSettings.onboardingCompleted || localSettings.onboardingCompleted || false,
+    plantOnboardingCompleted: dbSettings.plantOnboardingCompleted || localSettings.plantOnboardingCompleted || false,
+    spaceOnboardingCompleted: dbSettings.spaceOnboardingCompleted || localSettings.spaceOnboardingCompleted || false,
+    spaceHouseUnlocked: dbSettings.spaceHouseUnlocked || localSettings.spaceHouseUnlocked || false,
+    hasEnteredGarden: dbSettings.hasEnteredGarden || localSettings.hasEnteredGarden || false,
+    isPro: dbSettings.isPro || localSettings.isPro || false,
+    feedbackSubmitted: dbSettings.feedbackSubmitted || localSettings.feedbackSubmitted || false,
+  };
+
+  // Merge arrays uniquely
+  merged.joinedCircleIds = Array.from(new Set([...(dbSettings.joinedCircleIds || []), ...(localSettings.joinedCircleIds || [])]));
+  merged.notifEnabledCircleIds = Array.from(new Set([...(dbSettings.notifEnabledCircleIds || []), ...(localSettings.notifEnabledCircleIds || [])]));
+  merged.purchasedEcosystemItemIds = Array.from(new Set([...(dbSettings.purchasedEcosystemItemIds || []), ...(localSettings.purchasedEcosystemItemIds || [])]));
+  merged.activeEcosystemItemIds = Array.from(new Set([...(dbSettings.activeEcosystemItemIds || []), ...(localSettings.activeEcosystemItemIds || [])]));
+  merged.purchasedHouseItemIds = Array.from(new Set([...(dbSettings.purchasedHouseItemIds || []), ...(localSettings.purchasedHouseItemIds || [])]));
+  merged.readBookIds = Array.from(new Set([...(dbSettings.readBookIds || []), ...(localSettings.readBookIds || [])]));
+
+  // Merge plantState - if one is empty but the other has progress, use the one with progress.
+  // Growth stage and points indicate progress.
+  const dbPlant = dbSettings.plantState;
+  const localPlant = localSettings.plantState;
+  if (dbPlant && localPlant) {
+    const dbProgress = (dbPlant.stage || 0) * 1000 + (dbPlant.growthPoints || 0);
+    const localProgress = (localPlant.stage || 0) * 1000 + (localPlant.growthPoints || 0);
+    merged.plantState = localProgress >= dbProgress ? localPlant : dbPlant;
+  } else {
+    merged.plantState = dbPlant || localPlant;
+  }
+
+  // Merge plantsProgress
+  const dbPlantsProgress = dbSettings.plantsProgress || {};
+  const localPlantsProgress = localSettings.plantsProgress || {};
+  const mergedPlantsProgress: any = { ...dbPlantsProgress };
+  for (const key of Object.keys(localPlantsProgress)) {
+    const localProg = localPlantsProgress[key as any];
+    const dbProg = dbPlantsProgress[key as any];
+    if (localProg && dbProg) {
+      const localProgVal = (localProg.stage || 0) * 1000 + (localProg.growthPoints || 0);
+      const dbProgVal = (dbProg.stage || 0) * 1000 + (dbProg.growthPoints || 0);
+      mergedPlantsProgress[key] = localProgVal >= dbProgVal ? localProg : dbProg;
+    } else {
+      mergedPlantsProgress[key] = dbProg || localProg;
+    }
+  }
+  merged.plantsProgress = mergedPlantsProgress;
+
+  return merged;
+}
+
+function mergeGarden(dbGarden: GardenState, localGarden: GardenState, defaultGarden: GardenState): GardenState {
+  const localHasGarden = (localGarden.tiles && localGarden.tiles.length > 0) || (localGarden.inventory && Object.keys(localGarden.inventory).length > 0);
+  if (!localHasGarden) {
+    return { ...defaultGarden, ...dbGarden };
+  }
+
+  const merged: GardenState = {
+    ...defaultGarden,
+    ...localGarden,
+    ...dbGarden,
+  };
+
+  // Choose the one with more tiles, or if equal, keep local as baseline
+  const dbTiles = dbGarden.tiles || [];
+  const localTiles = localGarden.tiles || [];
+  merged.tiles = localTiles.length >= dbTiles.length ? localTiles : dbTiles;
+
+  // Merge inventory (take max of each seed count)
+  const dbInventory = dbGarden.inventory || {};
+  const localInventory = localGarden.inventory || {};
+  const mergedInventory: Record<string, number> = { ...dbInventory };
+  for (const key of Object.keys(localInventory)) {
+    mergedInventory[key] = Math.max(dbInventory[key] || 0, localInventory[key] || 0);
+  }
+  merged.inventory = mergedInventory;
+
+  // MascotState merging
+  merged.mascotState = {
+    mood: dbGarden.mascotState?.mood || localGarden.mascotState?.mood || 'happy',
+    lastInteracted: dbGarden.mascotState?.lastInteracted || localGarden.mascotState?.lastInteracted || Date.now(),
+    ...(dbGarden.mascotState || {}),
+    ...(localGarden.mascotState || {}),
+  };
+
+  return merged;
+}
+
+function mergeProgress(dbProgress: DailyProgress, localProgress: DailyProgress, defaultProgress: DailyProgress): DailyProgress {
+  const localHasProgress = (
+    localProgress.completed || 
+    localProgress.pushupsDone || 
+    localProgress.waterDrank > 0 || 
+    localProgress.breathingDone || 
+    localProgress.drawingDone || 
+    localProgress.footballDone || 
+    localProgress.bubblesDone || 
+    localProgress.completionsCount > 0 || 
+    localProgress.customPlanCompleted ||
+    localProgress.dailyQuestDone ||
+    localProgress.memoryDone ||
+    localProgress.gratitudeDone ||
+    localProgress.reactionDone ||
+    localProgress.meditationDone ||
+    localProgress.writingDone
+  );
+  if (!localHasProgress) {
+    return { ...defaultProgress, ...dbProgress };
+  }
+
+  const merged: DailyProgress = {
+    ...defaultProgress,
+    ...localProgress,
+    ...dbProgress, // Firestore database takes precedence by default
+
+    // Logically merge booleans with OR
+    completed: dbProgress.completed || localProgress.completed || false,
+    pushupsDone: dbProgress.pushupsDone || localProgress.pushupsDone || false,
+    breathingDone: dbProgress.breathingDone || localProgress.breathingDone || false,
+    drawingDone: dbProgress.drawingDone || localProgress.drawingDone || false,
+    footballDone: dbProgress.footballDone || localProgress.footballDone || false,
+    bubblesDone: dbProgress.bubblesDone || localProgress.bubblesDone || false,
+    customPlanCompleted: dbProgress.customPlanCompleted || localProgress.customPlanCompleted || false,
+    dailyQuestDone: dbProgress.dailyQuestDone || localProgress.dailyQuestDone || false,
+    memoryDone: dbProgress.memoryDone || localProgress.memoryDone || false,
+    gratitudeDone: dbProgress.gratitudeDone || localProgress.gratitudeDone || false,
+    reactionDone: dbProgress.reactionDone || localProgress.reactionDone || false,
+    meditationDone: dbProgress.meditationDone || localProgress.meditationDone || false,
+    writingDone: dbProgress.writingDone || localProgress.writingDone || false,
+    skippedPushups: dbProgress.skippedPushups || localProgress.skippedPushups || false,
+
+    // Numerics
+    waterDrank: Math.max(dbProgress.waterDrank || 0, localProgress.waterDrank || 0),
+    completionsCount: Math.max(dbProgress.completionsCount || 0, localProgress.completionsCount || 0),
+    waterChallengeCount: Math.max(dbProgress.waterChallengeCount || 0, localProgress.waterChallengeCount || 0),
+  };
+
+  // Merge water logs if present, ensuring unique entries by id
+  const dbLogs = dbProgress.waterLogs || [];
+  const localLogs = localProgress.waterLogs || [];
+  const logMap = new Map<string, any>();
+  dbLogs.forEach(log => { if (log?.id) logMap.set(log.id, log); });
+  localLogs.forEach(log => { if (log?.id) logMap.set(log.id, log); });
+  merged.waterLogs = Array.from(logMap.values());
+
+  return merged;
+}
 
 export function useNexoraData(
   DEFAULT_SETTINGS: UserSettings,
@@ -150,6 +377,15 @@ export function useNexoraData(
 
   const [needsOnboarding, rawSetNeedsOnboarding] = useState(!cachedOnboarding);
 
+  // Safe Firestore setDoc wrapper
+  const setDoc = useCallback(async (reference: any, data: any, options?: any) => {
+    if (blockAllWritesRef.current) {
+      console.warn(`[PERSISTENCE FIX] Write attempt blocked: Data not yet loaded from Firestore. Target: ${reference.path}`);
+      return;
+    }
+    return firestoreSetDoc(reference, cleanPayload(data), options);
+  }, []);
+
   const setSettings = useCallback((update: any) => {
     rawSetSettings((prev) => {
       const next = typeof update === "function" ? update(prev) : update;
@@ -226,6 +462,11 @@ export function useNexoraData(
 
       if (currentUser) {
         localStorage.setItem("nexora_cached_user", currentUser.uid);
+        setLoading(true);
+        setIsDataReady(false);
+        dataLoadedFromFirestore.current = false;
+        hasMatchedHydratedStateRef.current = false;
+        setIsStateLoaded(false, "User logging in, resetting states to load from Firestore.");
         
         let isTimeoutActive = false;
         if (loadTimeout) clearTimeout(loadTimeout);
@@ -363,25 +604,60 @@ export function useNexoraData(
           }
           
           if (docData) {
-            // Robust multi-layered onboarding status check
+            // Robust multi-layered parallel fetch of all auxiliary documents/subcollections
             let onboardingData: any = null;
+            let rewardsData: any = null;
+            let plantSectionData: any = null;
+            let notebookNotes: any[] = [];
+
             try {
               const onboardingIDRef = doc(db, "onboardingID", currentUser.uid);
-              const onboardingIDSnap = await getDoc(onboardingIDRef);
+              const onboardingSubdocRef = doc(db, "users", currentUser.uid, "onboarding", "main");
+              const rewardsDocRef = doc(db, "users", currentUser.uid, "rewards", "main");
+              const plantSectionDocRef = doc(db, "users", currentUser.uid, "plant_section", "main");
+              const notebookRef = doc(db, "notebooks", currentUser.uid);
+
+              const [
+                onboardingIDSnap,
+                onboardingSubdocSnap,
+                rewardsSnap,
+                plantSectionSnap,
+                notebookSnap
+              ] = await Promise.all([
+                getDoc(onboardingIDRef),
+                getDoc(onboardingSubdocRef),
+                getDoc(rewardsDocRef),
+                getDoc(plantSectionDocRef),
+                getDoc(notebookRef)
+              ]);
+
               if (onboardingIDSnap.exists()) {
                 onboardingData = onboardingIDSnap.data();
                 console.log(`[FIRESTORE] Loaded dedicated onboardingID data:`, onboardingData);
-              } else {
-                // Check users subcollection onboarding/main
-                const onboardingSubdocRef = doc(db, "users", currentUser.uid, "onboarding", "main");
-                const onboardingSubdocSnap = await getDoc(onboardingSubdocRef);
-                if (onboardingSubdocSnap.exists()) {
-                  onboardingData = onboardingSubdocSnap.data();
-                  console.log(`[FIRESTORE] Loaded users/${currentUser.uid}/onboarding/main data:`, onboardingData);
+              } else if (onboardingSubdocSnap.exists()) {
+                onboardingData = onboardingSubdocSnap.data();
+                console.log(`[FIRESTORE] Loaded users/${currentUser.uid}/onboarding/main data:`, onboardingData);
+              }
+
+              if (rewardsSnap.exists()) {
+                rewardsData = rewardsSnap.data();
+                console.log(`[FIRESTORE] Loaded dedicated rewards/main data:`, rewardsData);
+              }
+
+              if (plantSectionSnap.exists()) {
+                plantSectionData = plantSectionSnap.data();
+                console.log(`[FIRESTORE] Loaded dedicated plant_section/main data:`, plantSectionData);
+              }
+
+              if (notebookSnap.exists()) {
+                const nbData = notebookSnap.data();
+                if (nbData && Array.isArray(nbData.notes)) {
+                  notebookNotes = nbData.notes;
+                  console.log(`[FIRESTORE] Loaded dedicated notebooks notes:`, notebookNotes.length);
                 }
               }
-            } catch (onboardingErr) {
-              console.error("[FIRESTORE] Error reading dedicated onboarding documents:", onboardingErr);
+            } catch (pErr) {
+              console.error("[FIRESTORE] Error reading subcollection/auxiliary documents:", pErr);
             }
 
             const finalOnboardingCompleted = 
@@ -392,6 +668,7 @@ export function useNexoraData(
               
             const finalPlantOnboardingCompleted = 
               (onboardingData?.plantSectionOnboardingCompleted === true) || 
+              (plantSectionData?.plantOnboardingCompleted === true) ||
               (docData.plantOnboardingCompleted === true) || 
               (docData.settings?.plantOnboardingCompleted === true) || 
               false;
@@ -401,111 +678,223 @@ export function useNexoraData(
               (docData.settings?.spaceOnboardingCompleted === true) ||
               false;
 
+            // Extract plantState and plantsProgress from plant_section document, user doc, or settings
+            const finalPlantState = plantSectionData?.plantState ?? docData.plantState ?? docData.settings?.plantState ?? DEFAULT_SETTINGS.plantState;
+            const finalPlantsProgress = plantSectionData?.plantsProgress ?? docData.plantsProgress ?? docData.settings?.plantsProgress ?? DEFAULT_SETTINGS.plantsProgress ?? {};
+            const finalPurchasedEcosystemItemIds = plantSectionData?.purchasedEcosystemItemIds ?? docData.purchasedEcosystemItemIds ?? docData.settings?.purchasedEcosystemItemIds ?? DEFAULT_SETTINGS.purchasedEcosystemItemIds ?? [];
+            const finalActiveEcosystemItemIds = plantSectionData?.activeEcosystemItemIds ?? docData.activeEcosystemItemIds ?? docData.settings?.activeEcosystemItemIds ?? DEFAULT_SETTINGS.activeEcosystemItemIds ?? [];
+
             const mappedSettings = {
               ...DEFAULT_SETTINGS,
               ...(docData.settings || {}),
               
-              // Apply root-level or nested settings fields that may have been saved flatly
-              onboardingCompleted: finalOnboardingCompleted,
-              plantOnboardingCompleted: finalPlantOnboardingCompleted,
-              spaceOnboardingCompleted: finalSpaceOnboardingCompleted,
-              spaceHouseUnlocked: docData.spaceHouseUnlocked ?? docData.settings?.spaceHouseUnlocked ?? DEFAULT_SETTINGS.spaceHouseUnlocked,
-              hasEnteredGarden: docData.hasEnteredGarden ?? docData.settings?.hasEnteredGarden ?? DEFAULT_SETTINGS.hasEnteredGarden,
-              isReelsDisabled: docData.isReelsDisabled ?? docData.settings?.isReelsDisabled ?? DEFAULT_SETTINGS.isReelsDisabled,
-              joinedCircleIds: docData.joinedCircleIds ?? docData.settings?.joinedCircleIds ?? DEFAULT_SETTINGS.joinedCircleIds,
-              notifEnabledCircleIds: docData.notifEnabledCircleIds ?? docData.settings?.notifEnabledCircleIds ?? DEFAULT_SETTINGS.notifEnabledCircleIds,
-              workType: docData.workType ?? docData.settings?.workType ?? DEFAULT_SETTINGS.workType,
-              energyPeak: docData.energyPeak ?? docData.settings?.energyPeak ?? DEFAULT_SETTINGS.energyPeak,
-              priorityFocus: docData.priorityFocus ?? docData.settings?.priorityFocus ?? DEFAULT_SETTINGS.priorityFocus,
-              commitmentLevel: docData.commitmentLevel ?? docData.settings?.commitmentLevel ?? DEFAULT_SETTINGS.commitmentLevel,
-              archivedOfficialChallenges: docData.archivedOfficialChallenges ?? docData.settings?.archivedOfficialChallenges ?? DEFAULT_SETTINGS.archivedOfficialChallenges,
-              isPro: docData.isPro ?? docData.settings?.isPro ?? DEFAULT_SETTINGS.isPro,
-              lowPowerMode: docData.lowPowerMode ?? docData.settings?.lowPowerMode ?? DEFAULT_SETTINGS.lowPowerMode,
-              performanceMode: docData.performanceMode ?? docData.settings?.performanceMode ?? DEFAULT_SETTINGS.performanceMode,
+              // Fallback to flat/root values, settings subfields, or plantSectionData for EVERY single field in UserSettings:
+              pushupsGoal: docData.pushupsGoal ?? docData.settings?.pushupsGoal ?? DEFAULT_SETTINGS.pushupsGoal,
+              waterGoal: docData.waterGoal ?? docData.settings?.waterGoal ?? DEFAULT_SETTINGS.waterGoal,
+              reminderTime: docData.reminderTime ?? docData.settings?.reminderTime ?? DEFAULT_SETTINGS.reminderTime,
+              reminderTime2: docData.reminderTime2 ?? docData.settings?.reminderTime2 ?? DEFAULT_SETTINGS.reminderTime2,
+              motivationTime: docData.motivationTime ?? docData.settings?.motivationTime ?? DEFAULT_SETTINGS.motivationTime,
+              displayName: docData.displayName || docData.name || docData.settings?.displayName || currentUser.displayName || "Champion",
+              age: docData.age ?? docData.settings?.age ?? DEFAULT_SETTINGS.age,
+              gender: docData.gender ?? docData.settings?.gender,
+              profilePic: docData.profilePic || docData.photoFileName || docData.settings?.profilePic || currentUser.photoURL || "",
+              themeColor: docData.themeColor ?? docData.settings?.themeColor ?? DEFAULT_SETTINGS.themeColor,
               soundEnabled: docData.soundEnabled ?? docData.settings?.soundEnabled ?? DEFAULT_SETTINGS.soundEnabled,
               notificationsEnabled: docData.notificationsEnabled ?? docData.settings?.notificationsEnabled ?? DEFAULT_SETTINGS.notificationsEnabled,
               showQuotes: docData.showQuotes ?? docData.settings?.showQuotes ?? DEFAULT_SETTINGS.showQuotes,
-              pushupsGoal: docData.pushupsGoal ?? docData.settings?.pushupsGoal ?? DEFAULT_SETTINGS.pushupsGoal,
-              waterGoal: docData.waterGoal ?? docData.settings?.waterGoal ?? DEFAULT_SETTINGS.waterGoal,
+              pushMotivationEnabled: docData.pushMotivationEnabled ?? docData.settings?.pushMotivationEnabled ?? DEFAULT_SETTINGS.pushMotivationEnabled,
+              unitSystem: docData.unitSystem ?? docData.settings?.unitSystem ?? DEFAULT_SETTINGS.unitSystem,
+              purchasedItems: docData.purchasedItems ?? docData.settings?.purchasedItems ?? DEFAULT_SETTINGS.purchasedItems ?? [],
+              savedChallengeIds: docData.savedChallengeIds ?? docData.settings?.savedChallengeIds ?? DEFAULT_SETTINGS.savedChallengeIds ?? [],
+              savedTrophyIds: docData.savedTrophyIds ?? docData.settings?.savedTrophyIds ?? DEFAULT_SETTINGS.savedTrophyIds ?? [],
+              savedVideoIds: docData.savedVideoIds ?? docData.settings?.savedVideoIds ?? DEFAULT_SETTINGS.savedVideoIds ?? [],
+              savedPostIds: docData.savedPostIds ?? docData.settings?.savedPostIds ?? DEFAULT_SETTINGS.savedPostIds ?? [],
               activeHat: docData.activeHat ?? docData.settings?.activeHat ?? DEFAULT_SETTINGS.activeHat,
               activeSkin: docData.activeSkin ?? docData.settings?.activeSkin ?? DEFAULT_SETTINGS.activeSkin,
-              themeColor: docData.themeColor ?? docData.settings?.themeColor ?? DEFAULT_SETTINGS.themeColor,
-              activeMascotSkin: docData.activeMascotSkin ?? docData.settings?.activeMascotSkin ?? DEFAULT_SETTINGS.activeMascotSkin,
-              activeMascotEffect: docData.activeMascotEffect ?? docData.settings?.activeMascotEffect ?? DEFAULT_SETTINGS.activeMascotEffect,
-              activeProfileFrame: docData.activeProfileFrame ?? docData.settings?.activeProfileFrame ?? DEFAULT_SETTINGS.activeProfileFrame,
-              activeAppTheme: docData.activeAppTheme ?? docData.settings?.activeAppTheme ?? DEFAULT_SETTINGS.activeAppTheme,
+              zenModeEnabled: docData.zenModeEnabled ?? docData.settings?.zenModeEnabled ?? DEFAULT_SETTINGS.zenModeEnabled,
+              isPro: docData.isPro ?? docData.settings?.isPro ?? DEFAULT_SETTINGS.isPro,
+              performanceMode: docData.performanceMode ?? docData.settings?.performanceMode ?? DEFAULT_SETTINGS.performanceMode,
+              lowPowerMode: docData.lowPowerMode ?? docData.settings?.lowPowerMode ?? DEFAULT_SETTINGS.lowPowerMode,
+              onboardingCompleted: finalOnboardingCompleted,
+              plantOnboardingCompleted: finalPlantOnboardingCompleted,
+              spaceOnboardingCompleted: finalSpaceOnboardingCompleted,
+              hasNewPlantItem: docData.hasNewPlantItem ?? docData.settings?.hasNewPlantItem ?? DEFAULT_SETTINGS.hasNewPlantItem,
+              challengeCountGoal: docData.challengeCountGoal ?? docData.settings?.challengeCountGoal ?? DEFAULT_SETTINGS.challengeCountGoal,
+              inventory: docData.inventory ?? docData.settings?.inventory ?? DEFAULT_SETTINGS.inventory ?? [],
+              isDogSoundPackActive: docData.isDogSoundPackActive ?? docData.settings?.isDogSoundPackActive ?? DEFAULT_SETTINGS.isDogSoundPackActive,
+              league: docData.league ?? docData.settings?.league ?? DEFAULT_SETTINGS.league,
+              location: docData.location ?? docData.settings?.location ?? DEFAULT_SETTINGS.location,
+              timezone: docData.timezone ?? docData.settings?.timezone ?? DEFAULT_SETTINGS.timezone,
+              fcmToken: docData.fcmToken ?? docData.settings?.fcmToken,
+              badgeSettings: docData.badgeSettings ?? docData.settings?.badgeSettings ?? DEFAULT_SETTINGS.badgeSettings,
+              purchasedHouseItemIds: docData.purchasedHouseItemIds ?? docData.settings?.purchasedHouseItemIds ?? DEFAULT_SETTINGS.purchasedHouseItemIds ?? [],
+              placedHouseItems: docData.placedHouseItems ?? docData.settings?.placedHouseItems ?? DEFAULT_SETTINGS.placedHouseItems ?? [],
+              spaceHouseUnlocked: docData.spaceHouseUnlocked ?? docData.settings?.spaceHouseUnlocked ?? DEFAULT_SETTINGS.spaceHouseUnlocked,
+              plantState: finalPlantState,
+              plantsProgress: finalPlantsProgress,
+              purchasedEcosystemItemIds: finalPurchasedEcosystemItemIds,
+              activeEcosystemItemIds: finalActiveEcosystemItemIds,
+              mascotSize: docData.mascotSize ?? docData.settings?.mascotSize ?? DEFAULT_SETTINGS.mascotSize,
+              mascotPos: docData.mascotPos ?? docData.settings?.mascotPos ?? DEFAULT_SETTINGS.mascotPos,
+              mascotPinnedItemId: docData.mascotPinnedItemId ?? docData.settings?.mascotPinnedItemId ?? DEFAULT_SETTINGS.mascotPinnedItemId,
+              hasEnteredGarden: docData.hasEnteredGarden ?? docData.settings?.hasEnteredGarden ?? DEFAULT_SETTINGS.hasEnteredGarden,
+              isReelsDisabled: docData.isReelsDisabled ?? docData.settings?.isReelsDisabled ?? DEFAULT_SETTINGS.isReelsDisabled,
+              joinedCircleIds: docData.joinedCircleIds ?? docData.settings?.joinedCircleIds ?? DEFAULT_SETTINGS.joinedCircleIds ?? [],
               
-              displayName: docData.name || docData.displayName || (docData.settings?.displayName) || currentUser.displayName || "Champion",
-              profilePic: docData.photoFileName || docData.profilePic || (docData.settings?.profilePic) || currentUser.photoURL || "",
-              location: docData.location || docData["Location"] || (docData.settings?.location) || "",
+              // Trial test fields
+              proTestActive: docData.proTestActive ?? docData.settings?.proTestActive ?? false,
+              proTestStartedAt: docData.proTestStartedAt ?? docData.settings?.proTestStartedAt ?? null,
+              proTestExpiresAt: docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt ?? null,
+              proTestLastUsedAt: docData.proTestLastUsedAt ?? docData.settings?.proTestLastUsedAt ?? null,
+              
               accountName: docData.accountName || docData["Account name"] || (docData.settings?.accountName) || currentUser.displayName || currentUser.email?.split('@')[0] || "Champion",
               email: docData.email || (docData.settings?.email) || currentUser.email || "",
               time: docData.time || docData["Time"] || (docData.settings?.time) || new Date().toISOString()
             };
             
+            // Fallback stats fields using max/fallback to ensure we never lose progress
+            const finalStreak = Math.max(docData.streak || 0, docData.stats?.streak || 0, rewardsData?.streak || 0, DEFAULT_STATS.streak);
+            const finalBestStreak = Math.max(docData.bestStreak || 0, docData.stats?.bestStreak || 0, rewardsData?.bestStreak || 0, DEFAULT_STATS.bestStreak);
+            const finalTotalPoints = Math.max(docData.totalPoints || 0, docData.stats?.totalPoints || 0, rewardsData?.totalPoints || 0, DEFAULT_STATS.totalPoints);
+            const finalXP = Math.max(docData.xp || 0, docData.stats?.xp || 0, rewardsData?.xp || 0, DEFAULT_STATS.xp);
+            const finalLevel = Math.max(docData.level || 1, docData.stats?.level || 1, rewardsData?.level || 1, DEFAULT_STATS.level || 1);
+            const finalCoins = Math.max(docData.coins || 0, docData.stats?.coins || 0, rewardsData?.coins || 0, DEFAULT_STATS.coins);
+            const finalWeeklyPoints = Math.max(docData.weeklyPoints || 0, docData.stats?.weeklyPoints || 0, rewardsData?.weeklyPoints || 0, DEFAULT_STATS.weeklyPoints);
+            const finalWeeklyXP = Math.max(docData.weeklyXP || 0, docData.stats?.weeklyXP || 0, rewardsData?.weeklyXP || 0, DEFAULT_STATS.weeklyXP);
+            
+            // For complex structures, use the one that is non-empty
+            const finalTrophies = (rewardsData?.trophies?.length > 0) ? rewardsData.trophies : ((docData.stats?.trophies?.length > 0) ? docData.stats.trophies : (docData.trophies || []));
+            const finalUnlockedHats = (rewardsData?.unlockedHats?.length > 0) ? rewardsData.unlockedHats : ((docData.stats?.unlockedHats?.length > 0) ? docData.stats.unlockedHats : (docData.unlockedHats || []));
+            const finalGratitudeEntries = (rewardsData?.gratitudeEntries?.length > 0) ? rewardsData.gratitudeEntries : ((docData.stats?.gratitudeEntries?.length > 0) ? docData.stats.gratitudeEntries : ((docData.gratitudeEntries?.length > 0) ? docData.gratitudeEntries : notebookNotes));
+
             const mappedStats = {
               ...DEFAULT_STATS,
               ...(docData.stats || {}),
+              
+              streak: finalStreak,
+              bestStreak: finalBestStreak,
+              totalPoints: finalTotalPoints,
+              xp: finalXP,
+              level: finalLevel,
+              totalCompletedDays: docData.totalCompletedDays ?? docData.stats?.totalCompletedDays ?? rewardsData?.totalCompletedDays ?? DEFAULT_STATS.totalCompletedDays,
+              lastCompletedDate: docData.lastCompletedDate ?? docData.stats?.lastCompletedDate ?? rewardsData?.lastCompletedDate ?? DEFAULT_STATS.lastCompletedDate,
+              lastGiftDate: docData.lastGiftDate ?? docData.stats?.lastGiftDate ?? rewardsData?.lastGiftDate ?? DEFAULT_STATS.lastGiftDate,
+              currentChallengeIndex: docData.currentChallengeIndex ?? docData.stats?.currentChallengeIndex ?? rewardsData?.currentChallengeIndex ?? DEFAULT_STATS.currentChallengeIndex,
+              coins: finalCoins,
+              gems: docData.gems ?? docData.stats?.gems ?? rewardsData?.gems ?? DEFAULT_STATS.gems,
+              weeklyPoints: finalWeeklyPoints,
+              weeklyXP: finalWeeklyXP,
+              lastWeeklyReset: docData.lastWeeklyReset ?? docData.stats?.lastWeeklyReset ?? rewardsData?.lastWeeklyReset ?? DEFAULT_STATS.lastWeeklyReset,
+              lastRankRewardClaimWeek: docData.lastRankRewardClaimWeek ?? docData.stats?.lastRankRewardClaimWeek ?? rewardsData?.lastRankRewardClaimWeek ?? DEFAULT_STATS.lastRankRewardClaimWeek,
+              lastActiveDate: docData.lastActiveDate ?? docData.stats?.lastActiveDate ?? rewardsData?.lastActiveDate ?? DEFAULT_STATS.lastActiveDate,
+              trophies: finalTrophies,
+              pointsByCategory: docData.pointsByCategory ?? docData.stats?.pointsByCategory ?? rewardsData?.pointsByCategory ?? DEFAULT_STATS.pointsByCategory,
+              drawings: docData.drawings ?? docData.stats?.drawings ?? rewardsData?.drawings ?? DEFAULT_STATS.drawings ?? [],
+              unlockedHats: finalUnlockedHats,
+              gratitudeEntries: finalGratitudeEntries,
+              waterDrank: docData.waterDrank ?? docData.stats?.waterDrank ?? rewardsData?.waterDrank ?? DEFAULT_STATS.waterDrank,
+              lifetimeWaterCompletions: docData.lifetimeWaterCompletions ?? docData.stats?.lifetimeWaterCompletions ?? rewardsData?.lifetimeWaterCompletions ?? DEFAULT_STATS.lifetimeWaterCompletions,
+              hasClaimedXpChest: docData.hasClaimedXpChest ?? docData.stats?.hasClaimedXpChest ?? rewardsData?.hasClaimedXpChest ?? DEFAULT_STATS.hasClaimedXpChest,
             };
+            
+            const finalGardenStateFromPlantSection = plantSectionData?.gardenState ?? {};
             
             const mappedGarden = {
               ...createInitialGardenState(),
               ...(docData.garden || {}),
+              ...finalGardenStateFromPlantSection,
+              
+              tiles: docData.tiles ?? docData.garden?.tiles ?? finalGardenStateFromPlantSection.tiles ?? createInitialGardenState().tiles,
+              inventory: docData.inventory ?? docData.garden?.inventory ?? finalGardenStateFromPlantSection.inventory ?? createInitialGardenState().inventory,
+              streakSavers: docData.streakSavers ?? docData.garden?.streakSavers ?? finalGardenStateFromPlantSection.streakSavers ?? createInitialGardenState().streakSavers ?? 0,
             };
+
+            // Retrieve the absolute latest local storage changes (e.g. offline work or quick edits)
+            const cachedUser = localStorage.getItem("nexora_cached_user");
+            const hasLocalStorage = localStorage.getItem("nexora_settings") !== null;
             
-            rawSetSettings(mappedSettings);
-            rawSetStats(mappedStats);
-            rawSetGardenState(mappedGarden);
+            let resolvedSettings = mappedSettings;
+            let resolvedStats = mappedStats;
+            let resolvedGarden = mappedGarden;
+
+            if (hasLocalStorage && cachedUser === currentUser.uid) {
+              console.log("[PERSISTENCE] Matching local cache found. Performing safe merge...");
+              const latestLocalSettings = getCachedJson("nexora_settings", DEFAULT_SETTINGS);
+              const latestLocalStats = getCachedJson("nexora_stats", DEFAULT_STATS);
+              const latestLocalGarden = getCachedJson("nexora_garden", createInitialGardenState());
+
+              resolvedSettings = mergeSettings(mappedSettings, latestLocalSettings, DEFAULT_SETTINGS);
+              resolvedStats = mergeStats(mappedStats, latestLocalStats, DEFAULT_STATS);
+              resolvedGarden = mergeGarden(mappedGarden, latestLocalGarden, createInitialGardenState());
+            } else {
+              console.log("[PERSISTENCE] Fresh login, different user, or empty local cache. Skipping merge and trusting Firestore 100%.");
+            }
             
-            localStorage.setItem("nexora_settings", JSON.stringify(mappedSettings));
-            localStorage.setItem("nexora_stats", JSON.stringify(mappedStats));
-            localStorage.setItem("nexora_garden", JSON.stringify(mappedGarden));
+            rawSetSettings(resolvedSettings);
+            rawSetStats(resolvedStats);
+            rawSetGardenState(resolvedGarden);
+            
+            localStorage.setItem("nexora_settings", JSON.stringify(resolvedSettings));
+            localStorage.setItem("nexora_stats", JSON.stringify(resolvedStats));
+            localStorage.setItem("nexora_garden", JSON.stringify(resolvedGarden));
+            localStorage.setItem("nexora_cached_user", currentUser.uid);
             
             hydratedStateRef.current = {
-              s: mappedSettings,
-              st: mappedStats,
-              g: mappedGarden
+              s: resolvedSettings,
+              st: resolvedStats,
+              g: resolvedGarden
             };
             
             // Load Today's Progress if it exists
             try {
               const progressRef = doc(db, "users", currentUser.uid, "progress", today);
               const progressSnap = await getDoc(progressRef);
+              
+              const defaultProgress = {
+                date: today,
+                completed: false,
+                pushupsDone: false,
+                waterDrank: 0,
+                breathingDone: false,
+                drawingDone: false,
+                footballDone: false,
+                bubblesDone: false,
+                completionsCount: 0,
+                customPlanCompleted: false,
+                nextRestorationTime: null,
+              };
+
+              let resolvedProgress: DailyProgress = defaultProgress;
               if (progressSnap.exists()) {
-                const progData = progressSnap.data() as DailyProgress;
-                rawSetDailyProgress(progData);
-                localStorage.setItem("nexora_progress", JSON.stringify(progData));
-              } else {
-                const initialProgress = {
-                  date: today,
-                  completed: false,
-                  pushupsDone: false,
-                  waterDrank: 0,
-                  breathingDone: false,
-                  drawingDone: false,
-                  footballDone: false,
-                  bubblesDone: false,
-                  completionsCount: 0,
-                  customPlanCompleted: false,
-                  nextRestorationTime: null,
-                };
-                rawSetDailyProgress(initialProgress);
-                localStorage.setItem("nexora_progress", JSON.stringify(initialProgress));
+                resolvedProgress = progressSnap.data() as DailyProgress;
               }
+
+              if (hasLocalStorage && cachedUser === currentUser.uid) {
+                const latestLocalProgress = getCachedJson("nexora_progress", defaultProgress);
+                if (latestLocalProgress.date === today) {
+                  resolvedProgress = mergeProgress(resolvedProgress, latestLocalProgress, defaultProgress);
+                }
+              }
+
+              rawSetDailyProgress(resolvedProgress);
+              localStorage.setItem("nexora_progress", JSON.stringify(resolvedProgress));
+
+              // Set lastSyncedRef.current to the RAW database values.
+              // If the resolved (merged) state is different (has local progress), 
+              // background sync will immediately detect the difference and write it to Firestore!
+              lastSyncedRef.current = {
+                s: mappedSettings,
+                st: mappedStats,
+                p: {
+                  c: progressSnap.exists() ? (progressSnap.data() as DailyProgress).completed : false,
+                  cc: progressSnap.exists() ? (progressSnap.data() as DailyProgress).completionsCount : 0,
+                  d: today,
+                },
+                g: mappedGarden
+              };
             } catch (pErr) {
               console.error("[FIRESTORE] Error loading progress data:", pErr);
             }
-
-            lastSyncedRef.current = {
-              s: mappedSettings,
-              st: mappedStats,
-              p: {
-                c: dailyProgress.completed,
-                cc: dailyProgress.completionsCount,
-                d: dailyProgress.date,
-              },
-              g: mappedGarden
-            };
             
             setNeedsOnboarding(!finalOnboardingCompleted);
             if (finalOnboardingCompleted) {
@@ -584,27 +973,11 @@ export function useNexoraData(
     if (hasMatchedHydratedStateRef.current) return;
 
     if (isHydrated && hydratedStateRef.current) {
-      const currentObj = {
-        s: settings,
-        st: stats,
-        g: gardenState,
-      };
-
-      const dbObj = {
-        s: hydratedStateRef.current.s,
-        st: hydratedStateRef.current.st,
-        g: hydratedStateRef.current.g,
-      };
-
-      if (deepEqual(currentObj, dbObj)) {
-        console.log(`[PERSISTENCE AUDIT] Memory state matches hydrated database state perfectly. Unlocking sync gate safely.`);
-        hasMatchedHydratedStateRef.current = true;
-        setIsStateLoaded(true, "State matching complete");
-      } else {
-        console.log(`[PERSISTENCE AUDIT] Memory state does not match hydrated database state yet. Keeping sync gate locked.`);
-      }
+      console.log(`[PERSISTENCE AUDIT] Firestore data hydrated successfully. Unlocking sync gate safely.`);
+      hasMatchedHydratedStateRef.current = true;
+      setIsStateLoaded(true, "State matching complete");
     }
-  }, [isHydrated, user, isDataReady, settings, stats, gardenState]);
+  }, [isHydrated, user, isDataReady]);
 
   // Background Sync Effect with Aggressive Throttling (Optimized)
   useEffect(() => {
@@ -668,9 +1041,30 @@ export function useNexoraData(
             
             // CRITICAL DEFENSIVE GUARD: Never let uninitialized/empty stats overwrite positive Firestore stats
             if (dbData) {
-              const dbStats = dbData.stats || {};
-              const dbGarden = dbData.garden || {};
-              const dbSettings = dbData.settings || dbData;
+              const dbStats = {
+                ...DEFAULT_STATS,
+                ...(dbData.stats || {}),
+                streak: dbData.streak ?? dbData.stats?.streak ?? DEFAULT_STATS.streak,
+                bestStreak: dbData.bestStreak ?? dbData.stats?.bestStreak ?? DEFAULT_STATS.bestStreak,
+                totalPoints: dbData.totalPoints ?? dbData.stats?.totalPoints ?? DEFAULT_STATS.totalPoints,
+                xp: dbData.xp ?? dbData.stats?.xp ?? DEFAULT_STATS.xp,
+                level: dbData.level ?? dbData.stats?.level ?? DEFAULT_STATS.level,
+                coins: dbData.coins ?? dbData.stats?.coins ?? DEFAULT_STATS.coins,
+                weeklyPoints: dbData.weeklyPoints ?? dbData.stats?.weeklyPoints ?? DEFAULT_STATS.weeklyPoints,
+                weeklyXP: dbData.weeklyXP ?? dbData.stats?.weeklyXP ?? DEFAULT_STATS.weeklyXP,
+              };
+              const dbGarden = {
+                ...createInitialGardenState(),
+                ...(dbData.garden || {}),
+                tiles: dbData.tiles ?? dbData.garden?.tiles ?? createInitialGardenState().tiles,
+                inventory: dbData.inventory ?? dbData.garden?.inventory ?? createInitialGardenState().inventory,
+              };
+              const dbSettings = {
+                ...DEFAULT_SETTINGS,
+                ...(dbData.settings || {}),
+                displayName: dbData.displayName ?? dbData.name ?? dbData.settings?.displayName ?? DEFAULT_SETTINGS.displayName,
+                onboardingCompleted: dbData.onboardingCompleted ?? dbData.settings?.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
+              };
 
               const dbHasProgress = (dbStats.xp > 0 || dbStats.coins > 0 || (dbStats.totalPoints || 0) > 0 || (dbStats.streak || 0) > 0);
               const dbHasGarden = (dbGarden.tiles && dbGarden.tiles.length > 0) || (dbGarden.inventory && Object.keys(dbGarden.inventory).length > 0);
@@ -688,15 +1082,44 @@ export function useNexoraData(
                 console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in syncData! Attempted to overwrite positive Firestore data with empty local states. DB Stats Has Progress: ${dbHasProgress}, Local Is Empty Stats: ${localIsEmptyStats}. DB Garden Has Data: ${dbHasGarden}, Local Is Empty Garden: ${localIsEmptyGarden}. DB Settings Has Info: ${dbHasSettings}, Local Is Empty Settings: ${localIsEmptySettings}. Aborting write to prevent data loss.`);
                 
                 // Trigger emergency recovery: update local state to match database
-                if (dbData.stats) setStats(dbData.stats);
-                if (dbData.settings || dbData.displayName) {
-                  setSettings({
-                    ...DEFAULT_SETTINGS,
-                    ...dbData,
-                    ...dbData.settings,
+                if (dbData.stats || dbData.xp !== undefined || dbData.coins !== undefined) {
+                  setStats({
+                    ...DEFAULT_STATS,
+                    ...dbData.stats,
+                    streak: dbData.streak ?? dbData.stats?.streak ?? DEFAULT_STATS.streak,
+                    bestStreak: dbData.bestStreak ?? dbData.stats?.bestStreak ?? DEFAULT_STATS.bestStreak,
+                    totalPoints: dbData.totalPoints ?? dbData.stats?.totalPoints ?? DEFAULT_STATS.totalPoints,
+                    xp: dbData.xp ?? dbData.stats?.xp ?? DEFAULT_STATS.xp,
+                    level: dbData.level ?? dbData.stats?.level ?? DEFAULT_STATS.level,
+                    coins: dbData.coins ?? dbData.stats?.coins ?? DEFAULT_STATS.coins,
+                    weeklyPoints: dbData.weeklyPoints ?? dbData.stats?.weeklyPoints ?? DEFAULT_STATS.weeklyPoints,
+                    weeklyXP: dbData.weeklyXP ?? dbData.stats?.weeklyXP ?? DEFAULT_STATS.weeklyXP,
+                    trophies: dbData.trophies ?? dbData.stats?.trophies ?? [],
+                    drawings: dbData.drawings ?? dbData.stats?.drawings ?? [],
+                    unlockedHats: dbData.unlockedHats ?? dbData.stats?.unlockedHats ?? [],
+                    gratitudeEntries: dbData.gratitudeEntries ?? dbData.stats?.gratitudeEntries ?? [],
                   });
                 }
-                if (dbData.garden) setGardenState(dbData.garden);
+                if (dbData.settings || dbData.displayName || dbData.onboardingCompleted !== undefined) {
+                  setSettings({
+                    ...DEFAULT_SETTINGS,
+                    ...(dbData.settings || {}),
+                    displayName: dbData.displayName ?? dbData.name ?? dbData.settings?.displayName ?? DEFAULT_SETTINGS.displayName,
+                    onboardingCompleted: dbData.onboardingCompleted ?? dbData.settings?.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
+                    plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbData.settings?.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
+                    spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbData.settings?.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
+                    purchasedItems: dbData.purchasedItems ?? dbData.settings?.purchasedItems ?? DEFAULT_SETTINGS.purchasedItems,
+                    inventory: dbData.inventory ?? dbData.settings?.inventory ?? DEFAULT_SETTINGS.inventory,
+                  });
+                }
+                if (dbData.garden || dbData.tiles !== undefined) {
+                  setGardenState({
+                    ...createInitialGardenState(),
+                    ...(dbData.garden || {}),
+                    tiles: dbData.tiles ?? dbData.garden?.tiles ?? createInitialGardenState().tiles,
+                    inventory: dbData.inventory ?? dbData.garden?.inventory ?? createInitialGardenState().inventory,
+                  });
+                }
                 return;
               }
             }
@@ -849,8 +1272,54 @@ export function useNexoraData(
         try {
           console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${progressRef.path}`);
           const preProgSnap = await getDoc(progressRef);
-          console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${progressRef.path}:`, preProgSnap.exists() ? JSON.stringify(preProgSnap.data()) : "Document does not exist");
+          const dbProg = preProgSnap.exists() ? preProgSnap.data() as DailyProgress : null;
+          console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${progressRef.path}:`, dbProg ? JSON.stringify(dbProg) : "Document does not exist");
           
+          if (dbProg) {
+            const dbHasProgress = (
+              dbProg.completed || 
+              dbProg.pushupsDone || 
+              dbProg.waterDrank > 0 || 
+              dbProg.breathingDone || 
+              dbProg.drawingDone || 
+              dbProg.footballDone || 
+              dbProg.bubblesDone || 
+              dbProg.completionsCount > 0 || 
+              dbProg.customPlanCompleted ||
+              dbProg.dailyQuestDone ||
+              dbProg.memoryDone ||
+              dbProg.gratitudeDone ||
+              dbProg.reactionDone ||
+              dbProg.meditationDone ||
+              dbProg.writingDone
+            );
+            const localIsEmptyProgress = !(
+              dailyProgress.completed || 
+              dailyProgress.pushupsDone || 
+              dailyProgress.waterDrank > 0 || 
+              dailyProgress.breathingDone || 
+              dailyProgress.drawingDone || 
+              dailyProgress.footballDone || 
+              dailyProgress.bubblesDone || 
+              dailyProgress.completionsCount > 0 || 
+              dailyProgress.customPlanCompleted ||
+              dailyProgress.dailyQuestDone ||
+              dailyProgress.memoryDone ||
+              dailyProgress.gratitudeDone ||
+              dailyProgress.reactionDone ||
+              dailyProgress.meditationDone ||
+              dailyProgress.writingDone
+            );
+
+            if (dbHasProgress && localIsEmptyProgress) {
+              console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in syncData for progress! Attempted to overwrite positive/completed Firestore progress with empty local state. DB Progress: ${JSON.stringify(dbProg)}, Local Progress: ${JSON.stringify(dailyProgress)}. Aborting write to prevent data loss.`);
+              
+              // Trigger emergency recovery: update local state to match database progress
+              setDailyProgress(dbProg);
+              return;
+            }
+          }
+
           console.log(`[PERSISTENCE AUDIT] Write payload for progress document:`, JSON.stringify(dailyProgress));
           await setDoc(progressRef, dailyProgress, { merge: true });
           console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote progress document to: ${progressRef.path}`);
@@ -1029,11 +1498,31 @@ export function useNexoraData(
         const dbData = preSnap.exists() ? preSnap.data() : null;
         console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${userRef.path}:`, dbData ? JSON.stringify(dbData) : "Document does not exist");
 
-        // CRITICAL DEFENSIVE GUARD: Never let uninitialized/empty stats overwrite positive Firestore stats
         if (dbData) {
-          const dbStats = dbData.stats || {};
-          const dbGarden = dbData.garden || {};
-          const dbSettings = dbData.settings || dbData;
+          const dbStats = {
+            ...DEFAULT_STATS,
+            ...(dbData.stats || {}),
+            streak: dbData.streak ?? dbData.stats?.streak ?? DEFAULT_STATS.streak,
+            bestStreak: dbData.bestStreak ?? dbData.stats?.bestStreak ?? DEFAULT_STATS.bestStreak,
+            totalPoints: dbData.totalPoints ?? dbData.stats?.totalPoints ?? DEFAULT_STATS.totalPoints,
+            xp: dbData.xp ?? dbData.stats?.xp ?? DEFAULT_STATS.xp,
+            level: dbData.level ?? dbData.stats?.level ?? DEFAULT_STATS.level,
+            coins: dbData.coins ?? dbData.stats?.coins ?? DEFAULT_STATS.coins,
+            weeklyPoints: dbData.weeklyPoints ?? dbData.stats?.weeklyPoints ?? DEFAULT_STATS.weeklyPoints,
+            weeklyXP: dbData.weeklyXP ?? dbData.stats?.weeklyXP ?? DEFAULT_STATS.weeklyXP,
+          };
+          const dbGarden = {
+            ...createInitialGardenState(),
+            ...(dbData.garden || {}),
+            tiles: dbData.tiles ?? dbData.garden?.tiles ?? createInitialGardenState().tiles,
+            inventory: dbData.inventory ?? dbData.garden?.inventory ?? createInitialGardenState().inventory,
+          };
+          const dbSettings = {
+            ...DEFAULT_SETTINGS,
+            ...(dbData.settings || {}),
+            displayName: dbData.displayName ?? dbData.name ?? dbData.settings?.displayName ?? DEFAULT_SETTINGS.displayName,
+            onboardingCompleted: dbData.onboardingCompleted ?? dbData.settings?.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
+          };
 
           const dbHasProgress = (dbStats.xp > 0 || dbStats.coins > 0 || (dbStats.totalPoints || 0) > 0 || (dbStats.streak || 0) > 0);
           const dbHasGarden = (dbGarden.tiles && dbGarden.tiles.length > 0) || (dbGarden.inventory && Object.keys(dbGarden.inventory).length > 0);
@@ -1051,15 +1540,44 @@ export function useNexoraData(
             console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in forceSyncData! Attempted to overwrite positive Firestore data with empty local states. DB Stats Has Progress: ${dbHasProgress}, Local Is Empty Stats: ${localIsEmptyStats}. DB Garden Has Data: ${dbHasGarden}, Local Is Empty Garden: ${localIsEmptyGarden}. DB Settings Has Info: ${dbHasSettings}, Local Is Empty Settings: ${localIsEmptySettings}. Aborting write to prevent data loss.`);
             
             // Trigger emergency recovery: update local state to match database
-            if (dbData.stats) setStats(dbData.stats);
-            if (dbData.settings || dbData.displayName) {
-              setSettings({
-                ...DEFAULT_SETTINGS,
-                ...dbData,
-                ...dbData.settings,
+            if (dbData.stats || dbData.xp !== undefined || dbData.coins !== undefined) {
+              setStats({
+                ...DEFAULT_STATS,
+                ...dbData.stats,
+                streak: dbData.streak ?? dbData.stats?.streak ?? DEFAULT_STATS.streak,
+                bestStreak: dbData.bestStreak ?? dbData.stats?.bestStreak ?? DEFAULT_STATS.bestStreak,
+                totalPoints: dbData.totalPoints ?? dbData.stats?.totalPoints ?? DEFAULT_STATS.totalPoints,
+                xp: dbData.xp ?? dbData.stats?.xp ?? DEFAULT_STATS.xp,
+                level: dbData.level ?? dbData.stats?.level ?? DEFAULT_STATS.level,
+                coins: dbData.coins ?? dbData.stats?.coins ?? DEFAULT_STATS.coins,
+                weeklyPoints: dbData.weeklyPoints ?? dbData.stats?.weeklyPoints ?? DEFAULT_STATS.weeklyPoints,
+                weeklyXP: dbData.weeklyXP ?? dbData.stats?.weeklyXP ?? DEFAULT_STATS.weeklyXP,
+                trophies: dbData.trophies ?? dbData.stats?.trophies ?? [],
+                drawings: dbData.drawings ?? dbData.stats?.drawings ?? [],
+                unlockedHats: dbData.unlockedHats ?? dbData.stats?.unlockedHats ?? [],
+                gratitudeEntries: dbData.gratitudeEntries ?? dbData.stats?.gratitudeEntries ?? [],
               });
             }
-            if (dbData.garden) setGardenState(dbData.garden);
+            if (dbData.settings || dbData.displayName || dbData.onboardingCompleted !== undefined) {
+              setSettings({
+                ...DEFAULT_SETTINGS,
+                ...(dbData.settings || {}),
+                displayName: dbData.displayName ?? dbData.name ?? dbData.settings?.displayName ?? DEFAULT_SETTINGS.displayName,
+                onboardingCompleted: dbData.onboardingCompleted ?? dbData.settings?.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
+                plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbData.settings?.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
+                spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbData.settings?.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
+                purchasedItems: dbData.purchasedItems ?? dbData.settings?.purchasedItems ?? DEFAULT_SETTINGS.purchasedItems,
+                inventory: dbData.inventory ?? dbData.settings?.inventory ?? DEFAULT_SETTINGS.inventory,
+              });
+            }
+            if (dbData.garden || dbData.tiles !== undefined) {
+              setGardenState({
+                ...createInitialGardenState(),
+                ...(dbData.garden || {}),
+                tiles: dbData.tiles ?? dbData.garden?.tiles ?? createInitialGardenState().tiles,
+                inventory: dbData.inventory ?? dbData.garden?.inventory ?? createInitialGardenState().inventory,
+              });
+            }
             return;
           }
         }
@@ -1206,7 +1724,53 @@ export function useNexoraData(
       try {
         console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${progressRef.path}`);
         const preProgSnap = await getDoc(progressRef);
-        console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${progressRef.path}:`, preProgSnap.exists() ? JSON.stringify(preProgSnap.data()) : "Document does not exist");
+        const dbProg = preProgSnap.exists() ? preProgSnap.data() as DailyProgress : null;
+        console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${progressRef.path}:`, dbProg ? JSON.stringify(dbProg) : "Document does not exist");
+
+        if (dbProg) {
+          const dbHasProgress = (
+            dbProg.completed || 
+            dbProg.pushupsDone || 
+            dbProg.waterDrank > 0 || 
+            dbProg.breathingDone || 
+            dbProg.drawingDone || 
+            dbProg.footballDone || 
+            dbProg.bubblesDone || 
+            dbProg.completionsCount > 0 || 
+            dbProg.customPlanCompleted ||
+            dbProg.dailyQuestDone ||
+            dbProg.memoryDone ||
+            dbProg.gratitudeDone ||
+            dbProg.reactionDone ||
+            dbProg.meditationDone ||
+            dbProg.writingDone
+          );
+          const localIsEmptyProgress = !(
+            dailyProgress.completed || 
+            dailyProgress.pushupsDone || 
+            dailyProgress.waterDrank > 0 || 
+            dailyProgress.breathingDone || 
+            dailyProgress.drawingDone || 
+            dailyProgress.footballDone || 
+            dailyProgress.bubblesDone || 
+            dailyProgress.completionsCount > 0 || 
+            dailyProgress.customPlanCompleted ||
+            dailyProgress.dailyQuestDone ||
+            dailyProgress.memoryDone ||
+            dailyProgress.gratitudeDone ||
+            dailyProgress.reactionDone ||
+            dailyProgress.meditationDone ||
+            dailyProgress.writingDone
+          );
+
+          if (dbHasProgress && localIsEmptyProgress) {
+            console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in forceSyncData for progress! Attempted to overwrite positive/completed Firestore progress with empty local state. DB Progress: ${JSON.stringify(dbProg)}, Local Progress: ${JSON.stringify(dailyProgress)}. Aborting write to prevent data loss.`);
+            
+            // Trigger emergency recovery: update local state to match database progress
+            setDailyProgress(dbProg);
+            return;
+          }
+        }
 
         console.log(`[PERSISTENCE AUDIT] Force sync payload for progress document:`, JSON.stringify(dailyProgress));
         await setDoc(progressRef, dailyProgress, { merge: true });
