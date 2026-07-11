@@ -6322,6 +6322,7 @@ export default function App() {
               sessionXP={sessionXP}
               sessionCoins={sessionCoins}
               sessionStreak={sessionStreak}
+              isCustomPlan={activeCustomPlan !== null}
               onContinue={() => {
                 setShowMascotCelebration(false);
                 setShowCompletionFlame(true);

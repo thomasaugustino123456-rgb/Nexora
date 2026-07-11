@@ -7,6 +7,7 @@ interface MascotCelebrationScreenProps {
   sessionXP?: number;
   sessionCoins?: number;
   sessionStreak?: number;
+  isCustomPlan?: boolean;
   onContinue: () => void;
 }
 
@@ -37,8 +38,41 @@ export function MascotCelebrationScreen({
   sessionXP = 20,
   sessionCoins = 25,
   sessionStreak = 1,
+  isCustomPlan = false,
   onContinue
 }: MascotCelebrationScreenProps) {
+  const [mascotStyle, setMascotStyle] = useState<"slime" | "star_jump" | "happy_shuffle">(() => {
+    const base = isCustomPlan ? "star_jump" : "slime";
+    const key = isCustomPlan ? "nexora_last_custom_style" : "nexora_last_official_style";
+    const lastShown = localStorage.getItem(key);
+
+    if (lastShown) {
+      let nextStyle: "slime" | "star_jump" | "happy_shuffle" = base;
+      if (isCustomPlan) {
+        if (lastShown === "star_jump") {
+          nextStyle = "happy_shuffle";
+        } else if (lastShown === "happy_shuffle") {
+          nextStyle = "slime";
+        } else {
+          nextStyle = "star_jump";
+        }
+      } else {
+        if (lastShown === "slime") {
+          nextStyle = "star_jump";
+        } else if (lastShown === "star_jump") {
+          nextStyle = "happy_shuffle";
+        } else {
+          nextStyle = "slime";
+        }
+      }
+      localStorage.setItem(key, nextStyle);
+      return nextStyle;
+    }
+
+    localStorage.setItem(key, base);
+    return base;
+  });
+
   const [randomMessage, setRandomMessage] = useState("");
   const [isHovered, setIsHovered] = useState(false);
   const [clickScale, setClickScale] = useState(1);
@@ -519,6 +553,12 @@ export function MascotCelebrationScreen({
     triggerVibration([40, 45]);
     triggerConfettiExplosion();
     playSound("cheer");
+    setMascotStyle(prev => {
+      const next = prev === "slime" ? "star_jump" : prev === "star_jump" ? "happy_shuffle" : "slime";
+      const key = isCustomPlan ? "nexora_last_custom_style" : "nexora_last_official_style";
+      localStorage.setItem(key, next);
+      return next;
+    });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -689,6 +729,209 @@ export function MascotCelebrationScreen({
         .animate-card-bounce {
           animation: cardSquashStretch 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
+
+        /* STAR JUMP STYLE KEYFRAMES */
+        .jump-physics-core {
+          transform-origin: 200px 345px;
+          animation: heavyStarJump 2s infinite cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .arm-left {
+          transform-origin: 74px 225px;
+          animation: armThrowLeft 2s infinite cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        
+        .arm-right {
+          transform-origin: 326px 225px;
+          animation: armThrowRight 2s infinite cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .mascot-eyes {
+          transform-origin: center;
+          animation: eyeJoySquint 2s infinite ease-in-out;
+        }
+
+        .mascot-mouth {
+          transform-origin: 200px 205px;
+          animation: mouthScreamJoy 2s infinite cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .mascot-halo {
+          transform-origin: 200px 75px;
+          animation: haloLagPhysics 2s infinite cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .floor-shadow {
+          transform-origin: 200px 365px;
+          animation: shadowJumpPhysics 2s infinite cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes heavyStarJump {
+          0% { transform: translateY(0) scale(1, 1); }
+          15% { transform: translateY(10px) scale(1.2, 0.8); }
+          30% { transform: translateY(-120px) scale(0.85, 1.15); }
+          45% { transform: translateY(-140px) scale(1.05, 0.95); }
+          65% { transform: translateY(15px) scale(1.25, 0.75); }
+          80%, 100% { transform: translateY(0) scale(1, 1); }
+        }
+
+        @keyframes armThrowLeft {
+          0%, 15% { transform: rotate(-15deg); }
+          45% { transform: rotate(140deg) translate(-20px, 30px); }
+          65% { transform: rotate(-30deg); }
+          80%, 100% { transform: rotate(-15deg); }
+        }
+
+        @keyframes armThrowRight {
+          0%, 15% { transform: rotate(15deg); }
+          45% { transform: rotate(-140deg) translate(20px, 30px); }
+          65% { transform: rotate(30deg); }
+          80%, 100% { transform: rotate(15deg); }
+        }
+
+        @keyframes eyeJoySquint {
+          0%, 10% { transform: scaleY(1); }
+          15% { transform: scaleY(0.4); }
+          40%, 55% { transform: scaleY(1.1); }
+          65% { transform: scaleY(0.4); }
+          80%, 100% { transform: scaleY(1); }
+        }
+
+        @keyframes mouthScreamJoy {
+          0%, 15% { transform: scale(1); }
+          45% { transform: scale(1.4, 1.8) translateY(10px); }
+          65% { transform: scale(1.2, 0.5); }
+          80%, 100% { transform: scale(1); }
+        }
+
+        @keyframes haloLagPhysics {
+          0%, 15% { transform: translateY(0); }
+          30% { transform: translateY(20px); }
+          45% { transform: translateY(-15px) scale(1.1); }
+          65% { transform: translateY(-30px); }
+          80%, 100% { transform: translateY(0); }
+        }
+
+        @keyframes shadowJumpPhysics {
+          0%, 10% { transform: scale(1); opacity: 0.5; }
+          15% { transform: scale(1.3); opacity: 0.7; }
+          45% { transform: scale(0.3); opacity: 0.1; }
+          65% { transform: scale(1.4); opacity: 0.8; }
+          80%, 100% { transform: scale(1); opacity: 0.5; }
+        }
+
+        .jump-text {
+          font-size: 20px;
+          font-weight: 900;
+          color: #00d4ff;
+          letter-spacing: 1px;
+          opacity: 0;
+          transform: translateY(10px);
+          animation: slideUpText 0.8s ease-out 0.4s forwards;
+        }
+
+        @keyframes slideUpText {
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* HAPPY SHUFFLE STYLE KEYFRAMES */
+        .shuffle-pivot {
+          transform-origin: 200px 345px;
+          animation: metronomeSway 1.6s infinite ease-in-out;
+        }
+
+        .gravity-dip {
+          transform-origin: 200px 345px;
+          animation: weightTransferDip 0.8s infinite ease-in-out;
+        }
+
+        .shuffle-arm-left {
+          transform-origin: 74px 225px;
+          animation: danceBeatLeft 1.6s infinite ease-in-out;
+        }
+        
+        .shuffle-arm-right {
+          transform-origin: 326px 225px;
+          animation: danceBeatRight 1.6s infinite ease-in-out;
+        }
+
+        .shuffle-mascot-halo {
+          transform-origin: 200px 75px;
+          animation: haloInertiaDrag 1.6s infinite ease-in-out;
+        }
+
+        .shuffle-floor-shadow {
+          transform-origin: 200px 355px;
+          animation: shadowSway 1.6s infinite ease-in-out;
+        }
+
+        .music-notes-container {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+        }
+
+        .note {
+          position: absolute;
+          opacity: 0;
+          fill: #00d4ff;
+          filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.6));
+          animation: floatUpNote 2s infinite ease-in;
+        }
+        .note:nth-child(1) { left: 60px; top: 280px; animation-delay: 0.2s; transform: scale(0.8); }
+        .note:nth-child(2) { left: 280px; top: 260px; animation-delay: 0.9s; transform: scale(1.1); }
+        .note:nth-child(3) { left: 100px; top: 240px; animation-delay: 1.5s; transform: scale(0.9); }
+
+        @keyframes metronomeSway {
+          0%, 100% { transform: translateX(-15px) rotate(-12deg); }
+          50% { transform: translateX(15px) rotate(12deg); }
+        }
+
+        @keyframes weightTransferDip {
+          0%, 100% { transform: translateY(-5px) scale(0.98, 1.05); }
+          50% { transform: translateY(8px) scale(1.04, 0.96); }
+        }
+
+        @keyframes danceBeatLeft {
+          0%, 100% { transform: rotate(-45deg) translateY(-15px); }
+          50% { transform: rotate(10deg) translateY(5px); }
+        }
+
+        @keyframes danceBeatRight {
+          0%, 100% { transform: rotate(-10deg) translateY(5px); }
+          50% { transform: rotate(45deg) translateY(-15px); }
+        }
+
+        @keyframes haloInertiaDrag {
+          0%, 100% { transform: translateX(10px) translateY(2px) rotate(8deg); }
+          50% { transform: translateX(-10px) translateY(2px) rotate(-8deg); }
+        }
+
+        @keyframes shadowSway {
+          0%, 100% { transform: translateX(-15px) scale(0.9); }
+          50% { transform: translateX(15px) scale(0.9); }
+        }
+
+        @keyframes floatUpNote {
+          0% { opacity: 0; transform: translateY(0) rotate(-15deg); }
+          20% { opacity: 1; }
+          80% { opacity: 1; }
+          100% { opacity: 0; transform: translateY(-120px) rotate(15deg); }
+        }
+
+        .shuffle-text {
+          font-size: 18px;
+          font-weight: 900;
+          color: #00d4ff;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          opacity: 0;
+          transform: translateY(10px);
+          animation: slideUpText 0.8s ease-out 0.4s forwards;
+        }
       `}</style>
 
       {/* Interactive canvas for confetti */}
@@ -801,62 +1044,194 @@ export function MascotCelebrationScreen({
             <div className="absolute bottom-1.5 w-28 h-6 bg-gradient-to-t from-[#1cb0f6]/40 to-transparent rounded-full border border-[#1cb0f6]/20 shadow-inner" />
             
             {/* Custom vector real physics slime-mascot */}
-            <div className="relative w-40 h-40 -translate-y-2 hover:scale-105 transition-all duration-300">
-              <svg viewBox="0 0 400 400" width="100%" height="100%">
-                <defs>
-                  <radialGradient id="bodyGrad" cx="40%" cy="35%" r="60%">
-                    <stop offset="0%" stopColor="#ffffff"/>
-                    <stop offset="25%" stopColor="#a3e3ff"/>
-                    <stop offset="70%" stopColor="#21a7f0"/>
-                    <stop offset="100%" stopColor="#0066cc"/>
-                  </radialGradient>
-                  <linearGradient id="haloGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#b8f1ff"/>
-                    <stop offset="50%" stopColor="#ffffff"/>
-                    <stop offset="100%" stopColor="#b8f1ff"/>
-                  </linearGradient>
-                  <linearGradient id="armGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#ffffff" stopOpacity={0.9}/>
-                    <stop offset="100%" stopColor="#21a7f0" stopOpacity={0.4}/>
-                  </linearGradient>
-                </defs>
+            <div className="relative w-44 h-44 -translate-y-2 hover:scale-105 transition-all duration-300">
+              {mascotStyle === "slime" ? (
+                <svg viewBox="0 0 400 400" width="100%" height="100%">
+                  <defs>
+                    <radialGradient id="bodyGrad" cx="40%" cy="35%" r="60%">
+                      <stop offset="0%" stopColor="#ffffff"/>
+                      <stop offset="25%" stopColor="#a3e3ff"/>
+                      <stop offset="70%" stopColor="#21a7f0"/>
+                      <stop offset="100%" stopColor="#0066cc"/>
+                    </radialGradient>
+                    <linearGradient id="haloGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#b8f1ff"/>
+                      <stop offset="50%" stopColor="#ffffff"/>
+                      <stop offset="100%" stopColor="#b8f1ff"/>
+                    </linearGradient>
+                    <linearGradient id="armGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#ffffff" stopOpacity={0.9}/>
+                      <stop offset="100%" stopColor="#21a7f0" stopOpacity={0.4}/>
+                    </linearGradient>
+                  </defs>
 
-                <g className="slime-celebrate-core">
-                  <g className="halo-inertia">
-                    <ellipse cx="200" cy="75" rx="95" ry="16" fill="none" stroke="url(#haloGrad)" strokeWidth={9} filter="drop-shadow(0 0 8px rgba(184,241,255,0.7))"/>
+                  <g className="slime-celebrate-core">
+                    <g className="halo-inertia">
+                      <ellipse cx="200" cy="75" rx="95" ry="16" fill="none" stroke="url(#haloGrad)" strokeWidth={9} filter="drop-shadow(0 0 8px rgba(184,241,255,0.7))"/>
+                    </g>
+
+                    {/* Cat-ears */}
+                    <path d="M125,120 Q105,75 140,88 Z" fill="#21a7f0" stroke="#0055b3" strokeWidth={2}/>
+                    <path d="M275,120 Q295,75 260,88 Z" fill="#21a7f0" stroke="#0055b3" strokeWidth={2}/>
+
+                    {/* Body */}
+                    <ellipse cx="200" cy="215" rx="160" ry="130" fill="url(#bodyGrad)"/>
+
+                    {/* Left Arm */}
+                    <g className="left-arm-cheer">
+                      <ellipse cx="74" cy="225" rx="18" ry="24" fill="url(#armGrad)" transform="rotate(-15 74 225)"/>
+                    </g>
+
+                    {/* Right Arm */}
+                    <g className="right-arm-cheer">
+                      <ellipse cx="326" cy="225" rx="18" ry="24" fill="url(#armGrad)" transform="rotate(15 326 225)"/>
+                    </g>
+
+                    {/* Happy Eyes */}
+                    <g stroke="#031b33" strokeWidth={6.5} strokeLinecap="round" fill="none">
+                      <path d="M125,185 Q145,165 165,185" />
+                      <path d="M235,185 Q255,165 275,185" />
+                    </g>
+
+                    {/* Open Tongue Mouth */}
+                    <path d="M182,196 Q200,202 218,196 Q200,236 182,196 Z" fill="#b3243d" stroke="#031b33" strokeWidth={4.5} strokeLinejoin="round"/>
+                    <path d="M186,208 Q200,204 214,208 Q200,232 186,208 Z" fill="#ff6b8b"/>
+
+                    {/* Giant Central "N" insignia */}
+                    <text x="200" y="278" fontFamily="system-ui, sans-serif" fontWeight={900} fontSize={64} fill="#ffffff" textAnchor="middle" filter="drop-shadow(0 2px 10px rgba(255,255,255,0.6))">N</text>
                   </g>
+                </svg>
+              ) : mascotStyle === "star_jump" ? (
+                <div className="w-full h-full relative">
+                  <svg viewBox="0 0 400 400" width="100%" height="100%">
+                    <defs>
+                      <radialGradient id="bodyGrad-sj" cx="40%" cy="35%" r="60%">
+                        <stop offset="0%" stopColor="#ffffff"/>
+                        <stop offset="25%" stopColor="#a3e3ff"/>
+                        <stop offset="70%" stopColor="#21a7f0"/>
+                        <stop offset="100%" stopColor="#0066cc"/>
+                      </radialGradient>
+                      <linearGradient id="haloGrad-sj" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#b8f1ff"/>
+                        <stop offset="50%" stopColor="#ffffff"/>
+                        <stop offset="100%" stopColor="#b8f1ff"/>
+                      </linearGradient>
+                      <linearGradient id="armGrad-sj" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#ffffff" stopOpacity={0.9}/>
+                        <stop offset="100%" stopColor="#21a7f0" stopOpacity={0.4}/>
+                      </linearGradient>
+                    </defs>
 
-                  {/* Cat-ears */}
-                  <path d="M125,120 Q105,75 140,88 Z" fill="#21a7f0" stroke="#0055b3" strokeWidth={2}/>
-                  <path d="M275,120 Q295,75 260,88 Z" fill="#21a7f0" stroke="#0055b3" strokeWidth={2}/>
+                    <ellipse cx="200" cy="365" rx="140" ry="18" fill="#000000" className="floor-shadow"/>
 
-                  {/* Body */}
-                  <ellipse cx="200" cy="215" rx="160" ry="130" fill="url(#bodyGrad)"/>
+                    <g className="jump-physics-core">
+                      <g className="mascot-halo">
+                        <ellipse cx="200" cy="75" rx="95" ry="16" fill="none" stroke="url(#haloGrad-sj)" strokeWidth={9} filter="drop-shadow(0 0 8px rgba(184,241,255,0.7))"/>
+                      </g>
 
-                  {/* Left Arm */}
-                  <g className="left-arm-cheer">
-                    <ellipse cx="74" cy="225" rx="18" ry="24" fill="url(#armGrad)" transform="rotate(-15 74 225)"/>
-                  </g>
+                      <path d="M125,120 Q105,75 140,88 Z" fill="#21a7f0" stroke="#0055b3" strokeWidth={2}/>
+                      <path d="M275,120 Q295,75 260,88 Z" fill="#21a7f0" stroke="#0055b3" strokeWidth={2}/>
 
-                  {/* Right Arm */}
-                  <g className="right-arm-cheer">
-                    <ellipse cx="326" cy="225" rx="18" ry="24" fill="url(#armGrad)" transform="rotate(15 326 225)"/>
-                  </g>
+                      <ellipse cx="200" cy="215" rx="160" ry="130" fill="url(#bodyGrad-sj)"/>
 
-                  {/* Happy Eyes */}
-                  <g stroke="#031b33" strokeWidth={6.5} strokeLinecap="round" fill="none">
-                    <path d="M125,185 Q145,165 165,185" />
-                    <path d="M235,185 Q255,165 275,185" />
-                  </g>
+                      <g className="arm-left">
+                        <ellipse cx="74" cy="225" rx="18" ry="24" fill="url(#armGrad-sj)"/>
+                      </g>
 
-                  {/* Open Tongue Mouth */}
-                  <path d="M182,196 Q200,202 218,196 Q200,236 182,196 Z" fill="#b3243d" stroke="#031b33" strokeWidth={4.5} strokeLinejoin="round"/>
-                  <path d="M186,208 Q200,204 214,208 Q200,232 186,208 Z" fill="#ff6b8b"/>
+                      <g className="arm-right">
+                        <ellipse cx="326" cy="225" rx="18" ry="24" fill="url(#armGrad-sj)"/>
+                      </g>
 
-                  {/* Giant Central "N" insignia */}
-                  <text x="200" y="278" fontFamily="system-ui, sans-serif" fontWeight={900} fontSize={64} fill="#ffffff" textAnchor="middle" filter="drop-shadow(0 2px 10px rgba(255,255,255,0.6))">N</text>
-                </g>
-              </svg>
+                      <g className="mascot-eyes">
+                        <g>
+                          <circle cx="145" cy="180" r="24" fill="#031b33"/>
+                          <circle cx="145" cy="180" r="21" fill="#002d5a"/>
+                          <circle cx="138" cy="172" r="8" fill="#ffffff"/>
+                          <circle cx="152" cy="188" r="3" fill="#ffffff"/>
+                        </g>
+                        <g>
+                          <circle cx="255" cy="180" r="24" fill="#031b33"/>
+                          <circle cx="255" cy="180" r="21" fill="#002d5a"/>
+                          <circle cx="248" cy="172" r="8" fill="#ffffff"/>
+                          <circle cx="262" cy="188" r="3" fill="#ffffff"/>
+                        </g>
+                      </g>
+
+                      <g className="mascot-mouth">
+                        <path d="M188,198 Q200,208 212,198 Q200,228 188,198 Z" fill="#b3243d" stroke="#031b33" strokeWidth={4.5} strokeLinejoin="round"/>
+                        <path d="M192,208 Q200,202 208,208 Q200,224 192,208 Z" fill="#ff6b8b"/>
+                      </g>
+
+                      <text x="200" y="278" fontFamily="system-ui, sans-serif" fontWeight={900} fontSize={64} fill="#ffffff" textAnchor="middle" filter="drop-shadow(0 2px 10px rgba(255,255,255,0.6))">N</text>
+                    </g>
+                  </svg>
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20 jump-text">LEVEL UP!</div>
+                </div>
+              ) : (
+                <div className="w-full h-full relative">
+                  <svg className="music-notes-container absolute inset-0 w-full h-full" viewBox="0 0 380 380">
+                    <g className="note"><path d="M20,30 A6,6 0 1,1 14,24 L14,5 L28,2 L28,12 L16,15 L16,24 A6,6 0 1,1 20,30 Z"/></g>
+                    <g className="note"><path d="M20,30 A6,6 0 1,1 14,24 L14,5 L28,2 L28,12 L16,15 L16,24 A6,6 0 1,1 20,30 Z"/></g>
+                    <g className="note"><path d="M20,30 A6,6 0 1,1 14,24 L14,5 L28,2 L28,12 L16,15 L16,24 A6,6 0 1,1 20,30 Z"/></g>
+                  </svg>
+
+                  <svg viewBox="0 0 400 400" width="100%" height="100%" style={{ zIndex: 2 }}>
+                    <defs>
+                      <radialGradient id="bodyGrad-hs" cx="40%" cy="35%" r="60%">
+                        <stop offset="0%" stopColor="#ffffff"/>
+                        <stop offset="25%" stopColor="#a3e3ff"/>
+                        <stop offset="70%" stopColor="#21a7f0"/>
+                        <stop offset="100%" stopColor="#0066cc"/>
+                      </radialGradient>
+                      <linearGradient id="haloGrad-hs" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#b8f1ff"/>
+                        <stop offset="50%" stopColor="#ffffff"/>
+                        <stop offset="100%" stopColor="#b8f1ff"/>
+                      </linearGradient>
+                      <linearGradient id="armGrad-hs" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#ffffff" stopOpacity={0.9}/>
+                        <stop offset="100%" stopColor="#21a7f0" stopOpacity={0.4}/>
+                      </linearGradient>
+                    </defs>
+
+                    <ellipse cx="200" cy="355" rx="120" ry="14" fill="#000000" opacity="0.4" className="shuffle-floor-shadow"/>
+
+                    <g className="shuffle-pivot">
+                      <g className="gravity-dip">
+                        
+                        <g className="shuffle-mascot-halo">
+                          <ellipse cx="200" cy="75" rx="95" ry="16" fill="none" stroke="url(#haloGrad-hs)" strokeWidth={9} filter="drop-shadow(0 0 8px rgba(184,241,255,0.7))"/>
+                        </g>
+
+                        <path d="M125,120 Q105,75 140,88 Z" fill="#21a7f0" stroke="#0055b3" strokeWidth={2}/>
+                        <path d="M275,120 Q295,75 260,88 Z" fill="#21a7f0" stroke="#0055b3" strokeWidth={2}/>
+
+                        <ellipse cx="200" cy="215" rx="160" ry="130" fill="url(#bodyGrad-hs)"/>
+
+                        <g className="shuffle-arm-left">
+                          <ellipse cx="74" cy="225" rx="18" ry="24" fill="url(#armGrad-hs)"/>
+                        </g>
+
+                        <g className="shuffle-arm-right">
+                          <ellipse cx="326" cy="225" rx="18" ry="24" fill="url(#armGrad-hs)"/>
+                        </g>
+
+                        <g stroke="#031b33" strokeWidth="6.5" strokeLinecap="round" fill="none">
+                          <path d="M125,185 Q145,165 165,185" />
+                          <path d="M235,185 Q255,165 275,185" />
+                        </g>
+
+                        <path d="M188,198 Q200,208 212,198 Q200,228 188,198 Z" fill="#b3243d" stroke="#031b33" strokeWidth={4} strokeLinejoin="round"/>
+                        <path d="M192,208 Q200,202 208,208 Q200,224 192,208 Z" fill="#ff6b8b"/>
+
+                        <text x="200" y="278" fontFamily="system-ui, sans-serif" fontWeight={900} fontSize={64} fill="#ffffff" textAnchor="middle" filter="drop-shadow(0 2px 10px rgba(255,255,255,0.6))">N</text>
+
+                      </g>
+                    </g>
+                  </svg>
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20 shuffle-text">PERFECT RHYTHM!</div>
+                </div>
+              )}
 
               {/* Rosy blushing cheeks */}
               <div className="absolute inset-0 pointer-events-none flex justify-center items-center">
@@ -865,6 +1240,12 @@ export function MascotCelebrationScreen({
                   <div className="absolute right-[20px] bottom-[28px] w-5 h-2.5 bg-pink-500/35 rounded-full blur-[1px] animate-pulse" />
                 </div>
               </div>
+            </div>
+
+            {/* Premium Style Toggle Badge */}
+            <div className="absolute -bottom-7 bg-[#1cb0f6]/10 hover:bg-[#1cb0f6]/20 border border-[#1cb0f6]/30 text-[#00d4ff] text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 transition-all">
+              <span>Mascot Style: {mascotStyle === "slime" ? "Cat-Eared Slime" : mascotStyle === "star_jump" ? "Star Jump" : "Happy Shuffle"}</span>
+              <span className="text-[8px] opacity-70">(Tap Mascot to Swap)</span>
             </div>
           </motion.div>
         </div>
