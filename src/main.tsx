@@ -205,6 +205,8 @@ window.addEventListener('error', (event) => {
     msg.includes('dispatcher is null') ||
     msg.includes('useContext') ||
     msg.includes('Invalid hook call') ||
+    msg.includes('Script error') ||
+    msg.includes('script error') ||
     !event.filename ||
     event.filename.includes('extension')
   ) {

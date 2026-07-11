@@ -277,20 +277,20 @@ export function MascotCelebrationScreen({
     }
   };
 
-  // Generate background playful floating items
+  // Generate background playful floating items (harmonized to gold/amber theme, highly subtle)
   useEffect(() => {
-    const totalShapes = 16;
-    const colors = ["rgba(43,215,255,0.25)", "rgba(255,157,36,0.25)", "rgba(88,204,2,0.25)", "rgba(255,93,93,0.25)", "rgba(255,123,229,0.25)"];
-    const types: ("circle" | "ring" | "square" | "star")[] = ["circle", "ring", "square", "star"];
+    const totalShapes = 5;
+    const colors = ["rgba(251,191,36,0.12)", "rgba(245,158,11,0.1)", "rgba(217,119,6,0.08)"];
+    const types: ("circle" | "ring" | "star")[] = ["circle", "ring", "star"];
     
     const shapes: FloatingShape[] = Array.from({ length: totalShapes }).map((_, i) => ({
       id: i,
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
-      vx: (Math.random() - 0.5) * 1.5,
-      vy: (Math.random() - 0.5) * 1.5,
-      size: 15 + Math.random() * 25,
-      opacity: 0.3 + Math.random() * 0.5,
+      vx: (Math.random() - 0.5) * 1.0,
+      vy: (Math.random() - 0.5) * 1.0,
+      size: 15 + Math.random() * 20,
+      opacity: 0.15 + Math.random() * 0.2,
       type: types[Math.floor(Math.random() * types.length)],
       color: colors[Math.floor(Math.random() * colors.length)]
     }));
@@ -576,7 +576,7 @@ export function MascotCelebrationScreen({
       id="mascot-celebration-container"
       onMouseMove={handleMouseMove}
       onTouchMove={handleTouchMove}
-      className="fixed inset-0 z-[1002] bg-[#0c141d] flex flex-col items-center justify-between p-6 text-center overflow-hidden font-sans select-none"
+      className="fixed inset-0 z-[1002] bg-[#0c141d] flex flex-col items-center justify-between p-4 sm:p-6 text-center overflow-hidden font-sans select-none"
     >
       {/* 1. CARTOONISH LIGHTNING FLASH INTRO LAYER */}
       <AnimatePresence>
@@ -823,8 +823,10 @@ export function MascotCelebrationScreen({
         .jump-text {
           font-size: 20px;
           font-weight: 900;
-          color: #00d4ff;
-          letter-spacing: 1px;
+          color: #fbbf24;
+          letter-spacing: 1.5px;
+          white-space: nowrap;
+          text-shadow: 0 0 10px rgba(251, 191, 36, 0.6), 0 0 20px rgba(251, 191, 36, 0.2);
           opacity: 0;
           transform: translateY(10px);
           animation: slideUpText 0.8s ease-out 0.4s forwards;
@@ -925,9 +927,11 @@ export function MascotCelebrationScreen({
         .shuffle-text {
           font-size: 18px;
           font-weight: 900;
-          color: #00d4ff;
+          color: #fbbf24;
           letter-spacing: 1.5px;
           text-transform: uppercase;
+          white-space: nowrap;
+          text-shadow: 0 0 10px rgba(251, 191, 36, 0.6), 0 0 20px rgba(251, 191, 36, 0.2);
           opacity: 0;
           transform: translateY(10px);
           animation: slideUpText 0.8s ease-out 0.4s forwards;
@@ -981,15 +985,12 @@ export function MascotCelebrationScreen({
         ))}
       </div>
 
-      {/* EXPLICIT ORNAMENTAL STAR BUSTS */}
-      <div className="absolute top-[15%] left-[8%] opacity-30 animate-pulse pointer-events-none z-0">
-        <Sparkles size={40} className="text-[#FFE500]" />
+      {/* EXPLICIT ORNAMENTAL STAR BUSTS (SUBTLE, FRAMING THE MASCOT) */}
+      <div className="absolute top-[20%] left-[10%] opacity-25 animate-pulse pointer-events-none z-0">
+        <Sparkles size={32} className="text-[#fbbf24]" />
       </div>
-      <div className="absolute top-[18%] right-[10%] opacity-20 animate-bounce pointer-events-none z-0">
-        <Sparkles size={32} className="text-[#1CB0F6]" />
-      </div>
-      <div className="absolute bottom-[30%] left-[12%] opacity-15 animate-bounce pointer-events-none z-0">
-        <Sparkles size={28} className="text-[#58CC02]" />
+      <div className="absolute top-[22%] right-[12%] opacity-20 animate-bounce pointer-events-none z-0">
+        <Sparkles size={28} className="text-[#f59e0b]" />
       </div>
 
       <div className="relative z-10 w-full max-w-md flex flex-col items-center justify-between min-h-[92vh] py-2">
@@ -1008,11 +1009,14 @@ export function MascotCelebrationScreen({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.5 }}
                 transition={{ type: "spring", stiffness: 140, damping: 15 }}
-                className="absolute -top-12 left-1/2 -translate-x-1/2 w-[90%] max-w-[340px] bg-white text-gray-900 px-5 py-3 rounded-[1.6rem] shadow-[0_10px_0_rgba(0,0,0,0.15)] z-20 border-[4px] border-[#1cb0f6] relative"
+                className="absolute -top-12 left-1/2 -translate-x-1/2 w-[90%] max-w-[340px] bg-[#faf8f2] text-[#451a03] px-5 py-3.5 rounded-2xl shadow-[0_8px_0_rgba(63,31,4,0.15)] z-20 border-[4px] border-[#fbbf24] relative"
               >
-                {/* Pointer Arrow */}
-                <div className="absolute bottom-[-15px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[15px] border-t-[#1cb0f6]">
-                  <div className="absolute bottom-[4px] left-[-9px] w-0 h-0 border-l-[9px] border-l-transparent border-r-[9px] border-r-transparent border-t-[11px] border-t-white" />
+                {/* Tapered triangular tail shape matching the border and background */}
+                <div className="absolute bottom-[-14px] left-1/2 -translate-x-1/2 w-6 h-4 pointer-events-none">
+                  <svg viewBox="0 0 24 16" className="w-full h-full drop-shadow-[0_3px_0_rgba(63,31,4,0.15)]">
+                    <polygon points="12,16 2,0 22,0" fill="#fbbf24" />
+                    <polygon points="12,11 5,0 19,0" fill="#faf8f2" />
+                  </svg>
                 </div>
                 <p className="text-[14px] font-extrabold leading-snug">
                   {randomMessage}
@@ -1039,9 +1043,8 @@ export function MascotCelebrationScreen({
             onPointerEnter={() => setIsHovered(true)}
             onPointerLeave={() => setIsHovered(false)}
           >
-            {/* Concentric pedestal glow */}
-            <div className="absolute bottom-1 w-32 h-8 bg-[#1cb0f6]/25 rounded-full border border-[#1cb0f6]/30 blur-[1px]" />
-            <div className="absolute bottom-1.5 w-28 h-6 bg-gradient-to-t from-[#1cb0f6]/40 to-transparent rounded-full border border-[#1cb0f6]/20 shadow-inner" />
+            {/* Clean horizontal shadow under the mascot (replaces empty progress-like rings) */}
+            <div className="absolute bottom-1.5 w-32 h-3 bg-black/45 rounded-full blur-[2px]" />
             
             {/* Custom vector real physics slime-mascot */}
             <div className="relative w-44 h-44 -translate-y-2 hover:scale-105 transition-all duration-300">
@@ -1243,28 +1246,28 @@ export function MascotCelebrationScreen({
             </div>
 
             {/* Premium Style Toggle Badge */}
-            <div className="absolute -bottom-7 bg-[#1cb0f6]/10 hover:bg-[#1cb0f6]/20 border border-[#1cb0f6]/30 text-[#00d4ff] text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 transition-all">
+            <div className="absolute -bottom-14 left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#0a141d]/90 backdrop-blur-md hover:bg-[#fbbf24]/20 border border-[#fbbf24]/40 text-[#fbbf24] text-[10px] font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full flex items-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.5)] z-20">
               <span>Mascot Style: {mascotStyle === "slime" ? "Cat-Eared Slime" : mascotStyle === "star_jump" ? "Star Jump" : "Happy Shuffle"}</span>
-              <span className="text-[8px] opacity-70">(Tap Mascot to Swap)</span>
+              <span className="text-[8px] opacity-60 text-white/70 font-medium">| Tap Mascot to Swap</span>
             </div>
           </motion.div>
         </div>
 
         {/* 3-CARD COMPACT SEQUENCE SHAPED AS A SMALL POLISHED GRID */}
-        <div className="w-full grid grid-cols-3 gap-2.5 my-2 max-w-[340px]">
+        <div className="w-full grid grid-cols-3 gap-2 mt-8 mb-2 max-w-[340px] px-1 mx-auto">
           
           {/* Card 1: COINS */}
           <div className="min-h-[100px] flex items-stretch">
             {activeCardIndex >= 1 ? (
               <div
                 id="coin-stat-card"
-                className="animate-card-bounce w-full bg-[#1c2317] border-2 border-[#58cc02]/50 rounded-xl p-2 flex flex-col items-center justify-between shadow-[0_4px_0_#3c8c01]"
+                className="animate-card-bounce w-full bg-[#1e1b15] border-2 border-[#fbbf24]/50 rounded-xl p-2 flex flex-col items-center justify-between shadow-[0_4px_0_#b45309]"
               >
-                <div className="text-[9px] font-black text-[#58cc02] uppercase tracking-wider">
+                <div className="text-[9px] font-black text-[#fbbf24] uppercase tracking-wider">
                   COINS
                 </div>
-                <div className="w-8 h-8 rounded-full bg-[#58cc02]/15 flex items-center justify-center my-0.5">
-                  <Coins size={18} className="text-[#58cc02]" />
+                <div className="w-8 h-8 rounded-full bg-[#fbbf24]/15 flex items-center justify-center my-0.5">
+                  <Coins size={18} className="text-[#fbbf24]" />
                 </div>
                 <div className="text-base font-black text-white">
                   +{coinDisplay}
@@ -1280,13 +1283,13 @@ export function MascotCelebrationScreen({
             {activeCardIndex >= 2 ? (
               <div
                 id="streak-stat-card"
-                className="animate-card-bounce w-full bg-[#2a1711] border-2 border-[#ff9600]/50 rounded-xl p-2 flex flex-col items-center justify-between shadow-[0_4px_0_#b25200]"
+                className="animate-card-bounce w-full bg-[#1e1b15] border-2 border-[#fbbf24]/50 rounded-xl p-2 flex flex-col items-center justify-between shadow-[0_4px_0_#b45309]"
               >
-                <div className="text-[9px] font-black text-[#ff9600] uppercase tracking-wider">
+                <div className="text-[9px] font-black text-[#fbbf24] uppercase tracking-wider">
                   STREAK
                 </div>
-                <div className="w-8 h-8 rounded-full bg-[#ff9600]/15 flex items-center justify-center my-0.5">
-                  <Flame size={18} className="text-[#ff9600]" />
+                <div className="w-8 h-8 rounded-full bg-[#fbbf24]/15 flex items-center justify-center my-0.5">
+                  <Flame size={18} className="text-[#fbbf24]" />
                 </div>
                 <div className="text-base font-black text-white">
                   {streakDisplay} Day{streakDisplay > 1 ? 's' : ''}
@@ -1302,13 +1305,13 @@ export function MascotCelebrationScreen({
             {activeCardIndex >= 3 ? (
               <div
                 id="xp-stat-card"
-                className="animate-card-bounce w-full bg-[#11212c] border-2 border-[#1cb0f6]/50 rounded-xl p-2 flex flex-col items-center justify-between shadow-[0_4px_0_#1172a1]"
+                className="animate-card-bounce w-full bg-[#1e1b15] border-2 border-[#fbbf24]/50 rounded-xl p-2 flex flex-col items-center justify-between shadow-[0_4px_0_#b45309]"
               >
-                <div className="text-[9px] font-black text-[#1cb0f6] uppercase tracking-wider">
+                <div className="text-[9px] font-black text-[#fbbf24] uppercase tracking-wider">
                   ENERGY XP
                 </div>
-                <div className="w-8 h-8 rounded-full bg-[#1cb0f6]/15 flex items-center justify-center my-0.5">
-                  <Zap size={18} className="text-[#1cb0f6]" />
+                <div className="w-8 h-8 rounded-full bg-[#fbbf24]/15 flex items-center justify-center my-0.5">
+                  <Zap size={18} className="text-[#fbbf24]" />
                 </div>
                 <div className="text-base font-black text-white">
                   +{xpDisplay} XP
@@ -1337,13 +1340,13 @@ export function MascotCelebrationScreen({
                   triggerVibration(25);
                   onContinue();
                 }}
-                className="group relative w-full bg-[#58cc02] hover:bg-[#46a301] py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-[0_6px_0_#388301] active:translate-y-1 active:shadow-none cursor-pointer"
+                className="group relative w-full bg-gradient-to-r from-[#fbbf24] to-[#f59e0b] hover:from-[#f59e0b] hover:to-[#d97706] py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-[0_6px_0_#b45309] active:translate-y-1 active:shadow-none cursor-pointer"
               >
-                <span className="text-white font-black text-base italic uppercase tracking-wider">
+                <span className="text-amber-950 font-black text-base uppercase tracking-wider font-sans">
                   CONTINUE CHALLENGE
                 </span>
-                <div className="bg-white/20 p-1 rounded-lg group-hover:translate-x-1.5 transition-transform">
-                  <ChevronRight className="text-white" size={16} />
+                <div className="bg-amber-950/15 p-1 rounded-lg group-hover:translate-x-1.5 transition-transform">
+                  <ChevronRight className="text-amber-950" size={16} />
                 </div>
               </motion.button>
             )}
