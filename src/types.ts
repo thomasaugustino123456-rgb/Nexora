@@ -63,6 +63,7 @@ export interface UserSettings {
   showQuotes?: boolean;
   pushMotivationEnabled?: boolean;
   unitSystem?: 'metric' | 'imperial';
+  language?: 'en' | 'es' | 'de' | 'ja' | 'fr';
   purchasedItems?: string[];
   savedChallengeIds?: string[];
   savedTrophyIds?: string[];

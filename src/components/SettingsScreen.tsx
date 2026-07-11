@@ -13,6 +13,7 @@ type FirebaseUser = any; // Temporary fix
 
 import { UserSettings } from '../types';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
+import { translate } from '../lib/translations';
 
 interface SettingsScreenProps {
   user: FirebaseUser | null;
@@ -73,8 +74,8 @@ export function SettingsScreen({
   // Premium Code Entry state
   const [proCode, setProCode] = React.useState('');
 
-  // Selected language state (Mock)
-  const [selectedLanguage, setSelectedLanguage] = React.useState('en');
+  // Selected language state (bound to real settings.language)
+  const selectedLanguage = settings.language || 'en';
 
   const hasPasswordProvider = user?.providerData?.some(
     (provider) => provider.providerId === 'password'
@@ -273,8 +274,8 @@ export function SettingsScreen({
                 <ChevronLeft size={24} />
               </button>
               <div>
-                <h2 className="text-3xl font-black text-[#4F3F34] tracking-tight uppercase">System Settings</h2>
-                <p className="text-[10px] font-black text-[#69C496] uppercase tracking-[0.3em] opacity-80">Global Control Center</p>
+                <h2 className="text-3xl font-black text-[#4F3F34] tracking-tight uppercase">{translate("System Settings", selectedLanguage)}</h2>
+                <p className="text-[10px] font-black text-[#69C496] uppercase tracking-[0.3em] opacity-80">{translate("Global Control Center", selectedLanguage)}</p>
               </div>
             </div>
 
@@ -333,7 +334,7 @@ export function SettingsScreen({
                     </div>
                     <div className="min-w-0 space-y-1">
                       <h4 className="font-black text-[#4F3F34] text-[15px] tracking-tight flex items-center gap-1.5">
-                        {cat.label}
+                        {translate(cat.label, selectedLanguage)}
                         {cat.id === 'premium' && !isPro && (
                           <span className="text-[8px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase animate-pulse">
                             Get
@@ -346,7 +347,7 @@ export function SettingsScreen({
                         )}
                       </h4>
                       <p className="text-xs font-bold text-[#4F3F34]/50 leading-snug">
-                        {cat.desc}
+                        {translate(cat.desc, selectedLanguage)}
                       </p>
                     </div>
                   </motion.div>
@@ -389,15 +390,15 @@ export function SettingsScreen({
                 <ChevronLeft size={24} />
               </button>
               <div className="min-w-0">
-                <p className="text-[9px] font-black text-[#69C496] uppercase tracking-widest leading-none">Settings Area</p>
+                <p className="text-[9px] font-black text-[#69C496] uppercase tracking-widest leading-none">{translate("Settings Area", selectedLanguage)}</p>
                 <h2 className="text-2xl font-black text-[#4F3F34] tracking-tight uppercase truncate mt-0.5">
-                  {CATEGORIES.find(c => c.id === activeCategory)?.label}
+                  {translate(CATEGORIES.find(c => c.id === activeCategory)?.label || "", selectedLanguage)}
                 </h2>
               </div>
             </div>
 
             <p className="text-xs font-semibold text-[#4F3F34]/65 leading-relaxed bg-[#FAF7F2] p-4 rounded-2xl border border-[#E9E4D4]/50">
-              {CATEGORIES.find(c => c.id === activeCategory)?.desc}
+              {translate(CATEGORIES.find(c => c.id === activeCategory)?.desc || "", selectedLanguage)}
             </p>
 
             {/* Category Page Router Content */}
@@ -883,45 +884,46 @@ export function SettingsScreen({
                 <div className="space-y-6" id="language-subpage">
                   <div className="bg-white border border-[#E9E4D4] rounded-[2rem] p-6 space-y-5 shadow-sm text-left">
                     <h3 className="font-black text-[#4F3F34] text-xs uppercase tracking-widest flex items-center gap-2">
-                      <Globe size={14} className="text-indigo-500" /> Region & Localisation Parameters
+                      <Globe size={14} className="text-indigo-500" /> {translate("Region & Localisation Parameters", selectedLanguage)}
                     </h3>
 
                     {/* Metric / Imperial toggle */}
                     <div className="space-y-2">
                       <h4 className="text-[10px] font-black text-[#4F3F34]/40 uppercase tracking-widest pl-1">
-                        Measurement Scale Systems
+                        {translate("Measurement Scale Systems", selectedLanguage)}
                       </h4>
                       <div className="flex bg-[#FAF7F2] p-1.5 rounded-2xl border border-[#E9E4D4]/40 justify-between items-center gap-4">
-                        <span className="text-xs font-black text-[#4F3F34] pl-2">System Standard</span>
+                        <span className="text-xs font-black text-[#4F3F34] pl-2">{translate("System Standard", selectedLanguage)}</span>
                         <div className="flex bg-white p-1 rounded-xl shadow-inner border border-[#E9E4D4]/30">
                           <button 
                             onClick={() => { vibrate(5); setSettings({ unitSystem: 'metric' }); }}
                             className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${settings.unitSystem === 'metric' ? 'bg-[#4F3F34] text-[#FCFAF6] shadow-sm' : 'text-[#4F3F34]/50'}`}
-                          >Metric</button>
+                          >{translate("Metric", selectedLanguage)}</button>
                           <button 
                             onClick={() => { vibrate(5); setSettings({ unitSystem: 'imperial' }); }}
                             className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${settings.unitSystem === 'imperial' ? 'bg-[#4F3F34] text-[#FCFAF6] shadow-sm' : 'text-[#4F3F34]/50'}`}
-                          >Imperial</button>
+                          >{translate("Imperial", selectedLanguage)}</button>
                         </div>
                       </div>
                     </div>
 
-                    {/* Language selector (Mock) */}
+                    {/* Language selector */}
                     <div className="space-y-2">
                       <h4 className="text-[10px] font-black text-[#4F3F34]/40 uppercase tracking-widest pl-1">
-                        Active App Language Locale
+                        {translate("Active App Language Locale", selectedLanguage)}
                       </h4>
                       <div className="relative">
                         <select 
                           value={selectedLanguage}
                           onChange={(e) => {
                             vibrate(10);
-                            setSelectedLanguage(e.target.value);
-                            showToast(`Language system remapped to: ${e.target.value.toUpperCase()}`, 'info');
+                            const val = e.target.value as any;
+                            setSettings({ language: val });
+                            showToast(`${translate("Language system remapped to", val)}: ${val.toUpperCase()}`, 'info');
                           }}
                           className="w-full bg-[#FAF7F2] border border-[#E9E4D4]/60 rounded-2xl py-3.5 px-4 font-black text-xs text-[#4F3F34] focus:outline-none focus:ring-2 focus:ring-[#69C496] appearance-none cursor-pointer"
                         >
-                          <option value="en">🇺🇸 English (US) - Active</option>
+                          <option value="en">🇺🇸 English (US)</option>
                           <option value="es">🇪🇸 Spanish (Castellano)</option>
                           <option value="de">🇩🇪 German (Deutsch)</option>
                           <option value="ja">🇯🇵 Japanese (日本語)</option>

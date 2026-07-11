@@ -10,6 +10,7 @@ import {
 } from '../types';
 import { GardenState } from '../types/garden';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
+import { translate } from '../lib/translations';
 import { Mascot } from './Mascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
 import { MascotAIWrapper } from './SuspenseWrappers';
@@ -101,6 +102,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
   const latestTrophy = trophies[0];
   const layoutConfig = settings.layoutConfig || {};
   const sectionOrder = layoutConfig.sectionOrder || ['stats', 'protocol', 'quests', 'plans', 'mascot'];
+  const lang = settings.language || 'en';
 
   const quotes = [
     "The only way to do great work is to love what you do.",
@@ -225,7 +227,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border border-[#E9E4D4] shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 hover:border-orange-500/30 transition-colors"
                 >
-                  <span className="text-[9px] font-black text-orange-600/70 uppercase tracking-widest text-center block mb-1.5">Streak</span>
+                  <span className="text-[9px] font-black text-orange-600/70 uppercase tracking-widest text-center block mb-1.5">{translate("Streak", lang)}</span>
                   <div className="flex flex-col items-center gap-2 w-full">
                     <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/15 flex-shrink-0">
                       <Flame size={14} strokeWidth={2.2} />
@@ -244,7 +246,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border border-[#E9E4D4] shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 hover:border-emerald-500/30 transition-colors"
                 >
-                  <span className="text-[9px] font-black text-emerald-600/70 uppercase tracking-widest text-center block mb-1.5">XP</span>
+                  <span className="text-[9px] font-black text-emerald-600/70 uppercase tracking-widest text-center block mb-1.5">{translate("XP", lang)}</span>
                   <div className="flex flex-col items-center gap-2 w-full">
                     <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#69C496] to-[#58B383] flex items-center justify-center text-white shadow-md shadow-[#69C496]/15 flex-shrink-0">
                       <Star size={14} strokeWidth={2.2} />
@@ -254,7 +256,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                     </span>
                   </div>
                 </motion.div>
-
+ 
                 {/* Coins Metric */}
                 <motion.div 
                   id="metric-coins"
@@ -263,7 +265,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border border-[#E9E4D4] shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 hover:border-amber-500/30 transition-colors"
                 >
-                  <span className="text-[9px] font-black text-amber-600/70 uppercase tracking-widest text-center block mb-1.5">Coins</span>
+                  <span className="text-[9px] font-black text-amber-600/70 uppercase tracking-widest text-center block mb-1.5">{translate("Coins", lang)}</span>
                   <div className="flex flex-col items-center gap-2 w-full">
                     <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-500/15 flex-shrink-0">
                       <Coins size={14} strokeWidth={2.2} />
@@ -337,7 +339,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                 <div>
                   <h3 className="text-lg font-black text-[#4F3F34] uppercase tracking-wider leading-none mb-1.5 flex items-center gap-2">
                     <Zap size={16} className="text-[#69C496]" strokeWidth={2.5} />
-                    DAILY PROTOCOL
+                    {translate("Daily Challenge", lang).toUpperCase()}
                   </h3>
                   <p className="text-[#7D6B58] text-[9px] font-bold uppercase tracking-[0.15em] flex items-center gap-1.5">
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#69C496] animate-pulse" />
@@ -353,7 +355,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                       </span>
                     ) : (
                       <span className="bg-[#69C496]/5 border border-[#69C496]/20 px-3 py-1 rounded-full text-xs font-black text-[#69C496] shadow-sm">
-                        {dailyProgress.completionsCount} / 3 Challenges Done
+                        {dailyProgress.completionsCount} / 3 {translate("Completed Today", lang)}
                       </span>
                     )}
                   </div>
@@ -395,10 +397,10 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
               >
                 <Zap size={18} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
                 {!isPro && dailyProgress.completionsCount >= 3 
-                  ? 'PROTOCOL COMPLETE 🏆' 
+                  ? `${translate("Completed Today", lang).toUpperCase()} 🏆` 
                   : dailyProgress.completionsCount > 0 
-                    ? `NEXT CHALLENGE (#${dailyProgress.completionsCount + 1})` 
-                    : 'START INITIAL CHALLENGE'}
+                    ? `${translate("Start Challenge", lang).toUpperCase()} (#${dailyProgress.completionsCount + 1})` 
+                    : translate("Start Challenge", lang).toUpperCase()}
               </motion.button>
 
               {!isPro && dailyProgress.completionsCount >= 3 && (

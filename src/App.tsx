@@ -294,6 +294,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   notificationsEnabled: true,
   showQuotes: true,
   unitSystem: "metric",
+  language: "en",
   activeHat: "none",
   activeSkin: "sunset",
   zenModeEnabled: false,
