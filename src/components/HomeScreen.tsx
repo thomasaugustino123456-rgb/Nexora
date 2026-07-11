@@ -343,7 +343,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   </h3>
                   <p className="text-[#7D6B58] text-[9px] font-bold uppercase tracking-[0.15em] flex items-center gap-1.5">
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#69C496] animate-pulse" />
-                    Resets in: <CountdownToMidnight />
+                    {translate("Resets in:", lang)} <CountdownToMidnight />
                   </p>
                 </div>
                 <div className="text-left sm:text-right flex items-center sm:flex-col justify-between sm:justify-start gap-2">
@@ -351,7 +351,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                     {isPro ? (
                       <span className="flex items-center gap-1 text-[#69C496] bg-[#69C496]/10 px-3 py-1 rounded-full text-xs font-extrabold shadow-sm">
                         <Infinity size={14} strokeWidth={2.5} />
-                        UNLIMITED PRO
+                        {translate("UNLIMITED PRO", lang)}
                       </span>
                     ) : (
                       <span className="bg-[#69C496]/5 border border-[#69C496]/20 px-3 py-1 rounded-full text-xs font-black text-[#69C496] shadow-sm">
@@ -360,7 +360,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                     )}
                   </div>
                   <p className="text-[9px] font-bold text-[#7D6B58]/60 uppercase tracking-wider">
-                    {isPro ? 'Pro Status Active' : 'Daily Challenge Limit'}
+                    {isPro ? translate("Pro Status Active", lang) : translate("Daily Challenge Limit", lang)}
                   </p>
                 </div>
               </div>
@@ -407,7 +407,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                 <div className="flex items-center justify-center gap-3 p-3.5 bg-yellow-50/40 rounded-2xl border border-yellow-200/50">
                   <div className="flex items-center gap-2">
                     <Clock size={15} className="text-amber-500" strokeWidth={2.5} />
-                    <span className="text-[10px] font-black text-[#4F3F34]/80 uppercase tracking-wider">Next Recovery:</span>
+                    <span className="text-[10px] font-black text-[#4F3F34]/80 uppercase tracking-wider">{translate("Next Recovery:", lang)}</span>
                   </div>
                   <div className="text-xs font-extrabold text-[#69C496]">
                     <NextRestorationCountdown targetTime={(dailyProgress as any).nextRestorationTime} />
@@ -418,21 +418,21 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
               {/* Challenge Category Navigation */}
               <div className="space-y-3 pt-4 border-t border-[#E9E4D4]/40">
                 <span className="text-[9px] font-black text-[#7D6B58]/60 uppercase tracking-[0.2em] block text-center sm:text-left">
-                  TAP ANY CATEGORY TO RUN DIRECT CHALLENGE
+                  {translate("TAP ANY CATEGORY TO RUN DIRECT CHALLENGE", lang).toUpperCase()}
                 </span>
                 
                 <div className="grid grid-cols-5 xs:grid-cols-5 sm:flex sm:flex-wrap items-center justify-center gap-2.5 sm:gap-3 py-1">
                   {[
-                    { id: "pushups", label: "Pushups", done: dailyProgress.pushupsDone, icon: "💪" },
-                    { id: "water", label: "Water", done: dailyProgress.waterDrank >= settings.waterGoal, icon: "💧" },
-                    { id: "breathing", label: "Breath", done: dailyProgress.breathingDone, icon: "🧘" },
-                    { id: "drawing", label: "Draw", done: dailyProgress.drawingDone, icon: "🎨" },
-                    { id: "football", label: "Field", done: dailyProgress.footballDone, icon: "⚽" },
-                    { id: "bubbles", label: "Bubble", done: dailyProgress.bubblesDone, icon: "🫧" },
-                    { id: "memory", label: "Brain", done: dailyProgress.memoryDone, icon: "🧠" },
-                    { id: "gratitude", label: "Gratitude", done: dailyProgress.gratitudeDone, icon: "🙏" },
-                    { id: "reaction", label: "Reaction", done: dailyProgress.reactionDone, icon: "⚡" },
-                    { id: "meditation", label: "Calm", done: dailyProgress.meditationDone, icon: "🧘‍♀️" }
+                    { id: "pushups", label: translate("Pushups", lang), done: dailyProgress.pushupsDone, icon: "💪" },
+                    { id: "water", label: translate("Water", lang), done: dailyProgress.waterDrank >= settings.waterGoal, icon: "💧" },
+                    { id: "breathing", label: translate("Breath", lang), done: dailyProgress.breathingDone, icon: "🧘" },
+                    { id: "drawing", label: translate("Draw", lang), done: dailyProgress.drawingDone, icon: "🎨" },
+                    { id: "football", label: translate("Field", lang), done: dailyProgress.footballDone, icon: "⚽" },
+                    { id: "bubbles", label: translate("Bubble", lang), done: dailyProgress.bubblesDone, icon: "🫧" },
+                    { id: "memory", label: translate("Brain", lang), done: dailyProgress.memoryDone, icon: "🧠" },
+                    { id: "gratitude", label: translate("Gratitude", lang), done: dailyProgress.gratitudeDone, icon: "🙏" },
+                    { id: "reaction", label: translate("Reaction", lang), done: dailyProgress.reactionDone, icon: "⚡" },
+                    { id: "meditation", label: translate("Calm", lang), done: dailyProgress.meditationDone, icon: "🧘‍♀️" }
                   ].filter(task => !(settings.archivedOfficialChallenges || []).includes(task.id)).map((task, i) => (
                     <motion.button 
                       key={task.id}
@@ -490,9 +490,9 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                 <Crown size={20} />
               </div>
               <div>
-                <h4 className="font-black text-blue-900 text-sm">{dailyProgress.dailyQuestDone ? "QUEST ACHIEVED" : "LEGENDARY QUEST"}</h4>
+                <h4 className="font-black text-blue-900 text-sm">{dailyProgress.dailyQuestDone ? translate("QUEST ACHIEVED", lang) : translate("LEGENDARY QUEST", lang)}</h4>
                 <p className="text-[10px] font-bold text-blue-900/40 uppercase tracking-widest italic">
-                  {dailyProgress.dailyQuestDone ? "You crushed the daily goal!" : `Complete "${dailyQuest}" for DOUBLE REWARDS`}
+                  {dailyProgress.dailyQuestDone ? translate("You crushed the daily goal!", lang) : `${translate("Complete", lang)} "${dailyQuest}" ${translate("for DOUBLE REWARDS", lang)}`}
                 </p>
               </div>
             </div>
@@ -501,7 +501,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                 onClick={onStartChallenge}
                 className="bg-blue-900 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 active:scale-95 transition-all"
               >
-                Target
+                {translate("Target", lang)}
               </button>
             )}
           </motion.div>
@@ -513,7 +513,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
           <div key="plans" className="space-y-4 pt-4 transition-colors">
             
             <div className="flex items-center justify-between mt-8">
-              <h3 className="text-[10px] font-black text-blue-900/40 uppercase tracking-[0.2em]">Custom Protocol Library</h3>
+              <h3 className="text-[10px] font-black text-blue-900/40 uppercase tracking-[0.2em]">{translate("Custom Protocol Library", lang)}</h3>
               <button 
                 onClick={onOpenPlanBuilder}
                 className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
@@ -527,7 +527,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
               {customPlans.length === 0 ? (
                 <div className="p-12 rounded-3xl border-2 border-dashed border-slate-100 flex flex-col items-center gap-3 text-center">
                   <Target size={32} className="text-slate-200" />
-                  <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">No Custom Protocols</p>
+                  <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">{translate("No Custom Protocols", lang)}</p>
                 </div>
               ) : (
                 customPlans.map((plan) => (
@@ -540,14 +540,14 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                     </div>
                     <div className="flex-1">
                       <h4 className="font-black text-blue-900">{plan?.name}</h4>
-                      <p className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest">{plan.challenges.length} Steps • {plan.days.length} Days</p>
+                      <p className="text-[10px] font-bold text-blue-900/30 uppercase tracking-widest">{plan.challenges.length} {translate("Steps", lang)} • {plan.days.length} {translate(plan.days.length === 1 ? "Day" : "Days", lang)}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button onClick={() => onDeleteCustomPlan(plan.id)} className="p-2 text-slate-200 hover:text-red-500 transition-colors">
                         <Trash2 size={18} />
                       </button>
                       <button onClick={() => onStartCustomPlan(plan)} className="bg-blue-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] shadow-lg active:scale-95 transition-all">
-                        RUN
+                        {translate("Start", lang).toUpperCase()}
                       </button>
                     </div>
                   </motion.div>

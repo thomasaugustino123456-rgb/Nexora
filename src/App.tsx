@@ -245,6 +245,7 @@ import { HydrationDetailPage } from "./components/HydrationDetailPage";
 const SOCIAL_LOCKED = false;
 
 import { vibrate, VIBRATION_PATTERNS } from "./lib/vibrate";
+import { translate } from "./lib/translations";
 import {
   requestNotificationPermission,
   setupOnMessageListener,
@@ -5407,6 +5408,7 @@ export default function App() {
                       coins={stats.coins || 0}
                       purchasedItems={settings.purchasedItems || []}
                       isPro={isPro}
+                      settings={settings}
                       onBuy={(item, currency) => {
                         vibrate(VIBRATION_PATTERNS.SUCCESS);
 
@@ -6463,7 +6465,7 @@ export default function App() {
                             setActiveScreen(item.screen);
                           }}
                           icon={item.icon}
-                          label={item.label}
+                          label={translate(item.label, settings.language || "en")}
                         />
                       );
                     },

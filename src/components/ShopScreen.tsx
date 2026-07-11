@@ -1,7 +1,8 @@
 import React from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, Star } from "lucide-react";
-import { ShopItem } from "../types";
+import { ShopItem, UserSettings } from "../types";
+import { translate } from "../lib/translations";
 
 export const SHOP_ITEMS: ShopItem[] = [
   // Power-ups
@@ -340,6 +341,7 @@ export function ShopScreen({
   isPro,
   onBuy,
   onBack,
+  settings,
 }: {
   streak: number;
   coins: number;
@@ -347,7 +349,9 @@ export function ShopScreen({
   isPro: boolean;
   onBuy: (item: ShopItem, currency: "streak" | "coins") => void;
   onBack: () => void;
+  settings?: UserSettings;
 }) {
+  const lang = settings?.language || "en";
   const featuredItem = SHOP_ITEMS[0];
   const powerUps = SHOP_ITEMS.filter(
     (item) =>
@@ -373,7 +377,7 @@ export function ShopScreen({
         >
           <ArrowLeft size={24} className="text-blue-900" />
         </button>
-        <h1 className="text-3xl font-black text-blue-900">Nexora Shop</h1>
+        <h1 className="text-3xl font-black text-blue-900">Nexora {translate("Shop", lang)}</h1>
         <div className="flex items-center gap-3 ml-auto">
           <div className="flex items-center gap-2 bg-amber-100 border border-amber-200 px-4 py-2 rounded-full text-amber-600 font-bold shadow-sm">
             <Star size={20} className="fill-amber-500" />

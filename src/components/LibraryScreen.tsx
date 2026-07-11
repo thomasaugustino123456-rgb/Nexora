@@ -6,6 +6,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { LibraryItem, UserStats, UserSettings, NexusVideo } from '../types';
+import { translate } from '../lib/translations';
 
 interface LibraryScreenProps {
   items: LibraryItem[];
@@ -42,13 +43,14 @@ export function LibraryScreen({
   onPlayChallenge,
   onBack
 }: LibraryScreenProps) {
+  const lang = settings.language || 'en';
   const [activeTab, setActiveTab] = useState<Tab>('inventory');
 
   const tabs = [
-    { id: 'inventory', label: 'Vault', icon: Package, desc: 'Skins & Tracks' },
-    // { id: 'media', label: 'Media', icon: Video, desc: 'Saved Reels & Clips' },
-    { id: 'creative', label: 'Sketches', icon: Palette, desc: 'Saved Masterpieces' },
-    { id: 'archive', label: 'Protocols', icon: StickyNote, desc: 'Saved Brain Dumps' },
+    { id: 'inventory', label: translate('Vault', lang), icon: Package, desc: translate('Skins & Tracks', lang) },
+    // { id: 'media', label: translate('Media', lang), icon: Video, desc: translate('Saved Reels & Clips', lang) },
+    { id: 'creative', label: translate('Sketches', lang), icon: Palette, desc: translate('Saved Masterpieces', lang) },
+    { id: 'archive', label: translate('Protocols', lang), icon: StickyNote, desc: translate('Saved Brain Dumps', lang) },
   ];
 
   return (
@@ -59,11 +61,11 @@ export function LibraryScreen({
           onClick={onBack} 
           className="p-2.5 bg-white hover:bg-[#FAF7F2] border border-[#E9E4D4]/60 rounded-xl text-[#4F3F34] active:scale-95 transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm"
         >
-          <ChevronRight className="rotate-180 text-[#69C496]" size={14} /> BACK
+          <ChevronRight className="rotate-180 text-[#69C496]" size={14} /> {translate("BACK", lang)}
         </button>
         <div className="text-center">
-          <p className="text-[9px] font-black uppercase text-[#69C496] tracking-[0.18em]">Retention Treasury</p>
-          <h2 className="text-base font-black text-[#4F3F34] uppercase tracking-tight">Vault System</h2>
+          <p className="text-[9px] font-black uppercase text-[#69C496] tracking-[0.18em]">{translate("Retention Treasury", lang)}</p>
+          <h2 className="text-base font-black text-[#4F3F34] uppercase tracking-tight">{translate("Vault System", lang)}</h2>
         </div>
         <div className="w-10 h-10 rounded-xl bg-white border border-[#E9E4D4]/60 flex items-center justify-center text-[#69C496] shadow-sm">
           <Package size={16} />
@@ -77,9 +79,9 @@ export function LibraryScreen({
             <Sparkles size={13} className="fill-[#69C496]/20 animate-pulse" />
           </div>
           <div>
-            <h3 className="text-[11px] font-black text-[#4F3F34] uppercase tracking-wide">Integrated Treasury</h3>
+            <h3 className="text-[11px] font-black text-[#4F3F34] uppercase tracking-wide">{translate("Integrated Treasury", lang)}</h3>
             <p className="text-[10px] text-[#4F3F34]/60 font-medium leading-relaxed mt-0.5">
-              Select unlocks for your biological companion, trigger therapeutic audio streams, relive curated challenges, and appreciate your custom generated assets, bro.
+              {translate("Select unlocks for your biological companion, trigger therapeutic audio streams, relive curated challenges, and appreciate your custom generated assets, bro.", lang)}
             </p>
           </div>
         </div>
