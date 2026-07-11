@@ -236,6 +236,7 @@ import { ArchitectLab } from "./components/ArchitectLab";
 import { NexusVision } from "./components/NexusVision";
 import { DeepChecklist } from "./components/DeepChecklist";
 import { CompletionFlame } from "./components/CompletionFlame";
+import { MascotCelebrationScreen } from "./components/MascotCelebrationScreen";
 import { RewardsScreen } from "./components/RewardsScreen";
 import { TrophyRewardsScreen } from "./components/TrophyRewardsScreen";
 import { AdminPanel } from "./components/AdminPanel";
@@ -662,6 +663,7 @@ export default function App() {
   const [notifications, setNotifications] = useState<NexusNotification[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [showCompletionFlame, setShowCompletionFlame] = useState(false);
+  const [showMascotCelebration, setShowMascotCelebration] = useState(false);
   const [showRewardsScreen, setShowRewardsScreen] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showArchitectLab, setShowArchitectLab] = useState(false);
@@ -748,6 +750,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [settings.proTestExpiresAt, settings.isPro]);
   const [sessionXP, setSessionXP] = useState(0);
+  const [sessionCoins, setSessionCoins] = useState(0);
   const [sessionStreak, setSessionStreak] = useState(0);
   const [isNewStreak, setIsNewStreak] = useState(true);
   const [sessionTrophy, setSessionTrophy] = useState<TrophyType>("golden");
@@ -4439,9 +4442,10 @@ export default function App() {
     }
 
     setSessionXP(xpToAdd);
+    setSessionCoins(coinsToAdd);
     setSessionStreak(finalStreakShow);
 
-    setShowCompletionFlame(true);
+    setShowMascotCelebration(true);
     setActiveScreen("home");
     setChallengeStep("home" as any);
     setShowCoinAnimation(true);
@@ -6308,6 +6312,19 @@ export default function App() {
                 setShowCelebration(false);
                 onUpdateSettings({ spaceHouseUnlocked: true });
                 setActiveScreen("social");
+              }}
+            />
+          )}
+
+          {showMascotCelebration && (
+            <MascotCelebrationScreen
+              settings={settings}
+              sessionXP={sessionXP}
+              sessionCoins={sessionCoins}
+              sessionStreak={sessionStreak}
+              onContinue={() => {
+                setShowMascotCelebration(false);
+                setShowCompletionFlame(true);
               }}
             />
           )}

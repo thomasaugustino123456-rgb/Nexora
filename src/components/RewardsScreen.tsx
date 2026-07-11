@@ -5,6 +5,7 @@ import { vibrate } from "../lib/vibrate";
 import { UserStats } from "../types";
 import { MascotV2 } from "./MascotV2";
 import { XpRewardsScreen } from "./XpRewardsScreen";
+import { useSound } from "../hooks/useSound";
 
 const CHEST_SOUNDS = {
   reveal: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088376/mixkit-game-experience-level-increased-2062_cyf4kz.wav",
@@ -37,12 +38,25 @@ export function RewardsScreen({
   onFinish,
   isCustomPlan,
 }: RewardsScreenProps) {
+  const { play } = useSound();
   const [currentStage, setCurrentStage] = useState<'coins' | 'xp'>('coins');
   const [tapCount, setTapCount] = useState(0);
   const [coinsAdded, setCoinsAdded] = useState(0);
   const [showNext, setShowNext] = useState(false);
   const [statusText, setStatusText] = useState("Tap the Box 3 Times to Open");
   const [statusColor, setStatusColor] = useState("#788f9a");
+  const [isClickedPulse, setIsClickedPulse] = useState(false);
+  const [particles] = useState(() => 
+    Array.from({ length: 15 }, (_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      bottom: `${-10 - Math.random() * 20}%`,
+      size: `${4 + Math.random() * 8}px`,
+      delay: `${Math.random() * 10}s`,
+      duration: `${10 + Math.random() * 15}s`,
+      opacity: 0.15 + Math.random() * 0.3
+    }))
+  );
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Clean up AudioContext on unmount
@@ -239,42 +253,57 @@ export function RewardsScreen({
   const handleChestClick = () => {
     if (tapCount >= 3) return;
 
+    setIsClickedPulse(true);
+    setTimeout(() => setIsClickedPulse(false), 400);
+
     const nextTap = tapCount + 1;
     setTapCount(nextTap);
 
     if (nextTap === 1) {
       // Tap 1: Play click, strong vibration, and schedule landing sound
       vibrate(100);
-      playChestAudio("click", settings?.soundEnabled);
+      if (settings?.soundEnabled !== false) {
+        play("chest_click");
+      }
       playSoundEffect("thud1");
       setStatusText("2 Taps Remaining...");
       setStatusColor("#788f9a");
       setTimeout(() => {
-        playChestAudio("land", settings?.soundEnabled);
+        if (settings?.soundEnabled !== false) {
+          play("chest_land");
+        }
         vibrate(60);
       }, 300);
     } else if (nextTap === 2) {
       // Tap 2: Play click, even stronger vibration, and schedule landing sound
       vibrate(130);
-      playChestAudio("click", settings?.soundEnabled);
+      if (settings?.soundEnabled !== false) {
+        play("chest_click");
+      }
       playSoundEffect("thud2");
       setStatusText("FINAL TAP INITIALIZED!!!");
       setStatusColor("#FF9600");
       setTimeout(() => {
-        playChestAudio("land", settings?.soundEnabled);
+        if (settings?.soundEnabled !== false) {
+          play("chest_land");
+        }
         vibrate(90);
       }, 430);
     } else if (nextTap === 3) {
       // Tap 3: Play click & reveal, massive vibration, and schedule landing sound on impact
       vibrate([180, 50, 180]);
-      playChestAudio("click", settings?.soundEnabled);
-      playChestAudio("reveal", settings?.soundEnabled);
+      if (settings?.soundEnabled !== false) {
+        play("chest_click");
+        play("chest_reveal");
+      }
       playSoundEffect("launch");
       setStatusText("Protocol Rewards Disbursed!");
       setStatusColor("#FFD000");
 
       setTimeout(() => {
-        playChestAudio("land", settings?.soundEnabled);
+        if (settings?.soundEnabled !== false) {
+          play("chest_land");
+        }
         vibrate(220);
       }, 620);
 
@@ -321,9 +350,46 @@ export function RewardsScreen({
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-[#0d1518] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+    <div className="fixed inset-0 z-[1000] bg-radial from-[#321c08] via-[#120a04] to-[#050301] flex flex-col items-center justify-center p-6 text-center overflow-hidden transition-all duration-700">
+      {/* Floating amber particles background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[0]">
+        {particles.map(p => (
+          <div
+            key={p.id}
+            className="absolute rounded-full bg-amber-500/20 blur-[1px] animate-float-particle"
+            style={{
+              left: p.left,
+              bottom: p.bottom,
+              width: p.size,
+              height: p.size,
+              animationDelay: p.delay,
+              animationDuration: p.duration,
+              opacity: p.opacity,
+              "--op": p.opacity,
+            } as React.CSSProperties}
+          />
+        ))}
+      </div>
+
+      {/* Click Impact shockwave in background */}
+      <div 
+        className={`absolute inset-0 bg-radial from-amber-500/35 via-transparent to-transparent pointer-events-none transition-all duration-500 ease-out z-[1] ${
+          isClickedPulse ? "opacity-100 scale-150" : "opacity-0 scale-75"
+        }`} 
+      />
+
       {/* EXPLICIT STYLES FOR CINEMATIC 3D CHEST & COIN PHYSICS */}
       <style>{`
+        @keyframes floatParticle {
+          0% { transform: translateY(0) translateX(0); opacity: 0; }
+          10% { opacity: var(--op, 0.4); }
+          90% { opacity: var(--op, 0.4); }
+          100% { transform: translateY(-110vh) translateX(30px); opacity: 0; }
+        }
+        .animate-float-particle {
+          animation: floatParticle linear infinite;
+        }
+
         /* THE MASTER VIEWPORT CONTAINER */
         .chest-stage {
           width: 300px;
@@ -368,8 +434,17 @@ export function RewardsScreen({
           75% { transform: scale(0.96, 1.04) translateY(-14px); }
           85% { transform: scale(1.02, 0.98) translateY(0); }
         }
+        @keyframes anticipationShake {
+          0%, 80%, 100% { transform: rotate(0deg) scale(1); }
+          82% { transform: rotate(-3deg) scale(1.02) translateY(-2px); }
+          84% { transform: rotate(3deg) scale(1.02) translateY(1px); }
+          86% { transform: rotate(-2deg) scale(1.02) translateY(-1px); }
+          88% { transform: rotate(2deg) scale(1.02) translateY(1px); }
+          90% { transform: rotate(-1deg) scale(1.01) translateY(0); }
+          92% { transform: rotate(1deg) scale(1.01) translateY(0); }
+        }
         .chest-stage-idle .box-mesh {
-          animation: idleBounce 2.0s ease-in-out infinite;
+          animation: idleBounce 2.0s ease-in-out infinite, anticipationShake 2.5s ease-in-out infinite;
         }
 
         /* 3-TAP JUMP PHYSICS + VANISH TRIGGER */
@@ -543,28 +618,30 @@ export function RewardsScreen({
       `}</style>
 
       <div className="relative z-10 w-full max-w-lg flex flex-col items-center justify-between min-h-[85vh]">
-        {/* Top Header */}
-        <div className="space-y-3 mt-4">
-          <p className="text-yellow-500 font-black uppercase tracking-[0.4em] text-xs flex items-center justify-center gap-1">
-            <Sparkles size={14} className="animate-pulse" />
-            Claim Your Reward, Bro!
-            <Sparkles size={14} className="animate-pulse" />
-          </p>
-          <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">
-            Epic Chest Disbursed
+        {/* Top Header Card */}
+        <div className="space-y-4 mt-6 flex flex-col items-center">
+          <div className="px-5 py-2 rounded-full bg-amber-500/10 border-2 border-amber-500/40 text-amber-400 font-bold uppercase tracking-[0.25em] text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.15)] animate-bounce-slow">
+            <Sparkles size={14} className="text-amber-300 animate-pulse" />
+            Common Chest
+            <Sparkles size={14} className="text-amber-300 animate-pulse" />
+          </div>
+          <h2 className="text-3xl font-extrabold text-white tracking-tight">
+            Challenge Completed!
           </h2>
+          <p className="text-amber-200/60 text-sm max-w-xs mx-auto">
+            You finished your challenge successfully. Tap the chest below to claim your treasures!
+          </p>
         </div>
 
-        {/* Dynamic Tip / Instructions */}
+        {/* Dynamic Tip / Instructions banner */}
         <div 
-          className="test-tip" 
+          className="px-5 py-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-lg transition-all duration-300"
           style={{ 
             color: statusColor, 
-            transition: "all 0.4s ease-in-out",
             fontWeight: 800,
-            fontSize: "1.1rem",
+            fontSize: "0.95rem",
             textTransform: "uppercase",
-            letterSpacing: "1.5px"
+            letterSpacing: "2px"
           }}
         >
           {statusText}

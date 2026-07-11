@@ -86,6 +86,12 @@ const SOUNDS = {
   tulip_laugh: "",
   rose_sigh: "",
   shroom_glow: "",
+  chest_reveal:
+    "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088376/mixkit-game-experience-level-increased-2062_cyf4kz.wav",
+  chest_click:
+    "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088375/mixkit-quick-win-video-game-notification-269_ec7wwz.wav",
+  chest_land:
+    "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088375/mixkit-martial-arts-punch-2052_l0noe5.wav",
 };
 
 // Advanced Audio Engine
@@ -509,6 +515,39 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
 
       osc.start(now);
       osc.stop(now + 0.5);
+    } else if (soundKey === "chest_click") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.12);
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.15, now + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } else if (soundKey === "chest_land") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(110, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } else if (soundKey === "chest_reveal") {
+      const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99]; // C4, E4, G4, C5, E5, G5
+      notes.forEach((freq, idx) => {
+        const subOsc = ctx.createOscillator();
+        const subGain = ctx.createGain();
+        subOsc.type = "sine";
+        subOsc.frequency.setValueAtTime(freq, now + idx * 0.08);
+        subGain.gain.setValueAtTime(0, now + idx * 0.08);
+        subGain.gain.linearRampToValueAtTime(0.12, now + idx * 0.08 + 0.02);
+        subGain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 0.4);
+        subOsc.connect(subGain);
+        subGain.connect(ctx.destination);
+        subOsc.start(now + idx * 0.08);
+        subOsc.stop(now + idx * 0.08 + 0.4);
+      });
     } else {
       osc.type = "sine";
       osc.frequency.setValueAtTime(440, now);

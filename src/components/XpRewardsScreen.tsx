@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
 import { UserStats } from "../types";
+import { useSound } from "../hooks/useSound";
 
 const CHEST_SOUNDS = {
   reveal: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088376/mixkit-game-experience-level-increased-2062_cyf4kz.wav",
@@ -33,11 +34,24 @@ export function XpRewardsScreen({
   settings,
   onFinish,
 }: XpRewardsScreenProps) {
+  const { play } = useSound();
   const [clickCount, setClickCount] = useState(0);
   const [systemLock, setSystemLock] = useState(false);
   const [showXpText, setShowXpText] = useState(false);
   const [showNext, setShowNext] = useState(false);
   const [gems, setGems] = useState<Array<{ id: number; tx: string; ty: string; size: number; color: string }>>([]);
+  const [isClickedPulse, setIsClickedPulse] = useState(false);
+  const [particles] = useState(() => 
+    Array.from({ length: 15 }, (_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      bottom: `${-10 - Math.random() * 20}%`,
+      size: `${4 + Math.random() * 8}px`,
+      delay: `${Math.random() * 10}s`,
+      duration: `${10 + Math.random() * 15}s`,
+      opacity: 0.15 + Math.random() * 0.3
+    }))
+  );
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Status message controls
@@ -167,40 +181,55 @@ export function XpRewardsScreen({
   const handleChestClick = () => {
     if (systemLock) return;
 
+    setIsClickedPulse(true);
+    setTimeout(() => setIsClickedPulse(false), 400);
+
     const nextCount = clickCount + 1;
     setClickCount(nextCount);
 
     if (nextCount === 1) {
       // Click 1: Play click, strong vibration, and schedule landing sound on landing impact
       vibrate([100, 30, 80]);
-      playChestAudio("click", settings?.soundEnabled);
+      if (settings?.soundEnabled !== false) {
+        play("chest_click");
+      }
       playSoundEffect("tap", 1);
       setStatusText("3 Taps Left... Feel the Magic!");
       setStatusColor("#00f0ff");
       setTimeout(() => {
-        playChestAudio("land", settings?.soundEnabled);
+        if (settings?.soundEnabled !== false) {
+          play("chest_land");
+        }
         vibrate(90);
       }, 400);
     } else if (nextCount === 2) {
       // Click 2: Play click, stronger vibration, and schedule landing sound
       vibrate([120, 30, 100]);
-      playChestAudio("click", settings?.soundEnabled);
+      if (settings?.soundEnabled !== false) {
+        play("chest_click");
+      }
       playSoundEffect("tap", 2);
       setStatusText("2 Taps Left... Energy is Surging!");
       setStatusColor("#a832fc");
       setTimeout(() => {
-        playChestAudio("land", settings?.soundEnabled);
+        if (settings?.soundEnabled !== false) {
+          play("chest_land");
+        }
         vibrate(110);
       }, 450);
     } else if (nextCount === 3) {
       // Click 3: Play click, intense buildup vibration, and schedule landing sound
       vibrate([150, 25, 130, 25, 120]);
-      playChestAudio("click", settings?.soundEnabled);
+      if (settings?.soundEnabled !== false) {
+        play("chest_click");
+      }
       playSoundEffect("tap", 3);
       setStatusText("FINAL TAP DEPLOYMENT INITIALIZED!!!");
       setStatusColor("#ff00d0");
       setTimeout(() => {
-        playChestAudio("land", settings?.soundEnabled);
+        if (settings?.soundEnabled !== false) {
+          play("chest_land");
+        }
         vibrate(140);
       }, 500);
     } else if (nextCount === 4) {
@@ -212,8 +241,10 @@ export function XpRewardsScreen({
   const executeEpicFinalLaunch = () => {
     // 1. Play massive launch chime + laser sweep + Sound 1 (reveal) + Sound 2 (click/launch)
     playSoundEffect("epic_launch");
-    playChestAudio("click", settings?.soundEnabled);
-    playChestAudio("reveal", settings?.soundEnabled);
+    if (settings?.soundEnabled !== false) {
+      play("chest_click");
+      play("chest_reveal");
+    }
 
     // 2. Heavy explosion vibration so the user REALLY feels it!
     vibrate([200, 50, 250, 50, 300, 40, 350]);
@@ -223,7 +254,9 @@ export function XpRewardsScreen({
 
     // 3. Exact frame of landing impact is 680ms
     setTimeout(() => {
-      playChestAudio("land", settings?.soundEnabled);
+      if (settings?.soundEnabled !== false) {
+        play("chest_land");
+      }
       vibrate(220);
       setShowXpText(true);
 
@@ -264,9 +297,46 @@ export function XpRewardsScreen({
   };
 
   return (
-    <div className="fixed inset-0 z-[1001] bg-[#0a0f14] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+    <div className="fixed inset-0 z-[1001] bg-radial from-[#13113c] via-[#090724] to-[#030211] flex flex-col items-center justify-center p-6 text-center overflow-hidden transition-all duration-700">
+      {/* Floating magical purple/blue particles background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[0]">
+        {particles.map(p => (
+          <div
+            key={p.id}
+            className="absolute rounded-full bg-violet-400/25 blur-[1px] animate-float-particle"
+            style={{
+              left: p.left,
+              bottom: p.bottom,
+              width: p.size,
+              height: p.size,
+              animationDelay: p.delay,
+              animationDuration: p.duration,
+              opacity: p.opacity,
+              "--op": p.opacity,
+            } as React.CSSProperties}
+          />
+        ))}
+      </div>
+
+      {/* Click Impact shockwave in background */}
+      <div 
+        className={`absolute inset-0 bg-radial from-[#bd00ff]/20 via-transparent to-transparent pointer-events-none transition-all duration-500 ease-out z-[1] ${
+          isClickedPulse ? "opacity-100 scale-150" : "opacity-0 scale-75"
+        }`} 
+      />
+
       {/* COGNITIVE SCOPED STYLES FROM HTML DESIGN SHEET */}
       <style>{`
+        @keyframes floatParticle {
+          0% { transform: translateY(0) translateX(0); opacity: 0; }
+          10% { opacity: var(--op, 0.4); }
+          90% { opacity: var(--op, 0.4); }
+          100% { transform: translateY(-110vh) translateX(30px); opacity: 0; }
+        }
+        .animate-float-particle {
+          animation: floatParticle linear infinite;
+        }
+
         .chest-stage-xp {
           width: 360px;
           height: 360px;
@@ -351,7 +421,7 @@ export function XpRewardsScreen({
         /* =========================================
            THE IDLE LOOP PHYSICS
            ========================================= */
-        .idle-physics-xp { animation: idleBouncingXp 2.5s infinite ease-in-out; }
+        .idle-physics-xp { animation: idleBouncingXp 2.5s infinite ease-in-out, anticipationShakeXp 2.5s ease-in-out infinite; }
         .idle-glow-xp { animation: idleGlowPulseXp 2.5s infinite ease-in-out; }
 
         @keyframes idleBouncingXp {
@@ -363,6 +433,16 @@ export function XpRewardsScreen({
           60% { transform: scale(1.03, 0.97) translateY(0); }
           70% { transform: scale(0.99, 1.01) translateY(-2px); }
           80% { transform: scale(1, 1) translateY(0); }
+        }
+
+        @keyframes anticipationShakeXp {
+          0%, 80%, 100% { transform: rotate(0deg) scale(1); }
+          82% { transform: rotate(-3deg) scale(1.02) translateY(-2px); }
+          84% { transform: rotate(3deg) scale(1.02) translateY(1px); }
+          86% { transform: rotate(-2deg) scale(1.02) translateY(-1px); }
+          88% { transform: rotate(2deg) scale(1.02) translateY(1px); }
+          90% { transform: rotate(-1deg) scale(1.01) translateY(0); }
+          92% { transform: rotate(1deg) scale(1.01) translateY(0); }
         }
 
         @keyframes idleGlowPulseXp {
@@ -460,27 +540,30 @@ export function XpRewardsScreen({
 
       <div className="relative z-10 w-full max-w-lg flex flex-col items-center justify-between min-h-[85vh]">
         
-        {/* Top Header */}
-        <div className="space-y-3 mt-4">
-          <p className="text-[#00d4ff] font-black uppercase tracking-[0.4em] text-xs flex items-center justify-center gap-1">
-            <Sparkles size={14} className="animate-pulse" />
-            Official App Challenge Bonus!
-            <Sparkles size={14} className="animate-pulse" />
-          </p>
-          <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">
-            Nexora Blue Magical Chest
+        {/* Top Header Card */}
+        <div className="space-y-4 mt-6 flex flex-col items-center">
+          <div className="px-5 py-2 rounded-full bg-violet-500/15 border-2 border-violet-500/55 text-violet-300 font-bold uppercase tracking-[0.25em] text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(168,85,247,0.25)] animate-bounce-slow">
+            <Sparkles size={14} className="text-violet-300 animate-pulse" />
+            Rare Magical Chest
+            <Sparkles size={14} className="text-violet-300 animate-pulse" />
+          </div>
+          <h2 className="text-3xl font-extrabold text-white tracking-tight">
+            Legendary XP Surge!
           </h2>
+          <p className="text-[#a1b0cb] text-sm max-w-xs mx-auto">
+            Unleash the Blue Magical Energy to claim expensive XP multipliers!
+          </p>
         </div>
 
-        {/* Dynamic Tips */}
+        {/* Dynamic Tips banner */}
         <div 
+          className="px-5 py-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-lg transition-all duration-300"
           style={{ 
             color: statusColor, 
-            transition: "all 0.4s ease-in-out",
             fontWeight: 800,
-            fontSize: "1.1rem",
+            fontSize: "0.95rem",
             textTransform: "uppercase",
-            letterSpacing: "1.5px"
+            letterSpacing: "2px"
           }}
         >
           {statusText}
