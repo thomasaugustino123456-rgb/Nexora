@@ -5024,16 +5024,12 @@ export default function App() {
                         : "text-[#4F3F34]/70 bg-white hover:bg-slate-50 border-[#E9E4D4]"
                     }`}
                   >
-                    {(settings.profilePic || user?.photoURL) ? (
-                      <img
-                        src={settings.profilePic || user?.photoURL || ""}
-                        alt="Profile"
-                        className="w-[18px] h-[18px] rounded-full object-cover border border-[#E9E4D4]"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <User size={18} strokeWidth={2} />
-                    )}
+                    <img
+                      src={settings.profilePic || user?.photoURL || "/nexora_mascot_new.png"}
+                      alt="Profile"
+                      className="w-[18px] h-[18px] rounded-full object-cover border border-[#E9E4D4]"
+                      referrerPolicy="no-referrer"
+                    />
                   </button>
 
                   {(user?.uid === "G77faQhRPfe5jr4hbY0O0L4fNUs2" || user?.email === "thomasaugustino12345678@gmail.com") && (

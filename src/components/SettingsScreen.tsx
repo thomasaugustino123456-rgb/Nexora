@@ -287,11 +287,7 @@ export function SettingsScreen({
             >
               <div className="flex items-center gap-4 min-w-0">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FAF7F2] to-[#E9E4D4] overflow-hidden shadow-inner border-2 border-white shrink-0 relative">
-                  {(settings.profilePic || user?.photoURL) ? (
-                    <img src={settings.profilePic || user?.photoURL || ""} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Bio" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[#4F3F34] font-black text-lg">U</div>
-                  )}
+                  <img src={settings.profilePic || user?.photoURL || "/nexora_mascot_new.png"} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Bio" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[9px] font-black text-[#69C496] uppercase tracking-widest leading-none">Logged Operative</p>
@@ -415,11 +411,7 @@ export function SettingsScreen({
 
                     <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-[#FAF7F2]/50 rounded-2xl border border-[#E9E4D4]/40">
                       <div className="w-16 h-16 rounded-2xl bg-white overflow-hidden shadow-inner border-2 border-[#E9E4D4] shrink-0 relative flex items-center justify-center">
-                        {(settings.profilePic || user?.photoURL) ? (
-                          <img src={settings.profilePic || user?.photoURL || ""} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Avatar" />
-                        ) : (
-                          <span className="text-xl font-black text-[#4F3F34]">U</span>
-                        )}
+                        <img src={settings.profilePic || user?.photoURL || "/nexora_mascot_new.png"} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Avatar" />
                       </div>
                       <div className="flex-1 w-full space-y-1">
                         <label className="text-[9px] font-black text-[#4F3F34]/40 uppercase tracking-widest block pl-0.5">Custom Display Name</label>

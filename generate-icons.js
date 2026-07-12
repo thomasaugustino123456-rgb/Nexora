@@ -4,7 +4,7 @@ import { Jimp } from 'jimp';
 
 async function generatePWAIcons() {
   try {
-    const sourceJpg = path.resolve('src/assets/images/nexora_mascot_logo_1781981236517.jpg');
+    const sourceJpg = path.resolve('src/assets/images/nexora_mascot_new_1783846559328.jpg');
     
     if (!fs.existsSync(sourceJpg)) {
       console.error('Source official mascot JPG not found at', sourceJpg);
@@ -30,6 +30,11 @@ async function generatePWAIcons() {
     const publicLogoPath = path.resolve('public/nexora_mascot_logo.png');
     await originalImage.write(publicLogoPath);
     console.log('Saved:', publicLogoPath);
+
+    // 5. public/nexora_mascot_new.png
+    const publicNewMascotPath = path.resolve('public/nexora_mascot_new.png');
+    await originalImage.write(publicNewMascotPath);
+    console.log('Saved:', publicNewMascotPath);
 
     // 4. PWA Sizes
     const sizes = [72, 96, 128, 144, 152, 192, 384, 512];

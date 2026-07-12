@@ -446,7 +446,7 @@ export function SocialScreen({
   const currentUserName =
     settings.displayName || user?.displayName || "Anonymous Hero";
   const currentUserEmail = user?.email || "guest@nexora.io";
-  const currentUserPhoto = settings.profilePic || user?.photoURL || "";
+  const currentUserPhoto = settings.profilePic || user?.photoURL || "/nexora_mascot_new.png";
 
   useEffect(() => {
     (window as any)._nexora_sync_historical_posts = updateHistoricalPostsPrivacy;
