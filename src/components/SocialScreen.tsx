@@ -36,6 +36,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { vibrate, VIBRATION_PATTERNS } from "../lib/vibrate";
+import { MASCOT_IMAGE_SRC } from "../lib/mascot";
+
 
 // Audio effects for Community post actions (Publish & Trash)
 let socialAudioCtx: AudioContext | null = null;
@@ -446,7 +448,7 @@ export function SocialScreen({
   const currentUserName =
     settings.displayName || user?.displayName || "Anonymous Hero";
   const currentUserEmail = user?.email || "guest@nexora.io";
-  const currentUserPhoto = settings.profilePic || user?.photoURL || "/nexora_mascot_new.png";
+  const currentUserPhoto = settings.profilePic || user?.photoURL || MASCOT_IMAGE_SRC;
 
   useEffect(() => {
     (window as any)._nexora_sync_historical_posts = updateHistoricalPostsPrivacy;

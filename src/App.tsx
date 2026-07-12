@@ -257,8 +257,9 @@ import { SplashScreen } from "./components/SplashScreen";
 import { useNexoraData } from "./hooks/useNexoraData";
 import { MascotImage } from "./components/MascotImage";
 import nexoraAppIconImg from "./assets/images/nexora_app_icon.png";
+import { MASCOT_IMAGE_SRC } from "./lib/mascot";
 
-const nexoraAppIcon = "/nexora_mascot_new.png";
+const nexoraAppIcon = MASCOT_IMAGE_SRC;
 
 const detectLowEndDevice = (): boolean => {
   if (typeof navigator === "undefined") return false;
@@ -5025,7 +5026,7 @@ export default function App() {
                     }`}
                   >
                     <img
-                      src={settings.profilePic || user?.photoURL || "/nexora_mascot_new.png"}
+                      src={settings.profilePic || user?.photoURL || MASCOT_IMAGE_SRC}
                       alt="Profile"
                       className="w-[18px] h-[18px] rounded-full object-cover border border-[#E9E4D4]"
                       referrerPolicy="no-referrer"

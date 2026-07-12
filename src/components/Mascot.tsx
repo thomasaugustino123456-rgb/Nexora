@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useSound } from '../hooks/useSound';
+import { MASCOT_IMAGE_SRC } from '../lib/mascot';
+
 
 export type MascotMood = 'happy' | 'angry' | 'boiling' | 'neutral' | 'surprised';
 
@@ -124,7 +126,7 @@ export const Mascot = React.memo(({
       }}
     >
       <img
-        src="/nexora_mascot_new.png"
+        src={MASCOT_IMAGE_SRC}
         alt="Nexora Mascot"
         className="w-full h-full object-contain filter drop-shadow-[0_8px_16px_rgba(59,130,246,0.35)]"
         referrerPolicy="no-referrer"
