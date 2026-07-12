@@ -258,7 +258,7 @@ import { useNexoraData } from "./hooks/useNexoraData";
 import { MascotImage } from "./components/MascotImage";
 import nexoraAppIconImg from "./assets/images/nexora_app_icon.png";
 
-const nexoraAppIcon = "/assets/mascot.png";
+const nexoraAppIcon = "/mascot.png";
 
 const detectLowEndDevice = (): boolean => {
   if (typeof navigator === "undefined") return false;
@@ -4827,7 +4827,7 @@ export default function App() {
         {/* Performance optimized: Background Mascot Watermark removed to prevent heating
       <div className="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0 opacity-[0.03]">
         <img 
-          src="/nexora-mascot.png" 
+          src="/mascot.png" 
           alt="" 
           className="w-[150%] max-w-none"
           referrerPolicy="no-referrer"
@@ -5020,7 +5020,7 @@ export default function App() {
                     }`}
                   >
                     <img
-                      src={settings.profilePic || user?.photoURL || "/assets/mascot.png"}
+                      src={settings.profilePic || user?.photoURL || "/icon-512.png"}
                       alt="Profile"
                       className="w-[18px] h-[18px] rounded-full object-cover border border-[#E9E4D4]"
                       referrerPolicy="no-referrer"

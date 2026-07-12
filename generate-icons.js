@@ -4,7 +4,7 @@ import { Jimp } from 'jimp';
 
 async function generatePWAIcons() {
   try {
-    const sourcePng = path.resolve('public/assets/mascot.png');
+    const sourcePng = path.resolve('public/mascot.png');
     
     if (!fs.existsSync(sourcePng)) {
       console.error('Source official mascot PNG not found at', sourcePng);
@@ -21,8 +21,8 @@ async function generatePWAIcons() {
     await originalImage.write(nexoraAppIconPath);
     console.log('Saved:', nexoraAppIconPath);
 
-    // 2. public/nexora-mascot.png
-    const publicMascotPath = path.resolve('public/nexora-mascot.png');
+    // 2. public/mascot.png
+    const publicMascotPath = path.resolve('public/mascot.png');
     await originalImage.write(publicMascotPath);
     console.log('Saved:', publicMascotPath);
 
@@ -36,8 +36,8 @@ async function generatePWAIcons() {
     await originalImage.write(publicNewMascotPath);
     console.log('Saved:', publicNewMascotPath);
 
-    // 6. public/assets/mascot.png
-    const publicAssetsMascotPath = path.resolve('public/assets/mascot.png');
+    // 6. public/mascot.png
+    const publicAssetsMascotPath = path.resolve('public/mascot.png');
     // Ensure parent directory exists
     fs.mkdirSync(path.dirname(publicAssetsMascotPath), { recursive: true });
     await originalImage.write(publicAssetsMascotPath);

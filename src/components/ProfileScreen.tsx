@@ -179,7 +179,7 @@ export function ProfileScreen({
           <div className="absolute inset-0 bg-blue-500 rounded-[2.5rem] rotate-6 scale-105 opacity-20 blur-xl group-hover:rotate-12 transition-transform duration-500" />
           <div className="w-32 h-32 rounded-[2.5rem] bg-white border-4 border-white shadow-2xl relative z-10 overflow-hidden">
             <img
-              src={editPhoto || "/assets/mascot.png"}
+              src={editPhoto || "/icon-512.png"}
               className="w-full h-full object-cover shadow-inner"
               referrerPolicy="no-referrer"
             />
