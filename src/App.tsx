@@ -257,9 +257,8 @@ import { SplashScreen } from "./components/SplashScreen";
 import { useNexoraData } from "./hooks/useNexoraData";
 import { MascotImage } from "./components/MascotImage";
 import nexoraAppIconImg from "./assets/images/nexora_app_icon.png";
-import { MASCOT_IMAGE_SRC } from "./lib/mascot";
 
-const nexoraAppIcon = MASCOT_IMAGE_SRC;
+const nexoraAppIcon = "/assets/mascot.png";
 
 const detectLowEndDevice = (): boolean => {
   if (typeof navigator === "undefined") return false;
@@ -4951,13 +4950,8 @@ export default function App() {
                     onClick={handleLogoTap}
                     className="relative group p-0.5 rounded-2xl bg-[#69C496]/10 border border-[#69C496]/30 shadow-sm transition-all hover:scale-105 duration-300 cursor-pointer"
                   >
-                    <Mascot
-                      className="w-14 h-14 pointer-events-none"
-                      mood={globalMascotMood}
-                      hat={settings.activeHat || "none"}
-                      theme={settings.activeSkin || "standard"}
-                      performanceMode={settings.performanceMode}
-                      soundPack={settings.isDogSoundPackActive ? "dog" : "cat"}
+                    <MascotImage
+                      className="w-14 h-14 pointer-events-none rounded-xl"
                     />
                     <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -5026,7 +5020,7 @@ export default function App() {
                     }`}
                   >
                     <img
-                      src={settings.profilePic || user?.photoURL || MASCOT_IMAGE_SRC}
+                      src={settings.profilePic || user?.photoURL || "/assets/mascot.png"}
                       alt="Profile"
                       className="w-[18px] h-[18px] rounded-full object-cover border border-[#E9E4D4]"
                       referrerPolicy="no-referrer"

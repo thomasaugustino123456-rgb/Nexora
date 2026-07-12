@@ -4,15 +4,15 @@ import { Jimp } from 'jimp';
 
 async function generatePWAIcons() {
   try {
-    const sourceJpg = path.resolve('src/assets/images/nexora_mascot_new_1783846559328.jpg');
+    const sourcePng = path.resolve('public/assets/mascot.png');
     
-    if (!fs.existsSync(sourceJpg)) {
-      console.error('Source official mascot JPG not found at', sourceJpg);
+    if (!fs.existsSync(sourcePng)) {
+      console.error('Source official mascot PNG not found at', sourcePng);
       return;
     }
 
-    console.log('Reading source JPG...');
-    const originalImage = await Jimp.read(sourceJpg);
+    console.log('Reading source PNG...');
+    const originalImage = await Jimp.read(sourcePng);
 
     console.log('Converting and writing full-size PNGs...');
     
@@ -35,6 +35,13 @@ async function generatePWAIcons() {
     const publicNewMascotPath = path.resolve('public/nexora_mascot_new.png');
     await originalImage.write(publicNewMascotPath);
     console.log('Saved:', publicNewMascotPath);
+
+    // 6. public/assets/mascot.png
+    const publicAssetsMascotPath = path.resolve('public/assets/mascot.png');
+    // Ensure parent directory exists
+    fs.mkdirSync(path.dirname(publicAssetsMascotPath), { recursive: true });
+    await originalImage.write(publicAssetsMascotPath);
+    console.log('Saved:', publicAssetsMascotPath);
 
     // 4. PWA Sizes
     const sizes = [72, 96, 128, 144, 152, 192, 384, 512];

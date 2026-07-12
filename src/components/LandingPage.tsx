@@ -18,7 +18,7 @@ const phoneMockup = "https://res.cloudinary.com/ddtfq9acc/image/upload/v17824831
 const tabletMockup = "https://res.cloudinary.com/ddtfq9acc/image/upload/v1782483181/file_00000000352871f4b2fac6a36ed8b31f_djawfz.png";
 const combinedMockup = "https://res.cloudinary.com/ddtfq9acc/image/upload/v1782483209/file_0000000009c871f4a4d86809b9d548ea_rpn9kb.png";
 
-const nexoraAppIcon = nexoraAppIconImg;
+const nexoraAppIcon = "/assets/mascot.png";
 
 interface LandingPageProps {
   onGetStarted: () => void;

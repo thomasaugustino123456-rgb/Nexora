@@ -17,7 +17,7 @@ import { vibrate } from "../lib/vibrate";
 import { MascotImage } from "./MascotImage";
 import nexoraAppIconImg from "../assets/images/nexora_app_icon.png";
 
-const nexoraAppIcon = nexoraAppIconImg;
+const nexoraAppIcon = "/assets/mascot.png";
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
