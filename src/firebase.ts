@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore, memoryLocalCache } from 'firebase/firestore';
+import { initializeFirestore, memoryLocalCache, setLogLevel } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence, User } from 'firebase/auth';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import { getAnalytics, logEvent, isSupported as isAnalyticsSupported } from 'firebase/analytics';
@@ -63,6 +63,13 @@ export const db = initializeFirestore(app, {
   ...(isIframe ? { experimentalForceLongPolling: true } : {}),
 }, databaseId === "(default)" ? undefined : databaseId);
 
+// Silent native Firestore warnings (e.g. offline warnings) to prevent them being captured as platform errors.
+try {
+  setLogLevel('silent');
+} catch (e) {
+  console.warn("Failed to set Firestore log level to silent:", e);
+}
+
 // Messaging is only supported in some browsers
 export const messaging = async () => {
   try {
@@ -89,8 +96,24 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  
+  // Detect if this is an expected offline/network/unavailable state.
+  const isOffline = 
+    errorMessage.toLowerCase().includes('offline') || 
+    errorMessage.toLowerCase().includes('could not reach') ||
+    errorMessage.toLowerCase().includes('connection failed') ||
+    errorMessage.toLowerCase().includes('unavailable') ||
+    errorMessage.toLowerCase().includes('network') ||
+    (error && typeof error === 'object' && 'code' in error && (error as any).code === 'unavailable');
+
+  if (isOffline) {
+    console.warn(`[Firestore Offline] Operating in local fallback mode for ${operationType} on path: ${path}. Detail:`, errorMessage);
+    return;
+  }
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage,
     operationType,
     path
   }

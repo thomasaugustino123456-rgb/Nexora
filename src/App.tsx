@@ -4806,6 +4806,23 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+        
+        {/* OPTION 1: Warm Organic Ambient Glow (Gently breathing and drifting blobs representing Warm Orange, Nature Green, and Calm Blue) */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+          {/* Top-Right: Warm Sunset Amber/Orange Glow (represents streak/coins warmth) */}
+          <div 
+            className="absolute top-[-10%] right-[-10%] w-[550px] h-[550px] rounded-full bg-[#FF8A5B] opacity-15 blur-[120px] animate-ambient-one"
+          />
+          {/* Bottom-Left: Organic Moss Green Glow (represents growth and plants) */}
+          <div 
+            className="absolute bottom-[-15%] left-[-15%] w-[650px] h-[650px] rounded-full bg-[#69C496] opacity-20 blur-[130px] animate-ambient-two"
+          />
+          {/* Center-Left: Calm Serene Blue Glow (represents hydration and sleep focus) */}
+          <div 
+            className="absolute top-[30%] left-[-10%] w-[450px] h-[450px] rounded-full bg-[#3B82F6] opacity-15 blur-[110px] animate-ambient-three"
+          />
+        </div>
+
         {/* Performance optimized: Sparkles Background Effect removed to prevent heating
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {Array.from({ length: 20 }).map((_, i) => (

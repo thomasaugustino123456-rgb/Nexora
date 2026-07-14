@@ -541,4 +541,46 @@
   background-color: rgba(250, 247, 242, 0.95) !important;
 }
 
+/* Ambient Floating Glow Animations for Option 1 Background */
+@keyframes ambientGlowOne {
+  0% { transform: translate(0px, 0px) scale(1); opacity: 0.15; }
+  33% { transform: translate(30px, -50px) scale(1.15); opacity: 0.28; }
+  66% { transform: translate(-20px, 30px) scale(0.9); opacity: 0.12; }
+  100% { transform: translate(0px, 0px) scale(1); opacity: 0.15; }
+}
+
+@keyframes ambientGlowTwo {
+  0% { transform: translate(0px, 0px) scale(1.1); opacity: 0.2; }
+  50% { transform: translate(-40px, 40px) scale(0.85); opacity: 0.1; }
+  100% { transform: translate(0px, 0px) scale(1.1); opacity: 0.2; }
+}
+
+@keyframes ambientGlowThree {
+  0% { transform: translate(0px, 0px) scale(0.9); opacity: 0.12; }
+  50% { transform: translate(50px, 20px) scale(1.2); opacity: 0.25; }
+  100% { transform: translate(0px, 0px) scale(0.9); opacity: 0.12; }
+}
+
+.animate-ambient-one {
+  animation: ambientGlowOne 25s infinite ease-in-out;
+  will-change: transform, opacity;
+}
+
+.animate-ambient-two {
+  animation: ambientGlowTwo 30s infinite ease-in-out;
+  will-change: transform, opacity;
+}
+
+.animate-ambient-three {
+  animation: ambientGlowThree 28s infinite ease-in-out;
+  will-change: transform, opacity;
+}
+
+ 
+ 
+ 
+ 
+[diff_block_end]
+
+
 

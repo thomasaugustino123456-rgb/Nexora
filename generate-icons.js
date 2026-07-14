@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { Jimp } from 'jimp';
 
 async function generatePWAIcons() {
   try {
@@ -9,10 +10,12 @@ async function generatePWAIcons() {
       return;
     }
 
-    console.log('Copying source PNG...');
+    console.log('Reading source high-res PNG with Jimp...');
+    const originalImage = await Jimp.read(sourcePng);
+    console.log(`Original image loaded successfully. Dimensions: ${originalImage.width}x${originalImage.height}`);
     
-    // Copy the original to various locations
-    const destinations = [
+    // 1. Resized & optimized main app mascots (512x512)
+    const destinations512 = [
       'src/assets/images/nexora_app_icon.png',
       'public/mascot.png',
       'public/nexora_mascot_logo.png',
@@ -20,24 +23,29 @@ async function generatePWAIcons() {
       'public/nexora-mascot.png',
     ];
 
-    for (const dest of destinations) {
+    console.log('Generating optimized 512x512 main app logos...');
+    const mainMascot = originalImage.clone().resize({ w: 512, h: 512 });
+    
+    for (const dest of destinations512) {
       const destPath = path.resolve(dest);
       fs.mkdirSync(path.dirname(destPath), { recursive: true });
-      fs.copyFileSync(sourcePng, destPath);
-      console.log('Saved:', destPath);
+      await mainMascot.write(destPath);
+      console.log('Saved optimized logo:', destPath, `(size: ${fs.statSync(destPath).size} bytes)`);
     }
 
-    // For icon sizes, just copy
+    // 2. Resized PWA icon sizes (72, 96, 128, 144, 152, 192, 384, 512)
     const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    console.log('Generating resized PWA icons...');
     for (const size of sizes) {
       const dest = path.resolve(`public/icon-${size}.png`);
-      fs.copyFileSync(sourcePng, dest);
-      console.log(`Copied mascot to ${dest} (no resizing)`);
+      const resizedIcon = originalImage.clone().resize({ w: size, h: size });
+      await resizedIcon.write(dest);
+      console.log(`Generated resized icon ${size}x${size}:`, dest, `(size: ${fs.statSync(dest).size} bytes)`);
     }
 
-    console.log('All icons copied successfully!');
+    console.log('All icons generated, resized, and optimized successfully!');
   } catch (error) {
-    console.error('Failed to copy mascot icons:', error);
+    console.error('Failed to generate optimized mascot icons:', error);
   }
 }
 
