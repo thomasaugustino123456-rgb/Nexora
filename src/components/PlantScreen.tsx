@@ -375,6 +375,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
               ecosystemName={ecosystemInfo[plantState.type]?.name || "Ecosystem"}
               onSaveToLibrary={onSaveToLibrary}
               onClose={() => setShowCompletion(false)}
+              stats={stats}
+              settings={settings}
             />
           )}
 

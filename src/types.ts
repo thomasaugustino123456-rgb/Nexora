@@ -90,6 +90,7 @@ export interface UserSettings {
   spaceOnboardingCompleted?: boolean;
   plantOnboardingCompleted?: boolean;
   spaceHouseUnlocked?: boolean;
+  activeSpaceRoom?: number;
   plantState?: PlantState;
   plantsProgress?: Partial<Record<PlantType, PlantProgress>>;
   purchasedEcosystemItemIds?: string[];

@@ -105,6 +105,7 @@ import {
 } from "./types";
 import { HOUSE_ITEMS } from "./constants/houseItems";
 import { NexoraStudio } from "./components/NexoraStudio";
+import { BottomNav } from "./components/BottomNav";
 import {
   format,
   subDays,
@@ -310,6 +311,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   },
   purchasedHouseItemIds: [],
   placedHouseItems: [],
+  activeSpaceRoom: 0,
   mascotSize: 1.5,
   mascotPos: { x: 400, y: 300 },
   mascotPinnedItemId: null,
@@ -396,6 +398,7 @@ export default function App() {
     loading,
     authLoading,
     isDataReady,
+    isStateHydrated,
     settings,
     setSettings,
     stats,
@@ -773,6 +776,7 @@ export default function App() {
 
   // Space House Unlock Logic
   const isSpaceHouseUnlocked = useMemo(() => {
+    if (settings.spaceHouseUnlocked) return true;
     const progress = settings.plantsProgress || {};
     const plantsArray = Object.values(progress);
     if (plantsArray.length < 3) return false;
@@ -780,7 +784,14 @@ export default function App() {
     // Check if at least 3 plants have reached Stage 5
     const stage5Plants = plantsArray.filter((p) => p.stage >= 5);
     return stage5Plants.length >= 3;
-  }, [settings.plantsProgress]);
+  }, [settings.plantsProgress, settings.spaceHouseUnlocked]);
+
+  // Persist Space House unlock state once met
+  useEffect(() => {
+    if (isSpaceHouseUnlocked && !settings.spaceHouseUnlocked) {
+      onUpdateSettings({ spaceHouseUnlocked: true });
+    }
+  }, [isSpaceHouseUnlocked, settings.spaceHouseUnlocked, onUpdateSettings]);
 
   // Calculate Global Mascot Mood for the Dynamic Icon (Duolingo Style)
   const globalMascotMood: MascotMood = useMemo(() => {
@@ -813,6 +824,23 @@ export default function App() {
     "nexora_active_screen",
     "home",
   );
+
+  // Navigation Bar Visibility Logic - Show only on the 5 main dashboard tabs
+  const showBottomNav = useMemo(() => {
+    const mainScreens = ["home", "progress", "shop", "library", "notebook"];
+    return mainScreens.includes(activeScreen);
+  }, [activeScreen]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).__nexora_is_rewards_active =
+        showMascotCelebration ||
+        showCompletionFlame ||
+        showRewardsScreen ||
+        activeScreen === "trophy-rewards";
+      (window as any).__nexora_is_challenge_active = activeScreen === "challenge";
+    }
+  }, [showMascotCelebration, showCompletionFlame, showRewardsScreen, activeScreen]);
   const [decayAlert, setDecayAlert] = useState<{
     days: number;
     decayedPoints: number;
@@ -1186,10 +1214,6 @@ export default function App() {
       console.warn("Failed to mark notification as read in Firestore:", e);
     }
   };
-  const [scrollDirection, setScrollDirection] = useState<"up" | "down" | null>(
-    null,
-  );
-  const [lastScrollY, setLastScrollY] = useState(0);
   const { play, stop, playMusic, stopAllMusic } = useSound();
 
   const currentPlayingMusicTrack = useMemo(() => {
@@ -1223,6 +1247,16 @@ export default function App() {
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
   const [activeSystemNotification, setActiveSystemNotification] =
     useState<SystemNotification | null>(null);
+
+  useEffect(() => {
+    if (activeSystemNotification && settings.soundEnabled) {
+      const isRewardsActive = (window as any).__nexora_is_rewards_active;
+      const isChallengeActive = (window as any).__nexora_is_challenge_active || activeScreen === "challenge";
+      if (!isRewardsActive && !isChallengeActive) {
+        play("challenge_unlock");
+      }
+    }
+  }, [activeSystemNotification, settings.soundEnabled, activeScreen, play]);
   const [showCoinAnimation, setShowCoinAnimation] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -1293,32 +1327,93 @@ export default function App() {
     );
   };
 
-  useEffect(() => {
-    let ticking = false;
-    let prevScrollY = window.scrollY;
 
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const currentScrollY = window.scrollY;
-          if (currentScrollY > prevScrollY && currentScrollY > 50) {
-            setScrollDirection("down");
-          } else if (currentScrollY < prevScrollY) {
-            setScrollDirection("up");
-          }
-          prevScrollY = currentScrollY;
-          setLastScrollY(currentScrollY);
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const handleStartChallenge = useCallback(() => {
+    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    setActiveCustomPlan(null);
+    const archived = settings.archivedOfficialChallenges || [];
+    const possibleStarts: ChallengeStep[] = ([
+      "pushups", "water", "breathing", "drawing", "football",
+      "bubbles", "memory", "gratitude", "reaction", "meditation"
+    ] as ChallengeStep[]).filter(s => !archived.includes(s));
+    
+    const finalStarts = possibleStarts.length > 0 ? possibleStarts : ["water" as ChallengeStep];
+    const randomStart = finalStarts[Math.floor(Math.random() * finalStarts.length)];
+    setChallengeStep(randomStart);
+    
+    setActiveScreen("challenge");
+    setDailyProgress((prev) => ({
+      ...prev,
+      waterDrank: 0,
+      pushupsDone: false,
+      dailyQuestDone: false,
+      breathingDone: false,
+      drawingDone: false,
+      footballDone: false,
+      bubblesDone: false,
+      memoryDone: false,
+      gratitudeDone: false,
+      reactionDone: false,
+      meditationDone: false,
+      writingDone: false,
+    }));
+  }, [settings.archivedOfficialChallenges, setActiveScreen, setChallengeStep, setDailyProgress]);
 
-  const handleUpdateProfile = async (
+  const handleOpenGallery = useCallback(() => {
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    setActiveScreen("gallery");
+  }, [setActiveScreen]);
+
+  const handleStartCustomPlan = useCallback((plan: CustomPlan) => {
+    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    setActiveCustomPlan(plan);
+    setChallengeStep(plan.challenges[0]);
+    setActiveScreen("challenge");
+    setDailyProgress((prev) => ({
+      ...prev,
+      waterDrank: 0,
+      pushupsDone: false,
+      dailyQuestDone: false,
+      breathingDone: false,
+      drawingDone: false,
+      footballDone: false,
+      bubblesDone: false,
+      memoryDone: false,
+      gratitudeDone: false,
+      reactionDone: false,
+      meditationDone: false,
+      writingDone: false,
+    }));
+  }, [setActiveCustomPlan, setChallengeStep, setActiveScreen, setDailyProgress]);
+
+  const handleOpenPlanBuilder = useCallback(() => setActiveScreen("plan-builder"), [setActiveScreen]);
+  const handleOpenPlant = useCallback(() => {
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    setActiveScreen("plant");
+  }, [setActiveScreen]);
+
+  const handleOpenArchives = useCallback(() => {
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    setActiveScreen("archives");
+  }, [setActiveScreen]);
+
+  const handleOpenGarden = useCallback(() => {
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    setActiveScreen("garden");
+    if (!settings.hasEnteredGarden) {
+      onUpdateSettings({ hasEnteredGarden: true });
+    }
+  }, [setActiveScreen, settings.hasEnteredGarden, onUpdateSettings]);
+
+  const handleSelectTask = useCallback((taskId: string) => {
+    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    setActiveCustomPlan(null);
+    setChallengeStep(taskId as any);
+    setActiveScreen("challenge");
+  }, [setActiveCustomPlan, setChallengeStep, setActiveScreen]);
+
+  const handleUpdateProfile = useCallback(async (
     name: string,
     photoURL: string,
     location: string,
@@ -1394,7 +1489,7 @@ export default function App() {
       console.error(err);
       showToast("Profile update failed", "error");
     }
-  };
+  }, [user, settings, stats, onUpdateSettings, showToast]);
 
   useEffect(() => {
     if (!user) {
@@ -1421,7 +1516,7 @@ export default function App() {
     return unsub;
   }, [user]);
 
-  const handleDeleteSavedVideo = async (vId: string) => {
+  const handleDeleteSavedVideo = useCallback(async (vId: string) => {
     if (!user) return;
     try {
       const docRef = doc(db, "social_videos", vId);
@@ -1440,7 +1535,7 @@ export default function App() {
       console.error(err);
       showToast("Action failed", "error");
     }
-  };
+  }, [user, showToast]);
 
   const handlePostVideo = async (videoData: any) => {
     if (!user) return;
@@ -1660,7 +1755,7 @@ export default function App() {
     }
   }, [activeScreen]);
 
-  const handleArchiveChallenge = (challengeId: string) => {
+  const handleArchiveChallenge = useCallback((challengeId: string) => {
     const updated = [
       ...(settings.archivedOfficialChallenges || []),
       challengeId,
@@ -1687,7 +1782,7 @@ export default function App() {
         setDailyQuest(null);
       }
     }
-  };
+  }, [settings.archivedOfficialChallenges, onUpdateSettings, showToast, dailyQuest, setDailyQuest]);
 
   useEffect(() => {
     // Select a daily quest based on the date
@@ -1831,10 +1926,10 @@ export default function App() {
   }, [settings.plantState, settings.plantsProgress]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isDataReady || !isStateHydrated) return;
 
     // Initialize plant if not exists
-    if (isDataReady && !settings.plantState) {
+    if (!settings.plantState) {
       onUpdateSettings({
         plantState: {
           type: "sprout",
@@ -1951,7 +2046,7 @@ export default function App() {
     checkPlant();
     const timer = setInterval(checkPlant, 30 * 60 * 1000);
     return () => clearInterval(timer);
-  }, [user, settings.plantState?.lastCheckDate, isDataReady]);
+  }, [user, settings.plantState?.lastCheckDate, isDataReady, isStateHydrated]);
 
   // Global Social Listeners
   useEffect(() => {
@@ -2185,15 +2280,8 @@ export default function App() {
         read: false,
         createdAt: new Date().toISOString(),
       };
-      // Trigger both sound and state overlay
+      // Trigger state overlay (Sound effects are disabled for notifications per user feedback)
       setActiveSystemNotification(fallbackNotif);
-      if (settings.soundEnabled) {
-        try {
-          play("challenge_unlock");
-        } catch (soundErr) {
-          console.warn("Notification sound play rejected:", soundErr);
-        }
-      }
     }
 
     // 3. Server-Side FCM Notification (For background/closed app support)
@@ -2751,7 +2839,9 @@ export default function App() {
           }
         } catch (tokenErr: any) {
           console.error("FCM getToken error:", tokenErr);
-          setFcmError(tokenErr.message || "GET_TOKEN_ERROR");
+          if (tokenErr?.code !== 'messaging/permission-blocked') {
+            setFcmError(tokenErr.message || "GET_TOKEN_ERROR");
+          }
           return cachedToken || null;
         }
       } else {
@@ -2760,7 +2850,9 @@ export default function App() {
       }
     } catch (error: any) {
       console.error("Error setting up FCM:", error);
-      setFcmError(error.message || "UNKNOWN_ERROR");
+      if (error?.code !== 'messaging/permission-blocked') {
+        setFcmError(error.message || "UNKNOWN_ERROR");
+      }
 
       // Fallback: If we had a cached token, use it anyway even if fresh fetch failed
       const cachedToken = localStorage.getItem("nexora_fcm_token");
@@ -3258,7 +3350,7 @@ export default function App() {
     }
   };
 
-  const handleDeleteCustomPlan = async (planId: string) => {
+  const handleDeleteCustomPlan = useCallback(async (planId: string) => {
     if (!user) return;
     try {
       await deleteDoc(doc(db, "customPlans", planId));
@@ -3270,7 +3362,7 @@ export default function App() {
         console.error("Firestore error handled:", e);
       }
     }
-  };
+  }, [user, showToast]);
 
   const handleClaimRankReward = async (rank: number, rewardCoins: number) => {
     if (!user) return;
@@ -3342,7 +3434,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (user && isDataReady) {
+    if (user && isDataReady && isStateHydrated) {
       // Weekly Reset Logic
       const now = new Date();
       const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()))
@@ -3601,6 +3693,7 @@ export default function App() {
   }, [
     user,
     isDataReady,
+    isStateHydrated,
     settings.league,
     stats.lastWeeklyReset,
     stats.lastGiftDate,
@@ -3731,7 +3824,7 @@ export default function App() {
   >([]);
 
   useEffect(() => {
-    if (!isDataReady || !settings.badgeSettings?.trophyAlerts) return;
+    if (!isDataReady || !isStateHydrated || !settings.badgeSettings?.trophyAlerts) return;
 
     const currentTrophyStates = stats.trophies.map((t) => ({
       id: t.id,
@@ -3752,14 +3845,12 @@ export default function App() {
             body: "One of your trophies just turned to ICE! Complete a challenge now to save it!",
             icon: nexoraAppIcon,
           });
-          if (settings.soundEnabled) playTrophySound("ice");
           showToast("TROPHY ALERT: ICE DETECTED! 🧊", "info");
         } else if (curr.type === "broken") {
           sendNotification("Trophy Alert! 💔", {
             body: "Oh no! A trophy has BROKEN! Don't let more break, bro!",
             icon: nexoraAppIcon,
           });
-          if (settings.soundEnabled) playTrophySound("broken");
           showToast("TROPHY ALERT: SHATTERED! 💔", "error");
         }
       }
@@ -3769,6 +3860,7 @@ export default function App() {
   }, [
     stats.trophies,
     isDataReady,
+    isStateHydrated,
     settings.badgeSettings?.trophyAlerts,
     settings.soundEnabled,
   ]);
@@ -3779,32 +3871,71 @@ export default function App() {
         return prevStats;
 
       const now = Date.now();
-      let changed = false;
-
       const trophies = prevStats.trophies || [];
-      const updatedTrophies = trophies.map((t) => {
-        const earnedTime = new Date(t.earnedDate).getTime();
-        const daysSince = (now - earnedTime) / (1000 * 60 * 60 * 24);
 
-        // Revised thresholds: Golden->Ice (3 days), Ice->Broken (5 days)
-        if (t.type === "golden" && daysSince >= 3) {
-          changed = true;
-          return {
-            ...t,
+      // To ensure trophies degrade slowly one-by-one (at most one per 24 hours),
+      // we check if any trophy has been updated (degraded) within the last 24 hours.
+      const oneDayMs = 24 * 60 * 60 * 1000;
+      const hasRecentDegradation = trophies.some((t) => {
+        if (t.type === "ice" || t.type === "broken") {
+          const updatedTime = t.lastUpdated ? new Date(t.lastUpdated).getTime() : 0;
+          return (now - updatedTime) < oneDayMs;
+        }
+        return false;
+      });
+
+      if (hasRecentDegradation) {
+        return prevStats; // Wait for the 24-hour cycle before degrading another trophy!
+      }
+
+      let changed = false;
+      const updatedTrophies = [...trophies];
+
+      // 1. Check for the oldest 'ice' trophy to degrade to 'broken' (one-by-one)
+      let iceToBreakIndex = -1;
+      for (let i = updatedTrophies.length - 1; i >= 0; i--) {
+        const t = updatedTrophies[i];
+        if (t.type === "ice") {
+          const earnedTime = new Date(t.earnedDate).getTime();
+          const daysSince = (now - earnedTime) / (1000 * 60 * 60 * 24);
+          if (daysSince >= 3) {
+            iceToBreakIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (iceToBreakIndex !== -1) {
+        updatedTrophies[iceToBreakIndex] = {
+          ...updatedTrophies[iceToBreakIndex],
+          type: "broken" as const,
+          lastUpdated: new Date().toISOString(),
+        };
+        changed = true;
+      } else {
+        // 2. If no ice trophy was broken, find the oldest 'golden' trophy to turn to 'ice' (one-by-one)
+        let goldToIceIndex = -1;
+        for (let i = updatedTrophies.length - 1; i >= 0; i--) {
+          const t = updatedTrophies[i];
+          if (t.type === "golden") {
+            const earnedTime = new Date(t.earnedDate).getTime();
+            const daysSince = (now - earnedTime) / (1000 * 60 * 60 * 24);
+            if (daysSince >= 2) {
+              goldToIceIndex = i;
+              break;
+            }
+          }
+        }
+
+        if (goldToIceIndex !== -1) {
+          updatedTrophies[goldToIceIndex] = {
+            ...updatedTrophies[goldToIceIndex],
             type: "ice" as const,
             lastUpdated: new Date().toISOString(),
           };
-        }
-        if (t.type === "ice" && daysSince >= 5) {
           changed = true;
-          return {
-            ...t,
-            type: "broken" as const,
-            lastUpdated: new Date().toISOString(),
-          };
         }
-        return t;
-      });
+      }
 
       // 5-day Auto-Removal Cleanup: Delete old trophies (e.g., golden, ice, broken) older than 5 days.
       let cleanedTrophies = updatedTrophies;
@@ -3838,10 +3969,10 @@ export default function App() {
 
   // Trophy degradation logic
   useEffect(() => {
-    if (!isDataReady) return;
+    if (!isDataReady || !isStateHydrated) return;
     const timer = setTimeout(checkTrophies, 2000); // Check shortly after load
     return () => clearTimeout(timer);
-  }, [checkTrophies, isDataReady]);
+  }, [checkTrophies, isDataReady, isStateHydrated]);
 
   const handlePlayLibraryChallenge = (cid: string) => {
     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
@@ -3874,33 +4005,9 @@ export default function App() {
       return;
     }
 
-    // Immediate sound feedback for better UX
-    if (settings.soundEnabled) {
-      play("challenge_unlock");
-    }
-
     setEmergencyActive(false);
     const progress = finalProgress || dailyProgress;
     const isCustomPlan = isCustomPlanFlag ?? activeCustomPlan !== null;
-
-    // Restoring ice trophies logic
-    onUpdateStats((prev) => {
-      const hasIce = prev.trophies?.some((t) => t.type === "ice");
-      if (hasIce) {
-        const updated = prev.trophies.map((t) => {
-          if (t.type === "ice")
-            return {
-              ...t,
-              type: "golden" as const,
-              lastUpdated: new Date().toISOString(),
-            };
-          return t;
-        });
-        showToast("TROPHY RESTORED TO GOLD! 🔥", "success");
-        return { ...prev, trophies: updated };
-      }
-      return prev;
-    });
 
     // Calculate how many tasks were actually completed in this session
     const completedTasksList = Object.entries(progress).filter(
@@ -4255,8 +4362,29 @@ export default function App() {
 
       let newTrophies = [...(prevStats.trophies || [])];
       if (canAwardTrophy) {
-        // Filter out any older degraded/ice/broken trophies now that a new Golden Trophy is earned
-        newTrophies = newTrophies.filter((t) => t.type !== "ice" && t.type !== "broken");
+        // Find index of oldest 'ice' trophy to replace (furthest to the right)
+        let removeIndex = -1;
+        for (let i = newTrophies.length - 1; i >= 0; i--) {
+          if (newTrophies[i].type === "ice") {
+            removeIndex = i;
+            break;
+          }
+        }
+        
+        // If no 'ice' trophy, find the oldest 'broken' trophy to replace
+        if (removeIndex === -1) {
+          for (let i = newTrophies.length - 1; i >= 0; i--) {
+            if (newTrophies[i].type === "broken") {
+              removeIndex = i;
+              break;
+            }
+          }
+        }
+
+        if (removeIndex !== -1) {
+          newTrophies.splice(removeIndex, 1);
+        }
+
         newTrophies.unshift({
           id: `trophy-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           type: "golden",
@@ -4960,15 +5088,15 @@ export default function App() {
             (activeScreen as string) !== "garden" &&
             (activeScreen as string) !== "device-showcase" &&
             !showArchitectLab && (
-              <header className="px-6 pt-8 pb-4 flex items-center justify-between w-full mx-auto max-w-7xl border-b border-[#E9E4D4]/50">
-                <div className="flex items-center gap-3 select-none">
+              <header className="px-4 sm:px-6 pt-6 sm:pt-8 pb-3 sm:pb-4 flex items-center justify-between w-full mx-auto max-w-7xl border-b border-[#E9E4D4]/50">
+                <div className="flex items-center gap-2 sm:gap-3 select-none">
                   <motion.div
                     animate={headerMascotControls}
                     onClick={handleLogoTap}
-                    className="relative group p-0.5 rounded-2xl bg-[#69C496]/10 border border-[#69C496]/30 shadow-sm transition-all hover:scale-105 duration-300 cursor-pointer"
+                    className="relative group p-0.5 rounded-xl sm:rounded-2xl bg-[#69C496]/10 border border-[#69C496]/30 shadow-sm transition-all hover:scale-105 duration-300 cursor-pointer"
                   >
                     <MascotImage
-                      className="w-14 h-14 pointer-events-none rounded-xl"
+                      className="w-10 h-10 sm:w-14 sm:h-14 pointer-events-none rounded-lg sm:rounded-xl"
                     />
                     <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -4976,22 +5104,22 @@ export default function App() {
                     </span>
                   </motion.div>
                   <div className="flex flex-col">
-                    <h1 className="text-2xl font-black tracking-tight text-blue-950 bg-gradient-to-r from-blue-950 via-[#4F3F34] to-[#4F3F34] bg-clip-text text-transparent">
+                    <h1 className="text-lg sm:text-2xl font-black tracking-tight text-blue-950 bg-gradient-to-r from-blue-950 via-[#4F3F34] to-[#4F3F34] bg-clip-text text-transparent">
                       Nexora
                     </h1>
-                    <span className="text-[9px] font-extrabold text-[#7D6B58] uppercase tracking-[0.15em] opacity-80 select-none">
+                    <span className="text-[8px] sm:text-[9px] font-extrabold text-[#7D6B58] uppercase tracking-[0.15em] opacity-80 select-none">
                       Flow Catalyst
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center justify-end gap-2 sm:gap-3 ml-auto">
+                <div className="flex items-center justify-end gap-1.5 sm:gap-3 ml-auto flex-nowrap">
                   {isSpaceHouseUnlocked && (
                     <button
                       onClick={() => {
                         if (settings.soundEnabled) play("header_switch");
                         setActiveScreen("house");
                       }}
-                      className={`p-2.5 rounded-2xl transition-all relative shadow-sm border ${
+                      className={`p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl transition-all relative shadow-sm border shrink-0 ${
                         (activeScreen as string) === "house"
                           ? "bg-gradient-to-br from-[#69C496] to-[#58B383] text-white border-[#69C496]/50 scale-105"
                           : !settings.spaceOnboardingCompleted
@@ -5016,7 +5144,7 @@ export default function App() {
                       if (settings.soundEnabled) play("header_switch");
                       setActiveScreen("settings");
                     }}
-                    className={`p-2.5 rounded-2xl transition-all shadow-sm border ${
+                    className={`p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl transition-all shadow-sm border shrink-0 ${
                       activeScreen === "settings" 
                         ? "bg-gradient-to-br from-[#69C496] to-[#58B383] text-white border-[#69C496]/50 scale-105" 
                         : "text-[#4F3F34]/70 bg-white hover:bg-slate-50 border-[#E9E4D4]"
@@ -5030,7 +5158,7 @@ export default function App() {
                       if (settings.soundEnabled) play("header_switch");
                       setActiveScreen("profile");
                     }}
-                    className={`p-2.5 rounded-2xl transition-all shadow-sm border ${
+                    className={`p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl transition-all shadow-sm border shrink-0 flex items-center justify-center ${
                       activeScreen === "profile" 
                         ? "bg-gradient-to-br from-[#69C496] to-[#58B383] text-white border-[#69C496]/50 scale-105" 
                         : "text-[#4F3F34]/70 bg-white hover:bg-slate-50 border-[#E9E4D4]"
@@ -5039,7 +5167,7 @@ export default function App() {
                     <img
                       src={settings.profilePic || user?.photoURL || "/icon-512.png"}
                       alt="Profile"
-                      className="w-[18px] h-[18px] rounded-full object-cover border border-[#E9E4D4]"
+                      className="w-[18px] h-[18px] rounded-full object-cover border border-[#E9E4D4] shrink-0"
                       referrerPolicy="no-referrer"
                     />
                   </button>
@@ -5050,7 +5178,7 @@ export default function App() {
                         if (settings.soundEnabled) play("header_switch");
                         setActiveScreen("admin");
                       }}
-                      className={`p-2.5 rounded-2xl transition-all hover:scale-105 text-white flex items-center justify-center border`}
+                      className={`p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl transition-all hover:scale-105 text-white flex items-center justify-center border shrink-0`}
                       style={{ 
                         backgroundColor: activeScreen === "admin" ? "#9f1239" : "#e11d48", 
                         borderColor: activeScreen === "admin" ? "#9f1239" : "#e11d48",
@@ -5067,7 +5195,7 @@ export default function App() {
                       if (settings.soundEnabled) play("header_switch");
                       setActiveScreen("subscription");
                     }}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl transition-all border shadow-sm ${
+                    className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl transition-all border shadow-sm shrink-0 ${
                       (activeScreen as string) === "subscription" 
                         ? "bg-gradient-to-br from-amber-500 to-yellow-600 text-white border-amber-600/30 scale-105" 
                         : "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20"
@@ -5115,104 +5243,23 @@ export default function App() {
                   >
                     <HomeScreen
                       stats={stats}
-                      onStartChallenge={() => {
-                        vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                        setActiveCustomPlan(null);
-                        
-                        // Select a random first step that is not archived
-                        const archived = settings.archivedOfficialChallenges || [];
-                        const possibleStarts: ChallengeStep[] = ([
-                          "pushups",
-                          "water",
-                          "breathing",
-                          "drawing",
-                          "football",
-                          "bubbles",
-                          "memory",
-                          "gratitude",
-                          "reaction",
-                          "meditation"
-                        ] as ChallengeStep[]).filter(s => !archived.includes(s));
-                        
-                        const finalStarts = possibleStarts.length > 0 ? possibleStarts : ["water" as ChallengeStep];
-                        const randomStart = finalStarts[Math.floor(Math.random() * finalStarts.length)];
-                        setChallengeStep(randomStart);
-                        
-                        setActiveScreen("challenge");
-                        // Reset session flags for replayability
-                        setDailyProgress((prev) => ({
-                          ...prev,
-                          waterDrank: 0,
-                          pushupsDone: false,
-                          dailyQuestDone: false,
-                          breathingDone: false,
-                          drawingDone: false,
-                          footballDone: false,
-                          bubblesDone: false,
-                          memoryDone: false,
-                          gratitudeDone: false,
-                          reactionDone: false,
-                          meditationDone: false,
-                          writingDone: false,
-                        }));
-                      }}
+                      onStartChallenge={handleStartChallenge}
                       isCompletedToday={false} // Allow infinite replays as requested
                       dailyProgress={dailyProgress}
                       settings={settings}
                       history={history}
-                      onOpenGallery={() => {
-                        vibrate(VIBRATION_PATTERNS.CLICK);
-                        setActiveScreen("gallery");
-                      }}
+                      onOpenGallery={handleOpenGallery}
                       dailyQuest={dailyQuest}
                       isPro={isPro}
                       emergencyActive={emergencyActive}
                       customPlans={customPlans}
-                      onStartCustomPlan={(plan) => {
-                        vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                        setActiveCustomPlan(plan);
-                        setChallengeStep(plan.challenges[0]);
-                        setActiveScreen("challenge");
-                        // Ensure session flags are reset for custom plans too
-                        setDailyProgress((prev) => ({
-                          ...prev,
-                          waterDrank: 0,
-                          pushupsDone: false,
-                          dailyQuestDone: false,
-                          breathingDone: false,
-                          drawingDone: false,
-                          footballDone: false,
-                          bubblesDone: false,
-                          memoryDone: false,
-                          gratitudeDone: false,
-                          reactionDone: false,
-                          meditationDone: false,
-                          writingDone: false,
-                        }));
-                      }}
+                      onStartCustomPlan={handleStartCustomPlan}
                       onDeleteCustomPlan={handleDeleteCustomPlan}
-                      onOpenPlanBuilder={() => setActiveScreen("plan-builder")}
-                      onOpenPlant={() => {
-                        vibrate(VIBRATION_PATTERNS.CLICK);
-                        setActiveScreen("plant");
-                      }}
-                      onOpenArchives={() => {
-                        vibrate(VIBRATION_PATTERNS.CLICK);
-                        setActiveScreen("archives");
-                      }}
-                      onOpenGarden={() => {
-                        vibrate(VIBRATION_PATTERNS.CLICK);
-                        setActiveScreen("garden");
-                        if (!settings.hasEnteredGarden) {
-                          onUpdateSettings({ hasEnteredGarden: true });
-                        }
-                      }}
-                      onSelectTask={(taskId) => {
-                        vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                        setActiveCustomPlan(null);
-                        setChallengeStep(taskId as any);
-                        setActiveScreen("challenge");
-                      }}
+                      onOpenPlanBuilder={handleOpenPlanBuilder}
+                      onOpenPlant={handleOpenPlant}
+                      onOpenArchives={handleOpenArchives}
+                      onOpenGarden={handleOpenGarden}
+                      onSelectTask={handleSelectTask}
                       fcmToken={fcmToken}
                       setupFCM={setupFCM}
                       fcmError={fcmError}
@@ -6185,16 +6232,33 @@ export default function App() {
                         });
                       }}
                       onRecover={() => {
-                        onUpdateSettings({
-                          plantState: {
-                            ...settings.plantState!,
+                        onUpdateSettings((prev) => {
+                          const type = prev.plantState?.type || "sprout";
+                          const updatedProgress = {
                             stage: 0,
                             growthPoints: 0,
+                            lastGrowthDate: null,
+                            lastCheckDate: new Date().toISOString(),
+                            health: 100,
                             isDead: false,
                             isThirsty: false,
-                            health: 100,
-                            lastCheckDate: new Date().toISOString(),
-                          },
+                          };
+                          return {
+                            ...prev,
+                            plantState: {
+                              ...prev.plantState!,
+                              stage: 0,
+                              growthPoints: 0,
+                              isDead: false,
+                              isThirsty: false,
+                              health: 100,
+                              lastCheckDate: new Date().toISOString(),
+                            },
+                            plantsProgress: {
+                              ...(prev.plantsProgress || {}),
+                              [type]: updatedProgress,
+                            },
+                          };
                         });
                         showToast("Ecosystem restored! 🌿", "info");
                       }}
@@ -6354,8 +6418,10 @@ export default function App() {
             />
           )}
 
+          <AnimatePresence mode="wait">
           {showRewardsScreen && (
             <RewardsScreen
+              key="rewards-screen"
               stats={stats}
               onUpdateStats={onUpdateStats}
               settings={settings}
@@ -6366,6 +6432,7 @@ export default function App() {
               }}
             />
           )}
+          </AnimatePresence>
 
           {decayAlert && (
             <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-red-950/60 backdrop-blur-md">
@@ -6421,8 +6488,10 @@ export default function App() {
             </div>
           )}
 
+          <AnimatePresence mode="wait">
           {activeScreen === "trophy-rewards" && (
             <TrophyRewardsScreen
+              key="trophy-rewards-screen"
               trophyType={sessionTrophy}
               settings={settings}
               onFinish={() => {
@@ -6431,56 +6500,20 @@ export default function App() {
               }}
             />
           )}
+          </AnimatePresence>
 
-          {(activeScreen as string) !== "challenge" &&
-            (activeScreen as string) !== "subscription" &&
-            (activeScreen as string) !== "nexus-vision" &&
-            (activeScreen as string) !== "plant" &&
-            (activeScreen as string) !== "house" &&
-            (activeScreen as string) !== "archives" &&
-            (activeScreen as string) !== "leaderboard" &&
-            (activeScreen as string) !== "admin" &&
-            (activeScreen as string) !== "hydration-detail" &&
-            (activeScreen as string) !== "social" &&
-            (activeScreen as string) !== "garden" &&
-            (activeScreen as string) !== "device-showcase" &&
-            !showArchitectLab && (
-              <motion.div
-                initial={false}
-                animate={{
-                  y: scrollDirection === "down" ? 110 : 0,
-                  opacity: scrollDirection === "down" ? 0 : 1,
-                }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[80]"
-              >
-                <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-2 py-1 rounded-[2rem] flex items-center justify-around gap-0.5 pointer-events-auto w-[96%] max-w-[370px] sm:max-w-[440px] h-[60px] sm:h-[66px] overflow-hidden select-none">
-                  {(settings.navOrder || Object.keys(NAV_ITEMS_MAP)).map(
-                    (id) => {
-                      const item = NAV_ITEMS_MAP[id];
-                      if (!item) return null;
-                      if (id === "social") return null; // Keep hidden in bottom menu to prevent crowded arrangement
-                      const isHidden = settings.hiddenNavItems?.includes(id);
-                      if (isHidden) return null;
 
-                      return (
-                        <NavButton
-                          key={id}
-                          active={(activeScreen as string) === item.screen}
-                          onClick={() => {
-                            vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                            if (settings.soundEnabled) play("nav_switch");
-                            setActiveScreen(item.screen);
-                          }}
-                          icon={item.icon}
-                          label={translate(item.label, settings.language || "en")}
-                        />
-                      );
-                    },
-                  )}
-                </nav>
-              </motion.div>
-            )}
+          {showBottomNav && (
+            <BottomNav
+              activeScreen={activeScreen}
+              setActiveScreen={setActiveScreen}
+              settings={settings}
+              navItems={NAV_ITEMS_MAP}
+              play={play}
+              vibrate={vibrate}
+              translate={translate}
+            />
+          )}
 
           {publicUserViewId && (
             <PublicRankView

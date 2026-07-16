@@ -124,7 +124,7 @@ export function CompletionFlame({
   }, [isNewStreak, streak]);
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-[#131f24] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+    <div className="fixed inset-0 z-[1000] bg-radial from-[#2a1104] via-[#0d0602] to-[#030100] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
       <style>{`
         .flame-svg-wrapper {
           width: 200px;

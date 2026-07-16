@@ -2636,10 +2636,9 @@ export function SocialScreen({
     return (
       <motion.div
         key={post.id}
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-20px" }}
-        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
         className="bg-white rounded-[2rem] border border-slate-200/80 shadow-xs p-5 md:p-6 space-y-4 flex flex-col justify-between hover:shadow-sm hover:border-slate-300 transition-all"
       >
         {/* Header / Creator Info */}
@@ -6452,8 +6451,8 @@ export function SocialScreen({
       <motion.div
         initial={false}
         animate={{
-          y: scrollDirection === "down" ? 110 : 0,
-          opacity: scrollDirection === "down" ? 0 : 1,
+          y: 0,
+          opacity: 1,
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[450] bg-gradient-to-t from-slate-50/90 via-slate-50/40 to-transparent"

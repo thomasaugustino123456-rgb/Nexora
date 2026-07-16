@@ -1037,7 +1037,7 @@ export function MascotCelebrationScreen({
               stiffness: animationStage === "mascot_big" ? 120 : 180,
               damping: animationStage === "mascot_big" ? 12 : 16
             }}
-            className="relative flex items-center justify-center w-52 h-52 mt-8 cursor-pointer touch-none"
+            className="relative flex items-center justify-center w-52 h-52 mt-8 cursor-pointer touch-none !overflow-visible"
             style={{ transform: `scale(${clickScale})` }}
             onClick={handleMascotTap}
             onPointerEnter={() => setIsHovered(true)}
@@ -1047,9 +1047,9 @@ export function MascotCelebrationScreen({
             <div className="absolute bottom-1.5 w-32 h-3 bg-black/45 rounded-full blur-[2px]" />
             
             {/* Custom vector real physics slime-mascot */}
-            <div className="relative w-44 h-44 -translate-y-2 hover:scale-105 transition-all duration-300">
-              {mascotStyle === "slime" ? (
-                <svg viewBox="0 0 400 400" width="100%" height="100%">
+            <div className="relative w-44 h-44 -translate-y-2 hover:scale-105 transition-all duration-300 !overflow-visible">
+               {mascotStyle === "slime" ? (
+                <svg viewBox="0 0 400 400" width="100%" height="100%" style={{ overflow: "visible" }}>
                   <defs>
                     <radialGradient id="bodyGrad" cx="40%" cy="35%" r="60%">
                       <stop offset="0%" stopColor="#ffffff"/>
@@ -1105,8 +1105,8 @@ export function MascotCelebrationScreen({
                   </g>
                 </svg>
               ) : mascotStyle === "star_jump" ? (
-                <div className="w-full h-full relative">
-                  <svg viewBox="0 0 400 400" width="100%" height="100%">
+                <div className="w-full h-full relative !overflow-visible">
+                  <svg viewBox="0 0 400 400" width="100%" height="100%" style={{ overflow: "visible" }}>
                     <defs>
                       <radialGradient id="bodyGrad-sj" cx="40%" cy="35%" r="60%">
                         <stop offset="0%" stopColor="#ffffff"/>
@@ -1171,14 +1171,14 @@ export function MascotCelebrationScreen({
                   <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20 jump-text">LEVEL UP!</div>
                 </div>
               ) : (
-                <div className="w-full h-full relative">
-                  <svg className="music-notes-container absolute inset-0 w-full h-full" viewBox="0 0 380 380">
+                <div className="w-full h-full relative !overflow-visible">
+                  <svg className="music-notes-container absolute inset-0 w-full h-full" viewBox="0 0 380 380" style={{ overflow: "visible" }}>
                     <g className="note"><path d="M20,30 A6,6 0 1,1 14,24 L14,5 L28,2 L28,12 L16,15 L16,24 A6,6 0 1,1 20,30 Z"/></g>
                     <g className="note"><path d="M20,30 A6,6 0 1,1 14,24 L14,5 L28,2 L28,12 L16,15 L16,24 A6,6 0 1,1 20,30 Z"/></g>
                     <g className="note"><path d="M20,30 A6,6 0 1,1 14,24 L14,5 L28,2 L28,12 L16,15 L16,24 A6,6 0 1,1 20,30 Z"/></g>
                   </svg>
 
-                  <svg viewBox="0 0 400 400" width="100%" height="100%" style={{ zIndex: 2 }}>
+                  <svg viewBox="0 0 400 400" width="100%" height="100%" style={{ overflow: "visible", zIndex: 2 }}>
                     <defs>
                       <radialGradient id="bodyGrad-hs" cx="40%" cy="35%" r="60%">
                         <stop offset="0%" stopColor="#ffffff"/>

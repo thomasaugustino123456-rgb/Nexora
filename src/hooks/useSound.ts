@@ -240,7 +240,7 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
       osc.frequency.setValueAtTime(587.33, now); // D5
       osc.frequency.setValueAtTime(880, now + 0.08); // A5
       gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.12, now + 0.03);
+      gainNode.gain.linearRampToValueAtTime(0.06, now + 0.03);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
       osc.start(now);
       osc.stop(now + 0.35);
@@ -248,7 +248,7 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
       osc.type = "sine";
       osc.frequency.setValueAtTime(1000, now);
       osc.frequency.exponentialRampToValueAtTime(300, now + 0.04);
-      gainNode.gain.setValueAtTime(0.05, now);
+      gainNode.gain.setValueAtTime(0.02, now);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
       osc.start(now);
       osc.stop(now + 0.04);
@@ -256,7 +256,7 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
       osc.type = "sine";
       osc.frequency.setValueAtTime(120, now);
       osc.frequency.exponentialRampToValueAtTime(500, now + 0.12);
-      gainNode.gain.setValueAtTime(0.1, now);
+      gainNode.gain.setValueAtTime(0.05, now);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
       osc.start(now);
       osc.stop(now + 0.12);
@@ -264,7 +264,7 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
       osc.type = "triangle";
       osc.frequency.setValueAtTime(180, now);
       osc.frequency.linearRampToValueAtTime(60, now + 0.45);
-      gainNode.gain.setValueAtTime(0.15, now);
+      gainNode.gain.setValueAtTime(0.07, now);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
       osc.start(now);
       osc.stop(now + 0.45);
@@ -272,7 +272,7 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
       osc.type = "sawtooth";
       osc.frequency.setValueAtTime(500, now);
       osc.frequency.linearRampToValueAtTime(250, now + 0.2);
-      gainNode.gain.setValueAtTime(0.12, now);
+      gainNode.gain.setValueAtTime(0.06, now);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
       osc.start(now);
       osc.stop(now + 0.25);

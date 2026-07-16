@@ -171,14 +171,52 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
   merged.purchasedHouseItemIds = Array.from(new Set([...(dbSettings.purchasedHouseItemIds || []), ...(localSettings.purchasedHouseItemIds || [])]));
   merged.readBookIds = Array.from(new Set([...(dbSettings.readBookIds || []), ...(localSettings.readBookIds || [])]));
 
+  // Merge placedHouseItems - keep non-empty, database preferred if not empty
+  merged.placedHouseItems = (dbSettings.placedHouseItems && dbSettings.placedHouseItems.length > 0)
+    ? dbSettings.placedHouseItems
+    : (localSettings.placedHouseItems || []);
+
+  // Merge activeSpaceRoom
+  merged.activeSpaceRoom = dbSettings.activeSpaceRoom !== undefined && dbSettings.activeSpaceRoom !== 0
+    ? dbSettings.activeSpaceRoom
+    : (localSettings.activeSpaceRoom !== undefined ? localSettings.activeSpaceRoom : 0);
+
+  // Merge mascotPos - handle default position {x:400, y:300} versus actual customized positions
+  const dbMascotPos = dbSettings.mascotPos;
+  const localMascotPos = localSettings.mascotPos;
+  const isDefaultDbMascotPos = !dbMascotPos || (dbMascotPos.x === 400 && dbMascotPos.y === 300);
+  const isDefaultLocalMascotPos = !localMascotPos || (localMascotPos.x === 400 && localMascotPos.y === 300);
+  merged.mascotPos = (!isDefaultDbMascotPos)
+    ? dbMascotPos
+    : (!isDefaultLocalMascotPos ? localMascotPos : defaultSettings.mascotPos);
+
+  // Merge mascotSize
+  const isDefaultDbMascotSize = dbSettings.mascotSize === undefined || dbSettings.mascotSize === 1.5;
+  const isDefaultLocalMascotSize = localSettings.mascotSize === undefined || localSettings.mascotSize === 1.5;
+  merged.mascotSize = (!isDefaultDbMascotSize)
+    ? dbSettings.mascotSize
+    : (!isDefaultLocalMascotSize ? localSettings.mascotSize : defaultSettings.mascotSize);
+
+  // Merge mascotPinnedItemId
+  merged.mascotPinnedItemId = dbSettings.mascotPinnedItemId !== undefined && dbSettings.mascotPinnedItemId !== null
+    ? dbSettings.mascotPinnedItemId
+    : (localSettings.mascotPinnedItemId !== undefined ? localSettings.mascotPinnedItemId : null);
+
   // Merge plantState - if one is empty but the other has progress, use the one with progress.
   // Growth stage and points indicate progress.
+  // Special rule: if one is alive (isDead === false) and the other is dead (isDead === true), ALWAYS prefer the alive one!
   const dbPlant = dbSettings.plantState;
   const localPlant = localSettings.plantState;
   if (dbPlant && localPlant) {
-    const dbProgress = (dbPlant.stage || 0) * 1000 + (dbPlant.growthPoints || 0);
-    const localProgress = (localPlant.stage || 0) * 1000 + (localPlant.growthPoints || 0);
-    merged.plantState = localProgress >= dbProgress ? localPlant : dbPlant;
+    const dbIsDead = !!dbPlant.isDead;
+    const localIsDead = !!localPlant.isDead;
+    if (dbIsDead !== localIsDead) {
+      merged.plantState = !localIsDead ? localPlant : dbPlant;
+    } else {
+      const dbProgress = (dbPlant.stage || 0) * 1000 + (dbPlant.growthPoints || 0);
+      const localProgress = (localPlant.stage || 0) * 1000 + (localPlant.growthPoints || 0);
+      merged.plantState = localProgress >= dbProgress ? localPlant : dbPlant;
+    }
   } else {
     merged.plantState = dbPlant || localPlant;
   }
@@ -191,9 +229,15 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
     const localProg = localPlantsProgress[key as any];
     const dbProg = dbPlantsProgress[key as any];
     if (localProg && dbProg) {
-      const localProgVal = (localProg.stage || 0) * 1000 + (localProg.growthPoints || 0);
-      const dbProgVal = (dbProg.stage || 0) * 1000 + (dbProg.growthPoints || 0);
-      mergedPlantsProgress[key] = localProgVal >= dbProgVal ? localProg : dbProg;
+      const dbIsDead = !!dbProg.isDead;
+      const localIsDead = !!localProg.isDead;
+      if (dbIsDead !== localIsDead) {
+        mergedPlantsProgress[key] = !localIsDead ? localProg : dbProg;
+      } else {
+        const localProgVal = (localProg.stage || 0) * 1000 + (localProg.growthPoints || 0);
+        const dbProgVal = (dbProg.stage || 0) * 1000 + (dbProg.growthPoints || 0);
+        mergedPlantsProgress[key] = localProgVal >= dbProgVal ? localProg : dbProg;
+      }
     } else {
       mergedPlantsProgress[key] = dbProg || localProg;
     }
@@ -331,6 +375,7 @@ export function useNexoraData(
   // preventing user onboarding flashes/redirection glitches on slow connections.
   const [loading, setLoading] = useState(true);
   const [isDataReady, setIsDataReady] = useState(false);
+  const [isStateHydrated, setIsStateHydrated] = useState(false);
 
   const cachedSettings = getCachedJson("nexora_settings", DEFAULT_SETTINGS);
   const cachedStats = getCachedJson("nexora_stats", DEFAULT_STATS);
@@ -464,6 +509,7 @@ export function useNexoraData(
         localStorage.setItem("nexora_cached_user", currentUser.uid);
         setLoading(true);
         setIsDataReady(false);
+        setIsStateHydrated(false);
         dataLoadedFromFirestore.current = false;
         hasMatchedHydratedStateRef.current = false;
         setIsStateLoaded(false, "User logging in, resetting states to load from Firestore.");
@@ -479,6 +525,7 @@ export function useNexoraData(
           setIsHydrated(true);
           setIsStateLoaded(true, "Offline Fallback Timeout activated");
           hasMatchedHydratedStateRef.current = true;
+          setIsStateHydrated(true);
           setNeedsOnboarding(false);
           setAuthLoading(false);
           setIsDataReady(true);
@@ -730,6 +777,7 @@ export function useNexoraData(
               purchasedHouseItemIds: docData.purchasedHouseItemIds ?? docData.settings?.purchasedHouseItemIds ?? DEFAULT_SETTINGS.purchasedHouseItemIds ?? [],
               placedHouseItems: docData.placedHouseItems ?? docData.settings?.placedHouseItems ?? DEFAULT_SETTINGS.placedHouseItems ?? [],
               spaceHouseUnlocked: docData.spaceHouseUnlocked ?? docData.settings?.spaceHouseUnlocked ?? DEFAULT_SETTINGS.spaceHouseUnlocked,
+              activeSpaceRoom: docData.activeSpaceRoom ?? docData.settings?.activeSpaceRoom ?? DEFAULT_SETTINGS.activeSpaceRoom ?? 0,
               plantState: finalPlantState,
               plantsProgress: finalPlantsProgress,
               purchasedEcosystemItemIds: finalPurchasedEcosystemItemIds,
@@ -916,6 +964,7 @@ export function useNexoraData(
           setIsHydrated(true);
           setIsStateLoaded(true, "Auth load failed, fallback to local cache");
           hasMatchedHydratedStateRef.current = true;
+          setIsStateHydrated(true);
           setNeedsOnboarding(false);
         } finally {
           if (loadTimeout) clearTimeout(loadTimeout);
@@ -955,6 +1004,7 @@ export function useNexoraData(
         setIsHydrated(false);
         setIsStateLoaded(false, "No user session");
         hasMatchedHydratedStateRef.current = false;
+        setIsStateHydrated(false);
         setNeedsOnboarding(true);
         setAuthLoading(false);
         setIsDataReady(true);
@@ -976,6 +1026,7 @@ export function useNexoraData(
       console.log(`[PERSISTENCE AUDIT] Firestore data hydrated successfully. Unlocking sync gate safely.`);
       hasMatchedHydratedStateRef.current = true;
       setIsStateLoaded(true, "State matching complete");
+      setIsStateHydrated(true);
     }
   }, [isHydrated, user, isDataReady]);
 
@@ -1844,6 +1895,7 @@ export function useNexoraData(
     loading,
     authLoading,
     isDataReady,
+    isStateHydrated,
     settings,
     setSettings: onUpdateSettings,
     stats,

@@ -42,7 +42,16 @@ export function HouseScreen({
 }) {
   const [resetKey, setResetKey] = useState(0);
   const [zoom, setZoom] = useState(1);
-  const [activeRoom, setActiveRoom] = useState(0); // 0: Isometric, 1: Cartoon, 2: Cozy
+  const [activeRoom, setActiveRoom] = useState(settings.activeSpaceRoom || 0); // 0: Isometric, 1: Cartoon, 2: Cozy
+
+  const handleSetActiveRoom = (newRoom: number | ((prev: number) => number)) => {
+    setActiveRoom(prev => {
+      const next = typeof newRoom === 'function' ? newRoom(prev) : newRoom;
+      onUpdateSettings({ activeSpaceRoom: next });
+      return next;
+    });
+  };
+
   const [showStorage, setShowStorage] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [showWaterChallenge, setShowWaterChallenge] = useState(false);
@@ -435,72 +444,75 @@ export function HouseScreen({
       className="fixed inset-0 bg-[#1a1a2e] z-[150] flex flex-col overflow-hidden"
     >
       {/* Header */}
-      <header className="p-6 flex items-center justify-between z-20">
+      <header className="p-3 sm:p-6 flex items-center justify-between gap-2 z-20 border-b border-white/5 bg-[#1a1a2e]/60 backdrop-blur-md shrink-0">
         <button 
           onClick={onBack} 
-          className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md"
+          className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md shrink-0"
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft size={20} className="sm:w-[24px] sm:h-[24px]" />
         </button>
-        <div className="flex flex-col items-center">
-          <h2 className="text-xl font-black text-white uppercase tracking-tighter flex items-center gap-2">
-            My Nexora Space <Sparkles size={18} className="text-yellow-400" />
+        <div className="flex flex-col items-center text-center overflow-hidden">
+          <h2 className="text-sm sm:text-xl font-black text-white uppercase tracking-tighter flex items-center gap-1 sm:gap-2 truncate">
+            My Nexora Space <Sparkles size={14} className="text-yellow-400 shrink-0 sm:w-[18px] sm:h-[18px]" />
           </h2>
-          <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+          <p className="text-[8px] sm:text-[10px] font-bold text-white/40 uppercase tracking-widest truncate">
             {activeRoom === 0 ? 'Interactive 3D Room' : activeRoom === 1 ? 'Miniature 4-Room House' : 'Cozy Miniature'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <button 
             onClick={() => {
               vibrate(VIBRATION_PATTERNS.CLICK);
               setShowShop(true);
             }}
-            className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md flex items-center gap-2"
+            className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md flex items-center gap-1.5"
+            title="Shop"
           >
-            <ShoppingBag size={20} />
-            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Shop</span>
+            <ShoppingBag size={16} className="sm:w-[20px] sm:h-[20px]" />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden md:block">Shop</span>
           </button>
           <button 
             onClick={() => {
               vibrate(10);
               setShowStorage(true);
             }}
-            className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md flex items-center gap-2"
+            className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md flex items-center gap-1.5"
+            title="Library"
           >
-            <Archive size={20} />
-            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Library</span>
+            <Archive size={16} className="sm:w-[20px] sm:h-[20px]" />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden md:block">Library</span>
           </button>
           <button 
             onClick={() => {
               vibrate(10);
-              setActiveRoom(prev => (prev + 1) % 3);
+              handleSetActiveRoom(prev => (prev + 1) % 3);
             }}
-            className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md flex items-center gap-2"
+            className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-md flex items-center gap-1.5"
+            title="Switch Room"
           >
-            <RefreshCw size={20} className={`transition-transform duration-500 ${activeRoom !== 0 ? 'rotate-180' : ''}`} />
-            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Switch Room</span>
+            <RefreshCw size={16} className={`transition-transform duration-500 sm:w-[20px] sm:h-[20px] ${activeRoom !== 0 ? 'rotate-180' : ''}`} />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden md:block">Switch Room</span>
           </button>
         </div>
       </header>
 
       {/* Instructions Overlay */}
-      <div className="absolute top-24 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-        <div className="px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 flex items-center gap-3">
-          <div className="flex items-center gap-1 text-[10px] font-black text-white/60 uppercase tracking-widest">
-            <Move size={12} /> Drag items
+      <div className="absolute top-20 sm:top-24 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+        <div className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 text-[8px] sm:text-[10px] font-black text-white/60 uppercase tracking-widest">
+            <Move size={10} className="sm:size-[12px]" /> Drag items
           </div>
           <div className="w-1 h-1 rounded-full bg-white/20" />
-          <div className="flex items-center gap-1 text-[10px] font-black text-white/60 uppercase tracking-widest">
-            <MousePointer2 size={12} /> Tap to interact
+          <div className="flex items-center gap-1 text-[8px] sm:text-[10px] font-black text-white/60 uppercase tracking-widest">
+            <MousePointer2 size={10} className="sm:size-[12px]" /> Tap to interact
           </div>
         </div>
       </div>
 
       {/* Main Room Container */}
-      <div className="flex-1 relative flex items-center justify-center p-4 overflow-hidden" key={resetKey}>
+      <div className="flex-1 relative flex items-center justify-center p-3 sm:p-4 overflow-hidden" key={resetKey}>
         {/* Side Navigation Buttons */}
-        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between items-center z-30 pointer-events-none">
+        <div className="absolute inset-x-2 sm:inset-x-4 top-1/2 -translate-y-1/2 flex justify-between items-center z-30 pointer-events-none">
           {/* Left Button */}
           <div className="pointer-events-auto">
             <AnimatePresence>
@@ -511,11 +523,11 @@ export function HouseScreen({
                   exit={{ opacity: 0, x: -20 }}
                   onClick={() => {
                     vibrate(10);
-                    setActiveRoom(prev => prev - 1);
+                    handleSetActiveRoom(prev => prev - 1);
                   }}
-                  className="p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md border border-white/10 shadow-2xl group"
+                  className="p-2 sm:p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md border border-white/10 shadow-2xl group"
                 >
-                  <ChevronLeft size={32} className="group-hover:-translate-x-1 transition-transform" />
+                  <ChevronLeft size={20} className="sm:w-[32px] sm:h-[32px] group-hover:-translate-x-1 transition-transform" />
                 </motion.button>
               )}
             </AnimatePresence>
@@ -531,11 +543,11 @@ export function HouseScreen({
                   exit={{ opacity: 0, x: 20 }}
                   onClick={() => {
                     vibrate(10);
-                    setActiveRoom(prev => prev + 1);
+                    handleSetActiveRoom(prev => prev + 1);
                   }}
-                  className="p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md border border-white/10 shadow-2xl group"
+                  className="p-2 sm:p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md border border-white/10 shadow-2xl group"
                 >
-                  <ChevronRight size={32} className="group-hover:translate-x-1 transition-transform" />
+                  <ChevronRight size={20} className="sm:w-[32px] sm:h-[32px] group-hover:translate-x-1 transition-transform" />
                 </motion.button>
               )}
             </AnimatePresence>
@@ -550,12 +562,12 @@ export function HouseScreen({
               animate={{ opacity: 1, scale: zoom, rotateY: 0 }}
               exit={{ opacity: 0, scale: 1.2, rotateY: 20 }}
               transition={{ type: "spring", stiffness: 200, damping: 25 }}
-              className="w-full max-w-4xl aspect-[4/3] relative"
+              className="w-full h-full max-w-4xl max-h-full aspect-[4/3] relative flex items-center justify-center"
               drag
               dragConstraints={{ left: -400 * zoom, right: 400 * zoom, top: -300 * zoom, bottom: 300 * zoom }}
               dragElastic={0.1}
             >
-              <svg viewBox="0 0 800 600" className="w-full h-full drop-shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
+              <svg viewBox="0 0 800 600" className="max-w-full max-h-full drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
                 <defs>
                   <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
                     <feGaussianBlur stdDeviation="15" result="blur" />
@@ -611,12 +623,12 @@ export function HouseScreen({
               animate={{ opacity: 1, scale: zoom, rotateY: 0 }}
               exit={{ opacity: 0, scale: 1.2, rotateY: -20 }}
               transition={{ type: "spring", stiffness: 200, damping: 25 }}
-              className="w-full max-w-4xl aspect-[4/3] relative"
+              className="w-full h-full max-w-4xl max-h-full aspect-[4/3] relative flex items-center justify-center"
               drag
               dragConstraints={{ left: -400 * zoom, right: 400 * zoom, top: -300 * zoom, bottom: 300 * zoom }}
               dragElastic={0.1}
             >
-              <svg viewBox="0 0 800 600" className="w-full h-full drop-shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
+              <svg viewBox="0 0 800 600" className="max-w-full max-h-full drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
                 <defs>
                   <filter id="screenGlowRoom2" x="-20%" y="-20%" width="140%" height="140%">
                     <feGaussianBlur stdDeviation="8" result="blur" />
@@ -642,25 +654,25 @@ export function HouseScreen({
                   <polygon points="0,220 400,220 400,300 0,300" fill="#E06287"/>
                   
                   {/* Ambient Sunbeam */}
-                  <polygon points="120,0 280,0 40,300 -120,300" fill="#FFFFFF" opacity="0.15" pointer-events="none"/>
+                  <polygon points="120,0 280,0 40,300 -120,300" fill="#FFFFFF" opacity="0.15" pointerEvents="none"/>
                 </g>
 
                 <g id="room-tr" transform="translate(400, 0)">
                   <rect width="400" height="220" fill="#4DB6AC"/>
                   <polygon points="0,220 400,220 400,300 0,300" fill="#00695C"/>
-                  <polygon points="200,0 350,0 150,300 -50,300" fill="#FFFFFF" opacity="0.1" pointer-events="none"/>
+                  <polygon points="200,0 350,0 150,300 -50,300" fill="#FFFFFF" opacity="0.1" pointerEvents="none"/>
                 </g>
 
                 <g id="room-bl" transform="translate(0, 300)">
                   <rect width="400" height="220" fill="#E6C89C"/>
                   <polygon points="0,220 400,220 400,300 0,300" fill="#BA6824"/>
-                  <polygon points="100,0 250,0 50,300 -100,300" fill="#FFFFFF" opacity="0.15" pointer-events="none"/>
+                  <polygon points="100,0 250,0 50,300 -100,300" fill="#FFFFFF" opacity="0.15" pointerEvents="none"/>
                 </g>
 
                 <g id="room-br" transform="translate(400, 300)">
                   <rect width="400" height="220" fill="#F4DEBA"/>
                   <polygon points="0,220 400,220 400,300 0,300" fill="#50A29C"/>
-                  <polygon points="200,0 350,0 150,300 -50,300" fill="#FFFFFF" opacity="0.15" pointer-events="none"/>
+                  <polygon points="200,0 350,0 150,300 -50,300" fill="#FFFFFF" opacity="0.15" pointerEvents="none"/>
                 </g>
 
                 {renderPlacedItems()}
@@ -676,12 +688,12 @@ export function HouseScreen({
               animate={{ opacity: 1, scale: zoom, rotateY: 0 }}
               exit={{ opacity: 0, scale: 1.2, rotateY: -20 }}
               transition={{ type: "spring", stiffness: 200, damping: 25 }}
-              className="w-full max-w-4xl aspect-[4/3] relative"
+              className="w-full h-full max-w-4xl max-h-full aspect-[4/3] relative flex items-center justify-center"
               drag
               dragConstraints={{ left: -400 * zoom, right: 400 * zoom, top: -300 * zoom, bottom: 300 * zoom }}
               dragElastic={0.1}
             >
-              <svg viewBox="0 0 800 600" className="w-full h-full drop-shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
+              <svg viewBox="0 0 800 600" className="max-w-full max-h-full drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
                 <defs>
                   <pattern id="checker" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="scale(0.8)">
                     <rect width="20" height="20" fill="#81D4FA" />
@@ -744,119 +756,124 @@ export function HouseScreen({
       </div>
 
       {/* Footer Controls */}
-      <footer className="p-8 flex flex-wrap justify-center gap-4 z-20">
-        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md p-2 rounded-3xl border border-white/10">
+      <footer className="p-3 sm:p-6 pb-6 sm:pb-8 flex flex-col items-center gap-3 sm:gap-4 w-full max-w-lg mx-auto z-20 shrink-0">
+        <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-lg">
           <button 
             onClick={() => {
               vibrate(10);
               setShowWaterChallenge(true);
             }}
-            className="p-3 rounded-2xl bg-blue-500 text-white hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
+            className="p-2 sm:p-3 rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
             title="Water Drinking Challenge"
           >
-            <CupSoda size={20} />
+            <CupSoda size={16} className="sm:w-[20px] sm:h-[20px]" />
           </button>
           <button 
             onClick={() => handleZoom(-0.1)}
-            className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all"
+            className="p-2 sm:p-3 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all"
+            title="Zoom Out"
           >
-            <ZoomOut size={20} />
+            <ZoomOut size={16} className="sm:w-[20px] sm:h-[20px]" />
           </button>
-          <div className="px-2 text-[10px] font-black text-white/60 uppercase tracking-widest w-12 text-center">
+          <div className="px-1 text-[9px] sm:text-[10px] font-black text-white/60 uppercase tracking-widest w-10 sm:w-12 text-center">
             {Math.round(zoom * 100)}%
           </div>
           <button 
             onClick={() => handleZoom(0.1)}
-            className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all"
+            className="p-2 sm:p-3 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all"
+            title="Zoom In"
           >
-            <ZoomIn size={20} />
+            <ZoomIn size={16} className="sm:w-[20px] sm:h-[20px]" />
           </button>
           <button 
             onClick={() => setZoom(1)}
-            className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all"
+            className="p-2 sm:p-3 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all"
+            title="Actual Size"
           >
-            <Maximize size={20} />
+            <Maximize size={16} className="sm:w-[20px] sm:h-[20px]" />
           </button>
         </div>
 
-        {activeRoom === 0 ? (
-          <>
-            <button 
-              onClick={toggleLight}
-              className={`p-4 rounded-3xl transition-all shadow-xl flex items-center gap-3 ${
-                lightOn ? 'bg-yellow-400 text-yellow-900 shadow-yellow-200' : 'bg-white/10 text-white/40'
-              }`}
-            >
-              <Lightbulb size={24} />
-              <span className="font-black uppercase tracking-widest text-xs">{lightOn ? 'Light On' : 'Light Off'}</span>
-            </button>
-            
-            <button 
-              onClick={shakePlant}
-              className="p-4 rounded-3xl bg-emerald-500 text-white shadow-xl shadow-emerald-200 flex items-center gap-3"
-            >
-              <Sparkles size={24} />
-              <span className="font-black uppercase tracking-widest text-xs">Tickle Plant</span>
-            </button>
-          </>
-        ) : activeRoom === 1 ? (
-          <>
-            <button 
-              onClick={() => {
-                vibrate(15);
-                setRoom2Lamps([!room2Lamps[0], !room2Lamps[1], !room2Lamps[2], !room2Lamps[3]]);
-              }}
-              className={`p-4 rounded-3xl transition-all shadow-xl flex items-center gap-3 ${
-                room2Lamps.some(l => l) ? 'bg-yellow-400 text-yellow-900 shadow-yellow-200' : 'bg-white/10 text-white/40'
-              }`}
-            >
-              <Lightbulb size={24} />
-              <span className="font-black uppercase tracking-widest text-xs">All Lamps</span>
-            </button>
-            
-            <button 
-              onClick={toggleRoom2Computer}
-              className={`p-4 rounded-3xl transition-all shadow-xl flex items-center gap-3 ${
-                room2ComputerOn ? 'bg-green-500 text-white shadow-green-200' : 'bg-white/10 text-white/40'
-              }`}
-            >
-              <Sparkles size={24} />
-              <span className="font-black uppercase tracking-widest text-xs">PC Screen</span>
-            </button>
-          </>
-        ) : (
-          <>
-            <button 
-              onClick={handleFireClick}
-              className={`p-4 rounded-3xl transition-all shadow-xl flex items-center gap-3 ${
-                fireTaps === 4 ? 'bg-white/10 text-white/40' : 'bg-red-500 text-white shadow-red-200'
-              }`}
-            >
-              <Sparkles size={24} />
-              <span className="font-black uppercase tracking-widest text-xs">
-                {fireTaps === 4 ? 'Fire Out' : fireTaps >= 2 ? 'Roaring Fire' : 'Stoke Fire'}
-              </span>
-            </button>
-            
-            <button 
-              onClick={toggleNightMode}
-              className={`p-4 rounded-3xl transition-all shadow-xl flex items-center gap-3 ${
-                isNightMode ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-yellow-400 text-yellow-900'
-              }`}
-            >
-              <Lightbulb size={24} />
-              <span className="font-black uppercase tracking-widest text-xs">{isNightMode ? 'Night Mode' : 'Day Mode'}</span>
-            </button>
-          </>
-        )}
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 w-full">
+          {activeRoom === 0 ? (
+            <>
+              <button 
+                onClick={toggleLight}
+                className={`py-2 px-3 sm:py-4 rounded-xl sm:rounded-3xl transition-all shadow-xl flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 ${
+                  lightOn ? 'bg-yellow-400 text-yellow-900 shadow-yellow-200' : 'bg-white/10 text-white/40'
+                }`}
+              >
+                <Lightbulb size={18} className="sm:w-[24px] sm:h-[24px]" />
+                <span className="font-black uppercase tracking-wider text-[9px] sm:text-xs text-center">{lightOn ? 'Light On' : 'Light Off'}</span>
+              </button>
+              
+              <button 
+                onClick={shakePlant}
+                className="py-2 px-3 sm:py-4 rounded-xl sm:rounded-3xl bg-emerald-500 text-white shadow-xl shadow-emerald-200 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 hover:bg-emerald-600 transition-all"
+              >
+                <Sparkles size={18} className="sm:w-[24px] sm:h-[24px]" />
+                <span className="font-black uppercase tracking-wider text-[9px] sm:text-xs text-center">Tickle Plant</span>
+              </button>
+            </>
+          ) : activeRoom === 1 ? (
+            <>
+              <button 
+                onClick={() => {
+                  vibrate(15);
+                  setRoom2Lamps([!room2Lamps[0], !room2Lamps[1], !room2Lamps[2], !room2Lamps[3]]);
+                }}
+                className={`py-2 px-3 sm:py-4 rounded-xl sm:rounded-3xl transition-all shadow-xl flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 ${
+                  room2Lamps.some(l => l) ? 'bg-yellow-400 text-yellow-900 shadow-yellow-200' : 'bg-white/10 text-white/40'
+                }`}
+              >
+                <Lightbulb size={18} className="sm:w-[24px] sm:h-[24px]" />
+                <span className="font-black uppercase tracking-wider text-[9px] sm:text-xs text-center">All Lamps</span>
+              </button>
+              
+              <button 
+                onClick={toggleRoom2Computer}
+                className={`py-2 px-3 sm:py-4 rounded-xl sm:rounded-3xl transition-all shadow-xl flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 ${
+                  room2ComputerOn ? 'bg-green-500 text-white shadow-green-200' : 'bg-white/10 text-white/40'
+                }`}
+              >
+                <Sparkles size={18} className="sm:w-[24px] sm:h-[24px]" />
+                <span className="font-black uppercase tracking-wider text-[9px] sm:text-xs text-center">PC Screen</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button 
+                onClick={handleFireClick}
+                className={`py-2 px-3 sm:py-4 rounded-xl sm:rounded-3xl transition-all shadow-xl flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 ${
+                  fireTaps === 4 ? 'bg-white/10 text-white/40' : 'bg-red-500 text-white shadow-red-200'
+                }`}
+              >
+                <Sparkles size={18} className="sm:w-[24px] sm:h-[24px]" />
+                <span className="font-black uppercase tracking-wider text-[9px] sm:text-xs text-center">
+                  {fireTaps === 4 ? 'Fire Out' : fireTaps >= 2 ? 'Roaring' : 'Stoke Fire'}
+                </span>
+              </button>
+              
+              <button 
+                onClick={toggleNightMode}
+                className={`py-2 px-3 sm:py-4 rounded-xl sm:rounded-3xl transition-all shadow-xl flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 ${
+                  isNightMode ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-yellow-400 text-yellow-900'
+                }`}
+              >
+                <Lightbulb size={18} className="sm:w-[24px] sm:h-[24px]" />
+                <span className="font-black uppercase tracking-wider text-[9px] sm:text-xs text-center">{isNightMode ? 'Night' : 'Day Mode'}</span>
+              </button>
+            </>
+          )}
 
-        <button 
-          onClick={resetRoom}
-          className="p-4 rounded-3xl bg-white/10 text-white/60 hover:bg-white/20 transition-all flex items-center gap-3"
-        >
-          <RefreshCw size={24} />
-          <span className="font-black uppercase tracking-widest text-xs">Reset</span>
-        </button>
+          <button 
+            onClick={resetRoom}
+            className="py-2 px-3 sm:py-4 rounded-xl sm:rounded-3xl bg-white/10 text-white/60 hover:bg-white/20 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3"
+          >
+            <RefreshCw size={18} className="sm:w-[24px] sm:h-[24px]" />
+            <span className="font-black uppercase tracking-wider text-[9px] sm:text-xs text-center">Reset</span>
+          </button>
+        </div>
       </footer>
 
       {/* Water Challenge Modal */}

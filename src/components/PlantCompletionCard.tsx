@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Download, Library, X, Sparkles, Share2, Check } from 'lucide-react';
+import { Download, X, Check } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { PlantRenderer } from './PlantRenderer';
 import { PlantType } from '../types';
@@ -11,231 +11,306 @@ interface PlantCompletionCardProps {
   ecosystemName: string;
   onSaveToLibrary: (imageData: string) => void;
   onClose: () => void;
+  stats?: any;
+  settings?: any;
 }
+
+const ECOSYSTEM_PATH: PlantType[] = [
+  'sprout', 'zen', 'desert', 'tropical', 'forest', 'meadow', 'crystal', 'volcano', 
+  'boredFlower', 'mourningSprout', 'breezeTulip', 'happyTulip', 'distressedRose', 
+  'premium-cactus', 'lucky-bamboo', 'cosmic-star-flower', 'bubble-gum-succulent', 'neon-mushroom'
+];
 
 export const PlantCompletionCard: React.FC<PlantCompletionCardProps> = ({
   type,
   ecosystemName,
   onSaveToLibrary,
-  onClose
+  onClose,
+  stats
 }) => {
-  const captureRef = useRef<HTMLDivElement>(null); // Ref to capture card with text but no buttons
-  const plantRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
 
-  const handleCapture = async (type: 'library' | 'phone') => {
-    if (!captureRef.current || isSaving) return;
+  // Find index in collection
+  const plantIndex = ECOSYSTEM_PATH.indexOf(type) !== -1 ? ECOSYSTEM_PATH.indexOf(type) + 1 : 1;
+
+  const handleCapture = async () => {
+    if (!cardRef.current || isSaving) return;
     vibrate(20);
     setIsSaving(true);
     
     try {
-      const dataUrl = await toPng(captureRef.current, { 
-        backgroundColor: type === 'library' ? 'transparent' : '#F0F9FF',
-        width: 400, // Reasonable size
-        height: 500, // Covers text and plant
-        pixelRatio: 2,
+      const dataUrl = await toPng(cardRef.current, { 
+        backgroundColor: '#10a3a8', // Immersive teal background
+        pixelRatio: 4, // Ultra-sharp 4x high-definition (HD)
+        cacheBust: true,
         style: {
           transform: 'scale(1)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: type === 'library' ? '0' : '40px'
         }
       });
       
-      if (type === 'library') {
-        onSaveToLibrary(dataUrl);
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
-      } else {
-        const link = document.createElement('a');
-        link.download = `Nexora_${ecosystemName}_Legendary.png`;
-        link.href = dataUrl;
-        link.click();
-        setDownloadSuccess(true);
-        setTimeout(() => setDownloadSuccess(false), 3000);
-      }
+      // Trigger download
+      const link = document.createElement('a');
+      link.download = `Nexora_Postcard_${ecosystemName}.png`;
+      link.href = dataUrl;
+      link.click();
+      
+      // Save to library as well
+      onSaveToLibrary(dataUrl);
+
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 3000);
     } catch (err) {
-      console.error(`Failed to save to ${type}:`, err);
+      console.error('Failed to capture postcard image:', err);
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md"
-    >
-      <motion.div
-        initial={{ scale: 0.5, opacity: 0, rotate: -5, y: 100 }}
-        animate={{ scale: 1, opacity: 1, rotate: 0, y: 0 }}
-        exit={{ scale: 0.5, opacity: 0, scaleY: 0.2, filter: 'blur(20px)' }}
-        transition={{ 
-          type: "spring", 
-          stiffness: 300, 
-          damping: 20,
-          opacity: { duration: 0.2 }
+    <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center p-4 bg-[#10a3a8] overflow-y-auto no-scrollbar">
+      <style>{`
+        /* --- GENTLE FLOAT ANIMATION --- */
+        @keyframes gentleFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+        .animate-gentle-float {
+          animation: gentleFloat 4s ease-in-out infinite;
+        }
+
+        /* --- THE SQUARE POSTCARD (Plant Nanny Style) --- */
+        .postcard-container {
+          width: 100%;
+          max-width: 360px;
+          aspect-ratio: 1 / 1;
+          background: #ffffff;
+          border-radius: 20px;
+          overflow: hidden;
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* Top 82% - Artwork Section */
+        .postcard-artwork-sec {
+          flex: 82;
+          background: linear-gradient(to bottom, #a1e0ff, #e3f6ff);
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: flex-end;
+          overflow: hidden;
+        }
+
+        /* Soft green grass hill background */
+        .postcard-grass-hill {
+          position: absolute;
+          bottom: -15px;
+          width: 115%;
+          height: 65px;
+          background: #7bd062;
+          border-radius: 50%;
+          z-index: 1;
+        }
+
+        /* Plant wrapper sizing & floating */
+        .postcard-plant-wrap {
+          width: 210px;
+          height: 210px;
+          z-index: 2;
+          margin-bottom: 16px;
+          display: flex;
+          align-items: end;
+          justify-content: center;
+        }
+
+        /* Bottom 18% - Branding Bar */
+        .postcard-footer-sec {
+          flex: 18;
+          background-color: #10a3a8;
+          padding: 0 18px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-top: 1px solid rgba(255, 255, 255, 0.15);
+          box-shadow: none !important;
+        }
+
+        /* Left Side: Logo & Brand Name */
+        .brand-group-sec {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .app-mascot-icon {
+          width: 24px;
+          height: 24px;
+          background-color: #ffffff;
+          border-radius: 6px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          overflow: hidden;
+        }
+
+        .app-name-sec {
+          color: #ffffff;
+          font-weight: 700;
+          font-size: 14px;
+          font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        /* Right Side: Details */
+        .plant-details-sec {
+          text-align: right;
+          font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        .plant-name-sec {
+          color: #ffffff;
+          font-weight: 700;
+          font-size: 14px;
+          margin: 0;
+        }
+
+        .plant-stats-sec {
+          color: rgba(255, 255, 255, 0.85);
+          font-size: 11px;
+          margin-top: 2px;
+          font-weight: 500;
+        }
+      `}</style>
+
+      {/* Dynamic Feedback Toasts */}
+      <AnimatePresence>
+        {downloadSuccess && (
+          <motion.div 
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -30 }}
+            className="absolute top-6 left-1/2 -translate-x-1/2 z-[1010] bg-emerald-500 border border-emerald-400 text-white font-bold py-2.5 px-6 rounded-full shadow-lg flex items-center gap-2 text-sm"
+          >
+            <Check size={16} className="text-white" /> Postcard Saved to Device!
+          </motion.div>
+        )}
+        {isSaving && (
+          <motion.div 
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="absolute top-6 left-1/2 -translate-x-1/2 z-[1010] bg-sky-500 border border-sky-400 text-white font-bold py-2.5 px-6 rounded-full shadow-lg animate-pulse text-sm"
+          >
+            Generating Postcard...
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Close Button */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          vibrate(20);
+          onClose();
         }}
-        className="relative glass-card w-full max-w-sm bg-white p-8 overflow-hidden flex flex-col items-center gap-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] border-4 border-yellow-400"
+        className="absolute top-6 right-6 z-50 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full border border-white/10 backdrop-blur-md transition-all active:scale-95 cursor-pointer shadow-md"
       >
-        {/* Everything inside here (except buttons) is captured */}
-        <div ref={captureRef} className="flex flex-col items-center gap-6 bg-white w-full py-4 rounded-[2.5rem]">
-          {/* Background Confetti Aura - exclude from capture? Maybe not, keep for aesthetics. */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <motion.div 
-              animate={{ 
-                rotate: 360,
-                scale: [1, 1.2, 1],
-              }}
-              transition={{ duration: 10, repeat: 0 /* performance */, ease: "linear" }}
-              className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-[radial-gradient(circle,_rgba(255,223,0,0.15)_0%,_transparent_70%)]"
-            />
+        <X size={20} />
+      </button>
+
+      {/* Share Screen Viewport Wrapper */}
+      <div className="w-full max-w-[380px] flex flex-col items-center select-none py-6">
+        
+        {/* 📸 THE SQUARE POSTCARD (Plant Nanny Style) */}
+        <motion.div 
+          ref={cardRef} 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 25 }}
+          className="postcard-container"
+        >
+          {/* Top 82% (Artwork Section) */}
+          <div className="postcard-artwork-sec">
+            <div className="postcard-grass-hill" />
+
+            {/* Plant Wrapper with gentle Float Animation & Large Centered Size */}
+            <div className="postcard-plant-wrap animate-gentle-float">
+              <PlantRenderer 
+                type={type} 
+                stage={5} 
+                isThirsty={false} 
+                isDead={false} 
+                className="!w-full !h-full origin-bottom" 
+              />
+            </div>
           </div>
 
-          <div className="text-center space-y-1 z-10">
-            <motion.div
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="flex items-center justify-center gap-2"
-            >
-              <Sparkles className="text-yellow-500 fill-yellow-500" size={20} />
-              <h2 className="text-sm font-black text-yellow-600 uppercase tracking-[0.3em]">Legendary Growth</h2>
-              <Sparkles className="text-yellow-500 fill-yellow-500" size={20} />
-            </motion.div>
-            <motion.h3 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.4, type: "spring" }}
-              className="text-3xl font-black text-blue-900 leading-tight italic"
-            >
-              {ecosystemName}
-            </motion.h3>
-          </div>
-
-          {/* The Capture Area */}
-          <div className="relative group">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
-              className="bg-gradient-to-br from-blue-50 to-emerald-50 p-8 rounded-[3rem] shadow-inner border-2 border-dashed border-blue-100 flex items-center justify-center"
-            >
-              <div className="w-56 h-56 flex items-center justify-center">
-                <PlantRenderer type={type} stage={5} isThirsty={false} isDead={false} />
+          {/* Bottom 18% (Branding Bar) */}
+          <div className="postcard-footer-sec">
+            {/* Left Side: App Mascot Logo & Name */}
+            <div className="brand-group-sec">
+              <div className="app-mascot-icon">
+                <img 
+                  src="/mascot.png" 
+                  alt="Nexora Mascot" 
+                  className="w-5 h-5 object-contain"
+                  referrerPolicy="no-referrer"
+                />
               </div>
-            </motion.div>
-            
-            {/* Animated sparkles around the plant */}
-            {[...Array(6)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute text-yellow-400"
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ 
-                  opacity: [0, 1, 0], 
-                  scale: [0, 1, 0],
-                  x: Math.sin(i) * 120,
-                  y: Math.cos(i) * 120
-                }}
-                transition={{ 
-                  duration: 2, 
-                  repeat: 0 /* fixed */, 
-                  delay: i * 0.4,
-                  ease: "easeInOut"
-                }}
-              >
-                <Sparkles size={16} fill="currentColor" />
-              </motion.div>
-            ))}
-          </div>
+              <span className="app-name-sec">
+                Nexora
+              </span>
+            </div>
 
-          <p className="text-xs font-bold text-blue-900/40 text-center px-4 leading-relaxed z-10">
-            Bro, your discipline is insane! You've successfully cultivated the legendary {ecosystemName}. Capture this moment!
+            {/* Right Side: Plant details */}
+            <div className="plant-details-sec">
+              <h3 className="plant-name-sec">
+                {ecosystemName}
+              </h3>
+              <div className="plant-stats-sec">
+                {stats?.streak || 14} Day Streak • #{plantIndex}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* 📝 CONGRATS SECTION (Below the Card) */}
+        <div className="text-center my-6 px-2.5 text-white">
+          <h2 className="text-[22px] font-black mb-2 drop-shadow-sm font-sans tracking-wide">
+            A Precious Moment
+          </h2>
+          <p className="text-sm leading-relaxed opacity-90 font-medium font-sans">
+            What a lovely memory! Save this snap or share it with friends!
           </p>
         </div>
-        
-        {/* Buttons - Separated from captureRef capture area */}
-        <div className="w-full grid grid-cols-1 gap-3 z-10">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => handleCapture('library')}
-            disabled={isSaving || saveSuccess}
-            className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs transition-all shadow-lg ${
-              saveSuccess 
-                ? 'bg-emerald-500 text-white' 
-                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
-            }`}
-          >
-            {saveSuccess ? (
-              <>
-                <Check size={18} /> Saved to Library
-              </>
-            ) : (
-              <>
-                <Library size={18} /> Save to Library
-              </>
-            )}
-          </motion.button>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => handleCapture('phone')}
-            disabled={isSaving}
-            className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs transition-all shadow-lg border-2 ${
-              downloadSuccess
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
-                : 'bg-white border-blue-100 text-blue-900 hover:bg-blue-50 shadow-gray-200/50'
-            }`}
+        {/* 🔘 ACTION BUTTONS CONTAINER */}
+        <div className="w-full flex flex-col gap-3">
+          <button
+            onClick={handleCapture}
+            disabled={isSaving || downloadSuccess}
+            className="w-full py-4 border-none rounded-2xl bg-white hover:bg-slate-50 text-[#10a3a8] font-bold text-base cursor-pointer transition-transform duration-100 active:scale-[0.98] shadow-md flex items-center justify-center gap-2"
           >
-            {downloadSuccess ? (
-              <>
-                <Check size={18} /> Saved to Files
-              </>
-            ) : (
-              <>
-                <Download size={18} /> Save to Phone
-              </>
-            )}
-          </motion.button>
+            <Download size={18} />
+            {isSaving ? "Generating..." : "Share with Friends"}
+          </button>
+
+          <button
+            onClick={() => {
+              vibrate(20);
+              onClose();
+            }}
+            className="w-full py-4 rounded-2xl bg-white/25 hover:bg-white/30 text-white font-semibold text-base border border-white/40 backdrop-blur-sm transition-transform duration-100 active:scale-[0.98] cursor-pointer flex items-center justify-center"
+          >
+            Continue
+          </button>
         </div>
 
-        {/* Success burst animation */}
-        <AnimatePresence>
-          {(saveSuccess || downloadSuccess) && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: [1, 1.5, 1], opacity: [0, 1, 0] }}
-              exit={{ scale: 2, opacity: 0 }}
-              className="absolute inset-0 pointer-events-none flex items-center justify-center"
-            >
-              <div className="w-64 h-64 rounded-full border-8 border-yellow-400 opacity-20" />
-              <div className="absolute w-full h-full">
-                {[...Array(12)].map((_, i) => (
-                   <motion.div
-                    key={i}
-                    className="absolute top-1/2 left-1/2 w-2 h-8 bg-yellow-400 rounded-full"
-                    animate={{ 
-                      x: Math.sin(i * 30 * (Math.PI / 180)) * 200,
-                      y: Math.cos(i * 30 * (Math.PI / 180)) * 200,
-                      rotate: i * 30,
-                      opacity: [0, 1, 0]
-                    }}
-                    transition={{ duration: 0.8 }}
-                   />
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 };

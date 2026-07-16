@@ -555,7 +555,11 @@ const startVersionWatcher = () => {
                 }
               });
             } catch (fcmErr: any) {
-              console.warn("FCM Broadcast failed (likely FCM is not enabled or lacks permissions):", fcmErr.message || fcmErr);
+              if (fcmErr.message && fcmErr.message.includes("cloudmessaging.messages.create")) {
+                console.warn("FCM permission denied, skipping version update broadcast.");
+              } else {
+                console.warn("FCM Broadcast failed:", fcmErr.message || fcmErr);
+              }
             }
           }
         }
@@ -575,9 +579,12 @@ const sendPush = async (token: string, title: string, body: string) => {
       android: { priority: 'high' },
       apns: { payload: { aps: { sound: 'default' } } }
     });
-  } catch (err) {
-    // If token is invalid, we could remove it from DB
-    console.error("Push Error for token:", token, err);
+  } catch (err: any) {
+    if (err.message && err.message.includes("cloudmessaging.messages.create")) {
+      console.warn("FCM permission denied, skipping push notification.");
+    } else {
+      console.error("Push Error for token:", token, err);
+    }
   }
 };
 
@@ -735,7 +742,11 @@ async function startServer() {
         console.log("Successfully sent motivation message:", response);
         res.json({ success: true, messageId: response, quote: { title, body } });
       } catch (fcmErr: any) {
-        console.warn("FCM motivation send failed (likely FCM not enabled or lacks permissions):", fcmErr.message || fcmErr);
+        if (fcmErr.message && fcmErr.message.includes("cloudmessaging.messages.create")) {
+          console.warn("FCM permission denied, skipping motivation push.");
+        } else {
+          console.warn("FCM motivation send failed:", fcmErr.message || fcmErr);
+        }
         res.json({ success: true, simulated: true, messageId: "simulated-fcm-motivation-id", quote: { title, body } });
       }
     } catch (error: any) {
@@ -811,7 +822,11 @@ async function startServer() {
         const pushRes = await admin.messaging().send(message as any);
         res.json({ success: true, messageId: pushRes });
       } catch (fcmErr: any) {
-        console.warn("FCM push send failed (likely FCM not enabled or lacks permissions):", fcmErr.message || fcmErr);
+        if (fcmErr.message && fcmErr.message.includes("cloudmessaging.messages.create")) {
+          console.warn("FCM permission denied, skipping notification push.");
+        } else {
+          console.warn("FCM push send failed:", fcmErr.message || fcmErr);
+        }
         res.json({ success: true, simulated: true, messageId: "simulated-fcm-notification-id" });
       }
     } catch (error: any) {

@@ -47,8 +47,12 @@ async function getAndSaveToken(userId: string) {
       });
       return token;
     }
-  } catch (err) {
-    console.error('FCM Token error:', err);
+  } catch (err: any) {
+    if (err?.code === 'messaging/permission-blocked' || err?.code === 'messaging/permission-default') {
+      console.warn('FCM Permission blocked or default:', err);
+    } else {
+      console.error('FCM Token error:', err);
+    }
   }
   return null;
 }

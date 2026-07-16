@@ -555,23 +555,25 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidPost(request.resource.data);
       allow update: if isAuthenticated() && (
-        // Allow others to increment flames/shields ONLY
+        // Action 1: Others increment/interact with flames/shields/comments
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['flames', 'shields', 'commentCount', 'likedBy', 'shieldedBy'])) ||
-        // Allow the author to edit their own post
-        (resource.data.userId == request.auth.uid && isValidPost(request.resource.data))
+        // Action 2: Author soft-deletes the post (only modifies 'deleted')
+        (resource.data.get('userId', '') == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted'])) ||
+        // Action 3: Author edits the post content/title/image/etc.
+        (resource.data.get('userId', '') == request.auth.uid && isValidPost(request.resource.data))
       );
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.get('userId', '') == request.auth.uid || resource.data.get('ownerId', '') == request.auth.uid || isAdmin());
 
       match /comments/{commentId} {
         allow read: if isAuthenticated();
         allow create: if isAuthenticated() && isValidComment(request.resource.data);
         allow update: if isAuthenticated() && (
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy'])) ||
-          (resource.data.userId == request.auth.uid && isValidComment(request.resource.data))
+          (resource.data.get('userId', '') == request.auth.uid && isValidComment(request.resource.data))
         );
         allow delete: if isAuthenticated() && (
-          resource.data.userId == request.auth.uid || 
-          get(/databases/$(database)/documents/posts/$(postId)).data.userId == request.auth.uid || 
+          resource.data.get('userId', '') == request.auth.uid || 
+          get(/databases/$(database)/documents/posts/$(postId)).data.get('userId', '') == request.auth.uid || 
           isAdmin()
         );
       }
@@ -582,20 +584,20 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isValidVideo(request.resource.data);
       allow update: if isAuthenticated() && (
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy', 'commentCount', 'saves', 'savedBy', 'repostCount'])) ||
-        (resource.data.userId == request.auth.uid && isValidVideo(request.resource.data))
+        (resource.data.get('userId', '') == request.auth.uid && isValidVideo(request.resource.data))
       );
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.get('userId', '') == request.auth.uid || resource.data.get('ownerId', '') == request.auth.uid || isAdmin());
  
       match /comments/{commentId} {
         allow read: if true;
         allow create: if isAuthenticated() && isValidVideoComment(request.resource.data);
         allow update: if isAuthenticated() && (
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy'])) ||
-          (resource.data.userId == request.auth.uid && isValidVideoComment(request.resource.data))
+          (resource.data.get('userId', '') == request.auth.uid && isValidVideoComment(request.resource.data))
         );
         allow delete: if isAuthenticated() && (
-          resource.data.userId == request.auth.uid || 
-          get(/databases/$(database)/documents/social_videos/$(videoId)).data.userId == request.auth.uid || 
+          resource.data.get('userId', '') == request.auth.uid || 
+          get(/databases/$(database)/documents/social_videos/$(videoId)).data.get('userId', '') == request.auth.uid || 
           isAdmin()
         );
       }

@@ -191,7 +191,6 @@ window.addEventListener('unhandledrejection', (event) => {
 
 window.addEventListener('error', (event) => {
   const msg = event.message || '';
-  console.error('Global Error Captured:', msg, 'at', event.filename);
   
   if (
     msg.includes('quota') || 
@@ -213,6 +212,8 @@ window.addEventListener('error', (event) => {
     console.warn('Ignored transient or extension-related warning in global handler:', msg);
     return;
   }
+
+  console.error('Global Error Captured:', msg, 'at', event.filename);
   
   // Create beautiful fallback banner only for truly unhandled raw errors
   const errDiv = document.createElement('div');

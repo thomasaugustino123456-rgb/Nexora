@@ -41,6 +41,7 @@ export function ProgressScreen({
   const [waveOffset, setWaveOffset] = useState(0);
   const [isHydrationExpanded, setIsHydrationExpanded] = useState(false);
   const [selectedQuantity, setSelectedQuantity] = useState<number>(1.0);
+  const [isTrophiesExpanded, setIsTrophiesExpanded] = useState(false);
 
   // continuous fluid loop
   useEffect(() => {
@@ -394,9 +395,16 @@ export function ProgressScreen({
 
         {stats.trophies && stats.trophies.length > 0 && (
           <div className="mt-8 pt-8 border-t border-[#E9E4D4]">
-             <p className="text-[10px] font-black text-[#4F3F34]/60 uppercase tracking-widest mb-4">Highest Artifacts (Tap to view big)</p>
+             <div className="flex items-center justify-between mb-4">
+               <p className="text-[10px] font-black text-[#4F3F34]/60 uppercase tracking-widest flex items-center gap-2">
+                 <span>Highest Artifacts (Tap to view big)</span>
+                 <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[8px] font-black rounded-full shadow-sm">
+                   {stats.trophies.filter(t => t.type !== 'broken').length} Active / {stats.trophies.length} Total
+                 </span>
+               </p>
+             </div>
              <div className="flex flex-wrap gap-3">
-                {stats.trophies.map(t => (
+                {(isTrophiesExpanded ? stats.trophies : stats.trophies.slice(0, 5)).map(t => (
                   <div 
                     key={t.id} 
                     onClick={() => setSelectedTrophy(t)}
@@ -421,10 +429,11 @@ export function ProgressScreen({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm(`Do you want to delete the ${t.type.toUpperCase()} trophy, bro?`)) {
-                          const updated = (stats.trophies || []).filter(item => item.id !== t.id);
-                          setStats({ ...stats, trophies: updated });
-                          showToast("Trophy deleted successfully 🗑️", "success");
+                        const updated = (stats.trophies || []).filter(item => item.id !== t.id);
+                        setStats((prev) => ({ ...prev, trophies: updated }));
+                        showToast(`Deleted ${t.type.toUpperCase()} trophy 🗑️`, "success");
+                        if (selectedTrophy?.id === t.id) {
+                          setSelectedTrophy(null);
                         }
                       }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-rose-50 text-rose-500 hover:text-rose-600 rounded-lg transition-all md:opacity-0 group-hover:opacity-100 z-10"
@@ -434,6 +443,46 @@ export function ProgressScreen({
                     </button>
                   </div>
                 ))}
+
+                {/* Expand Button */}
+                {stats.trophies.length > 5 && !isTrophiesExpanded && (
+                  <button 
+                    onClick={() => setIsTrophiesExpanded(true)}
+                    className="px-4 py-3 bg-amber-50/60 hover:bg-amber-50 active:scale-95 transition-all rounded-2xl border border-dashed border-amber-300 flex items-center gap-3 min-w-[155px] shadow-sm text-left group relative cursor-pointer"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-amber-400 text-white flex items-center justify-center font-black text-[10px] shadow-[0_0_8px_rgba(245,158,11,0.3)] flex-shrink-0 animate-bounce">
+                      +{stats.trophies.length - 5}
+                    </div>
+                    <div className="flex flex-col overflow-hidden">
+                      <span className="text-[10px] font-black uppercase tracking-widest leading-none mb-1 text-[#4F3F34] group-hover:text-amber-600 transition-colors">
+                        See All
+                      </span>
+                      <span className="text-[8px] font-bold uppercase tracking-tighter text-amber-600">
+                        Expand Vault
+                      </span>
+                    </div>
+                  </button>
+                )}
+
+                {/* Collapse Button */}
+                {stats.trophies.length > 5 && isTrophiesExpanded && (
+                  <button 
+                    onClick={() => setIsTrophiesExpanded(false)}
+                    className="px-4 py-3 bg-gray-50/60 hover:bg-gray-50 active:scale-95 transition-all rounded-2xl border border-dashed border-gray-300 flex items-center gap-3 min-w-[155px] shadow-sm text-left group relative cursor-pointer"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-gray-400 text-white flex items-center justify-center font-black text-[10px] flex-shrink-0">
+                      <ChevronUp size={12} />
+                    </div>
+                    <div className="flex flex-col overflow-hidden">
+                      <span className="text-[10px] font-black uppercase tracking-widest leading-none mb-1 text-[#4F3F34] group-hover:text-gray-600 transition-colors">
+                        Show Less
+                      </span>
+                      <span className="text-[8px] font-bold uppercase tracking-tighter text-gray-500">
+                        Collapse Vault
+                      </span>
+                    </div>
+                  </button>
+                )}
              </div>
           </div>
         )}
@@ -551,12 +600,10 @@ export function ProgressScreen({
                 </button>
                 <button
                   onClick={() => {
-                    if (confirm(`Are you sure you want to permanently delete this ${selectedTrophy.type.toUpperCase()} trophy, bro? This is irreversible!`)) {
-                      const updated = (stats.trophies || []).filter(item => item.id !== selectedTrophy.id);
-                      setStats({ ...stats, trophies: updated });
-                      showToast("Trophy permanently deleted 🗑️", "success");
-                      setSelectedTrophy(null);
-                    }
+                    const updated = (stats.trophies || []).filter(item => item.id !== selectedTrophy.id);
+                    setStats((prev) => ({ ...prev, trophies: updated }));
+                    showToast(`Permanently deleted ${selectedTrophy.type.toUpperCase()} trophy 🗑️`, "success");
+                    setSelectedTrophy(null);
                   }}
                   className="flex-1 bg-rose-600/90 hover:bg-rose-700 text-white px-5 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 shadow-md shadow-rose-900/20 shadow-inner"
                 >

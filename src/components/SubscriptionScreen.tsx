@@ -837,6 +837,7 @@ export function SubscriptionScreen({
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
             className="p-10 rounded-[3rem] bg-gradient-to-br from-indigo-600/10 via-slate-900 to-indigo-600/5 border-2 border-indigo-500/30 text-center space-y-8 overflow-hidden relative"
           >
             <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-indigo-500/10 blur-[100px]" />

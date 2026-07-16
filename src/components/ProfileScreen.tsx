@@ -20,6 +20,7 @@ import {
   Users,
   Layout,
   Book,
+  ArrowLeft,
 } from "lucide-react";
 import { FirebaseUser } from "../firebase";
 import { UserSettings, UserStats, SocialCircle, Screen } from "../types";
@@ -174,7 +175,18 @@ export function ProfileScreen({
       exit={{ opacity: 0, x: -20 }}
       className="max-w-5xl mx-auto w-full space-y-8 pb-32"
     >
-      <div className="flex flex-col items-center gap-6 pt-10">
+      {/* Back Button */}
+      <div className="flex justify-start px-4 pt-4 sm:px-0">
+        <button
+          onClick={() => setActiveScreen("home")}
+          className="p-3 bg-white/80 hover:bg-white border border-slate-200/80 hover:border-slate-300 text-slate-700 rounded-2xl flex items-center gap-2 shadow-sm transition-all hover:scale-105 active:scale-95 text-xs font-black uppercase tracking-widest cursor-pointer"
+        >
+          <ArrowLeft size={16} className="stroke-[2.5]" />
+          <span>Back to Hub</span>
+        </button>
+      </div>
+
+      <div className="flex flex-col items-center gap-6 pt-2">
         <div className="relative group">
           <div className="absolute inset-0 bg-blue-500 rounded-[2.5rem] rotate-6 scale-105 opacity-20 blur-xl group-hover:rotate-12 transition-transform duration-500" />
           <div className="w-32 h-32 rounded-[2.5rem] bg-white border-4 border-white shadow-2xl relative z-10 overflow-hidden">

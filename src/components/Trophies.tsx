@@ -192,6 +192,26 @@ export function BrokenTrophy() {
 }
 
 export async function playTrophySound(type: 'golden' | 'ice' | 'broken') {
+  if (typeof window !== "undefined") {
+    // Check if sound is disabled in settings
+    try {
+      const settingsStr = localStorage.getItem("nexora_settings");
+      if (settingsStr) {
+        const settings = JSON.parse(settingsStr);
+        if (settings && settings.soundEnabled === false) {
+          return;
+        }
+      }
+    } catch {}
+
+    // Only it does not have to play when the user take a Challenge and task or the user is in the Rewards Pages bro
+    const isRewardsActive = (window as any).__nexora_is_rewards_active;
+    const isChallengeActive = (window as any).__nexora_is_challenge_active;
+    if (isRewardsActive || isChallengeActive) {
+      return;
+    }
+  }
+
   const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
   if (!AudioContext) return;
   const ctx = new AudioContext();

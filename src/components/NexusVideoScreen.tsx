@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Video, Plus, Search, X, MessageSquare, Heart, RefreshCw, Send, User, Trash2, Bookmark, Flag, EyeOff, Share2, Award, Zap, History, Camera } from 'lucide-react';
 import { FirebaseUser } from '../firebase';
@@ -129,6 +129,15 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
   const [isStudioOpen, setIsStudioOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [postProgress, setPostProgress] = useState<{ current: number; total: number; percent: number } | null>(null);
+  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+    scrollTimeout.current = setTimeout(() => {
+      const index = Math.round(e.currentTarget.scrollTop / window.innerHeight);
+      if (index !== activeIndex) setActiveIndex(index);
+    }, 100);
+  };
 
   const [videoComments, setVideoComments] = useState<any[]>([]);
   const [newVideoComment, setNewVideoComment] = useState('');
@@ -215,7 +224,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
     });
   };
 
-  const handleLike = async (vId: string, likedBy: string[]) => {
+  const handleLike = useCallback(async (vId: string, likedBy: string[]) => {
     if (!user) return;
     const isLiked = (likedBy || []).includes(user.uid);
     const newLikedBy = isLiked ? likedBy.filter(id => id !== user.uid) : [...(likedBy || []), user.uid];
@@ -223,7 +232,12 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
       await updateDoc(doc(db, 'social_videos', vId), { likedBy: newLikedBy, likes: newLikedBy.length });
       vibrate(VIBRATION_PATTERNS.CLICK);
     } catch (err) { console.error(err); }
-  };
+  }, [user]);
+
+  const handleShareVideo = useCallback((id: string) => {
+    navigator.clipboard.writeText(`${window.location.origin}?video=${id}`);
+    showToast('Link Copied! 🎬', 'success');
+  }, [showToast]);
 
   const handleCreateVideo = async () => {
     if (!videoUrl.trim() || !user) return;
@@ -347,10 +361,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
       {/* Snap Scroll Vertical Feed */}
       <div 
         className="flex-1 overflow-y-scroll snap-y snap-mandatory h-full no-scrollbar overscroll-none"
-        onScroll={(e) => {
-          const index = Math.round(e.currentTarget.scrollTop / window.innerHeight);
-          if (index !== activeIndex) setActiveIndex(index);
-        }}
+        onScroll={handleScroll}
       >
         {videos.length === 0 ? (
           <div className="h-screen w-full flex flex-col items-center justify-center text-white space-y-6">
@@ -369,10 +380,7 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
               index={i}
               activeIndex={activeIndex}
               handleLike={handleLike}
-              handleShareVideo={(id: string) => {
-                navigator.clipboard.writeText(`${window.location.origin}?video=${id}`);
-                showToast('Link Copied! 🎬', 'success');
-              }}
+              handleShareVideo={handleShareVideo}
               setSelectedVideo={setSelectedVideo}
             />
           ))

@@ -60,9 +60,55 @@ export function TrophyRewardsScreen({
     };
   }, [play, stopAllMusic, trophyType, settings?.soundEnabled]);
 
+  const themeConfig = {
+    golden: {
+      bg: "from-[#faf8f4] via-[#f4efe3] to-[#e7dec7]",
+      accentText: "text-amber-600",
+      accentTitle: "text-amber-950",
+      descText: "text-amber-900/70",
+      tagBg: "bg-amber-500/10 border border-amber-500/20",
+      tagText: "text-amber-800",
+      buttonBg: "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 shadow-xl shadow-amber-500/20 border-t border-white/20",
+      buttonText: "text-amber-950",
+    },
+    ice: {
+      bg: "from-[#f3fafd] via-[#e2f1f7] to-[#cbe5f2]",
+      accentText: "text-sky-600",
+      accentTitle: "text-sky-950",
+      descText: "text-sky-900/70",
+      tagBg: "bg-sky-500/10 border border-sky-500/20",
+      tagText: "text-sky-800",
+      buttonBg: "bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 shadow-xl shadow-sky-500/20 border-t border-white/20",
+      buttonText: "text-white",
+    },
+    broken: {
+      bg: "from-[#fafafa] via-[#f1f1f1] to-[#dedede]",
+      accentText: "text-gray-600",
+      accentTitle: "text-gray-900",
+      descText: "text-gray-600/70",
+      tagBg: "bg-gray-500/10 border border-gray-500/20",
+      tagText: "text-gray-800",
+      buttonBg: "bg-gradient-to-r from-gray-600 to-slate-700 hover:from-gray-700 hover:to-slate-800 shadow-xl shadow-gray-600/20 border-t border-white/10",
+      buttonText: "text-white",
+    }
+  }[trophyType] || {
+    bg: "from-[#faf8f4] via-[#f4efe3] to-[#e7dec7]",
+    accentText: "text-amber-600",
+    accentTitle: "text-amber-950",
+    descText: "text-amber-900/70",
+    tagBg: "bg-amber-500/10 border border-amber-500/20",
+    tagText: "text-amber-800",
+    buttonBg: "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 shadow-xl shadow-amber-500/20 border-t border-white/20",
+    buttonText: "text-amber-950",
+  };
+
   return (
-    <div
-      className="fixed inset-0 z-[1000] bg-white overflow-y-auto w-full h-full no-scrollbar"
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -10, scale: 0.98 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className={`fixed inset-0 z-[1000] bg-radial ${themeConfig.bg} overflow-y-auto w-full h-full no-scrollbar`}
       style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: 'contain' }}
     >
       <div className="min-h-[120vh] sm:min-h-screen flex flex-col items-center justify-start py-12 px-6 text-center relative w-full pb-32">
@@ -83,10 +129,10 @@ export function TrophyRewardsScreen({
           className="relative z-10 w-full max-w-lg flex flex-col items-center gap-8"
         >
           <div className="space-y-2">
-            <p className="text-blue-500 font-black uppercase tracking-[0.4em] text-xs">
+            <p className={`${themeConfig.accentText} font-black uppercase tracking-[0.4em] text-xs`}>
               Achievement Unlocked
             </p>
-            <h2 className="text-5xl font-black text-blue-900 italic tracking-tighter uppercase">
+            <h2 className={`text-5xl font-black ${themeConfig.accentTitle} italic tracking-tighter uppercase`}>
               {trophyType === "golden"
                 ? "Pure Victory"
                 : trophyType === "ice"
@@ -118,7 +164,7 @@ export function TrophyRewardsScreen({
           </motion.div>
 
           <div className="space-y-4 max-w-xs">
-            <p className="text-blue-900/60 font-medium leading-relaxed italic">
+            <p className={`${themeConfig.descText} font-medium leading-relaxed italic`}>
               "
               {trophyType === "golden"
                 ? "You've proven your discipline today, bro. This golden treasure belongs to the elite."
@@ -127,15 +173,15 @@ export function TrophyRewardsScreen({
             </p>
 
             <div className="flex items-center justify-center gap-3">
-              <div className="px-4 py-2 bg-blue-50 rounded-full flex items-center gap-2">
-                <Sparkles size={14} className="text-blue-500" />
-                <span className="text-[10px] font-black text-blue-900 uppercase">
+              <div className={`px-4 py-2 ${themeConfig.tagBg} rounded-full flex items-center gap-2`}>
+                <Sparkles size={14} className={themeConfig.accentText} />
+                <span className={`text-[10px] font-black ${themeConfig.tagText} uppercase`}>
                   Season 1 Rare
                 </span>
               </div>
-              <div className="px-4 py-2 bg-blue-50 rounded-full flex items-center gap-2">
-                <Check size={14} className="text-green-500" />
-                <span className="text-[10px] font-black text-blue-900 uppercase">
+              <div className={`px-4 py-2 ${themeConfig.tagBg} rounded-full flex items-center gap-2`}>
+                <Check size={14} className="text-green-600" />
+                <span className={`text-[10px] font-black ${themeConfig.tagText} uppercase`}>
                   Verified
                 </span>
               </div>
@@ -154,7 +200,7 @@ export function TrophyRewardsScreen({
                     play("nav_switch");
                     onFinish();
                   }}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-[2rem] font-black uppercase tracking-widest shadow-2xl shadow-blue-500/20 transition-all active:scale-95 text-lg"
+                  className={`w-full ${themeConfig.buttonBg} ${themeConfig.buttonText} py-6 rounded-[2rem] font-black uppercase tracking-widest transition-all active:scale-95 text-lg cursor-pointer`}
                 >
                   Finished
                 </button>
@@ -175,7 +221,7 @@ export function TrophyRewardsScreen({
                         link.click();
                       }
                     }}
-                    className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-blue-900 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all"
+                    className="flex-1 py-4 bg-black/5 hover:bg-black/10 text-slate-800 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all"
                   >
                     <Download size={14} /> Save Card
                   </button>
@@ -188,7 +234,6 @@ export function TrophyRewardsScreen({
                         (window.location.pathname === "/"
                           ? ""
                           : window.location.pathname);
-                      // const shareUrl = `${baseUrl}?user=${auth.currentUser?.uid || ""}`;
                       const shareUrl = `${baseUrl}`;
                       const shareText = `Bro, check my discipline stats! I just earned a ${trophyType.toUpperCase()} trophy on Nexora! 🏆🚀`;
 
@@ -210,7 +255,7 @@ export function TrophyRewardsScreen({
                         );
                       }
                     }}
-                    className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-blue-900 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all"
+                    className="flex-1 py-4 bg-black/5 hover:bg-black/10 text-slate-800 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all"
                   >
                     <Share2 size={14} /> Share Rank
                   </button>
@@ -270,6 +315,6 @@ export function TrophyRewardsScreen({
           ))}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

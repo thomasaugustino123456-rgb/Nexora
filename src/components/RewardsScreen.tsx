@@ -350,7 +350,12 @@ export function RewardsScreen({
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-radial from-[#321c08] via-[#120a04] to-[#050301] flex flex-col items-center justify-center p-6 text-center overflow-hidden transition-all duration-700">
+    <motion.div 
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -10, scale: 0.98 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="fixed inset-0 z-[1000] bg-radial from-[#321c08] via-[#120a04] to-[#050301] flex flex-col items-center justify-center p-6 text-center overflow-hidden transition-all duration-700">
       {/* Floating amber particles background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-[0]">
         {particles.map(p => (
@@ -844,6 +849,6 @@ export function RewardsScreen({
           </AnimatePresence>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
