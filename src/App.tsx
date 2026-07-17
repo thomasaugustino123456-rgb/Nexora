@@ -825,6 +825,22 @@ export default function App() {
     "home",
   );
 
+  const [isRankGlowActive, setIsRankGlowActive] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("nexora_rank_glow_active") === "true";
+    }
+    return false;
+  });
+
+  const setRankGlowActive = (active: boolean) => {
+    setIsRankGlowActive(active);
+    if (active) {
+      localStorage.setItem("nexora_rank_glow_active", "true");
+    } else {
+      localStorage.removeItem("nexora_rank_glow_active");
+    }
+  };
+
   // Navigation Bar Visibility Logic - Show only on the 5 main dashboard tabs
   const showBottomNav = useMemo(() => {
     const mainScreens = ["home", "progress", "shop", "library", "notebook"];
@@ -3709,6 +3725,44 @@ export default function App() {
 
   const userRank = leaderboard.findIndex((l) => l.uid === user?.uid) + 1;
 
+  // Monitor leaderboard for user rank improvements to trigger the Golden Glow
+  useEffect(() => {
+    if (!user || leaderboard.length === 0) return;
+    const currentRank = leaderboard.findIndex((l) => l.uid === user.uid) + 1;
+    if (currentRank <= 0) return;
+
+    const lastViewedRankStr = localStorage.getItem("nexora_last_viewed_rank");
+    if (!lastViewedRankStr) {
+      localStorage.setItem("nexora_last_viewed_rank", currentRank.toString());
+      return;
+    }
+
+    const lastViewedRank = parseInt(lastViewedRankStr);
+    
+    if (currentRank < lastViewedRank) {
+      console.log(`[RANK ANIMATION] Rank improved! Old rank: ${lastViewedRank}, New rank: ${currentRank}. Activating Golden Glow!`);
+      setRankGlowActive(true);
+      if (!localStorage.getItem("nexora_previous_rank")) {
+        localStorage.setItem("nexora_previous_rank", lastViewedRank.toString());
+      }
+    } else if (currentRank > lastViewedRank) {
+      // Keep in sync if rank decreases, to avoid false positive glows
+      localStorage.setItem("nexora_last_viewed_rank", currentRank.toString());
+    }
+  }, [leaderboard, user]);
+
+  // Acknowledge the Rank Golden Glow when navigating to the leaderboard
+  useEffect(() => {
+    if (activeScreen === "leaderboard" && isRankGlowActive) {
+      console.log(`[RANK ANIMATION] Navigated to leaderboard while glow was active. Acknowledging glow.`);
+      setRankGlowActive(false);
+      const currentRank = leaderboard.findIndex((l) => l.uid === user?.uid) + 1;
+      if (currentRank > 0) {
+        localStorage.setItem("nexora_last_viewed_rank", currentRank.toString());
+      }
+    }
+  }, [activeScreen, isRankGlowActive, leaderboard, user]);
+
   // Midnight rollover
   useEffect(() => {
     if (isDataReady && dailyProgress.date && dailyProgress.date !== today) {
@@ -4583,6 +4637,12 @@ export default function App() {
 
   const handleLogout = async () => {
     vibrate(VIBRATION_PATTERNS.CLICK);
+    try {
+      showToast("Syncing user stats and progress, please wait...", "info");
+      await forceSyncData();
+    } catch (syncErr) {
+      console.warn("Pre-logout sync failed:", syncErr);
+    }
     try {
       await signOut(auth);
       showToast("Logout successful.", "success");
@@ -6231,7 +6291,7 @@ export default function App() {
                           };
                         });
                       }}
-                      onRecover={() => {
+                      onRecover={async () => {
                         onUpdateSettings((prev) => {
                           const type = prev.plantState?.type || "sprout";
                           const updatedProgress = {
@@ -6261,6 +6321,11 @@ export default function App() {
                           };
                         });
                         showToast("Ecosystem restored! 🌿", "info");
+                        try {
+                          await forceSyncData();
+                        } catch (syncErr) {
+                          console.warn("Failed to force sync plant restoration:", syncErr);
+                        }
                       }}
                       onPurchaseEcosystemItem={buyEcosystemItem}
                       onToggleEcosystemItem={toggleEcosystemItem}
@@ -6512,6 +6577,7 @@ export default function App() {
               play={play}
               vibrate={vibrate}
               translate={translate}
+              isRankGlowActive={isRankGlowActive}
             />
           )}
 

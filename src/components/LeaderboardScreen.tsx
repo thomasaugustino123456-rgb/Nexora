@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   ChevronRight, 
@@ -199,7 +199,63 @@ export function LeaderboardScreen({
   onBack: () => void;
   onClaimRankReward: (rank: number, coins: number) => void;
 }) {
-  const userRank = leaderboard.findIndex(l => l.uid === user?.uid) + 1;
+  const currentRank = useMemo(() => {
+    return leaderboard.findIndex(l => l.uid === user?.uid) + 1;
+  }, [leaderboard, user]);
+
+  const userRank = currentRank;
+
+  const [displayList, setDisplayList] = useState<LeaderboardEntry[]>(() => leaderboard);
+  const [isAnimatingRank, setIsAnimatingRank] = useState<boolean>(false);
+  const [showCelebrationSpot, setShowCelebrationSpot] = useState<boolean>(false);
+  const [animationPreviousRank, setAnimationPreviousRank] = useState<number | null>(null);
+
+  // Set up the moving animation if there's a stored previous rank
+  useEffect(() => {
+    if (!user || leaderboard.length === 0 || currentRank <= 0) {
+      setDisplayList(leaderboard);
+      return;
+    }
+
+    const prevRankStr = localStorage.getItem("nexora_previous_rank");
+    if (prevRankStr) {
+      const prevRank = parseInt(prevRankStr);
+      if (prevRank > currentRank && prevRank <= leaderboard.length) {
+        setAnimationPreviousRank(prevRank);
+        setIsAnimatingRank(true);
+
+        const listCopy = [...leaderboard];
+        const curIdx = listCopy.findIndex(l => l.uid === user.uid);
+        if (curIdx !== -1) {
+          const userEntry = listCopy[curIdx];
+          listCopy.splice(curIdx, 1);
+          listCopy.splice(prevRank - 1, 0, userEntry);
+          setDisplayList(listCopy);
+
+          const animationTimer = setTimeout(() => {
+            setDisplayList(leaderboard);
+
+            const celebrationTimer = setTimeout(() => {
+              setShowCelebrationSpot(true);
+              setIsAnimatingRank(false);
+              localStorage.removeItem("nexora_previous_rank");
+              
+              setTimeout(() => {
+                setShowCelebrationSpot(false);
+              }, 4000);
+            }, 1600);
+
+            return () => clearTimeout(celebrationTimer);
+          }, 1800);
+
+          return () => clearTimeout(animationTimer);
+        }
+      }
+    }
+
+    setDisplayList(leaderboard);
+  }, [leaderboard, user, currentRank]);
+
   const currentLeague = settings.league || 'Bronze';
   const leagueIndex = LEAGUES.indexOf(currentLeague);
 
@@ -416,10 +472,10 @@ export function LeaderboardScreen({
             <Award size={14} className="text-emerald-500" />
             <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Arena Rankings</span>
           </div>
-          <span className="text-[10px] font-black text-slate-400 uppercase">{leaderboard.length} Combatants</span>
+          <span className="text-[10px] font-black text-slate-400 uppercase">{displayList.length} Combatants</span>
         </div>
 
-        {leaderboard.length === 0 ? (
+        {displayList.length === 0 ? (
           <div className="border-2 border-dashed border-slate-200 rounded-[2rem] p-10 text-center flex flex-col items-center gap-4">
             <div className="w-20 h-20">
               <Mascot mood="neutral" className="w-full h-full" />
@@ -431,7 +487,7 @@ export function LeaderboardScreen({
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {leaderboard.map((entry, index) => {
+            {displayList.map((entry, index) => {
               const isCurrentUser = entry.uid === user?.uid;
               const rank = index + 1;
               const isTop3 = rank <= 3;
@@ -452,24 +508,52 @@ export function LeaderboardScreen({
                 textColor = "text-blue-950 font-black";
                 subTextColor = "text-blue-600";
                 pointsTextStyle = "text-blue-600 font-black";
+
+                // Highlight user with an amber golden glowing pulse if they just moved up and are celebrating
+                if (showCelebrationSpot) {
+                  rowBg = "bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-2xl my-1 relative shadow-[0_0_20px_rgba(250,204,21,0.35)]";
+                  textColor = "text-yellow-950 font-black animate-pulse";
+                  subTextColor = "text-yellow-700";
+                  pointsTextStyle = "text-yellow-600 font-black";
+                }
               }
 
               return (
                 <React.Fragment key={entry.uid}>
                   <motion.div
+                    layout
+                    key={entry.uid}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(index * 0.03, 0.4) }}
+                    transition={{
+                      layout: {
+                        type: "spring",
+                        stiffness: 85,
+                        damping: 14,
+                        mass: 1.15
+                      },
+                      opacity: { duration: 0.2 },
+                      y: { duration: 0.2 }
+                    }}
                     className={`flex items-center gap-4 py-3.5 px-3 transition-all relative overflow-hidden ${rowBg}`}
                   >
+                    {/* Celebration Sparkles Overlay */}
+                    {isCurrentUser && showCelebrationSpot && (
+                      <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-around z-20">
+                        <Sparkles size={16} className="text-yellow-500 animate-bounce absolute left-4" />
+                        <Sparkles size={14} className="text-yellow-400 animate-pulse absolute right-12" />
+                        <Star size={12} className="text-amber-400 fill-amber-400 animate-spin absolute right-4" />
+                      </div>
+                    )}
+
                     {/* Rank Position */}
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs relative z-10">
                       {rankBadge}
                     </div>
 
                     {/* Profile Picture / Avatar */}
-                    <div className="relative">
-                      {isCurrentUser && entry.photoURL ? (
+                    <div className="relative z-10">
+                      {entry.photoURL ? (
                         <img 
                           src={entry.photoURL} 
                           alt={entry.displayName} 
@@ -490,18 +574,16 @@ export function LeaderboardScreen({
                     </div>
 
                     {/* Name and Level Details */}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 relative z-10">
                       <h4 className={`font-black text-sm uppercase tracking-wide truncate ${textColor}`}>
-                        {isCurrentUser ? (entry.displayName || "Nexora Champion") : `Competitor #${rank}`}
+                        {entry.displayName || "Anonymous Champion"}
                         {isCurrentUser && <span className="ml-1.5 font-bold text-[8px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">You</span>}
                       </h4>
                       
                       <div className="flex items-center gap-2 mt-1">
-                        {isCurrentUser && (
-                          <div className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-150">
-                            Lvl {entry.level || 1}
-                          </div>
-                        )}
+                        <div className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-150">
+                          Lvl {entry.level || 1}
+                        </div>
 
                         <div className="flex items-center gap-1.5 text-[10px] font-black tracking-tight">
                           <Flame size={11} className="text-orange-500" />
@@ -513,7 +595,7 @@ export function LeaderboardScreen({
                     </div>
 
                     {/* Points Counter */}
-                    <div className="text-right pl-2 flex-shrink-0">
+                    <div className="text-right pl-2 flex-shrink-0 relative z-10">
                       <div className={`text-base ${pointsTextStyle}`}>
                         {entry.weeklyPoints !== undefined ? entry.weeklyPoints : ((entry as any).weeklyXP || 0)}
                       </div>
@@ -524,7 +606,7 @@ export function LeaderboardScreen({
                   </motion.div>
 
                   {/* Duolingo promotion dashed zone line */}
-                  {rank === 3 && leaderboard.length > 3 && (
+                  {rank === 3 && displayList.length > 3 && (
                     <div className="my-3 flex items-center gap-3 px-2">
                       <div className="h-[1px] flex-grow bg-emerald-400/40" />
                       <span className="text-[9px] font-black uppercase tracking-[0.15em] text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">

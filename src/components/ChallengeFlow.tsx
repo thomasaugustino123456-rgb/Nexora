@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, lazy, Suspense, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   ChevronRight, Save, LogOut, Pencil, Pen, Palette, PaintBucket, 
   CheckCircle2, X, Star, Flame, Award, Heart, Brain, Zap, Crown
@@ -882,7 +882,6 @@ export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin 
 });
 
 export const CompletionStep = React.memo(({ onFinish, streak, points, xp, coins, showTrophy, settings, play }: { onFinish: () => void, streak: number, points: number, xp: number, coins: number, showTrophy: boolean, settings: UserSettings, play: (s: string) => void }) => {
-  const mascotControls = useAnimationControls();
 
   useEffect(() => {
     if (showTrophy) {
@@ -891,14 +890,7 @@ export const CompletionStep = React.memo(({ onFinish, streak, points, xp, coins,
         playTrophySound('golden');
       }
     }
-    // Animate mascot entry
-    mascotControls.start({ 
-      scale: [0, 1.2, 1],
-      rotate: [0, -10, 0],
-      opacity: 1,
-      transition: { type: "spring", damping: 10, stiffness: 100 }
-    });
-  }, [showTrophy, settings.soundEnabled, mascotControls]);
+  }, [showTrophy, settings.soundEnabled]);
 
   return (
     <motion.div 
@@ -909,7 +901,12 @@ export const CompletionStep = React.memo(({ onFinish, streak, points, xp, coins,
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0 overflow-hidden w-full h-full flex items-center justify-center">
         <motion.div 
           initial={{ opacity: 0, scale: 0 }}
-          animate={mascotControls}
+          animate={{
+            scale: [0, 1.2, 1],
+            rotate: [0, -10, 0],
+            opacity: 1,
+          }}
+          transition={{ type: "spring", damping: 10, stiffness: 100 }}
           className="w-[120%] h-[120%] opacity-10"
         >
           <HappyMascot size={300} settings={settings} />

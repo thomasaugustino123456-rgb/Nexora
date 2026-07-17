@@ -12,7 +12,8 @@ export const BottomNav = ({
   navItems,
   play,
   vibrate,
-  translate
+  translate,
+  isRankGlowActive
 }: {
   activeScreen: string;
   setActiveScreen: (screen: any) => void;
@@ -21,6 +22,7 @@ export const BottomNav = ({
   play: (sound: string) => void;
   vibrate: (pattern: number[]) => void;
   translate: (text: string, lang: string) => string;
+  isRankGlowActive?: boolean;
 }) => {
   const [isVisible, setIsVisible] = useState(true);
 
@@ -93,6 +95,7 @@ export const BottomNav = ({
               <NavButton
                 key={id}
                 active={activeScreen === item.screen}
+                glow={id === "leaderboard" && isRankGlowActive}
                 onClick={() => {
                   vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                   if (settings.soundEnabled) play("nav_switch");

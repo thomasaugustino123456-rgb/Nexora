@@ -954,8 +954,9 @@ export function useNexoraData(
           
           dataLoadedFromFirestore.current = true;
           setIsHydrated(true);
-          setIsStateLoaded(false, "Auth state resolved with loaded Firestore data. Waiting for state matching.");
-          hasMatchedHydratedStateRef.current = false;
+          hasMatchedHydratedStateRef.current = true;
+          setIsStateLoaded(true, "Auth state resolved with loaded Firestore data. Hydration completed successfully.");
+          setIsStateHydrated(true);
         } catch (error) {
           handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
           
@@ -1016,29 +1017,12 @@ export function useNexoraData(
       if (loadTimeout) clearTimeout(loadTimeout);
     };
   }, []);
-  // Safe State Matching Gate: ensure React state matches the loaded/hydrated Firestore data
-  // before unlocking the sync gate. This prevents empty default states from overwriting database records.
-  useEffect(() => {
-    if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
-    if (hasMatchedHydratedStateRef.current) return;
-
-    if (isHydrated && hydratedStateRef.current) {
-      console.log(`[PERSISTENCE AUDIT] Firestore data hydrated successfully. Unlocking sync gate safely.`);
-      hasMatchedHydratedStateRef.current = true;
-      setIsStateLoaded(true, "State matching complete");
-      setIsStateHydrated(true);
-    }
-  }, [isHydrated, user, isDataReady]);
 
   // Background Sync Effect with Aggressive Throttling (Optimized)
   useEffect(() => {
     if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
-    if (!isStateLoadedRef.current) {
+    if (!isStateLoadedRef.current || !hasMatchedHydratedStateRef.current) {
       console.log(`[PERSISTENCE AUDIT] State is not fully loaded/synchronized with Firestore yet. Skipping background sync for user UID: ${user.uid}`);
-      return;
-    }
-    if (!hasMatchedHydratedStateRef.current) {
-      console.log(`[PERSISTENCE AUDIT] Stale memory state detected (React has not yet flushed hydrated state from Firestore). Skipping background sync to avoid data loss.`);
       return;
     }
 
@@ -1115,22 +1099,28 @@ export function useNexoraData(
                 ...(dbData.settings || {}),
                 displayName: dbData.displayName ?? dbData.name ?? dbData.settings?.displayName ?? DEFAULT_SETTINGS.displayName,
                 onboardingCompleted: dbData.onboardingCompleted ?? dbData.settings?.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
+                plantState: dbData.plantState ?? dbData.settings?.plantState ?? DEFAULT_SETTINGS.plantState,
               };
 
               const dbHasProgress = (dbStats.xp > 0 || dbStats.coins > 0 || (dbStats.totalPoints || 0) > 0 || (dbStats.streak || 0) > 0);
               const dbHasGarden = (dbGarden.tiles && dbGarden.tiles.length > 0) || (dbGarden.inventory && Object.keys(dbGarden.inventory).length > 0);
-              const dbHasSettings = (dbSettings.displayName && dbSettings.displayName !== "Nexora User" && dbSettings.displayName !== "Champion");
+              const dbHasSettings = (dbSettings.displayName && dbSettings.displayName !== "Nexora User" && dbSettings.displayName !== "Champion") || (dbSettings.plantState?.stage || 0) > 0 || (dbSettings.plantState?.growthPoints || 0) > 0;
 
               const localIsEmptyStats = (stats.xp === 0 && stats.coins === 0 && (stats.totalPoints || 0) === 0 && (stats.streak || 0) === 0);
               const localIsEmptyGarden = !gardenState.tiles || gardenState.tiles.length === 0;
-              const localIsEmptySettings = !settings.displayName || settings.displayName === "Nexora User" || settings.displayName === "Champion";
+              const localIsEmptySettings = (!settings.displayName || settings.displayName === "Nexora User" || settings.displayName === "Champion") && (settings.plantState?.stage || 0) === 0 && (settings.plantState?.growthPoints || 0) === 0;
+
+              const streakOverwritten = (dbStats.streak > stats.streak && stats.streak <= 1 && dbStats.streak > 1);
+              const plantOverwritten = ((dbSettings.plantState?.stage || 0) > (settings.plantState?.stage || 0) && (settings.plantState?.stage || 0) <= 1 && (dbSettings.plantState?.stage || 0) > 1);
 
               if (
                 (dbHasProgress && localIsEmptyStats) ||
                 (dbHasGarden && localIsEmptyGarden) ||
-                (dbHasSettings && localIsEmptySettings)
+                (dbHasSettings && localIsEmptySettings) ||
+                streakOverwritten ||
+                plantOverwritten
               ) {
-                console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in syncData! Attempted to overwrite positive Firestore data with empty local states. DB Stats Has Progress: ${dbHasProgress}, Local Is Empty Stats: ${localIsEmptyStats}. DB Garden Has Data: ${dbHasGarden}, Local Is Empty Garden: ${localIsEmptyGarden}. DB Settings Has Info: ${dbHasSettings}, Local Is Empty Settings: ${localIsEmptySettings}. Aborting write to prevent data loss.`);
+                console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in syncData! Attempted to overwrite positive Firestore data with empty local states or degraded streak/plant. DB Stats Has Progress: ${dbHasProgress}, Local Is Empty Stats: ${localIsEmptyStats}. DB Garden Has Data: ${dbHasGarden}, Local Is Empty Garden: ${localIsEmptyGarden}. DB Settings Has Info: ${dbHasSettings}, Local Is Empty Settings: ${localIsEmptySettings}. Streak Overwritten: ${streakOverwritten}, Plant Overwritten: ${plantOverwritten}. Aborting write to prevent data loss.`);
                 
                 // Trigger emergency recovery: update local state to match database
                 if (dbData.stats || dbData.xp !== undefined || dbData.coins !== undefined) {
@@ -1149,6 +1139,18 @@ export function useNexoraData(
                     drawings: dbData.drawings ?? dbData.stats?.drawings ?? [],
                     unlockedHats: dbData.unlockedHats ?? dbData.stats?.unlockedHats ?? [],
                     gratitudeEntries: dbData.gratitudeEntries ?? dbData.stats?.gratitudeEntries ?? [],
+                    totalCompletedDays: dbData.totalCompletedDays ?? dbData.stats?.totalCompletedDays ?? DEFAULT_STATS.totalCompletedDays,
+                    lastCompletedDate: dbData.lastCompletedDate ?? dbData.stats?.lastCompletedDate ?? DEFAULT_STATS.lastCompletedDate,
+                    lastGiftDate: dbData.lastGiftDate ?? dbData.stats?.lastGiftDate ?? DEFAULT_STATS.lastGiftDate,
+                    currentChallengeIndex: dbData.currentChallengeIndex ?? dbData.stats?.currentChallengeIndex ?? DEFAULT_STATS.currentChallengeIndex,
+                    gems: dbData.gems ?? dbData.stats?.gems ?? DEFAULT_STATS.gems,
+                    lastWeeklyReset: dbData.lastWeeklyReset ?? dbData.stats?.lastWeeklyReset ?? DEFAULT_STATS.lastWeeklyReset,
+                    lastRankRewardClaimWeek: dbData.lastRankRewardClaimWeek ?? dbData.stats?.lastRankRewardClaimWeek ?? DEFAULT_STATS.lastRankRewardClaimWeek,
+                    lastActiveDate: dbData.lastActiveDate ?? dbData.stats?.lastActiveDate ?? DEFAULT_STATS.lastActiveDate,
+                    pointsByCategory: dbData.pointsByCategory ?? dbData.stats?.pointsByCategory ?? DEFAULT_STATS.pointsByCategory,
+                    waterDrank: dbData.waterDrank ?? dbData.stats?.waterDrank ?? DEFAULT_STATS.waterDrank,
+                    lifetimeWaterCompletions: dbData.lifetimeWaterCompletions ?? dbData.stats?.lifetimeWaterCompletions ?? DEFAULT_STATS.lifetimeWaterCompletions,
+                    hasClaimedXpChest: dbData.hasClaimedXpChest ?? dbData.stats?.hasClaimedXpChest ?? DEFAULT_STATS.hasClaimedXpChest,
                   });
                 }
                 if (dbData.settings || dbData.displayName || dbData.onboardingCompleted !== undefined) {
@@ -1573,22 +1575,28 @@ export function useNexoraData(
             ...(dbData.settings || {}),
             displayName: dbData.displayName ?? dbData.name ?? dbData.settings?.displayName ?? DEFAULT_SETTINGS.displayName,
             onboardingCompleted: dbData.onboardingCompleted ?? dbData.settings?.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
+            plantState: dbData.plantState ?? dbData.settings?.plantState ?? DEFAULT_SETTINGS.plantState,
           };
 
           const dbHasProgress = (dbStats.xp > 0 || dbStats.coins > 0 || (dbStats.totalPoints || 0) > 0 || (dbStats.streak || 0) > 0);
           const dbHasGarden = (dbGarden.tiles && dbGarden.tiles.length > 0) || (dbGarden.inventory && Object.keys(dbGarden.inventory).length > 0);
-          const dbHasSettings = (dbSettings.displayName && dbSettings.displayName !== "Nexora User" && dbSettings.displayName !== "Champion");
+          const dbHasSettings = (dbSettings.displayName && dbSettings.displayName !== "Nexora User" && dbSettings.displayName !== "Champion") || (dbSettings.plantState?.stage || 0) > 0 || (dbSettings.plantState?.growthPoints || 0) > 0;
 
           const localIsEmptyStats = (stats.xp === 0 && stats.coins === 0 && (stats.totalPoints || 0) === 0 && (stats.streak || 0) === 0);
           const localIsEmptyGarden = !gardenState.tiles || gardenState.tiles.length === 0;
-          const localIsEmptySettings = !settings.displayName || settings.displayName === "Nexora User" || settings.displayName === "Champion";
+          const localIsEmptySettings = (!settings.displayName || settings.displayName === "Nexora User" || settings.displayName === "Champion") && (settings.plantState?.stage || 0) === 0 && (settings.plantState?.growthPoints || 0) === 0;
+
+          const streakOverwritten = (dbStats.streak > stats.streak && stats.streak <= 1 && dbStats.streak > 1);
+          const plantOverwritten = ((dbSettings.plantState?.stage || 0) > (settings.plantState?.stage || 0) && (settings.plantState?.stage || 0) <= 1 && (dbSettings.plantState?.stage || 0) > 1);
 
           if (
             (dbHasProgress && localIsEmptyStats) ||
             (dbHasGarden && localIsEmptyGarden) ||
-            (dbHasSettings && localIsEmptySettings)
+            (dbHasSettings && localIsEmptySettings) ||
+            streakOverwritten ||
+            plantOverwritten
           ) {
-            console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in forceSyncData! Attempted to overwrite positive Firestore data with empty local states. DB Stats Has Progress: ${dbHasProgress}, Local Is Empty Stats: ${localIsEmptyStats}. DB Garden Has Data: ${dbHasGarden}, Local Is Empty Garden: ${localIsEmptyGarden}. DB Settings Has Info: ${dbHasSettings}, Local Is Empty Settings: ${localIsEmptySettings}. Aborting write to prevent data loss.`);
+            console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in forceSyncData! Attempted to overwrite positive Firestore data with empty local states or degraded streak/plant. DB Stats Has Progress: ${dbHasProgress}, Local Is Empty Stats: ${localIsEmptyStats}. DB Garden Has Data: ${dbHasGarden}, Local Is Empty Garden: ${localIsEmptyGarden}. DB Settings Has Info: ${dbHasSettings}, Local Is Empty Settings: ${localIsEmptySettings}. Streak Overwritten: ${streakOverwritten}, Plant Overwritten: ${plantOverwritten}. Aborting write to prevent data loss.`);
             
             // Trigger emergency recovery: update local state to match database
             if (dbData.stats || dbData.xp !== undefined || dbData.coins !== undefined) {
@@ -1607,6 +1615,18 @@ export function useNexoraData(
                 drawings: dbData.drawings ?? dbData.stats?.drawings ?? [],
                 unlockedHats: dbData.unlockedHats ?? dbData.stats?.unlockedHats ?? [],
                 gratitudeEntries: dbData.gratitudeEntries ?? dbData.stats?.gratitudeEntries ?? [],
+                totalCompletedDays: dbData.totalCompletedDays ?? dbData.stats?.totalCompletedDays ?? DEFAULT_STATS.totalCompletedDays,
+                lastCompletedDate: dbData.lastCompletedDate ?? dbData.stats?.lastCompletedDate ?? DEFAULT_STATS.lastCompletedDate,
+                lastGiftDate: dbData.lastGiftDate ?? dbData.stats?.lastGiftDate ?? DEFAULT_STATS.lastGiftDate,
+                currentChallengeIndex: dbData.currentChallengeIndex ?? dbData.stats?.currentChallengeIndex ?? DEFAULT_STATS.currentChallengeIndex,
+                gems: dbData.gems ?? dbData.stats?.gems ?? DEFAULT_STATS.gems,
+                lastWeeklyReset: dbData.lastWeeklyReset ?? dbData.stats?.lastWeeklyReset ?? DEFAULT_STATS.lastWeeklyReset,
+                lastRankRewardClaimWeek: dbData.lastRankRewardClaimWeek ?? dbData.stats?.lastRankRewardClaimWeek ?? DEFAULT_STATS.lastRankRewardClaimWeek,
+                lastActiveDate: dbData.lastActiveDate ?? dbData.stats?.lastActiveDate ?? DEFAULT_STATS.lastActiveDate,
+                pointsByCategory: dbData.pointsByCategory ?? dbData.stats?.pointsByCategory ?? DEFAULT_STATS.pointsByCategory,
+                waterDrank: dbData.waterDrank ?? dbData.stats?.waterDrank ?? DEFAULT_STATS.waterDrank,
+                lifetimeWaterCompletions: dbData.lifetimeWaterCompletions ?? dbData.stats?.lifetimeWaterCompletions ?? DEFAULT_STATS.lifetimeWaterCompletions,
+                hasClaimedXpChest: dbData.hasClaimedXpChest ?? dbData.stats?.hasClaimedXpChest ?? DEFAULT_STATS.hasClaimedXpChest,
               });
             }
             if (dbData.settings || dbData.displayName || dbData.onboardingCompleted !== undefined) {
