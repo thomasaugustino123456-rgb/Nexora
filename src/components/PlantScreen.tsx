@@ -343,7 +343,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
                       </span>
                       {isUnlocked && (
                         <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 mt-1">
-                          Stage {plantData.stage}/5
+                          Stage {Math.min(plantData.stage, 5)}/5
                         </span>
                       )}
                       {!isUnlocked && (
@@ -377,6 +377,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
               onClose={() => setShowCompletion(false)}
               stats={stats}
               settings={settings}
+              onSwitchType={onSwitchType}
             />
           )}
 
@@ -752,7 +753,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
               <>
                 <Sprout size={18} className="text-green-500" />
                 <span className="text-green-900 font-black uppercase text-xs tracking-[0.2em]">
-                  {getStageName(plantState.stage)}: Level {plantState.stage}/5
+                  {getStageName(plantState.stage)}: Level {Math.min(plantState.stage, 5)}/5
                 </span>
               </>
             )}
@@ -842,7 +843,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
                    </div>
                 </div>
 
-                {plantState.stage === 5 && (
+                {plantState.stage >= 5 && (
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}

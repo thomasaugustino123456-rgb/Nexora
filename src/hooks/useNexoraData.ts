@@ -208,14 +208,22 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
   const dbPlant = dbSettings.plantState;
   const localPlant = localSettings.plantState;
   if (dbPlant && localPlant) {
-    const dbIsDead = !!dbPlant.isDead;
-    const localIsDead = !!localPlant.isDead;
-    if (dbIsDead !== localIsDead) {
-      merged.plantState = !localIsDead ? localPlant : dbPlant;
+    if (dbPlant.type !== localPlant.type) {
+      // Different plant types! We must compare their lastCheckDate to see which one is the most recent switch/user action.
+      const dbTime = dbPlant.lastCheckDate ? new Date(dbPlant.lastCheckDate).getTime() : 0;
+      const localTime = localPlant.lastCheckDate ? new Date(localPlant.lastCheckDate).getTime() : 0;
+      merged.plantState = localTime >= dbTime ? localPlant : dbPlant;
     } else {
-      const dbProgress = (dbPlant.stage || 0) * 1000 + (dbPlant.growthPoints || 0);
-      const localProgress = (localPlant.stage || 0) * 1000 + (localPlant.growthPoints || 0);
-      merged.plantState = localProgress >= dbProgress ? localPlant : dbPlant;
+      // Same plant type. Merge based on death status and progress.
+      const dbIsDead = !!dbPlant.isDead;
+      const localIsDead = !!localPlant.isDead;
+      if (dbIsDead !== localIsDead) {
+        merged.plantState = !localIsDead ? localPlant : dbPlant;
+      } else {
+        const dbProgress = (dbPlant.stage || 0) * 1000 + (dbPlant.growthPoints || 0);
+        const localProgress = (localPlant.stage || 0) * 1000 + (localPlant.growthPoints || 0);
+        merged.plantState = localProgress >= dbProgress ? localPlant : dbPlant;
+      }
     }
   } else {
     merged.plantState = dbPlant || localPlant;
@@ -852,9 +860,9 @@ export function useNexoraData(
               ...(docData.garden || {}),
               ...finalGardenStateFromPlantSection,
               
-              tiles: docData.tiles ?? docData.garden?.tiles ?? finalGardenStateFromPlantSection.tiles ?? createInitialGardenState().tiles,
-              inventory: docData.inventory ?? docData.garden?.inventory ?? finalGardenStateFromPlantSection.inventory ?? createInitialGardenState().inventory,
-              streakSavers: docData.streakSavers ?? docData.garden?.streakSavers ?? finalGardenStateFromPlantSection.streakSavers ?? createInitialGardenState().streakSavers ?? 0,
+              tiles: finalGardenStateFromPlantSection.tiles ?? docData.garden?.tiles ?? docData.tiles ?? createInitialGardenState().tiles,
+              inventory: finalGardenStateFromPlantSection.inventory ?? docData.garden?.inventory ?? createInitialGardenState().inventory,
+              streakSavers: finalGardenStateFromPlantSection.streakSavers ?? docData.garden?.streakSavers ?? docData.streakSavers ?? createInitialGardenState().streakSavers ?? 0,
             };
 
             // Retrieve the absolute latest local storage changes (e.g. offline work or quick edits)
@@ -1091,8 +1099,8 @@ export function useNexoraData(
               const dbGarden = {
                 ...createInitialGardenState(),
                 ...(dbData.garden || {}),
-                tiles: dbData.tiles ?? dbData.garden?.tiles ?? createInitialGardenState().tiles,
-                inventory: dbData.inventory ?? dbData.garden?.inventory ?? createInitialGardenState().inventory,
+                tiles: dbData.garden?.tiles ?? dbData.tiles ?? createInitialGardenState().tiles,
+                inventory: dbData.garden?.inventory ?? createInitialGardenState().inventory,
               };
               const dbSettings = {
                 ...DEFAULT_SETTINGS,
@@ -1110,8 +1118,21 @@ export function useNexoraData(
               const localIsEmptyGarden = !gardenState.tiles || gardenState.tiles.length === 0;
               const localIsEmptySettings = (!settings.displayName || settings.displayName === "Nexora User" || settings.displayName === "Champion") && (settings.plantState?.stage || 0) === 0 && (settings.plantState?.growthPoints || 0) === 0;
 
+              // STALENESS GUARD: If Firestore contains progress but local states are currently empty,
+              // check if lastSyncedData has already captured non-empty values. If so, local state is just stale (React is flushing updates).
+              // We must abort this sync pass immediately without triggering the emergency block or overwriting DB.
+              const isLocalStateUnhydrated = 
+                (lastSyncedData && lastSyncedData.st && ((lastSyncedData.st.xp || 0) > 0 || (lastSyncedData.st.coins || 0) > 0) && localIsEmptyStats) ||
+                (lastSyncedData && lastSyncedData.s && (lastSyncedData.s.displayName && lastSyncedData.s.displayName !== "Nexora User" && lastSyncedData.s.displayName !== "Champion") && localIsEmptySettings) ||
+                (lastSyncedData && lastSyncedData.g && (lastSyncedData.g.tiles && lastSyncedData.g.tiles.length > 0) && localIsEmptyGarden);
+
+              if (isLocalStateUnhydrated) {
+                console.log("[PERSISTENCE SYSTEM] Local React state has not yet updated to the hydrated Firestore values in syncData. Aborting sync pass.");
+                return;
+              }
+
               const streakOverwritten = (dbStats.streak > stats.streak && stats.streak <= 1 && dbStats.streak > 1);
-              const plantOverwritten = ((dbSettings.plantState?.stage || 0) > (settings.plantState?.stage || 0) && (settings.plantState?.stage || 0) <= 1 && (dbSettings.plantState?.stage || 0) > 1);
+              const plantOverwritten = (dbSettings.plantState?.type === settings.plantState?.type && (dbSettings.plantState?.stage || 0) > (settings.plantState?.stage || 0) && (settings.plantState?.stage || 0) <= 1 && (dbSettings.plantState?.stage || 0) > 1);
 
               if (
                 (dbHasProgress && localIsEmptyStats) ||
@@ -1154,8 +1175,9 @@ export function useNexoraData(
                   });
                 }
                 if (dbData.settings || dbData.displayName || dbData.onboardingCompleted !== undefined) {
-                  setSettings({
+                  setSettings((prev: any) => ({
                     ...DEFAULT_SETTINGS,
+                    ...prev,
                     ...(dbData.settings || {}),
                     displayName: dbData.displayName ?? dbData.name ?? dbData.settings?.displayName ?? DEFAULT_SETTINGS.displayName,
                     onboardingCompleted: dbData.onboardingCompleted ?? dbData.settings?.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
@@ -1163,15 +1185,16 @@ export function useNexoraData(
                     spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbData.settings?.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
                     purchasedItems: dbData.purchasedItems ?? dbData.settings?.purchasedItems ?? DEFAULT_SETTINGS.purchasedItems,
                     inventory: dbData.inventory ?? dbData.settings?.inventory ?? DEFAULT_SETTINGS.inventory,
-                  });
+                  }));
                 }
                 if (dbData.garden || dbData.tiles !== undefined) {
-                  setGardenState({
+                  setGardenState((prev: any) => ({
                     ...createInitialGardenState(),
+                    ...prev,
                     ...(dbData.garden || {}),
-                    tiles: dbData.tiles ?? dbData.garden?.tiles ?? createInitialGardenState().tiles,
-                    inventory: dbData.inventory ?? dbData.garden?.inventory ?? createInitialGardenState().inventory,
-                  });
+                    tiles: dbData.garden?.tiles ?? dbData.tiles ?? prev.tiles ?? createInitialGardenState().tiles,
+                    inventory: dbData.garden?.inventory ?? prev.inventory ?? createInitialGardenState().inventory,
+                  }));
                 }
                 return;
               }
@@ -1216,8 +1239,10 @@ export function useNexoraData(
               uid: user.uid,
               plantOnboardingCompleted: settings.plantOnboardingCompleted || false,
               plantState: settings.plantState || null,
+              plantsProgress: settings.plantsProgress || {},
               gardenState: gardenState || null,
               purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
+              activeEcosystemItemIds: settings.activeEcosystemItemIds || [],
               updatedAt: serverTimestamp(),
             };
 
@@ -1567,8 +1592,8 @@ export function useNexoraData(
           const dbGarden = {
             ...createInitialGardenState(),
             ...(dbData.garden || {}),
-            tiles: dbData.tiles ?? dbData.garden?.tiles ?? createInitialGardenState().tiles,
-            inventory: dbData.inventory ?? dbData.garden?.inventory ?? createInitialGardenState().inventory,
+            tiles: dbData.garden?.tiles ?? dbData.tiles ?? createInitialGardenState().tiles,
+            inventory: dbData.garden?.inventory ?? createInitialGardenState().inventory,
           };
           const dbSettings = {
             ...DEFAULT_SETTINGS,
@@ -1586,8 +1611,23 @@ export function useNexoraData(
           const localIsEmptyGarden = !gardenState.tiles || gardenState.tiles.length === 0;
           const localIsEmptySettings = (!settings.displayName || settings.displayName === "Nexora User" || settings.displayName === "Champion") && (settings.plantState?.stage || 0) === 0 && (settings.plantState?.growthPoints || 0) === 0;
 
+          const lastSyncedData = lastSyncedRef.current;
+
+          // STALENESS GUARD: If Firestore contains progress but local states are currently empty,
+          // check if lastSyncedData has already captured non-empty values. If so, local state is just stale (React is flushing updates).
+          // We must abort this sync pass immediately without triggering the emergency block or overwriting DB.
+          const isLocalStateUnhydrated = 
+            (lastSyncedData && lastSyncedData.st && ((lastSyncedData.st.xp || 0) > 0 || (lastSyncedData.st.coins || 0) > 0) && localIsEmptyStats) ||
+            (lastSyncedData && lastSyncedData.s && (lastSyncedData.s.displayName && lastSyncedData.s.displayName !== "Nexora User" && lastSyncedData.s.displayName !== "Champion") && localIsEmptySettings) ||
+            (lastSyncedData && lastSyncedData.g && (lastSyncedData.g.tiles && lastSyncedData.g.tiles.length > 0) && localIsEmptyGarden);
+
+          if (isLocalStateUnhydrated) {
+            console.log("[PERSISTENCE SYSTEM] Local React state has not yet updated to the hydrated Firestore values in forceSyncData. Aborting sync pass.");
+            return;
+          }
+
           const streakOverwritten = (dbStats.streak > stats.streak && stats.streak <= 1 && dbStats.streak > 1);
-          const plantOverwritten = ((dbSettings.plantState?.stage || 0) > (settings.plantState?.stage || 0) && (settings.plantState?.stage || 0) <= 1 && (dbSettings.plantState?.stage || 0) > 1);
+          const plantOverwritten = (dbSettings.plantState?.type === settings.plantState?.type && (dbSettings.plantState?.stage || 0) > (settings.plantState?.stage || 0) && (settings.plantState?.stage || 0) <= 1 && (dbSettings.plantState?.stage || 0) > 1);
 
           if (
             (dbHasProgress && localIsEmptyStats) ||
@@ -1630,8 +1670,9 @@ export function useNexoraData(
               });
             }
             if (dbData.settings || dbData.displayName || dbData.onboardingCompleted !== undefined) {
-              setSettings({
+              setSettings((prev: any) => ({
                 ...DEFAULT_SETTINGS,
+                ...prev,
                 ...(dbData.settings || {}),
                 displayName: dbData.displayName ?? dbData.name ?? dbData.settings?.displayName ?? DEFAULT_SETTINGS.displayName,
                 onboardingCompleted: dbData.onboardingCompleted ?? dbData.settings?.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
@@ -1639,15 +1680,16 @@ export function useNexoraData(
                 spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbData.settings?.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
                 purchasedItems: dbData.purchasedItems ?? dbData.settings?.purchasedItems ?? DEFAULT_SETTINGS.purchasedItems,
                 inventory: dbData.inventory ?? dbData.settings?.inventory ?? DEFAULT_SETTINGS.inventory,
-              });
+              }));
             }
             if (dbData.garden || dbData.tiles !== undefined) {
-              setGardenState({
+              setGardenState((prev: any) => ({
                 ...createInitialGardenState(),
+                ...prev,
                 ...(dbData.garden || {}),
-                tiles: dbData.tiles ?? dbData.garden?.tiles ?? createInitialGardenState().tiles,
-                inventory: dbData.inventory ?? dbData.garden?.inventory ?? createInitialGardenState().inventory,
-              });
+                tiles: dbData.garden?.tiles ?? dbData.tiles ?? prev.tiles ?? createInitialGardenState().tiles,
+                inventory: dbData.garden?.inventory ?? prev.inventory ?? createInitialGardenState().inventory,
+              }));
             }
             return;
           }
@@ -1692,8 +1734,10 @@ export function useNexoraData(
           uid: user.uid,
           plantOnboardingCompleted: settings.plantOnboardingCompleted || false,
           plantState: settings.plantState || null,
+          plantsProgress: settings.plantsProgress || {},
           gardenState: gardenState || null,
           purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
+          activeEcosystemItemIds: settings.activeEcosystemItemIds || [],
           updatedAt: serverTimestamp(),
         };
 

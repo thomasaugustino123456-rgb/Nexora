@@ -13,6 +13,7 @@ interface PlantCompletionCardProps {
   onClose: () => void;
   stats?: any;
   settings?: any;
+  onSwitchType?: (type: PlantType) => void;
 }
 
 const ECOSYSTEM_PATH: PlantType[] = [
@@ -26,7 +27,8 @@ export const PlantCompletionCard: React.FC<PlantCompletionCardProps> = ({
   ecosystemName,
   onSaveToLibrary,
   onClose,
-  stats
+  stats,
+  onSwitchType
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -290,6 +292,26 @@ export const PlantCompletionCard: React.FC<PlantCompletionCardProps> = ({
 
         {/* 🔘 ACTION BUTTONS CONTAINER */}
         <div className="w-full flex flex-col gap-3">
+          {(() => {
+            const currentIdx = ECOSYSTEM_PATH.indexOf(type);
+            const nextType = (currentIdx !== -1 && currentIdx < ECOSYSTEM_PATH.length - 1) ? ECOSYSTEM_PATH[currentIdx + 1] : null;
+            if (nextType && onSwitchType) {
+              return (
+                <button
+                  onClick={() => {
+                    vibrate(20);
+                    onSwitchType(nextType);
+                    onClose();
+                  }}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white font-extrabold text-base cursor-pointer transition-transform duration-100 active:scale-[0.98] shadow-md flex items-center justify-center gap-2"
+                >
+                  Plant Next Ecosystem 🌿🚀
+                </button>
+              );
+            }
+            return null;
+          })()}
+
           <button
             onClick={handleCapture}
             disabled={isSaving || downloadSuccess}

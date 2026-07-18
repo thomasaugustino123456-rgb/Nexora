@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { 
   ChevronRight, 
@@ -18,6 +18,8 @@ import {
 import { FirebaseUser } from '../firebase';
 import { LeaderboardEntry, UserSettings, UserStats } from '../types';
 import { Mascot } from './Mascot';
+import { useSound } from '../hooks/useSound';
+import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 
 const LEAGUES = [
   'Bronze', 
@@ -204,13 +206,72 @@ export function LeaderboardScreen({
   }, [leaderboard, user]);
 
   const userRank = currentRank;
+  const { play } = useSound();
 
   const [displayList, setDisplayList] = useState<LeaderboardEntry[]>(() => leaderboard);
   const [isAnimatingRank, setIsAnimatingRank] = useState<boolean>(false);
   const [showCelebrationSpot, setShowCelebrationSpot] = useState<boolean>(false);
   const [animationPreviousRank, setAnimationPreviousRank] = useState<number | null>(null);
+  const [climbPhase, setClimbPhase] = useState<'idle' | 'anticipation' | 'shooting' | 'impact' | 'celebrate'>('idle');
 
-  // Set up the moving animation if there's a stored previous rank
+  const scrollToUser = (instant = false) => {
+    setTimeout(() => {
+      const el = document.getElementById("leaderboard-user-row");
+      if (el) {
+        el.scrollIntoView({
+          behavior: instant ? "auto" : "smooth",
+          block: "center"
+        });
+      }
+    }, 120);
+  };
+
+  const cardAnimProps = useMemo(() => {
+    switch (climbPhase) {
+      case 'anticipation':
+        return {
+          scaleX: 1.15,
+          scaleY: 0.8,
+          y: 8,
+          borderColor: "rgba(245, 158, 11, 0.4)",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
+        };
+      case 'shooting':
+        return {
+          scaleX: 0.85,
+          scaleY: 1.25,
+          y: -15,
+          borderColor: "rgba(245, 158, 11, 0.8)",
+          boxShadow: "0 15px 30px rgba(245, 158, 11, 0.45), 0 0 15px rgba(245, 158, 11, 0.3)"
+        };
+      case 'impact':
+        return {
+          scaleX: 1.25,
+          scaleY: 0.75,
+          y: 4,
+          borderColor: "rgba(245, 158, 11, 0.5)",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+        };
+      case 'celebrate':
+        return {
+          scaleX: 1.04,
+          scaleY: 1.04,
+          y: -3,
+          borderColor: "rgba(245, 158, 11, 0.6)",
+          boxShadow: "0 8px 20px rgba(245, 158, 11, 0.3), 0 0 12px rgba(245, 158, 11, 0.2)"
+        };
+      case 'idle':
+      default:
+        return {
+          scaleX: 1,
+          scaleY: 1,
+          y: 0,
+          boxShadow: "none"
+        };
+    }
+  }, [climbPhase]);
+
+  // Set up the moving animation if there's a stored previous rank or if glowing button was clicked
   useEffect(() => {
     if (!user || leaderboard.length === 0 || currentRank <= 0) {
       setDisplayList(leaderboard);
@@ -218,6 +279,8 @@ export function LeaderboardScreen({
     }
 
     const prevRankStr = localStorage.getItem("nexora_previous_rank");
+    const wasGlowActive = localStorage.getItem("nexora_scrolling_to_user_rank") === "true";
+
     if (prevRankStr) {
       const prevRank = parseInt(prevRankStr);
       if (prevRank > currentRank && prevRank <= leaderboard.length) {
@@ -232,29 +295,137 @@ export function LeaderboardScreen({
           listCopy.splice(prevRank - 1, 0, userEntry);
           setDisplayList(listCopy);
 
-          const animationTimer = setTimeout(() => {
-            setDisplayList(leaderboard);
+          // Scroll immediately to the starting (lower) position
+          scrollToUser(true);
 
-            const celebrationTimer = setTimeout(() => {
-              setShowCelebrationSpot(true);
-              setIsAnimatingRank(false);
-              localStorage.removeItem("nexora_previous_rank");
+          // Step 1: Wait 1500ms (1.5 seconds) so they see their starting position before the climb starts
+          const anticipationTimer = setTimeout(() => {
+            setClimbPhase('anticipation');
+            vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT || [30, 50, 10]);
+            
+            // Step 2: Wait 600ms of squash preparation, then shoot up!
+            const shootTimer = setTimeout(() => {
+              setClimbPhase('shooting');
+              setDisplayList(leaderboard); // Update list order to trigger layout transition!
+              vibrate([20, 30, 20, 30, 20]); // Speed-dash rapid haptic vibrations
               
+              if (settings.soundEnabled) {
+                play('header_switch'); // Whoosh sound!
+              }
+              
+              // Smooth scroll to follow the climb to the new final position
               setTimeout(() => {
-                setShowCelebrationSpot(false);
-              }, 4000);
-            }, 1600);
+                scrollToUser(false);
+              }, 150);
+              
+              // Step 3: Wait 900ms during the climb, then impact!
+              const impactTimer = setTimeout(() => {
+                setClimbPhase('impact');
+                setShowCelebrationSpot(true);
+                vibrate(VIBRATION_PATTERNS.HEAVY || 40); // Thump/impact vibration!
+                
+                if (settings.soundEnabled) {
+                  play('chest_land'); // Slam/impact sound!
+                }
+                
+                // Step 4: Wait 450ms squash rebound, then celebrate!
+                const celebrateTimer = setTimeout(() => {
+                  setClimbPhase('celebrate');
+                  setIsAnimatingRank(false);
+                  localStorage.removeItem("nexora_previous_rank");
+                  localStorage.removeItem("nexora_scrolling_to_user_rank"); // Clean up both
+                  vibrate(VIBRATION_PATTERNS.TROPHY || [40, 60, 40, 60, 40]);
+                  
+                  if (settings.soundEnabled) {
+                    play('trophy1'); // Beautiful reward chime!
+                  }
+                  
+                  // Step 5: Wait 2000ms, then settle back to idle
+                  const settleTimer = setTimeout(() => {
+                    setClimbPhase('idle');
+                    setShowCelebrationSpot(false);
+                  }, 2000);
+                  
+                  return () => clearTimeout(settleTimer);
+                }, 450);
+                
+                return () => clearTimeout(celebrateTimer);
+              }, 900);
+              
+              return () => clearTimeout(impactTimer);
+            }, 600);
+            
+            return () => clearTimeout(shootTimer);
+          }, 1500);
 
-            return () => clearTimeout(celebrationTimer);
-          }, 1800);
-
-          return () => clearTimeout(animationTimer);
+          return () => {
+            clearTimeout(anticipationTimer);
+          };
         }
       }
+    } else if (wasGlowActive) {
+      // User clicked the glowing tab. Smoothly scroll to user position, wait, then trigger a gorgeous highlight bounce!
+      localStorage.removeItem("nexora_scrolling_to_user_rank");
+      setDisplayList(leaderboard);
+      
+      // First, scroll to user smoothly
+      scrollToUser(false);
+      
+      // Step 1: Wait 1800ms (1.8 seconds) for smooth scroll to finish and user to fully focus on their row
+      const bounceStartTimer = setTimeout(() => {
+        setClimbPhase('anticipation');
+        vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT || [30, 50, 10]);
+        
+        // Step 2: Wait 600ms, then jump up (bounce stretch)!
+        const bounceShootTimer = setTimeout(() => {
+          setClimbPhase('shooting');
+          vibrate([25, 45, 25]); // Playful bounce vibrations
+          if (settings.soundEnabled) {
+            play('header_switch'); // Whoosh sound
+          }
+          
+          // Step 3: Wait 700ms in the air, then slam back down!
+          const bounceImpactTimer = setTimeout(() => {
+            setClimbPhase('impact');
+            setShowCelebrationSpot(true);
+            vibrate(VIBRATION_PATTERNS.HEAVY || 40); // Impact vibration
+            if (settings.soundEnabled) {
+              play('chest_land'); // Slam sound
+            }
+            
+            // Step 4: Wait 450ms, then celebrate!
+            const bounceCelebrateTimer = setTimeout(() => {
+              setClimbPhase('celebrate');
+              vibrate(VIBRATION_PATTERNS.SUCCESS || [20, 50, 20]); // Happy victory vibration
+              if (settings.soundEnabled) {
+                play('continue'); // Light success chime
+              }
+              
+              // Step 5: Wait 2000ms, then settle back to normal idle
+              const bounceSettleTimer = setTimeout(() => {
+                setClimbPhase('idle');
+                setShowCelebrationSpot(false);
+              }, 2000);
+              
+              return () => clearTimeout(bounceSettleTimer);
+            }, 450);
+            
+            return () => clearTimeout(bounceCelebrateTimer);
+          }, 700);
+          
+          return () => clearTimeout(bounceImpactTimer);
+        }, 600);
+        
+        return () => clearTimeout(bounceShootTimer);
+      }, 1800);
+      
+      return () => {
+        clearTimeout(bounceStartTimer);
+      };
     }
 
     setDisplayList(leaderboard);
-  }, [leaderboard, user, currentRank]);
+  }, [leaderboard, user, currentRank, settings.soundEnabled, play]);
 
   const currentLeague = settings.league || 'Bronze';
   const leagueIndex = LEAGUES.indexOf(currentLeague);
@@ -504,13 +675,17 @@ export function LeaderboardScreen({
               else rankBadge = rank.toString();
 
               if (isCurrentUser) {
-                rowBg = "bg-blue-50/70 border-x border-y border-blue-100/50 rounded-2xl my-1 relative";
+                rowBg = "bg-blue-50/70 border border-blue-100/50 rounded-2xl my-1 relative";
                 textColor = "text-blue-950 font-black";
                 subTextColor = "text-blue-600";
                 pointsTextStyle = "text-blue-600 font-black";
 
-                // Highlight user with an amber golden glowing pulse if they just moved up and are celebrating
-                if (showCelebrationSpot) {
+                if (climbPhase !== 'idle') {
+                  rowBg = "bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-amber-300 rounded-2xl my-1 relative z-30 shadow-[0_10px_25px_rgba(245,158,11,0.2)]";
+                  textColor = "text-amber-950 font-black";
+                  subTextColor = "text-amber-700";
+                  pointsTextStyle = "text-amber-600 font-black";
+                } else if (showCelebrationSpot) {
                   rowBg = "bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-2xl my-1 relative shadow-[0_0_20px_rgba(250,204,21,0.35)]";
                   textColor = "text-yellow-950 font-black animate-pulse";
                   subTextColor = "text-yellow-700";
@@ -518,23 +693,45 @@ export function LeaderboardScreen({
                 }
               }
 
+              const itemAnimate = isCurrentUser 
+                ? { opacity: 1, ...cardAnimProps } 
+                : { opacity: 1, y: 0 };
+
+              const itemTransition = (isCurrentUser && climbPhase !== 'idle'
+                ? {
+                    layout: {
+                      type: "spring",
+                      stiffness: climbPhase === 'shooting' ? 120 : 85,
+                      damping: climbPhase === 'shooting' ? 10 : 14,
+                      mass: 1.15
+                    },
+                    scaleX: { type: "spring", stiffness: 220, damping: 15 },
+                    scaleY: { type: "spring", stiffness: 220, damping: 15 },
+                    y: { type: "spring", stiffness: 220, damping: 15 },
+                    boxShadow: { duration: 0.2 },
+                    borderColor: { duration: 0.2 },
+                    opacity: { duration: 0.2 }
+                  }
+                : {
+                    layout: {
+                      type: "spring",
+                      stiffness: 85,
+                      damping: 14,
+                      mass: 1.15
+                    },
+                    opacity: { duration: 0.2 },
+                    y: { duration: 0.2 }
+                  }) as any;
+
               return (
                 <React.Fragment key={entry.uid}>
                   <motion.div
                     layout
                     key={entry.uid}
+                    id={isCurrentUser ? "leaderboard-user-row" : undefined}
                     initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      layout: {
-                        type: "spring",
-                        stiffness: 85,
-                        damping: 14,
-                        mass: 1.15
-                      },
-                      opacity: { duration: 0.2 },
-                      y: { duration: 0.2 }
-                    }}
+                    animate={itemAnimate}
+                    transition={itemTransition}
                     className={`flex items-center gap-4 py-3.5 px-3 transition-all relative overflow-hidden ${rowBg}`}
                   >
                     {/* Celebration Sparkles Overlay */}
@@ -543,6 +740,29 @@ export function LeaderboardScreen({
                         <Sparkles size={16} className="text-yellow-500 animate-bounce absolute left-4" />
                         <Sparkles size={14} className="text-yellow-400 animate-pulse absolute right-12" />
                         <Star size={12} className="text-amber-400 fill-amber-400 animate-spin absolute right-4" />
+                      </div>
+                    )}
+
+                    {/* Speed Lines/Dashes Overlay for Duolingo-style climb */}
+                    {isCurrentUser && climbPhase === 'shooting' && (
+                      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+                        {[...Array(5)].map((_, idx) => (
+                          <motion.div
+                            key={idx}
+                            initial={{ y: -60, opacity: 0 }}
+                            animate={{ y: 160, opacity: [0, 0.75, 0] }}
+                            transition={{
+                              duration: 0.45,
+                              repeat: Infinity,
+                              delay: idx * 0.08,
+                              ease: "linear"
+                            }}
+                            className="absolute w-[2px] h-10 bg-gradient-to-b from-yellow-300 via-amber-400 to-transparent"
+                            style={{
+                              left: `${15 + idx * 18}%`,
+                            }}
+                          />
+                        ))}
                       </div>
                     )}
 

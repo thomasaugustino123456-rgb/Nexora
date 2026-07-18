@@ -317,6 +317,9 @@ const DEFAULT_SETTINGS: UserSettings = {
   mascotPinnedItemId: null,
   spaceOnboardingCompleted: false,
   plantOnboardingCompleted: false,
+  purchasedEcosystemItemIds: [],
+  activeEcosystemItemIds: [],
+  plantsProgress: {},
   performanceMode: detectLowEndDevice(),
   lowPowerMode: detectLowEndDevice(),
   plantState: {
@@ -418,13 +421,13 @@ export default function App() {
 
   // Performance-optimized animation configs for page transitions
   const pageVariants = {
-    initial: settings.performanceMode ? { opacity: 0 } : { opacity: 0, x: 15 },
-    animate: { opacity: 1, x: 0 },
-    exit: settings.performanceMode ? { opacity: 0 } : { opacity: 0, x: -15 },
+    initial: { opacity: 0, y: 4 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -4 },
   };
   const pageTransition = settings.performanceMode 
-    ? { duration: 0.1 } 
-    : { type: "spring" as const, stiffness: 500, damping: 40 };
+    ? { duration: 0.08, ease: "linear" as const } 
+    : { duration: 0.15, ease: "easeInOut" as const };
 
   // Global hydration-detail states synced with localStorage
   const [hydrationConsecutiveDays, setHydrationConsecutiveDays] = useState<number>(() => {
@@ -4348,198 +4351,196 @@ export default function App() {
       showToast("Streak Protection Saved! Your daily streak didn't break! 🛡️🔥", "success");
     }
 
-    setStats((prevStats) => {
-      const oldLevel = prevStats.level || 1;
-      let streakToSave = prevStats.streak || 0;
+    const oldLevel = stats.level || 1;
+    let streakToSave = stats.streak || 0;
 
-      if (
-        prevStats.lastCompletedDate === today ||
-        prevStats.lastCompletedDate === yesterdayStr
-      ) {
-        streakToSave = (prevStats.streak || 0) + 1;
-      } else if (hasStreakProtection) {
-        streakToSave = (prevStats.streak || 0) + 1;
+    if (
+      stats.lastCompletedDate === today ||
+      stats.lastCompletedDate === yesterdayStr
+    ) {
+      streakToSave = (stats.streak || 0) + 1;
+    } else if (hasStreakProtection) {
+      streakToSave = (stats.streak || 0) + 1;
+    } else {
+      streakToSave = 1;
+    }
+
+    const newBestStreak = Math.max(stats.bestStreak || 0, streakToSave);
+    const newTotalCompletedDays =
+      stats.lastCompletedDate !== today
+        ? (stats.totalCompletedDays || 0) + 1
+        : stats.totalCompletedDays || 0;
+    const newLastCompletedDate = today;
+
+    const hasDoublePoints =
+      settings.purchasedItems?.includes("double-points") || hasDoubleXP;
+    const streakBonusPoints = hasDoublePoints ? 10 : 5;
+
+    const newPoints =
+      (stats.totalPoints || 0) + pointsToAdd + streakBonusPoints;
+    const newXP = (stats.xp || 0) + xpToAdd;
+    const newLevel = Math.floor(newXP / 1000) + 1;
+
+    let levelUpBonusCoins = 0;
+    if (newLevel > oldLevel) {
+      setShowLevelUp(newLevel);
+      vibrate(VIBRATION_PATTERNS.TROPHY);
+
+      // Tiered variety rewards for leveling up
+      if (newLevel <= 5) {
+        levelUpBonusCoins = 50;
+      } else if (newLevel <= 15) {
+        levelUpBonusCoins = 150;
+        // Award cosmetic item variety - Silver Profile Frame
+        plantBonusItems.push({
+          id: `frame-silver-${Date.now()}`,
+          itemId: 'frame-silver',
+          name: 'Silver Profile Frame',
+          icon: '🖼️',
+          activated: false,
+          type: 'power-up',
+          purchasedAt: new Date().toISOString()
+        });
       } else {
-        streakToSave = 1;
+        levelUpBonusCoins = 300;
+        // Award Cosmic Skin
+        plantBonusItems.push({
+          id: `skin-cosmic-${Date.now()}`,
+          itemId: 'skin-cosmic',
+          name: 'Cosmic Skin',
+          icon: '🌌',
+          activated: false,
+          type: 'skin',
+          purchasedAt: new Date().toISOString()
+        });
       }
+    }
 
-      const newBestStreak = Math.max(prevStats.bestStreak || 0, streakToSave);
-      const newTotalCompletedDays =
-        prevStats.lastCompletedDate !== today
-          ? (prevStats.totalCompletedDays || 0) + 1
-          : prevStats.totalCompletedDays || 0;
-      const newLastCompletedDate = today;
-
-      const hasDoublePoints =
-        settings.purchasedItems?.includes("double-points") || hasDoubleXP;
-      const streakBonusPoints = hasDoublePoints ? 10 : 5;
-
-      const newPoints =
-        (prevStats.totalPoints || 0) + pointsToAdd + streakBonusPoints;
-      const newXP = (prevStats.xp || 0) + xpToAdd;
-      const newLevel = Math.floor(newXP / 1000) + 1;
-
-      let levelUpBonusCoins = 0;
-      if (newLevel > oldLevel) {
-        setShowLevelUp(newLevel);
-        vibrate(VIBRATION_PATTERNS.TROPHY);
-
-        // Tiered variety rewards for leveling up
-        if (newLevel <= 5) {
-          levelUpBonusCoins = 50;
-        } else if (newLevel <= 15) {
-          levelUpBonusCoins = 150;
-          // Award cosmetic item variety - Silver Profile Frame
-          plantBonusItems.push({
-            id: `frame-silver-${Date.now()}`,
-            itemId: 'frame-silver',
-            name: 'Silver Profile Frame',
-            icon: '🖼️',
-            activated: false,
-            type: 'power-up',
-            purchasedAt: new Date().toISOString()
-          });
-        } else {
-          levelUpBonusCoins = 300;
-          // Award Cosmic Skin
-          plantBonusItems.push({
-            id: `skin-cosmic-${Date.now()}`,
-            itemId: 'skin-cosmic',
-            name: 'Cosmic Skin',
-            icon: '🌌',
-            activated: false,
-            type: 'skin',
-            purchasedAt: new Date().toISOString()
-          });
+    let newTrophies = [...(stats.trophies || [])];
+    if (canAwardTrophy) {
+      // Find index of oldest 'ice' trophy to replace (furthest to the right)
+      let removeIndex = -1;
+      for (let i = newTrophies.length - 1; i >= 0; i--) {
+        if (newTrophies[i].type === "ice") {
+          removeIndex = i;
+          break;
         }
       }
-
-      let newTrophies = [...(prevStats.trophies || [])];
-      if (canAwardTrophy) {
-        // Find index of oldest 'ice' trophy to replace (furthest to the right)
-        let removeIndex = -1;
+      
+      // If no 'ice' trophy, find the oldest 'broken' trophy to replace
+      if (removeIndex === -1) {
         for (let i = newTrophies.length - 1; i >= 0; i--) {
-          if (newTrophies[i].type === "ice") {
+          if (newTrophies[i].type === "broken") {
             removeIndex = i;
             break;
           }
         }
-        
-        // If no 'ice' trophy, find the oldest 'broken' trophy to replace
-        if (removeIndex === -1) {
-          for (let i = newTrophies.length - 1; i >= 0; i--) {
-            if (newTrophies[i].type === "broken") {
-              removeIndex = i;
-              break;
-            }
-          }
-        }
-
-        if (removeIndex !== -1) {
-          newTrophies.splice(removeIndex, 1);
-        }
-
-        newTrophies.unshift({
-          id: `trophy-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-          type: "golden",
-          earnedDate: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-        });
       }
 
-      const updatedStats = {
-        ...prevStats,
-        totalPoints: newPoints,
-        weeklyPoints:
-          (prevStats.weeklyPoints || 0) + pointsToAdd + streakBonusPoints,
-        xp: newXP,
-        weeklyXP: (prevStats.weeklyXP || 0) + xpToAdd,
-        level: newLevel,
-        coins: (prevStats.coins || 0) + coinsToAdd + levelUpBonusCoins,
-        streak: streakToSave,
-        bestStreak: newBestStreak,
-        totalCompletedDays: newTotalCompletedDays,
-        lastCompletedDate: newLastCompletedDate,
-        trophies: newTrophies.slice(0, 50),
-        pointsByCategory: {
-          physical:
-            (prevStats.pointsByCategory?.physical || 0) +
-            (completedTasks > 1 ? 10 : 5),
-          mental:
-            (prevStats.pointsByCategory?.mental || 0) +
-            (completedTasks > 1 ? 10 : 5),
-          creative:
-            (prevStats.pointsByCategory?.creative || 0) +
-            (completedTasks > 2 ? 5 : 2),
+      if (removeIndex !== -1) {
+        newTrophies.splice(removeIndex, 1);
+      }
+
+      newTrophies.unshift({
+        id: `trophy-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        type: "golden",
+        earnedDate: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+      });
+    }
+
+    const updatedStats = {
+      ...stats,
+      totalPoints: newPoints,
+      weeklyPoints:
+        (stats.weeklyPoints || 0) + pointsToAdd + streakBonusPoints,
+      xp: newXP,
+      weeklyXP: (stats.weeklyXP || 0) + xpToAdd,
+      level: newLevel,
+      coins: (stats.coins || 0) + coinsToAdd + levelUpBonusCoins,
+      streak: streakToSave,
+      bestStreak: newBestStreak,
+      totalCompletedDays: newTotalCompletedDays,
+      lastCompletedDate: newLastCompletedDate,
+      trophies: newTrophies.slice(0, 50),
+      pointsByCategory: {
+        physical:
+          (stats.pointsByCategory?.physical || 0) +
+          (completedTasks > 1 ? 10 : 5),
+        mental:
+          (stats.pointsByCategory?.mental || 0) +
+          (completedTasks > 1 ? 10 : 5),
+        creative:
+          (stats.pointsByCategory?.creative || 0) +
+          (completedTasks > 2 ? 5 : 2),
+      },
+    };
+
+    setStats(updatedStats);
+
+    if (user) {
+      const leaderboardRef = doc(db, "leaderboard", user.uid);
+      setDoc(
+        leaderboardRef,
+        {
+          uid: user.uid,
+          displayName: settings.displayName || "Anonymous",
+          photoURL: settings.profilePic || user.photoURL || "",
+          streak: updatedStats.streak,
+          totalPoints: updatedStats.totalPoints,
+          weeklyXP: updatedStats.weeklyXP || 0,
+          weeklyPoints: updatedStats.weeklyPoints || 0,
+          xp: updatedStats.xp,
+          level: newLevel,
+          league: settings.league || "Bronze",
         },
-      };
+        { merge: true },
+      ).catch((err) => {
+        try {
+          handleFirestoreError(err, OperationType.WRITE, `leaderboard/${user.uid}`);
+        } catch (e) {
+          console.error("LB sync error", e);
+        }
+      });
 
-      if (user) {
-        const leaderboardRef = doc(db, "leaderboard", user.uid);
-        setDoc(
-          leaderboardRef,
-          {
-            uid: user.uid,
-            displayName: settings.displayName || "Anonymous",
-            photoURL: settings.profilePic || user.photoURL || "",
-            streak: updatedStats.streak,
-            totalPoints: updatedStats.totalPoints,
-            weeklyXP: updatedStats.weeklyXP || 0,
-            weeklyPoints: updatedStats.weeklyPoints || 0,
-            xp: updatedStats.xp,
-            level: newLevel,
-            league: settings.league || "Bronze",
-          },
-          { merge: true },
-        ).catch((err) => {
-          try {
-            handleFirestoreError(err, OperationType.WRITE, `leaderboard/${user.uid}`);
-          } catch (e) {
-            console.error("LB sync error", e);
-          }
-        });
+      // 1. Log Finished Challenge to the new global "challenges" collection under user UID
+      const challengeDocRef = doc(db, "challenges", user.uid);
+      setDoc(challengeDocRef, {
+        userId: user.uid,
+        userName: settings.displayName || user.displayName || "Champion",
+        userEmail: user.email || `${user.uid}@nexora.app`,
+        counter: updatedStats.totalCompletedDays || 1,
+        lastChallengeId: isCustomPlan ? (activeCustomPlan?.id || "custom") : (challengeStep || "official"),
+        lastChallengeName: isCustomPlan ? (activeCustomPlan?.name || "Custom Plan") : (challengeStep || "Official Daily Challenge"),
+        lastChallengeType: isCustomPlan ? "user_created_plan" : "official_challenge",
+        lastCompletedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true }).catch((err) => {
+        console.error("Failed to save to global challenges collection", err);
+      });
 
-        // 1. Log Finished Challenge to the new global "challenges" collection under user UID
-        const challengeDocRef = doc(db, "challenges", user.uid);
-        setDoc(challengeDocRef, {
-          userId: user.uid,
-          userName: settings.displayName || user.displayName || "Champion",
-          userEmail: user.email || `${user.uid}@nexora.app`,
-          counter: updatedStats.totalCompletedDays || 1,
-          lastChallengeId: isCustomPlan ? (activeCustomPlan?.id || "custom") : (challengeStep || "official"),
-          lastChallengeName: isCustomPlan ? (activeCustomPlan?.name || "Custom Plan") : (challengeStep || "Official Daily Challenge"),
-          lastChallengeType: isCustomPlan ? "user_created_plan" : "official_challenge",
-          lastCompletedAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        }, { merge: true }).catch((err) => {
-          console.error("Failed to save to global challenges collection", err);
-        });
-
-        // 2. Log Rewards (Coins, Streaks, XP, Points) to the new global "rewards" collection under user UID
-        const rewardDocRef = doc(db, "rewards", user.uid);
-        setDoc(rewardDocRef, {
-          userId: user.uid,
-          userName: settings.displayName || user.displayName || "Champion",
-          userEmail: user.email || `${user.uid}@nexora.app`,
-          coins: updatedStats.coins || 0,
-          streak: updatedStats.streak || 0,
-          xp: updatedStats.xp || 0,
-          points: updatedStats.totalPoints || 0,
-          lastRewardReceivedAt: serverTimestamp(),
-          lastRewardSource: isCustomPlan ? "custom_plan_completion" : "official_challenge_completion",
-          updatedAt: serverTimestamp(),
-        }, { merge: true }).catch((err) => {
-          console.error("Failed to save to global rewards collection", err);
-          try {
-            handleFirestoreError(err, OperationType.WRITE, `rewards/${user.uid}`);
-          } catch (e) {
-            console.error("Firestore error handled:", e);
-          }
-        });
-      }
-
-      return updatedStats;
-    });
+      // 2. Log Rewards (Coins, Streaks, XP, Points) to the new global "rewards" collection under user UID
+      const rewardDocRef = doc(db, "rewards", user.uid);
+      setDoc(rewardDocRef, {
+        userId: user.uid,
+        userName: settings.displayName || user.displayName || "Champion",
+        userEmail: user.email || `${user.uid}@nexora.app`,
+        coins: updatedStats.coins || 0,
+        streak: updatedStats.streak || 0,
+        xp: updatedStats.xp || 0,
+        points: updatedStats.totalPoints || 0,
+        lastRewardReceivedAt: serverTimestamp(),
+        lastRewardSource: isCustomPlan ? "custom_plan_completion" : "official_challenge_completion",
+        updatedAt: serverTimestamp(),
+      }, { merge: true }).catch((err) => {
+        console.error("Failed to save to global rewards collection", err);
+        try {
+          handleFirestoreError(err, OperationType.WRITE, `rewards/${user.uid}`);
+        } catch (e) {
+          console.error("Firestore error handled:", e);
+        }
+      });
+    }
 
     setDailyProgress((prev) => ({
       ...prev,
@@ -5135,20 +5136,23 @@ export default function App() {
         </AnimatePresence>
 
         <div className="w-full flex flex-col min-h-screen relative z-10 px-0 sm:px-6">
-          {(activeScreen as string) !== "challenge" &&
-            (activeScreen as string) !== "subscription" &&
-            (activeScreen as string) !== "nexus-vision" &&
-            (activeScreen as string) !== "plant" &&
-            (activeScreen as string) !== "house" &&
-            (activeScreen as string) !== "archives" &&
-            (activeScreen as string) !== "leaderboard" &&
-            (activeScreen as string) !== "admin" &&
-            (activeScreen as string) !== "hydration-detail" &&
-            (activeScreen as string) !== "social" &&
-            (activeScreen as string) !== "garden" &&
-            (activeScreen as string) !== "device-showcase" &&
-            !showArchitectLab && (
-              <header className="px-4 sm:px-6 pt-6 sm:pt-8 pb-3 sm:pb-4 flex items-center justify-between w-full mx-auto max-w-7xl border-b border-[#E9E4D4]/50">
+          <header className={`px-4 sm:px-6 pt-6 sm:pt-8 pb-3 sm:pb-4 flex items-center justify-between w-full mx-auto max-w-7xl border-b border-[#E9E4D4]/50 ${
+            (activeScreen as string) === "challenge" ||
+            (activeScreen as string) === "subscription" ||
+            (activeScreen as string) === "nexus-vision" ||
+            (activeScreen as string) === "plant" ||
+            (activeScreen as string) === "house" ||
+            (activeScreen as string) === "archives" ||
+            (activeScreen as string) === "leaderboard" ||
+            (activeScreen as string) === "admin" ||
+            (activeScreen as string) === "hydration-detail" ||
+            (activeScreen as string) === "social" ||
+            (activeScreen as string) === "garden" ||
+            (activeScreen as string) === "device-showcase" ||
+            showArchitectLab
+              ? "hidden"
+              : ""
+          }`}>
                 <div className="flex items-center gap-2 sm:gap-3 select-none">
                   <motion.div
                     animate={headerMascotControls}
@@ -5268,7 +5272,6 @@ export default function App() {
                   </button>
                 </div>
               </header>
-            )}
 
           <main
             className={`flex-1 flex flex-col w-full max-w-7xl mx-auto ${(activeScreen as string) === "subscription" || (activeScreen as string) === "archives" || (activeScreen as string) === "leaderboard" || (activeScreen as string) === "admin" || (activeScreen as string) === "garden" || showArchitectLab ? "px-0 sm:px-0 pb-0 pt-0 max-w-none" : "px-4 sm:px-6 pb-32"}`}
