@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { auth, db } from "../firebase";
 import { 
   createUserWithEmailAndPassword, 
@@ -65,6 +65,14 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const mascotControls = useAnimationControls();
+  const isMountedRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Calming down state
   const [lastY, setLastY] = useState<number | null>(null);
@@ -87,14 +95,20 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
   }
 
   const triggerJump = async () => {
-    await mascotControls.start({
-      y: -20,
-      transition: { type: "spring", stiffness: 400, damping: 10 },
-    });
-    await mascotControls.start({
-      y: 0,
-      transition: { type: "spring", stiffness: 400, damping: 10 },
-    });
+    if (!isMountedRef.current) return;
+    try {
+      await mascotControls.start({
+        y: -20,
+        transition: { type: "spring", stiffness: 400, damping: 10 },
+      });
+      if (!isMountedRef.current) return;
+      await mascotControls.start({
+        y: 0,
+        transition: { type: "spring", stiffness: 400, damping: 10 },
+      });
+    } catch (err) {
+      // Safe fallback if controls unmounted
+    }
   };
 
   const handleMascotTap = () => {
@@ -188,6 +202,26 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
         };
         await setDoc(doc(db, "users", userCredential.user.uid), signUpData);
         await setDoc(doc(db, "user", userCredential.user.uid), signUpData);
+        const initialLbData = {
+          uid: userCredential.user.uid,
+          userId: userCredential.user.uid,
+          displayName: 'Champion',
+          name: 'Champion',
+          photoURL: '',
+          profilePic: '',
+          streak: 0,
+          totalPoints: 0,
+          points: 0,
+          weeklyPoints: 0,
+          weeklyXP: 0,
+          xp: 0,
+          level: 1,
+          league: 'Bronze',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        await setDoc(doc(db, "leaderboard", userCredential.user.uid), initialLbData, { merge: true });
+        await setDoc(doc(db, "rank", userCredential.user.uid), initialLbData, { merge: true });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -277,6 +311,26 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
       };
       await setDoc(doc(db, "users", result.user.uid), googleUserData, { merge: true });
       await setDoc(doc(db, "user", result.user.uid), googleUserData, { merge: true });
+      const initialGoogleLbData = {
+        uid: result.user.uid,
+        userId: result.user.uid,
+        displayName: result.user.displayName || 'Champion',
+        name: result.user.displayName || 'Champion',
+        photoURL: result.user.photoURL || '',
+        profilePic: result.user.photoURL || '',
+        streak: 0,
+        totalPoints: 0,
+        points: 0,
+        weeklyPoints: 0,
+        weeklyXP: 0,
+        xp: 0,
+        level: 1,
+        league: 'Bronze',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      await setDoc(doc(db, "leaderboard", result.user.uid), initialGoogleLbData, { merge: true });
+      await setDoc(doc(db, "rank", result.user.uid), initialGoogleLbData, { merge: true });
       setIsSuccess(true);
       triggerJump();
     } catch (err: any) {

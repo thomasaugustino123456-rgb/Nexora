@@ -32,7 +32,13 @@ import womensWellnessImg from '../assets/images/womens_wellness_1779272279548.pn
 import pregnancyHydrationImg from '../assets/images/pregnancy_hydration_1779272296073.png';
 import periodHydrationImg from '../assets/images/period_hydration_1779272315074.png';
 
+import nexoraAppIconImg from '../assets/images/nexora_app_icon.png';
+
 export const ARCHIVE_IMAGES = [
+  nexoraAppIconImg,
+  "/mascot.png",
+  "/icon-192.png",
+  "/nexora_mascot_logo.png",
   pushupProtocolImg,
   hydrationLogicImg,
   vagalNerveImg,

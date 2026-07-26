@@ -39,17 +39,17 @@ export const ScreenWater: React.FC<ScreenWaterProps> = React.memo(({ progress })
   // When progress = 1: currentY is 150 (completely filling background)
   const currentY = 935 - (progress * 780);
 
-  // Initialize 5 ice cubes with optimized, balanced sizing to prevent looking too big on any screen:
+  // Initialize 5 ice cubes with increased, medium balanced sizing:
   const [iceCubes, setIceCubes] = useState<CartoonIceCube[]>(() => {
     const layers: { layer: 'top' | 'middle' | 'bottom'; homeX: number; size: number }[] = [
       // Top floaters
-      { layer: 'top', homeX: 450, size: 46 },
-      { layer: 'top', homeX: 540, size: 48 },
+      { layer: 'top', homeX: 430, size: 76 },
+      { layer: 'top', homeX: 550, size: 80 },
       // Mid drifters (suspended inside water depth)
-      { layer: 'middle', homeX: 420, size: 40 },
-      { layer: 'middle', homeX: 560, size: 42 },
+      { layer: 'middle', homeX: 380, size: 68 },
+      { layer: 'middle', homeX: 580, size: 72 },
       // Bottom sinkers (heavy glass slide/clatter on screen bottom floor)
-      { layer: 'bottom', homeX: 490, size: 52 }
+      { layer: 'bottom', homeX: 490, size: 85 }
     ];
 
     return layers.map((item, idx) => ({

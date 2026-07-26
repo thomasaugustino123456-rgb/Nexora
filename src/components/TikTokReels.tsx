@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Heart, MessageSquare, Share2, Plus, Sparkles, Camera, ArrowLeft, RefreshCw, Check, Film, Upload, Trash2, ArrowUpDown, ChevronDown, ChevronUp, AlertCircle, Smile, X, Scissors, Volume2, Sliders, Type, Mic, Music, VolumeX, Volume1 } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
+import { copyToClipboard } from '../lib/clipboard';
 import { db } from '../firebase';
 import { collection, onSnapshot, addDoc, updateDoc, doc, increment, query, orderBy, limit, where } from 'firebase/firestore';
 
@@ -1063,9 +1064,9 @@ export function TikTokReels({ onBack, user, showToast, play }: TikTokReelsProps)
 
           {/* Share */}
           <button 
-            onClick={() => {
+            onClick={async () => {
               vibrate(VIBRATION_PATTERNS.CLICK);
-              navigator.clipboard.writeText(`${window.location.origin}/reels/${activeReel.id}`);
+              await copyToClipboard(`${window.location.origin}/reels/${activeReel.id}`);
               showToast('Loop Link Encrypted and Copied! 🔗', 'success');
             }}
             className="flex flex-col items-center text-center group"

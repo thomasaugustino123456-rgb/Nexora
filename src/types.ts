@@ -113,6 +113,8 @@ export interface UserSettings {
   proTestStartedAt?: string | null;
   proTestExpiresAt?: string | null;
   proTestLastUsedAt?: string | null;
+  originalStatsBeforeProTest?: UserStats | null;
+  lastViewedRank?: number;
   layoutConfig?: {
     hideStats?: boolean;
     hidePlants?: boolean;
@@ -143,6 +145,7 @@ export interface UserSettings {
   date?: string;
   Date?: string;
   "Email address"?: string;
+  purchasedAwards?: Record<string, number>;
 }
 
 export interface ShopItem {
@@ -228,6 +231,7 @@ export interface UserStats {
     creative: number;
   };
   drawings?: string[]; // base64 strings
+  achievements?: any[];
   unlockedHats?: string[];
   gratitudeEntries?: GratitudeEntry[];
   waterDrank?: number;
@@ -348,6 +352,7 @@ export interface Post {
   type: 'text' | 'image' | 'milestone' | 'video';
   deleted?: boolean;
   videoUrl?: string;
+  awards?: Record<string, number>;
   milestoneData?: {
     type: 'streak' | 'trophy' | 'level';
     value: string | number;
@@ -388,6 +393,7 @@ export interface SystemNotification {
   message: string;
   type: 'system' | 'reward' | 'alert' | 'mascot';
   read: boolean;
+  isRead?: boolean;
   createdAt: string;
   expiresAt?: string;
 }

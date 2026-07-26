@@ -260,7 +260,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
               <CompletionStep 
                 key="completion-step"
                 onFinish={onExit} 
-                streak={stats.streak || 0} 
+                streak={(stats.streak || 0) + 1} 
                 points={10} 
                 xp={5}
                 coins={15}

@@ -118,6 +118,14 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
   // Mascot Interaction State
   const [tapCount, setTapCount] = useState(0);
   const mascotControls = useAnimationControls();
+  const isHomeScreenMountedRef = useRef(false);
+
+  useEffect(() => {
+    isHomeScreenMountedRef.current = true;
+    return () => {
+      isHomeScreenMountedRef.current = false;
+    };
+  }, []);
 
   // Calming down state
   const [lastY, setLastY] = useState<number | null>(null);
@@ -134,29 +142,39 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
   }
 
   const triggerJump = async () => {
-    await mascotControls.start({ y: -20, transition: { type: "spring", stiffness: 400, damping: 10 } });
-    await mascotControls.start({ y: 0, transition: { type: "spring", stiffness: 400, damping: 10 } });
+    if (!isHomeScreenMountedRef.current) return;
+    try {
+      await mascotControls.start({ y: -20, transition: { type: "spring", stiffness: 400, damping: 10 } });
+      if (!isHomeScreenMountedRef.current) return;
+      await mascotControls.start({ y: 0, transition: { type: "spring", stiffness: 400, damping: 10 } });
+    } catch (e) {}
   };
 
   const lastMascotTapRef = useRef<number>(0);
   const mascotTapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const triggerMascotDoubleTapReaction = async () => {
-    await mascotControls.start({
-      scaleY: [1, 0.76, 1.18, 0.94, 1],
-      scaleX: [1, 1.22, 0.82, 1.06, 1],
-      y: [0, 5, -55, 3, 0],
-      rotate: [0, -6, 15, -2, 0],
-      transition: { duration: 0.45, ease: "easeInOut" }
-    });
+    if (!isHomeScreenMountedRef.current) return;
+    try {
+      await mascotControls.start({
+        scaleY: [1, 0.76, 1.18, 0.94, 1],
+        scaleX: [1, 1.22, 0.82, 1.06, 1],
+        y: [0, 5, -55, 3, 0],
+        rotate: [0, -6, 15, -2, 0],
+        transition: { duration: 0.45, ease: "easeInOut" }
+      });
+    } catch (e) {}
   };
 
   const triggerMascotSimpleTapReaction = async () => {
-    await mascotControls.start({
-      scale: [1, 1.1, 1],
-      y: [0, -10, 0],
-      transition: { duration: 0.2 }
-    });
+    if (!isHomeScreenMountedRef.current) return;
+    try {
+      await mascotControls.start({
+        scale: [1, 1.1, 1],
+        y: [0, -10, 0],
+        transition: { duration: 0.2 }
+      });
+    } catch (e) {}
   };
 
   const handleMascotTap = (e: React.MouseEvent<HTMLDivElement>) => {

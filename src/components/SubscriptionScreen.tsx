@@ -19,7 +19,13 @@ import {
   Palette, 
   Lock, 
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Copy,
+  Coins,
+  CheckCircle2,
+  Globe,
+  Star,
+  ExternalLink
 } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { Mascot } from './Mascot';
@@ -45,16 +51,79 @@ export function SubscriptionScreen({
 }: SubscriptionScreenProps) {
   const [scrollY, setScrollY] = useState(0);
   const [activeTab, setActiveTab] = useState<'coach' | 'soundscapes' | 'auras'>('coach');
+  const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'USDT' | 'BTC' | 'ALL'>('ALL');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<'yearly' | 'monthly' | 'weekly'>('yearly');
 
   // Determine if Pro (or Pro Test mode) is currently active
   const isPro = settings?.isPro || settings?.proTestActive;
 
-  const features = [
-    { title: 'UI Architect Lab', description: 'Redesign the app your way. Drag and hide anything.' },
-    { title: 'Challenge Archive', description: 'Filter official challenges. Only focus on what matters.' },
-    { title: 'Unlimited Everything', description: 'No daily limits. All tools unlocked.' },
-    { title: 'Exclusive Content', description: 'Special skins and high-fidelity soundtracks.' },
+  // Crypto conversion rate reference (approx 1 BTC = $66,666, 1 USDT = $1.00 USD)
+  const plans = [
+    {
+      id: 'yearly',
+      name: 'YEARLY MASTER',
+      usd: '$64.00',
+      period: '/ year',
+      equivalent: '$5.33 / month',
+      usdt: '64.00 USDT',
+      btc: '~0.00096 BTC',
+      savings: 'SAVE 64%',
+      badge: 'BEST VALUE',
+      popular: true,
+      accent: 'border-emerald-500/60 bg-gradient-to-b from-emerald-500/10 via-slate-900 to-slate-950',
+      badgeBg: 'bg-emerald-500 text-slate-950',
+      icon: '💎',
+      desc: 'Full year of unlimited protocol access & priority features.'
+    },
+    {
+      id: 'monthly',
+      name: 'MONTHLY LEGEND',
+      usd: '$14.99',
+      period: '/ month',
+      equivalent: '$0.50 / day',
+      usdt: '14.99 USDT',
+      btc: '~0.000225 BTC',
+      savings: 'MOST POPULAR',
+      badge: 'LEGEND CHOICE',
+      popular: false,
+      accent: 'border-amber-500/50 bg-gradient-to-b from-amber-500/10 via-slate-900 to-slate-950',
+      badgeBg: 'bg-amber-500 text-slate-950',
+      icon: '🔥',
+      desc: 'Flexible monthly plan with complete Architect Lab unlocks.'
+    },
+    {
+      id: 'weekly',
+      name: 'WEEKLY SPRINT',
+      usd: '$4.99',
+      period: '/ week',
+      equivalent: '$0.71 / day',
+      usdt: '4.99 USDT',
+      btc: '~0.000075 BTC',
+      savings: 'FLEXIBLE',
+      badge: 'STARTER',
+      popular: false,
+      accent: 'border-indigo-500/40 bg-gradient-to-b from-indigo-500/10 via-slate-900 to-slate-950',
+      badgeBg: 'bg-indigo-500 text-white',
+      icon: '⚡',
+      desc: 'Short-term boost to test and master your discipline habits.'
+    }
   ];
+
+  const features = [
+    { title: 'UI Architect Lab', description: 'Redesign the app your way. Drag, reorder, and customize every widget.' },
+    { title: 'Challenge Archive', description: 'Filter official challenges and target hyper-specific focus goals.' },
+    { title: 'Unlimited Everything', description: 'No daily limits. All tools, trackers, and soundscapes unlocked.' },
+    { title: 'Exclusive Content', description: 'Special neon companion skins and binaural focus soundtracks.' },
+  ];
+
+  // Copy helper with animated feedback
+  const copyToClipboard = (text: string, label: string) => {
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
+    navigator.clipboard.writeText(text);
+    setCopiedKey(label);
+    setTimeout(() => setCopiedKey(null), 2500);
+  };
 
   // Track scroll position for dynamic styling
   useEffect(() => {
@@ -79,7 +148,6 @@ export function SubscriptionScreen({
     setMessages(prev => [...prev, { sender: 'user', text: question }]);
     setAiLoading(true);
 
-    // Simulate AI loading with stateful analytics feedback
     setTimeout(() => {
       let aiResponse = "";
       if (question.includes("optimize")) {
@@ -104,7 +172,6 @@ export function SubscriptionScreen({
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioNodesRef = useRef<any[]>([]);
 
-  // Stop any active synthesized soundwaves
   const stopSynthesizer = () => {
     if (audioNodesRef.current.length > 0) {
       audioNodesRef.current.forEach(node => {
@@ -116,20 +183,17 @@ export function SubscriptionScreen({
     setIsPlayingSound(null);
   };
 
-  // Synthesize binaural frequencies or high-contrast pink-noise masking on-the-fly!
   const startSynthesizer = (type: string) => {
     stopSynthesizer();
     vibrate(VIBRATION_PATTERNS.SUCCESS);
 
     try {
-      // Lazy init AudioContext securely
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (!audioCtxRef.current) {
         audioCtxRef.current = new AudioContextClass();
       }
       const ctx = audioCtxRef.current;
 
-      // Ensure AudioContext is resumed in case browser blocked it
       if (ctx.state === 'suspended') {
         ctx.resume();
       }
@@ -140,7 +204,6 @@ export function SubscriptionScreen({
       audioNodesRef.current.push(masterGain);
 
       if (type === 'binaural_gamma') {
-        // Binaural 40Hz Gamma Focus: Left Ear = 200Hz, Right Ear = 240Hz
         const oscL = ctx.createOscillator();
         const oscR = ctx.createOscillator();
         const pannerL = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
@@ -174,7 +237,6 @@ export function SubscriptionScreen({
         setIsPlayingSound('binaural_gamma');
 
       } else if (type === 'binaural_delta') {
-        // Binaural 4Hz Delta Sleep: Left Ear = 150Hz, Right Ear = 154Hz
         const oscL = ctx.createOscillator();
         const oscR = ctx.createOscillator();
         const pannerL = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
@@ -208,37 +270,32 @@ export function SubscriptionScreen({
         setIsPlayingSound('binaural_delta');
 
       } else if (type === 'pink_noise_rain') {
-        // Synthesizing calming Pink Noise (Brownish Rain Ambient Noise Mask)
         const bufferSize = 2 * ctx.sampleRate;
         const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const output = noiseBuffer.getChannelData(0);
 
-        // Brown noise math simulation for deep rainfall rumble
         let lastOut = 0.0;
         for (let i = 0; i < bufferSize; i++) {
           const white = Math.random() * 2 - 1;
           output[i] = (lastOut + (0.02 * white)) / 1.02;
           lastOut = output[i];
-          output[i] *= 3.5; // Amplify slightly for comfortable volume levels
+          output[i] *= 3.5;
         }
 
         const noiseSource = ctx.createBufferSource();
         noiseSource.buffer = noiseBuffer;
         noiseSource.loop = true;
 
-        // Apply a BiquadFilter lowpass to make it sound incredibly smooth and watery
         const filter = ctx.createBiquadFilter();
         filter.type = 'lowpass';
         filter.frequency.setValueAtTime(450, ctx.currentTime);
 
-        // Amplitude modulator (creates waves rolling or soft wind gusting)
         const modulator = ctx.createOscillator();
         const modGain = ctx.createGain();
-        modulator.frequency.setValueAtTime(0.12, ctx.currentTime); // very slow cycle (8 seconds)
-        modGain.gain.setValueAtTime(0.2, ctx.currentTime); // modulate up to 20%
+        modulator.frequency.setValueAtTime(0.12, ctx.currentTime);
+        modGain.gain.setValueAtTime(0.2, ctx.currentTime);
 
         modulator.connect(modGain);
-        // We link the modulator to gain directly
         
         noiseSource.connect(filter);
         filter.connect(masterGain);
@@ -253,10 +310,8 @@ export function SubscriptionScreen({
     }
   };
 
-  // Adjust volume in real-time
   useEffect(() => {
     if (audioNodesRef.current.length > 0) {
-      // First node in refs is the master Gain Node
       const masterGain = audioNodesRef.current[0];
       if (masterGain && masterGain.gain) {
         masterGain.gain.setValueAtTime(audioVolume, audioCtxRef.current?.currentTime || 0);
@@ -264,7 +319,6 @@ export function SubscriptionScreen({
     }
   }, [audioVolume]);
 
-  // Cleanup synthesizer on component unmount
   useEffect(() => {
     return () => {
       if (audioNodesRef.current.length > 0) {
@@ -306,32 +360,33 @@ export function SubscriptionScreen({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen relative bg-slate-950 text-white overflow-x-hidden selection:bg-amber-500/30"
+      className="min-h-screen relative bg-slate-950 text-white overflow-x-hidden selection:bg-emerald-500/30"
     >
-      {/* Dynamic Warm Glow Background */}
+      {/* Background Radial Glow Effects */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <motion.div 
           style={{ 
             y: scrollY * 0.2,
             scale: 1 + scrollY * 0.0005,
-            opacity: 0.4 + (Math.sin(scrollY * 0.005) * 0.1)
+            opacity: 0.3 + (Math.sin(scrollY * 0.005) * 0.1)
           }}
-          className="absolute top-[-20%] left-[-10%] w-[100vw] h-[100vw] rounded-full bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent blur-[120px]"
+          className="absolute top-[-10%] left-[-10%] w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] rounded-full bg-gradient-to-br from-emerald-500/15 via-teal-500/5 to-transparent blur-[140px]"
         />
         <motion.div 
           style={{ 
             y: scrollY * -0.1,
-            scale: 1.2 - scrollY * 0.0003,
+            scale: 1.1 - scrollY * 0.0003,
             opacity: 0.3 + (Math.cos(scrollY * 0.003) * 0.1)
           }}
-          className="absolute bottom-[-20%] right-[-10%] w-[110vw] h-[110vw] rounded-full bg-gradient-to-tl from-blue-500/10 via-indigo-500/5 to-transparent blur-[140px]"
+          className="absolute bottom-[-10%] right-[-10%] w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] rounded-full bg-gradient-to-tl from-indigo-500/15 via-amber-500/5 to-transparent blur-[160px]"
         />
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03] mix-blend-overlay" />
       </div>
 
-      <div className="relative z-10 w-full max-w-4xl mx-auto px-6 py-12 md:py-24">
-        {/* Header */}
-        <div className="flex flex-col items-center text-center mb-12 space-y-4 relative">
+      {/* Main Container - EXPANDED WIDESCREEN SUPPORT */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16">
+        
+        {/* Top Header Navigation */}
+        <div className="flex items-center justify-between mb-8">
           <motion.button 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -339,91 +394,198 @@ export function SubscriptionScreen({
               stopSynthesizer();
               onBack();
             }} 
-            className="absolute top-0 left-0 p-3 sm:p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md group"
+            className="p-3 sm:p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md group flex items-center gap-2 text-xs sm:text-sm font-extrabold text-slate-200"
           >
-            <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform sm:w-6 sm:h-6" />
+            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+            <span>Back to Workspace</span>
           </motion.button>
 
+          {/* Member Social Proof Pill */}
+          <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
+            <Users size={14} />
+            <span>14,200+ Active Pro Legends</span>
+          </div>
+        </div>
+
+        {/* Hero Section */}
+        <div className="flex flex-col items-center text-center mb-12 space-y-4 relative">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-amber-400 to-orange-600 rounded-[2rem] sm:rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-amber-500/20 mb-2"
+            className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-emerald-400 via-teal-500 to-amber-500 rounded-[2rem] sm:rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-emerald-500/25 mb-2 relative group"
           >
-            <Crown size={40} className="text-white drop-shadow-lg sm:w-12 sm:h-12" />
+            <Crown size={42} className="text-slate-950 drop-shadow-md sm:w-12 sm:h-12 group-hover:scale-110 transition-transform" />
+            <div className="absolute inset-0 rounded-[2rem] sm:rounded-[2.5rem] border-2 border-white/30 animate-ping opacity-20" />
           </motion.div>
           
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tighter text-white">NEXORA PRO</h1>
-          <p className="text-slate-200 max-w-md text-base sm:text-lg font-medium leading-relaxed px-2">
-            The ultimate protocol for discipline legends. Access the Architect Lab and support the mission.
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-400 rounded-full text-xs font-black uppercase tracking-widest border border-amber-500/20">
+            <Sparkles size={12} /> UNLOCK MAXIMUM DISCIPLINE
+          </div>
+
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tighter text-white">
+            NEXORA <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-400">PRO</span>
+          </h1>
+          <p className="text-slate-300 max-w-xl text-base sm:text-lg font-medium leading-relaxed">
+            The ultimate protocol for discipline legends. Access the Architect Lab, custom soundscapes, and support independent AI engineering.
           </p>
+
+          {/* Risk Free Guarantee Banner */}
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-extrabold text-slate-400 pt-2">
+            <span className="flex items-center gap-1 text-emerald-400"><ShieldCheck size={14} /> 7-Day Money Back Guarantee</span>
+            <span className="hidden sm:inline text-slate-600">•</span>
+            <span className="flex items-center gap-1 text-slate-300"><CheckCircle2 size={14} /> Cancel Anytime</span>
+            <span className="hidden sm:inline text-slate-600">•</span>
+            <span className="flex items-center gap-1 text-amber-400"><Zap size={14} /> Instant Activation</span>
+          </div>
         </div>
 
-        {/* Mission Transparency Section */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          className="mb-12 p-6 sm:p-8 rounded-[2rem] sm:rounded-[3rem] bg-amber-500/5 border border-amber-500/20 relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 p-12 bg-amber-500/10 rounded-full blur-3xl -mr-16 -mt-16" />
-          <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 sm:gap-8">
-            <div className="flex-1 space-y-4 text-center md:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 text-amber-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-500/30">
-                <Heart size={12} fill="currentColor" /> THE MISSION
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black italic tracking-tight uppercase">Where does your support go?</h2>
-              <p className="text-slate-200 text-xs sm:text-sm leading-relaxed">
-                Nexora is fully independent. We are a small team of engineers building high-contrast, beautiful productivity software without corporate venture funding. Your support directly enables:
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-left">
-                {[
-                  { icon: <Zap size={13}/>, text: 'Ultra-Fast AI Services' },
-                  { icon: <ShieldCheck size={13}/>, text: 'Secure Cloud Synced Databases' },
-                  { icon: <Crown size={13}/>, text: 'Exclusive Asset & Animation Design' },
-                  { icon: <Users size={13}/>, text: 'Clean Interactive Soundscapes' },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-amber-200/80">
-                    <div className="p-1.5 bg-amber-500/20 rounded-md text-amber-500">{item.icon}</div>
-                    {item.text}
-                  </div>
-                ))}
-              </div>
+        {/* ======================================================== */}
+        {/* NEW CRYPTO & CURRENCY SELECTOR STRIP */}
+        {/* ======================================================== */}
+        <div className="mb-10 p-4 sm:p-6 rounded-3xl bg-slate-900/90 border border-white/10 backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+          <div className="flex items-center gap-3 text-center md:text-left">
+            <div className="p-3 bg-emerald-500/20 rounded-2xl text-emerald-400 shrink-0">
+              <Coins size={22} />
             </div>
-            <div className="w-24 h-24 sm:w-36 sm:h-36 flex items-center justify-center bg-white/5 rounded-full border border-white/10 shadow-2xl relative shrink-0">
-              <div className="absolute inset-3 rounded-full border border-amber-500/20 animate-pulse" />
-              <Crown className="text-amber-500 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)] w-10 h-10 sm:w-16 sm:h-16" />
+            <div>
+              <h3 className="font-extrabold text-sm sm:text-base text-white">Display Currency & Crypto Rates</h3>
+              <p className="text-xs text-slate-400 font-medium">Select your preferred viewing format (USD, USDT, or Bitcoin BTC equivalent)</p>
             </div>
           </div>
-        </motion.div>
 
-        {/* Pro Test Mode Card */}
+          <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-white/10 shrink-0">
+            {(['ALL', 'USD', 'USDT', 'BTC'] as const).map((curr) => (
+              <button
+                key={curr}
+                onClick={() => {
+                  vibrate(VIBRATION_PATTERNS.SUCCESS);
+                  setSelectedCurrency(curr);
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all ${
+                  selectedCurrency === curr 
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-lg shadow-emerald-500/20' 
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {curr === 'ALL' && '✨ All Rates'}
+                {curr === 'USD' && '💵 USD ($)'}
+                {curr === 'USDT' && '🪙 USDT (Tether)'}
+                {curr === 'BTC' && '₿ BTC (Bitcoin)'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ======================================================== */}
+        {/* WIDESCREEN PRICING CARDS GRID (3-COLUMN DESKTOP LAYOUT) */}
+        {/* ======================================================== */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mb-16 items-stretch">
+          {plans.map((plan) => {
+            const isSelected = selectedPlanId === plan.id;
+            return (
+              <motion.div
+                key={plan.id}
+                whileHover={{ y: -6 }}
+                onClick={() => setSelectedPlanId(plan.id as any)}
+                className={`p-6 sm:p-8 rounded-[2.5rem] border-2 transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden backdrop-blur-xl ${
+                  plan.accent
+                } ${
+                  isSelected ? 'ring-2 ring-emerald-400 shadow-2xl shadow-emerald-500/20 scale-[1.02]' : 'opacity-95 hover:opacity-100'
+                }`}
+              >
+                {/* Popular / Best Value Badge */}
+                {plan.badge && (
+                  <div className={`absolute top-0 right-0 px-4 py-1.5 rounded-bl-2xl text-[10px] font-black uppercase tracking-widest shadow-md ${plan.badgeBg}`}>
+                    {plan.badge}
+                  </div>
+                )}
+
+                <div>
+                  <div className="text-4xl mb-4">{plan.icon}</div>
+                  <h3 className="font-black text-xl text-white tracking-tight">{plan.name}</h3>
+                  <p className="text-xs text-slate-300 font-medium mt-1 mb-6 leading-relaxed">{plan.desc}</p>
+
+                  {/* Dynamic Pricing View based on Currency Selection */}
+                  <div className="space-y-2 py-4 border-y border-white/10 my-4 bg-black/20 p-4 rounded-2xl">
+                    {(selectedCurrency === 'ALL' || selectedCurrency === 'USD') && (
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-2xl sm:text-3xl font-black text-white">{plan.usd}</span>
+                        <span className="text-xs font-bold text-slate-400">{plan.period}</span>
+                      </div>
+                    )}
+
+                    {(selectedCurrency === 'ALL' || selectedCurrency === 'USDT') && (
+                      <div className="flex items-center justify-between text-emerald-400 font-black text-xs sm:text-sm">
+                        <span>🪙 USDT:</span>
+                        <span>{plan.usdt}</span>
+                      </div>
+                    )}
+
+                    {(selectedCurrency === 'ALL' || selectedCurrency === 'BTC') && (
+                      <div className="flex items-center justify-between text-amber-400 font-mono text-xs font-bold">
+                        <span>₿ Bitcoin:</span>
+                        <span>{plan.btc}</span>
+                      </div>
+                    )}
+
+                    <div className="pt-2 text-[11px] font-extrabold text-teal-300 flex items-center justify-between">
+                      <span>Equiv Rate:</span>
+                      <span>{plan.equivalent}</span>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-2.5 text-xs font-medium text-slate-200 mb-6">
+                    <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400 shrink-0" /> Full Architect UI Customizer</li>
+                    <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400 shrink-0" /> Unlimited AI Coach Queries</li>
+                    <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400 shrink-0" /> Web Audio Soundscapes Live</li>
+                    <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400 shrink-0" /> High-Fidelity Companion Skins</li>
+                  </ul>
+                </div>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    vibrate(VIBRATION_PATTERNS.SUCCESS);
+                    const whatsappMsg = `Hi Nexora, I'd like to subscribe to the ${plan.name} (${plan.usd} / ${plan.usdt} / ${plan.btc}). My UID: ${userId}`;
+                    window.open(`https://api.whatsapp.com/send?phone=211929635502&text=${encodeURIComponent(whatsappMsg)}`, '_blank');
+                  }}
+                  className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg ${
+                    plan.id === 'yearly'
+                      ? 'bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-slate-950 shadow-emerald-500/20'
+                      : plan.id === 'monthly'
+                      ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20'
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'
+                  }`}
+                >
+                  <MessageSquare size={16} /> SUBSCRIBE VIA WHATSAPP
+                </button>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* Pro Test Mode Banner */}
         {onStartProTest && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mb-12 p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border-2 border-blue-500/30 backdrop-blur-md relative overflow-hidden group"
+            className="mb-16 p-6 sm:p-8 rounded-[2.5rem] bg-gradient-to-r from-blue-600/20 via-indigo-600/20 to-teal-600/20 border-2 border-blue-500/30 backdrop-blur-md relative overflow-hidden group"
           >
-            <div className="absolute top-0 right-0 p-12 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-blue-500/20 transition-colors" />
-            
-            <div className="flex flex-col md:flex-row items-center gap-6 sm:gap-8 relative z-10">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-500 rounded-2xl sm:rounded-3xl flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 rotate-3 group-hover:rotate-0 transition-transform shrink-0">
-                <Crown className="w-10 h-10 sm:w-12 sm:h-12" />
-              </div>
-              
-              <div className="flex-1 text-center md:text-left space-y-2">
-                <div className="flex items-center justify-center md:justify-start gap-2">
-                  <h3 className="text-xl sm:text-2xl font-black text-white">PRO TEST MODE</h3>
-                  <span className="bg-blue-500 text-[8px] font-black px-2 py-0.5 rounded-full text-white uppercase tracking-widest">Limited Time</span>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/40 shrink-0">
+                  <Crown size={32} />
                 </div>
-                <p className="text-blue-100 font-medium leading-relaxed max-w-lg text-xs sm:text-sm">
-                  Curious about the power of Nexora Pro? Unlock every feature, custom plan, and exclusive item for 15 minutes. Experience the peak of consistency.
-                </p>
-                {settings?.proTestStartedAt && (
-                   <p className="text-[10px] font-bold text-blue-400/60 uppercase tracking-widest">
-                      Last tested: {new Date(settings.proTestStartedAt).toLocaleDateString()}
-                   </p>
-                )}
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-black text-white">PRO TEST DRIVE MODE</h3>
+                    <span className="bg-blue-500 text-[9px] font-black px-2 py-0.5 rounded-full text-white uppercase tracking-widest">Free Trial</span>
+                  </div>
+                  <p className="text-blue-100 text-xs sm:text-sm font-medium leading-relaxed max-w-xl">
+                    Test every feature, custom plan, and exclusive item for 15 minutes before choosing your plan. Experience peak focus.
+                  </p>
+                </div>
               </div>
 
               {(() => {
@@ -439,17 +601,17 @@ export function SubscriptionScreen({
                         vibrate(VIBRATION_PATTERNS.SUCCESS);
                         onStartProTest();
                       }}
-                      className="w-full md:w-auto px-8 py-4 sm:px-10 sm:py-5 bg-white text-blue-600 rounded-2xl font-black text-xs sm:text-sm shadow-xl shadow-white/10 hover:scale-105 active:scale-95 transition-all shrink-0"
+                      className="w-full md:w-auto px-8 py-4 bg-white text-blue-600 hover:bg-slate-100 rounded-2xl font-black text-xs sm:text-sm shadow-xl hover:scale-105 active:scale-95 transition-all shrink-0"
                     >
-                      START 15-MIN TEST
+                      START 15-MIN FREE TEST
                     </button>
                   );
                 } else {
                   const daysRemaining = Math.ceil((cooldownDays * 24 * 60 * 60 * 1000 - (now.getTime() - lastTest!.getTime())) / (24 * 60 * 60 * 1000));
                   return (
-                    <div className="w-full md:w-auto px-6 py-4 sm:px-8 sm:py-5 bg-white/10 rounded-2xl border border-white/20 text-center opacity-70 shrink-0">
-                       <p className="text-[9px] font-black uppercase text-white/40 tracking-widest leading-none mb-1">Cooldown Active</p>
-                       <p className="text-xs sm:text-sm font-black text-white">{daysRemaining} DAYS WAIT</p>
+                    <div className="w-full md:w-auto px-6 py-4 bg-white/10 rounded-2xl border border-white/20 text-center opacity-80 shrink-0">
+                       <p className="text-[9px] font-black uppercase text-white/50 tracking-widest mb-0.5">Cooldown Active</p>
+                       <p className="text-xs font-black text-white">{daysRemaining} DAYS WAIT</p>
                     </div>
                   );
                 }
@@ -459,21 +621,21 @@ export function SubscriptionScreen({
         )}
 
         {/* ======================================================== */}
-        {/* NEW INTERACTIVE FEATURE: PRO MULTIVERSE SUITE (1, 2, 3) */}
+        {/* INTERACTIVE PRO MULTIVERSE COMMAND SUITE */}
         {/* ======================================================== */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mb-16 p-6 sm:p-8 rounded-[2rem] sm:rounded-[3rem] bg-slate-900/90 border border-amber-500/30 shadow-2xl relative overflow-hidden"
+          className="mb-16 p-6 sm:p-10 rounded-[3rem] bg-slate-900/90 border border-emerald-500/30 shadow-2xl relative overflow-hidden"
         >
           {/* Locked Overlay if not Pro */}
           {!isPro && (
-            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center">
-              <div className="w-16 h-16 bg-gradient-to-tr from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-amber-500/20 mb-4 animate-bounce">
+            <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center">
+              <div className="w-16 h-16 bg-gradient-to-tr from-emerald-400 to-amber-500 rounded-2xl flex items-center justify-center text-slate-950 shadow-xl shadow-emerald-500/20 mb-4 animate-bounce">
                 <Lock size={28} />
               </div>
-              <h3 className="text-xl sm:text-2xl font-black tracking-tight uppercase text-amber-400">PRO MULTIVERSE COMMAND SUITE</h3>
+              <h3 className="text-xl sm:text-2xl font-black tracking-tight uppercase text-emerald-400">PRO COMMAND SUITE LOCKED</h3>
               <p className="text-slate-200 text-xs sm:text-sm max-w-md mt-2 mb-6 font-medium">
                 Unlock or test Nexora Pro to access the interactive AI Mentor, procedural focus sound waves synthesizer, and high-fidelity mascot skins customizer!
               </p>
@@ -482,9 +644,9 @@ export function SubscriptionScreen({
                   vibrate(VIBRATION_PATTERNS.SUCCESS);
                   if (onStartProTest) onStartProTest();
                 }}
-                className="px-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-all hover:scale-105"
+                className="px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-105"
               >
-                Start Free Pro Test Mode
+                Start Free 15-Min Pro Test Mode
               </button>
             </div>
           )}
@@ -492,37 +654,37 @@ export function SubscriptionScreen({
           <div className="relative z-10 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
               <div>
-                <span className="bg-amber-500/20 text-amber-500 border border-amber-500/30 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest inline-block mb-1">
+                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest inline-block mb-1">
                   Pro Interactive Deck
                 </span>
                 <h3 className="text-xl sm:text-2xl font-black italic tracking-tight text-white uppercase">MULTIVERSE COMMAND SUITE</h3>
               </div>
               
               {/* Tab Selector */}
-              <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 shrink-0 self-start sm:self-auto">
+              <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-white/10 shrink-0 self-start sm:self-auto">
                 <button
                   onClick={() => setActiveTab('coach')}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-black transition-all ${
-                    activeTab === 'coach' ? 'bg-amber-500 text-slate-950' : 'text-slate-300 hover:bg-white/5'
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                    activeTab === 'coach' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:bg-white/5'
                   }`}
                 >
-                  <Bot size={14} /> <span className="hidden sm:inline">AI COACH</span>
+                  <Bot size={14} /> <span>AI COACH</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('soundscapes')}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-black transition-all ${
-                    activeTab === 'soundscapes' ? 'bg-amber-500 text-slate-950' : 'text-slate-300 hover:bg-white/5'
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                    activeTab === 'soundscapes' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:bg-white/5'
                   }`}
                 >
-                  <Music size={14} /> <span className="hidden sm:inline">SOUNDSCAPE</span>
+                  <Music size={14} /> <span>SOUNDSCAPE</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('auras')}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-black transition-all ${
-                    activeTab === 'auras' ? 'bg-amber-500 text-slate-950' : 'text-slate-300 hover:bg-white/5'
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                    activeTab === 'auras' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:bg-white/5'
                   }`}
                 >
-                  <Palette size={14} /> <span className="hidden sm:inline">COMPANION</span>
+                  <Palette size={14} /> <span>SKINS</span>
                 </button>
               </div>
             </div>
@@ -530,16 +692,16 @@ export function SubscriptionScreen({
             {/* TAB CONTENT: AI COACH */}
             {activeTab === 'coach' && (
               <div className="space-y-4">
-                <p className="text-slate-200 text-xs sm:text-sm font-medium">
+                <p className="text-slate-300 text-xs sm:text-sm font-medium">
                   Talk directly with Nexora's AI Mentor. We analyze your levels to forge optimal strategy plans.
                 </p>
-                <div className="h-64 bg-black/60 rounded-2xl border border-white/5 p-4 overflow-y-auto space-y-3 font-medium flex flex-col">
+                <div className="h-64 bg-black/60 rounded-2xl border border-white/10 p-4 overflow-y-auto space-y-3 font-medium flex flex-col">
                   {messages.map((msg, i) => (
                     <div 
                       key={i} 
-                      className={`max-w-[85%] p-3 rounded-2xl text-xs leading-relaxed ${
+                      className={`max-w-[85%] p-3.5 rounded-2xl text-xs leading-relaxed ${
                         msg.sender === 'coach' 
-                          ? 'bg-amber-500/10 text-amber-200 self-start border border-amber-500/15' 
+                          ? 'bg-emerald-500/10 text-emerald-200 self-start border border-emerald-500/20' 
                           : 'bg-white/10 text-white self-end border border-white/10'
                       }`}
                     >
@@ -547,8 +709,8 @@ export function SubscriptionScreen({
                     </div>
                   ))}
                   {aiLoading && (
-                    <div className="bg-amber-500/10 text-amber-200 p-3 rounded-2xl text-xs self-start border border-amber-500/15 flex items-center gap-1.5">
-                      <RefreshCw size={12} className="animate-spin text-amber-500" /> Thinking...
+                    <div className="bg-emerald-500/10 text-emerald-200 p-3 rounded-2xl text-xs self-start border border-emerald-500/20 flex items-center gap-1.5">
+                      <RefreshCw size={12} className="animate-spin text-emerald-400" /> Thinking...
                     </div>
                   )}
                 </div>
@@ -563,10 +725,10 @@ export function SubscriptionScreen({
                       key={idx}
                       disabled={aiLoading}
                       onClick={() => handleAskCoach(q)}
-                      className="px-3.5 py-2 sm:py-2.5 bg-white/5 hover:bg-white/10 text-slate-200 text-[10px] sm:text-xs font-bold rounded-xl border border-white/10 flex items-center gap-1.5 transition-all text-left max-w-full"
+                      className="px-3.5 py-2.5 bg-white/5 hover:bg-white/10 text-slate-200 text-xs font-bold rounded-xl border border-white/10 flex items-center gap-1.5 transition-all text-left"
                     >
-                      <Sparkles size={11} className="text-amber-500 shrink-0" />
-                      <span className="truncate">{q}</span>
+                      <Sparkles size={12} className="text-emerald-400 shrink-0" />
+                      <span>{q}</span>
                     </button>
                   ))}
                 </div>
@@ -576,7 +738,7 @@ export function SubscriptionScreen({
             {/* TAB CONTENT: SOUNDSCAPES PLAYER */}
             {activeTab === 'soundscapes' && (
               <div className="space-y-4">
-                <p className="text-slate-200 text-xs sm:text-sm font-medium">
+                <p className="text-slate-300 text-xs sm:text-sm font-medium">
                   Trigger procedural focus sound waves synthesized live inside your browser using the Web Audio API.
                 </p>
                 
@@ -590,7 +752,7 @@ export function SubscriptionScreen({
                       key={track.id} 
                       className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
                         isPlayingSound === track.id 
-                          ? 'bg-amber-500/10 border-amber-500/50' 
+                          ? 'bg-emerald-500/10 border-emerald-500/50' 
                           : 'bg-white/5 border-white/5'
                       }`}
                     >
@@ -627,14 +789,14 @@ export function SubscriptionScreen({
                   ))}
                 </div>
 
-                {/* Sound wave visualizer and Volume slider */}
+                {/* Volume & Wave Visualizer */}
                 {isPlayingSound && (
                   <motion.div 
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="p-4 bg-black/40 rounded-2xl border border-amber-500/20 flex flex-col sm:flex-row items-center gap-4"
+                    className="p-4 bg-black/40 rounded-2xl border border-emerald-500/20 flex flex-col sm:flex-row items-center gap-4"
                   >
-                    <div className="flex items-center gap-2 text-amber-500 flex-1 w-full justify-center sm:justify-start">
+                    <div className="flex items-center gap-2 text-emerald-400 flex-1 w-full justify-center sm:justify-start">
                       <Volume2 size={16} />
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Volume</span>
                       <input 
@@ -644,15 +806,14 @@ export function SubscriptionScreen({
                         step="0.05"
                         value={audioVolume}
                         onChange={(e) => setAudioVolume(parseFloat(e.target.value))}
-                        className="w-24 sm:w-32 accent-amber-500 cursor-pointer"
+                        className="w-24 sm:w-32 accent-emerald-500 cursor-pointer"
                       />
                     </div>
-                    {/* Animated Synthesizer Wave SVG */}
                     <div className="h-8 flex gap-1 items-center shrink-0">
                       {[...Array(12)].map((_, i) => (
                         <div 
                           key={i} 
-                          className="w-1 bg-amber-500 rounded-full"
+                          className="w-1 bg-emerald-400 rounded-full"
                           style={{
                             height: `${15 + Math.random() * 85}%`,
                             animation: `bounce 0.8s ease-in-out infinite alternate`,
@@ -669,14 +830,12 @@ export function SubscriptionScreen({
             {/* TAB CONTENT: MASCOT CUSTOMIZER */}
             {activeTab === 'auras' && (
               <div className="space-y-4">
-                <p className="text-slate-200 text-xs sm:text-sm font-medium">
+                <p className="text-slate-300 text-xs sm:text-sm font-medium">
                   Activate elite, high-fidelity neon skins and custom companion aura particles that glow in real-time.
                 </p>
 
                 <div className="flex flex-col md:flex-row gap-6 items-center">
-                  {/* Live Interactive Mascot Preview */}
                   <div className="w-40 h-40 bg-black/60 rounded-3xl border border-white/10 flex items-center justify-center relative overflow-hidden shrink-0 group">
-                    {/* Glowing Aura Loop */}
                     <div 
                       className="absolute inset-4 rounded-full filter blur-xl opacity-60 animate-pulse transition-all duration-500"
                       style={{
@@ -684,27 +843,9 @@ export function SubscriptionScreen({
                       }}
                     />
                     
-                    {/* Mini floating elements/particles */}
-                    <div className="absolute inset-0 pointer-events-none">
-                      {[...Array(4)].map((_, i) => (
-                        <div 
-                          key={i} 
-                          className="absolute w-2 h-2 rounded-full opacity-60"
-                          style={{
-                            background: activeSkin === 'neon' ? '#EC4899' : activeSkin === 'cosmic' ? '#A855F7' : '#38BDF8',
-                            top: `${20 + Math.random() * 60}%`,
-                            left: `${20 + Math.random() * 60}%`,
-                            animation: `float 2.5s ease-in-out infinite`,
-                            animationDelay: `${i * 0.4}s`
-                          }}
-                        />
-                      ))}
-                    </div>
-
                     <Mascot theme={activeSkin} className="w-24 h-24 relative z-10 transition-transform duration-300 group-hover:scale-110" mood="happy" />
                   </div>
 
-                  {/* Skins Grid List */}
                   <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full">
                     {[
                       { id: 'standard', name: 'Classic Blue', color: 'bg-[#38BDF8]' },
@@ -719,14 +860,14 @@ export function SubscriptionScreen({
                         onClick={() => handleSelectAuraSkin(skin.id)}
                         className={`p-3 rounded-xl border transition-all text-left flex items-center gap-2 ${
                           activeSkin === skin.id 
-                            ? 'bg-amber-500/10 border-amber-500/50' 
+                            ? 'bg-emerald-500/10 border-emerald-500/50' 
                             : 'bg-white/5 border-white/5 hover:border-white/10'
                         }`}
                       >
                         <div className={`w-3.5 h-3.5 rounded-full ${skin.color}`} />
                         <div>
                           <p className="text-[10px] font-black text-white leading-none mb-0.5">{skin.name}</p>
-                          <p className={`text-[8px] font-bold uppercase tracking-widest ${activeSkin === skin.id ? 'text-amber-500' : 'text-slate-400'}`}>
+                          <p className={`text-[8px] font-bold uppercase tracking-widest ${activeSkin === skin.id ? 'text-emerald-400' : 'text-slate-400'}`}>
                             {activeSkin === skin.id ? 'Active' : 'Aura'}
                           </p>
                         </div>
@@ -739,8 +880,8 @@ export function SubscriptionScreen({
           </div>
         </motion.div>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-16">
+        {/* Feature Grid Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
           {features.map((f, i) => (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -748,35 +889,36 @@ export function SubscriptionScreen({
               transition={{ delay: i * 0.1 }}
               viewport={{ once: true }}
               key={f.title}
-              className="p-6 rounded-3xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors group"
+              className="p-6 rounded-3xl bg-slate-900/80 border border-white/10 hover:border-emerald-500/40 transition-all group"
             >
-              <div className="flex items-center gap-4 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
-                  <Check size={20} />
-                </div>
-                <h4 className="font-black text-lg text-white">{f.title}</h4>
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
+                <Check size={20} />
               </div>
-              <p className="text-slate-200 text-sm leading-relaxed">{f.description}</p>
+              <h4 className="font-black text-base text-white mb-1">{f.title}</h4>
+              <p className="text-slate-300 text-xs leading-relaxed font-medium">{f.description}</p>
             </motion.div>
           ))}
         </div>
 
         {/* Comparison Table */}
-        <div className="mb-24 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/5 backdrop-blur-xl">
-          <div className="p-8 border-b border-white/10 bg-white/5">
-            <h3 className="font-black text-xl tracking-tight uppercase text-white">Protocol Comparison</h3>
-            <p className="text-[10px] uppercase tracking-widest text-slate-300 font-bold mt-1">Free Tier vs Architect Pro</p>
+        <div className="mb-16 overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-900/90 backdrop-blur-xl">
+          <div className="p-6 sm:p-8 border-b border-white/10 bg-white/5 flex items-center justify-between">
+            <div>
+              <h3 className="font-black text-xl tracking-tight uppercase text-white">PROTOCOL COMPARISON</h3>
+              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mt-1">Free Tier vs Architect Pro</p>
+            </div>
+            <Crown size={28} className="text-amber-400" />
           </div>
           <div className="p-0 overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[500px] sm:min-w-full">
+            <table className="w-full text-left border-collapse min-w-[500px]">
               <thead>
-                <tr className="border-b border-white/10">
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-300">Capability</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-300 text-center bg-white/5">Free</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-amber-500 text-center bg-amber-500/5">Pro</th>
+                <tr className="border-b border-white/10 text-[10px] font-black uppercase text-slate-400">
+                  <th className="px-6 py-4">Capability</th>
+                  <th className="px-6 py-4 text-center bg-white/5">Free</th>
+                  <th className="px-6 py-4 text-center bg-emerald-500/10 text-emerald-400">Pro</th>
                 </tr>
               </thead>
-              <tbody className="text-sm">
+              <tbody className="text-xs font-medium">
                 {[
                   { name: 'Core Challenges', free: true, pro: true },
                   { name: 'Community Access', free: true, pro: true },
@@ -786,13 +928,13 @@ export function SubscriptionScreen({
                   { name: 'Mascot Skins', free: 'Basic', pro: 'Experimental/Elite' },
                   { name: 'Support', free: 'Community', pro: 'Priority Protocol' },
                 ].map((row, i) => (
-                  <tr key={i} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors text-[11px]">
-                    <td className="px-6 py-4 font-bold text-slate-200 uppercase tracking-tight whitespace-normal">{row.name}</td>
-                    <td className="px-6 py-4 text-center text-slate-300 bg-white/5 font-black">
-                      {typeof row.free === 'boolean' ? (row.free ? <Check size={14} className="mx-auto text-emerald-500" /> : <X size={14} className="mx-auto text-gray-700" />) : row.free}
+                  <tr key={i} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-4 font-bold text-slate-200 uppercase tracking-tight">{row.name}</td>
+                    <td className="px-6 py-4 text-center text-slate-400 bg-white/5 font-black">
+                      {typeof row.free === 'boolean' ? (row.free ? <Check size={16} className="mx-auto text-emerald-400" /> : <X size={16} className="mx-auto text-slate-600" />) : row.free}
                     </td>
-                    <td className="px-6 py-4 text-center bg-amber-500/5 font-black text-amber-400">
-                      {typeof row.pro === 'boolean' ? (row.pro ? <Crown size={14} className="mx-auto text-amber-500" /> : <X size={14} className="mx-auto text-rose-500" />) : row.pro}
+                    <td className="px-6 py-4 text-center bg-emerald-500/5 font-black text-emerald-400">
+                      {typeof row.pro === 'boolean' ? (row.pro ? <Crown size={16} className="mx-auto text-amber-400" /> : <X size={16} className="mx-auto text-rose-500" />) : row.pro}
                     </td>
                   </tr>
                 ))}
@@ -801,136 +943,86 @@ export function SubscriptionScreen({
           </div>
         </div>
 
-        {/* Payment Options */}
-        <div className="space-y-4 mb-24">
-          <h2 className="text-center text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mb-8">SECURE PAYMENT PROTOCOLS</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-8 rounded-[2rem] bg-white/5 border border-white/10 flex flex-col items-center text-center space-y-4 hover:border-white/20 transition-all cursor-pointer hover:bg-white/10 group">
-              <div className="text-4xl group-hover:rotate-12 transition-transform">💎</div>
-              <div>
-                <h3 className="font-black text-xl text-white">YEARLY</h3>
-                <p className="text-amber-500 font-bold">$64.00 / year</p>
-                <p className="text-[10px] text-slate-300 mt-2">Elite Master Access</p>
+        {/* Crypto & Direct Payment Details */}
+        <div className="p-6 sm:p-10 rounded-[3rem] bg-slate-900/90 border border-white/10 backdrop-blur-xl mb-16">
+          <div className="flex flex-col lg:flex-row items-center gap-8">
+            <div className="flex-1 space-y-4">
+              <div className="flex items-center gap-2 text-amber-400 font-black text-xs uppercase tracking-widest">
+                <Coins size={18} /> CRYPTO & DIRECT MANUAL PAYMENT
               </div>
-            </div>
-            <div className="p-8 rounded-[2rem] bg-gradient-to-b from-amber-500/20 to-amber-950/40 border-2 border-amber-500/50 flex flex-col items-center text-center space-y-4 relative hover:scale-105 transition-all cursor-pointer group">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full text-white">LEGEND CHOICE</div>
-              <div className="text-4xl text-amber-400 group-hover:scale-125 transition-transform">🔥</div>
-              <div>
-                <h3 className="font-black text-xl text-white">MONTHLY</h3>
-                <p className="text-amber-400 font-bold">$14.99 / mo</p>
-                <p className="text-[10px] text-amber-300 mt-2">Maximum Protocol</p>
-              </div>
-            </div>
-            <div className="p-8 rounded-[2rem] bg-white/5 border border-white/10 flex flex-col items-center text-center space-y-4 hover:border-white/20 transition-all cursor-pointer hover:bg-white/10 group">
-              <div className="text-4xl text-blue-400 group-hover:-rotate-12 transition-transform">⚡</div>
-              <div>
-                <h3 className="font-black text-xl text-white">WEEKLY</h3>
-                <p className="text-blue-400 font-bold">$4.99 / wk</p>
-                <p className="text-[10px] text-slate-300 mt-2">Quick Protocol</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Pay What You Want / Support Section */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="p-10 rounded-[3rem] bg-gradient-to-br from-indigo-600/10 via-slate-900 to-indigo-600/5 border-2 border-indigo-500/30 text-center space-y-8 overflow-hidden relative"
-          >
-            <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-indigo-500/10 blur-[100px]" />
-            <div className="absolute -top-20 -right-20 w-64 h-64 bg-blue-500/10 blur-[100px]" />
-            
-            <div className="relative z-10 space-y-3">
-              <div className="w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/30">
-                <Heart className="text-indigo-400" size={28} />
-              </div>
-              <h3 className="text-3xl font-black tracking-tighter italic text-white">WILLINGLY SUPPORT</h3>
-              <p className="text-base text-slate-200 max-w-lg mx-auto leading-relaxed">
-                Nexora is built for the community. If you find value in our mission, you can choose to willingly support the lab with whatever amount you feel is right. Legends invest in the future.
+              <h3 className="text-2xl font-black text-white tracking-tight">Prefer paying with Crypto (BTC/USDT) or m-GURUSH?</h3>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+                Send your payment to the wallet addresses below along with your Unique User ID <b className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded font-mono">({userId})</b> via WhatsApp to get activated instantly.
               </p>
-            </div>
 
-            <div className="grid grid-cols-3 md:flex md:flex-wrap justify-center gap-3 relative z-10">
-              {['$5', '$10', '$25', '$50', '$100', 'Custom'].map((val) => (
-                <button
-                  key={val}
-                  onClick={() => {
-                    vibrate(VIBRATION_PATTERNS.SUCCESS);
-                    window.open(`https://api.whatsapp.com/send?phone=211929635502&text=Hi%20Nexora,%20I'd%20like%20to%20willingly%20support%20the%20mission%20with%20${val}.%20My%20UID:%20${userId}`, '_blank');
-                  }}
-                  className="px-6 py-4 bg-white/5 hover:bg-white text-slate-300 hover:text-slate-950 border border-white/10 rounded-2xl font-black text-xs transition-all active:scale-95 shadow-xl shadow-black/20"
-                >
-                  {val}
-                </button>
-              ))}
-            </div>
-          </motion.div>
+              {/* Copyable Wallet Cards */}
+              <div className="space-y-3 font-mono text-xs pt-2">
+                <div className="p-4 rounded-2xl bg-black/60 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 group hover:border-amber-500/40 transition-colors">
+                  <div className="break-all">
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase font-sans mb-0.5">Bitcoin (BTC) Wallet:</span>
+                    <span className="text-amber-200 select-all font-semibold">bc1q5qfv4fkvd9s5j90pc6mg9fjxjyelt992fu0xfh</span>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard('bc1q5qfv4fkvd9s5j90pc6mg9fjxjyelt992fu0xfh', 'btc')}
+                    className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 rounded-xl font-sans font-extrabold text-xs transition-all flex items-center gap-1.5 shrink-0"
+                  >
+                    <Copy size={12} /> {copiedKey === 'btc' ? 'Copied!' : 'Copy Address'}
+                  </button>
+                </div>
 
-          <div className="mt-8 p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] bg-slate-900/80 border border-white/10 backdrop-blur-md">
-            <div className="flex flex-col md:flex-row gap-8">
-              <div className="flex-1 space-y-4">
-                <h3 className="text-lg font-black text-blue-400 flex items-center gap-2">
-                  <MessageSquare size={20} /> CRYPTO & m-GURUSH
-                </h3>
-                <p className="text-xs text-slate-200 leading-relaxed">
-                  Manual verification for South Sudan and Crypto users. Send payment and your UID <b className="text-white">({userId})</b> to WhatsApp.
-                </p>
-                <div className="space-y-3 font-mono text-[10px] sm:text-xs bg-black/50 p-5 rounded-2xl border border-white/5">
-                  <p className="text-amber-200 select-all break-all leading-normal">
-                    <span className="text-slate-400 font-bold block mb-1">BTC Address:</span>
-                    bc1q5qfv4fkvd9s5j90pc6mg9fjxjyelt992fu0xfh
-                  </p>
-                  <p className="text-blue-200 select-all break-all leading-normal border-t border-white/5 pt-3">
-                    <span className="text-slate-400 font-bold block mb-1">USDT (ERC20) Address:</span>
-                    0x0d10b62ca87c87bcfa91cee9a08d3041b10d104e
-                  </p>
+                <div className="p-4 rounded-2xl bg-black/60 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 group hover:border-emerald-500/40 transition-colors">
+                  <div className="break-all">
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase font-sans mb-0.5">USDT (ERC20 / TRC20) Wallet:</span>
+                    <span className="text-emerald-200 select-all font-semibold">0x0d10b62ca87c87bcfa91cee9a08d3041b10d104e</span>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard('0x0d10b62ca87c87bcfa91cee9a08d3041b10d104e', 'usdt')}
+                    className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 rounded-xl font-sans font-extrabold text-xs transition-all flex items-center gap-1.5 shrink-0"
+                  >
+                    <Copy size={12} /> {copiedKey === 'usdt' ? 'Copied!' : 'Copy Address'}
+                  </button>
                 </div>
               </div>
-              <div className="w-full md:w-64 flex flex-col justify-center gap-3">
+            </div>
+
+            <div className="w-full lg:w-80 flex flex-col justify-center gap-3 shrink-0">
+              <button 
+                onClick={() => window.open(`https://api.whatsapp.com/send?phone=211929635502&text=${encodeURIComponent(`Hi Nexora, I'd like to activate Pro manually. My UID is: ${userId}`)}`, '_blank')}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 py-4 rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2"
+              >
+                <MessageSquare size={18} /> OPEN WHATSAPP CHAT
+              </button>
+
+              {onActivatePro && (
                 <button 
-                  onClick={() => window.open(`https://api.whatsapp.com/send?phone=211929635502&text=Hi%20Nexora,%20I'd%20like%20to%20activate%20Pro%20manually.%20My%20UID%20is:%20${userId}`, '_blank')}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-xl font-black text-xs transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                  onClick={() => {
+                    if (confirm("Admin Verification Mode: Instantly activate Pro on this device?")) {
+                      onActivatePro();
+                      onBack();
+                    }
+                  }}
+                  className="py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors text-center"
                 >
-                  <MessageSquare size={16} /> WHATSAPP
+                  ⚡ Admin Quick Verify
                 </button>
-                {onActivatePro && (
-                  <button 
-                    onClick={() => {
-                      if (confirm("Developer Mode: Activate Pro instantly for verification?")) {
-                        onActivatePro();
-                        onBack();
-                      }
-                    }}
-                    className="text-[8px] font-black text-white/20 uppercase tracking-widest hover:text-white/40 transition-colors"
-                  >
-                    Auto-Verify (Admin)
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="text-center pb-12">
-          <p className="text-slate-600 text-[8px] font-black uppercase tracking-[0.6em]">Nexora Discipline Systems © 2026</p>
+        <div className="text-center pb-8">
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.5em]">Nexora Discipline Systems © 2026</p>
         </div>
       </div>
       
-      {/* Dynamic Keyframes for simple CSS bounce & float */}
+      {/* Keyframe animations */}
       <style>{`
         @keyframes bounce {
           0% { transform: scaleY(0.4); }
           100% { transform: scaleY(1); }
         }
-        @keyframes float {
-          0% { transform: translateY(0px) scale(1); opacity: 0.4; }
-          50% { transform: translateY(-10px) scale(1.1); opacity: 0.8; }
-          100% { transform: translateY(0px) scale(1); opacity: 0.4; }
-        }
       `}</style>
     </motion.div>
   );
 }
+

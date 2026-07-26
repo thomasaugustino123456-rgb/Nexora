@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
 import { ScreenWater } from './ScreenWater';
+import { WaterMascot } from './WaterMascot';
 import { UserStats, DailyProgress, UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';
 
@@ -236,159 +237,29 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
         </div>
       </header>
 
-      {/* Main Container - Modern Dashboard featuring bottle on left, and ring widget + streak counter on right */}
-      <div className="flex-1 w-full max-w-5xl mx-auto px-4 xs:px-6 flex items-center justify-center relative z-40 -mt-6">
+      {/* Main Container - Modern Dashboard featuring mascot on left (512px max), and card box + streak counter on right */}
+      <div className="flex-1 w-full max-w-6xl mx-auto px-3 xs:px-5 flex items-center justify-center relative z-40 -mt-2 sm:-mt-6">
         
-        <div className="flex flex-row items-center justify-center gap-4 xs:gap-6 sm:gap-12 md:gap-16 w-full max-w-4xl mx-auto">
+        <div className="flex flex-row items-center justify-center gap-3 xs:gap-6 sm:gap-10 md:gap-12 w-full max-w-5xl mx-auto">
           
-          {/* Left Column: Adaptive/Responsive Elegant Water Bottle (User's request to place on the left) */}
-          <div className="flex items-center justify-center flex-shrink-0 animate-in fade-in duration-500 w-[42%] xs:w-[45%] md:w-[50%] md:max-w-[512px]">
-            <div className="relative w-[105px] h-[262px] xs:w-[125px] xs:h-[312px] sm:w-[160px] sm:h-[400px] md:w-[190px] md:h-[475px] drop-shadow-[0_15px_40px_rgba(14,165,233,0.18)] animate-in zoom-in duration-500 flex items-center justify-center">
+          {/* Left Column: App Water Mascot (Prominent, up to 512px size as requested) */}
+          <div className="flex flex-col items-center justify-center flex-shrink-0 animate-in fade-in duration-500 w-[55%] xs:w-[58%] sm:w-[60%] max-w-[320px] xs:max-w-[420px] sm:max-w-[480px] md:max-w-[512px]">
+            <div className="relative w-full drop-shadow-[0_20px_50px_rgba(14,165,233,0.25)] animate-in zoom-in duration-500 flex flex-col items-center justify-center">
+              <WaterMascot progress={activeProgress} className="w-full max-w-[320px] xs:max-w-[420px] sm:max-w-[480px] md:max-w-[512px]" />
               
-              <svg
-                viewBox="0 0 200 500"
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-full h-full overflow-visible"
-              >
-                <defs>
-                  {/* Inner cavity mask to clip water inside the container perfectly */}
-                  <clipPath id="bottle-inner-mask">
-                    <path
-                      d="
-                        M 84,130
-                        L 84,82
-                        L 116,82
-                        L 116,130
-                        C 116,130 126,155 148,175
-                        L 148,452
-                        Q 148,468 132,468
-                        L 68,468
-                        Q 52,468 52,452
-                        L 52,175
-                        C 52,175 74,155 84,130
-                        Z
-                      "
-                    />
-                  </clipPath>
-
-                  {/* Glass reflective radial glare */}
-                  <linearGradient id="glass-specular" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
-                    <stop offset="50%" stopColor="#ffffff" stopOpacity="0.08" />
-                    <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.25" />
-                  </linearGradient>
-
-                  {/* Rich water body colors with shading */}
-                  <linearGradient id="water-body-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.9" />
-                    <stop offset="40%" stopColor="#0ea5e9" stopOpacity="0.95" />
-                    <stop offset="100%" stopColor="#1e3a8a" stopOpacity="0.98" />
-                  </linearGradient>
-                </defs>
-
-                {/* Ground Shadow underneath the bottle */}
-                <ellipse cx="100" cy="482" rx="60" ry="8" fill="#000000" fillOpacity="0.18" filter="blur(3px)" />
-
-                {/* 1. LIQUID CONTENTS (Clamped inside bottle body cavity) */}
-                <g clipPath="url(#bottle-inner-mask)">
-                  {/* Soft backing glass refraction tint */}
-                  <rect x="30" y="30" width="140" height="440" fill="#e0f2fe" fillOpacity="0.3" />
-                  <ellipse cx="100" cy="300" rx="46" ry="164" fill="#0ea5e9" fillOpacity="0.06" />
-
-                  {/* Parallax background waver */}
-                  <motion.path
-                    d={backgroundWaterPath}
-                    fill="#0284c7"
-                    opacity="0.4"
-                    animate={{ y: [0, -1, 0] }}
-                    transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
-                  />
-
-                  {/* Main foreground sloshing liquid */}
-                  <motion.path
-                    d={foregroundWaterPath}
-                    fill="url(#water-body-grad)"
-                    animate={{ y: [0, 1.5, 0] }}
-                    transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
-                  />
-
-                  {/* Tiny rising oxygen bubbles inside the water */}
-                  {activeProgress > 0 && (
-                    <g fill="#ffffff" fillOpacity="0.7">
-                      <circle cx="82" cy="350" r="2.5" className="animate-bounce" style={{ animationDuration: "3s" }} />
-                      <circle cx="120" cy="410" r="3" className="animate-bounce" style={{ animationDuration: "4s" }} />
-                      <circle cx="68" cy="280" r="2" className="animate-bounce" style={{ animationDuration: "2.5s" }} />
-                      <circle cx="110" cy="310" r="3.5" className="animate-bounce" style={{ animationDuration: "3.5s" }} />
-                      <circle cx="95" cy="440" r="2" className="animate-bounce" style={{ animationDuration: "5s" }} />
-                    </g>
-                  )}
-                </g>
-
-                {/* 2. REALISTIC GLOSSY GLASS SHELL (Drawn on top for perfect specular refraction) */}
-                <path
-                  d="
-                    M 80,130
-                    L 80,82
-                    L 120,82
-                    L 120,130
-                    C 120,130 132,155 154,175
-                    L 154,452
-                    Q 154,472 132,472
-                    L 68,472
-                    Q 46,472 46,452
-                    L 46,175
-                    C 46,175 68,155 80,130
-                    Z
-                  "
-                  fill="url(#glass-specular)"
-                  fillOpacity="0.3"
-                  stroke="#0ea5e9"
-                  strokeWidth="3.5"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                />
-
-                {/* Thread details near the neck */}
-                <line x1="82" y1="92" x2="118" y2="92" stroke="#0ea5e9" strokeWidth="2" opacity="0.6" />
-                <line x1="82" y1="102" x2="118" y2="102" stroke="#0ea5e9" strokeWidth="2" opacity="0.6" />
-                <line x1="82" y1="112" x2="118" y2="112" stroke="#0ea5e9" strokeWidth="2" opacity="0.6" />
-
-                {/* Premium shiny cap on top */}
-                <rect x="74" y="44" width="52" height="38" rx="8" fill="#1e40af" stroke="#0ea5e9" strokeWidth="3" />
-                <line x1="84" y1="48" x2="84" y2="78" stroke="#38bdf8" strokeWidth="2.5" opacity="0.7" />
-                <line x1="92" y1="48" x2="92" y2="78" stroke="#38bdf8" strokeWidth="2.5" opacity="0.7" />
-                <line x1="100" y1="48" x2="100" y2="78" stroke="#38bdf8" strokeWidth="2.5" opacity="0.7" />
-                <line x1="108" y1="48" x2="108" y2="78" stroke="#38bdf8" strokeWidth="2.5" opacity="0.7" />
-                <line x1="116" y1="48" x2="116" y2="78" stroke="#38bdf8" strokeWidth="2.5" opacity="0.7" />
-
-                {/* Glossy linear highlights tracing down the side profiles */}
-                <path d="M 52,190 Q 51,320 51,440" fill="none" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" opacity="0.6" />
-                <path d="M 148,190 Q 149,320 149,440" fill="none" stroke="#0ea5e9" strokeWidth="3.5" strokeLinecap="round" opacity="0.4" />
-
-                {/* Specular curved glass reflections */}
-                <path d="M 54,195 A 150,120 0 0,1 146,195" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.45" />
-                <path d="M 70,464 Q 100,466 130,464" fill="none" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" opacity="0.6" />
-
-                {/* Floating shiny stars for premium appearance */}
-                <g fill="#ffffff">
-                  <polygon points="35,160 38,163 41,160 38,157" className="animate-pulse" style={{ animationDuration: "2.5s" }} />
-                  <polygon points="165,145 168,148 171,145 168,142" className="animate-pulse" style={{ animationDuration: "3.5s" }} />
-                </g>
-              </svg>
-
-              {/* Water level digital percentage label inside the bottle */}
-              <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none text-center">
-                <span className="text-xs xs:text-sm font-black text-white/95 tracking-widest block uppercase drop-shadow-md bg-blue-950/40 px-3 py-1 rounded-full border border-blue-400">
-                  {(activeProgress * 100).toFixed(0)}%
+              {/* Water level digital percentage badge below mascot */}
+              <div className="-mt-1 xs:-mt-2 sm:-mt-4 pointer-events-none text-center z-30">
+                <span className="text-xs xs:text-sm sm:text-base font-black text-white tracking-wider inline-block uppercase drop-shadow-md bg-blue-600/90 px-4 py-1.5 xs:px-5 xs:py-2 rounded-full border border-blue-300 shadow-md">
+                  {(activeProgress * 100).toFixed(0)}% FULL
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Interactive stats & layout (User's request to place on the right next to the bottle) */}
-          <div className="flex flex-col items-center sm:items-start text-center sm:text-left space-y-4 xs:space-y-6 sm:space-y-8 md:space-y-10 w-[55%] xs:w-[50%] sm:w-[50%] max-w-[280px] sm:max-w-md text-[#4F3F34]">
+          {/* Right Column: Interactive stats & card box balanced with mascot */}
+          <div className="flex flex-col items-center sm:items-start text-center sm:text-left space-y-3 xs:space-y-5 sm:space-y-6 w-[45%] xs:w-[42%] max-w-[220px] xs:max-w-[260px] sm:max-w-[320px] text-[#4F3F34]">
             
-            {/* Red Circle-inspired Custom Circular Hydration progress widget matching third image */}
+            {/* Today's Water Progress Card Box (Balanced with 512px mascot) */}
             <motion.div 
               onClick={handleCardBoxClick}
               whileHover={{ scale: 1.02 }}
@@ -398,7 +269,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                 opacity: 1, 
                 x: 0,
                 borderColor: isDrinkingAnimate ? "#0ea5e9" : "#E9E4D4",
-                boxShadow: isDrinkingAnimate ? "0 20px 40px -10px rgba(14,165,233,0.18)" : "0 10px 30px rgba(79,63,52,0.04)",
+                boxShadow: isDrinkingAnimate ? "0 15px 35px -10px rgba(14,165,233,0.2)" : "0 8px 25px rgba(79,63,52,0.06)",
                 scale: isDrinkingAnimate ? 1.03 : 1
               }}
               transition={{ 
@@ -407,12 +278,12 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                 scale: { type: "spring", stiffness: 350, damping: 15 },
                 default: { delay: 0.1 }
               }}
-              className="bg-white/95 hover:bg-white backdrop-blur-md rounded-[24px] p-4 xs:p-5 sm:p-6 border border-[#E9E4D4]/70 shadow-lg w-full flex flex-col sm:flex-row items-center gap-4 sm:gap-5 relative overflow-hidden cursor-pointer hover:border-[#0ea5e9]/30 transition-all active:ring-4 active:ring-blue-50/50"
+              className="bg-white/95 hover:bg-white backdrop-blur-md rounded-2xl xs:rounded-3xl p-3.5 xs:p-4 sm:p-5 md:p-6 border border-[#E9E4D4]/80 shadow-md w-full flex flex-col items-center gap-2.5 xs:gap-3 relative overflow-hidden cursor-pointer hover:border-[#0ea5e9]/30 transition-all active:ring-2 active:ring-blue-100"
             >
               {/* Outer Decorative Glow */}
-              <div className="absolute -top-10 -right-10 w-24 h-24 bg-blue-400/10 rounded-full blur-xl pointer-events-none" />
+              <div className="absolute -top-8 -right-8 w-20 h-20 bg-blue-400/10 rounded-full blur-lg pointer-events-none" />
 
-              {/* Falling Droplet Layer relative on top of the phone screen landing directly into the container */}
+              {/* Falling Droplet Layer */}
               <AnimatePresence>
                 {isDropping && (
                   <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
@@ -422,7 +293,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                       animate={{ y: 0, opacity: [0.3, 1, 1], scale: [1.3, 1, 0.95] }}
                       exit={{ scale: [0.95, 2.2], opacity: [1, 0] }}
                       transition={{ 
-                        y: { duration: 0.62, ease: [0.47, 0, 0.745, 0.715] }, // gravity acceleration curve
+                        y: { duration: 0.62, ease: [0.47, 0, 0.745, 0.715] },
                         opacity: { duration: 0.15 },
                         scale: { duration: 0.25 }
                       }}
@@ -434,7 +305,7 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                       }}
                       className="absolute pl-0.5 pt-0.5"
                     >
-                      <svg className="w-10 h-10 xs:w-12 xs:h-12 text-[#0ea5e9] drop-shadow-[0_4px_15px_rgba(14,165,233,0.75)]" fill="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-8 h-8 xs:w-10 xs:h-10 text-[#0ea5e9] drop-shadow-[0_4px_15px_rgba(14,165,233,0.75)]" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
                       </svg>
                     </motion.div>
@@ -442,53 +313,44 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                 )}
               </AnimatePresence>
               
-              {/* SVG Ring Progress - Properly scaled with responsive viewBox */}
-              <div className="relative w-16 h-16 xs:w-20 xs:h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 flex-shrink-0 flex items-center justify-center">
+              {/* SVG Ring Progress */}
+              <div className="relative w-14 h-14 xs:w-16 xs:h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex-shrink-0 flex items-center justify-center">
                 <svg viewBox="0 0 80 80" className="w-full h-full transform -rotate-90">
                   {/* Background Circle */}
                   <circle
                     cx="40"
                     cy="40"
-                    r="34"
-                    className="stroke-blue-100/50"
-                    strokeWidth="6.5"
+                    r="33"
+                    className="stroke-blue-100/60"
+                    strokeWidth="6"
                     fill="transparent"
                   />
                   {/* Foreground Animated Circle */}
                   <motion.circle
                     cx="40"
                     cy="40"
-                    r="34"
+                    r="33"
                     className="stroke-[#0ea5e9]"
-                    strokeWidth="6.5"
+                    strokeWidth="6"
                     fill="transparent"
-                    strokeDasharray={2 * Math.PI * 34}
-                    initial={{ strokeDashoffset: 2 * Math.PI * 34 }}
-                    animate={{ strokeDashoffset: 2 * Math.PI * 34 - (Math.min(finalDrunk / finalGoal, 1) * 2 * Math.PI * 34) }}
+                    strokeDasharray={2 * Math.PI * 33}
+                    initial={{ strokeDashoffset: 2 * Math.PI * 33 }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 33 - (Math.min(finalDrunk / finalGoal, 1) * 2 * Math.PI * 33) }}
                     transition={{ duration: 1.2, ease: "easeOut" }}
                   />
                 </svg>
-                {/* Central Droplet Icon inside the ring */}
-                <div className="absolute inset-0 flex items-center justify-center pl-0.5 pt-0.5">
-                  {/* Glowing pulses behind the droplet */}
+                {/* Central Droplet Icon inside ring */}
+                <div className="absolute inset-0 flex items-center justify-center">
                   <AnimatePresence>
                     {isDrinkingAnimate && (
                       <>
                         <motion.div
                           key="pulse-1"
                           initial={{ scale: 0.8, opacity: 0.8 }}
-                          animate={{ scale: 2.8, opacity: 0 }}
+                          animate={{ scale: 2.2, opacity: 0 }}
                           exit={{ opacity: 0 }}
-                          transition={{ duration: 1.5, ease: "easeOut" }}
-                          className="absolute w-12 h-12 bg-[#0ea5e9]/20 rounded-full"
-                        />
-                        <motion.div
-                          key="pulse-2"
-                          initial={{ scale: 0.7, opacity: 0.6 }}
-                          animate={{ scale: 3.5, opacity: 0 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 2.0, ease: "easeOut", delay: 0.2 }}
-                          className="absolute w-12 h-12 bg-[#38bdf8]/15 rounded-full"
+                          transition={{ duration: 1.2, ease: "easeOut" }}
+                          className="absolute w-10 h-10 bg-[#0ea5e9]/20 rounded-full"
                         />
                       </>
                     )}
@@ -496,13 +358,13 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                   
                   <motion.div
                     animate={isDrinkingAnimate ? {
-                      scale: [1, 1.4, 0.9, 1.2, 1],
+                      scale: [1, 1.3, 0.9, 1.1, 1],
                       rotate: [0, 15, -15, 5, 0],
                     } : {}}
                     transition={{ duration: 1.2, ease: "easeInOut" }}
                     className="relative z-10"
                   >
-                    <svg className="w-6 h-6 xs:w-8 xs:h-8 sm:w-10 sm:h-10 text-[#0ea5e9] drop-shadow-[0_2px_6px_rgba(14,165,233,0.35)]" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 text-[#0ea5e9] drop-shadow-[0_2px_4px_rgba(14,165,233,0.3)]" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
                     </svg>
                   </motion.div>
@@ -510,33 +372,33 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
               </div>
 
               {/* Text Information for today's drinks */}
-              <div className="flex flex-col text-center sm:text-left space-y-0.5 select-none min-w-0 flex-1">
-                <span className="text-[#0ea5e9] text-[10px] sm:text-xs font-black tracking-widest uppercase truncate">
+              <div className="flex flex-col text-center space-y-0.5 select-none w-full">
+                <span className="text-[#0ea5e9] text-[10px] xs:text-xs font-black tracking-widest uppercase truncate">
                   Today's Water
                 </span>
                 
-                <div className="h-6 sm:h-10 flex items-center justify-center sm:justify-start">
+                <div className="h-6 xs:h-7 flex items-center justify-center">
                   <AnimatePresence mode="popLayout">
                     <motion.span
                       key={finalDrunk}
-                      initial={{ y: 15, opacity: 0 }}
+                      initial={{ y: 10, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
-                      exit={{ y: -15, opacity: 0 }}
+                      exit={{ y: -10, opacity: 0 }}
                       transition={{ type: "spring", stiffness: 350, damping: 18 }}
-                      className="text-base xs:text-lg sm:text-xl md:text-2xl font-black text-[#4F3F34] tracking-tight block truncate"
+                      className="text-base xs:text-lg sm:text-xl font-black text-[#4F3F34] tracking-tight block truncate"
                     >
                       {finalDrunk.toFixed(1)} cups
                     </motion.span>
                   </AnimatePresence>
                 </div>
 
-                <div className="h-4 sm:h-5 flex items-center justify-center sm:justify-start">
+                <div className="h-4 xs:h-5 flex items-center justify-center">
                   <AnimatePresence mode="popLayout">
                     <motion.span
                       key={finalDrunk}
-                      initial={{ y: 8, opacity: 0 }}
+                      initial={{ y: 6, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
-                      exit={{ y: -8, opacity: 0 }}
+                      exit={{ y: -6, opacity: 0 }}
                       transition={{ type: "spring", stiffness: 350, damping: 20 }}
                       className="text-stone-500 font-semibold text-[10px] xs:text-xs sm:text-sm tracking-tight block truncate"
                     >
@@ -545,27 +407,27 @@ export const HydrationDetailPage: React.FC<HydrationDetailPageProps> = ({
                   </AnimatePresence>
                 </div>
 
-                <div className="mt-1 sm:mt-1.5 flex items-center justify-center sm:justify-start gap-1">
+                <div className="mt-1 flex items-center justify-center gap-1">
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[9px] sm:text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Tap Box to log +1 cup</span>
+                  <span className="text-[9px] xs:text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Tap Box to log +1 cup</span>
                 </div>
               </div>
             </motion.div>
 
-            {/* Streak Counter Segment (Positioned cleanly on the right column below progress widget) */}
+            {/* Consecutive Days Streak Counter Segment */}
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="flex flex-col items-center sm:items-start space-y-0.5 w-full pl-0 sm:pl-2"
+              className="flex flex-col items-center text-center space-y-0.5 w-full pt-1"
             >
-              <div className="flex items-baseline gap-1 xs:gap-2 justify-center sm:justify-start">
-                <span className="text-4xl xs:text-5xl sm:text-6xl md:text-[8rem] font-sans font-black tracking-tighter text-[#0ea5e9] leading-none drop-shadow-[0_4px_15px_rgba(14,165,233,0.18)] select-none">
+              <div className="flex items-baseline gap-1 justify-center">
+                <span className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-sans font-black tracking-tighter text-[#3C2E2B] leading-none drop-shadow-sm select-none">
                   {consecutiveDays}
                 </span>
-                <span className="text-xl sm:text-3xl text-[#0ea5e9] select-none animate-bounce" style={{ animationDuration: "4s" }}>🔥</span>
+                <span className="text-xl xs:text-2xl sm:text-3xl select-none animate-bounce" style={{ animationDuration: "4s" }}>🔥</span>
               </div>
-              <span className="text-[#0ea5e9]/60 font-black text-[9px] xs:text-[10px] sm:text-xs tracking-[0.15em] sm:tracking-[0.2em] uppercase text-center sm:text-left">
+              <span className="text-[#3C2E2B]/70 font-black text-[9px] xs:text-[10px] sm:text-xs tracking-wider uppercase text-center">
                 CONSECUTIVE DAYS STREAK
               </span>
             </motion.div>

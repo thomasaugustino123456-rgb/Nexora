@@ -33,6 +33,14 @@ const LEAGUES = [
   'Nexus'
 ];
 
+export function getRankRewardCoins(rank: number): number {
+  if (rank === 1) return 400;
+  if (rank === 2) return 200;
+  if (rank === 3) return 150;
+  if (rank >= 4 && rank <= 6) return 50;
+  return 0;
+}
+
 // Beautiful custom vector SVG component for each specific League to give a high-prestige feel
 export function LeagueIcon({ league, active, className = "w-14 h-14" }: { league: string; active: boolean; className?: string }) {
   const activeShadow = active ? "drop-shadow-[0_0_12px_rgba(251,191,36,0.6)] animate-pulse" : "opacity-45 grayscale-[40%]";
@@ -215,7 +223,7 @@ export function LeaderboardScreen({
   const [climbPhase, setClimbPhase] = useState<'idle' | 'anticipation' | 'shooting' | 'impact' | 'celebrate'>('idle');
 
   const scrollToUser = (instant = false) => {
-    setTimeout(() => {
+    const attempt = () => {
       const el = document.getElementById("leaderboard-user-row");
       if (el) {
         el.scrollIntoView({
@@ -223,8 +231,21 @@ export function LeaderboardScreen({
           block: "center"
         });
       }
-    }, 120);
+    };
+    attempt();
+    requestAnimationFrame(attempt);
+    setTimeout(attempt, 60);
+    setTimeout(attempt, 180);
+    setTimeout(attempt, 350);
   };
+
+  // Auto scroll to user row on screen launch
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      scrollToUser(false);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const cardAnimProps = useMemo(() => {
     switch (climbPhase) {
@@ -557,35 +578,35 @@ export function LeaderboardScreen({
 
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-4xl shadow-sm animate-pulse">
-                {userRank > 0 && userRank <= 3 ? "🏆" : userRank >= 4 && userRank <= 10 ? "🥇" : userRank >= 11 && userRank <= 16 ? "🥈" : "🎗️"}
+                {userRank === 1 ? "🏆" : userRank === 2 ? "🥇" : userRank === 3 ? "🥈" : userRank >= 4 && userRank <= 6 ? "🥉" : "🎗️"}
               </div>
               <div className="min-w-0 flex-1">
                 <h4 className="text-sm font-black uppercase tracking-tight truncate text-slate-800">
-                  {userRank > 0 && userRank <= 16 
+                  {userRank > 0 && userRank <= 6 
                     ? `Congratulations, bro!` 
-                    : userRank > 16 
+                    : userRank > 6 
                       ? `Progress Recognition` 
                       : `Unranked`}
                 </h4>
                 <p className="text-[11px] text-slate-500 font-medium leading-tight">
                   {userRank === 1 
-                    ? `You are Rank #1! You've earned the ultimate weekly championship: 250 Coins, Golden Trophy, and +150 XP Bonus, bro! 🔥`
-                    : userRank > 1 && userRank <= 16
-                      ? `You are Rank #${userRank} this week and eligible for a special rebalanced coin reward, bro!` 
-                      : userRank > 16
-                        ? `You are Rank #${userRank}. Excellent routine consistency! Keep pushing to reach the Top 16 for raw coin rewards.`
+                    ? `You are Rank #1! You've earned the ultimate weekly championship: 400 Coins, Golden Trophy, and +150 XP Bonus, bro! 🔥`
+                    : userRank > 1 && userRank <= 6
+                      ? `You are Rank #${userRank} this week and earned +${getRankRewardCoins(userRank)} Coins reward, bro!` 
+                      : userRank > 6
+                        ? `You are Rank #${userRank}. Excellent effort! Keep pushing to reach the Top 6 for coin rewards.`
                         : `Complete your active habits to climb the ranks and unlock weekly chest rewards!`}
                 </p>
               </div>
             </div>
 
             {/* Reward Claim Parameters */}
-            {userRank > 0 && userRank <= 16 ? (
+            {userRank > 0 && userRank <= 6 ? (
               <div className="pt-2 border-t border-slate-150 flex items-center justify-between">
                 <div>
                   <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Calculated Reward</p>
                   <p className="text-sm font-black text-amber-600 flex flex-col leading-tight">
-                    <span>🪙 +{userRank === 1 ? 250 : userRank === 2 ? 200 : userRank === 3 ? 150 : userRank <= 10 ? 100 : 75} Coins</span>
+                    <span>🪙 +{getRankRewardCoins(userRank)} Coins</span>
                     {userRank === 1 && <span className="text-[9px] text-amber-600 font-bold uppercase tracking-wider">+150 XP & Golden Trophy</span>}
                   </p>
                 </div>
@@ -597,7 +618,7 @@ export function LeaderboardScreen({
                 ) : (
                   <button
                     onClick={() => {
-                      const coins = userRank === 1 ? 250 : userRank === 2 ? 200 : userRank === 3 ? 150 : userRank <= 10 ? 100 : 75;
+                      const coins = getRankRewardCoins(userRank);
                       onClaimRankReward(userRank, coins);
                     }}
                     className="bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-yellow-950 font-black text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl shadow-lg ring-2 ring-yellow-400/30 border border-yellow-200/50 transition-all active:scale-95 duration-200"
@@ -606,29 +627,33 @@ export function LeaderboardScreen({
                   </button>
                 )}
               </div>
-            ) : userRank > 16 ? (
+            ) : userRank > 6 ? (
               <div className="pt-2 border-t border-slate-150 flex items-center justify-between">
                 <div>
                   <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Status Award</p>
-                  <p className="text-xs font-black text-emerald-600 uppercase tracking-wider">Progress Recognition Verified</p>
+                  <p className="text-xs font-black text-slate-600 uppercase tracking-wider">Top 6 Required for Coin Rewards</p>
                 </div>
-                <div className="text-[10px] bg-slate-100 px-3 py-1.5 rounded-xl text-slate-600 font-bold uppercase tracking-wider border border-slate-150">
-                  Baseline Secured
+                <div className="text-[10px] bg-slate-100 px-3 py-1.5 rounded-xl text-slate-500 font-bold uppercase tracking-wider border border-slate-150">
+                  No Coin Reward
                 </div>
               </div>
             ) : (
-              <div className="pt-2 border-t border-slate-150 grid grid-cols-3 gap-2 text-center">
+              <div className="pt-2 border-t border-slate-150 grid grid-cols-4 gap-1.5 text-center">
                 <div className="bg-white border border-slate-200 rounded-xl p-2">
-                  <p className="text-[8px] font-black text-yellow-600 uppercase">Top 1 - 3 Rewards</p>
-                  <p className="text-[10px] font-black text-slate-800">Up to 250 🪙</p>
+                  <p className="text-[8px] font-black text-yellow-600 uppercase">Rank 1</p>
+                  <p className="text-[10px] font-black text-slate-800">400 🪙</p>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-xl p-2">
-                  <p className="text-[8px] font-black text-blue-600 uppercase">Top 4 - 10 Rewards</p>
-                  <p className="text-[10px] font-black text-slate-800">100 🪙</p>
+                  <p className="text-[8px] font-black text-blue-600 uppercase">Rank 2</p>
+                  <p className="text-[10px] font-black text-slate-800">200 🪙</p>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-xl p-2">
-                  <p className="text-[8px] font-black text-slate-500 uppercase">Top 11 - 16 Rewards</p>
-                  <p className="text-[10px] font-black text-slate-800">75 🪙</p>
+                  <p className="text-[8px] font-black text-amber-600 uppercase">Rank 3</p>
+                  <p className="text-[10px] font-black text-slate-800">150 🪙</p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-xl p-2">
+                  <p className="text-[8px] font-black text-slate-500 uppercase">Ranks 4-6</p>
+                  <p className="text-[10px] font-black text-slate-800">50 🪙</p>
                 </div>
               </div>
             )}

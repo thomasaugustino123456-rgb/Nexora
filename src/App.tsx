@@ -137,6 +137,7 @@ import {
   updateDoc as firestoreUpdateDoc,
   getDocFromServer,
   deleteDoc,
+  deleteField,
   collection,
   query,
   orderBy,
@@ -152,8 +153,12 @@ import {
 
 function cleanPayload<T>(obj: T): T {
   if (obj === null || obj === undefined) return null as any;
+  if (typeof obj === "symbol" || typeof obj === "function") return undefined as any;
   if (typeof obj !== "object") return obj;
   if (obj instanceof Date) return obj as any;
+  if ((obj as any).$$typeof || (obj as any)._owner || (obj as any)._store) {
+    return "✨" as any;
+  }
   if (
     (obj as any)._methodName || 
     (obj as any).constructor?.name?.includes('FieldValue') ||
@@ -163,13 +168,16 @@ function cleanPayload<T>(obj: T): T {
     return obj;
   }
   if (Array.isArray(obj)) {
-    return obj.map(cleanPayload) as any;
+    return obj.map(cleanPayload).filter((item) => item !== undefined) as any;
   }
   const cleaned: any = {};
   for (const key of Object.keys(obj)) {
     const val = (obj as any)[key];
-    if (val !== undefined) {
-      cleaned[key] = cleanPayload(val);
+    if (val !== undefined && typeof val !== "function" && typeof val !== "symbol") {
+      const cleanedVal = cleanPayload(val);
+      if (cleanedVal !== undefined) {
+        cleaned[key] = cleanedVal;
+      }
     }
   }
   return cleaned;
@@ -337,19 +345,30 @@ const DEFAULT_SETTINGS: UserSettings = {
   email: "",
   time: "",
   profilePrivacy: "private",
+  proTestActive: false,
+  proTestStartedAt: null,
+  proTestExpiresAt: null,
+  proTestLastUsedAt: null,
+  originalStatsBeforeProTest: null,
 };
 
 const DEFAULT_STATS: UserStats = {
   streak: 0,
   bestStreak: 0,
   totalPoints: 0,
+  level: 1,
   totalCompletedDays: 0,
   lastCompletedDate: null,
+  lastGiftDate: null,
   currentChallengeIndex: 0,
   coins: 0,
+  gems: 0,
   xp: 0,
   weeklyPoints: 0,
   weeklyXP: 0,
+  lastWeeklyReset: null,
+  lastRankRewardClaimWeek: null,
+  lastActiveDate: null,
   trophies: [],
   pointsByCategory: {
     physical: 0,
@@ -357,7 +376,12 @@ const DEFAULT_STATS: UserStats = {
     creative: 0,
   },
   drawings: [],
+  achievements: [],
   unlockedHats: ["none"],
+  gratitudeEntries: [],
+  waterDrank: 0,
+  lifetimeWaterCompletions: 0,
+  hasClaimedXpChest: false,
 };
 
 import { PublicRankView } from "./components/PublicRankView";
@@ -441,18 +465,23 @@ export default function App() {
   });
   const [pendingHydrationCoinsAdded, setPendingHydrationCoinsAdded] = useState<boolean>(false);
 
+  const previousUserUidRef = useRef<string | null>(null);
+
   // Reload hydration state when the logged-in user changes to prevent cross-account leaks
   useEffect(() => {
-    if (!user) {
-      setHydrationConsecutiveDays(0);
-      setHydrationWaterLevel(0.0);
-      setHydrationLastCompletedDate('');
-      setSplashFinished(false);
-    } else {
-      setHydrationConsecutiveDays(parseInt(localStorage.getItem('hydration_consecutive_days') || '0', 10));
-      setHydrationWaterLevel(parseFloat(localStorage.getItem('hydration_water_level') || '0.0'));
-      setHydrationLastCompletedDate(localStorage.getItem('hydration_last_completed_date') || '');
-      setSplashFinished(false);
+    const currentUid = user?.uid || null;
+    if (previousUserUidRef.current !== currentUid) {
+      previousUserUidRef.current = currentUid;
+      if (!user) {
+        setHydrationConsecutiveDays(0);
+        setHydrationWaterLevel(0.0);
+        setHydrationLastCompletedDate('');
+        setSplashFinished(false);
+      } else {
+        setHydrationConsecutiveDays(parseInt(localStorage.getItem('hydration_consecutive_days') || '0', 10));
+        setHydrationWaterLevel(parseFloat(localStorage.getItem('hydration_water_level') || '0.0'));
+        setHydrationLastCompletedDate(localStorage.getItem('hydration_last_completed_date') || '');
+      }
     }
   }, [user]);
 
@@ -502,6 +531,19 @@ export default function App() {
     setHydrationConsecutiveDays(nextDays);
     setHydrationWaterLevel(nextLevel);
     setHydrationLastCompletedDate(todayStr);
+
+    // Water plant & grow plant on water challenge completion!
+    growPlant();
+    if (settings.plantState) {
+      onUpdateSettings({
+        plantState: {
+          ...settings.plantState,
+          isThirsty: false,
+          health: 100,
+          lastCheckDate: new Date().toISOString(),
+        }
+      });
+    }
 
     // Increment daily progress counter when fully completing the Water Challenge!
     onUpdateDailyProgress((prev) => {
@@ -601,32 +643,48 @@ export default function App() {
   );
 
   const headerMascotControls = useAnimationControls();
+  const isAppHeaderMountedRef = useRef(false);
+
+  useEffect(() => {
+    isAppHeaderMountedRef.current = true;
+    return () => {
+      isAppHeaderMountedRef.current = false;
+    };
+  }, []);
+
   const lastLogoTapRef = useRef<number>(0);
   const logoTapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const leaderboardLoadedTimeRef = useRef<number | null>(null);
 
   const triggerHeaderMascotReaction = async () => {
-    await headerMascotControls.start({
-      scaleY: [1, 0.78, 1.15, 0.95, 1],
-      scaleX: [1, 1.2, 0.85, 1.05, 1],
-      y: [0, 5, -28, 2, 0],
-      rotate: [0, -4, 10, -2, 0],
-      boxShadow: [
-        "0 0 0 rgba(96,165,250,0)",
-        "0 0 10px rgba(96,165,250,0.4)",
-        "0 0 20px rgba(96,165,250,0.6)",
-        "0 0 4px rgba(96,165,250,0.2)",
-        "0 0 0 rgba(96,165,250,0)"
-      ],
-      transition: { duration: 0.45, ease: "easeInOut" }
-    });
+    if (!isAppHeaderMountedRef.current) return;
+    try {
+      await headerMascotControls.start({
+        scaleY: [1, 0.78, 1.15, 0.95, 1],
+        scaleX: [1, 1.2, 0.85, 1.05, 1],
+        y: [0, 5, -28, 2, 0],
+        rotate: [0, -4, 10, -2, 0],
+        boxShadow: [
+          "0 0 0 rgba(96,165,250,0)",
+          "0 0 10px rgba(96,165,250,0.4)",
+          "0 0 20px rgba(96,165,250,0.6)",
+          "0 0 4px rgba(96,165,250,0.2)",
+          "0 0 0 rgba(96,165,250,0)"
+        ],
+        transition: { duration: 0.45, ease: "easeInOut" }
+      });
+    } catch (e) {}
   };
 
   const triggerHeaderMascotSingleBounce = async () => {
-    await headerMascotControls.start({
-      y: [0, -8, 0],
-      scaleY: [1, 0.92, 1.04, 1],
-      transition: { duration: 0.28, ease: "easeInOut" }
-    });
+    if (!isAppHeaderMountedRef.current) return;
+    try {
+      await headerMascotControls.start({
+        y: [0, -8, 0],
+        scaleY: [1, 0.92, 1.04, 1],
+        transition: { duration: 0.28, ease: "easeInOut" }
+      });
+    } catch (e) {}
   };
 
   const handleLogoTap = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -667,7 +725,14 @@ export default function App() {
 
   const today = new Date().toISOString().split("T")[0];
   const [circles, setCircles] = useState<SocialCircle[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<Post[]>(() => {
+    try {
+      const saved = localStorage.getItem("nexora_posts_cache");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [notifications, setNotifications] = useState<NexusNotification[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [showCompletionFlame, setShowCompletionFlame] = useState(false);
@@ -680,65 +745,190 @@ export default function App() {
     useLocalStorage<UserStats | null>("nexora_original_stats", null);
   const [isCurrentlyBoosting, setIsCurrentlyBoosting] = useState(false);
 
-  // Pro Test Expiration & Boost Manager
+  // Pro Test Expiration & Restoration Manager
+  const restoreTrueProgressAfterProTest = useCallback(
+    async (savedOriginalStats?: UserStats | null) => {
+      const targetStats: UserStats | null =
+        savedOriginalStats ||
+        originalStatsBeforeProTest ||
+        settings.originalStatsBeforeProTest ||
+        (() => {
+          try {
+            const raw = localStorage.getItem("nexora_original_stats");
+            return raw ? JSON.parse(raw) : null;
+          } catch {
+            return null;
+          }
+        })();
+
+      if (!targetStats || Object.keys(targetStats).length === 0) {
+        console.warn("No original stats found for Pro Test rollback. Clearing Pro test active flag.");
+        onUpdateSettings({
+          proTestActive: false,
+          proTestExpiresAt: null,
+          originalStatsBeforeProTest: null,
+        });
+        return;
+      }
+
+      // 1. Restore local stats state cleanly
+      const restoredStats: UserStats = {
+        ...targetStats,
+        coins: Math.max(0, Number(targetStats.coins) || 0),
+        xp: Math.max(0, Number(targetStats.xp) || 0),
+        streak: Math.max(0, Number(targetStats.streak) || 0),
+        level: Math.max(1, Number(targetStats.level) || 1),
+        totalPoints: Math.max(0, Number(targetStats.totalPoints ?? targetStats.xp) || 0),
+        weeklyPoints: Math.max(0, Number(targetStats.weeklyPoints) || 0),
+        weeklyXP: Math.max(0, Number(targetStats.weeklyXP) || 0),
+      };
+
+      setStats(restoredStats);
+      setOriginalStatsBeforeProTest(null);
+      try {
+        localStorage.removeItem("nexora_original_stats");
+      } catch (e) {
+        console.error("Error clearing nexora_original_stats:", e);
+      }
+
+      // 2. HARD OVERWRITE Firestore collections to wipe any Pro boosted values (900k coins, 150k XP, etc.)
+      if (user) {
+        try {
+          const userRef = doc(db, "users", user.uid);
+          const statsMainRef = doc(db, "users", user.uid, "stats", "main");
+          const leaderboardRef = doc(db, "leaderboard", user.uid);
+          const rankRef = doc(db, "rank", user.uid);
+          const rewardsRef = doc(db, "rewards", user.uid);
+
+          const restoredUserPayload = {
+            coins: restoredStats.coins,
+            xp: restoredStats.xp,
+            level: restoredStats.level,
+            streak: restoredStats.streak,
+            totalPoints: restoredStats.totalPoints,
+            weeklyPoints: restoredStats.weeklyPoints,
+            weeklyXP: restoredStats.weeklyXP,
+            proTestActive: false,
+            proTestExpiresAt: null,
+            originalStatsBeforeProTest: deleteField(),
+          };
+
+          const restoredLeaderboardPayload = {
+            uid: user.uid,
+            userId: user.uid,
+            displayName: settings.displayName || user.displayName || "Champion",
+            name: settings.displayName || user.displayName || "Champion",
+            photoURL: settings.profilePic || user.photoURL || "",
+            photoFileName: settings.profilePic || user.photoURL || "",
+            profilePic: settings.profilePic || user.photoURL || "",
+            streak: restoredStats.streak,
+            totalPoints: restoredStats.totalPoints,
+            points: restoredStats.totalPoints,
+            weeklyXP: restoredStats.weeklyXP,
+            weeklyPoints: restoredStats.weeklyPoints,
+            xp: restoredStats.xp,
+            level: restoredStats.level,
+            league: settings.league || "Bronze",
+          };
+
+          await Promise.all([
+            firestoreSetDoc(userRef, restoredUserPayload, { merge: true }),
+            firestoreSetDoc(statsMainRef, {
+              coins: restoredStats.coins,
+              xp: restoredStats.xp,
+              level: restoredStats.level,
+              streak: restoredStats.streak,
+              totalPoints: restoredStats.totalPoints,
+              weeklyPoints: restoredStats.weeklyPoints,
+              weeklyXP: restoredStats.weeklyXP,
+            }, { merge: true }),
+            firestoreSetDoc(leaderboardRef, restoredLeaderboardPayload), // Hard overwrite without merge!
+            firestoreSetDoc(rankRef, restoredLeaderboardPayload),
+            firestoreSetDoc(rewardsRef, restoredLeaderboardPayload),
+          ]);
+
+          console.log("PRO TEST ROLLBACK: Successfully restored true free tier stats to Firestore!");
+        } catch (err) {
+          console.error("Failed to restore stats in Firestore:", err);
+          handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`);
+        }
+      }
+
+      // 3. Clear Pro Test settings
+      onUpdateSettings({
+        proTestActive: false,
+        proTestExpiresAt: null,
+        originalStatsBeforeProTest: null,
+      });
+
+      showToast("PRO TRIAL ENDED: YOUR TRUE FREE TIER PROGRESS HAS BEEN RESTORED.", "info");
+      setProTestMessage(
+        "Your pro features test time is out. If u want it u can pay, bro! 👑",
+      );
+      vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    },
+    [user, settings, originalStatsBeforeProTest, setStats, setOriginalStatsBeforeProTest, onUpdateSettings, showToast],
+  );
+
   useEffect(() => {
     if (!isDataReady) return;
 
     const testExpiresAt = settings.proTestExpiresAt;
     const now = new Date();
-    // Use a small buffer to avoid weird edge cases on load
     const isTestActive =
-      testExpiresAt && new Date(testExpiresAt).getTime() > now.getTime() + 100;
+      Boolean(settings.proTestActive) &&
+      Boolean(testExpiresAt) &&
+      new Date(testExpiresAt!).getTime() > now.getTime() + 100;
 
     if (isTestActive) {
       if (!isCurrentlyBoosting) {
         setIsCurrentlyBoosting(true);
 
-        // Only save original if we haven't already (prevents recursive overwrite on refresh)
-        if (!originalStatsBeforeProTest) {
+        // Save original stats before applying boost if not already saved
+        if (!originalStatsBeforeProTest && !settings.originalStatsBeforeProTest) {
           const statsToSave = JSON.parse(JSON.stringify(stats));
           setOriginalStatsBeforeProTest(statsToSave);
+          try {
+            localStorage.setItem("nexora_original_stats", JSON.stringify(statsToSave));
+          } catch (e) {
+            console.error(e);
+          }
 
-          // Apply temporary boost ONLY ONCE
-          setStats((prev) => ({
-            ...prev,
-            streak: Math.max(prev.streak, 9999),
-            coins: Math.max(prev.coins, 900000),
-            xp: Math.max(prev.xp, 150000),
-            level: Math.max(prev.level, 99),
-          }));
-          showToast("PRO PROTOCOL: BOOSTED STATS ACTIVATED!", "success");
+          if (user) {
+            firestoreSetDoc(
+              doc(db, "users", user.uid),
+              { originalStatsBeforeProTest: statsToSave },
+              { merge: true },
+            ).catch((e) => console.error("Error saving originalStatsBeforeProTest:", e));
+          }
         }
+
+        // Apply temporary allowance ONLY ONCE during test mode: +1000 Coins, +500 XP, streak UNCHANGED
+        setStats((prev) => ({
+          ...prev,
+          coins: prev.coins + 1000,
+          xp: prev.xp + 500,
+          level: Math.max(prev.level, Math.floor((prev.xp + 500) / 1000) + 1),
+          // Streak stays strictly unchanged!
+        }));
+        showToast("PRO TEST DRIVE: +1,000 COINS & +500 XP TEST ALLOWANCE ACTIVATED! STREAK UNCHANGED.", "success");
       }
     } else if (
       isCurrentlyBoosting ||
+      settings.proTestActive ||
       (testExpiresAt && new Date(testExpiresAt).getTime() <= now.getTime())
     ) {
-      // Transition from active to expired, OR detected as already expired on load
+      // Transition from active to expired or detected as expired
       setIsCurrentlyBoosting(false);
-
-      // If we were previously boosting or detected it was active but expired
-      if (originalStatsBeforeProTest) {
-        if (
-          !originalStatsBeforeProTest ||
-          Object.keys(originalStatsBeforeProTest).length === 0
-        ) {
-          console.warn("Skipping Pro rollback because original stats are empty");
-          return;
-        }
-
-        // Force rollback of stats
-        setStats(originalStatsBeforeProTest);
-        setOriginalStatsBeforeProTest(null);
-        showToast("PRO TRIAL ENDED: STATS ROLLBACK SUCCESSFUL.", "info");
-        onUpdateSettings({ proTestActive: false, proTestExpiresAt: null });
-        setProTestMessage(
-          "Your pro features test time is out. If u want it u can pay, bro! 👑",
-        );
-        vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-      }
+      restoreTrueProgressAfterProTest();
     }
-  }, [settings.proTestExpiresAt, isDataReady, isCurrentlyBoosting]);
+  }, [
+    settings.proTestExpiresAt,
+    settings.proTestActive,
+    isDataReady,
+    isCurrentlyBoosting,
+    restoreTrueProgressAfterProTest,
+  ]);
 
   // Expiry Check Interval
   useEffect(() => {
@@ -749,14 +939,14 @@ export default function App() {
       const expiry = new Date(settings.proTestExpiresAt!);
 
       if (now >= expiry) {
-        // This will trigger the boost manager useEffect
-        onUpdateSettings({ proTestExpiresAt: null, proTestActive: false });
+        // Trigger restore
+        restoreTrueProgressAfterProTest();
         clearInterval(interval);
       }
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [settings.proTestExpiresAt, settings.isPro]);
+  }, [settings.proTestExpiresAt, settings.isPro, restoreTrueProgressAfterProTest]);
   const [sessionXP, setSessionXP] = useState(0);
   const [sessionCoins, setSessionCoins] = useState(0);
   const [sessionStreak, setSessionStreak] = useState(0);
@@ -1178,9 +1368,16 @@ export default function App() {
     return () => clearInterval(interval);
   }, [settings.notificationsEnabled, isDataReady, today, NOTIFICATION_SLOTS]);
 
+  const loginTimeRef = useRef<number>(Date.now());
+  useEffect(() => {
+    if (user?.uid) {
+      loginTimeRef.current = Date.now();
+    }
+  }, [user?.uid]);
+
   // SYSTEM NOTIFICATION LISTENER
   useEffect(() => {
-    if (!user || !isDataReady) return;
+    if (!user || !isDataReady || !isStateHydrated) return;
 
     const notifRef = collection(db, "users", user.uid, "notifications");
     const q = query(
@@ -1190,9 +1387,14 @@ export default function App() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
-        const notifs = snapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() }) as SystemNotification,
-        );
+        const notifs = snapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }) as SystemNotification)
+          .filter((n) => !n.isRead && !n.read);
+
+        if (notifs.length === 0) {
+          setActiveSystemNotification(null);
+          return;
+        }
 
         // Sort in memory to bypass composite/collectionGroup index constraints
         notifs.sort((a, b) => {
@@ -1208,13 +1410,25 @@ export default function App() {
           return;
         }
 
+        // Only trigger live popup overlay for notifications generated DURING or after this active login session
+        const createdTime = activeNotif.createdAt ? (typeof activeNotif.createdAt === "string" ? new Date(activeNotif.createdAt).getTime() : (typeof activeNotif.createdAt === "object" && activeNotif.createdAt && "seconds" in activeNotif.createdAt ? (activeNotif.createdAt as any).seconds * 1000 : 0)) : 0;
+        
+        if (createdTime > 0 && createdTime < (loginTimeRef.current - 60000)) {
+          // Old notification created prior to this login - do not show loud popup overlay on login
+          return;
+        }
+
         setActiveSystemNotification(activeNotif);
         vibrate(VIBRATION_PATTERNS.NOTIFY);
+      } else {
+        setActiveSystemNotification(null);
       }
+    }, (err) => {
+      console.warn("System notification listener error handled:", err);
     });
 
     return () => unsubscribe();
-  }, [user, isDataReady]);
+  }, [user, isDataReady, isStateHydrated]);
 
   const markSystemNotificationRead = async (id: string) => {
     // ALWAYS hide the notification immediately from the UI
@@ -1226,17 +1440,19 @@ export default function App() {
 
     if (!user) return;
     try {
-      await updateDoc(doc(db, "users", user.uid, "notifications", id), {
+      await setDoc(doc(db, "users", user.uid, "notifications", id), {
         read: true,
-      });
+        isRead: true,
+      }, { merge: true });
     } catch (e) {
       console.warn("Failed to mark notification as read in Firestore:", e);
     }
   };
+  const [isUserManualMusicStarted, setIsUserManualMusicStarted] = useState(false);
   const { play, stop, playMusic, stopAllMusic } = useSound();
 
   const currentPlayingMusicTrack = useMemo(() => {
-    if (!settings.soundEnabled) return null;
+    if (!settings.soundEnabled || !isUserManualMusicStarted) return null;
     const activeMusicItem = (settings.inventory || []).find(
       (item) => item.type === "music" && item.activated,
     );
@@ -1260,7 +1476,7 @@ export default function App() {
       };
     }
     return null;
-  }, [settings.inventory, settings.soundEnabled, settings.zenModeEnabled, activeScreen]);
+  }, [settings.inventory, settings.soundEnabled, settings.zenModeEnabled, activeScreen, isUserManualMusicStarted]);
   const [history, setHistory] = useState<DailyProgress[]>([]);
   const [earnedTrophyToday, setEarnedTrophyToday] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
@@ -1607,7 +1823,7 @@ export default function App() {
         purchases: arrayUnion({
           itemId: item.id,
           itemName: item.name,
-          itemIcon: item.icon || "🏠",
+          itemIcon: typeof item.icon === "string" || typeof item.icon === "number" ? String(item.icon) : "🏠",
           price: currency === "coins" ? item.coinPrice : item.price,
           currency: currency,
           itemType: "house_item",
@@ -1656,7 +1872,7 @@ export default function App() {
           purchases: arrayUnion({
             itemId: item.id,
             itemName: item.name,
-            itemIcon: item.icon || "🌿",
+            itemIcon: typeof item.icon === "string" || typeof item.icon === "number" ? String(item.icon) : "🌿",
             price: item.price,
             currency: "coins",
             itemType: "ecosystem_item",
@@ -1920,6 +2136,7 @@ export default function App() {
         stage: newStage,
         growthPoints: newPoints,
         lastGrowthDate: new Date().toISOString(),
+        lastCheckDate: new Date().toISOString(),
         health: 100,
         isThirsty: false,
       };
@@ -1939,6 +2156,7 @@ export default function App() {
           isDead: false,
           isThirsty: false,
           health: 100,
+          lastCheckDate: new Date().toISOString(),
         },
       };
     });
@@ -1969,95 +2187,70 @@ export default function App() {
 
     const checkPlant = () => {
       const now = new Date();
-      const lastCheck = new Date(
-        settings.plantState!.lastCheckDate || now.toISOString(),
-      );
+      const rawCheckDate = settings.plantState!.lastCheckDate;
+      
+      // If lastCheckDate is missing or invalid, initialize it safely to now without penalizing
+      if (!rawCheckDate) {
+        onUpdateSettings({
+          plantState: {
+            ...settings.plantState!,
+            lastCheckDate: now.toISOString(),
+          },
+        });
+        return;
+      }
+
+      const lastCheck = new Date(rawCheckDate);
+      if (isNaN(lastCheck.getTime())) {
+        onUpdateSettings({
+          plantState: {
+            ...settings.plantState!,
+            lastCheckDate: now.toISOString(),
+          },
+        });
+        return;
+      }
+
       const diffMs = now.getTime() - lastCheck.getTime();
       const diffHours = diffMs / (1000 * 60 * 60);
 
-      const activeItems = settings.activeEcosystemItemIds || [];
-      const hasSprinkler = activeItems.includes("eco_sprinkler_01");
-      const deathThreshold = 48;
-      const thirstThreshold = hasSprinkler ? 48 : 36; // Sprinkler buys time
-
-      if (diffHours >= deathThreshold && !settings.plantState!.isDead) {
-        // 2 days
-        const type = settings.plantState!.type;
-        const currentProgress = settings.plantsProgress?.[type] || {
-          stage: settings.plantState!.stage,
-          growthPoints: settings.plantState!.growthPoints,
-          lastGrowthDate: settings.plantState!.lastGrowthDate,
-          health: 100,
-          isDead: false,
-          isThirsty: false,
-        };
-
-        const updatedProgress = {
-          ...currentProgress,
-          isDead: true,
-          health: 0,
-          isThirsty: true,
-        };
-
+      // Sanity check: if diffHours is negative or impossibly huge (> 30 days due to date corruption), reset lastCheckDate
+      if (diffHours < 0 || diffHours > 30 * 24) {
         onUpdateSettings({
           plantState: {
             ...settings.plantState!,
-            isDead: true,
-            health: 0,
-            isThirsty: true,
             lastCheckDate: now.toISOString(),
           },
-          plantsProgress: {
-            ...(settings.plantsProgress || {}),
-            [type]: updatedProgress,
-          },
         });
+        return;
+      }
 
-        // Inactivity Penalty: Reduce weekly leaderboard points & XP by 250!
-        onUpdateStats((prev) => {
-          const updatedPoints = Math.max(0, (prev.weeklyPoints || 0) - 250);
-          const updatedXP = Math.max(0, (prev.weeklyXP || 0) - 250);
-          return {
-            ...prev,
-            weeklyPoints: updatedPoints,
-            weeklyXP: updatedXP,
-          };
-        });
+      const activeItems = settings.activeEcosystemItemIds || [];
+      const hasSprinkler = activeItems.includes("eco_sprinkler_01");
+      const thirstThreshold = hasSprinkler ? 72 : 48;
 
-        showToast("INACTIVITY PENALTY: You left for 2 days. Leaderboard progress reduced! ⚠️📉", "error");
-
-        sendNotification("Your Nexora Ecosystem has died... 🥀", {
-          body: "Bro, your plants need discipline! Restore the room and try again.",
-        });
-      } else if (
-        diffHours >= thirstThreshold &&
-        !settings.plantState!.isThirsty &&
-        !settings.plantState!.isDead
-      ) {
-        // 1.5 days or 2 days with tech
-        const type = settings.plantState!.type;
-        const currentProgress = settings.plantsProgress?.[type] || {
-          stage: settings.plantState!.stage,
-          growthPoints: settings.plantState!.growthPoints,
-          lastGrowthDate: settings.plantState!.lastGrowthDate,
-          health: 100,
-          isDead: false,
-          isThirsty: false,
-        };
-        const updatedProgress = { ...currentProgress, isThirsty: true };
-
+      // On active user login / app opening, ensure plant is active and safe
+      if (settings.plantState!.isDead) {
         onUpdateSettings({
           plantState: {
             ...settings.plantState!,
-            isThirsty: true,
-          },
-          plantsProgress: {
-            ...(settings.plantsProgress || {}),
-            [type]: updatedProgress,
-          },
+            isDead: false,
+            health: 100,
+            isThirsty: false,
+            lastCheckDate: now.toISOString(),
+          }
         });
-        sendNotification("Your ecosystem is thirsty! 💧", {
-          body: "Nurture your plants by completing your daily tasks, bro!",
+        return;
+      }
+
+      const newThirsty = diffHours >= thirstThreshold;
+      if (settings.plantState!.isThirsty !== newThirsty) {
+        onUpdateSettings({
+          plantState: {
+            ...settings.plantState!,
+            isDead: false,
+            isThirsty: newThirsty,
+          }
         });
       }
     };
@@ -2065,11 +2258,11 @@ export default function App() {
     checkPlant();
     const timer = setInterval(checkPlant, 30 * 60 * 1000);
     return () => clearInterval(timer);
-  }, [user, settings.plantState?.lastCheckDate, isDataReady, isStateHydrated]);
+  }, [user, isDataReady, isStateHydrated]);
 
   // Global Social Listeners
   useEffect(() => {
-    if (!user) return;
+    if (!user || authLoading || !isDataReady || !isStateHydrated) return;
 
     // Fetch Notifications
     const qNotifs = query(
@@ -2095,10 +2288,9 @@ export default function App() {
       }
     });
 
-    // Fetch Circles (Filter by user UID for strict privacy)
+    // Fetch Circles globally so all users can see and interact with all sub-communities
     const qCircles = query(
-      collection(db, "circles"),
-      where("ownerId", "==", user.uid)
+      collection(db, "circles")
     );
     const unsubCircles = onSnapshot(qCircles, (snapshot) => {
       const circlesData = snapshot.docs.map(
@@ -2106,26 +2298,24 @@ export default function App() {
       );
       // Sort in memory to bypass index constraints
       circlesData.sort((a, b) => (b.memberCount || 0) - (a.memberCount || 0));
-      setCircles(circlesData);
-      if (circlesData.length === 0) {
-        setCircles([
-          {
-            id: "nexora-general",
-            name: "Nexora General",
-            description: "The main hub for all Nexora members.",
-            icon: "🏛️",
-            color: "bg-blue-100",
-            memberCount: 1250,
-            category: "general",
-            ownerId: "system",
-            rules: ["Be respectful", "No spam", "Stay focused"],
-            followerIds: [],
-            createdAt: new Date().toISOString(),
-          },
-        ]);
-      } else {
-        setCircles(circlesData);
-      }
+      
+      const defaultGeneral: SocialCircle = {
+        id: "nexora-general",
+        name: "Nexora General",
+        description: "The main hub for all Nexora members.",
+        icon: "🏛️",
+        color: "bg-blue-100",
+        memberCount: 1250,
+        category: "general",
+        ownerId: "system",
+        rules: ["Be respectful", "No spam", "Stay focused"],
+        followerIds: [],
+        createdAt: new Date().toISOString(),
+      };
+
+      const hasGeneral = circlesData.some(c => c.id === "nexora-general");
+      const finalCircles = hasGeneral ? circlesData : [defaultGeneral, ...circlesData];
+      setCircles(finalCircles);
     }, (err) => {
       try {
         handleFirestoreError(err, OperationType.LIST, "circles");
@@ -2134,24 +2324,57 @@ export default function App() {
       }
     });
 
-    // Fetch Posts (Filter by user UID for strict privacy)
+    // Fetch Posts globally so all users can see posts from each other
     const qPosts = query(
-      collection(db, "posts"),
-      where("userId", "==", user.uid)
+      collection(db, "community_posts")
     );
     const unsubPosts = onSnapshot(qPosts, (snapshot) => {
       const postsData = snapshot.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() }) as Post,
       );
-      postsData.sort((a, b) => {
-        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return timeB - timeA;
+
+      const safeTime = (val: any): number => {
+        if (!val) return 0;
+        if (typeof val === "number") return val;
+        if (typeof val === "string") {
+          const t = new Date(val).getTime();
+          return isNaN(t) ? 0 : t;
+        }
+        if (typeof val === "object") {
+          if (typeof val.seconds === "number") return val.seconds * 1000;
+          if (typeof val.toDate === "function") {
+            try { return val.toDate().getTime(); } catch {}
+          }
+        }
+        return 0;
+      };
+
+      postsData.sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt));
+      const topPosts = postsData.slice(0, 150);
+
+      setPosts((prevPosts) => {
+        const firestoreIds = new Set(topPosts.map((p) => p.id));
+        const localPending = prevPosts.filter((p) => !firestoreIds.has(p.id) && !p.deleted);
+        const combined = [...localPending, ...topPosts];
+        combined.sort((a, b) => safeTime(b.createdAt) - safeTime(a.createdAt));
+        const finalPosts = combined.slice(0, 150);
+        try {
+          localStorage.setItem("nexora_posts_cache", JSON.stringify(finalPosts));
+        } catch (e) {
+          try {
+            const stripped = finalPosts.map((p) => ({
+              ...p,
+              image: p.image && p.image.length > 50000 ? undefined : p.image,
+              images: p.images?.map((img) => (img.length > 50000 ? "" : img)),
+            }));
+            localStorage.setItem("nexora_posts_cache", JSON.stringify(stripped));
+          } catch {}
+        }
+        return finalPosts;
       });
-      setPosts(postsData.slice(0, 50));
     }, (err) => {
       try {
-        handleFirestoreError(err, OperationType.LIST, "posts");
+        handleFirestoreError(err, OperationType.LIST, "community_posts");
       } catch (e) {
         console.error("Firestore posts error:", e);
       }
@@ -2162,7 +2385,7 @@ export default function App() {
       unsubCircles();
       unsubPosts();
     };
-  }, [user]);
+  }, [user, authLoading, isDataReady, isStateHydrated]);
 
   
   
@@ -2335,9 +2558,9 @@ export default function App() {
     localStorage.getItem("nexora_last_update_time"),
   );
 
-  // Background Music Logic
+  // Background Music Logic (Only plays when manually started by user to prevent auto-play on reload/login)
   useEffect(() => {
-    if (!settings.soundEnabled) {
+    if (!settings.soundEnabled || !isUserManualMusicStarted) {
       stopAllMusic();
       return;
     }
@@ -2347,19 +2570,13 @@ export default function App() {
     );
     if (activeMusicItem) {
       playMusic(activeMusicItem.itemId);
-    } else if (
-      settings.zenModeEnabled &&
-      (activeScreen === "challenge" || activeScreen === "home")
-    ) {
-      playMusic("music-forest");
     } else {
       stopAllMusic();
     }
   }, [
     settings.inventory, 
     settings.soundEnabled, 
-    settings.zenModeEnabled, 
-    activeScreen, 
+    isUserManualMusicStarted,
     playMusic, 
     stopAllMusic
   ]);
@@ -3097,9 +3314,38 @@ export default function App() {
     setActiveScreen("home"); // Ensure home is default after major state transitions
   }, [user]);
 
-  // 11. Leaderboard Data Fetching
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [customPlans, setCustomPlans] = useState<CustomPlan[]>([]);
+  // 11. Leaderboard & Custom Plans Data Fetching with Instant Local Cache
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem("nexora_leaderboard_cache");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn("Failed to read cached leaderboard:", e);
+    }
+    return [
+      { uid: "bot-1", displayName: "Apex_Habit", weeklyXP: 1250, weeklyPoints: 1250, level: 12, streak: 45, league: "Bronze" },
+      { uid: "bot-2", displayName: "Zen_Master", weeklyXP: 950, weeklyPoints: 950, level: 10, streak: 32, league: "Bronze" },
+      { uid: "bot-3", displayName: "HabitHero_99", weeklyXP: 750, weeklyPoints: 750, level: 8, streak: 15, league: "Bronze" },
+      { uid: "bot-4", displayName: "FlowState", weeklyXP: 500, weeklyPoints: 500, level: 6, streak: 8, league: "Bronze" },
+      { uid: "bot-5", displayName: "Iron_Will", weeklyXP: 320, weeklyPoints: 320, level: 4, streak: 5, league: "Bronze" },
+    ];
+  });
+
+  const [customPlans, setCustomPlans] = useState<CustomPlan[]>(() => {
+    try {
+      const saved = localStorage.getItem("nexora_custom_plans_cache");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn("Failed to read cached custom plans:", e);
+    }
+    return [];
+  });
 
   useEffect(() => {
     if (user) {
@@ -3120,6 +3366,11 @@ export default function App() {
             return timeB - timeA;
           });
           setCustomPlans(plans);
+          try {
+            localStorage.setItem("nexora_custom_plans_cache", JSON.stringify(plans));
+          } catch (e) {
+            console.warn("Failed to write custom plans cache:", e);
+          }
         },
         (error) => {
           try {
@@ -3406,7 +3657,7 @@ export default function App() {
           earnedDate: new Date().toISOString(),
           lastUpdated: new Date().toISOString()
         });
-        msg = `Championship Claimed! +250 Coins, Golden Trophy, & +150 XP Bonus! 🏆`;
+        msg = `Championship Claimed! +400 Coins, Golden Trophy, & +150 XP Bonus! 🏆`;
       }
 
       const next = {
@@ -3426,7 +3677,7 @@ export default function App() {
     });
 
     const isRankOne = rank === 1;
-    showToast(isRankOne ? "Championship Claimed! +250 Coins, Golden Trophy, & +150 XP Bonus! 🏆" : `Weekly Reward Claimed! +${rewardCoins} Coins! 🎁`, "success");
+    showToast(isRankOne ? "Championship Claimed! +400 Coins, Golden Trophy, & +150 XP Bonus! 🏆" : `Weekly Reward Claimed! +${rewardCoins} Coins! 🎁`, "success");
     vibrate(VIBRATION_PATTERNS.SUCCESS);
 
     // 2. Log Weekly Leaderboard Rewards to global "rewards" collection
@@ -3454,11 +3705,12 @@ export default function App() {
 
   useEffect(() => {
     if (user && isDataReady && isStateHydrated) {
-      // Weekly Reset Logic
+      // Weekly Reset Logic (Timezone-safe & stable using local date parts to prevent flip-flopping resets)
       const now = new Date();
-      const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()))
-        .toISOString()
-        .split("T")[0];
+      const sunday = new Date(now);
+      sunday.setDate(now.getDate() - now.getDay());
+      const startOfWeek = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, "0")}-${String(sunday.getDate()).padStart(2, "0")}`;
+      
       if (stats.lastWeeklyReset !== startOfWeek) {
         setStats((prev) => ({
           ...prev,
@@ -3489,72 +3741,9 @@ export default function App() {
         }));
       }
 
-      // Absence Decay (Point decay if away for 2 days, complete reset if away for 4+ days)
-      const lastActiveStr = stats.lastActiveDate;
-      if (!lastActiveStr) {
+      // Daily Active Date tracking (no score resets or point wiping)
+      if (stats.lastActiveDate !== today) {
         setStats((prev) => ({ ...prev, lastActiveDate: today }));
-      } else if (lastActiveStr !== today) {
-        const activeDate = new Date(lastActiveStr + "T00:00:00");
-        const currentDate = new Date(today + "T00:00:00");
-        const diffTime = currentDate.getTime() - activeDate.getTime();
-        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays >= 2) {
-          let decayMsg = "";
-          let nextWeeklyXP = stats.weeklyXP || 0;
-          let nextWeeklyPoints = stats.weeklyPoints || 0;
-          let nextTotalPoints = stats.totalPoints || 0;
-          let nextXP = stats.xp || 0;
-          let resetAll = false;
-
-          if (diffDays === 2) {
-            decayMsg = "You were away for 2 days! Cosmic Energy decayed 25% of your Weekly Rank score.";
-            nextWeeklyXP = Math.round(nextWeeklyXP * 0.75);
-            nextWeeklyPoints = Math.round(nextWeeklyPoints * 0.75);
-            nextTotalPoints = Math.max(0, Math.round(nextTotalPoints * 0.9));
-            nextXP = Math.max(0, Math.round(nextXP * 0.9));
-          } else if (diffDays === 3) {
-            decayMsg = "You were away for 3 days! Major Entropy decayed 50% of your Weekly Rank score.";
-            nextWeeklyXP = Math.round(nextWeeklyXP * 0.50);
-            nextWeeklyPoints = Math.round(nextWeeklyPoints * 0.50);
-            nextTotalPoints = Math.max(0, Math.round(nextTotalPoints * 0.8));
-            nextXP = Math.max(0, Math.round(nextXP * 0.8));
-          } else {
-            resetAll = true;
-            decayMsg = `You were away for ${diffDays} days! Your Arena XP faded entirely. You must restart from 0 at the lower position!`;
-            nextWeeklyXP = 0;
-            nextWeeklyPoints = 0;
-            nextTotalPoints = Math.max(0, Math.round(nextTotalPoints * 0.6));
-            nextXP = Math.max(0, Math.round(nextXP * 0.6));
-          }
-
-          const lostWeeklyXP = (stats.weeklyXP || 0) - nextWeeklyXP;
-          const lostWeeklyPoints = (stats.weeklyPoints || 0) - nextWeeklyPoints;
-
-          if (lostWeeklyXP > 0 || lostWeeklyPoints > 0 || resetAll) {
-            setStats((prev) => ({
-              ...prev,
-              weeklyXP: nextWeeklyXP,
-              weeklyPoints: nextWeeklyPoints,
-              totalPoints: nextTotalPoints,
-              xp: nextXP,
-              lastActiveDate: today,
-            }));
-
-            setDecayAlert({
-              days: diffDays,
-              decayedPoints: lostWeeklyPoints,
-              decayedXP: lostWeeklyXP,
-              resetAll,
-              message: decayMsg,
-            });
-            showToast("⚠️ Arena Decay Penalization Triggered!", "error");
-          } else {
-            setStats((prev) => ({ ...prev, lastActiveDate: today }));
-          }
-        } else {
-          setStats((prev) => ({ ...prev, lastActiveDate: today }));
-        }
       }
 
       // Pro Daily Gift Logic
@@ -3566,193 +3755,347 @@ export default function App() {
         }));
         showToast(`Pro Daily Gift: +50 Coins! 🎁`, "success");
       }
-
-      // Leaderboard Listener - Query collection cleanly to bypass composite index constraints, then filter in memory
-      const q = query(
-        collection(db, "leaderboard"),
-        limit(150),
-      );
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const rawDocs = snapshot.docs.map((doc) => doc.data() as any);
-          const currentLeagueName = settings.league || "Bronze";
-          // Filter by league in memory
-          let data = rawDocs.filter((d) => d.league === currentLeagueName);
-
-          // BOT SYSTEM: Always add some competitive AI players to make it feel alive!
-          const bots = [
-            {
-              uid: "bot-1",
-              displayName: "Apex_Habit",
-              weeklyXP: 1250,
-              weeklyPoints: 1250,
-              level: 12,
-              streak: 45,
-              league: settings.league || "Bronze",
-            },
-            {
-              uid: "bot-2",
-              displayName: "Zen_Master",
-              weeklyXP: 950,
-              weeklyPoints: 950,
-              level: 10,
-              streak: 32,
-              league: settings.league || "Bronze",
-            },
-            {
-              uid: "bot-3",
-              displayName: "HabitHero_99",
-              weeklyXP: 750,
-              weeklyPoints: 750,
-              level: 8,
-              streak: 15,
-              league: settings.league || "Bronze",
-            },
-            {
-              uid: "bot-4",
-              displayName: "FlowState",
-              weeklyXP: 500,
-              weeklyPoints: 500,
-              level: 6,
-              streak: 8,
-              league: settings.league || "Bronze",
-            },
-            {
-              uid: "bot-5",
-              displayName: "Iron_Will",
-              weeklyXP: 320,
-              weeklyPoints: 320,
-              level: 4,
-              streak: 5,
-              league: settings.league || "Bronze",
-            },
-          ];
-
-          // Merge real users and bots, then deduplicate by ID just in case
-          const allDataMap = new Map();
-
-          // Only keep real users who have at least > 0 in streak, weeklyXP, or weeklyPoints
-          data.forEach((d) => {
-            if (!d || !d.uid) return;
-            const hasXp = (d.weeklyXP || 0) > 0;
-            const hasStreak = (d.streak || 0) > 0;
-            const hasPts = (d.weeklyPoints || 0) > 0;
-            const hasTotal = (d.totalPoints || 0) > 0;
-            if (hasXp || hasStreak || hasPts || hasTotal) {
-              allDataMap.set(d.uid, d);
-            }
-          });
-
-          // Add Bots
-          bots.forEach((b) => {
-            if (b && b.uid && !allDataMap.has(b.uid)) {
-              allDataMap.set(b.uid, b);
-            }
-          });
-
-          data = Array.from(allDataMap.values());
-
-          // Also handle current user: add them IF they have > 0 points
-          const userHasPoints =
-            (stats.weeklyXP || 0) > 0 ||
-            (stats.streak || 0) > 0 ||
-            (stats.weeklyPoints || 0) > 0 ||
-            (stats.totalPoints || 0) > 0;
-
-          if (user && !allDataMap.has(user.uid) && userHasPoints) {
-            data.push({
-              uid: user.uid,
-              displayName: settings.displayName || "Anonymous",
-              photoURL: settings.profilePic || user.photoURL || "",
-              weeklyXP: stats.weeklyXP || 0,
-              weeklyPoints: stats.weeklyPoints || 0,
-              level: Math.floor((stats.totalPoints || 0) / 100) + 1,
-              streak: stats.streak || 0,
-              league: settings.league || "Bronze",
-            });
-          } else if (user && allDataMap.has(user.uid)) {
-            // Force local settings to be used for the current user's entry
-            // (fixes bug where Firestore latency ignores recent photo uploads in leaderboard)
-            const localEntry = allDataMap.get(user.uid);
-            if (localEntry) {
-              localEntry.displayName =
-                settings.displayName || localEntry.displayName || "Anonymous";
-              localEntry.photoURL = settings.profilePic || localEntry.photoURL || "";
-            }
-          }
-          setLeaderboard(
-            data.sort((a, b) => {
-              // Primary: weeklyPoints > weeklyXP > totalPoints > level-based points desc (Duolingo Style: points earned are authoritative!)
-              const aPoints = a.weeklyPoints !== undefined ? a.weeklyPoints : (a.weeklyXP || a.totalPoints || a.xp || 0);
-              const bPoints = b.weeklyPoints !== undefined ? b.weeklyPoints : (b.weeklyXP || b.totalPoints || b.xp || 0);
-              
-              const pointsDiff = bPoints - aPoints;
-              if (pointsDiff !== 0) return pointsDiff;
-              
-              // Secondary: Level desc
-              const levelDiff = (b.level || 0) - (a.level || 0);
-              if (levelDiff !== 0) return levelDiff;
-              
-              // Tertiary: Streak desc (used strictly as a tie-breaker, streak shouldn't penalize active high earners)
-              return (b.streak || 0) - (a.streak || 0);
-            }),
-          );
-        },
-        (error) => {
-          try {
-            handleFirestoreError(error, OperationType.LIST, "leaderboard");
-          } catch (e) {
-            console.error("Firestore error handled:", e);
-          }
-        },
-      );
-      return () => unsubscribe();
     }
+  }, [
+    isDataReady,
+    isStateHydrated,
+    stats.lastWeeklyReset,
+    stats.lastGiftDate,
+    today,
+    settings.isPro,
+    settings.league,
+  ]);
+
+  // Dedicated stable Leaderboard Listener with multi-collection real-time sync and local cache saving
+  useEffect(() => {
+    if (!isDataReady || !isStateHydrated) return;
+
+    let leaderboardDocs: any[] = [];
+    let usersDocs: any[] = [];
+    let rankDocs: any[] = [];
+
+    const processAndSetLeaderboard = () => {
+      const allDataMap = new Map<string, any>();
+
+      const parseAndAdd = (d: any, defaultDocId: string) => {
+        if (!d) return;
+        const uid = d.uid || d.userId || d.id || defaultDocId;
+        if (!uid || uid.startsWith("bot-")) return;
+
+        const displayName = d.displayName || d.accountName || d.name || d.Name || d.account_name || "Anonymous";
+        const photoURL = d.photoURL || d.profilePic || d.photoFileName || d["Photo file name"] || d["Profile image"] || "";
+        
+        const maxPts = Math.max(
+          Number(d.weeklyPoints || 0),
+          Number(d.weeklyXP || 0),
+          Number(d.totalPoints || 0),
+          Number(d.points || 0),
+          Number(d.xp || 0),
+          Number(d.stats?.weeklyPoints || 0),
+          Number(d.stats?.weeklyXP || 0),
+          Number(d.stats?.totalPoints || 0),
+          Number(d.stats?.xp || 0)
+        );
+
+        const streak = Math.max(
+          Number(d.streak || 0),
+          Number(d.stats?.streak || 0)
+        );
+
+        const level = Math.max(
+          Number(d.level || 1),
+          Number(d.stats?.level || 1),
+          Math.floor(maxPts / 100) + 1
+        );
+
+        const league = d.league || d.stats?.league || "Bronze";
+
+        const existing = allDataMap.get(uid);
+        if (existing) {
+          const mergedPts = Math.max(existing.weeklyPoints || 0, maxPts);
+          const mergedStreak = Math.max(existing.streak || 0, streak);
+          const mergedLevel = Math.max(existing.level || 1, level);
+          const finalName = (displayName && displayName !== "Anonymous") ? displayName : (existing.displayName || "Anonymous");
+          const finalPhoto = photoURL || existing.photoURL || "";
+
+          allDataMap.set(uid, {
+            uid,
+            displayName: finalName,
+            photoURL: finalPhoto,
+            weeklyPoints: mergedPts,
+            weeklyXP: mergedPts,
+            totalPoints: mergedPts,
+            xp: mergedPts,
+            streak: mergedStreak,
+            level: mergedLevel,
+            league: league || existing.league || "Bronze",
+          });
+        } else {
+          allDataMap.set(uid, {
+            uid,
+            displayName: displayName || "Anonymous",
+            photoURL: photoURL || "",
+            weeklyPoints: maxPts,
+            weeklyXP: maxPts,
+            totalPoints: maxPts,
+            xp: maxPts,
+            streak,
+            level,
+            league,
+          });
+        }
+      };
+
+      leaderboardDocs.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
+      usersDocs.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
+      rankDocs.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
+
+      // BOT SYSTEM: Always add competitive AI players alongside real users
+      const bots = [
+        {
+          uid: "bot-1",
+          displayName: "Apex_Habit",
+          weeklyXP: 1250,
+          weeklyPoints: 1250,
+          totalPoints: 1250,
+          xp: 1250,
+          level: 12,
+          streak: 45,
+          league: settings.league || "Bronze",
+          photoURL: "",
+        },
+        {
+          uid: "bot-2",
+          displayName: "Zen_Master",
+          weeklyXP: 950,
+          weeklyPoints: 950,
+          totalPoints: 950,
+          xp: 950,
+          level: 10,
+          streak: 32,
+          league: settings.league || "Bronze",
+          photoURL: "",
+        },
+        {
+          uid: "bot-3",
+          displayName: "HabitHero_99",
+          weeklyXP: 750,
+          weeklyPoints: 750,
+          totalPoints: 750,
+          xp: 750,
+          level: 8,
+          streak: 15,
+          league: settings.league || "Bronze",
+          photoURL: "",
+        },
+        {
+          uid: "bot-4",
+          displayName: "FlowState",
+          weeklyXP: 500,
+          weeklyPoints: 500,
+          totalPoints: 500,
+          xp: 500,
+          level: 6,
+          streak: 8,
+          league: settings.league || "Bronze",
+          photoURL: "",
+        },
+        {
+          uid: "bot-5",
+          displayName: "Iron_Will",
+          weeklyXP: 320,
+          weeklyPoints: 320,
+          totalPoints: 320,
+          xp: 320,
+          level: 4,
+          streak: 5,
+          league: settings.league || "Bronze",
+          photoURL: "",
+        },
+      ];
+
+      bots.forEach((b) => {
+        if (!allDataMap.has(b.uid)) {
+          allDataMap.set(b.uid, b);
+        }
+      });
+
+      // Handle logged-in current user: ensure local state and server state are synced
+      if (user) {
+        const existingUser = allDataMap.get(user.uid);
+        const currentLocalMaxPts = Math.max(
+          stats.weeklyPoints || 0,
+          stats.weeklyXP || 0,
+          stats.totalPoints || 0,
+          stats.xp || 0
+        );
+        const firestoreUserMaxPts = existingUser?.weeklyPoints || 0;
+        const authoritativeMaxPts = Math.max(firestoreUserMaxPts, currentLocalMaxPts);
+        const authoritativeStreak = Math.max(existingUser?.streak || 0, stats.streak || 0);
+        const authoritativeLevel = Math.max(
+          existingUser?.level || 1,
+          stats.level || 1,
+          Math.floor(authoritativeMaxPts / 100) + 1
+        );
+
+        const currentUserEntry = {
+          uid: user.uid,
+          displayName: settings.displayName || existingUser?.displayName || user.displayName || "Champion",
+          photoURL: settings.profilePic || existingUser?.photoURL || user.photoURL || "",
+          weeklyXP: authoritativeMaxPts,
+          weeklyPoints: authoritativeMaxPts,
+          totalPoints: authoritativeMaxPts,
+          points: authoritativeMaxPts,
+          xp: authoritativeMaxPts,
+          streak: authoritativeStreak,
+          level: authoritativeLevel,
+          league: settings.league || existingUser?.league || "Bronze",
+        };
+
+        allDataMap.set(user.uid, currentUserEntry);
+
+        if (firestoreUserMaxPts > currentLocalMaxPts) {
+          setStats((prev) => ({
+            ...prev,
+            totalPoints: Math.max(prev.totalPoints || 0, firestoreUserMaxPts),
+            weeklyPoints: Math.max(prev.weeklyPoints || 0, firestoreUserMaxPts),
+            weeklyXP: Math.max(prev.weeklyXP || 0, firestoreUserMaxPts),
+            xp: Math.max(prev.xp || 0, firestoreUserMaxPts),
+            streak: Math.max(prev.streak || 0, authoritativeStreak),
+            level: Math.max(prev.level || 1, authoritativeLevel),
+          }));
+        }
+      }
+
+      const rawList = Array.from(allDataMap.values());
+
+      const sorted = rawList.sort((a, b) => {
+        const aPoints = a.weeklyPoints !== undefined ? a.weeklyPoints : (a.weeklyXP || a.totalPoints || a.xp || 0);
+        const bPoints = b.weeklyPoints !== undefined ? b.weeklyPoints : (b.weeklyXP || b.totalPoints || b.xp || 0);
+        
+        const pointsDiff = bPoints - aPoints;
+        if (pointsDiff !== 0) return pointsDiff;
+        
+        const levelDiff = (b.level || 0) - (a.level || 0);
+        if (levelDiff !== 0) return levelDiff;
+        
+        return (b.streak || 0) - (a.streak || 0);
+      });
+
+      setLeaderboard(sorted);
+      try {
+        localStorage.setItem("nexora_leaderboard_cache", JSON.stringify(sorted));
+      } catch (e) {
+        console.warn("Failed to write leaderboard cache:", e);
+      }
+    };
+
+    const qLb = query(collection(db, "leaderboard"), limit(150));
+    const unsubLb = onSnapshot(
+      qLb,
+      (snapshot) => {
+        leaderboardDocs = snapshot.docs;
+        processAndSetLeaderboard();
+      },
+      (error) => {
+        try {
+          handleFirestoreError(error, OperationType.LIST, "leaderboard");
+        } catch (e) {
+          console.error("Leaderboard listener handled error:", e);
+        }
+      }
+    );
+
+    const qUsers = query(collection(db, "users"), limit(150));
+    const unsubUsers = onSnapshot(
+      qUsers,
+      (snapshot) => {
+        usersDocs = snapshot.docs;
+        processAndSetLeaderboard();
+      },
+      (error) => {
+        try {
+          handleFirestoreError(error, OperationType.LIST, "users");
+        } catch (e) {
+          console.error("Users listener handled error:", e);
+        }
+      }
+    );
+
+    const qRank = query(collection(db, "rank"), limit(150));
+    const unsubRank = onSnapshot(
+      qRank,
+      (snapshot) => {
+        rankDocs = snapshot.docs;
+        processAndSetLeaderboard();
+      },
+      (error) => {
+        try {
+          handleFirestoreError(error, OperationType.LIST, "rank");
+        } catch (e) {
+          console.error("Rank listener handled error:", e);
+        }
+      }
+    );
+
+    return () => {
+      unsubLb();
+      unsubUsers();
+      unsubRank();
+    };
   }, [
     user,
     isDataReady,
     isStateHydrated,
     settings.league,
-    stats.lastWeeklyReset,
-    stats.lastGiftDate,
-    today,
-    settings.isPro,
-    stats.weeklyXP,
-    stats.weeklyPoints,
-    stats.totalPoints,
-    stats.streak,
     settings.displayName,
     settings.profilePic,
+    stats.weeklyPoints,
+    stats.weeklyXP,
+    stats.totalPoints,
+    stats.xp,
+    stats.streak,
+    stats.level,
   ]);
 
   const userRank = leaderboard.findIndex((l) => l.uid === user?.uid) + 1;
 
   // Monitor leaderboard for user rank improvements to trigger the Golden Glow
+  const rankUserRef = useRef<string | null>(null);
+  const initialRankHandledRef = useRef<boolean>(false);
+
   useEffect(() => {
-    if (!user || leaderboard.length === 0) return;
+    if (user?.uid !== rankUserRef.current) {
+      rankUserRef.current = user?.uid || null;
+      initialRankHandledRef.current = false;
+    }
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (!user || leaderboard.length === 0 || !isStateHydrated) return;
+    
     const currentRank = leaderboard.findIndex((l) => l.uid === user.uid) + 1;
     if (currentRank <= 0) return;
 
-    const lastViewedRankStr = localStorage.getItem("nexora_last_viewed_rank");
-    if (!lastViewedRankStr) {
-      localStorage.setItem("nexora_last_viewed_rank", currentRank.toString());
+    if (!initialRankHandledRef.current) {
+      initialRankHandledRef.current = true;
+      if (settings.lastViewedRank !== currentRank) {
+        onUpdateSettings({ lastViewedRank: currentRank });
+      }
       return;
     }
 
-    const lastViewedRank = parseInt(lastViewedRankStr);
+    const lastRank = settings.lastViewedRank ?? currentRank;
     
-    if (currentRank < lastViewedRank) {
-      console.log(`[RANK ANIMATION] Rank improved! Old rank: ${lastViewedRank}, New rank: ${currentRank}. Activating Golden Glow!`);
+    if (currentRank < lastRank && stats.totalPoints > 0) {
+      console.log(`[RANK ANIMATION] Rank improved! Old rank: ${lastRank}, New rank: ${currentRank}. Activating Golden Glow!`);
       setRankGlowActive(true);
       if (!localStorage.getItem("nexora_previous_rank")) {
-        localStorage.setItem("nexora_previous_rank", lastViewedRank.toString());
+        localStorage.setItem("nexora_previous_rank", lastRank.toString());
       }
-    } else if (currentRank > lastViewedRank) {
-      // Keep in sync if rank decreases, to avoid false positive glows
-      localStorage.setItem("nexora_last_viewed_rank", currentRank.toString());
+      onUpdateSettings({ lastViewedRank: currentRank });
     }
-  }, [leaderboard, user]);
+  }, [userRank, isStateHydrated, settings.lastViewedRank, stats.totalPoints, leaderboard, user, onUpdateSettings]);
 
   // Acknowledge the Rank Golden Glow when navigating to the leaderboard
   useEffect(() => {
@@ -3761,7 +4104,7 @@ export default function App() {
       setRankGlowActive(false);
       const currentRank = leaderboard.findIndex((l) => l.uid === user?.uid) + 1;
       if (currentRank > 0) {
-        localStorage.setItem("nexora_last_viewed_rank", currentRank.toString());
+        onUpdateSettings({ lastViewedRank: currentRank });
       }
     }
   }, [activeScreen, isRankGlowActive, leaderboard, user]);
@@ -3875,159 +4218,99 @@ export default function App() {
     setHistory(memoizedHistory);
   }, [memoizedHistory]);
 
-  // Trophy Alert Logic (Side-effect separated from state update for reliability)
-  const [lastTrophyAlert, setLastTrophyAlert] = useState<
-    { id: string; type: string }[]
-  >([]);
-
-  useEffect(() => {
-    if (!isDataReady || !isStateHydrated || !settings.badgeSettings?.trophyAlerts) return;
-
-    const currentTrophyStates = stats.trophies.map((t) => ({
-      id: t.id,
-      type: t.type,
-    }));
-
-    // Compare with last known states to find transitions
-    if (lastTrophyAlert.length === 0) {
-      setLastTrophyAlert(currentTrophyStates);
-      return;
-    }
-
-    currentTrophyStates.forEach((curr) => {
-      const prev = lastTrophyAlert.find((p) => p.id === curr.id);
-      if (prev && prev.type !== curr.type) {
-        if (curr.type === "ice") {
-          sendNotification("Trophy Alert! 🧊", {
-            body: "One of your trophies just turned to ICE! Complete a challenge now to save it!",
-            icon: nexoraAppIcon,
-          });
-          showToast("TROPHY ALERT: ICE DETECTED! 🧊", "info");
-        } else if (curr.type === "broken") {
-          sendNotification("Trophy Alert! 💔", {
-            body: "Oh no! A trophy has BROKEN! Don't let more break, bro!",
-            icon: nexoraAppIcon,
-          });
-          showToast("TROPHY ALERT: SHATTERED! 💔", "error");
-        }
-      }
-    });
-
-    setLastTrophyAlert(currentTrophyStates);
-  }, [
-    stats.trophies,
-    isDataReady,
-    isStateHydrated,
-    settings.badgeSettings?.trophyAlerts,
-    settings.soundEnabled,
-  ]);
-
+  // Trophy Check & Decay Logic based strictly on user inactivity days
   const checkTrophies = useCallback(() => {
     onUpdateStats((prevStats) => {
-      if (!prevStats.trophies || prevStats.trophies.length === 0)
+      if (!prevStats.trophies || prevStats.trophies.length === 0) return prevStats;
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      // If user active date is missing, set to today and do not decay
+      if (!prevStats.lastActiveDate) {
+        return { ...prevStats, lastActiveDate: todayStr };
+      }
+
+      const lastActiveTime = new Date(prevStats.lastActiveDate).getTime();
+      const todayTime = new Date(todayStr).getTime();
+      if (isNaN(lastActiveTime) || isNaN(todayTime)) {
+        return { ...prevStats, lastActiveDate: todayStr };
+      }
+
+      const daysInactive = Math.floor((todayTime - lastActiveTime) / (1000 * 60 * 60 * 24));
+
+      // Day 0 or Day 1 of inactivity (< 2 days): No trophy decay, no alerts
+      if (daysInactive < 2) {
         return prevStats;
-
-      const now = Date.now();
-      const trophies = prevStats.trophies || [];
-
-      // To ensure trophies degrade slowly one-by-one (at most one per 24 hours),
-      // we check if any trophy has been updated (degraded) within the last 24 hours.
-      const oneDayMs = 24 * 60 * 60 * 1000;
-      const hasRecentDegradation = trophies.some((t) => {
-        if (t.type === "ice" || t.type === "broken") {
-          const updatedTime = t.lastUpdated ? new Date(t.lastUpdated).getTime() : 0;
-          return (now - updatedTime) < oneDayMs;
-        }
-        return false;
-      });
-
-      if (hasRecentDegradation) {
-        return prevStats; // Wait for the 24-hour cycle before degrading another trophy!
       }
 
-      let changed = false;
-      const updatedTrophies = [...trophies];
+      const trophies = [...prevStats.trophies];
 
-      // 1. Check for the oldest 'ice' trophy to degrade to 'broken' (one-by-one)
-      let iceToBreakIndex = -1;
-      for (let i = updatedTrophies.length - 1; i >= 0; i--) {
-        const t = updatedTrophies[i];
-        if (t.type === "ice") {
-          const earnedTime = new Date(t.earnedDate).getTime();
-          const daysSince = (now - earnedTime) / (1000 * 60 * 60 * 24);
-          if (daysSince >= 3) {
-            iceToBreakIndex = i;
-            break;
-          }
-        }
-      }
-
-      if (iceToBreakIndex !== -1) {
-        updatedTrophies[iceToBreakIndex] = {
-          ...updatedTrophies[iceToBreakIndex],
-          type: "broken" as const,
-          lastUpdated: new Date().toISOString(),
-        };
-        changed = true;
-      } else {
-        // 2. If no ice trophy was broken, find the oldest 'golden' trophy to turn to 'ice' (one-by-one)
-        let goldToIceIndex = -1;
-        for (let i = updatedTrophies.length - 1; i >= 0; i--) {
-          const t = updatedTrophies[i];
-          if (t.type === "golden") {
-            const earnedTime = new Date(t.earnedDate).getTime();
-            const daysSince = (now - earnedTime) / (1000 * 60 * 60 * 24);
-            if (daysSince >= 2) {
-              goldToIceIndex = i;
-              break;
-            }
-          }
-        }
-
-        if (goldToIceIndex !== -1) {
-          updatedTrophies[goldToIceIndex] = {
-            ...updatedTrophies[goldToIceIndex],
-            type: "ice" as const,
+      if (daysInactive === 2) {
+        // DAY 2 INACTIVE: Exactly 1 oldest golden trophy turns to ICE
+        // Notification sent ONLY on second day, and only once per calendar day
+        const goldIndex = trophies.findIndex((t) => t.type === "golden");
+        if (goldIndex !== -1) {
+          trophies[goldIndex] = {
+            ...trophies[goldIndex],
+            type: "ice",
             lastUpdated: new Date().toISOString(),
           };
-          changed = true;
+
+          const lastAlert = localStorage.getItem("nexora_last_trophy_ice_alert");
+          if (lastAlert !== todayStr && settings.badgeSettings?.trophyAlerts) {
+            localStorage.setItem("nexora_last_trophy_ice_alert", todayStr);
+            sendNotification("Trophy Alert! 🧊", {
+              body: "One of your trophies turned to ICE! Complete a challenge today to restore it!",
+              icon: nexoraAppIcon,
+            });
+            showToast("TROPHY ALERT: ICE DETECTED! 🧊", "info");
+          }
+
+          return {
+            ...prevStats,
+            trophies,
+            lastActiveDate: todayStr,
+          };
         }
-      }
-
-      // 5-day Auto-Removal Cleanup: Delete old trophies (e.g., golden, ice, broken) older than 5 days.
-      let cleanedTrophies = updatedTrophies;
-      if (updatedTrophies.length > 3) {
-        const oldTrophies = updatedTrophies.filter((t) => {
-          const earnedTime = new Date(t.earnedDate).getTime();
-          const daysSince = (now - earnedTime) / (1000 * 60 * 60 * 24);
-          return daysSince >= 5;
-        });
-
-        if (oldTrophies.length > 0) {
-          // Sort oldest first to remove
-          oldTrophies.sort((a, b) => new Date(a.earnedDate).getTime() - new Date(b.earnedDate).getTime());
-          
-          // Delete up to 20 of them but leave at least 3 trophies as a buffer so we don't wipe out everything!
-          const maxToDelete = Math.min(oldTrophies.length, 20, updatedTrophies.length - 3);
-          if (maxToDelete > 0) {
-            const idsToDelete = oldTrophies.slice(0, maxToDelete).map(t => t.id);
-            cleanedTrophies = updatedTrophies.filter(t => !idsToDelete.includes(t.id));
-            changed = true;
+      } else if (daysInactive >= 3) {
+        // DAY 3+ INACTIVE: Exactly 1 oldest ice trophy breaks (turns to broken)
+        // (or 1 golden turns to ice if no ice trophies). NO notification sent!
+        const iceIndex = trophies.findIndex((t) => t.type === "ice");
+        if (iceIndex !== -1) {
+          trophies[iceIndex] = {
+            ...trophies[iceIndex],
+            type: "broken",
+            lastUpdated: new Date().toISOString(),
+          };
+          return {
+            ...prevStats,
+            trophies,
+            lastActiveDate: todayStr,
+          };
+        } else {
+          const goldIndex = trophies.findIndex((t) => t.type === "golden");
+          if (goldIndex !== -1) {
+            trophies[goldIndex] = {
+              ...trophies[goldIndex],
+              type: "ice",
+              lastUpdated: new Date().toISOString(),
+            };
+            return {
+              ...prevStats,
+              trophies,
+              lastActiveDate: todayStr,
+            };
           }
         }
       }
 
-      if (changed) {
-        return { ...prevStats, trophies: cleanedTrophies };
-      }
       return prevStats;
     });
-  }, [onUpdateStats]);
+  }, [onUpdateStats, settings.badgeSettings?.trophyAlerts]);
 
-  // Trophy degradation logic
+  // Run trophy inactivity check once after hydration
   useEffect(() => {
     if (!isDataReady || !isStateHydrated) return;
-    const timer = setTimeout(checkTrophies, 2000); // Check shortly after load
+    const timer = setTimeout(checkTrophies, 2000);
     return () => clearTimeout(timer);
   }, [checkTrophies, isDataReady, isStateHydrated]);
 
@@ -4315,29 +4598,22 @@ export default function App() {
     coinsToAdd += plantBonusCoins;
     xpToAdd += plantBonusXP;
 
-    // STRICT DAILY STREAK CALCULATION
+    // STRICT DAILY STREAK CALCULATION - ALWAYS INCREMENT STREAK BY 1 ON COMPLETING ANY CHALLENGE (OFFICIAL OR CUSTOM PLAN)
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split("T")[0];
 
+    // Safely normalize lastCompletedDate string (stripping time if present)
+    const rawLastCompleted = stats.lastCompletedDate || "";
+    const normalizedLastCompleted = rawLastCompleted ? rawLastCompleted.split("T")[0].split(" ")[0].trim() : "";
+
     let currentActualStreak = stats.streak || 0;
-    let finalStreakShow = currentActualStreak;
+    let streakToSave = currentActualStreak + 1;
     let usedStreakProtection = false;
 
-    if (
-      stats.lastCompletedDate === today ||
-      stats.lastCompletedDate === yesterdayStr
-    ) {
-      finalStreakShow = currentActualStreak + 1;
-    } else if (hasStreakProtection) {
-      finalStreakShow = currentActualStreak + 1;
-      usedStreakProtection = true;
-    } else {
-      finalStreakShow = 1;
-    }
-
+    const finalStreakShow = streakToSave;
     setSessionStreak(finalStreakShow);
-    setIsNewStreak(true); // Always treat it as a new streak bump for the animation since it always increases now
+    setIsNewStreak(true); // Always treat as a new streak bump for the animation
 
     if (usedXPBoost) {
       showToast("XP Overdrive consumed! Triple XP added! 🚀⚡", "success");
@@ -4352,22 +4628,9 @@ export default function App() {
     }
 
     const oldLevel = stats.level || 1;
-    let streakToSave = stats.streak || 0;
-
-    if (
-      stats.lastCompletedDate === today ||
-      stats.lastCompletedDate === yesterdayStr
-    ) {
-      streakToSave = (stats.streak || 0) + 1;
-    } else if (hasStreakProtection) {
-      streakToSave = (stats.streak || 0) + 1;
-    } else {
-      streakToSave = 1;
-    }
-
     const newBestStreak = Math.max(stats.bestStreak || 0, streakToSave);
     const newTotalCompletedDays =
-      stats.lastCompletedDate !== today
+      normalizedLastCompleted !== today
         ? (stats.totalCompletedDays || 0) + 1
         : stats.totalCompletedDays || 0;
     const newLastCompletedDate = today;
@@ -4479,6 +4742,33 @@ export default function App() {
     setStats(updatedStats);
 
     if (user) {
+      // Direct write to user's primary document and stats subdocument for guaranteed immediate persistence
+      const userRef = doc(db, "users", user.uid);
+      const userStatsMainRef = doc(db, "users", user.uid, "stats", "main");
+      const userTopStatsRef = doc(db, "stats", user.uid);
+
+      const coreStatsPayload = {
+        streak: updatedStats.streak,
+        bestStreak: updatedStats.bestStreak,
+        totalPoints: updatedStats.totalPoints,
+        weeklyPoints: updatedStats.weeklyPoints,
+        weeklyXP: updatedStats.weeklyXP,
+        xp: updatedStats.xp,
+        level: updatedStats.level,
+        coins: updatedStats.coins,
+        totalCompletedDays: updatedStats.totalCompletedDays,
+        lastCompletedDate: updatedStats.lastCompletedDate,
+        updatedAt: serverTimestamp(),
+      };
+
+      setDoc(userRef, { stats: updatedStats, streak: updatedStats.streak, lastCompletedDate: updatedStats.lastCompletedDate, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+      setDoc(userStatsMainRef, coreStatsPayload, { merge: true }).catch(() => {});
+      setDoc(userTopStatsRef, coreStatsPayload, { merge: true }).catch(() => {});
+
+      setTimeout(() => {
+        forceSyncData().catch(() => {});
+      }, 300);
+
       const leaderboardRef = doc(db, "leaderboard", user.uid);
       setDoc(
         leaderboardRef,
@@ -5421,10 +5711,22 @@ export default function App() {
                       stats={stats}
                       showToast={showToast}
                       onUpdateSettings={onUpdateSettings}
+                      onUpdateStats={onUpdateStats}
                       posts={posts}
                       circles={circles}
                       notifications={notifications}
                       setActiveScreen={setActiveScreen}
+                      onPostCreated={(newPost) => {
+                        setPosts((prev) => {
+                          const next = [newPost, ...prev.filter((p) => p.id !== newPost.id)];
+                          try {
+                            localStorage.setItem("nexora_posts_cache", JSON.stringify(next.slice(0, 150)));
+                          } catch (e) {
+                            console.warn("Failed to update posts cache:", e);
+                          }
+                          return next;
+                        });
+                      }}
                     />
                   </Suspense>
                 </motion.div>
@@ -5538,7 +5840,7 @@ export default function App() {
                           id: `${item.id}-${Date.now()}`,
                           itemId: item.id,
                           name: item.name,
-                          icon: item.icon,
+                          icon: typeof item.icon === "string" || typeof item.icon === "number" ? String(item.icon) : (isMusic ? "🎵" : isSkin ? "🎨" : isSoundPack ? "🔊" : "🎁"),
                           activated: isSkin || isMusic || isSoundPack, // Activate immediately!
                           type:
                             item.effect === "skin"
@@ -5560,11 +5862,16 @@ export default function App() {
                             id: `bonus-${item.id}-${Date.now()}`,
                             itemId: `bonus-${item.id}`,
                             name: `Bonus ${item.name}`,
-                            icon: `✨${item.icon}`,
+                            icon: typeof item.icon === "string" || typeof item.icon === "number" ? `✨${item.icon}` : "✨🎁",
                             activated: false,
                             type: "gift",
                             purchasedAt: new Date().toISOString(),
                           });
+                        }
+
+                        if (isMusic) {
+                          setIsUserManualMusicStarted(true);
+                          playMusic(item.id);
                         }
 
                         onUpdateSettings((prev) => {
@@ -5614,38 +5921,51 @@ export default function App() {
                         });
 
                         if (user) {
+                          const userRef = doc(db, "users", user.uid);
                           const purchaseRef = doc(db, "shop_purchases", user.uid);
-                          setDoc(purchaseRef, {
+                          const shopRef = doc(db, "shop", user.uid);
+                          const userShopRef = doc(db, "users", user.uid, "shop", "main");
+                          const libraryRef = doc(db, "library", user.uid);
+
+                          const purchaseData = {
                             userId: user.uid,
                             userName: settings.displayName || user.displayName || "Champion",
                             userEmail: user.email || `${user.uid}@nexora.app`,
                             purchases: arrayUnion({
                               itemId: item.id,
                               itemName: item.name,
-                              itemIcon: item.icon || "🛒",
+                              itemIcon: typeof item.icon === "string" || typeof item.icon === "number" ? String(item.icon) : "🛒",
                               price: currency === "coins" ? (item.coinPrice || 0) : (item.price || 0),
                               currency: currency,
                               itemType: item.effect || "shop_item",
                               purchasedAt: new Date().toISOString(),
                             }),
+                            purchasedItems: arrayUnion(item.id),
+                            inventory: arrayUnion(newItem, ...bonusItems),
                             updatedAt: serverTimestamp()
-                          }, { merge: true }).catch((err) => console.error("Failed to save shop purchase to shop_purchases:", err));
+                          };
+                          setDoc(userRef, { purchasedItems: arrayUnion(item.id), inventory: arrayUnion(newItem, ...bonusItems) }, { merge: true }).catch((err) => console.error(err));
+                          setDoc(libraryRef, { purchasedItems: arrayUnion(item.id), inventory: arrayUnion(newItem, ...bonusItems) }, { merge: true }).catch((err) => console.error(err));
+                          setDoc(purchaseRef, purchaseData, { merge: true }).catch((err) => console.error("Failed to save shop purchase to shop_purchases:", err));
+                          setDoc(shopRef, purchaseData, { merge: true }).catch((err) => console.error("Failed to save shop purchase to shop collection:", err));
+                          setDoc(userShopRef, purchaseData, { merge: true }).catch((err) => console.error("Failed to save shop purchase to user shop subcollection:", err));
                         }
 
-                        setStats((prev) => ({
+                        const nextCoins = currency === "coins" ? Math.max(0, (stats.coins || 0) - (item.coinPrice || 0)) : (stats.coins || 0);
+                        const nextStreak = currency === "streak" ? Math.max(0, stats.streak - item.price) : stats.streak;
+
+                        onUpdateStats((prev) => ({
                           ...prev,
-                          streak:
-                            currency === "streak"
-                              ? Math.max(0, prev.streak - item.price)
-                              : prev.streak,
-                          coins:
-                            currency === "coins"
-                              ? Math.max(
-                                  0,
-                                  (prev.coins || 0) - (item.coinPrice || 0),
-                                )
-                              : prev.coins || 0,
+                          streak: nextStreak,
+                          coins: nextCoins,
                         }));
+
+                        if (user) {
+                          const userRef = doc(db, "users", user.uid);
+                          const statsRef = doc(db, "users", user.uid, "stats", "main");
+                          setDoc(userRef, { coins: nextCoins, streak: nextStreak }, { merge: true }).catch((e) => console.error(e));
+                          setDoc(statsRef, { coins: nextCoins, streak: nextStreak }, { merge: true }).catch((e) => console.error(e));
+                        }
 
                         // SYNC WITH ORIGINAL STATS FOR ROLLBACK CONSISTENCY
                         if (originalStatsBeforeProTest) {
@@ -5725,6 +6045,15 @@ export default function App() {
                           }
                         }
 
+                        // Snapshot original stats BEFORE starting Pro Test mode
+                        const statsToSave = JSON.parse(JSON.stringify(stats));
+                        setOriginalStatsBeforeProTest(statsToSave);
+                        try {
+                          localStorage.setItem("nexora_original_stats", JSON.stringify(statsToSave));
+                        } catch (e) {
+                          console.error("Error setting nexora_original_stats:", e);
+                        }
+
                         // Adjusted duration: 15 minutes for a balanced test experience
                         const expiry = new Date(now.getTime() + 15 * 60 * 1000);
                         const settingsUpdate = {
@@ -5732,12 +6061,13 @@ export default function App() {
                           proTestExpiresAt: expiry.toISOString(),
                           proTestLastUsedAt: now.toISOString(),
                           proTestActive: true,
+                          originalStatsBeforeProTest: statsToSave,
                         };
                         onUpdateSettings(settingsUpdate);
 
-                        // CRITICAL: Force immediate sync to Firestore so refresh/exit doesn't lose the test state
+                        // CRITICAL: Force immediate sync to Firestore with originalStatsBeforeProTest snapshot
                         if (user) {
-                          setDoc(doc(db, "users", user.uid), settingsUpdate, {
+                          firestoreSetDoc(doc(db, "users", user.uid), settingsUpdate, {
                             merge: true,
                           }).catch((e) =>
                             console.error("Pro Test immediate sync failed:", e),
@@ -5835,6 +6165,11 @@ export default function App() {
                         (i) => i.id === id,
                       );
                       if (!itemToActivate) return;
+
+                      if (itemToActivate.type === "music") {
+                        setIsUserManualMusicStarted(true);
+                        playMusic(itemToActivate.itemId || itemToActivate.id);
+                      }
 
                       let inventory = (settings.inventory || []).map(
                         (item) => {
@@ -5934,7 +6269,7 @@ export default function App() {
                         showToast(reward.msg, "success");
                         vibrate(VIBRATION_PATTERNS.SUCCESS);
 
-                        setStats((s) => ({
+                        onUpdateStats((s) => ({
                           ...s,
                           coins:
                             reward.type === "coins"
@@ -5966,10 +6301,14 @@ export default function App() {
                       vibrate(VIBRATION_PATTERNS.CLICK);
                       onUpdateSettings((prev) => {
                         const itemToDeactivate = prev.inventory?.find(
-                          (i) => i.id === id,
+                          (i) => i.id === id || i.itemId === id,
                         );
+                        if (itemToDeactivate?.type === "music") {
+                          setIsUserManualMusicStarted(false);
+                          stopAllMusic();
+                        }
                         const inventory = (prev.inventory || []).map((item) => {
-                          if (item.id === id) {
+                          if (item.id === id || item.itemId === id) {
                             return { ...item, activated: false };
                           }
                           return item;
@@ -5998,17 +6337,23 @@ export default function App() {
                       vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                       onUpdateSettings((prev) => {
                         const itemToDelete = prev.inventory?.find(
-                          (i) => i.id === id,
+                          (i) => i.id === id || i.itemId === id,
                         );
+                        const deletedItemId = itemToDelete?.itemId || id;
+
+                        if (itemToDelete?.type === "music") {
+                          setIsUserManualMusicStarted(false);
+                          stopAllMusic();
+                        }
+
                         const inventory = (prev.inventory || []).filter(
-                          (item) => item.id !== id,
+                          (item) => item.id !== id && item.itemId !== id && item.id !== deletedItemId && item.itemId !== deletedItemId,
                         );
 
-                        // If deleted, remove from purchasedItems so it can be bought again
-                        // But ONLY if it's not a bonus gift (bonus gifts don't exist in shop)
+                        // If deleted, remove from purchasedItems so it can be bought again in Shop
                         const purchasedItems = (
                           prev.purchasedItems || []
-                        ).filter((pid) => pid !== itemToDelete?.itemId);
+                        ).filter((pid) => pid !== deletedItemId && pid !== id && pid !== itemToDelete?.id);
 
                         let activeHat = prev.activeHat;
                         if (
@@ -6016,6 +6361,27 @@ export default function App() {
                           itemToDelete.activated
                         ) {
                           activeHat = "none";
+                        }
+
+                        if (user) {
+                          const userRef = doc(db, "users", user.uid);
+                          const purchaseRef = doc(db, "shop_purchases", user.uid);
+                          const shopRef = doc(db, "shop", user.uid);
+                          const userShopRef = doc(db, "users", user.uid, "shop", "main");
+                          const libraryRef = doc(db, "library", user.uid);
+
+                          const updateData = {
+                            purchasedItems,
+                            inventory,
+                            activeHat: activeHat || "none",
+                            updatedAt: serverTimestamp(),
+                          };
+
+                          setDoc(userRef, updateData, { merge: true }).catch((e) => console.error(e));
+                          setDoc(purchaseRef, { purchasedItems, inventory }, { merge: true }).catch((e) => console.error(e));
+                          setDoc(shopRef, { purchasedItems, inventory }, { merge: true }).catch((e) => console.error(e));
+                          setDoc(userShopRef, { purchasedItems, inventory }, { merge: true }).catch((e) => console.error(e));
+                          setDoc(libraryRef, { purchasedItems, inventory }, { merge: true }).catch((e) => console.error(e));
                         }
 
                         return {
@@ -6929,12 +7295,14 @@ export default function App() {
                       <button
                         onClick={() => {
                           vibrate(VIBRATION_PATTERNS.CLICK);
+                          setIsUserManualMusicStarted(false);
+                          stopAllMusic();
                           if (currentPlayingMusicTrack.isZen) {
                             onUpdateSettings({ soundEnabled: false });
                             showToast("Sound Muted 🔇", "success");
                           } else {
                             const inventory = (settings.inventory || []).map((item) => {
-                              if (item.id === currentPlayingMusicTrack.id) {
+                              if (item.id === currentPlayingMusicTrack.id || item.itemId === currentPlayingMusicTrack.itemId || item.type === "music") {
                                 return { ...item, activated: false };
                               }
                               return item;

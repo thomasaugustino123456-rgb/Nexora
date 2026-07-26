@@ -179,9 +179,21 @@ window.addEventListener('vite:preloadError', (event) => {
   window.location.reload();
 });
 
-// Fallback for uncaught chunk errors
+// Fallback for uncaught chunk errors and internal SDK assertions
 window.addEventListener('unhandledrejection', (event) => {
-  const msg = event.reason?.message || '';
+  const msg = event.reason?.message || String(event.reason || '');
+  if (
+    msg.includes('INTERNAL ASSERTION FAILED') ||
+    msg.includes('Unexpected state') ||
+    msg.includes('ca9') ||
+    msg.includes('ve:') ||
+    msg.includes('FIRESTORE')
+  ) {
+    event.preventDefault();
+    console.warn('Unhandled promise rejection: Ignored internal Firestore SDK assertion error:', msg);
+    return;
+  }
+
   if (msg.includes('Failed to fetch dynamically imported module') || msg.includes('loading chunk') || msg.includes('dynamically imported module')) {
     console.log('Unhandled chunk error detected, reloading page...');
     event.preventDefault();
@@ -206,6 +218,11 @@ window.addEventListener('error', (event) => {
     msg.includes('Invalid hook call') ||
     msg.includes('Script error') ||
     msg.includes('script error') ||
+    msg.includes('INTERNAL ASSERTION FAILED') ||
+    msg.includes('Unexpected state') ||
+    msg.includes('ca9') ||
+    msg.includes('ve:') ||
+    msg.includes('FIRESTORE') ||
     !event.filename ||
     event.filename.includes('extension')
   ) {

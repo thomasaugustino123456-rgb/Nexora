@@ -99,7 +99,7 @@ export const BottomNav = ({
                 onClick={() => {
                   vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
                   if (settings.soundEnabled) play("nav_switch");
-                  if (id === "leaderboard" && isRankGlowActive) {
+                  if (id === "leaderboard") {
                     localStorage.setItem("nexora_scrolling_to_user_rank", "true");
                   }
                   setActiveScreen(item.screen);

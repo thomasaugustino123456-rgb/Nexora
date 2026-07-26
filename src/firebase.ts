@@ -60,7 +60,7 @@ const isIframe = typeof window !== 'undefined' && window.self !== window.top;
 
 export const db = initializeFirestore(app, {
   localCache: memoryLocalCache(),
-  ...(isIframe ? { experimentalForceLongPolling: true } : {}),
+  ...(isIframe ? { experimentalAutoDetectLongPolling: true } : { experimentalAutoDetectLongPolling: true }),
 }, databaseId === "(default)" ? undefined : databaseId);
 
 // Silent native Firestore warnings (e.g. offline warnings) to prevent them being captured as platform errors.
@@ -98,6 +98,18 @@ export interface FirestoreErrorInfo {
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errorMessage = error instanceof Error ? error.message : String(error);
   
+  // Detect if this is a internal assertion or unexpected SDK state error (e.g. ID: ca9, ve: -1)
+  const isInternalAssertion = 
+    errorMessage.includes('INTERNAL ASSERTION FAILED') ||
+    errorMessage.includes('Unexpected state') ||
+    errorMessage.includes('ca9') ||
+    errorMessage.includes('ve:');
+
+  if (isInternalAssertion) {
+    console.warn(`[Firestore Internal Assertion Handled] Operating through transient SDK assertion during ${operationType} on path: ${path}. Detail:`, errorMessage);
+    return;
+  }
+
   // Detect if this is an expected offline/network/unavailable state.
   const isOffline = 
     errorMessage.toLowerCase().includes('offline') || 
@@ -109,6 +121,16 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
   if (isOffline) {
     console.warn(`[Firestore Offline] Operating in local fallback mode for ${operationType} on path: ${path}. Detail:`, errorMessage);
+    return;
+  }
+
+  const isPermissionError = 
+    errorMessage.toLowerCase().includes('permission') || 
+    errorMessage.toLowerCase().includes('insufficient') ||
+    (error && typeof error === 'object' && 'code' in error && (error as any).code === 'permission-denied');
+
+  if (isPermissionError) {
+    console.warn(`[Firestore Permission] Operating in local fallback mode for ${operationType} on path: ${path}. Detail:`, errorMessage);
     return;
   }
 

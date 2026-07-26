@@ -152,10 +152,105 @@ import {
   query,
   where,
   orderBy,
+  increment,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { CreateCircleWizard } from "./CreateCircleWizard";
 import { NexusLinkRenderer } from "./NexusLinkRenderer";
+
+export const CUTE_AWARDS = [
+  {
+    key: "hand_clipping",
+    emoji: "👏",
+    label: "Hand Clipping",
+    cost: 30,
+    xpAward: 15,
+    uses: 5,
+    desc: "Super fast cute round of applause!",
+    animation: {
+      animate: { scale: [1, 1.25, 0.95, 1.25, 1], rotate: [0, -10, 10, -10, 0] },
+      transition: { repeat: Infinity, duration: 1.2 }
+    }
+  },
+  {
+    key: "cring_face",
+    emoji: "😬",
+    label: "Cartoon Face Cringe",
+    cost: 50,
+    xpAward: 30,
+    uses: 3,
+    desc: "Yikes! Relatable cringe moment.",
+    animation: {
+      animate: { x: [0, -3, 3, -3, 3, 0], scale: [1, 0.95, 1] },
+      transition: { repeat: Infinity, duration: 1.0 }
+    }
+  },
+  {
+    key: "happy_toon",
+    emoji: "🥳",
+    label: "Happy Cartoon",
+    cost: 80,
+    xpAward: 50,
+    uses: 3,
+    desc: "Pure joy and positive energy!",
+    animation: {
+      animate: { y: [0, -12, 0, -6, 0], rotate: [0, 15, -15, 0] },
+      transition: { repeat: Infinity, duration: 1.5 }
+    }
+  },
+  {
+    key: "sleeping_mascot",
+    emoji: "😴",
+    label: "Sleeping Mascot",
+    cost: 100,
+    xpAward: 75,
+    uses: 3,
+    desc: "Exhausted focus recharge mode.",
+    animation: {
+      animate: { scale: [1, 1.08, 1], rotate: [-5, 5, -5] },
+      transition: { repeat: Infinity, duration: 2.0 }
+    }
+  },
+  {
+    key: "car_raising",
+    emoji: "🏎️",
+    label: "Car Raising",
+    cost: 150,
+    xpAward: 120,
+    uses: 2,
+    desc: "Revving up the progress engine!",
+    animation: {
+      animate: { y: [0, -8, -10, -8, 0], x: [0, -2, 2, 0] },
+      transition: { repeat: Infinity, duration: 0.8 }
+    }
+  },
+  {
+    key: "dog_chill",
+    emoji: "🐶",
+    label: "Chill Dog",
+    cost: 200,
+    xpAward: 180,
+    uses: 2,
+    desc: "Absolute zen master chill mode.",
+    animation: {
+      animate: { rotate: [0, -10, 10, 0], scale: [1, 1.05, 1] },
+      transition: { repeat: Infinity, duration: 2.2 }
+    }
+  },
+  {
+    key: "eating_food",
+    emoji: "🥗",
+    label: "Eating Cartoon",
+    cost: 250,
+    xpAward: 250,
+    uses: 2,
+    desc: "Yummy food battery recharge!",
+    animation: {
+      animate: { scaleY: [1, 0.85, 1.15, 1], scaleX: [1, 1.15, 0.85, 1] },
+      transition: { repeat: Infinity, duration: 1.4 }
+    }
+  }
+];
 
 interface SocialScreenProps {
   play?: (sound: string) => void;
@@ -165,10 +260,12 @@ interface SocialScreenProps {
   stats: UserStats;
   showToast: (m: string, t?: "success" | "info" | "error") => void;
   onUpdateSettings?: (updates: any) => Promise<void> | void;
+  onUpdateStats?: (updater: any) => void;
   posts: Post[];
   circles: SocialCircle[];
   notifications?: NexusNotification[];
   setActiveScreen: (s: Screen) => void;
+  onPostCreated?: (post: Post) => void;
 }
 
 export function SocialScreen({
@@ -179,10 +276,12 @@ export function SocialScreen({
   stats,
   showToast,
   onUpdateSettings,
+  onUpdateStats,
   posts: initialPosts,
   circles: initialCircles,
   notifications = [],
   setActiveScreen,
+  onPostCreated,
 }: SocialScreenProps) {
   // Tab Navigation inside Community Section
   // 'home' = Feed, 'groups' = Sub-communities list, 'rewards' = Achievements/Rewards cabinet, 'library' = Saved list, 'profile' = User profile
@@ -244,6 +343,7 @@ export function SocialScreen({
   >({});
   const [lightboxPost, setLightboxPost] = useState<Post | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number>(0);
+  const [awardingPost, setAwardingPost] = useState<Post | null>(null);
 
   // Advanced Group Onboarding Wizard (Pages 1 to 4)
   const [creationStep, setCreationStep] = useState<number>(1);
@@ -329,7 +429,7 @@ export function SocialScreen({
   // Background update helper for historical posts privacy toggles
   const updateHistoricalPostsPrivacy = async (hidePosts: boolean) => {
     try {
-      const q = query(collection(db, "posts"), where("userId", "==", currentUserId));
+      const q = query(collection(db, "community_posts"), where("userId", "==", currentUserId));
       const snap = await getDocs(q);
       snap.docs.forEach(async (docRef) => {
         await updateDoc(docRef.ref, { hidePostsFromOthers: hidePosts });
@@ -345,12 +445,12 @@ export function SocialScreen({
       if (!targetUserId) return;
       const statsRef = doc(db, "users", targetUserId, "stats", "main");
       const { increment } = await import("firebase/firestore");
-      await updateDoc(statsRef, {
+      await setDoc(statsRef, {
         totalPoints: increment(xp),
         coins: increment(coins)
-      });
+      }, { merge: true });
       // Register a system reward notification card
-      await addDoc(collection(db, "users", targetUserId, "notifications"), {
+      await addDoc(collection(db, "users", targetUserId, "notifications"), cleanPayload({
         userId: targetUserId,
         senderId: "system",
         senderName: "Nexora Rewards",
@@ -358,7 +458,7 @@ export function SocialScreen({
         message: `🏆 Level Up! Claim: +${xp} XP & +${coins} Coins! (${reason})`,
         isRead: false,
         createdAt: new Date().toISOString()
-      });
+      }));
     } catch (e) {
       console.error("Failed to disburse milestone rewards:", e);
     }
@@ -370,27 +470,76 @@ export function SocialScreen({
     setInspectedUserProfileId(targetUserId);
     setInspectedUserLoading(true);
     try {
-      const userDocRef = doc(db, "users", targetUserId);
-      const userSnap = await getDoc(userDocRef);
-      const statsDocRef = doc(db, "users", targetUserId, "stats", "main");
-      const statsSnap = await getDoc(statsDocRef);
+      if (targetUserId.startsWith("bot-")) {
+        const botNames: Record<string, string> = {
+          "bot-1": "Apex_Habit",
+          "bot-2": "Zen_Master",
+          "bot-3": "HabitHero_99",
+          "bot-4": "FlowState",
+          "bot-5": "Iron_Will"
+        };
+        const name = botNames[targetUserId] || "Apex Bot";
+        setInspectedUser({
+          userId: targetUserId,
+          settings: { displayName: name, role: "bot" },
+          stats: { streak: 15, level: 8, totalPoints: 750, weeklyXP: 750, weeklyPoints: 750 },
+          displayName: name,
+          photoURL: "",
+        });
+        return;
+      }
 
       let userData: any = null;
       let statsData: any = null;
 
-      if (userSnap.exists()) {
-        userData = userSnap.data();
+      try {
+        const userDocRef = doc(db, "users", targetUserId);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          userData = userSnap.data();
+        }
+      } catch (err) {
+        console.warn("User doc fetch handled:", err);
       }
-      if (statsSnap.exists()) {
-        statsData = statsSnap.data();
+
+      try {
+        const statsDocRef = doc(db, "users", targetUserId, "stats", "main");
+        const statsSnap = await getDoc(statsDocRef);
+        if (statsSnap.exists()) {
+          statsData = statsSnap.data();
+        }
+      } catch (err) {
+        console.warn("User stats fetch handled:", err);
+      }
+
+      if (!userData) {
+        try {
+          const lbSnap = await getDoc(doc(db, "leaderboard", targetUserId));
+          if (lbSnap.exists()) {
+            userData = lbSnap.data();
+          }
+        } catch (err) {
+          console.warn("Leaderboard doc fetch handled:", err);
+        }
+      }
+
+      if (!userData) {
+        try {
+          const rankSnap = await getDoc(doc(db, "rank", targetUserId));
+          if (rankSnap.exists()) {
+            userData = rankSnap.data();
+          }
+        } catch (err) {
+          console.warn("Rank doc fetch handled:", err);
+        }
       }
 
       setInspectedUser({
         userId: targetUserId,
         settings: userData || {},
-        stats: statsData || {},
-        displayName: userData?.displayName || userData?.settings?.displayName || "Anonymous Hero",
-        photoURL: userData?.profilePic || userData?.settings?.profilePic || "",
+        stats: statsData || userData?.stats || {},
+        displayName: userData?.displayName || userData?.accountName || userData?.name || userData?.settings?.displayName || "Anonymous Hero",
+        photoURL: userData?.profilePic || userData?.photoURL || userData?.settings?.profilePic || "",
       });
     } catch (error) {
       console.error("Error inspecting user profile:", error);
@@ -405,7 +554,7 @@ export function SocialScreen({
     // Mark the selected notification card as read instantly in database
     try {
       const notifRef = doc(db, "users", currentUserId, "notifications", notif.id);
-      await updateDoc(notifRef, { isRead: true });
+      await updateDoc(notifRef, { isRead: true, read: true });
     } catch (e) {
       console.error("Could not write notification read status:", e);
     }
@@ -414,7 +563,7 @@ export function SocialScreen({
       let foundPost = allPosts.find((p) => p.id === notif.postId);
       if (!foundPost) {
         try {
-          const snap = await getDoc(doc(db, "posts", notif.postId));
+          const snap = await getDoc(doc(db, "community_posts", notif.postId));
           if (snap.exists()) {
             foundPost = { id: snap.id, ...snap.data() } as Post;
           }
@@ -456,6 +605,104 @@ export function SocialScreen({
     };
   }, [currentUserId]);
 
+  const [localPostOverrides, setLocalPostOverrides] = useState<Record<string, Partial<Post>>>(() => {
+    try {
+      const saved = localStorage.getItem("nexora_post_overrides");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const updatePostOverride = (postId: string, override: Partial<Post>) => {
+    setLocalPostOverrides((prev) => {
+      const updated = {
+        ...prev,
+        [postId]: {
+          ...prev[postId],
+          ...override,
+        },
+      };
+      try {
+        localStorage.setItem("nexora_post_overrides", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const cleanPayload = (obj: any): any => {
+    if (obj === null || obj === undefined) return null;
+    if (Array.isArray(obj)) return obj.map(cleanPayload);
+    if (typeof obj === "object") {
+      const cleaned: any = {};
+      for (const key of Object.keys(obj)) {
+        const val = obj[key];
+        if (val !== undefined) {
+          cleaned[key] = cleanPayload(val);
+        }
+      }
+      return cleaned;
+    }
+    return obj;
+  };
+
+  const saveLocalPostsToStorage = (posts: Post[]) => {
+    try {
+      localStorage.setItem("nexora_local_posts", JSON.stringify(posts));
+    } catch (e) {
+      console.warn("Failed to store full posts in localStorage, saving stripped version:", e);
+      try {
+        const stripped = posts.map((p) => ({
+          ...p,
+          image: p.image && p.image.length > 50000 ? undefined : p.image,
+          imageUrl: p.imageUrl && p.imageUrl.length > 50000 ? undefined : p.imageUrl,
+          images: p.images?.map((img) => (img.length > 50000 ? "" : img)),
+        }));
+        localStorage.setItem("nexora_local_posts", JSON.stringify(stripped));
+      } catch (e2) {
+        console.error("Critical: Could not save posts to localStorage:", e2);
+      }
+    }
+  };
+
+  const compressImageFile = (file: File, maxWidth = 1024, maxHeight = 1024, quality = 0.75): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth || height > maxHeight) {
+            if (width / height > maxWidth / maxHeight) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          } else {
+            resolve(event.target?.result as string);
+          }
+        };
+        img.onerror = () => resolve(event.target?.result as string);
+      };
+      reader.onerror = () => resolve("");
+    });
+  };
+
   const [localAddedPosts, setLocalAddedPosts] = useState<Post[]>(() => {
     try {
       const saved = localStorage.getItem("nexora_local_posts");
@@ -465,10 +712,35 @@ export function SocialScreen({
     }
   });
 
+  // Synchronize and clean up localAddedPosts when they have been successfully retrieved from the global backend
+  useEffect(() => {
+    if (localAddedPosts.length > 0 && initialPosts.length > 0) {
+      const initialIds = new Set(initialPosts.map((p) => p.id));
+      const filtered = localAddedPosts.filter((p) => !initialIds.has(p.id));
+      if (filtered.length !== localAddedPosts.length) {
+        setLocalAddedPosts(filtered);
+        saveLocalPostsToStorage(filtered);
+      }
+    }
+  }, [initialPosts, localAddedPosts]);
+
   const allPosts = useMemo(() => {
     const combined = [...localAddedPosts, ...initialPosts];
-    return combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
-  }, [initialPosts, localAddedPosts]);
+    const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+    return unique.map((p) => {
+      const override = localPostOverrides[p.id];
+      if (override) {
+        return { ...p, ...override };
+      }
+      return p;
+    });
+  }, [initialPosts, localAddedPosts, localPostOverrides]);
+
+  const activePostForDetails = useMemo(() => {
+    if (!selectedPost) return null;
+    const found = allPosts.find((p) => p.id === selectedPost.id);
+    return found || selectedPost;
+  }, [selectedPost, allPosts]);
 
   // Dynamic Achievements Data Source
   const myPostsCount = useMemo(() => {
@@ -1772,7 +2044,7 @@ export function SocialScreen({
     for (const notif of unread) {
       try {
         const notifRef = doc(db, "users", user.uid, "notifications", notif.id);
-        await updateDoc(notifRef, { isRead: true });
+        await updateDoc(notifRef, { isRead: true, read: true });
       } catch (e) {
         console.warn("Failed to mark notification as read:", e);
       }
@@ -1792,6 +2064,9 @@ export function SocialScreen({
         );
         return;
       }
+      setPostTargetGroup(selectedGroupId);
+    } else {
+      setPostTargetGroup("public");
     }
     setShowCreatePost(true);
   };
@@ -1807,12 +2082,9 @@ export function SocialScreen({
     if (!selectedPost) return;
     setLoadingComments(true);
     try {
-      const q = query(
-        collection(db, "posts", selectedPost.id, "comments"),
-        orderBy("createdAt", "asc"),
-      );
-      const snap = await getDocs(q);
-      const list = snap.docs.map(
+      const commentsRef = collection(db, "community_posts", selectedPost.id, "comments");
+      const snap = await getDocs(commentsRef);
+      let list = snap.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() }) as SocialComment & { hideCommentsFromOthers?: boolean },
       ).filter(c => {
         if (c.hideCommentsFromOthers && c.userId !== currentUserId && selectedPost.userId !== currentUserId) {
@@ -1820,28 +2092,31 @@ export function SocialScreen({
         }
         return true;
       });
-      setPostComments(list);
+
+      list.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+
+      // Merge with local comments for this post
+      const localKey = `nexora_comments_${selectedPost.id}`;
+      let localList: any[] = [];
+      try {
+        const savedLocal = localStorage.getItem(localKey);
+        localList = savedLocal ? JSON.parse(savedLocal) : [];
+      } catch {}
+
+      const combined = [...list, ...localList];
+      const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id || (t.content === v.content && t.userId === v.userId)) === i);
+      setPostComments(unique);
     } catch (err) {
       console.warn("Failed retrieving standard comments: ", err);
-      // Fallback comments
-      setPostComments([
-        {
-          id: "c1",
-          postId: selectedPost.id,
-          userId: "demo",
-          userName: "FitnessCoach",
-          content: "Incredible work, keep pushing consistency!",
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          id: "c2",
-          postId: selectedPost.id,
-          userId: "demo2",
-          userName: "ZenMind",
-          content: "Awesome to see focus and persistence pay off so well.",
-          createdAt: new Date(Date.now() - 1800000).toISOString(),
-        },
-      ]);
+      // Fallback: load local comments from localStorage
+      const localKey = `nexora_comments_${selectedPost.id}`;
+      try {
+        const savedLocal = localStorage.getItem(localKey);
+        const localList = savedLocal ? JSON.parse(savedLocal) : [];
+        setPostComments(localList);
+      } catch {
+        setPostComments([]);
+      }
     } finally {
       setLoadingComments(false);
     }
@@ -1898,9 +2173,6 @@ export function SocialScreen({
 
   const saveCommentLocally = (comment: any) => {
     try {
-      const key = `nexora_comments_${currentUserId}`;
-      const savedLocal = localStorage.getItem(key);
-      const localList = savedLocal ? JSON.parse(savedLocal) : [];
       const preparedCommentObj = {
         id: comment.id || Math.random().toString(36).substring(7),
         postId: comment.postId,
@@ -1910,8 +2182,22 @@ export function SocialScreen({
         content: comment.content || comment.text || "",
         createdAt: comment.createdAt || new Date().toISOString(),
       };
-      localList.unshift(preparedCommentObj);
-      localStorage.setItem(key, JSON.stringify(localList));
+
+      // 1. Save to user comments
+      const userKey = `nexora_comments_${currentUserId}`;
+      const savedUserLocal = localStorage.getItem(userKey);
+      const userLocalList = savedUserLocal ? JSON.parse(savedUserLocal) : [];
+      userLocalList.unshift(preparedCommentObj);
+      localStorage.setItem(userKey, JSON.stringify(userLocalList));
+
+      // 2. Save to post-specific comments
+      if (comment.postId) {
+        const postKey = `nexora_comments_${comment.postId}`;
+        const savedPostLocal = localStorage.getItem(postKey);
+        const postLocalList = savedPostLocal ? JSON.parse(savedPostLocal) : [];
+        postLocalList.push(preparedCommentObj);
+        localStorage.setItem(postKey, JSON.stringify(postLocalList));
+      }
     } catch (e) {
       console.warn("Failed to save comment locally:", e);
     }
@@ -1937,9 +2223,14 @@ export function SocialScreen({
 
       saveCommentLocally(newComment);
 
+      // Optimistic UI update for comment count
+      updatePostOverride(selectedPost.id, {
+        commentCount: (selectedPost.commentCount || 0) + 1,
+      });
+
       await addDoc(
-        collection(db, "posts", selectedPost.id, "comments"),
-        newComment,
+        collection(db, "community_posts", selectedPost.id, "comments"),
+        cleanPayload(newComment),
       );
 
       // Trigger comment milestone notifications & rewards increment
@@ -1957,24 +2248,28 @@ export function SocialScreen({
 
       // Notify the post author when another member writes comments
       if (selectedPost.userId && selectedPost.userId !== currentUserId) {
-        await addDoc(collection(db, "users", selectedPost.userId, "notifications"), {
-          userId: selectedPost.userId,
-          senderId: currentUserId,
-          senderName: currentUserName,
-          senderPhoto: currentUserPhoto,
-          type: "reply",
-          postId: selectedPost.id,
-          message: `${currentUserName} commented: "${trimmedCommentText.substring(0, 55)}${trimmedCommentText.length > 55 ? "..." : ""}"`,
-          isRead: false,
-          createdAt: new Date().toISOString()
-        });
+        try {
+          await addDoc(collection(db, "users", selectedPost.userId, "notifications"), cleanPayload({
+            userId: selectedPost.userId,
+            senderId: currentUserId || "anonymous",
+            senderName: currentUserName || "Anonymous Hero",
+            senderPhoto: currentUserPhoto || "",
+            type: "reply",
+            postId: selectedPost.id,
+            message: `${currentUserName || "A user"} commented: "${trimmedCommentText.substring(0, 55)}${trimmedCommentText.length > 55 ? "..." : ""}"`,
+            isRead: false,
+            createdAt: new Date().toISOString()
+          }));
+        } catch (notifErr) {
+          console.warn("Comment notification error:", notifErr);
+        }
       }
 
       // Update comment count
-      const postRef = doc(db, "posts", selectedPost.id);
-      await updateDoc(postRef, {
-        commentCount: (selectedPost.commentCount || 0) + 1,
-      });
+      const postRef = doc(db, "community_posts", selectedPost.id);
+      await setDoc(postRef, {
+        commentCount: increment(1),
+      }, { merge: true });
 
       // Update local copy of selected post
       setSelectedPost((prev) =>
@@ -2043,16 +2338,21 @@ export function SocialScreen({
 
       saveCommentLocally(newReply);
 
+      // Optimistic UI update for comment count
+      updatePostOverride(selectedPost.id, {
+        commentCount: (selectedPost.commentCount || 0) + 1,
+      });
+
       await addDoc(
-        collection(db, "posts", selectedPost.id, "comments"),
-        newReply,
+        collection(db, "community_posts", selectedPost.id, "comments"),
+        cleanPayload(newReply),
       );
 
       // Update comment count
-      const postRef = doc(db, "posts", selectedPost.id);
-      await updateDoc(postRef, {
-        commentCount: (selectedPost.commentCount || 0) + 1,
-      });
+      const postRef = doc(db, "community_posts", selectedPost.id);
+      await setDoc(postRef, {
+        commentCount: increment(1),
+      }, { merge: true });
 
       setSelectedPost((prev) =>
         prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : null,
@@ -2105,31 +2405,37 @@ export function SocialScreen({
       ? (post.likedBy || []).filter((uid) => uid !== currentUserId)
       : [...(post.likedBy || []), currentUserId];
 
-    const newFlames = Math.max(0, post.flames + (isLiked ? -1 : 1));
+    const newFlames = Math.max(0, (post.flames || 0) + (isLiked ? -1 : 1));
+
+    // Optimistic UI update with persistence
+    updatePostOverride(post.id, {
+      likedBy: newLikedBy,
+      flames: newFlames,
+    });
 
     try {
-      const postRef = doc(db, "posts", post.id);
-      await updateDoc(postRef, {
+      const postRef = doc(db, "community_posts", post.id);
+      await setDoc(postRef, {
         likedBy: newLikedBy,
         flames: newFlames,
-      });
+      }, { merge: true });
       if (play) play("click");
 
       // Trigger landmark upflame (like) notifications and reward disbursements
       if (!isLiked && post.userId) {
         // Send a post like notification to the creator if liking someone else's post
         if (post.userId !== currentUserId) {
-          await addDoc(collection(db, "users", post.userId, "notifications"), {
+          await addDoc(collection(db, "users", post.userId, "notifications"), cleanPayload({
             userId: post.userId,
-            senderId: currentUserId,
-            senderName: currentUserName,
-            senderPhoto: currentUserPhoto,
+            senderId: currentUserId || "anonymous",
+            senderName: currentUserName || "Anonymous Hero",
+            senderPhoto: currentUserPhoto || "",
             type: "like",
             postId: post.id,
-            message: `${currentUserName} upflamed your log: "${post.content.substring(0, 35)}${post.content.length > 35 ? "..." : ""}"`,
+            message: `${currentUserName || "A user"} upflamed your log: "${post.content.substring(0, 35)}${post.content.length > 35 ? "..." : ""}"`,
             isRead: false,
             createdAt: new Date().toISOString()
-          });
+          }));
         }
 
         // Milestone level checks for rewards & special notifications
@@ -2188,6 +2494,126 @@ export function SocialScreen({
     }
   };
 
+  // Reddit Award Post handler using new cute animated stock-based CUTE_AWARDS
+  const handleAwardPost = async (post: Post, awardKey: string) => {
+    const award = CUTE_AWARDS.find(a => a.key === awardKey);
+    if (!award) return;
+
+    const purchasedAwards = settings?.purchasedAwards || {};
+    const stock = purchasedAwards[awardKey] || 0;
+
+    // If they have no stock, we prompt them to buy a bundle of uses first!
+    if (stock <= 0) {
+      if ((stats?.coins || 0) < award.cost) {
+        showToast(`Insufficient coins! You need ${award.cost} coins to unlock a bundle of ${award.uses}x "${award.label}".`, "error");
+        return;
+      }
+
+      try {
+        // 1. Deduct coins from user stats locally and in Firestore
+        if (onUpdateStats) {
+          onUpdateStats((prev: any) => ({
+            ...prev,
+            coins: (prev.coins || 0) - award.cost
+          }));
+        }
+
+        const senderStatsRef = doc(db, "users", currentUserId, "stats", "main");
+        await setDoc(senderStatsRef, {
+          coins: (stats.coins || 0) - award.cost
+        }, { merge: true });
+
+        // 2. Increment inventory in settings
+        const nextPurchasedAwards = {
+          ...purchasedAwards,
+          [awardKey]: (purchasedAwards[awardKey] || 0) + award.uses
+        };
+
+        if (onUpdateSettings) {
+          await onUpdateSettings({ purchasedAwards: nextPurchasedAwards });
+        }
+
+        showToast(`Unlocked! You bought a pack of ${award.uses}x "${award.label}"! Let's award it now!`, "success");
+        if (play) play("click");
+        return;
+      } catch (err) {
+        console.error("Error purchasing award stock:", err);
+        showToast("Failed to purchase award. Please check your network.", "error");
+        return;
+      }
+    }
+
+    // If they have stock, they bestow/give 1 award!
+    try {
+      const { increment } = await import("firebase/firestore");
+      
+      // 1. Decrement inventory in settings
+      const nextPurchasedAwards = {
+        ...purchasedAwards,
+        [awardKey]: stock - 1
+      };
+      if (onUpdateSettings) {
+        await onUpdateSettings({ purchasedAwards: nextPurchasedAwards });
+      }
+
+      // 2. Award coins (+5 Coins as requested) and XP to post author (if not self-awarding)
+      if (post.userId && post.userId !== currentUserId) {
+        try {
+          const authorStatsRef = doc(db, "users", post.userId, "stats", "main");
+          await setDoc(authorStatsRef, {
+            totalPoints: increment(award.xpAward),
+            coins: increment(5) // Grants 5 coins to post author as requested!
+          }, { merge: true });
+        } catch (authorErr) {
+          console.warn("Could not directly update recipient stats main document:", authorErr);
+        }
+
+        // 3. Send private notification to the author (including the sender's name)
+        try {
+          await addDoc(collection(db, "users", post.userId, "notifications"), cleanPayload({
+            userId: post.userId,
+            senderId: currentUserId || "anonymous",
+            senderName: currentUserName || "Anonymous Hero",
+            senderPhoto: currentUserPhoto || "",
+            type: "system",
+            postId: post.id,
+            message: `🎁 ${currentUserName || "A user"} gifted your post a ${award.emoji} "${award.label}" budget reward! You received +5 Coins!`,
+            isRead: false,
+            createdAt: new Date().toISOString()
+          }));
+        } catch (notifErr) {
+          console.warn("Could not send award notification:", notifErr);
+        }
+      } else if (post.userId === currentUserId) {
+        showToast("Self-awarded! You used an award to decorate your own post.", "success");
+      }
+
+      // 4. Update the post's award map in Firestore
+      const postRef = doc(db, "community_posts", post.id);
+      const currentAwards = post.awards || {};
+      const nextAwards = {
+        ...currentAwards,
+        [awardKey]: (currentAwards[awardKey] || 0) + 1
+      };
+      
+      // Optimistic UI update
+      updatePostOverride(post.id, {
+        awards: nextAwards,
+      });
+
+      await setDoc(postRef, {
+        awards: nextAwards
+      }, { merge: true });
+
+      showToast(`Successfully awarded "${award.label}"!`, "success");
+      setAwardingPost(null);
+      if (play) play("click");
+    } catch (err) {
+      console.error("Error giving award:", err);
+      showToast("Could not bestow award. Please try again.", "error");
+    }
+  };
+
   // Group Joining helper
   const handleJoinGroup = async (group: SocialCircle) => {
     if (!onUpdateSettings) return;
@@ -2198,6 +2624,23 @@ export function SocialScreen({
       : [...currentJoined, group.id];
 
     await onUpdateSettings({ joinedCircleIds: newJoined });
+
+    try {
+      const groupRef = doc(db, "circles", group.id);
+      const currentFollowerIds = group.followerIds || [];
+      const newFollowerIds = isJoined
+        ? currentFollowerIds.filter((uid) => uid !== currentUserId)
+        : [...currentFollowerIds, currentUserId];
+      const newMemberCount = Math.max(1, (group.memberCount || 1) + (isJoined ? -1 : 1));
+
+      await updateDoc(groupRef, {
+        followerIds: newFollowerIds,
+        memberCount: newMemberCount
+      });
+    } catch (err) {
+      console.warn("Could not sync circle followers on Firestore:", err);
+    }
+
     showToast(
       isJoined ? `Left ${group.name}` : `Welcome to ${group.name}! 🎉`,
       "success",
@@ -2243,11 +2686,11 @@ export function SocialScreen({
       // 1. Delete or soft-delete on Firestore
       if (!post.id.startsWith("local_p_")) {
         try {
-          await updateDoc(doc(db, "posts", post.id), { deleted: true });
+          await updateDoc(doc(db, "community_posts", post.id), { deleted: true });
         } catch (docErr) {
           console.warn("Firestore soft delete failed, attempting direct database drop:", docErr);
           try {
-            await deleteDoc(doc(db, "posts", post.id));
+            await deleteDoc(doc(db, "community_posts", post.id));
           } catch (hardErr) {
             console.error("Firestore hard delete failed:", hardErr);
           }
@@ -2257,9 +2700,7 @@ export function SocialScreen({
       // 2. Clear out of local added posts registry as well
       setLocalAddedPosts((prev) => {
         const next = prev.filter((p) => p.id !== post.id);
-        try {
-          localStorage.setItem("nexora_local_posts", JSON.stringify(next));
-        } catch {}
+        saveLocalPostsToStorage(next);
         return next;
       });
 
@@ -2279,21 +2720,22 @@ export function SocialScreen({
     }
   };
 
-  // Launch File selector and read Image to base64
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Launch File selector and read Image with automatic compression to under 150KB
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
       const fileList = Array.from(files);
-      fileList.forEach((file) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result as string;
-          setPostImagesBase64((prev) => [...prev, result]);
-          // For single-image fallback
-          setPostImageBase64(result);
-        };
-        reader.readAsDataURL(file);
-      });
+      for (const file of fileList) {
+        try {
+          const compressed = await compressImageFile(file);
+          if (compressed) {
+            setPostImagesBase64((prev) => [...prev, compressed]);
+            setPostImageBase64(compressed);
+          }
+        } catch (err) {
+          console.warn("Image compression fallback:", err);
+        }
+      }
     }
   };
 
@@ -2313,24 +2755,18 @@ export function SocialScreen({
         createPostMode === "image"
           ? postImagesBase64[0] || postImageBase64 || undefined
           : undefined;
-      const postData: Partial<Post> & { hidePostsFromOthers?: boolean; profilePrivacy?: string } = {
+      const cleanedPostData = cleanPayload({
         userId: currentUserId,
-        userName: currentUserName,
-        userEmail: currentUserEmail,
-        userPhoto: currentUserPhoto,
+        userName: currentUserName || "Anonymous Hero",
+        userEmail: currentUserEmail || "",
+        userPhoto: currentUserPhoto || "",
         title: postTitle.trim(),
         content:
           createPostMode === "text"
             ? postContent.trim()
             : postContent.trim() || "",
-        image: mainImg,
-        imageUrl: mainImg,
-        images:
-          createPostMode === "image"
-            ? postImagesBase64.length
-              ? postImagesBase64
-              : undefined
-            : undefined,
+        ...(mainImg ? { image: mainImg, imageUrl: mainImg } : {}),
+        ...(createPostMode === "image" && postImagesBase64.length ? { images: postImagesBase64 } : {}),
         circleId: postTargetGroup === "public" ? "public" : postTargetGroup,
         circleName:
           postTargetGroup === "public"
@@ -2343,26 +2779,35 @@ export function SocialScreen({
         commentCount: 0,
         type: createPostMode === "image" ? "image" : "text",
         createdAt: new Date().toISOString(),
-        hidePostsFromOthers: settings.hidePostsFromOthers || false,
+        hidePostsFromOthers: false,
         profilePrivacy: settings.profilePrivacy || "public",
-      };
+      });
 
-      const tempPostId = "local_p_" + Math.random().toString(36).substring(7);
+      const postsRef = collection(db, "community_posts");
+      const postDocRef = doc(postsRef);
+      const realPostId = postDocRef.id;
+
       const fullPostTemp: Post = {
-        id: tempPostId,
-        ...postData,
+        id: realPostId,
+        ...cleanedPostData,
       } as Post;
 
       setLocalAddedPosts((prev) => {
         const next = [fullPostTemp, ...prev];
-        try {
-          localStorage.setItem("nexora_local_posts", JSON.stringify(next));
-        } catch {}
+        saveLocalPostsToStorage(next);
         return next;
       });
 
+      if (onPostCreated) {
+        onPostCreated(fullPostTemp);
+      }
+
       try {
-        await addDoc(collection(db, "posts"), postData);
+        const { setDoc } = await import("firebase/firestore");
+        await setDoc(postDocRef, {
+          ...cleanedPostData,
+          id: realPostId,
+        });
       } catch (firestoreErr) {
         console.warn("Firestore save deferred, using offline local registry:", firestoreErr);
       }
@@ -2416,7 +2861,7 @@ export function SocialScreen({
       // 1. Update Firestore if it's a real server post
       if (!editingPost.id.startsWith("local_p_")) {
         try {
-          await updateDoc(doc(db, "posts", editingPost.id), updatedFields);
+          await updateDoc(doc(db, "community_posts", editingPost.id), updatedFields);
         } catch (dbErr) {
           console.warn("Firestore update deferred:", dbErr);
         }
@@ -2427,9 +2872,7 @@ export function SocialScreen({
         const next = prev.map((p) =>
           p.id === editingPost.id ? { ...p, ...updatedFields } : p
         );
-        try {
-          localStorage.setItem("nexora_local_posts", JSON.stringify(next));
-        } catch {}
+        saveLocalPostsToStorage(next);
         return next;
       });
 
@@ -2443,13 +2886,60 @@ export function SocialScreen({
     }
   };
 
+  const handlePurchaseAwardStore = async (awardKey: string) => {
+    const award = CUTE_AWARDS.find(a => a.key === awardKey);
+    if (!award) return;
+
+    if ((stats?.coins || 0) < award.cost) {
+      showToast(`Insufficient coins! You need ${award.cost} coins to unlock a bundle of ${award.uses}x "${award.label}".`, "error");
+      return;
+    }
+
+    try {
+      // 1. Deduct coins from user stats locally and in Firestore
+      if (onUpdateStats) {
+        onUpdateStats((prev: any) => ({
+          ...prev,
+          coins: (prev.coins || 0) - award.cost
+        }));
+      }
+
+      const senderStatsRef = doc(db, "users", currentUserId, "stats", "main");
+      await setDoc(senderStatsRef, {
+        coins: (stats.coins || 0) - award.cost
+      }, { merge: true });
+
+      // 2. Increment inventory in settings
+      const purchasedAwards = settings?.purchasedAwards || {};
+      const nextPurchasedAwards = {
+        ...purchasedAwards,
+        [awardKey]: (purchasedAwards[awardKey] || 0) + award.uses
+      };
+
+      if (onUpdateSettings) {
+        await onUpdateSettings({ purchasedAwards: nextPurchasedAwards });
+      }
+
+      showToast(`Successfully purchased a bundle of ${award.uses}x "${award.label}"!`, "success");
+      if (play) play("click");
+    } catch (err) {
+      console.error("Error purchasing from store:", err);
+      showToast("Failed to complete purchase. Try again.", "error");
+    }
+  };
+
   // Submit Group creation
   const handleCreateGroupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGroupName.trim()) return;
 
     try {
-      const groupData: Partial<SocialCircle> = {
+      const circlesCol = collection(db, "circles");
+      const newDocRef = doc(circlesCol);
+      const groupId = newDocRef.id;
+
+      const groupData: SocialCircle = {
+        id: groupId,
         name: newGroupName.trim(),
         description: newGroupDesc.trim(),
         icon: newGroupIcon,
@@ -2462,15 +2952,15 @@ export function SocialScreen({
         createdAt: new Date().toISOString(),
       };
 
-      await addDoc(collection(db, "circles"), groupData);
+      await setDoc(newDocRef, groupData);
 
-      // Auto-join group creator
+      // Auto-join group creator using the correct generated groupId
       if (onUpdateSettings) {
         const currentJoined = settings.joinedCircleIds || [];
         await onUpdateSettings({
           joinedCircleIds: [
             ...currentJoined,
-            newGroupName.toLowerCase().replace(/\s+/g, "-"),
+            groupId,
           ],
         });
       }
@@ -2523,8 +3013,8 @@ export function SocialScreen({
       if (post.deleted) return false;
       if (hiddenPostIds.includes(post.id)) return false;
 
-      // Privacy check: If another user has enabled "Hide My Posts", skip rendering
-      if (post.userId !== currentUserId && (post as any).hidePostsFromOthers === true) {
+      // Privacy check: If another user has enabled "Hide My Posts", skip rendering for non-public posts
+      if (post.userId !== currentUserId && (post as any).hidePostsFromOthers === true && post.circleId !== "public") {
         return false;
       }
 
@@ -2786,6 +3276,28 @@ export function SocialScreen({
 
         {/* Title & Body */}
         <div className="space-y-2">
+          {post.awards && Object.entries(post.awards).some(([_, qty]) => (qty as number) > 0) && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5 pb-1">
+              {Object.entries(post.awards).map(([awardKey, qty]) => {
+                const q = qty as number;
+                if (q <= 0) return null;
+                const award = CUTE_AWARDS.find(a => a.key === awardKey);
+                if (!award) return null;
+                return (
+                  <span key={awardKey} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50/70 text-indigo-700 border border-indigo-100" title={`${award.label} Award`}>
+                    <motion.span
+                      animate={award.animation.animate}
+                      transition={award.animation.transition}
+                      className="inline-block origin-center"
+                    >
+                      {award.emoji}
+                    </motion.span>
+                    <span>{q}</span>
+                  </span>
+                );
+              })}
+            </div>
+          )}
           {post.title && (
             <h4
               onClick={() => setSelectedPost(post)}
@@ -2877,7 +3389,7 @@ export function SocialScreen({
             <motion.button
               whileTap={{ y: -8, scale: 1.08 }}
               animate={isLiked ? { scale: [1, 1.25, 1], y: [0, -6, 0] } : {}}
-              transition={{ type: "spring", stiffness: 350, damping: 10 }}
+              transition={{ type: "tween", ease: "easeInOut", duration: 0.3 }}
               onClick={() => handleToggleFlame(post)}
               className={`px-4 py-2 flex items-center gap-1.5 rounded-full text-xs font-black transition-all ${
                 isLiked
@@ -2904,6 +3416,24 @@ export function SocialScreen({
             >
               <MessageSquare size={14} />
               <span>{post.commentCount || 0} comments</span>
+            </button>
+
+            {/* Reddit Award Post trigger */}
+            <button
+              onClick={() => {
+                setAwardingPost(post);
+                vibrate(8);
+                if (play) play("click");
+              }}
+              className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-705 flex items-center gap-1.5 rounded-full text-xs font-black transition-all border border-amber-100"
+            >
+              <Award size={14} className="text-amber-500" />
+              <span>
+                {(() => {
+                  const totalAwards = Object.values(post.awards || {}).reduce((a, b) => (a as number) + (b as number), 0);
+                  return totalAwards > 0 ? `${totalAwards} Gift${totalAwards === 1 ? '' : 's'}` : "Gift Award";
+                })()}
+              </span>
             </button>
           </div>
 
@@ -4070,6 +4600,78 @@ export function SocialScreen({
                 ))}
               </div>
 
+              {/* ─── REDDIT-STYLE ANIMATED AWARD STORE & BUDGETS ─── */}
+              <div className="bg-gradient-to-br from-indigo-50/50 via-slate-50 to-indigo-50/20 p-5 sm:p-6 rounded-[2rem] border border-indigo-100 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-100/50 pb-3">
+                  <div>
+                    <h4 className="text-base font-black text-slate-850 tracking-tight flex items-center gap-1.5">
+                      🎁 Reddit-Style Animated Award Store
+                    </h4>
+                    <p className="text-xs text-slate-550 font-bold">
+                      Exchange your Nexora coins for bundles of animated awards, then bestow them onto posts to award peers XP & Coins!
+                    </p>
+                  </div>
+                  <div className="shrink-0 bg-white border border-indigo-150 px-3.5 py-1.5 rounded-2xl flex items-center gap-1.5 self-start sm:self-auto shadow-2xs">
+                    <span className="text-base">🪙</span>
+                    <span className="text-xs font-black text-slate-700">
+                      {stats?.coins || 0} Coins
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {CUTE_AWARDS.map((award) => {
+                    const ownedStock = (settings?.purchasedAwards || {})[award.key] || 0;
+                    return (
+                      <div
+                        key={award.key}
+                        className="bg-white p-4 rounded-3xl border border-slate-150 flex flex-col items-center text-center justify-between space-y-3.5 hover:shadow-xs hover:border-indigo-300 transition-all group"
+                      >
+                        {/* Animated Emojis with highly cute custom transitions */}
+                        <div className="h-14 w-14 bg-slate-50 rounded-2xl flex items-center justify-center text-3xl shadow-2xs group-hover:scale-105 transition-transform overflow-hidden relative">
+                          <motion.span
+                            animate={award.animation.animate}
+                            transition={award.animation.transition}
+                            className="inline-block origin-center"
+                          >
+                            {award.emoji}
+                          </motion.span>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <span className="text-xs font-black text-slate-800 tracking-tight leading-tight block">
+                            {award.label}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-bold block leading-tight">
+                            {award.desc}
+                          </span>
+                        </div>
+
+                        <div className="w-full space-y-2">
+                          {/* Stock Inventory */}
+                          <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider text-slate-400 bg-slate-50 px-2.5 py-1 rounded-xl">
+                            <span>Stock:</span>
+                            <span className={ownedStock > 0 ? "text-indigo-650" : "text-slate-400"}>
+                              {ownedStock} uses
+                            </span>
+                          </div>
+
+                          {/* Purchase Button */}
+                          <button
+                            onClick={() => handlePurchaseAwardStore(award.key)}
+                            className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-750 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-2xs hover:shadow-xs active:scale-95 flex items-center justify-center gap-1"
+                          >
+                            <span>Buy {award.uses}x</span>
+                            <span>•</span>
+                            <span>🪙 {award.cost}</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Render dynamic inline list of categories with HORIZONTAL scrolling tracks and 'See All' triggers */}
               <div className="space-y-6">
                 {[
@@ -4755,7 +5357,7 @@ export function SocialScreen({
                     <p className="font-extrabold text-slate-600 text-sm">No posts shared yet</p>
                     <p className="text-xs text-slate-400 font-medium leading-relaxed">Share your progress logs or questions in any public feed or group!</p>
                     <button
-                      onClick={() => setShowCreatePost(true)}
+                      onClick={handleLaunchCreatePost}
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl transition-all"
                     >
                       Create First Post
@@ -4812,7 +5414,7 @@ export function SocialScreen({
                             } else {
                               try {
                                 const { getDoc } = await import("firebase/firestore");
-                                const postDoc = await getDoc(doc(db, "posts", comment.postId));
+                                const postDoc = await getDoc(doc(db, "community_posts", comment.postId));
                                 if (postDoc.exists()) {
                                   setSelectedPost({ id: postDoc.id, ...postDoc.data() } as Post);
                                 } else {
@@ -5463,14 +6065,15 @@ export function SocialScreen({
         </div>
       )}
 
-      {/* ─── NEW GROUP FORM POPUP SCREEN (CreateCircleWizard) ─── */}
+       {/* ─── NEW GROUP FORM POPUP SCREEN (CreateCircleWizard) ─── */}
       {showCreateGroup && (
         <CreateCircleWizard
           onClose={() => setShowCreateGroup(false)}
           onComplete={async (data) => {
             try {
               const circlesRef = collection(db, "circles");
-              const circleId = data.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-");
+              const safeSlug = data.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "").replace(/^-+/, "");
+              const circleId = safeSlug || doc(circlesRef).id;
               
               const circlePayload = {
                 ...data,
@@ -5481,6 +6084,10 @@ export function SocialScreen({
                 ownerId: currentUserId,
                 followerIds: [currentUserId],
               };
+
+              // Remove null/undefined/empty keys that might fail firestore.rules checks
+              if (!circlePayload.customIconUrl) delete circlePayload.customIconUrl;
+              if (!circlePayload.customBgUrl) delete circlePayload.customBgUrl;
 
               await setDoc(doc(circlesRef, circleId), circlePayload);
               showToast(`n/${data.name.toLowerCase()} established! 🚀`, "success");
@@ -6500,7 +7107,7 @@ export function SocialScreen({
 
           {/* Green plus FAB (+) to launch Create Post */}
           <button
-            onClick={() => setShowCreatePost(true)}
+            onClick={handleLaunchCreatePost}
             className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 shadow-emerald-500/25 transition-all active:scale-95 flex-shrink-0"
             title="Create Post"
           >
@@ -6568,6 +7175,120 @@ export function SocialScreen({
           </button>
         </nav>
       </motion.div>
+
+      {/* ─── REDDIT-STYLE AWARD SELECTION MODAL ─── */}
+      <AnimatePresence>
+        {awardingPost && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[900] flex items-center justify-center p-4 select-none"
+            onClick={() => setAwardingPost(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white relative">
+                <button
+                  onClick={() => setAwardingPost(null)}
+                  className="absolute top-4 right-4 p-1.5 bg-white/20 hover:bg-white/30 text-white rounded-full transition-all"
+                >
+                  <X size={16} />
+                </button>
+                <div className="flex items-center gap-2.5">
+                  <Award size={24} className="animate-pulse text-yellow-200" />
+                  <h3 className="text-lg font-black tracking-tight uppercase">Gild with Reddit-style Awards</h3>
+                </div>
+                <p className="text-xs text-white/80 font-bold uppercase mt-1 tracking-wider">
+                  Post by {awardingPost.userName}
+                </p>
+                <div className="mt-3.5 flex items-center justify-between bg-white/20 px-3 py-2 rounded-xl text-xs font-black">
+                  <span>YOUR BALANCE:</span>
+                  <span className="text-yellow-200">🪙 {stats?.coins || 0} Coins</span>
+                </div>
+              </div>
+
+              {/* Award List Grid */}
+              <div className="p-6 space-y-4">
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                  Select an Award to bestow:
+                </p>
+
+                <div className="grid grid-cols-2 gap-3.5 max-h-[24rem] overflow-y-auto pr-1">
+                  {CUTE_AWARDS.map((award) => {
+                    const stock = settings?.purchasedAwards?.[award.key] || 0;
+                    const canAfford = (stats?.coins || 0) >= award.cost;
+                    const isPurchased = stock > 0;
+                    return (
+                      <button
+                        key={award.key}
+                        type="button"
+                        onClick={() => handleAwardPost(awardingPost, award.key)}
+                        className={`flex flex-col items-center justify-between p-3.5 rounded-2xl border transition-all text-center h-48 cursor-pointer relative overflow-hidden group ${
+                          isPurchased
+                            ? "bg-emerald-50/40 hover:bg-emerald-50 border-emerald-300 hover:border-emerald-500 shadow-xs"
+                            : canAfford
+                              ? "bg-slate-50 hover:bg-slate-100 hover:border-amber-400 border-slate-200"
+                              : "bg-slate-50/40 border-slate-100 opacity-60 hover:opacity-80"
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <motion.span
+                            animate={award.animation.animate}
+                            transition={award.animation.transition}
+                            className="text-3xl filter drop-shadow-md block origin-center"
+                          >
+                            {award.emoji}
+                          </motion.span>
+                          <span className="block text-xs font-black text-slate-800 leading-tight">
+                            {award.label}
+                          </span>
+                          <span className="block text-[8.5px] text-slate-400 font-semibold leading-tight">
+                            {award.desc}
+                          </span>
+                        </div>
+
+                        <div className="w-full mt-2 pt-2 border-t border-slate-100 flex flex-col items-center gap-1">
+                          {isPurchased ? (
+                            <>
+                              <span className="text-[9px] font-black text-emerald-600 bg-emerald-100/60 px-2 py-0.5 rounded-full block animate-pulse">
+                                Bestow ({stock}x Stock)
+                              </span>
+                              <span className="text-[8px] text-slate-400 font-extrabold block">
+                                Pays author +{award.cost}🪙 & +{award.xpAward}XP
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-[9px] font-black text-indigo-600 block">
+                                Buy {award.uses}x uses bundle
+                              </span>
+                              <span className={`inline-flex items-center gap-1 text-[11px] font-extrabold ${canAfford ? 'text-amber-600 bg-amber-50' : 'text-slate-500 bg-slate-100'} px-2 py-0.5 rounded-full border border-amber-100/55`}>
+                                🪙 {award.cost}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Modal Footer info */}
+              <div className="bg-slate-50 p-4 border-t border-slate-200 text-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                Giving awards boosts community spirit and distributes reputation!
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

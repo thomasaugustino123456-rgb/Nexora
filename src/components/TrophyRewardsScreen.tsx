@@ -11,6 +11,7 @@ import { GoldenTrophy, IceTrophy, BrokenTrophy } from "./Trophies";
 import { useSound } from "../hooks/useSound";
 import { TrophyType } from "../types";
 import { vibrate } from "../lib/vibrate";
+import { copyToClipboard } from "../lib/clipboard";
 
 interface TrophyRewardsScreenProps {
   trophyType: TrophyType;
@@ -245,13 +246,13 @@ export function TrophyRewardsScreen({
                             url: shareUrl,
                           });
                         } catch (e) {
-                          await navigator.clipboard.writeText(shareUrl);
+                          await copyToClipboard(shareUrl);
                           alert("Profile link copied! 📋");
                         }
                       } else {
-                        await navigator.clipboard.writeText(shareUrl);
+                        await copyToClipboard(shareUrl);
                         alert(
-                          "Profile link copied to clipboard! 📋 Past it anywhere, bro!",
+                          "Profile link copied to clipboard! 📋 Paste it anywhere, bro!",
                         );
                       }
                     }}

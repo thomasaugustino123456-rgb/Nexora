@@ -6,6 +6,7 @@ import { doc, collection, query, orderBy, onSnapshot, setDoc, updateDoc, increme
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { NexusVideo, UserSettings, UserStats, Screen } from '../types';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
+import { copyToClipboard } from '../lib/clipboard';
 import { VideoPlayer } from './VideoPlayer';
 import { NexoraStudio } from './NexoraStudio';
 
@@ -234,8 +235,8 @@ export function NexusVideoScreen({ onBack, user, settings, showToast, initialVid
     } catch (err) { console.error(err); }
   }, [user]);
 
-  const handleShareVideo = useCallback((id: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}?video=${id}`);
+  const handleShareVideo = useCallback(async (id: string) => {
+    await copyToClipboard(`${window.location.origin}?video=${id}`);
     showToast('Link Copied! 🎬', 'success');
   }, [showToast]);
 

@@ -80,10 +80,9 @@ const Tree: React.FC<TreeProps> = ({ x, y, scale, color, delay }) => {
 };
 
 export const ForestBackdrop: React.FC = () => {
-  const { playMusic, stopAllMusic } = useSound();
+  const { stopAllMusic } = useSound();
 
   useEffect(() => {
-    playMusic('music-forest');
     return () => stopAllMusic();
   }, []);
 

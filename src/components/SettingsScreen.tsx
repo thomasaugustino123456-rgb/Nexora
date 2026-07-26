@@ -63,6 +63,7 @@ export function SettingsScreen({
   const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
   const [showPrivacyModal, setShowPrivacyModal] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
   const [mascotError, setMascotError] = React.useState(false);
 
   // Password actions state
@@ -141,6 +142,7 @@ export function SettingsScreen({
     { id: 'premium', label: 'Premium', desc: 'Unlock architect mode & elite perks', icon: Sparkles, color: 'text-yellow-600 bg-yellow-500/[0.06] border-yellow-500/10' },
     { id: 'device-showcase', label: 'Mockup Studio', desc: 'Frame screens in phone, tablet, laptop', icon: Smartphone, color: 'text-indigo-600 bg-indigo-600/[0.06] border-indigo-600/10' },
     { id: 'about', label: 'About & Security', desc: 'Integrity tests, manifesto, session exit', icon: Info, color: 'text-slate-500 bg-slate-500/[0.06] border-slate-500/10' },
+    { id: 'logout', label: 'Log Out', desc: 'Motivational rest & session exit', icon: LogOut, color: 'text-red-500 bg-red-500/[0.06] border-red-500/10' },
   ];
 
   return (
@@ -245,6 +247,56 @@ export function SettingsScreen({
                   id="confirm-delete-btn"
                 >
                   DELETE DATA
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[500] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-[32px] p-8 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden border border-[#E9E4D4]"
+              id="logout-confirm-modal"
+            >
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-400 via-red-500 to-amber-500" />
+              <div className="flex items-center gap-4 text-[#4F3F34]">
+                <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 shadow-sm border border-red-100 shrink-0">
+                  <LogOut size={24} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black leading-tight text-[#4F3F34]">Log Out</h3>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Confirm Action</p>
+                </div>
+              </div>
+              
+              <div className="p-5 bg-[#FAF7F2] border border-[#E9E4D4] rounded-2xl text-center">
+                <p className="text-base font-bold text-[#4F3F34]">
+                  Do You want to Log out, Are You Sure?
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={() => { vibrate(10); setShowLogoutConfirm(false); }}
+                  className="flex-1 bg-gray-100 text-[#4F3F34] py-4 rounded-2xl font-black shadow-sm hover:bg-gray-200 active:scale-95 transition-all text-xs uppercase tracking-wider border border-gray-200"
+                  id="cancel-logout-btn"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+                    setShowLogoutConfirm(false);
+                    onLogout();
+                  }}
+                  className="flex-1 bg-red-600 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-red-700 active:scale-95 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                  id="confirm-logout-btn"
+                >
+                  <LogOut size={16} /> Log Out
                 </button>
               </div>
             </motion.div>
@@ -1222,7 +1274,7 @@ export function SettingsScreen({
                     </h3>
 
                     <button 
-                      onClick={() => { vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT); onLogout(); }}
+                      onClick={() => { vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT); setShowLogoutConfirm(true); }}
                       className="w-full py-4.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
                     >
                       <LogOut size={16} /> Terminate Active Session
@@ -1238,6 +1290,37 @@ export function SettingsScreen({
                     <p className="text-[9px] text-red-900/30 font-black text-center uppercase tracking-widest">
                       Warning: termination suspends local background biometrics syncing protocols.
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* === 13. LOG OUT CATEGORY === */}
+              {activeCategory === 'logout' && (
+                <div className="space-y-6" id="logout-subpage">
+                  <div className="bg-white border border-[#E9E4D4] rounded-[2.5rem] p-6 space-y-5 shadow-sm text-left relative overflow-hidden">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 border border-red-100 shrink-0">
+                        <LogOut size={24} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-[#4F3F34] tracking-tight">Log Out of Nexora</h3>
+                        <p className="text-xs font-bold text-[#4F3F34]/50">End your current active session</p>
+                      </div>
+                    </div>
+
+                    <div className="p-4.5 bg-[#FAF7F2] rounded-2xl border border-[#E9E4D4] text-center space-y-2">
+                      <p className="text-sm font-bold text-[#4F3F34]">
+                        Do You want to Log out, Are You Sure?
+                      </p>
+                    </div>
+
+                    <button 
+                      onClick={() => { vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT); setShowLogoutConfirm(true); }}
+                      className="w-full py-4.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all active:scale-95"
+                      id="subpage-logout-trigger-btn"
+                    >
+                      <LogOut size={18} /> Log Out
+                    </button>
                   </div>
                 </div>
               )}

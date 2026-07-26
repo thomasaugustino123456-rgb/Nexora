@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
-import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target, Crown, Sparkles, X, ShieldCheck, Zap, MessageSquare, Send, Smartphone, Download, Share, HelpCircle } from 'lucide-react';
+import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target, Crown, Sparkles, X, ShieldCheck, Zap, MessageSquare, Send, Smartphone, Download, Share, HelpCircle, CheckCircle2, Clock } from 'lucide-react';
 import { Mascot } from './Mascot';
 import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
 import { vibrate } from '../lib/vibrate';
@@ -306,6 +306,8 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         )}
       </AnimatePresence>
 
+
+
       {/* Animated Background Mesh with Scroll Interaction - Optimized for Performance */}
       <motion.div 
         style={{ opacity: bgOpacity }}
@@ -459,7 +461,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex flex-col sm:flex-row gap-6 w-full sm:w-auto"
+            className="flex flex-col sm:flex-row gap-4 sm:gap-6 w-full sm:w-auto"
           >
             <motion.button 
               whileHover={{ scale: 1.02, y: -4 }}
@@ -468,11 +470,12 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 vibrate(20);
                 onGetStarted();
               }}
-              className="group relative bg-blue-600 text-white px-12 py-6 rounded-2xl font-black text-xl shadow-[0_20px_50px_rgba(37,99,235,0.3)] hover:shadow-[0_30px_60px_rgba(37,99,235,0.4)] transition-all flex items-center justify-center gap-4 overflow-hidden"
+              className="group relative bg-blue-600 text-white px-10 py-5 sm:px-12 sm:py-6 rounded-2xl font-black text-xl shadow-[0_20px_50px_rgba(37,99,235,0.3)] hover:shadow-[0_30px_60px_rgba(37,99,235,0.4)] transition-all flex items-center justify-center gap-4 overflow-hidden"
             >
               <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
               START FLOWING <ArrowRight size={28} className="group-hover:translate-x-2 transition-transform duration-500" />
             </motion.button>
+
           </motion.div>
 
           {/* Features Grid - Quick Preview connected directly to active presets */}
@@ -789,7 +792,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </motion.div>
       </div>
 
-      {/* Narrative Section */}
+
       <section className="w-full bg-white py-32 relative z-10">
         <div className="max-w-5xl mx-auto px-6">
           <motion.div 

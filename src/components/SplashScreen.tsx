@@ -43,20 +43,26 @@ export function SplashScreen({ isReady = false, onFinish }: SplashScreenProps) {
     }
   }, [isReady, isMinTimePassed, onFinish]);
 
-  // Fallback if no external onFinish callback is provided
+  // Absolute emergency fallback: Guarantee splash screen exits after max 5 seconds
+  // regardless of network/auth latency so the user never gets stuck.
   useEffect(() => {
-    if (!onFinish) {
-      const t1 = setTimeout(() => {
-        setShowText(true);
-      }, 2000);
-      const t2 = setTimeout(() => {
+    const emergencyTimer = setTimeout(() => {
+      setShowText(true);
+      const exitTimer = setTimeout(() => {
         setExitSplash(true);
-      }, 3000);
+      }, 800);
+      const finishTimer = setTimeout(() => {
+        if (onFinish) {
+          onFinish();
+        }
+      }, 1400);
       return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
+        clearTimeout(exitTimer);
+        clearTimeout(finishTimer);
       };
-    }
+    }, 5000);
+
+    return () => clearTimeout(emergencyTimer);
   }, [onFinish]);
 
   return (

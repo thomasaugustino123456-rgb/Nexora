@@ -39,17 +39,15 @@ const SOUNDS = {
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775223411/mixkit-g-eazy-nba-type-403_kai44j.mp3",
   "music-complicated":
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775223497/mixkit-complicated-281_iqtv8a.mp3",
-  coin: "https://actions.google.com/sounds/v1/ui/gameshow_correct_answer.ogg",
+  coin: "",
   water:
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775302429/mixkit-liquid-bubble-3000_dvewrr.wav",
   nav_switch:
     "https://res.cloudinary.com/ddtfq9acc/video/upload/v1777215538/mixkit-retro-arcade-casino-notification-211_chrmoj.wav",
   header_switch:
     "https://res.cloudinary.com/ddtfq9acc/video/upload/v1777215960/mixkit-explainer-video-game-alert-sweep-236_xmqkot.wav",
-  fire_streak:
-    "https://res.cloudinary.com/ddtfq9acc/video/upload/v1731515665/mixkit-fire-spell-cast-2311_u5x6zv.wav",
-  fire_ambient:
-    "https://res.cloudinary.com/ddtfq9acc/video/upload/v1731515702/mixkit-gentle-fire-crackling-1339_y8zxvj.wav",
+  fire_streak: "",
+  fire_ambient: "",
   challenge_unlock:
     "https://res.cloudinary.com/ddtfq9acc/video/upload/v1778320911/mixkit-unlock-new-item-game-notification-254_wdigpd.wav",
   flame_complete:
@@ -613,8 +611,12 @@ export function useSound() {
   const stop = useCallback(async (soundKey: keyof typeof SOUNDS) => {
     const node = await getMusicNode(soundKey as string);
     if (node) {
-      node.audio.pause();
-      node.audio.currentTime = 0;
+      try {
+        node.audio.pause();
+        node.audio.currentTime = 0;
+      } catch {
+        // ignore pause errors
+      }
     }
   }, []);
 
@@ -625,8 +627,12 @@ export function useSound() {
     if (activeMusicKey) {
       const prevNode = await getMusicNode(activeMusicKey);
       if (prevNode) {
-        prevNode.audio.pause();
-        prevNode.audio.currentTime = 0;
+        try {
+          prevNode.audio.pause();
+          prevNode.audio.currentTime = 0;
+        } catch {
+          // ignore pause errors
+        }
       }
     }
 
@@ -634,7 +640,15 @@ export function useSound() {
       const node = await getMusicNode(musicKey);
       if (node) {
         node.audio.loop = true;
-        node.audio.play().catch((e) => console.error(e));
+        const promise = node.audio.play();
+        if (promise !== undefined) {
+          promise.catch((e) => {
+            const msg = String(e?.message || e || "");
+            if (e?.name !== "AbortError" && !msg.includes("interrupted") && !msg.includes("pause")) {
+              console.warn("Audio play notice:", e);
+            }
+          });
+        }
         activeMusicKey = musicKey;
         setCurrentMusic(musicKey);
       }
@@ -646,8 +660,12 @@ export function useSound() {
 
   const stopAllMusic = useCallback(() => {
     Object.keys(musicNodes).forEach((key) => {
-      musicNodes[key].audio.pause();
-      musicNodes[key].audio.currentTime = 0;
+      try {
+        musicNodes[key].audio.pause();
+        musicNodes[key].audio.currentTime = 0;
+      } catch {
+        // ignore pause errors
+      }
     });
     activeMusicKey = null;
     setCurrentMusic(null);

@@ -73,7 +73,7 @@ export const WaterMascot = React.memo(({ className, progress }: WaterMascotProps
   }, [progress, fillY]);
 
   return (
-    <div className={`relative w-full aspect-[4/5] max-w-[320px] md:max-w-[380px] mx-auto select-none ${className || ''}`}>
+    <div className={`relative w-full aspect-[4/5] mx-auto select-none ${className || 'max-w-[320px] md:max-w-[380px]'}`}>
       
       {/* Self-contained CSS for high-performance responsive animations (Zero CPU drain on low-end devices) */}
       <style>{`

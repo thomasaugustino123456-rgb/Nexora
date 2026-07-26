@@ -140,7 +140,7 @@ export function LibraryScreen({
                   </div>
                 ) : (
                   <div className="flex flex-col">
-                    {items.map(item => {
+                    {Array.from(new Map(items.map((it, idx) => [it.id || `item-${idx}`, it])).values()).map((item, idx) => {
                       const isMusic = item.type === 'music';
                       const isSkin = item.type === 'skin';
                       const isSoundPack = item.type === 'sound-pack';
@@ -148,25 +148,35 @@ export function LibraryScreen({
 
                       return (
                         <div 
-                          key={item.id} 
+                          key={`${item.id || 'item'}-${idx}`} 
                           className="flex items-center justify-between gap-4 py-4 border-b border-[#E9E4D4]/30 hover:bg-[#FAF7F2]/30 px-2 rounded-xl transition-all"
                         >
                           <div className="flex items-center gap-4 min-w-0">
                             {/* Item display icon */}
-                            <div className="relative shrink-0">
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                if (active) {
+                                  onDeactivate(item.id);
+                                } else {
+                                  onActivate(item.id);
+                                }
+                              }}
+                              className="relative shrink-0 text-left cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+                            >
                               <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl border transition-all ${
                                 active 
                                   ? 'bg-[#FAF7F2] border-[#69C496]/40 text-[#4F3F34]' 
                                   : 'bg-white border-[#E9E4D4]/50'
                               }`}>
-                                {item.icon}
+                                {typeof item.icon === 'string' || typeof item.icon === 'number' ? item.icon : '🎁'}
                               </div>
                               {active && (
                                 <span className="absolute -top-1 -right-1 flex h-2 w-2">
                                   <span className="relative inline-flex rounded-full h-2 w-2 bg-[#69C496]"></span>
                                 </span>
                               )}
-                            </div>
+                            </button>
 
                             {/* Detail display panel */}
                             <div className="min-w-0">

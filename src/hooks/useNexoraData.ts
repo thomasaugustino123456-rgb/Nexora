@@ -55,19 +55,86 @@ function cleanPayload<T>(obj: T): T {
     return obj;
   }
   if (Array.isArray(obj)) {
-    return obj.map(cleanPayload) as any;
+    return obj.map(cleanPayload).filter((v: any) => v !== undefined && v !== null) as any;
   }
   const cleaned: any = {};
   for (const key of Object.keys(obj)) {
     const val = (obj as any)[key];
     if (val !== undefined) {
-      cleaned[key] = cleanPayload(val);
+      const cleanedVal = cleanPayload(val);
+      if (cleanedVal !== undefined) {
+        cleaned[key] = cleanedVal;
+      }
     }
   }
   return cleaned;
 }
 
 const today = new Date().toISOString().split("T")[0];
+
+function getBestPlantState(...candidates: (any)[]): any {
+  const valid = candidates.filter((c): c is any => !!c && typeof c === 'object' && !!c.type);
+  if (valid.length === 0) {
+    return {
+      type: "sprout",
+      stage: 0,
+      growthPoints: 0,
+      lastGrowthDate: null,
+      lastCheckDate: new Date().toISOString(),
+      health: 100,
+      isDead: false,
+      isThirsty: false,
+      unlockedTypes: ["sprout"],
+    };
+  }
+
+  const allUnlocked = Array.from(new Set(
+    valid.flatMap(c => Array.isArray(c.unlockedTypes) ? c.unlockedTypes : ['sprout'])
+  ));
+
+  const best = valid.reduce((acc, curr) => {
+    if (!curr.isDead && acc.isDead) return curr;
+    if (curr.isDead && !acc.isDead) return acc;
+
+    const currScore = (curr.stage || 0) * 1000 + (curr.growthPoints || 0);
+    const accScore = (acc.stage || 0) * 1000 + (acc.growthPoints || 0);
+
+    if (currScore > accScore) return curr;
+    if (accScore > currScore) return acc;
+
+    if ((curr.unlockedTypes?.length || 0) > (acc.unlockedTypes?.length || 0)) return curr;
+
+    return acc;
+  }, valid[0]);
+
+  return {
+    ...best,
+    unlockedTypes: allUnlocked.length > 0 ? allUnlocked : (best.unlockedTypes || ['sprout']),
+  };
+}
+
+function getMergedPlantsProgress(...progressMaps: (Record<string, any> | undefined | null)[]): Record<string, any> {
+  const merged: Record<string, any> = {};
+  for (const map of progressMaps) {
+    if (!map || typeof map !== 'object') continue;
+    for (const [key, prog] of Object.entries(map)) {
+      if (!prog || typeof prog !== 'object') continue;
+      if (!merged[key]) {
+        merged[key] = prog;
+      } else {
+        const existing = merged[key];
+        const progScore = (prog.stage || 0) * 1000 + (prog.growthPoints || 0);
+        const existScore = (existing.stage || 0) * 1000 + (existing.growthPoints || 0);
+        if (!prog.isDead && existing.isDead) {
+          merged[key] = prog;
+        } else if (progScore > existScore) {
+          merged[key] = prog;
+        }
+      }
+    }
+  }
+  return merged;
+}
 
 // ============================================================================
 // Robust Bi-Directional State Merging Functions to Prevent Data Loss
@@ -97,13 +164,13 @@ function mergeStats(dbStats: UserStats, localStats: UserStats, defaultStats: Use
     
     lastCompletedDate: (dbStats.lastCompletedDate || "") > (localStats.lastCompletedDate || "")
       ? dbStats.lastCompletedDate
-      : localStats.lastCompletedDate,
+      : (localStats.lastCompletedDate ?? null),
     lastActiveDate: (dbStats.lastActiveDate || "") > (localStats.lastActiveDate || "")
       ? dbStats.lastActiveDate
-      : localStats.lastActiveDate,
+      : (localStats.lastActiveDate ?? null),
     lastGiftDate: (dbStats.lastGiftDate || "") > (localStats.lastGiftDate || "")
       ? dbStats.lastGiftDate
-      : localStats.lastGiftDate,
+      : (localStats.lastGiftDate ?? null),
   };
 
   // Merge trophies array uniquely by id
@@ -170,6 +237,35 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
   merged.activeEcosystemItemIds = Array.from(new Set([...(dbSettings.activeEcosystemItemIds || []), ...(localSettings.activeEcosystemItemIds || [])]));
   merged.purchasedHouseItemIds = Array.from(new Set([...(dbSettings.purchasedHouseItemIds || []), ...(localSettings.purchasedHouseItemIds || [])]));
   merged.readBookIds = Array.from(new Set([...(dbSettings.readBookIds || []), ...(localSettings.readBookIds || [])]));
+  
+  const inventoryMap = new Map();
+  const sourceInventory = Array.isArray(dbSettings.inventory) && Array.isArray(localSettings.inventory)
+    ? (localSettings.inventory.length < dbSettings.inventory.length ? localSettings.inventory : dbSettings.inventory)
+    : [...(dbSettings.inventory || []), ...(localSettings.inventory || [])];
+  sourceInventory.forEach((item: any) => {
+    if (item && item.id) {
+      if (!inventoryMap.has(item.id)) {
+        inventoryMap.set(item.id, item);
+      } else {
+        const existing = inventoryMap.get(item.id);
+        inventoryMap.set(item.id, {
+          ...existing,
+          ...item,
+          activated: existing.activated || item.activated || false,
+        });
+      }
+    }
+  });
+  merged.inventory = Array.from(inventoryMap.values());
+  const currentInvItemIds = new Set(merged.inventory.map((i: any) => i?.itemId || i?.id).filter(Boolean));
+  merged.purchasedItems = Array.from(new Set([...(dbSettings.purchasedItems || []), ...(localSettings.purchasedItems || [])])).filter(
+    (id: string) => currentInvItemIds.has(id) || id.startsWith("skin-") || id === "double-points" || id === "streak-protection" || id === "xp-boost" || id === "coin-magnet"
+  );
+  
+  merged.savedChallengeIds = Array.from(new Set([...(dbSettings.savedChallengeIds || []), ...(localSettings.savedChallengeIds || [])]));
+  merged.savedTrophyIds = Array.from(new Set([...(dbSettings.savedTrophyIds || []), ...(localSettings.savedTrophyIds || [])]));
+  merged.savedVideoIds = Array.from(new Set([...(dbSettings.savedVideoIds || []), ...(localSettings.savedVideoIds || [])]));
+  merged.savedPostIds = Array.from(new Set([...(dbSettings.savedPostIds || []), ...(localSettings.savedPostIds || [])]));
 
   // Merge placedHouseItems - keep non-empty, database preferred if not empty
   merged.placedHouseItems = (dbSettings.placedHouseItems && dbSettings.placedHouseItems.length > 0)
@@ -190,7 +286,8 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
     ? dbMascotPos
     : (!isDefaultLocalMascotPos ? localMascotPos : defaultSettings.mascotPos);
 
-  // Merge mascotSize
+
+// Merge mascotSize
   const isDefaultDbMascotSize = dbSettings.mascotSize === undefined || dbSettings.mascotSize === 1.5;
   const isDefaultLocalMascotSize = localSettings.mascotSize === undefined || localSettings.mascotSize === 1.5;
   merged.mascotSize = (!isDefaultDbMascotSize)
@@ -489,6 +586,23 @@ export function useNexoraData(
 
   const [authLoading, setAuthLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Emergency Auth Initialization Safety Timeout:
+  // Ensures authLoading resolves to false within 4 seconds even if onAuthStateChanged or network is delayed.
+  useEffect(() => {
+    const authTimer = setTimeout(() => {
+      setAuthLoading((prev) => {
+        if (prev) {
+          console.warn("[STARTUP SAFETY] Auth initialization emergency timeout (4s) reached. Resolving auth state.");
+          setIsDataReady(true);
+          setLoading(false);
+          return false;
+        }
+        return prev;
+      });
+    }, 4000);
+    return () => clearTimeout(authTimer);
+  }, []);
   const [isHydrated, setIsHydrated] = useState(false);
   const dataLoadedFromFirestore = useRef(false);
 
@@ -662,53 +776,116 @@ export function useNexoraData(
             // Robust multi-layered parallel fetch of all auxiliary documents/subcollections
             let onboardingData: any = null;
             let rewardsData: any = null;
+            let rewardsTopData: any = null;
+            let rankTopData: any = null;
+            let leaderboardTopData: any = null;
+            let statsMainData: any = null;
+            let statsTopData: any = null;
             let plantSectionData: any = null;
-            let notebookNotes: any[] = [];
+            let plantsTopData: any = null;
+            let libraryTopData: any = null;
+            let shopPurchasesTopData: any = null;
+            let shopTopData: any = null;
+            let userShopData: any = null;
+            let notebookNotesList: any[] = [];
+            let notebookDrawingsList: any[] = [];
 
             try {
               const onboardingIDRef = doc(db, "onboardingID", currentUser.uid);
               const onboardingSubdocRef = doc(db, "users", currentUser.uid, "onboarding", "main");
               const rewardsDocRef = doc(db, "users", currentUser.uid, "rewards", "main");
+              const rewardsTopRef = doc(db, "rewards", currentUser.uid);
+              const rankTopRef = doc(db, "rank", currentUser.uid);
+              const leaderboardTopRef = doc(db, "leaderboard", currentUser.uid);
+              const statsMainDocRef = doc(db, "users", currentUser.uid, "stats", "main");
+              const statsTopRef = doc(db, "stats", currentUser.uid);
               const plantSectionDocRef = doc(db, "users", currentUser.uid, "plant_section", "main");
+              const plantsTopRef = doc(db, "plants", currentUser.uid);
+              const libraryTopRef = doc(db, "library", currentUser.uid);
+              const shopPurchasesTopRef = doc(db, "shop_purchases", currentUser.uid);
+              const shopTopRef = doc(db, "shop", currentUser.uid);
+              const userShopDocRef = doc(db, "users", currentUser.uid, "shop", "main");
               const notebookRef = doc(db, "notebooks", currentUser.uid);
 
-              const [
-                onboardingIDSnap,
-                onboardingSubdocSnap,
-                rewardsSnap,
-                plantSectionSnap,
-                notebookSnap
-              ] = await Promise.all([
+              const results = await Promise.allSettled([
                 getDoc(onboardingIDRef),
                 getDoc(onboardingSubdocRef),
                 getDoc(rewardsDocRef),
+                getDoc(rewardsTopRef),
+                getDoc(rankTopRef),
+                getDoc(leaderboardTopRef),
+                getDoc(statsMainDocRef),
+                getDoc(statsTopRef),
                 getDoc(plantSectionDocRef),
+                getDoc(plantsTopRef),
+                getDoc(libraryTopRef),
+                getDoc(shopPurchasesTopRef),
+                getDoc(shopTopRef),
+                getDoc(userShopDocRef),
                 getDoc(notebookRef)
               ]);
 
-              if (onboardingIDSnap.exists()) {
+              const onboardingIDSnap = results[0].status === "fulfilled" ? results[0].value : null;
+              const onboardingSubdocSnap = results[1].status === "fulfilled" ? results[1].value : null;
+              const rewardsSnap = results[2].status === "fulfilled" ? results[2].value : null;
+              const rewardsTopSnap = results[3].status === "fulfilled" ? results[3].value : null;
+              const rankTopSnap = results[4].status === "fulfilled" ? results[4].value : null;
+              const leaderboardTopSnap = results[5].status === "fulfilled" ? results[5].value : null;
+              const statsMainSnap = results[6].status === "fulfilled" ? results[6].value : null;
+              const statsTopSnap = results[7].status === "fulfilled" ? results[7].value : null;
+              const plantSectionSnap = results[8].status === "fulfilled" ? results[8].value : null;
+              const plantsTopSnap = results[9].status === "fulfilled" ? results[9].value : null;
+              const libraryTopSnap = results[10].status === "fulfilled" ? results[10].value : null;
+              const shopPurchasesTopSnap = results[11].status === "fulfilled" ? results[11].value : null;
+              const shopTopSnap = results[12].status === "fulfilled" ? results[12].value : null;
+              const userShopSnap = results[13].status === "fulfilled" ? results[13].value : null;
+              const notebookSnap = results[14].status === "fulfilled" ? results[14].value : null;
+
+              if (onboardingIDSnap?.exists()) {
                 onboardingData = onboardingIDSnap.data();
-                console.log(`[FIRESTORE] Loaded dedicated onboardingID data:`, onboardingData);
-              } else if (onboardingSubdocSnap.exists()) {
+              } else if (onboardingSubdocSnap?.exists()) {
                 onboardingData = onboardingSubdocSnap.data();
-                console.log(`[FIRESTORE] Loaded users/${currentUser.uid}/onboarding/main data:`, onboardingData);
               }
 
-              if (rewardsSnap.exists()) {
-                rewardsData = rewardsSnap.data();
-                console.log(`[FIRESTORE] Loaded dedicated rewards/main data:`, rewardsData);
-              }
+              if (rewardsSnap?.exists()) rewardsData = rewardsSnap.data();
+              if (rewardsTopSnap?.exists()) rewardsTopData = rewardsTopSnap.data();
+              if (rankTopSnap?.exists()) rankTopData = rankTopSnap.data();
+              if (leaderboardTopSnap?.exists()) leaderboardTopData = leaderboardTopSnap.data();
+              if (statsMainSnap?.exists()) statsMainData = statsMainSnap.data();
+              if (statsTopSnap?.exists()) statsTopData = statsTopSnap.data();
+              if (plantSectionSnap?.exists()) plantSectionData = plantSectionSnap.data();
+              if (plantsTopSnap?.exists()) plantsTopData = plantsTopSnap.data();
+              if (libraryTopSnap?.exists()) libraryTopData = libraryTopSnap.data();
+              if (shopPurchasesTopSnap?.exists()) shopPurchasesTopData = shopPurchasesTopSnap.data();
+              if (shopTopSnap?.exists()) shopTopData = shopTopSnap.data();
+              if (userShopSnap?.exists()) userShopData = userShopSnap.data();
 
-              if (plantSectionSnap.exists()) {
-                plantSectionData = plantSectionSnap.data();
-                console.log(`[FIRESTORE] Loaded dedicated plant_section/main data:`, plantSectionData);
-              }
-
-              if (notebookSnap.exists()) {
+              if (notebookSnap?.exists()) {
                 const nbData = notebookSnap.data();
-                if (nbData && Array.isArray(nbData.notes)) {
-                  notebookNotes = nbData.notes;
-                  console.log(`[FIRESTORE] Loaded dedicated notebooks notes:`, notebookNotes.length);
+                if (nbData) {
+                  if (Array.isArray(nbData.notes)) {
+                    nbData.notes.forEach((item: any) => {
+                      if (!item) return;
+                      // Categorize correctly into notes vs drawings
+                      if (item.text || item.content || item.category || item.neuralInsight || item.title) {
+                        notebookNotesList.push(item);
+                      } else if (item.lines || item.strokes || item.imageData || item.type === 'drawing') {
+                        notebookDrawingsList.push(item);
+                      } else {
+                        notebookNotesList.push(item);
+                      }
+                    });
+                  }
+                  if (Array.isArray(nbData.gratitudeEntries)) {
+                    nbData.gratitudeEntries.forEach((item: any) => {
+                      if (item && !notebookNotesList.some((n: any) => n.id === item.id)) {
+                        notebookNotesList.push(item);
+                      }
+                    });
+                  }
+                  if (Array.isArray(nbData.drawings)) {
+                    nbData.drawings.forEach((d: any) => { if (d) notebookDrawingsList.push(d); });
+                  }
                 }
               }
             } catch (pErr) {
@@ -721,29 +898,123 @@ export function useNexoraData(
               (docData.settings?.onboardingCompleted === true) || 
               false;
               
-            const finalPlantOnboardingCompleted = 
-              (onboardingData?.plantSectionOnboardingCompleted === true) || 
-              (plantSectionData?.plantOnboardingCompleted === true) ||
-              (docData.plantOnboardingCompleted === true) || 
-              (docData.settings?.plantOnboardingCompleted === true) || 
-              false;
-              
             const finalSpaceOnboardingCompleted = 
               (docData.spaceOnboardingCompleted === true) ||
               (docData.settings?.spaceOnboardingCompleted === true) ||
               false;
 
-            // Extract plantState and plantsProgress from plant_section document, user doc, or settings
-            const finalPlantState = plantSectionData?.plantState ?? docData.plantState ?? docData.settings?.plantState ?? DEFAULT_SETTINGS.plantState;
-            const finalPlantsProgress = plantSectionData?.plantsProgress ?? docData.plantsProgress ?? docData.settings?.plantsProgress ?? DEFAULT_SETTINGS.plantsProgress ?? {};
-            const finalPurchasedEcosystemItemIds = plantSectionData?.purchasedEcosystemItemIds ?? docData.purchasedEcosystemItemIds ?? docData.settings?.purchasedEcosystemItemIds ?? DEFAULT_SETTINGS.purchasedEcosystemItemIds ?? [];
-            const finalActiveEcosystemItemIds = plantSectionData?.activeEcosystemItemIds ?? docData.activeEcosystemItemIds ?? docData.settings?.activeEcosystemItemIds ?? DEFAULT_SETTINGS.activeEcosystemItemIds ?? [];
+            // Extract plantState and plantsProgress from plant_section document, plants collection, user doc, or settings
+            const finalPlantState = getBestPlantState(
+              plantsTopData?.plantState,
+              plantSectionData?.plantState,
+              docData.plantState,
+              docData.settings?.plantState
+            );
+
+            const finalPlantsProgress = getMergedPlantsProgress(
+              plantsTopData?.plantsProgress,
+              plantSectionData?.plantsProgress,
+              docData.plantsProgress,
+              docData.settings?.plantsProgress
+            );
+
+            const finalPlantOnboardingCompleted = 
+              (onboardingData?.plantSectionOnboardingCompleted === true) || 
+              (plantSectionData?.plantOnboardingCompleted === true) ||
+              (docData.plantOnboardingCompleted === true) || 
+              (docData.settings?.plantOnboardingCompleted === true) || 
+              (plantsTopData?.plantOnboardingCompleted === true) ||
+              Boolean(finalPlantState && ((finalPlantState.stage || 0) > 0 || (finalPlantState.growthPoints || 0) > 0 || Boolean(finalPlantState.type))) ||
+              false;
+
+            const finalPurchasedEcosystemItemIds = Array.from(new Set([
+              ...(plantSectionData?.purchasedEcosystemItemIds || []),
+              ...(plantsTopData?.purchasedEcosystemItemIds || []),
+              ...(docData.purchasedEcosystemItemIds || docData.settings?.purchasedEcosystemItemIds || []),
+              ...(shopTopData?.purchasedEcosystemItemIds || []),
+              ...(shopPurchasesTopData?.purchasedEcosystemItemIds || [])
+            ].filter(Boolean)));
+
+            const finalActiveEcosystemItemIds = Array.from(new Set([
+              ...(plantSectionData?.activeEcosystemItemIds || []),
+              ...(plantsTopData?.activeEcosystemItemIds || []),
+              ...(docData.activeEcosystemItemIds || docData.settings?.activeEcosystemItemIds || [])
+            ].filter(Boolean)));
+
+            // Merge Shop inventory across Firestore locations, prioritizing primary docData inventory if present
+            const primaryInventory = docData.inventory || docData.settings?.inventory;
+            let mergedInventory: any[];
+            if (Array.isArray(primaryInventory)) {
+              mergedInventory = primaryInventory;
+            } else {
+              const mergedInventoryMap = new Map();
+              [
+                ...(shopPurchasesTopData?.inventory || []),
+                ...(shopTopData?.inventory || []),
+                ...(libraryTopData?.inventory || [])
+              ].forEach((item: any) => {
+                if (item && (item.id || item.name)) {
+                  mergedInventoryMap.set(item.id || item.name, item);
+                }
+              });
+              mergedInventory = Array.from(mergedInventoryMap.values());
+            }
+
+            // Build set of itemIds currently present in inventory
+            const currentInventoryItemIds = new Set(
+              mergedInventory.map((item: any) => item?.itemId || item?.id).filter(Boolean)
+            );
+            const activeEquippedIds = new Set([
+              docData.activeSkin ? `skin-${docData.activeSkin}` : null,
+              docData.activeHat ? `skin-${docData.activeHat}` : null,
+              docData.settings?.activeSkin ? `skin-${docData.settings.activeSkin}` : null,
+              docData.settings?.activeHat ? `skin-${docData.settings.activeHat}` : null,
+            ].filter(Boolean));
+
+            // Merge Shop purchasedItems and filter out deleted items that are no longer in inventory
+            const primaryPurchasedItems = Array.isArray(docData.purchasedItems)
+              ? docData.purchasedItems
+              : Array.isArray(docData.settings?.purchasedItems)
+                ? docData.settings.purchasedItems
+                : null;
+
+            const rawPurchasedItems = primaryPurchasedItems !== null
+              ? primaryPurchasedItems
+              : Array.from(new Set([
+                  ...(shopPurchasesTopData?.purchasedItems || []),
+                  ...(shopTopData?.purchasedItems || []),
+                  ...(userShopData?.purchasedItems || [])
+                ].filter(Boolean)));
+
+            const mergedPurchasedItems = rawPurchasedItems.filter(
+              (id: string) => currentInventoryItemIds.has(id) || activeEquippedIds.has(id) || id === "double-points" || id === "streak-protection" || id === "xp-boost" || id === "coin-magnet"
+            );
+
+            const mergedSavedChallenges = Array.from(new Set([
+              ...(docData.savedChallengeIds || docData.settings?.savedChallengeIds || []),
+              ...(libraryTopData?.savedChallengeIds || [])
+            ].filter(Boolean)));
+
+            const mergedSavedVideos = Array.from(new Set([
+              ...(docData.savedVideoIds || docData.settings?.savedVideoIds || []),
+              ...(libraryTopData?.savedVideoIds || libraryTopData?.savedVideos || [])
+            ].filter(Boolean)));
+
+            const mergedSavedPosts = Array.from(new Set([
+              ...(docData.savedPostIds || docData.settings?.savedPostIds || []),
+              ...(libraryTopData?.savedPostIds || [])
+            ].filter(Boolean)));
+
+            const mergedHouseItemIds = Array.from(new Set([
+              ...(docData.purchasedHouseItemIds || docData.settings?.purchasedHouseItemIds || []),
+              ...(shopTopData?.purchasedHouseItemIds || []),
+              ...(shopPurchasesTopData?.purchasedHouseItemIds || [])
+            ].filter(Boolean)));
 
             const mappedSettings = {
               ...DEFAULT_SETTINGS,
               ...(docData.settings || {}),
               
-              // Fallback to flat/root values, settings subfields, or plantSectionData for EVERY single field in UserSettings:
               pushupsGoal: docData.pushupsGoal ?? docData.settings?.pushupsGoal ?? DEFAULT_SETTINGS.pushupsGoal,
               waterGoal: docData.waterGoal ?? docData.settings?.waterGoal ?? DEFAULT_SETTINGS.waterGoal,
               reminderTime: docData.reminderTime ?? docData.settings?.reminderTime ?? DEFAULT_SETTINGS.reminderTime,
@@ -759,11 +1030,11 @@ export function useNexoraData(
               showQuotes: docData.showQuotes ?? docData.settings?.showQuotes ?? DEFAULT_SETTINGS.showQuotes,
               pushMotivationEnabled: docData.pushMotivationEnabled ?? docData.settings?.pushMotivationEnabled ?? DEFAULT_SETTINGS.pushMotivationEnabled,
               unitSystem: docData.unitSystem ?? docData.settings?.unitSystem ?? DEFAULT_SETTINGS.unitSystem,
-              purchasedItems: docData.purchasedItems ?? docData.settings?.purchasedItems ?? DEFAULT_SETTINGS.purchasedItems ?? [],
-              savedChallengeIds: docData.savedChallengeIds ?? docData.settings?.savedChallengeIds ?? DEFAULT_SETTINGS.savedChallengeIds ?? [],
+              purchasedItems: mergedPurchasedItems,
+              savedChallengeIds: mergedSavedChallenges,
               savedTrophyIds: docData.savedTrophyIds ?? docData.settings?.savedTrophyIds ?? DEFAULT_SETTINGS.savedTrophyIds ?? [],
-              savedVideoIds: docData.savedVideoIds ?? docData.settings?.savedVideoIds ?? DEFAULT_SETTINGS.savedVideoIds ?? [],
-              savedPostIds: docData.savedPostIds ?? docData.settings?.savedPostIds ?? DEFAULT_SETTINGS.savedPostIds ?? [],
+              savedVideoIds: mergedSavedVideos,
+              savedPostIds: mergedSavedPosts,
               activeHat: docData.activeHat ?? docData.settings?.activeHat ?? DEFAULT_SETTINGS.activeHat,
               activeSkin: docData.activeSkin ?? docData.settings?.activeSkin ?? DEFAULT_SETTINGS.activeSkin,
               zenModeEnabled: docData.zenModeEnabled ?? docData.settings?.zenModeEnabled ?? DEFAULT_SETTINGS.zenModeEnabled,
@@ -775,14 +1046,14 @@ export function useNexoraData(
               spaceOnboardingCompleted: finalSpaceOnboardingCompleted,
               hasNewPlantItem: docData.hasNewPlantItem ?? docData.settings?.hasNewPlantItem ?? DEFAULT_SETTINGS.hasNewPlantItem,
               challengeCountGoal: docData.challengeCountGoal ?? docData.settings?.challengeCountGoal ?? DEFAULT_SETTINGS.challengeCountGoal,
-              inventory: docData.inventory ?? docData.settings?.inventory ?? DEFAULT_SETTINGS.inventory ?? [],
+              inventory: mergedInventory,
               isDogSoundPackActive: docData.isDogSoundPackActive ?? docData.settings?.isDogSoundPackActive ?? DEFAULT_SETTINGS.isDogSoundPackActive,
               league: docData.league ?? docData.settings?.league ?? DEFAULT_SETTINGS.league,
               location: docData.location ?? docData.settings?.location ?? DEFAULT_SETTINGS.location,
               timezone: docData.timezone ?? docData.settings?.timezone ?? DEFAULT_SETTINGS.timezone,
               fcmToken: docData.fcmToken ?? docData.settings?.fcmToken,
               badgeSettings: docData.badgeSettings ?? docData.settings?.badgeSettings ?? DEFAULT_SETTINGS.badgeSettings,
-              purchasedHouseItemIds: docData.purchasedHouseItemIds ?? docData.settings?.purchasedHouseItemIds ?? DEFAULT_SETTINGS.purchasedHouseItemIds ?? [],
+              purchasedHouseItemIds: mergedHouseItemIds,
               placedHouseItems: docData.placedHouseItems ?? docData.settings?.placedHouseItems ?? DEFAULT_SETTINGS.placedHouseItems ?? [],
               spaceHouseUnlocked: docData.spaceHouseUnlocked ?? docData.settings?.spaceHouseUnlocked ?? DEFAULT_SETTINGS.spaceHouseUnlocked,
               activeSpaceRoom: docData.activeSpaceRoom ?? docData.settings?.activeSpaceRoom ?? DEFAULT_SETTINGS.activeSpaceRoom ?? 0,
@@ -808,20 +1079,110 @@ export function useNexoraData(
               time: docData.time || docData["Time"] || (docData.settings?.time) || new Date().toISOString()
             };
             
-            // Fallback stats fields using max/fallback to ensure we never lose progress
-            const finalStreak = Math.max(docData.streak || 0, docData.stats?.streak || 0, rewardsData?.streak || 0, DEFAULT_STATS.streak);
-            const finalBestStreak = Math.max(docData.bestStreak || 0, docData.stats?.bestStreak || 0, rewardsData?.bestStreak || 0, DEFAULT_STATS.bestStreak);
-            const finalTotalPoints = Math.max(docData.totalPoints || 0, docData.stats?.totalPoints || 0, rewardsData?.totalPoints || 0, DEFAULT_STATS.totalPoints);
-            const finalXP = Math.max(docData.xp || 0, docData.stats?.xp || 0, rewardsData?.xp || 0, DEFAULT_STATS.xp);
-            const finalLevel = Math.max(docData.level || 1, docData.stats?.level || 1, rewardsData?.level || 1, DEFAULT_STATS.level || 1);
-            const finalCoins = Math.max(docData.coins || 0, docData.stats?.coins || 0, rewardsData?.coins || 0, DEFAULT_STATS.coins);
-            const finalWeeklyPoints = Math.max(docData.weeklyPoints || 0, docData.stats?.weeklyPoints || 0, rewardsData?.weeklyPoints || 0, DEFAULT_STATS.weeklyPoints);
-            const finalWeeklyXP = Math.max(docData.weeklyXP || 0, docData.stats?.weeklyXP || 0, rewardsData?.weeklyXP || 0, DEFAULT_STATS.weeklyXP);
+            const savedOrigStats = docData.originalStatsBeforeProTest || docData.settings?.originalStatsBeforeProTest;
+            const isTestActive = Boolean(docData.proTestActive ?? docData.settings?.proTestActive) && Boolean(docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt) && new Date((docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt)!).getTime() > Date.now();
+
+            let finalStreak: number;
+            let finalBestStreak: number;
+            let finalTotalPoints: number;
+            let finalXP: number;
+            let finalLevel: number;
+            let finalCoins: number;
+            let finalWeeklyPoints: number;
+            let finalWeeklyXP: number;
+
+            if (!isTestActive && savedOrigStats && typeof savedOrigStats === "object") {
+              // Pro test expired or inactive: restore true free tier stats!
+              finalStreak = Math.max(0, Number(savedOrigStats.streak) || 0);
+              finalBestStreak = Math.max(finalStreak, Number(savedOrigStats.bestStreak) || 0);
+              finalTotalPoints = Math.max(0, Number(savedOrigStats.totalPoints ?? savedOrigStats.xp) || 0);
+              finalXP = Math.max(0, Number(savedOrigStats.xp) || 0);
+              finalLevel = Math.max(1, Number(savedOrigStats.level) || 1);
+              finalCoins = Math.max(0, Number(savedOrigStats.coins) || 0);
+              finalWeeklyPoints = Math.max(0, Number(savedOrigStats.weeklyPoints) || 0);
+              finalWeeklyXP = Math.max(0, Number(savedOrigStats.weeklyXP) || 0);
+            } else {
+              // Fallback stats fields using max/fallback across all collections to ensure we never lose progress
+              const maxOverallPoints = Math.max(
+                docData.totalPoints || 0,
+                docData.stats?.totalPoints || 0,
+                docData.weeklyPoints || 0,
+                docData.weeklyXP || 0,
+                docData.xp || 0,
+                rewardsData?.totalPoints || 0,
+                rewardsData?.points || 0,
+                rewardsTopData?.totalPoints || 0,
+                rewardsTopData?.points || 0,
+                rankTopData?.totalPoints || 0,
+                rankTopData?.points || 0,
+                rankTopData?.weeklyPoints || 0,
+                rankTopData?.weeklyXP || 0,
+                leaderboardTopData?.totalPoints || 0,
+                leaderboardTopData?.points || 0,
+                leaderboardTopData?.weeklyPoints || 0,
+                leaderboardTopData?.weeklyXP || 0,
+                statsMainData?.totalPoints || 0,
+                statsTopData?.totalPoints || 0,
+                DEFAULT_STATS.totalPoints
+              );
+
+              finalStreak = Math.max(docData.streak || 0, docData.stats?.streak || 0, rewardsData?.streak || 0, rewardsTopData?.streak || 0, rankTopData?.streak || 0, leaderboardTopData?.streak || 0, statsMainData?.streak || 0, statsTopData?.streak || 0, DEFAULT_STATS.streak);
+              finalBestStreak = Math.max(docData.bestStreak || 0, docData.stats?.bestStreak || 0, rewardsData?.bestStreak || 0, rewardsTopData?.bestStreak || 0, rankTopData?.bestStreak || 0, leaderboardTopData?.bestStreak || 0, statsMainData?.bestStreak || 0, statsTopData?.bestStreak || 0, DEFAULT_STATS.bestStreak);
+              finalTotalPoints = maxOverallPoints;
+              finalXP = Math.max(docData.xp || 0, docData.stats?.xp || 0, rewardsData?.xp || 0, rewardsTopData?.xp || 0, rankTopData?.xp || 0, leaderboardTopData?.xp || 0, statsMainData?.xp || 0, statsTopData?.xp || 0, maxOverallPoints, DEFAULT_STATS.xp);
+              finalLevel = Math.max(docData.level || 1, docData.stats?.level || 1, rewardsData?.level || 1, rewardsTopData?.level || 1, rankTopData?.level || 1, leaderboardTopData?.level || 1, statsMainData?.level || 1, statsTopData?.level || 1, Math.floor(maxOverallPoints / 100) + 1);
+              finalCoins = Math.max(
+                docData.coins || 0,
+                docData.stats?.coins || 0,
+                statsMainData?.coins || 0,
+                rewardsData?.coins || 0,
+                rewardsTopData?.coins || 0,
+                rankTopData?.coins || 0,
+                leaderboardTopData?.coins || 0,
+                statsTopData?.coins || 0,
+                DEFAULT_STATS.coins
+              );
+              finalWeeklyPoints = Math.max(docData.weeklyPoints || 0, docData.stats?.weeklyPoints || 0, rewardsData?.weeklyPoints || 0, rewardsTopData?.weeklyPoints || 0, rankTopData?.weeklyPoints || 0, leaderboardTopData?.weeklyPoints || 0, statsMainData?.weeklyPoints || 0, statsTopData?.weeklyPoints || 0, maxOverallPoints, DEFAULT_STATS.weeklyPoints);
+              finalWeeklyXP = Math.max(docData.weeklyXP || 0, docData.stats?.weeklyXP || 0, rewardsData?.weeklyXP || 0, rewardsTopData?.weeklyXP || 0, rankTopData?.weeklyXP || 0, leaderboardTopData?.weeklyXP || 0, statsMainData?.weeklyXP || 0, statsTopData?.weeklyXP || 0, finalXP, maxOverallPoints, DEFAULT_STATS.weeklyXP);
+            }
             
             // For complex structures, use the one that is non-empty
-            const finalTrophies = (rewardsData?.trophies?.length > 0) ? rewardsData.trophies : ((docData.stats?.trophies?.length > 0) ? docData.stats.trophies : (docData.trophies || []));
-            const finalUnlockedHats = (rewardsData?.unlockedHats?.length > 0) ? rewardsData.unlockedHats : ((docData.stats?.unlockedHats?.length > 0) ? docData.stats.unlockedHats : (docData.unlockedHats || []));
-            const finalGratitudeEntries = (rewardsData?.gratitudeEntries?.length > 0) ? rewardsData.gratitudeEntries : ((docData.stats?.gratitudeEntries?.length > 0) ? docData.stats.gratitudeEntries : ((docData.gratitudeEntries?.length > 0) ? docData.gratitudeEntries : notebookNotes));
+            const finalTrophies = (rewardsData?.trophies?.length > 0) ? rewardsData.trophies : ((rewardsTopData?.trophies?.length > 0) ? rewardsTopData.trophies : ((statsMainData?.trophies?.length > 0) ? statsMainData.trophies : ((docData.stats?.trophies?.length > 0) ? docData.stats.trophies : (docData.trophies || []))));
+            const finalUnlockedHats = (rewardsData?.unlockedHats?.length > 0) ? rewardsData.unlockedHats : ((statsMainData?.unlockedHats?.length > 0) ? statsMainData.unlockedHats : ((docData.stats?.unlockedHats?.length > 0) ? docData.stats.unlockedHats : (docData.unlockedHats || [])));
+            
+            // Merge Notebook Notes cleanly so notes are 100% preserved
+            const rawNotes = [
+              ...(Array.isArray(notebookNotesList) ? notebookNotesList : []),
+              ...(Array.isArray(docData.gratitudeEntries) ? docData.gratitudeEntries : []),
+              ...(Array.isArray(docData.stats?.gratitudeEntries) ? docData.stats.gratitudeEntries : []),
+              ...(Array.isArray(statsMainData?.gratitudeEntries) ? statsMainData.gratitudeEntries : []),
+              ...(Array.isArray(rewardsData?.gratitudeEntries) ? rewardsData.gratitudeEntries : [])
+            ];
+            const notesMap = new Map();
+            rawNotes.forEach((n: any) => {
+              if (n && (n.id || n.text || n.content)) {
+                const key = n.id || `${n.title || ''}-${n.date || n.createdAt || ''}-${(n.text || n.content || '').substring(0, 15)}`;
+                if (!notesMap.has(key)) notesMap.set(key, n);
+              }
+            });
+            const finalGratitudeEntries = Array.from(notesMap.values());
+
+            // Merge drawings separately
+            const rawDrawings = [
+              ...(Array.isArray(notebookDrawingsList) ? notebookDrawingsList : []),
+              ...(Array.isArray(docData.drawings) ? docData.drawings : []),
+              ...(Array.isArray(docData.stats?.drawings) ? docData.stats.drawings : []),
+              ...(Array.isArray(statsMainData?.drawings) ? statsMainData.drawings : []),
+              ...(Array.isArray(libraryTopData?.savedDrawings) ? libraryTopData.savedDrawings : [])
+            ];
+            const mergedDrawingsMap = new Map();
+            rawDrawings.forEach((d: any) => {
+              if (d && (d.id || d.title || d.lines || d.imageData)) {
+                const key = d.id || `${d.title}-${d.createdAt || ''}`;
+                if (!mergedDrawingsMap.has(key)) mergedDrawingsMap.set(key, d);
+              }
+            });
+            const finalDrawings = Array.from(mergedDrawingsMap.values());
 
             const mappedStats = {
               ...DEFAULT_STATS,
@@ -832,20 +1193,20 @@ export function useNexoraData(
               totalPoints: finalTotalPoints,
               xp: finalXP,
               level: finalLevel,
-              totalCompletedDays: docData.totalCompletedDays ?? docData.stats?.totalCompletedDays ?? rewardsData?.totalCompletedDays ?? DEFAULT_STATS.totalCompletedDays,
-              lastCompletedDate: docData.lastCompletedDate ?? docData.stats?.lastCompletedDate ?? rewardsData?.lastCompletedDate ?? DEFAULT_STATS.lastCompletedDate,
-              lastGiftDate: docData.lastGiftDate ?? docData.stats?.lastGiftDate ?? rewardsData?.lastGiftDate ?? DEFAULT_STATS.lastGiftDate,
-              currentChallengeIndex: docData.currentChallengeIndex ?? docData.stats?.currentChallengeIndex ?? rewardsData?.currentChallengeIndex ?? DEFAULT_STATS.currentChallengeIndex,
+              totalCompletedDays: docData.totalCompletedDays ?? docData.stats?.totalCompletedDays ?? rewardsData?.totalCompletedDays ?? rewardsTopData?.totalCompletedDays ?? DEFAULT_STATS.totalCompletedDays,
+              lastCompletedDate: docData.lastCompletedDate ?? docData.stats?.lastCompletedDate ?? rewardsData?.lastCompletedDate ?? rewardsTopData?.lastCompletedDate ?? DEFAULT_STATS.lastCompletedDate ?? null,
+              lastGiftDate: docData.lastGiftDate ?? docData.stats?.lastGiftDate ?? rewardsData?.lastGiftDate ?? DEFAULT_STATS.lastGiftDate ?? null,
+              currentChallengeIndex: docData.currentChallengeIndex ?? docData.stats?.currentChallengeIndex ?? rewardsData?.currentChallengeIndex ?? DEFAULT_STATS.currentChallengeIndex ?? 0,
               coins: finalCoins,
-              gems: docData.gems ?? docData.stats?.gems ?? rewardsData?.gems ?? DEFAULT_STATS.gems,
+              gems: docData.gems ?? docData.stats?.gems ?? rewardsData?.gems ?? DEFAULT_STATS.gems ?? 0,
               weeklyPoints: finalWeeklyPoints,
               weeklyXP: finalWeeklyXP,
-              lastWeeklyReset: docData.lastWeeklyReset ?? docData.stats?.lastWeeklyReset ?? rewardsData?.lastWeeklyReset ?? DEFAULT_STATS.lastWeeklyReset,
-              lastRankRewardClaimWeek: docData.lastRankRewardClaimWeek ?? docData.stats?.lastRankRewardClaimWeek ?? rewardsData?.lastRankRewardClaimWeek ?? DEFAULT_STATS.lastRankRewardClaimWeek,
-              lastActiveDate: docData.lastActiveDate ?? docData.stats?.lastActiveDate ?? rewardsData?.lastActiveDate ?? DEFAULT_STATS.lastActiveDate,
+              lastWeeklyReset: docData.lastWeeklyReset ?? docData.stats?.lastWeeklyReset ?? rewardsData?.lastWeeklyReset ?? DEFAULT_STATS.lastWeeklyReset ?? null,
+              lastRankRewardClaimWeek: docData.lastRankRewardClaimWeek ?? docData.stats?.lastRankRewardClaimWeek ?? rewardsData?.lastRankRewardClaimWeek ?? DEFAULT_STATS.lastRankRewardClaimWeek ?? null,
+              lastActiveDate: docData.lastActiveDate ?? docData.stats?.lastActiveDate ?? rewardsData?.lastActiveDate ?? DEFAULT_STATS.lastActiveDate ?? null,
               trophies: finalTrophies,
               pointsByCategory: docData.pointsByCategory ?? docData.stats?.pointsByCategory ?? rewardsData?.pointsByCategory ?? DEFAULT_STATS.pointsByCategory,
-              drawings: docData.drawings ?? docData.stats?.drawings ?? rewardsData?.drawings ?? DEFAULT_STATS.drawings ?? [],
+              drawings: finalDrawings.length > 0 ? finalDrawings : (docData.drawings ?? DEFAULT_STATS.drawings ?? []),
               unlockedHats: finalUnlockedHats,
               gratitudeEntries: finalGratitudeEntries,
               waterDrank: docData.waterDrank ?? docData.stats?.waterDrank ?? rewardsData?.waterDrank ?? DEFAULT_STATS.waterDrank,
@@ -853,16 +1214,69 @@ export function useNexoraData(
               hasClaimedXpChest: docData.hasClaimedXpChest ?? docData.stats?.hasClaimedXpChest ?? rewardsData?.hasClaimedXpChest ?? DEFAULT_STATS.hasClaimedXpChest,
             };
             
-            const finalGardenStateFromPlantSection = plantSectionData?.gardenState ?? {};
-            
-            const mappedGarden = {
+            const gardenCandidates = [
+              plantsTopData?.gardenState,
+              plantSectionData?.gardenState,
+              docData.gardenState,
+              docData.garden,
+              docData.settings?.gardenState,
+            ].filter(Boolean);
+
+            let bestTiles = createInitialGardenState().tiles;
+            let maxPlacedCount = -1;
+            for (const gCandidate of gardenCandidates) {
+              if (Array.isArray(gCandidate.tiles) && gCandidate.tiles.length > 0) {
+                const placedCount = gCandidate.tiles.filter((t: any) => t.plantType || t.itemId || t.occupied).length;
+                if (placedCount > maxPlacedCount || gCandidate.tiles.length > bestTiles.length) {
+                  bestTiles = gCandidate.tiles;
+                  maxPlacedCount = placedCount;
+                }
+              }
+            }
+
+            const mergedSeedInventory: Record<string, number> = {
+              ...(createInitialGardenState().inventory || {}),
+              ...(plantsTopData?.seedsInventory || {}),
+              ...(plantsTopData?.inventory || {}),
+            };
+            for (const gCandidate of gardenCandidates) {
+              if (gCandidate.inventory && typeof gCandidate.inventory === 'object') {
+                for (const [seedId, count] of Object.entries(gCandidate.inventory)) {
+                  mergedSeedInventory[seedId] = Math.max(
+                    mergedSeedInventory[seedId] || 0,
+                    typeof count === 'number' ? count : 0
+                  );
+                }
+              }
+            }
+
+            const pendingLootSeed =
+              plantsTopData?.lastLuckySeedDrop ??
+              plantsTopData?.pendingLootSeed ??
+              plantSectionData?.gardenState?.pendingLootSeed ??
+              docData.gardenState?.pendingLootSeed ??
+              null;
+
+            const mappedGarden: GardenState = {
               ...createInitialGardenState(),
               ...(docData.garden || {}),
-              ...finalGardenStateFromPlantSection,
-              
-              tiles: finalGardenStateFromPlantSection.tiles ?? docData.garden?.tiles ?? docData.tiles ?? createInitialGardenState().tiles,
-              inventory: finalGardenStateFromPlantSection.inventory ?? docData.garden?.inventory ?? createInitialGardenState().inventory,
-              streakSavers: finalGardenStateFromPlantSection.streakSavers ?? docData.garden?.streakSavers ?? docData.streakSavers ?? createInitialGardenState().streakSavers ?? 0,
+              ...(docData.gardenState || {}),
+              ...(plantSectionData?.gardenState || {}),
+              ...(plantsTopData?.gardenState || {}),
+              tiles: bestTiles,
+              inventory: mergedSeedInventory,
+              pendingLootSeed: pendingLootSeed,
+              streakSavers: Math.max(
+                plantsTopData?.gardenState?.streakSavers || 0,
+                plantSectionData?.gardenState?.streakSavers || 0,
+                docData.gardenState?.streakSavers || 0,
+                docData.garden?.streakSavers || 0
+              ),
+              lastSeedDropAt: Math.max(
+                plantsTopData?.gardenState?.lastSeedDropAt || 0,
+                plantSectionData?.gardenState?.lastSeedDropAt || 0,
+                docData.gardenState?.lastSeedDropAt || 0
+              ),
             };
 
             // Retrieve the absolute latest local storage changes (e.g. offline work or quick edits)
@@ -902,26 +1316,36 @@ export function useNexoraData(
             };
             
             // Load Today's Progress if it exists
+            const defaultProgress = {
+              date: today,
+              completed: false,
+              pushupsDone: false,
+              waterDrank: 0,
+              breathingDone: false,
+              drawingDone: false,
+              footballDone: false,
+              bubblesDone: false,
+              completionsCount: 0,
+              customPlanCompleted: false,
+              nextRestorationTime: null,
+            };
+
+            let progressSnap: any = null;
             try {
               const progressRef = doc(db, "users", currentUser.uid, "progress", today);
-              const progressSnap = await getDoc(progressRef);
+              try {
+                progressSnap = await getDoc(progressRef);
+              } catch (onlineErr: any) {
+                console.warn("[FIRESTORE] Online progress fetch failed, attempting cache fetch:", onlineErr?.message || onlineErr);
+                try {
+                  progressSnap = await getDocFromCache(progressRef);
+                } catch (cacheErr) {
+                  progressSnap = null;
+                }
+              }
               
-              const defaultProgress = {
-                date: today,
-                completed: false,
-                pushupsDone: false,
-                waterDrank: 0,
-                breathingDone: false,
-                drawingDone: false,
-                footballDone: false,
-                bubblesDone: false,
-                completionsCount: 0,
-                customPlanCompleted: false,
-                nextRestorationTime: null,
-              };
-
               let resolvedProgress: DailyProgress = defaultProgress;
-              if (progressSnap.exists()) {
+              if (progressSnap && progressSnap.exists && progressSnap.exists()) {
                 resolvedProgress = progressSnap.data() as DailyProgress;
               }
 
@@ -938,18 +1362,21 @@ export function useNexoraData(
               // Set lastSyncedRef.current to the RAW database values.
               // If the resolved (merged) state is different (has local progress), 
               // background sync will immediately detect the difference and write it to Firestore!
+              const hasSnap = progressSnap && progressSnap.exists && progressSnap.exists();
               lastSyncedRef.current = {
                 s: mappedSettings,
                 st: mappedStats,
                 p: {
-                  c: progressSnap.exists() ? (progressSnap.data() as DailyProgress).completed : false,
-                  cc: progressSnap.exists() ? (progressSnap.data() as DailyProgress).completionsCount : 0,
+                  c: hasSnap ? (progressSnap.data() as DailyProgress).completed : false,
+                  cc: hasSnap ? (progressSnap.data() as DailyProgress).completionsCount : 0,
                   d: today,
                 },
                 g: mappedGarden
               };
             } catch (pErr) {
-              console.error("[FIRESTORE] Error loading progress data:", pErr);
+              console.warn("[FIRESTORE] Handled error/offline status loading progress data:", pErr);
+              const latestLocalProgress = getCachedJson("nexora_progress", defaultProgress);
+              rawSetDailyProgress(latestLocalProgress);
             }
             
             setNeedsOnboarding(!finalOnboardingCompleted);
@@ -1092,7 +1519,7 @@ export function useNexoraData(
                 totalPoints: dbData.totalPoints ?? dbData.stats?.totalPoints ?? DEFAULT_STATS.totalPoints,
                 xp: dbData.xp ?? dbData.stats?.xp ?? DEFAULT_STATS.xp,
                 level: dbData.level ?? dbData.stats?.level ?? DEFAULT_STATS.level,
-                coins: dbData.coins ?? dbData.stats?.coins ?? DEFAULT_STATS.coins,
+                coins: Math.max(dbData.coins || 0, dbData.stats?.coins || 0, DEFAULT_STATS.coins),
                 weeklyPoints: dbData.weeklyPoints ?? dbData.stats?.weeklyPoints ?? DEFAULT_STATS.weeklyPoints,
                 weeklyXP: dbData.weeklyXP ?? dbData.stats?.weeklyXP ?? DEFAULT_STATS.weeklyXP,
               };
@@ -1131,7 +1558,7 @@ export function useNexoraData(
                 return;
               }
 
-              const streakOverwritten = (dbStats.streak > stats.streak && stats.streak <= 1 && dbStats.streak > 1);
+              const streakOverwritten = localIsEmptyStats && (dbStats.streak > stats.streak && stats.streak <= 1 && dbStats.streak > 1);
               const plantOverwritten = (dbSettings.plantState?.type === settings.plantState?.type && (dbSettings.plantState?.stage || 0) > (settings.plantState?.stage || 0) && (settings.plantState?.stage || 0) <= 1 && (dbSettings.plantState?.stage || 0) > 1);
 
               if (
@@ -1153,7 +1580,7 @@ export function useNexoraData(
                     totalPoints: dbData.totalPoints ?? dbData.stats?.totalPoints ?? DEFAULT_STATS.totalPoints,
                     xp: dbData.xp ?? dbData.stats?.xp ?? DEFAULT_STATS.xp,
                     level: dbData.level ?? dbData.stats?.level ?? DEFAULT_STATS.level,
-                    coins: dbData.coins ?? dbData.stats?.coins ?? DEFAULT_STATS.coins,
+                    coins: Math.max(dbData.coins || 0, dbData.stats?.coins || 0, DEFAULT_STATS.coins),
                     weeklyPoints: dbData.weeklyPoints ?? dbData.stats?.weeklyPoints ?? DEFAULT_STATS.weeklyPoints,
                     weeklyXP: dbData.weeklyXP ?? dbData.stats?.weeklyXP ?? DEFAULT_STATS.weeklyXP,
                     trophies: dbData.trophies ?? dbData.stats?.trophies ?? [],
@@ -1161,13 +1588,13 @@ export function useNexoraData(
                     unlockedHats: dbData.unlockedHats ?? dbData.stats?.unlockedHats ?? [],
                     gratitudeEntries: dbData.gratitudeEntries ?? dbData.stats?.gratitudeEntries ?? [],
                     totalCompletedDays: dbData.totalCompletedDays ?? dbData.stats?.totalCompletedDays ?? DEFAULT_STATS.totalCompletedDays,
-                    lastCompletedDate: dbData.lastCompletedDate ?? dbData.stats?.lastCompletedDate ?? DEFAULT_STATS.lastCompletedDate,
-                    lastGiftDate: dbData.lastGiftDate ?? dbData.stats?.lastGiftDate ?? DEFAULT_STATS.lastGiftDate,
-                    currentChallengeIndex: dbData.currentChallengeIndex ?? dbData.stats?.currentChallengeIndex ?? DEFAULT_STATS.currentChallengeIndex,
-                    gems: dbData.gems ?? dbData.stats?.gems ?? DEFAULT_STATS.gems,
-                    lastWeeklyReset: dbData.lastWeeklyReset ?? dbData.stats?.lastWeeklyReset ?? DEFAULT_STATS.lastWeeklyReset,
-                    lastRankRewardClaimWeek: dbData.lastRankRewardClaimWeek ?? dbData.stats?.lastRankRewardClaimWeek ?? DEFAULT_STATS.lastRankRewardClaimWeek,
-                    lastActiveDate: dbData.lastActiveDate ?? dbData.stats?.lastActiveDate ?? DEFAULT_STATS.lastActiveDate,
+                    lastCompletedDate: dbData.lastCompletedDate ?? dbData.stats?.lastCompletedDate ?? DEFAULT_STATS.lastCompletedDate ?? null,
+                    lastGiftDate: dbData.lastGiftDate ?? dbData.stats?.lastGiftDate ?? DEFAULT_STATS.lastGiftDate ?? null,
+                    currentChallengeIndex: dbData.currentChallengeIndex ?? dbData.stats?.currentChallengeIndex ?? DEFAULT_STATS.currentChallengeIndex ?? 0,
+                    gems: dbData.gems ?? dbData.stats?.gems ?? DEFAULT_STATS.gems ?? 0,
+                    lastWeeklyReset: dbData.lastWeeklyReset ?? dbData.stats?.lastWeeklyReset ?? DEFAULT_STATS.lastWeeklyReset ?? null,
+                    lastRankRewardClaimWeek: dbData.lastRankRewardClaimWeek ?? dbData.stats?.lastRankRewardClaimWeek ?? DEFAULT_STATS.lastRankRewardClaimWeek ?? null,
+                    lastActiveDate: dbData.lastActiveDate ?? dbData.stats?.lastActiveDate ?? DEFAULT_STATS.lastActiveDate ?? null,
                     pointsByCategory: dbData.pointsByCategory ?? dbData.stats?.pointsByCategory ?? DEFAULT_STATS.pointsByCategory,
                     waterDrank: dbData.waterDrank ?? dbData.stats?.waterDrank ?? DEFAULT_STATS.waterDrank,
                     lifetimeWaterCompletions: dbData.lifetimeWaterCompletions ?? dbData.stats?.lifetimeWaterCompletions ?? DEFAULT_STATS.lifetimeWaterCompletions,
@@ -1175,17 +1602,41 @@ export function useNexoraData(
                   });
                 }
                 if (dbData.settings || dbData.displayName || dbData.onboardingCompleted !== undefined) {
-                  setSettings((prev: any) => ({
-                    ...DEFAULT_SETTINGS,
-                    ...prev,
-                    ...(dbData.settings || {}),
-                    displayName: dbData.displayName ?? dbData.name ?? dbData.settings?.displayName ?? DEFAULT_SETTINGS.displayName,
-                    onboardingCompleted: dbData.onboardingCompleted ?? dbData.settings?.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
-                    plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbData.settings?.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
-                    spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbData.settings?.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
-                    purchasedItems: dbData.purchasedItems ?? dbData.settings?.purchasedItems ?? DEFAULT_SETTINGS.purchasedItems,
-                    inventory: dbData.inventory ?? dbData.settings?.inventory ?? DEFAULT_SETTINGS.inventory,
-                  }));
+                  setSettings((prev: any) => {
+                    const dbSettings = dbData.settings || {};
+                    return {
+                      ...DEFAULT_SETTINGS,
+                      ...prev,
+                      ...dbSettings,
+                      displayName: dbData.displayName ?? dbData.name ?? dbSettings.displayName ?? DEFAULT_SETTINGS.displayName,
+                      onboardingCompleted: dbData.onboardingCompleted ?? dbSettings.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
+                      plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbSettings.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
+                      spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbSettings.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
+                      purchasedItems: dbData.purchasedItems ?? dbSettings.purchasedItems ?? DEFAULT_SETTINGS.purchasedItems,
+                      inventory: dbData.inventory ?? dbSettings.inventory ?? DEFAULT_SETTINGS.inventory,
+                      plantState: dbData.plantState ?? dbSettings.plantState ?? DEFAULT_SETTINGS.plantState,
+                      plantsProgress: dbData.plantsProgress ?? dbSettings.plantsProgress ?? DEFAULT_SETTINGS.plantsProgress,
+                      purchasedEcosystemItemIds: dbData.purchasedEcosystemItemIds ?? dbSettings.purchasedEcosystemItemIds ?? DEFAULT_SETTINGS.purchasedEcosystemItemIds,
+                      activeEcosystemItemIds: dbData.activeEcosystemItemIds ?? dbSettings.activeEcosystemItemIds ?? DEFAULT_SETTINGS.activeEcosystemItemIds,
+                      savedChallengeIds: dbData.savedChallengeIds ?? dbSettings.savedChallengeIds ?? DEFAULT_SETTINGS.savedChallengeIds,
+                      savedTrophyIds: dbData.savedTrophyIds ?? dbSettings.savedTrophyIds ?? DEFAULT_SETTINGS.savedTrophyIds,
+                      savedVideoIds: dbData.savedVideoIds ?? dbSettings.savedVideoIds ?? DEFAULT_SETTINGS.savedVideoIds,
+                      savedPostIds: dbData.savedPostIds ?? dbSettings.savedPostIds ?? DEFAULT_SETTINGS.savedPostIds,
+                      activeHat: dbData.activeHat ?? dbSettings.activeHat ?? DEFAULT_SETTINGS.activeHat,
+                      activeSkin: dbData.activeSkin ?? dbSettings.activeSkin ?? DEFAULT_SETTINGS.activeSkin,
+                      joinedCircleIds: dbData.joinedCircleIds ?? dbSettings.joinedCircleIds ?? DEFAULT_SETTINGS.joinedCircleIds,
+                      purchasedHouseItemIds: dbData.purchasedHouseItemIds ?? dbSettings.purchasedHouseItemIds ?? DEFAULT_SETTINGS.purchasedHouseItemIds,
+                      placedHouseItems: dbData.placedHouseItems ?? dbSettings.placedHouseItems ?? DEFAULT_SETTINGS.placedHouseItems,
+                      spaceHouseUnlocked: dbData.spaceHouseUnlocked ?? dbSettings.spaceHouseUnlocked ?? DEFAULT_SETTINGS.spaceHouseUnlocked,
+                      activeSpaceRoom: dbData.activeSpaceRoom ?? dbSettings.activeSpaceRoom ?? DEFAULT_SETTINGS.activeSpaceRoom,
+                      isPro: dbData.isPro ?? dbSettings.isPro ?? DEFAULT_SETTINGS.isPro,
+                      proTestActive: dbData.proTestActive ?? dbSettings.proTestActive ?? false,
+                      proTestStartedAt: dbData.proTestStartedAt ?? dbSettings.proTestStartedAt ?? null,
+                      proTestExpiresAt: dbData.proTestExpiresAt ?? dbSettings.proTestExpiresAt ?? null,
+                      proTestLastUsedAt: dbData.proTestLastUsedAt ?? dbSettings.proTestLastUsedAt ?? null,
+                      lastViewedRank: dbData.lastViewedRank ?? dbSettings.lastViewedRank ?? undefined,
+                    };
+                  });
                 }
                 if (dbData.garden || dbData.tiles !== undefined) {
                   setGardenState((prev: any) => ({
@@ -1196,6 +1647,12 @@ export function useNexoraData(
                     inventory: dbData.garden?.inventory ?? prev.inventory ?? createInitialGardenState().inventory,
                   }));
                 }
+                lastSyncedRef.current = {
+                  st: JSON.parse(JSON.stringify(stats)),
+                  s: JSON.parse(JSON.stringify(settings)),
+                  dp: JSON.parse(JSON.stringify(dailyProgress)),
+                  g: JSON.parse(JSON.stringify(gardenState))
+                };
                 return;
               }
             }
@@ -1282,6 +1739,25 @@ export function useNexoraData(
             await setDoc(rewardsDocRef, rewardsPayload, { merge: true });
             console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote rewards subdocument to: ${rewardsDocRef.path}`);
 
+            const statsMainDocRef = doc(db, "users", user.uid, "stats", "main");
+            const statsMainPayload = {
+              streak: stats.streak || 0,
+              bestStreak: stats.bestStreak || 0,
+              totalPoints: stats.totalPoints || 0,
+              weeklyPoints: stats.weeklyPoints || 0,
+              level: stats.level || 1,
+              coins: stats.coins || 0,
+              totalCompletedDays: stats.totalCompletedDays || 0,
+              lastCompletedDate: stats.lastCompletedDate || "",
+              currentChallengeIndex: stats.currentChallengeIndex || 0,
+              pointsByCategory: stats.pointsByCategory || { physical: 0, mental: 0, creative: 0 },
+              trophies: stats.trophies || [],
+              achievements: stats.achievements || [],
+              drawings: stats.drawings || []
+            };
+            await setDoc(statsMainDocRef, statsMainPayload, { merge: true });
+            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote stats main subdocument to: ${statsMainDocRef.path}`);
+
             await setDoc(plantSectionDocRef, plantSectionPayload, { merge: true });
             console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote plant section subdocument to: ${plantSectionDocRef.path}`);
 
@@ -1291,6 +1767,75 @@ export function useNexoraData(
             await setDoc(onboardingSubdocRef, onboardingPayload, { merge: true });
             console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote onboarding subcollection document to: ${onboardingSubdocRef.path}`);
             
+            // Top-level /rewards/{user.uid}
+            const rewardsTopRef = doc(db, "rewards", user.uid);
+            await setDoc(rewardsTopRef, rewardsPayload, { merge: true });
+
+            // Top-level /rank/{user.uid}
+            const rankDocRef = doc(db, "rank", user.uid);
+            const currentMaxPoints = Math.max(
+              stats.weeklyPoints || 0,
+              stats.weeklyXP || 0,
+              stats.totalPoints || 0,
+              stats.xp || 0
+            );
+            const rankPayload = {
+              uid: user.uid,
+              userId: user.uid,
+              name: settings.displayName || user.displayName || 'Champion',
+              displayName: settings.displayName || user.displayName || 'Champion',
+              photoFileName: settings.profilePic || user.photoURL || '',
+              profilePic: settings.profilePic || user.photoURL || '',
+              league: settings.league || 'Bronze',
+              points: currentMaxPoints,
+              weeklyPoints: currentMaxPoints,
+              weeklyXP: stats.weeklyXP || stats.xp || currentMaxPoints,
+              totalPoints: stats.totalPoints || currentMaxPoints,
+              xp: stats.xp || currentMaxPoints,
+              streak: stats.streak || 0,
+              level: stats.level || Math.floor(currentMaxPoints / 100) + 1,
+              updatedAt: serverTimestamp(),
+            };
+            if (!settings.proTestActive) {
+              await setDoc(rankDocRef, rankPayload, { merge: true });
+
+              // Top-level /leaderboard/{user.uid}
+              const leaderboardTopRef = doc(db, "leaderboard", user.uid);
+              await setDoc(leaderboardTopRef, rankPayload, { merge: true });
+            }
+
+            // Top-level /notebooks/{user.uid}
+            const notebookRef = doc(db, "notebooks", user.uid);
+            await setDoc(notebookRef, {
+              uid: user.uid,
+              userId: user.uid,
+              userName: settings.displayName || user.displayName || 'Champion',
+              userEmail: user.email || `${user.uid}@nexora.app`,
+              notes: stats.gratitudeEntries || [],
+              gratitudeEntries: stats.gratitudeEntries || [],
+              drawings: stats.drawings || [],
+              updatedAt: serverTimestamp(),
+            }, { merge: true });
+
+            // Top-level /shop/{user.uid} and /shop_purchases/{user.uid}
+            const shopDocRef = doc(db, "shop", user.uid);
+            const shopPurchasesDocRef = doc(db, "shop_purchases", user.uid);
+            const userShopDocRef = doc(db, "users", user.uid, "shop", "main");
+            const shopPayload = {
+              uid: user.uid,
+              userId: user.uid,
+              userName: settings.displayName || user.displayName || 'Champion',
+              userEmail: user.email || `${user.uid}@nexora.app`,
+              purchasedItems: settings.purchasedItems || [],
+              inventory: settings.inventory || [],
+              purchasedHouseItemIds: settings.purchasedHouseItemIds || [],
+              purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
+              updatedAt: serverTimestamp(),
+            };
+            await setDoc(shopDocRef, shopPayload, { merge: true });
+            await setDoc(shopPurchasesDocRef, shopPayload, { merge: true });
+            await setDoc(userShopDocRef, shopPayload, { merge: true });
+
             // 1. Plants Collection Sync
             const plantsDocRef = doc(db, "plants", user.uid);
             const plantsPayload = {
@@ -1323,23 +1868,31 @@ export function useNexoraData(
 
             // 3. Library Collection Sync
             const libraryDocRef = doc(db, "library", user.uid);
+            const userLibraryDocRef = doc(db, "users", user.uid, "library", "main");
             const libraryPayload = {
+              uid: user.uid,
               userId: user.uid,
               userName: settings.displayName || user.displayName || 'Champion',
               userEmail: user.email || `${user.uid}@nexora.app`,
               inventory: settings.inventory || [],
-              savedVideos: [],
+              purchasedItems: settings.purchasedItems || [],
+              savedVideos: settings.savedVideoIds || [],
+              savedVideoIds: settings.savedVideoIds || [],
+              savedTrophyIds: settings.savedTrophyIds || [],
               savedDrawings: stats.drawings || [],
               savedChallengeIds: settings.savedChallengeIds || [],
+              savedPostIds: settings.savedPostIds || [],
               updatedAt: serverTimestamp()
             };
             await setDoc(libraryDocRef, libraryPayload, { merge: true });
+            await setDoc(userLibraryDocRef, libraryPayload, { merge: true });
             console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote library collection to: ${libraryDocRef.path}`);
 
             console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${userRef.path}`);
             const postSnap = await getDoc(userRef);
             console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${userRef.path}:`, postSnap.exists() ? JSON.stringify(postSnap.data()) : "Document does not exist");
           } catch (err: any) {
+            handleFirestoreError(err, OperationType.WRITE, userRef.path);
             console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Failed to write core document to: ${userRef.path}. Error:`, err);
           }
         }
@@ -1406,45 +1959,64 @@ export function useNexoraData(
           const postProgSnap = await getDoc(progressRef);
           console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${progressRef.path}:`, postProgSnap.exists() ? JSON.stringify(postProgSnap.data()) : "Document does not exist");
         } catch (err: any) {
+          handleFirestoreError(err, OperationType.WRITE, progressRef.path);
           console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Failed to write progress document to: ${progressRef.path}. Error:`, err);
         }
 
-        // 3. Leaderboard sync (only if streak, points, name or photo changed)
+        // 3. Leaderboard sync (only if streak, points, name, photo, weekly points, or weekly XP changed)
         const lbChanged =
           !lastSyncedData ||
           lastSyncedData.st?.totalPoints !== stats.totalPoints ||
           lastSyncedData.st?.streak !== stats.streak ||
+          lastSyncedData.st?.weeklyPoints !== stats.weeklyPoints ||
+          lastSyncedData.st?.weeklyXP !== stats.weeklyXP ||
           lastSyncedData.s?.displayName !== settings.displayName ||
           lastSyncedData.s?.profilePic !== settings.profilePic;
 
-        if (lbChanged) {
+        if (lbChanged && !settings.proTestActive) {
           console.log(`[PERSISTENCE AUDIT] Leaderboard relevant fields changed. Initiating write for leaderboard document...`);
           console.log(`[PERSISTENCE AUDIT] Exact Firestore path: ${leaderboardRef.path}`);
           try {
             console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${leaderboardRef.path}`);
             const preLbSnap = await getDoc(leaderboardRef);
-            console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${leaderboardRef.path}:`, preLbSnap.exists() ? JSON.stringify(preLbSnap.data()) : "Document does not exist");
+            const preData = preLbSnap.exists() ? preLbSnap.data() : {};
+            const rankDocRef = doc(db, "rank", user.uid);
             
+            const maxPts = Math.max(
+              preData.weeklyPoints || 0,
+              preData.totalPoints || 0,
+              preData.weeklyXP || 0,
+              preData.points || 0,
+              stats.weeklyPoints || 0,
+              stats.totalPoints || 0,
+              stats.weeklyXP || 0,
+              stats.xp || 0
+            );
+
             const writePayload = {
               uid: user.uid,
-              displayName: settings.displayName || "Anonymous",
+              userId: user.uid,
+              displayName: settings.displayName || user.displayName || "Champion",
+              name: settings.displayName || user.displayName || "Champion",
               photoURL: settings.profilePic || user.photoURL || "",
-              streak: stats.streak || 0,
-              totalPoints: stats.totalPoints || 0,
-              weeklyXP: stats.weeklyXP || 0,
-              weeklyPoints: stats.weeklyPoints || 0,
-              level: stats.level || Math.floor((stats.totalPoints || 0) / 100) + 1,
-              league: settings.league || "Bronze",
+              photoFileName: settings.profilePic || user.photoURL || "",
+              profilePic: settings.profilePic || user.photoURL || "",
+              streak: Math.max(preData.streak || 0, stats.streak || 0),
+              totalPoints: maxPts,
+              points: maxPts,
+              weeklyXP: maxPts,
+              weeklyPoints: maxPts,
+              xp: maxPts,
+              level: Math.max(preData.level || 1, stats.level || 1, Math.floor(maxPts / 100) + 1),
+              league: settings.league || preData.league || "Bronze",
             };
             console.log(`[PERSISTENCE AUDIT] Write payload for leaderboard document:`, JSON.stringify(writePayload));
             
             await setDoc(leaderboardRef, writePayload, { merge: true });
+            await setDoc(rankDocRef, writePayload, { merge: true });
             console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote leaderboard document to: ${leaderboardRef.path}`);
-            
-            console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${leaderboardRef.path}`);
-            const postLbSnap = await getDoc(leaderboardRef);
-            console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${leaderboardRef.path}:`, postLbSnap.exists() ? JSON.stringify(postLbSnap.data()) : "Document does not exist");
           } catch (err: any) {
+            handleFirestoreError(err, OperationType.WRITE, leaderboardRef.path);
             console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Failed to write leaderboard document to: ${leaderboardRef.path}. Error:`, err);
           }
         }
@@ -1452,6 +2024,7 @@ export function useNexoraData(
         lastSyncedRef.current = currentState;
         console.log("Hooks: Optimized Background Sync Complete ✅");
       } catch (e: any) {
+        handleFirestoreError(e, OperationType.WRITE, user?.uid ? `users/${user.uid}` : 'users');
         console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Error syncing data for user UID: ${user?.uid}. Error:`, e);
         if (e.message?.includes("quota") || e.code === "resource-exhausted") {
           quotaExceededRef.current = true;
@@ -1585,7 +2158,7 @@ export function useNexoraData(
             totalPoints: dbData.totalPoints ?? dbData.stats?.totalPoints ?? DEFAULT_STATS.totalPoints,
             xp: dbData.xp ?? dbData.stats?.xp ?? DEFAULT_STATS.xp,
             level: dbData.level ?? dbData.stats?.level ?? DEFAULT_STATS.level,
-            coins: dbData.coins ?? dbData.stats?.coins ?? DEFAULT_STATS.coins,
+            coins: Math.max(dbData.coins || 0, dbData.stats?.coins || 0, DEFAULT_STATS.coins),
             weeklyPoints: dbData.weeklyPoints ?? dbData.stats?.weeklyPoints ?? DEFAULT_STATS.weeklyPoints,
             weeklyXP: dbData.weeklyXP ?? dbData.stats?.weeklyXP ?? DEFAULT_STATS.weeklyXP,
           };
@@ -1626,7 +2199,7 @@ export function useNexoraData(
             return;
           }
 
-          const streakOverwritten = (dbStats.streak > stats.streak && stats.streak <= 1 && dbStats.streak > 1);
+          const streakOverwritten = localIsEmptyStats && (dbStats.streak > stats.streak && stats.streak <= 1 && dbStats.streak > 1);
           const plantOverwritten = (dbSettings.plantState?.type === settings.plantState?.type && (dbSettings.plantState?.stage || 0) > (settings.plantState?.stage || 0) && (settings.plantState?.stage || 0) <= 1 && (dbSettings.plantState?.stage || 0) > 1);
 
           if (
@@ -1648,7 +2221,7 @@ export function useNexoraData(
                 totalPoints: dbData.totalPoints ?? dbData.stats?.totalPoints ?? DEFAULT_STATS.totalPoints,
                 xp: dbData.xp ?? dbData.stats?.xp ?? DEFAULT_STATS.xp,
                 level: dbData.level ?? dbData.stats?.level ?? DEFAULT_STATS.level,
-                coins: dbData.coins ?? dbData.stats?.coins ?? DEFAULT_STATS.coins,
+                coins: Math.max(dbData.coins || 0, dbData.stats?.coins || 0, DEFAULT_STATS.coins),
                 weeklyPoints: dbData.weeklyPoints ?? dbData.stats?.weeklyPoints ?? DEFAULT_STATS.weeklyPoints,
                 weeklyXP: dbData.weeklyXP ?? dbData.stats?.weeklyXP ?? DEFAULT_STATS.weeklyXP,
                 trophies: dbData.trophies ?? dbData.stats?.trophies ?? [],
@@ -1656,13 +2229,13 @@ export function useNexoraData(
                 unlockedHats: dbData.unlockedHats ?? dbData.stats?.unlockedHats ?? [],
                 gratitudeEntries: dbData.gratitudeEntries ?? dbData.stats?.gratitudeEntries ?? [],
                 totalCompletedDays: dbData.totalCompletedDays ?? dbData.stats?.totalCompletedDays ?? DEFAULT_STATS.totalCompletedDays,
-                lastCompletedDate: dbData.lastCompletedDate ?? dbData.stats?.lastCompletedDate ?? DEFAULT_STATS.lastCompletedDate,
-                lastGiftDate: dbData.lastGiftDate ?? dbData.stats?.lastGiftDate ?? DEFAULT_STATS.lastGiftDate,
-                currentChallengeIndex: dbData.currentChallengeIndex ?? dbData.stats?.currentChallengeIndex ?? DEFAULT_STATS.currentChallengeIndex,
-                gems: dbData.gems ?? dbData.stats?.gems ?? DEFAULT_STATS.gems,
-                lastWeeklyReset: dbData.lastWeeklyReset ?? dbData.stats?.lastWeeklyReset ?? DEFAULT_STATS.lastWeeklyReset,
-                lastRankRewardClaimWeek: dbData.lastRankRewardClaimWeek ?? dbData.stats?.lastRankRewardClaimWeek ?? DEFAULT_STATS.lastRankRewardClaimWeek,
-                lastActiveDate: dbData.lastActiveDate ?? dbData.stats?.lastActiveDate ?? DEFAULT_STATS.lastActiveDate,
+                lastCompletedDate: dbData.lastCompletedDate ?? dbData.stats?.lastCompletedDate ?? DEFAULT_STATS.lastCompletedDate ?? null,
+                lastGiftDate: dbData.lastGiftDate ?? dbData.stats?.lastGiftDate ?? DEFAULT_STATS.lastGiftDate ?? null,
+                currentChallengeIndex: dbData.currentChallengeIndex ?? dbData.stats?.currentChallengeIndex ?? DEFAULT_STATS.currentChallengeIndex ?? 0,
+                gems: dbData.gems ?? dbData.stats?.gems ?? DEFAULT_STATS.gems ?? 0,
+                lastWeeklyReset: dbData.lastWeeklyReset ?? dbData.stats?.lastWeeklyReset ?? DEFAULT_STATS.lastWeeklyReset ?? null,
+                lastRankRewardClaimWeek: dbData.lastRankRewardClaimWeek ?? dbData.stats?.lastRankRewardClaimWeek ?? DEFAULT_STATS.lastRankRewardClaimWeek ?? null,
+                lastActiveDate: dbData.lastActiveDate ?? dbData.stats?.lastActiveDate ?? DEFAULT_STATS.lastActiveDate ?? null,
                 pointsByCategory: dbData.pointsByCategory ?? dbData.stats?.pointsByCategory ?? DEFAULT_STATS.pointsByCategory,
                 waterDrank: dbData.waterDrank ?? dbData.stats?.waterDrank ?? DEFAULT_STATS.waterDrank,
                 lifetimeWaterCompletions: dbData.lifetimeWaterCompletions ?? dbData.stats?.lifetimeWaterCompletions ?? DEFAULT_STATS.lifetimeWaterCompletions,
@@ -1670,17 +2243,41 @@ export function useNexoraData(
               });
             }
             if (dbData.settings || dbData.displayName || dbData.onboardingCompleted !== undefined) {
-              setSettings((prev: any) => ({
-                ...DEFAULT_SETTINGS,
-                ...prev,
-                ...(dbData.settings || {}),
-                displayName: dbData.displayName ?? dbData.name ?? dbData.settings?.displayName ?? DEFAULT_SETTINGS.displayName,
-                onboardingCompleted: dbData.onboardingCompleted ?? dbData.settings?.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
-                plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbData.settings?.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
-                spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbData.settings?.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
-                purchasedItems: dbData.purchasedItems ?? dbData.settings?.purchasedItems ?? DEFAULT_SETTINGS.purchasedItems,
-                inventory: dbData.inventory ?? dbData.settings?.inventory ?? DEFAULT_SETTINGS.inventory,
-              }));
+              setSettings((prev: any) => {
+                const dbSettings = dbData.settings || {};
+                return {
+                  ...DEFAULT_SETTINGS,
+                  ...prev,
+                  ...dbSettings,
+                  displayName: dbData.displayName ?? dbData.name ?? dbSettings.displayName ?? DEFAULT_SETTINGS.displayName,
+                  onboardingCompleted: dbData.onboardingCompleted ?? dbSettings.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
+                  plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbSettings.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
+                  spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbSettings.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
+                  purchasedItems: dbData.purchasedItems ?? dbSettings.purchasedItems ?? DEFAULT_SETTINGS.purchasedItems,
+                  inventory: dbData.inventory ?? dbSettings.inventory ?? DEFAULT_SETTINGS.inventory,
+                  plantState: dbData.plantState ?? dbSettings.plantState ?? DEFAULT_SETTINGS.plantState,
+                  plantsProgress: dbData.plantsProgress ?? dbSettings.plantsProgress ?? DEFAULT_SETTINGS.plantsProgress,
+                  purchasedEcosystemItemIds: dbData.purchasedEcosystemItemIds ?? dbSettings.purchasedEcosystemItemIds ?? DEFAULT_SETTINGS.purchasedEcosystemItemIds,
+                  activeEcosystemItemIds: dbData.activeEcosystemItemIds ?? dbSettings.activeEcosystemItemIds ?? DEFAULT_SETTINGS.activeEcosystemItemIds,
+                  savedChallengeIds: dbData.savedChallengeIds ?? dbSettings.savedChallengeIds ?? DEFAULT_SETTINGS.savedChallengeIds,
+                  savedTrophyIds: dbData.savedTrophyIds ?? dbSettings.savedTrophyIds ?? DEFAULT_SETTINGS.savedTrophyIds,
+                  savedVideoIds: dbData.savedVideoIds ?? dbSettings.savedVideoIds ?? DEFAULT_SETTINGS.savedVideoIds,
+                  savedPostIds: dbData.savedPostIds ?? dbSettings.savedPostIds ?? DEFAULT_SETTINGS.savedPostIds,
+                  activeHat: dbData.activeHat ?? dbSettings.activeHat ?? DEFAULT_SETTINGS.activeHat,
+                  activeSkin: dbData.activeSkin ?? dbSettings.activeSkin ?? DEFAULT_SETTINGS.activeSkin,
+                  joinedCircleIds: dbData.joinedCircleIds ?? dbSettings.joinedCircleIds ?? DEFAULT_SETTINGS.joinedCircleIds,
+                  purchasedHouseItemIds: dbData.purchasedHouseItemIds ?? dbSettings.purchasedHouseItemIds ?? DEFAULT_SETTINGS.purchasedHouseItemIds,
+                  placedHouseItems: dbData.placedHouseItems ?? dbSettings.placedHouseItems ?? DEFAULT_SETTINGS.placedHouseItems,
+                  spaceHouseUnlocked: dbData.spaceHouseUnlocked ?? dbSettings.spaceHouseUnlocked ?? DEFAULT_SETTINGS.spaceHouseUnlocked,
+                  activeSpaceRoom: dbData.activeSpaceRoom ?? dbSettings.activeSpaceRoom ?? DEFAULT_SETTINGS.activeSpaceRoom,
+                  isPro: dbData.isPro ?? dbSettings.isPro ?? DEFAULT_SETTINGS.isPro,
+                  proTestActive: dbData.proTestActive ?? dbSettings.proTestActive ?? false,
+                  proTestStartedAt: dbData.proTestStartedAt ?? dbSettings.proTestStartedAt ?? null,
+                  proTestExpiresAt: dbData.proTestExpiresAt ?? dbSettings.proTestExpiresAt ?? null,
+                  proTestLastUsedAt: dbData.proTestLastUsedAt ?? dbSettings.proTestLastUsedAt ?? null,
+                  lastViewedRank: dbData.lastViewedRank ?? dbSettings.lastViewedRank ?? undefined,
+                };
+              });
             }
             if (dbData.garden || dbData.tiles !== undefined) {
               setGardenState((prev: any) => ({
@@ -1815,18 +2412,52 @@ export function useNexoraData(
 
         // 3. Library Collection Sync
         const libraryDocRef = doc(db, "library", user.uid);
+        const userLibraryDocRef = doc(db, "users", user.uid, "library", "main");
         const libraryPayload = {
           userId: user.uid,
           userName: settings.displayName || user.displayName || 'Champion',
           userEmail: user.email || `${user.uid}@nexora.app`,
           inventory: settings.inventory || [],
-          savedVideos: [],
+          savedVideos: settings.savedVideoIds || [],
           savedDrawings: stats.drawings || [],
           savedChallengeIds: settings.savedChallengeIds || [],
+          savedPostIds: settings.savedPostIds || [],
           updatedAt: serverTimestamp()
         };
         await setDoc(libraryDocRef, libraryPayload, { merge: true });
+        await setDoc(userLibraryDocRef, libraryPayload, { merge: true });
         console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote library collection to: ${libraryDocRef.path}`);
+
+        // 4. Notebook Collection Sync
+        const notebookRef = doc(db, "notebooks", user.uid);
+        await setDoc(notebookRef, {
+          uid: user.uid,
+          userId: user.uid,
+          userName: settings.displayName || user.displayName || 'Champion',
+          userEmail: user.email || `${user.uid}@nexora.app`,
+          notes: stats.gratitudeEntries || [],
+          drawings: stats.drawings || [],
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+
+        // 5. Shop Collection Sync
+        const shopDocRef = doc(db, "shop", user.uid);
+        const shopPurchasesDocRef = doc(db, "shop_purchases", user.uid);
+        const userShopDocRef = doc(db, "users", user.uid, "shop", "main");
+        const shopPayload = {
+          uid: user.uid,
+          userId: user.uid,
+          userName: settings.displayName || user.displayName || 'Champion',
+          userEmail: user.email || `${user.uid}@nexora.app`,
+          purchasedItems: settings.purchasedItems || [],
+          inventory: settings.inventory || [],
+          purchasedHouseItemIds: settings.purchasedHouseItemIds || [],
+          purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
+          updatedAt: serverTimestamp(),
+        };
+        await setDoc(shopDocRef, shopPayload, { merge: true });
+        await setDoc(shopPurchasesDocRef, shopPayload, { merge: true });
+        await setDoc(userShopDocRef, shopPayload, { merge: true });
 
         console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${userRef.path}`);
         const postSnap = await getDoc(userRef);
@@ -1924,11 +2555,13 @@ export function useNexoraData(
         const postLbSnap = await getDoc(leaderboardRef);
         console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${leaderboardRef.path}:`, postLbSnap.exists() ? JSON.stringify(postLbSnap.data()) : "Document does not exist");
       } catch (err: any) {
+        handleFirestoreError(err, OperationType.WRITE, leaderboardRef.path);
         console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Force sync failed to write leaderboard document to: ${leaderboardRef.path}. Error:`, err);
       }
 
       console.log("Hooks: Manual/Force Sync complete ✅");
     } catch (e: any) {
+      handleFirestoreError(e, OperationType.WRITE, user?.uid ? `users/${user.uid}` : 'users');
       console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Force sync failed for user UID: ${user?.uid}. Error:`, e);
       console.error("Hooks: Force sync failed", e);
     }
