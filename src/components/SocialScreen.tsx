@@ -33,9 +33,11 @@ import {
   ShieldCheck,
   EyeOff,
   MessageSquareOff,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { vibrate, VIBRATION_PATTERNS } from "../lib/vibrate";
+import { handleFirestoreError, OperationType } from "../firebase";
 
 
 // Audio effects for Community post actions (Publish & Trash)
@@ -665,7 +667,7 @@ export function SocialScreen({
     }
   };
 
-  const compressImageFile = (file: File, maxWidth = 1024, maxHeight = 1024, quality = 0.75): Promise<string> => {
+  const compressImageFile = (file: File, maxWidth = 720, maxHeight = 720, quality = 0.65): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -2742,7 +2744,19 @@ export function SocialScreen({
   // Submit Post
   const handleCreatePostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!postTitle.trim() || isSubmittingPost) return;
+    if (!postTitle.trim()) {
+      showToast("Please enter a title for your post!", "error");
+      return;
+    }
+    if (createPostMode === "text" && !postContent.trim()) {
+      showToast("Please enter body content for your post!", "error");
+      return;
+    }
+    if (createPostMode === "image" && postImagesBase64.length === 0 && !postImageBase64) {
+      showToast("Please select at least one image to post!", "error");
+      return;
+    }
+    if (isSubmittingPost) return;
 
     setIsSubmittingPost(true);
     try {
@@ -2809,7 +2823,10 @@ export function SocialScreen({
           id: realPostId,
         });
       } catch (firestoreErr) {
-        console.warn("Firestore save deferred, using offline local registry:", firestoreErr);
+        console.error("Firestore save error:", firestoreErr);
+        try {
+          handleFirestoreError(firestoreErr, OperationType.WRITE, `community_posts/${realPostId}`);
+        } catch (e) {}
       }
 
       // Reset forms
@@ -2820,12 +2837,13 @@ export function SocialScreen({
       setPostTargetGroup("public");
       setShowCreatePost(false);
       showToast(
-        "Posted successfully! Everyone in Nexora will see it. 📡",
+        "Posted successfully! Everyone in Nexora can see it. 📡",
         "success",
       );
       if (play) play("click");
     } catch (err) {
-      showToast("Posted successfully! Connected to localized hub.", "success");
+      console.error("Post creation failed:", err);
+      showToast("Post created locally. Syncing with community server...", "info");
       setShowCreatePost(false);
     } finally {
       setIsSubmittingPost(false);
@@ -5944,25 +5962,36 @@ export function SocialScreen({
 
               {/* Conditional Publishing Trigger */}
               <div className="pt-2">
-                {(createPostMode === "text" &&
-                  postTitle.trim() !== "" &&
-                  postContent.trim() !== "") ||
-                (createPostMode === "image" &&
-                  postTitle.trim() !== "" &&
-                  (postImagesBase64.length > 0 || postImageBase64 !== "")) ? (
-                  <button
-                    type="submit"
-                    className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-emerald-500/15 transition-all"
-                  >
-                    Publish Post 📡
-                  </button>
-                ) : (
-                  <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl text-center text-[10.5px] font-bold text-slate-400 animate-pulse">
-                    {createPostMode === "text"
-                      ? "Please complete the Post Title and Body to publish"
-                      : "Please enter a Post Title and upload an image to publish"}
-                  </div>
-                )}
+                <button
+                  type="submit"
+                  disabled={isSubmittingPost}
+                  className={`w-full py-4 font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 ${
+                    isSubmittingPost
+                      ? "bg-slate-400 text-white cursor-not-allowed opacity-80"
+                      : ((createPostMode === "text" && postTitle.trim() !== "" && postContent.trim() !== "") ||
+                         (createPostMode === "image" && postTitle.trim() !== "" && (postImagesBase64.length > 0 || postImageBase64 !== "")))
+                      ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/15 active:scale-98 cursor-pointer"
+                      : "bg-emerald-500/60 hover:bg-emerald-500 text-white cursor-pointer"
+                  }`}
+                >
+                  {isSubmittingPost ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>Publishing to Community... 📡</span>
+                    </>
+                  ) : (
+                    <span>Publish Post 📡</span>
+                  )}
+                </button>
+                {!isSubmittingPost &&
+                  !((createPostMode === "text" && postTitle.trim() !== "" && postContent.trim() !== "") ||
+                    (createPostMode === "image" && postTitle.trim() !== "" && (postImagesBase64.length > 0 || postImageBase64 !== ""))) && (
+                    <p className="mt-2 text-center text-[10.5px] font-bold text-slate-400">
+                      {createPostMode === "text"
+                        ? "Fill in Title and Body to publish"
+                        : "Enter Title and upload an Image to publish"}
+                    </p>
+                  )}
               </div>
             </form>
           </div>

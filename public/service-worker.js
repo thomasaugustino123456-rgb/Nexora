@@ -98,8 +98,12 @@ self.addEventListener('fetch', (event) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          // If no cache match, fallback to the root index.html
-          return caches.match('/');
+          // Only fallback to root index.html for HTML navigation requests, NEVER for JS/CSS assets
+          const acceptHeader = event.request.headers.get('accept') || '';
+          if (event.request.mode === 'navigate' || acceptHeader.includes('text/html')) {
+            return caches.match('/');
+          }
+          return new Response('', { status: 404, statusText: 'Not Found' });
         });
       })
   );

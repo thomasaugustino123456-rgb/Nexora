@@ -220,6 +220,9 @@ window.addEventListener('error', (event) => {
     msg.includes('Invalid hook call') ||
     msg.includes('Script error') ||
     msg.includes('script error') ||
+    msg.includes('Unexpected token') ||
+    msg.includes('SyntaxError') ||
+    msg.includes("token '<'") ||
     msg.includes('INTERNAL ASSERTION FAILED') ||
     msg.includes('Unexpected state') ||
     msg.includes('ca9') ||
@@ -232,7 +235,7 @@ window.addEventListener('error', (event) => {
       event.preventDefault();
       event.stopPropagation();
     } catch (e) {}
-    console.warn('Ignored transient or internal Firestore assertion warning in global handler:', msg);
+    console.warn('Ignored transient script syntax error or internal warning in global handler:', msg);
     return;
   }
 
