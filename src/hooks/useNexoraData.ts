@@ -54,6 +54,49 @@ export function extractRealProfilePic(docData: any, currentUser?: any): string {
   return "";
 }
 
+export function autoRestoreInventoryFromPurchased(purchasedItems: string[], existingInventory: any[]): any[] {
+  const inventoryMap = new Map();
+
+  (existingInventory || []).forEach((item: any) => {
+    if (item && (item.id || item.itemId || item.name)) {
+      const key = item.id || item.itemId || item.name;
+      if (!inventoryMap.has(key)) {
+        inventoryMap.set(key, item);
+      } else {
+        const existing = inventoryMap.get(key);
+        inventoryMap.set(key, {
+          ...existing,
+          ...item,
+          activated: existing.activated || item.activated || false,
+        });
+      }
+    }
+  });
+
+  (purchasedItems || []).forEach((purchasedId) => {
+    if (!purchasedId) return;
+    const hasKey = Array.from(inventoryMap.values()).some(
+      (inv: any) => inv?.itemId === purchasedId || inv?.id === purchasedId
+    );
+    if (!hasKey) {
+      const shopMatch = SHOP_ITEMS.find((si) => si.id === purchasedId);
+      if (shopMatch) {
+        inventoryMap.set(shopMatch.id, {
+          id: `${shopMatch.id}-restored`,
+          itemId: shopMatch.id,
+          name: shopMatch.name,
+          icon: typeof shopMatch.icon === "string" || typeof shopMatch.icon === "number" ? String(shopMatch.icon) : "🛒",
+          activated: true,
+          type: shopMatch.effect === "skin" ? "skin" : shopMatch.effect === "sound-pack" ? "sound-pack" : shopMatch.effect === "music" ? "music" : shopMatch.effect === "gift" ? "gift" : "power-up",
+          purchasedAt: new Date().toISOString()
+        });
+      }
+    }
+  });
+
+  return Array.from(inventoryMap.values());
+}
+
 function deepEqual(a: any, b: any): boolean {
   if (a === b) return true;
   if (a && b && typeof a === "object" && typeof b === "object") {
@@ -290,29 +333,17 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
   merged.purchasedHouseItemIds = Array.from(new Set([...(dbSettings.purchasedHouseItemIds || []), ...(localSettings.purchasedHouseItemIds || [])]));
   merged.readBookIds = Array.from(new Set([...(dbSettings.readBookIds || []), ...(localSettings.readBookIds || [])]));
   
-  const inventoryMap = new Map();
-  const sourceInventory = Array.isArray(dbSettings.inventory) && Array.isArray(localSettings.inventory)
-    ? (localSettings.inventory.length < dbSettings.inventory.length ? localSettings.inventory : dbSettings.inventory)
-    : [...(dbSettings.inventory || []), ...(localSettings.inventory || [])];
-  sourceInventory.forEach((item: any) => {
-    if (item && item.id) {
-      if (!inventoryMap.has(item.id)) {
-        inventoryMap.set(item.id, item);
-      } else {
-        const existing = inventoryMap.get(item.id);
-        inventoryMap.set(item.id, {
-          ...existing,
-          ...item,
-          activated: existing.activated || item.activated || false,
-        });
-      }
-    }
-  });
-  merged.inventory = Array.from(inventoryMap.values());
-  const currentInvItemIds = new Set(merged.inventory.map((i: any) => i?.itemId || i?.id).filter(Boolean));
-  merged.purchasedItems = Array.from(new Set([...(dbSettings.purchasedItems || []), ...(localSettings.purchasedItems || [])])).filter(
-    (id: string) => currentInvItemIds.has(id) || id.startsWith("skin-") || id === "double-points" || id === "streak-protection" || id === "xp-boost" || id === "coin-magnet"
-  );
+  const rawInventory = [
+    ...(Array.isArray(dbSettings.inventory) ? dbSettings.inventory : []),
+    ...(Array.isArray(localSettings.inventory) ? localSettings.inventory : [])
+  ];
+  const mergedPurchasedItems = Array.from(new Set([
+    ...(Array.isArray(dbSettings.purchasedItems) ? dbSettings.purchasedItems : []),
+    ...(Array.isArray(localSettings.purchasedItems) ? localSettings.purchasedItems : [])
+  ].filter(Boolean)));
+
+  merged.inventory = autoRestoreInventoryFromPurchased(mergedPurchasedItems, rawInventory);
+  merged.purchasedItems = mergedPurchasedItems;
   
   merged.savedChallengeIds = Array.from(new Set([...(dbSettings.savedChallengeIds || []), ...(localSettings.savedChallengeIds || [])]));
   merged.savedTrophyIds = Array.from(new Set([...(dbSettings.savedTrophyIds || []), ...(localSettings.savedTrophyIds || [])]));
@@ -1669,7 +1700,10 @@ export function useNexoraData(
                       plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbSettings.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
                       spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbSettings.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
                       purchasedItems: Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].filter(Boolean))),
-                      inventory: Array.from(new Map([...(prev.inventory || []), ...(dbData.inventory || []), ...(dbSettings.inventory || [])].map((item: any) => [item.id || item.itemId || item.name, item])).values()),
+                      inventory: autoRestoreInventoryFromPurchased(
+                        Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].filter(Boolean))),
+                        Array.from(new Map([...(prev.inventory || []), ...(dbData.inventory || []), ...(dbSettings.inventory || [])].map((item: any) => [item.id || item.itemId || item.name, item])).values())
+                      ),
                       plantState: dbData.plantState ?? dbSettings.plantState ?? DEFAULT_SETTINGS.plantState,
                       plantsProgress: dbData.plantsProgress ?? dbSettings.plantsProgress ?? DEFAULT_SETTINGS.plantsProgress,
                       purchasedEcosystemItemIds: dbData.purchasedEcosystemItemIds ?? dbSettings.purchasedEcosystemItemIds ?? DEFAULT_SETTINGS.purchasedEcosystemItemIds,
@@ -2311,7 +2345,10 @@ export function useNexoraData(
                   plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbSettings.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
                   spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbSettings.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
                   purchasedItems: Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].filter(Boolean))),
-                  inventory: Array.from(new Map([...(prev.inventory || []), ...(dbData.inventory || []), ...(dbSettings.inventory || [])].map((item: any) => [item.id || item.itemId || item.name, item])).values()),
+                  inventory: autoRestoreInventoryFromPurchased(
+                    Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].filter(Boolean))),
+                    Array.from(new Map([...(prev.inventory || []), ...(dbData.inventory || []), ...(dbSettings.inventory || [])].map((item: any) => [item.id || item.itemId || item.name, item])).values())
+                  ),
                   plantState: dbData.plantState ?? dbSettings.plantState ?? DEFAULT_SETTINGS.plantState,
                   plantsProgress: dbData.plantsProgress ?? dbSettings.plantsProgress ?? DEFAULT_SETTINGS.plantsProgress,
                   purchasedEcosystemItemIds: dbData.purchasedEcosystemItemIds ?? dbSettings.purchasedEcosystemItemIds ?? DEFAULT_SETTINGS.purchasedEcosystemItemIds,
