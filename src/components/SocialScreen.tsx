@@ -423,6 +423,143 @@ export function SocialScreen({
   const [selectedAchievementId, setSelectedAchievementId] = useState<string | null>(null);
   const [achievementFilter, setAchievementFilter] = useState<"all" | "unlocked" | "locked">("all");
 
+  // Claimed Badges state & persistent tracking
+  const [claimedBadgeIds, setClaimedBadgeIds] = useState<string[]>(() => {
+    if (Array.isArray((settings as any)?.claimedBadges)) {
+      return (settings as any).claimedBadges;
+    }
+    try {
+      const stored = localStorage.getItem("nexora_claimed_badges");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const notifiedBadgeIds = useRef<Set<string>>(new Set());
+
+  // Keep claimed badges synced to settings prop
+  useEffect(() => {
+    if (Array.isArray((settings as any)?.claimedBadges) && (settings as any).claimedBadges.length > claimedBadgeIds.length) {
+      setClaimedBadgeIds((settings as any).claimedBadges);
+    }
+  }, [(settings as any)?.claimedBadges]);
+
+  const handleClaimBadge = async (badge: { id: string; title: string; rewardXP: number; rewardCoins: number; unlocked: boolean }) => {
+    if (!badge.unlocked) {
+      showToast(`"${badge.title}" is still locked! Complete the requirements to unlock.`, "info");
+      return;
+    }
+    if (claimedBadgeIds.includes(badge.id)) {
+      showToast(`You have already claimed the rewards for "${badge.title}"!`, "info");
+      return;
+    }
+
+    const nextClaimed = [...claimedBadgeIds, badge.id];
+    setClaimedBadgeIds(nextClaimed);
+    try {
+      localStorage.setItem("nexora_claimed_badges", JSON.stringify(nextClaimed));
+    } catch {}
+
+    const currentCoins = (settings as any)?.points || (settings as any)?.coins || (stats as any)?.coins || 0;
+    const updatedCoins = currentCoins + badge.rewardCoins;
+
+    if (onUpdateSettings) {
+      await onUpdateSettings({
+        points: updatedCoins,
+        coins: updatedCoins,
+        claimedBadges: nextClaimed,
+      });
+    }
+
+    if (onUpdateStats) {
+      onUpdateStats((prev: any) => ({
+        ...prev,
+        totalPoints: (prev?.totalPoints || 0) + badge.rewardXP,
+        coins: ((prev?.coins || 0) + badge.rewardCoins),
+      }));
+    }
+
+    if (user?.uid) {
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSettingsRef = doc(db, "users", user.uid, "settings", "main");
+        await setDoc(userSettingsRef, { points: updatedCoins, coins: updatedCoins, claimedBadges: nextClaimed }, { merge: true });
+        const { increment } = await import("firebase/firestore");
+        await setDoc(userRef, { totalPoints: increment(badge.rewardXP) }, { merge: true });
+      } catch (e) {
+        console.warn("Error syncing claimed badge to Firestore:", e);
+      }
+    }
+
+    vibrate(35);
+    if (play) play("click");
+    showToast(`🎉 Claimed "${badge.title}"! Added +${badge.rewardXP} XP & +${badge.rewardCoins} Coins!`, "success");
+  };
+
+  const handleClaimAllBadges = async () => {
+    const unclaimedUnlocked = achievements.filter(
+      (b) => b.unlocked && !claimedBadgeIds.includes(b.id)
+    );
+
+    if (unclaimedUnlocked.length === 0) {
+      showToast("No unclaimed badge rewards available right now!", "info");
+      return;
+    }
+
+    let totalXP = 0;
+    let totalCoins = 0;
+    const newClaimedIds = [...claimedBadgeIds];
+
+    unclaimedUnlocked.forEach((b) => {
+      totalXP += b.rewardXP;
+      totalCoins += b.rewardCoins;
+      if (!newClaimedIds.includes(b.id)) {
+        newClaimedIds.push(b.id);
+      }
+    });
+
+    setClaimedBadgeIds(newClaimedIds);
+    try {
+      localStorage.setItem("nexora_claimed_badges", JSON.stringify(newClaimedIds));
+    } catch {}
+
+    const currentCoins = (settings as any)?.points || (settings as any)?.coins || (stats as any)?.coins || 0;
+    const updatedCoins = currentCoins + totalCoins;
+
+    if (onUpdateSettings) {
+      await onUpdateSettings({
+        points: updatedCoins,
+        coins: updatedCoins,
+        claimedBadges: newClaimedIds,
+      });
+    }
+
+    if (onUpdateStats) {
+      onUpdateStats((prev: any) => ({
+        ...prev,
+        totalPoints: (prev?.totalPoints || 0) + totalXP,
+        coins: ((prev?.coins || 0) + totalCoins),
+      }));
+    }
+
+    if (user?.uid) {
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSettingsRef = doc(db, "users", user.uid, "settings", "main");
+        await setDoc(userSettingsRef, { points: updatedCoins, coins: updatedCoins, claimedBadges: newClaimedIds }, { merge: true });
+        const { increment } = await import("firebase/firestore");
+        await setDoc(userRef, { totalPoints: increment(totalXP) }, { merge: true });
+      } catch (e) {
+        console.warn("Error syncing all claimed badges to Firestore:", e);
+      }
+    }
+
+    vibrate(50);
+    if (play) play("click");
+    showToast(`🎉 Claimed ALL ${unclaimedUnlocked.length} Badges! +${totalXP} XP & +${totalCoins} Coins!`, "success");
+  };
+
   // Real-time custom peer-profile card inspector states
   const [inspectedUserProfileId, setInspectedUserProfileId] = useState<string | null>(null);
   const [inspectedUserLoading, setInspectedUserLoading] = useState<boolean>(false);
@@ -3675,6 +3812,9 @@ export function SocialScreen({
                   <div className="flex flex-wrap gap-x-5 gap-y-7 justify-start items-start pt-2">
                     {filteredBadges.map((item) => {
                       const isSelected = selectedAchievementId === item.id;
+                      const isClaimed = claimedBadgeIds.includes(item.id);
+                      const isUnclaimed = item.unlocked && !isClaimed;
+
                       return (
                         <button
                           key={item.id}
@@ -3683,11 +3823,11 @@ export function SocialScreen({
                             vibrate(18);
                             if (play) play("click");
                           }}
-                          className="flex flex-col items-center group w-24 text-center focus:outline-none"
+                          className="flex flex-col items-center group w-24 text-center focus:outline-none relative"
                         >
                           {/* 3D Shiny Concentric Round Medallion Container */}
                           {item.unlocked ? (
-                            <div className={`relative w-18 h-18 sm:w-20 sm:h-20 rounded-full flex items-center justify-center p-0.5 bg-gradient-to-tr from-amber-500 via-yellow-3.5 to-orange-400 shadow-md shadow-orange-500/10 transform transition-all group-hover:scale-105 group-active:scale-95 ${
+                            <div className={`relative w-18 h-18 sm:w-20 sm:h-20 rounded-full flex items-center justify-center p-0.5 bg-gradient-to-tr from-amber-500 via-yellow-400 to-orange-400 shadow-md shadow-orange-500/10 transform transition-all group-hover:scale-105 group-active:scale-95 ${
                               isSelected ? "ring-4 ring-orange-500/30 scale-102" : "ring-2 ring-white"
                             }`}>
                               {/* Glowing Inner Concentric Golden Bevel */}
@@ -3697,7 +3837,17 @@ export function SocialScreen({
                                   {item.icon}
                                 </span>
                               </div>
-                              {/* Glittery Sparkle indicators */}
+                              {/* Claimed vs Unclaimed Badge indicator */}
+                              {isUnclaimed ? (
+                                <div className="absolute -top-1 -right-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full shadow-md border border-white animate-bounce z-20 flex items-center gap-0.5">
+                                  <span>🎁</span>
+                                  <span>CLAIM</span>
+                                </div>
+                              ) : (
+                                <div className="absolute -top-1 -right-1 bg-emerald-500 text-white w-5 h-5 rounded-full shadow-md border border-white z-20 flex items-center justify-center text-[10px] font-black">
+                                  ✓
+                                </div>
+                              )}
                               <div className="absolute bottom-1 right-1.5 text-[8px] animate-pulse">✨</div>
                               <div className="absolute top-1 left-2 text-[6px] animate-pulse">⭐</div>
                             </div>
@@ -3711,7 +3861,7 @@ export function SocialScreen({
                                 </span>
                               </div>
                               {/* Grey Lock Overlay in bottom corner */}
-                              <div className="absolute -bottom-1 -right-1 bg-slate-205 border border-slate-300 text-slate-500 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[8px] shadow-sm font-extrabold">
+                              <div className="absolute -bottom-1 -right-1 bg-slate-200 border border-slate-300 text-slate-500 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[8px] shadow-sm font-extrabold">
                                 🔒
                               </div>
                             </div>
@@ -3719,14 +3869,14 @@ export function SocialScreen({
 
                           {/* Medallion title label */}
                           <span className={`text-[11px] font-black leading-tight pt-2 tracking-tight line-clamp-2 block w-full text-center ${
-                            item.unlocked ? "text-slate-800 group-hover:text-orange-600" : "text-slate-405 text-slate-400"
+                            item.unlocked ? "text-slate-800 group-hover:text-orange-600" : "text-slate-400"
                           }`}>
                             {item.title}
                           </span>
 
                           {/* Medallion sub-history info */}
                           <span className="text-[9px] font-bold text-slate-400 block mt-0.5 text-center leading-none">
-                            {item.unlocked ? item.date || "Unlocked" : `${item.currentValue}/${item.targetValue}`}
+                            {item.unlocked ? (isClaimed ? "Claimed ✓" : "Ready to Claim 🎁") : `${item.currentValue}/${item.targetValue}`}
                           </span>
                         </button>
                       );
@@ -3824,17 +3974,19 @@ export function SocialScreen({
                     </div>
                   </div>
                   {selectedItem.unlocked ? (
-                    <button
-                      onClick={() => {
-                        vibrate(30);
-                        if (play) play("click");
-                        setSelectedAchievementId(null);
-                        showToast(`Successfully unlocked & synchronized ${selectedItem.title}!`);
-                      }}
-                      className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-orange-500/10 active:scale-95"
-                    >
-                      CLAIM BOOST
-                    </button>
+                    claimedBadgeIds.includes(selectedItem.id) ? (
+                      <span className="px-3.5 py-1.5 bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                        ✓ CLAIMED REWARD
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleClaimBadge(selectedItem)}
+                        className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-orange-500/20 active:scale-95 animate-pulse cursor-pointer flex items-center gap-1.5"
+                      >
+                        <span>🎁</span>
+                        <span>CLAIM BOOST</span>
+                      </button>
+                    )
                   ) : (
                     <span className="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-400 rounded-lg text-[9px] font-extrabold tracking-wider">
                       LOCKED 🔒
@@ -4413,6 +4565,9 @@ export function SocialScreen({
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-y-7 gap-x-4 pt-2 justify-items-center">
                     {filteredBadges.map((item) => {
                       const isSelected = selectedAchievementId === item.id;
+                      const isClaimed = claimedBadgeIds.includes(item.id);
+                      const isUnclaimed = item.unlocked && !isClaimed;
+
                       return (
                         <button
                           key={item.id}
@@ -4421,7 +4576,7 @@ export function SocialScreen({
                             vibrate(18);
                             if (play) play("click");
                           }}
-                          className="flex flex-col items-center group w-20 text-center focus:outline-none"
+                          className="flex flex-col items-center group w-20 text-center focus:outline-none relative"
                         >
                           {/* Round Medallion wrapper */}
                           {item.unlocked ? (
@@ -4433,6 +4588,16 @@ export function SocialScreen({
                                   {item.icon}
                                 </span>
                               </div>
+                              {isUnclaimed ? (
+                                <div className="absolute -top-1 -right-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full shadow-md border border-white animate-bounce z-20 flex items-center gap-0.5">
+                                  <span>🎁</span>
+                                  <span>CLAIM</span>
+                                </div>
+                              ) : (
+                                <div className="absolute -top-1 -right-1 bg-emerald-500 text-white w-4.5 h-4.5 rounded-full shadow-md border border-white z-20 flex items-center justify-center text-[9px] font-black">
+                                  ✓
+                                </div>
+                              )}
                               <div className="absolute bottom-0.5 right-1 text-[7px] animate-pulse">✨</div>
                             </div>
                           ) : (
@@ -4459,7 +4624,7 @@ export function SocialScreen({
 
                           {/* Progress label */}
                           <span className="text-[8px] font-bold text-slate-400 block mt-0.5 text-center leading-none">
-                            {item.unlocked ? item.date || "Unlocked" : `${item.currentValue}/${item.targetValue}`}
+                            {item.unlocked ? (isClaimed ? "Claimed ✓" : "Ready to Claim 🎁") : `${item.currentValue}/${item.targetValue}`}
                           </span>
                         </button>
                       );
@@ -4546,17 +4711,19 @@ export function SocialScreen({
                         <p className="text-xs text-slate-700 font-bold">+{selectedItem.rewardXP} XP & +{selectedItem.rewardCoins} Coins</p>
                       </div>
                       {selectedItem.unlocked ? (
-                        <button
-                          onClick={() => {
-                            vibrate(30);
-                            if (play) play("click");
-                            setSelectedAchievementId(null);
-                            showToast(`Successfully unlocked & synchronized ${selectedItem.title}!`);
-                          }}
-                          className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
-                        >
-                          Claim Boost
-                        </button>
+                        claimedBadgeIds.includes(selectedItem.id) ? (
+                          <span className="px-3.5 py-1.5 bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                            ✓ Claimed (+{selectedItem.rewardXP} XP)
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleClaimBadge(selectedItem)}
+                            className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 animate-pulse cursor-pointer flex items-center gap-1"
+                          >
+                            <span>🎁</span>
+                            <span>Claim Boost</span>
+                          </button>
+                        )
                       ) : (
                         <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-400 rounded-md text-[8px] font-bold">
                           Locked
@@ -4690,6 +4857,40 @@ export function SocialScreen({
                 </div>
               </div>
 
+              {/* Community Badges Summary & Claim All Banner */}
+              <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-5 rounded-3xl text-white shadow-lg border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-2xl shadow-md border border-amber-300/30 shrink-0">
+                    🏆
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-base tracking-tight text-white flex items-center gap-2">
+                      <span>Community Rewards Cabinet</span>
+                      <span className="text-[10px] bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full font-black">
+                        {achievements.filter(a => a.unlocked).length} / {achievements.length} Unlocked
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-300 font-medium mt-0.5">
+                      Earn XP & Coins by participating in community conversations, building streaks, and setting up your profile!
+                    </p>
+                  </div>
+                </div>
+
+                {achievements.filter(a => a.unlocked && !claimedBadgeIds.includes(a.id)).length > 0 ? (
+                  <button
+                    onClick={handleClaimAllBadges}
+                    className="px-5 py-2.5 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-orange-500/20 active:scale-95 transition-all animate-pulse shrink-0 flex items-center gap-2 cursor-pointer"
+                  >
+                    <span>🎁</span>
+                    <span>CLAIM ALL ({achievements.filter(a => a.unlocked && !claimedBadgeIds.includes(a.id)).length})</span>
+                  </button>
+                ) : (
+                  <div className="px-3.5 py-1.5 bg-slate-800/80 border border-slate-700 text-slate-400 rounded-xl text-[10px] font-extrabold uppercase tracking-wider shrink-0 flex items-center gap-1.5">
+                    <span>✨ All Claimed</span>
+                  </div>
+                )}
+              </div>
+
               {/* Render dynamic inline list of categories with HORIZONTAL scrolling tracks and 'See All' triggers */}
               <div className="space-y-6">
                 {[
@@ -4739,6 +4940,9 @@ export function SocialScreen({
                       <div className="flex items-start gap-4 overflow-x-auto pb-3 pt-1 scrollbar-none snap-x touch-pan-x scroll-smooth">
                         {filteredBadges.map((item) => {
                           const isSelected = selectedAchievementId === item.id;
+                          const isClaimed = claimedBadgeIds.includes(item.id);
+                          const isUnclaimed = item.unlocked && !isClaimed;
+
                           return (
                             <button
                               key={item.id}
@@ -4747,7 +4951,7 @@ export function SocialScreen({
                                 vibrate(18);
                                 if (play) play("click");
                               }}
-                              className="flex flex-col items-center group w-20 text-center focus:outline-none snap-start shrink-0"
+                              className="flex flex-col items-center group w-20 text-center focus:outline-none snap-start shrink-0 relative"
                             >
                               {/* Round Medallion wrapper */}
                               {item.unlocked ? (
@@ -4759,6 +4963,16 @@ export function SocialScreen({
                                       {item.icon}
                                     </span>
                                   </div>
+                                  {isUnclaimed ? (
+                                    <div className="absolute -top-1 -right-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full shadow-md border border-white animate-bounce z-20 flex items-center gap-0.5">
+                                      <span>🎁</span>
+                                      <span>CLAIM</span>
+                                    </div>
+                                  ) : (
+                                    <div className="absolute -top-1 -right-1 bg-emerald-500 text-white w-4.5 h-4.5 rounded-full shadow-md border border-white z-20 flex items-center justify-center text-[9px] font-black">
+                                      ✓
+                                    </div>
+                                  )}
                                   <div className="absolute bottom-0.5 right-1 text-[7px] animate-pulse">✨</div>
                                 </div>
                               ) : (
@@ -4785,7 +4999,7 @@ export function SocialScreen({
 
                               {/* Progress details indicator */}
                               <span className="text-[8px] font-bold text-slate-400 block mt-0.5 text-center leading-none">
-                                {item.unlocked ? item.date || "Unlocked" : `${item.currentValue}/${item.targetValue}`}
+                                {item.unlocked ? (isClaimed ? "Claimed ✓" : "Ready to Claim 🎁") : `${item.currentValue}/${item.targetValue}`}
                               </span>
                             </button>
                           );
@@ -4876,17 +5090,19 @@ export function SocialScreen({
                           <p className="text-xs text-slate-700 font-bold">+{selectedItem.rewardXP} XP & +{selectedItem.rewardCoins} Coins</p>
                         </div>
                         {selectedItem.unlocked ? (
-                          <button
-                            onClick={() => {
-                              vibrate(30);
-                              if (play) play("click");
-                              setSelectedAchievementId(null);
-                              showToast(`Successfully unlocked & synchronized ${selectedItem.title}!`);
-                            }}
-                            className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
-                          >
-                            Claim Boost
-                          </button>
+                          claimedBadgeIds.includes(selectedItem.id) ? (
+                            <span className="px-3.5 py-1.5 bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                              ✓ Claimed (+{selectedItem.rewardXP} XP)
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleClaimBadge(selectedItem)}
+                              className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 animate-pulse cursor-pointer flex items-center gap-1"
+                            >
+                              <span>🎁</span>
+                              <span>Claim Boost</span>
+                            </button>
+                          )
                         ) : (
                           <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-400 rounded-md text-[8px] font-bold">
                             Locked
@@ -5064,6 +5280,9 @@ export function SocialScreen({
                       <div className="flex flex-wrap gap-x-5 gap-y-6 justify-start items-start pt-1">
                         {filteredBadges.map((item) => {
                           const isSelected = selectedAchievementId === item.id;
+                          const isClaimed = claimedBadgeIds.includes(item.id);
+                          const isUnclaimed = item.unlocked && !isClaimed;
+
                           return (
                             <button
                               key={item.id}
@@ -5072,7 +5291,7 @@ export function SocialScreen({
                                 vibrate(18);
                                 if (play) play("click");
                               }}
-                              className="flex flex-col items-center group w-20 text-center focus:outline-none"
+                              className="flex flex-col items-center group w-20 text-center focus:outline-none relative"
                             >
                               {/* Round Medallion wrapper (gilded gold if unlocked, grey ring and coin shape if locked) */}
                               {item.unlocked ? (
@@ -5084,6 +5303,16 @@ export function SocialScreen({
                                       {item.icon}
                                     </span>
                                   </div>
+                                  {isUnclaimed ? (
+                                    <div className="absolute -top-1 -right-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full shadow-md border border-white animate-bounce z-20 flex items-center gap-0.5">
+                                      <span>🎁</span>
+                                      <span>CLAIM</span>
+                                    </div>
+                                  ) : (
+                                    <div className="absolute -top-1 -right-1 bg-emerald-500 text-white w-4.5 h-4.5 rounded-full shadow-md border border-white z-20 flex items-center justify-center text-[9px] font-black">
+                                      ✓
+                                    </div>
+                                  )}
                                   <div className="absolute bottom-0.5 right-1 text-[7px] animate-pulse">✨</div>
                                 </div>
                               ) : (
@@ -5110,7 +5339,7 @@ export function SocialScreen({
 
                               {/* Target info */}
                               <span className="text-[8px] font-bold text-slate-400 block mt-0.5 text-center leading-none">
-                                {item.unlocked ? item.date || "Unlocked" : `${item.currentValue}/${item.targetValue}`}
+                                {item.unlocked ? (isClaimed ? "Claimed ✓" : "Ready to Claim 🎁") : `${item.currentValue}/${item.targetValue}`}
                               </span>
                             </button>
                           );
@@ -5201,17 +5430,19 @@ export function SocialScreen({
                           <p className="text-xs text-slate-700 font-bold">+{selectedItem.rewardXP} XP & +{selectedItem.rewardCoins} Coins</p>
                         </div>
                         {selectedItem.unlocked ? (
-                          <button
-                            onClick={() => {
-                              vibrate(30);
-                              if (play) play("click");
-                              setSelectedAchievementId(null);
-                              showToast(`Successfully unlocked & synchronized ${selectedItem.title}!`);
-                            }}
-                            className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
-                          >
-                            Claim Boost
-                          </button>
+                          claimedBadgeIds.includes(selectedItem.id) ? (
+                            <span className="px-3.5 py-1.5 bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                              ✓ Claimed (+{selectedItem.rewardXP} XP)
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleClaimBadge(selectedItem)}
+                              className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 animate-pulse cursor-pointer flex items-center gap-1"
+                            >
+                              <span>🎁</span>
+                              <span>Claim Boost</span>
+                            </button>
+                          )
                         ) : (
                           <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-400 rounded-md text-[8px] font-bold">
                             Locked
