@@ -60,7 +60,6 @@ const isIframe = typeof window !== 'undefined' && window.self !== window.top;
 
 export const db = initializeFirestore(app, {
   localCache: memoryLocalCache(),
-  ...(isIframe ? { experimentalAutoDetectLongPolling: true } : { experimentalAutoDetectLongPolling: true }),
 }, databaseId === "(default)" ? undefined : databaseId);
 
 // Silent native Firestore warnings (e.g. offline warnings) to prevent them being captured as platform errors.

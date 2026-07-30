@@ -114,7 +114,7 @@ export function NotebookScreen({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="max-w-4xl mx-auto w-full flex flex-col h-[85vh] bg-stone-50/50 rounded-[3rem] overflow-hidden border-8 border-white shadow-2xl relative"
+      className="max-w-4xl mx-auto w-full flex flex-col min-h-[500px] sm:h-[85vh] h-[calc(100dvh-4rem)] bg-stone-50/50 rounded-[2.5rem] sm:rounded-[3rem] overflow-hidden border-4 sm:border-8 border-white shadow-2xl relative"
     >
       <div className="p-8 pb-4 flex items-center justify-between relative z-10">
          <div className="flex items-center gap-4">
@@ -183,18 +183,18 @@ export function NotebookScreen({
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
-            className="absolute inset-0 bg-stone-50 z-50 flex flex-col p-8"
+            className="fixed inset-0 sm:absolute sm:inset-0 bg-stone-50 z-[100] flex flex-col p-4 sm:p-8 overflow-y-auto"
           >
-             <div className="flex items-center justify-between mb-8">
-                <button onClick={() => setIsCreating(false)} className="text-blue-900/40 font-black flex items-center gap-2 hover:text-blue-900 transition-colors">
+             <div className="flex flex-wrap items-center justify-between gap-3 mb-4 sm:mb-8 shrink-0">
+                <button onClick={() => setIsCreating(false)} className="text-blue-900/60 font-black flex items-center gap-2 hover:text-blue-900 transition-colors">
                    <ChevronLeft size={20} /> Close Editor
                 </button>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                    {['Growth', 'Idea', 'Vibe', 'System'].map(cat => (
                      <button 
                        key={cat} 
                        onClick={() => setCategory(cat)}
-                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${category === cat ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white text-blue-900/40'}`}
+                       className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[10px] font-black uppercase transition-all ${category === cat ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white text-blue-900/40'}`}
                      >
                        {cat}
                      </button>
@@ -202,9 +202,9 @@ export function NotebookScreen({
                 </div>
              </div>
 
-             <div className="flex flex-col gap-5 flex-1 overflow-y-auto mb-4">
+             <div className="flex flex-col gap-4 flex-1 min-h-[220px] mb-4">
                 {/* Title Section */}
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1.5 shrink-0">
                   <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1">
                     <PenTool size={10} /> Manifest Title / Topic
                   </label>
@@ -214,12 +214,12 @@ export function NotebookScreen({
                     value={title} 
                     onChange={e => setTitle(e.target.value)}
                     placeholder="Enter note title..."
-                    className="w-full bg-transparent text-lg font-bold text-black border-b-2 border-stone-200 focus:border-emerald-500 focus:outline-none pb-2 placeholder:text-stone-300"
+                    className="w-full bg-white text-base font-bold text-black border border-stone-200 focus:border-emerald-500 focus:outline-none p-3 rounded-xl placeholder:text-stone-300 shadow-sm"
                   />
                 </div>
 
                 {/* Content Section */}
-                <div className="flex flex-col gap-1.5 flex-1">
+                <div className="flex flex-col gap-1.5 flex-1 min-h-[140px]">
                   <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1">
                     <BookOpen size={10} /> Thought Flow / Manifest Body
                   </label>
@@ -227,7 +227,7 @@ export function NotebookScreen({
                     value={content} 
                     onChange={e => setContent(e.target.value)}
                     placeholder="Write body content of your dump here..."
-                    className="w-full h-full min-h-[120px] bg-transparent text-sm font-medium text-black focus:outline-none resize-none leading-relaxed placeholder:text-stone-300 border border-stone-200 rounded-2xl p-4 bg-stone-50 focus:border-emerald-500 focus:bg-white transition-all"
+                    className="w-full h-full min-h-[140px] sm:min-h-[180px] bg-white text-base sm:text-sm font-medium text-black focus:outline-none resize-y leading-relaxed placeholder:text-stone-300 border border-stone-200 rounded-2xl p-4 focus:border-emerald-500 transition-all shadow-sm"
                   />
                 </div>
              </div>
@@ -237,7 +237,7 @@ export function NotebookScreen({
                  <motion.div 
                    initial={{ opacity: 0, height: 0 }}
                    animate={{ opacity: 1, height: 'auto' }}
-                   className="mb-4 p-4 bg-blue-900/5 rounded-3xl border border-blue-900/10 space-y-3"
+                   className="mb-4 p-4 bg-blue-900/5 rounded-3xl border border-blue-900/10 space-y-3 shrink-0"
                  >
                    <div className="flex items-center gap-2 text-blue-600">
                      <Sparkles size={16} />
@@ -257,7 +257,7 @@ export function NotebookScreen({
                )}
              </AnimatePresence>
 
-             <div className="pt-4 flex items-center justify-between border-t border-stone-200">
+             <div className="pt-3 pb-2 flex items-center justify-between border-t border-stone-200 shrink-0 bg-stone-50 sticky bottom-0 z-10">
                 <div className="flex gap-2">
                   {/* Delete Button (Compact) */}
                   <button 

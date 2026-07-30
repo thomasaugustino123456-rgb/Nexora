@@ -930,6 +930,7 @@ export function HouseScreen({
 
       {/* Space Mascot Integration */}
       <SpaceMascot 
+        hat={settings.activeHat || 'none'}
         onboardingStep={onboardingStep}
         setOnboardingStep={setOnboardingStep}
         isNewUser={!settings.spaceOnboardingCompleted}

@@ -6,13 +6,15 @@ interface GardenerDroneProps {
   className?: string;
   targetPos?: { x: number; y: number } | null;
   onPositionChange?: (pos: { x: number, y: number }) => void;
+  isPro?: boolean;
 }
 
 export const GardenerDrone: React.FC<GardenerDroneProps> = ({ 
   mood = 'idle', 
   className = "", 
   targetPos = null,
-  onPositionChange 
+  onPositionChange,
+  isPro = false,
 }) => {
   const droneRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -108,17 +110,36 @@ export const GardenerDrone: React.FC<GardenerDroneProps> = ({
           <defs>
             {/* Sleek executive metal and glossy reflections */}
             <linearGradient id="droneBodyMetal" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#f8fafc" />
-              <stop offset="45%" stopColor="#94a3b8" />
-              <stop offset="100%" stopColor="#334155" />
+              {isPro ? (
+                <>
+                  <stop offset="0%" stopColor="#fef08a" />
+                  <stop offset="45%" stopColor="#fbbf24" />
+                  <stop offset="100%" stopColor="#92400e" />
+                </>
+              ) : (
+                <>
+                  <stop offset="0%" stopColor="#f8fafc" />
+                  <stop offset="45%" stopColor="#94a3b8" />
+                  <stop offset="100%" stopColor="#334155" />
+                </>
+              )}
             </linearGradient>
             <linearGradient id="armorOrange" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#f97316" />
-              <stop offset="100%" stopColor="#c2410c" />
+              {isPro ? (
+                <>
+                  <stop offset="0%" stopColor="#38bdf8" />
+                  <stop offset="100%" stopColor="#0284c7" />
+                </>
+              ) : (
+                <>
+                  <stop offset="0%" stopColor="#f97316" />
+                  <stop offset="100%" stopColor="#c2410c" />
+                </>
+              )}
             </linearGradient>
             <linearGradient id="laserGleam" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#0891b2" stopOpacity="0" />
+              <stop offset="0%" stopColor={isPro ? "#f59e0b" : "#22d3ee"} stopOpacity="0.5" />
+              <stop offset="100%" stopColor={isPro ? "#d97706" : "#0891b2"} stopOpacity="0" />
             </linearGradient>
             <radialGradient id="shadowGradZone">
               <stop offset="0%" stopColor="rgba(15,23,42,0.45)" />

@@ -89,7 +89,7 @@ export function XpRewardsScreen({
         osc.frequency.exponentialRampToValueAtTime(baseFreq / 2, now + 0.22);
 
         gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.45, now + 0.01);
+        gainNode.gain.linearRampToValueAtTime(0.2, now + 0.01);
         gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
 
         osc.connect(gainNode);
@@ -104,7 +104,7 @@ export function XpRewardsScreen({
           tOsc.type = "sine";
           tOsc.frequency.setValueAtTime(1000 + clickIdx * 300 + i * 200, now);
           tGain.gain.setValueAtTime(0, now);
-          tGain.gain.linearRampToValueAtTime(0.04, now + 0.01);
+          tGain.gain.linearRampToValueAtTime(0.02, now + 0.01);
           tGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
 
           tOsc.connect(tGain);
@@ -121,7 +121,7 @@ export function XpRewardsScreen({
         subOsc.frequency.exponentialRampToValueAtTime(45, now + 0.45);
 
         subGain.gain.setValueAtTime(0, now);
-        subGain.gain.linearRampToValueAtTime(0.6, now + 0.02);
+        subGain.gain.linearRampToValueAtTime(0.25, now + 0.02);
         subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
 
         subOsc.connect(subGain);
@@ -282,11 +282,13 @@ export function XpRewardsScreen({
       }
       setGems(newGems);
 
-      // Update actual user stats (award 500 XP and flag XP chest as claimed)
+      // Update actual user stats (award 500 XP and flag XP chest as claimed for today)
+      const todayStr = new Date().toISOString().split('T')[0];
       onUpdateStats((prev) => ({
         ...prev,
         xp: (prev.xp || 0) + 500,
         hasClaimedXpChest: true,
+        lastXpChestClaimDate: todayStr,
       }));
 
       // Make "Next" button appear

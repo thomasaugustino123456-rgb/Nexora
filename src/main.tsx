@@ -164,7 +164,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   (window as any).deferredPrompt = e;
   try {
-    localStorage.setItem("nexora_pwa_installed", "false");
+    if (localStorage.getItem("nexora_pwa_installed") !== "true") {
+      localStorage.setItem("nexora_pwa_installed", "false");
+    }
   } catch (err) {
     console.error("Failed to reset installation local storage:", err);
   }
@@ -202,7 +204,7 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 window.addEventListener('error', (event) => {
-  const msg = event.message || '';
+  const msg = event.message || event.error?.message || String(event.error || '');
   
   if (
     msg.includes('quota') || 
@@ -226,7 +228,11 @@ window.addEventListener('error', (event) => {
     !event.filename ||
     event.filename.includes('extension')
   ) {
-    console.warn('Ignored transient or extension-related warning in global handler:', msg);
+    try {
+      event.preventDefault();
+      event.stopPropagation();
+    } catch (e) {}
+    console.warn('Ignored transient or internal Firestore assertion warning in global handler:', msg);
     return;
   }
 

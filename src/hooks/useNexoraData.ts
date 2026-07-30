@@ -12,8 +12,47 @@ import {
   getDocsFromCache,
 } from "firebase/firestore";
 import { db, auth, handleFirestoreError, OperationType, onAuthStateChanged } from "../firebase";
-import { UserSettings, UserStats, DailyProgress } from "../types";
+import { UserSettings, UserStats, DailyProgress, isUserProUnlocked } from "../types";
 import { GardenState, createInitialGardenState } from "../types/garden";
+import { SHOP_ITEMS } from "../components/ShopScreen";
+
+export function extractRealDisplayName(docData: any, currentUser?: any): string {
+  const candidates = [
+    docData?.settings?.displayName,
+    docData?.displayName,
+    docData?.name,
+    docData?.["Name"],
+    docData?.accountName,
+    docData?.["Account name"],
+    docData?.settings?.accountName,
+    currentUser?.displayName,
+    currentUser?.email ? currentUser.email.split('@')[0] : ""
+  ];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim() !== "" && c.trim() !== "Champion" && c.trim() !== "Nexora User" && c.trim() !== "Nexora Citizen") {
+      return c.trim();
+    }
+  }
+  return docData?.displayName || docData?.name || currentUser?.displayName || "Champion";
+}
+
+export function extractRealProfilePic(docData: any, currentUser?: any): string {
+  const candidates = [
+    docData?.profilePic,
+    docData?.photoFileName,
+    docData?.["Photo file name"],
+    docData?.["Profile image"],
+    docData?.photoURL,
+    docData?.settings?.profilePic,
+    currentUser?.photoURL
+  ];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim() !== "") {
+      return c.trim();
+    }
+  }
+  return "";
+}
 
 function deepEqual(a: any, b: any): boolean {
   if (a === b) return true;
@@ -210,10 +249,21 @@ function mergeStats(dbStats: UserStats, localStats: UserStats, defaultStats: Use
   return merged;
 }
 
-function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, defaultSettings: UserSettings): UserSettings {
-  const localHasSettings = (localSettings.displayName && localSettings.displayName !== "Nexora User" && localSettings.displayName !== "Champion") || localSettings.onboardingCompleted;
+function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, defaultSettings: UserSettings, userId?: string): UserSettings {
+  const localHasSettings = (localSettings.displayName && localSettings.displayName !== "Nexora User" && localSettings.displayName !== "Champion" && localSettings.displayName !== "Nexora Citizen") || localSettings.onboardingCompleted;
+
+  const dbName = (dbSettings.displayName && dbSettings.displayName !== "Nexora User" && dbSettings.displayName !== "Champion" && dbSettings.displayName !== "Nexora Citizen") ? dbSettings.displayName : undefined;
+  const localName = (localSettings.displayName && localSettings.displayName !== "Nexora User" && localSettings.displayName !== "Champion" && localSettings.displayName !== "Nexora Citizen") ? localSettings.displayName : undefined;
+  const finalName = dbName || localName || dbSettings.displayName || localSettings.displayName || defaultSettings.displayName || "Champion";
+
+  const dbPic = (dbSettings.profilePic && dbSettings.profilePic.trim() !== "") ? dbSettings.profilePic : undefined;
+  const localPic = (localSettings.profilePic && localSettings.profilePic.trim() !== "") ? localSettings.profilePic : undefined;
+  const finalPic = dbPic || localPic || defaultSettings.profilePic || "";
+
+  const isPro = isUserProUnlocked(userId) || Boolean(dbSettings.isPro) || Boolean(localSettings.isPro);
+
   if (!localHasSettings) {
-    return { ...defaultSettings, ...dbSettings };
+    return { ...defaultSettings, ...dbSettings, displayName: finalName, profilePic: finalPic, isPro };
   }
 
   const merged: UserSettings = {
@@ -221,12 +271,14 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
     ...localSettings,
     ...dbSettings, // dbSettings wins by default for general/unhandled settings
 
+    displayName: finalName,
+    profilePic: finalPic,
     onboardingCompleted: dbSettings.onboardingCompleted || localSettings.onboardingCompleted || false,
     plantOnboardingCompleted: dbSettings.plantOnboardingCompleted || localSettings.plantOnboardingCompleted || false,
     spaceOnboardingCompleted: dbSettings.spaceOnboardingCompleted || localSettings.spaceOnboardingCompleted || false,
     spaceHouseUnlocked: dbSettings.spaceHouseUnlocked || localSettings.spaceHouseUnlocked || false,
     hasEnteredGarden: dbSettings.hasEnteredGarden || localSettings.hasEnteredGarden || false,
-    isPro: dbSettings.isPro || localSettings.isPro || false,
+    isPro: isPro,
     feedbackSubmitted: dbSettings.feedbackSubmitted || localSettings.feedbackSubmitted || false,
   };
 
@@ -941,54 +993,57 @@ export function useNexoraData(
               ...(docData.activeEcosystemItemIds || docData.settings?.activeEcosystemItemIds || [])
             ].filter(Boolean)));
 
-            // Merge Shop inventory across Firestore locations, prioritizing primary docData inventory if present
-            const primaryInventory = docData.inventory || docData.settings?.inventory;
-            let mergedInventory: any[];
-            if (Array.isArray(primaryInventory)) {
-              mergedInventory = primaryInventory;
-            } else {
-              const mergedInventoryMap = new Map();
-              [
-                ...(shopPurchasesTopData?.inventory || []),
-                ...(shopTopData?.inventory || []),
-                ...(libraryTopData?.inventory || [])
-              ].forEach((item: any) => {
-                if (item && (item.id || item.name)) {
-                  mergedInventoryMap.set(item.id || item.name, item);
-                }
-              });
-              mergedInventory = Array.from(mergedInventoryMap.values());
-            }
+            // Merge Shop inventory across all Firestore locations to ensure no items are lost
+            const mergedInventoryMap = new Map();
+            [
+              ...(Array.isArray(docData.inventory) ? docData.inventory : []),
+              ...(Array.isArray(docData.settings?.inventory) ? docData.settings.inventory : []),
+              ...(shopPurchasesTopData?.inventory || []),
+              ...(shopTopData?.inventory || []),
+              ...(userShopData?.inventory || []),
+              ...(libraryTopData?.inventory || [])
+            ].forEach((item: any) => {
+              if (item && (item.id || item.itemId || item.name)) {
+                const key = item.id || item.itemId || item.name;
+                mergedInventoryMap.set(key, item);
+              }
+            });
+            let mergedInventory: any[] = Array.from(mergedInventoryMap.values());
+
+            // Merge Shop purchasedItems across all Firestore collections
+            const mergedPurchasedItems = Array.from(new Set([
+              ...(Array.isArray(docData.purchasedItems) ? docData.purchasedItems : []),
+              ...(Array.isArray(docData.settings?.purchasedItems) ? docData.settings.purchasedItems : []),
+              ...(shopPurchasesTopData?.purchasedItems || []),
+              ...(shopTopData?.purchasedItems || []),
+              ...(userShopData?.purchasedItems || []),
+              ...(libraryTopData?.purchasedItems || [])
+            ].filter(Boolean)));
 
             // Build set of itemIds currently present in inventory
-            const currentInventoryItemIds = new Set(
+            const existingInventoryKeys = new Set(
               mergedInventory.map((item: any) => item?.itemId || item?.id).filter(Boolean)
             );
-            const activeEquippedIds = new Set([
-              docData.activeSkin ? `skin-${docData.activeSkin}` : null,
-              docData.activeHat ? `skin-${docData.activeHat}` : null,
-              docData.settings?.activeSkin ? `skin-${docData.settings.activeSkin}` : null,
-              docData.settings?.activeHat ? `skin-${docData.settings.activeHat}` : null,
-            ].filter(Boolean));
 
-            // Merge Shop purchasedItems and filter out deleted items that are no longer in inventory
-            const primaryPurchasedItems = Array.isArray(docData.purchasedItems)
-              ? docData.purchasedItems
-              : Array.isArray(docData.settings?.purchasedItems)
-                ? docData.settings.purchasedItems
-                : null;
-
-            const rawPurchasedItems = primaryPurchasedItems !== null
-              ? primaryPurchasedItems
-              : Array.from(new Set([
-                  ...(shopPurchasesTopData?.purchasedItems || []),
-                  ...(shopTopData?.purchasedItems || []),
-                  ...(userShopData?.purchasedItems || [])
-                ].filter(Boolean)));
-
-            const mergedPurchasedItems = rawPurchasedItems.filter(
-              (id: string) => currentInventoryItemIds.has(id) || activeEquippedIds.has(id) || id === "double-points" || id === "streak-protection" || id === "xp-boost" || id === "coin-magnet"
-            );
+            // Auto-restore inventory item for any purchased item that is missing from inventory
+            mergedPurchasedItems.forEach((purchasedId) => {
+              if (!existingInventoryKeys.has(purchasedId)) {
+                const shopMatch = SHOP_ITEMS.find((si) => si.id === purchasedId);
+                if (shopMatch) {
+                  const autoInventoryItem = {
+                    id: `${shopMatch.id}-restored`,
+                    itemId: shopMatch.id,
+                    name: shopMatch.name,
+                    icon: typeof shopMatch.icon === "string" || typeof shopMatch.icon === "number" ? String(shopMatch.icon) : "🛒",
+                    activated: true,
+                    type: shopMatch.effect === "skin" ? "skin" : shopMatch.effect === "sound-pack" ? "sound-pack" : shopMatch.effect === "music" ? "music" : shopMatch.effect === "gift" ? "gift" : "power-up",
+                    purchasedAt: new Date().toISOString()
+                  };
+                  mergedInventory.push(autoInventoryItem);
+                  existingInventoryKeys.add(purchasedId);
+                }
+              }
+            });
 
             const mergedSavedChallenges = Array.from(new Set([
               ...(docData.savedChallengeIds || docData.settings?.savedChallengeIds || []),
@@ -1020,10 +1075,10 @@ export function useNexoraData(
               reminderTime: docData.reminderTime ?? docData.settings?.reminderTime ?? DEFAULT_SETTINGS.reminderTime,
               reminderTime2: docData.reminderTime2 ?? docData.settings?.reminderTime2 ?? DEFAULT_SETTINGS.reminderTime2,
               motivationTime: docData.motivationTime ?? docData.settings?.motivationTime ?? DEFAULT_SETTINGS.motivationTime,
-              displayName: docData.displayName || docData.name || docData.settings?.displayName || currentUser.displayName || "Champion",
+              displayName: extractRealDisplayName(docData, currentUser),
               age: docData.age ?? docData.settings?.age ?? DEFAULT_SETTINGS.age,
               gender: docData.gender ?? docData.settings?.gender,
-              profilePic: docData.profilePic || docData.photoFileName || docData.settings?.profilePic || currentUser.photoURL || "",
+              profilePic: extractRealProfilePic(docData, currentUser),
               themeColor: docData.themeColor ?? docData.settings?.themeColor ?? DEFAULT_SETTINGS.themeColor,
               soundEnabled: docData.soundEnabled ?? docData.settings?.soundEnabled ?? DEFAULT_SETTINGS.soundEnabled,
               notificationsEnabled: docData.notificationsEnabled ?? docData.settings?.notificationsEnabled ?? DEFAULT_SETTINGS.notificationsEnabled,
@@ -1038,7 +1093,7 @@ export function useNexoraData(
               activeHat: docData.activeHat ?? docData.settings?.activeHat ?? DEFAULT_SETTINGS.activeHat,
               activeSkin: docData.activeSkin ?? docData.settings?.activeSkin ?? DEFAULT_SETTINGS.activeSkin,
               zenModeEnabled: docData.zenModeEnabled ?? docData.settings?.zenModeEnabled ?? DEFAULT_SETTINGS.zenModeEnabled,
-              isPro: docData.isPro ?? docData.settings?.isPro ?? DEFAULT_SETTINGS.isPro,
+              isPro: isUserProUnlocked(currentUser?.uid) || Boolean(docData.isPro ?? docData.settings?.isPro ?? DEFAULT_SETTINGS.isPro),
               performanceMode: docData.performanceMode ?? docData.settings?.performanceMode ?? DEFAULT_SETTINGS.performanceMode,
               lowPowerMode: docData.lowPowerMode ?? docData.settings?.lowPowerMode ?? DEFAULT_SETTINGS.lowPowerMode,
               onboardingCompleted: finalOnboardingCompleted,
@@ -1293,7 +1348,7 @@ export function useNexoraData(
               const latestLocalStats = getCachedJson("nexora_stats", DEFAULT_STATS);
               const latestLocalGarden = getCachedJson("nexora_garden", createInitialGardenState());
 
-              resolvedSettings = mergeSettings(mappedSettings, latestLocalSettings, DEFAULT_SETTINGS);
+              resolvedSettings = mergeSettings(mappedSettings, latestLocalSettings, DEFAULT_SETTINGS, user?.uid);
               resolvedStats = mergeStats(mappedStats, latestLocalStats, DEFAULT_STATS);
               resolvedGarden = mergeGarden(mappedGarden, latestLocalGarden, createInitialGardenState());
             } else {
@@ -1608,12 +1663,13 @@ export function useNexoraData(
                       ...DEFAULT_SETTINGS,
                       ...prev,
                       ...dbSettings,
-                      displayName: dbData.displayName ?? dbData.name ?? dbSettings.displayName ?? DEFAULT_SETTINGS.displayName,
+                      displayName: extractRealDisplayName(dbData, user) || dbSettings.displayName || DEFAULT_SETTINGS.displayName,
+                      profilePic: extractRealProfilePic(dbData, user) || dbSettings.profilePic || DEFAULT_SETTINGS.profilePic,
                       onboardingCompleted: dbData.onboardingCompleted ?? dbSettings.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
                       plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbSettings.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
                       spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbSettings.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
-                      purchasedItems: dbData.purchasedItems ?? dbSettings.purchasedItems ?? DEFAULT_SETTINGS.purchasedItems,
-                      inventory: dbData.inventory ?? dbSettings.inventory ?? DEFAULT_SETTINGS.inventory,
+                      purchasedItems: Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].filter(Boolean))),
+                      inventory: Array.from(new Map([...(prev.inventory || []), ...(dbData.inventory || []), ...(dbSettings.inventory || [])].map((item: any) => [item.id || item.itemId || item.name, item])).values()),
                       plantState: dbData.plantState ?? dbSettings.plantState ?? DEFAULT_SETTINGS.plantState,
                       plantsProgress: dbData.plantsProgress ?? dbSettings.plantsProgress ?? DEFAULT_SETTINGS.plantsProgress,
                       purchasedEcosystemItemIds: dbData.purchasedEcosystemItemIds ?? dbSettings.purchasedEcosystemItemIds ?? DEFAULT_SETTINGS.purchasedEcosystemItemIds,
@@ -1629,7 +1685,7 @@ export function useNexoraData(
                       placedHouseItems: dbData.placedHouseItems ?? dbSettings.placedHouseItems ?? DEFAULT_SETTINGS.placedHouseItems,
                       spaceHouseUnlocked: dbData.spaceHouseUnlocked ?? dbSettings.spaceHouseUnlocked ?? DEFAULT_SETTINGS.spaceHouseUnlocked,
                       activeSpaceRoom: dbData.activeSpaceRoom ?? dbSettings.activeSpaceRoom ?? DEFAULT_SETTINGS.activeSpaceRoom,
-                      isPro: dbData.isPro ?? dbSettings.isPro ?? DEFAULT_SETTINGS.isPro,
+                      isPro: isUserProUnlocked(user?.uid) || (dbData.isPro ?? dbSettings.isPro ?? DEFAULT_SETTINGS.isPro),
                       proTestActive: dbData.proTestActive ?? dbSettings.proTestActive ?? false,
                       proTestStartedAt: dbData.proTestStartedAt ?? dbSettings.proTestStartedAt ?? null,
                       proTestExpiresAt: dbData.proTestExpiresAt ?? dbSettings.proTestExpiresAt ?? null,
@@ -2249,12 +2305,13 @@ export function useNexoraData(
                   ...DEFAULT_SETTINGS,
                   ...prev,
                   ...dbSettings,
-                  displayName: dbData.displayName ?? dbData.name ?? dbSettings.displayName ?? DEFAULT_SETTINGS.displayName,
+                  displayName: extractRealDisplayName(dbData, user) || dbSettings.displayName || DEFAULT_SETTINGS.displayName,
+                  profilePic: extractRealProfilePic(dbData, user) || dbSettings.profilePic || DEFAULT_SETTINGS.profilePic,
                   onboardingCompleted: dbData.onboardingCompleted ?? dbSettings.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
                   plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbSettings.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
                   spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbSettings.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
-                  purchasedItems: dbData.purchasedItems ?? dbSettings.purchasedItems ?? DEFAULT_SETTINGS.purchasedItems,
-                  inventory: dbData.inventory ?? dbSettings.inventory ?? DEFAULT_SETTINGS.inventory,
+                  purchasedItems: Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].filter(Boolean))),
+                  inventory: Array.from(new Map([...(prev.inventory || []), ...(dbData.inventory || []), ...(dbSettings.inventory || [])].map((item: any) => [item.id || item.itemId || item.name, item])).values()),
                   plantState: dbData.plantState ?? dbSettings.plantState ?? DEFAULT_SETTINGS.plantState,
                   plantsProgress: dbData.plantsProgress ?? dbSettings.plantsProgress ?? DEFAULT_SETTINGS.plantsProgress,
                   purchasedEcosystemItemIds: dbData.purchasedEcosystemItemIds ?? dbSettings.purchasedEcosystemItemIds ?? DEFAULT_SETTINGS.purchasedEcosystemItemIds,
@@ -2270,7 +2327,7 @@ export function useNexoraData(
                   placedHouseItems: dbData.placedHouseItems ?? dbSettings.placedHouseItems ?? DEFAULT_SETTINGS.placedHouseItems,
                   spaceHouseUnlocked: dbData.spaceHouseUnlocked ?? dbSettings.spaceHouseUnlocked ?? DEFAULT_SETTINGS.spaceHouseUnlocked,
                   activeSpaceRoom: dbData.activeSpaceRoom ?? dbSettings.activeSpaceRoom ?? DEFAULT_SETTINGS.activeSpaceRoom,
-                  isPro: dbData.isPro ?? dbSettings.isPro ?? DEFAULT_SETTINGS.isPro,
+                  isPro: isUserProUnlocked(user?.uid) || (dbData.isPro ?? dbSettings.isPro ?? DEFAULT_SETTINGS.isPro),
                   proTestActive: dbData.proTestActive ?? dbSettings.proTestActive ?? false,
                   proTestStartedAt: dbData.proTestStartedAt ?? dbSettings.proTestStartedAt ?? null,
                   proTestExpiresAt: dbData.proTestExpiresAt ?? dbSettings.proTestExpiresAt ?? null,

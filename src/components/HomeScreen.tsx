@@ -432,58 +432,6 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   </div>
                 </div>
               )}
-
-              {/* Challenge Category Navigation */}
-              <div className="space-y-3 pt-4 border-t border-[#E9E4D4]/40">
-                <span className="text-[9px] font-black text-[#7D6B58]/60 uppercase tracking-[0.2em] block text-center sm:text-left">
-                  {translate("TAP ANY CATEGORY TO RUN DIRECT CHALLENGE", lang).toUpperCase()}
-                </span>
-                
-                <div className="grid grid-cols-5 xs:grid-cols-5 sm:flex sm:flex-wrap items-center justify-center gap-2.5 sm:gap-3 py-1">
-                  {[
-                    { id: "pushups", label: translate("Pushups", lang), done: dailyProgress.pushupsDone, icon: "💪" },
-                    { id: "water", label: translate("Water", lang), done: dailyProgress.waterDrank >= settings.waterGoal, icon: "💧" },
-                    { id: "breathing", label: translate("Breath", lang), done: dailyProgress.breathingDone, icon: "🧘" },
-                    { id: "drawing", label: translate("Draw", lang), done: dailyProgress.drawingDone, icon: "🎨" },
-                    { id: "football", label: translate("Field", lang), done: dailyProgress.footballDone, icon: "⚽" },
-                    { id: "bubbles", label: translate("Bubble", lang), done: dailyProgress.bubblesDone, icon: "🫧" },
-                    { id: "memory", label: translate("Brain", lang), done: dailyProgress.memoryDone, icon: "🧠" },
-                    { id: "gratitude", label: translate("Gratitude", lang), done: dailyProgress.gratitudeDone, icon: "🙏" },
-                    { id: "reaction", label: translate("Reaction", lang), done: dailyProgress.reactionDone, icon: "⚡" },
-                    { id: "meditation", label: translate("Calm", lang), done: dailyProgress.meditationDone, icon: "🧘‍♀️" }
-                  ].filter(task => !(settings.archivedOfficialChallenges || []).includes(task.id)).map((task, i) => (
-                    <motion.button 
-                      key={task.id}
-                      id={`challenge-category-nav-${task.id}`}
-                      whileHover={{ scale: 1.08, y: -2 }}
-                      whileTap={{ scale: 0.93 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                      onClick={() => onSelectTask(task.id)}
-                      className={`flex flex-col items-center justify-center p-2 rounded-2xl w-full sm:w-[58px] aspect-square transition-all cursor-pointer relative group ${
-                        task.done 
-                          ? 'bg-[#69C496]/10 border-2 border-[#69C496]/40 text-[#4F3F34]' 
-                          : 'bg-white border border-[#E9E4D4]/60 hover:bg-slate-50 text-[#7D6B58]/50 hover:text-[#4F3F34]'
-                      }`}
-                      title={`Start ${task.label}`}
-                    >
-                      <span className={`text-[21px] select-none block transition-transform duration-300 group-hover:scale-110 ${task.done ? 'filter-none' : 'grayscale-[20%] opacity-80'}`}>
-                        {task.icon}
-                      </span>
-                      
-                      {/* Smooth indicator dot for completed states */}
-                      {task.done && (
-                        <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#69C496] shadow-sm">
-                          <CheckCircle2 size={10} className="text-white" strokeWidth={3} />
-                        </span>
-                      )}
-
-                      <span className="text-[7.5px] font-bold uppercase tracking-tight mt-1 text-[#7D6B58] block max-w-full truncate">
-                        {task.label}
-                      </span>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         );

@@ -345,7 +345,7 @@ export function SettingsScreen({
                 <div className="min-w-0">
                   <p className="text-[9px] font-black text-[#69C496] uppercase tracking-widest leading-none">Logged Operative</p>
                   <h3 className="font-black text-lg text-[#4F3F34] truncate mt-1">
-                    {settings.displayName || user?.displayName || 'Nexora Citizen'}
+                    {(settings.displayName && settings.displayName !== "Nexora Citizen" && settings.displayName !== "Nexora User" && settings.displayName !== "Champion") ? settings.displayName : (user?.displayName || settings.accountName || 'Nexora Citizen')}
                   </h3>
                   <p className="text-[10px] text-[#4F3F34]/55 truncate">{user?.email || 'offline_node@citizen.nexora'}</p>
                 </div>

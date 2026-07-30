@@ -595,8 +595,12 @@ export function useSound() {
 
       if (buffer) {
         const source = ctx.createBufferSource();
+        const gainNode = ctx.createGain();
+        // Calibrate master effect gain to comfortable 0.35 volume (prevents 1.0 raw audio clipping)
+        gainNode.gain.setValueAtTime(0.35, ctx.currentTime);
         source.buffer = buffer;
-        source.connect(ctx.destination);
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
         source.start(0);
       } else {
         // Fallback programmatic synthesizer if no buffer could be downloaded/decoded!

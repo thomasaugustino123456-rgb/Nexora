@@ -32,6 +32,7 @@ interface PlantScreenProps {
   showToast?: (message: string, type?: 'success' | 'info' | 'error') => void;
   onOpenGarden?: () => void;
   onUpdateStats?: (updater: any) => void;
+  onOpenProModal?: () => void;
 }
 
 export const PlantScreen: React.FC<PlantScreenProps> = ({
@@ -51,7 +52,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
   setGardenState,
   showToast,
   onOpenGarden,
-  onUpdateStats
+  onUpdateStats,
+  onOpenProModal,
 }) => {
   const [step, setStep] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
@@ -388,6 +390,8 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
               settings={settings}
               onPurchase={onPurchaseEcosystemItem}
               onToggleActive={onToggleEcosystemItem}
+              isPro={settings.isPro || settings.proTestActive}
+              onOpenProModal={onOpenProModal}
             />
           )}
 

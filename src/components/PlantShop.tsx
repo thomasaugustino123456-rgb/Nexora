@@ -14,6 +14,8 @@ import {
   Box,
   Bug,
   Ghost,
+  Crown,
+  Lock,
   Map as MapIcon,
 } from "lucide-react";
 import { UserStats, UserSettings } from "../types";
@@ -26,6 +28,8 @@ interface PlantShopProps {
   settings: UserSettings;
   onPurchase: (item: EcosystemItem) => void;
   onToggleActive: (itemId: string) => void;
+  isPro?: boolean;
+  onOpenProModal?: () => void;
 }
 
 export interface EcosystemItem {
@@ -37,6 +41,7 @@ export interface EcosystemItem {
   icon: React.ReactNode;
   effect?: string;
   metadata?: any;
+  proOnly?: boolean;
 }
 
 export const SHOP_ITEMS: EcosystemItem[] = [
@@ -49,6 +54,17 @@ export const SHOP_ITEMS: EcosystemItem[] = [
     type: "companion",
     icon: <Bot className="text-blue-400" />,
     effect: "+12% Growth / Interactive",
+  },
+  {
+    id: "eco_drone_pro_01",
+    name: "Cyber Pollinator Drone X",
+    description:
+      "Pro-exclusive golden autonomous drone. Accelerates growth by 30% with particle aura.",
+    price: 1200,
+    type: "companion",
+    icon: <Bot className="text-amber-400" />,
+    effect: "Pro-Exclusive +30% Growth",
+    proOnly: true,
   },
   {
     id: "eco_nanobees_01",
@@ -88,6 +104,17 @@ export const SHOP_ITEMS: EcosystemItem[] = [
     icon: <Sun className="text-amber-400" />,
     effect: "2x Growth Rate",
   },
+  {
+    id: "eco_uv_pro_01",
+    name: "Hyperion Sol Sphere",
+    description:
+      "Pro-exclusive artificial star harness providing 3x photosynthesis growth boost 24/7.",
+    price: 2200,
+    type: "growth-tech",
+    icon: <Sun className="text-amber-500" />,
+    effect: "Pro 3x Photo-Boost",
+    proOnly: true,
+  },
   // POTS
   {
     id: "pot_cyber_01",
@@ -107,7 +134,40 @@ export const SHOP_ITEMS: EcosystemItem[] = [
     icon: <Box className="text-gray-400" />,
     effect: "Visual Style",
   },
-  // COLORS
+  {
+    id: "pot_quantum_pro_01",
+    name: "Levitating Quantum Pot",
+    description:
+      "Pro-exclusive zero-gravity floating magnetic vessel with pulsing quantum energy.",
+    price: 900,
+    type: "pot",
+    icon: <Crown className="text-cyan-400" />,
+    effect: "Pro Floating Zero-G",
+    proOnly: true,
+  },
+  {
+    id: "pot_gold_pro_01",
+    name: "Golden Obsidian Vessel",
+    description:
+      "Pro-exclusive luxury golden obsidian planter crafted for elite botanists.",
+    price: 1500,
+    type: "pot",
+    icon: <Crown className="text-amber-300" />,
+    effect: "Pro Metallic Gold Shimmer",
+    proOnly: true,
+  },
+  {
+    id: "pot_cyber_pro_01",
+    name: "Neon Cyber Pot",
+    description:
+      "Pro-exclusive cybernetic planter with animated RGB light ring.",
+    price: 800,
+    type: "pot",
+    icon: <Box className="text-fuchsia-400" />,
+    effect: "Pro RGB Ring FX",
+    proOnly: true,
+  },
+  // COLORS & VISUALS
   {
     id: "eco_forest_01",
     name: "Ancient Sacred Forest",
@@ -117,6 +177,17 @@ export const SHOP_ITEMS: EcosystemItem[] = [
     type: "visual",
     icon: <MapIcon className="text-green-500" />,
     effect: "Deep Forest Backdrop / Sounds",
+  },
+  {
+    id: "eco_nebula_pro_01",
+    name: "Nebula Aurora Canvas",
+    description:
+      "Pro-exclusive starry cosmic nebula backdrop with glowing animated auroras.",
+    price: 3000,
+    type: "visual",
+    icon: <Sparkles className="text-purple-400" />,
+    effect: "Pro Cosmic Nebula Realm",
+    proOnly: true,
   },
   {
     id: "color_bio_01",
@@ -144,7 +215,10 @@ export const PlantShop: React.FC<PlantShopProps> = ({
   settings,
   onPurchase,
   onToggleActive,
+  isPro: propIsPro,
+  onOpenProModal,
 }) => {
+  const isPro = propIsPro ?? (settings.isPro || settings.proTestActive);
   const [activeTab, setActiveTab] = useState<
     "all" | "companion" | "growth-tech" | "pot" | "color"
   >("all");
@@ -230,37 +304,52 @@ export const PlantShop: React.FC<PlantShopProps> = ({
             const isPurchased = purchased.includes(item.id);
             const isActive = activeItems.includes(item.id);
             const canAfford = stats.coins >= item.price;
+            const isProLocked = item.proOnly && !isPro;
 
             return (
               <motion.div
                 key={item.id}
                 layout
                 className={`p-5 rounded-3xl border-2 transition-all group ${
-                  isActive
-                    ? "border-blue-500 bg-blue-50/30"
-                    : "border-gray-100 bg-white hover:border-blue-200"
+                  item.proOnly
+                    ? "border-amber-300 bg-amber-50/20"
+                    : isActive
+                      ? "border-blue-500 bg-blue-50/30"
+                      : "border-gray-100 bg-white hover:border-blue-200"
                 }`}
               >
                 <div className="flex items-start gap-4">
                   <div
-                    className={`p-4 rounded-2xl shadow-inner ${isActive ? "bg-blue-100" : "bg-gray-50"}`}
+                    className={`p-4 rounded-2xl shadow-inner relative ${isActive ? "bg-blue-100" : "bg-gray-50"}`}
                   >
-                    {item.id === "eco_drone_01" ? (
+                    {item.id === "eco_drone_01" || item.id === "eco_drone_pro_01" ? (
                       <div className="scale-[0.5] -mx-8 -my-8">
                         <GardenerDrone mood={isActive ? "happy" : "idle"} />
                       </div>
                     ) : (
                       item.icon
                     )}
+                    {item.proOnly && (
+                      <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-[8px] font-black p-1 rounded-full shadow">
+                        <Crown size={10} />
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-black text-blue-900 leading-tight tracking-tight">
-                        {item.name}
-                      </h3>
+                    <div className="flex items-center justify-between mb-1 gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3 className="font-black text-blue-900 leading-tight tracking-tight">
+                          {item.name}
+                        </h3>
+                        {item.proOnly && (
+                          <span className="text-[8px] bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-2 py-0.5 rounded-full font-black uppercase flex items-center gap-0.5 shadow-sm">
+                            <Crown size={8} /> Pro Exclusive
+                          </span>
+                        )}
+                      </div>
                       {isActive && (
-                        <span className="text-[8px] bg-green-500 text-white px-2 py-1 rounded-full font-black uppercase">
+                        <span className="text-[8px] bg-green-500 text-white px-2 py-1 rounded-full font-black uppercase shrink-0">
                           Active
                         </span>
                       )}
@@ -290,6 +379,20 @@ export const PlantShop: React.FC<PlantShopProps> = ({
                           }`}
                         >
                           {isActive ? "Deactivate" : "Activate"}
+                        </button>
+                      ) : isProLocked ? (
+                        <button
+                          onClick={() => {
+                            vibrate(20);
+                            if (onOpenProModal) {
+                              onOpenProModal();
+                            } else {
+                              alert("👑 Pro Membership required for this item!");
+                            }
+                          }}
+                          className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-md hover:scale-105 active:scale-95 transition-all"
+                        >
+                          <Lock size={12} /> Pro Required
                         </button>
                       ) : (
                         <button

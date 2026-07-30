@@ -61,10 +61,12 @@ export function ProfileScreen({
   const nextLevelXP = (stats.level || 1) * 1000;
   const progressPercent = (currentXP / nextLevelXP) * 100;
 
+  const effectiveName = (settings.displayName && settings.displayName !== "Nexora User" && settings.displayName !== "Champion" && settings.displayName !== "Nexora Citizen")
+    ? settings.displayName
+    : (user?.displayName || settings.accountName || "Nexora User");
+
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(
-    settings.displayName || user?.displayName || "Nexora User",
-  );
+  const [editName, setEditName] = useState(effectiveName);
   const [editPhoto, setEditPhoto] = useState(
     settings.profilePic || user?.photoURL || "",
   );
@@ -80,7 +82,10 @@ export function ProfileScreen({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setEditName(settings.displayName || user?.displayName || "Nexora User");
+    const name = (settings.displayName && settings.displayName !== "Nexora User" && settings.displayName !== "Champion" && settings.displayName !== "Nexora Citizen")
+      ? settings.displayName
+      : (user?.displayName || settings.accountName || "Nexora User");
+    setEditName(name);
     setEditPhoto(settings.profilePic || user?.photoURL || "");
     setEditLocation(settings.location || "");
     setEditAccountName(
@@ -93,7 +98,9 @@ export function ProfileScreen({
     settings.location,
     settings.accountName,
     settings.email,
-    user
+    user?.displayName,
+    user?.photoURL,
+    user?.email,
   ]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -279,7 +286,7 @@ export function ProfileScreen({
               onClick={() => setIsEditing(true)}
               className="text-4xl font-black text-blue-900 tracking-tight leading-none cursor-pointer hover:opacity-70"
             >
-              {settings.displayName || user?.displayName || "Nexora User"}
+              {effectiveName}
             </h2>
           )}
           <div className="flex flex-col sm:flex-row items-center gap-2 justify-center mt-3">

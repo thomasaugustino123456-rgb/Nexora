@@ -749,10 +749,9 @@ export function LeaderboardScreen({
                   }) as any;
 
               return (
-                <React.Fragment key={entry.uid}>
+                <React.Fragment key={entry.uid ? `${entry.uid}-${index}` : index}>
                   <motion.div
                     layout
-                    key={entry.uid}
                     id={isCurrentUser ? "leaderboard-user-row" : undefined}
                     initial={{ opacity: 0, y: 10 }}
                     animate={itemAnimate}
@@ -820,9 +819,14 @@ export function LeaderboardScreen({
 
                     {/* Name and Level Details */}
                     <div className="flex-1 min-w-0 relative z-10">
-                      <h4 className={`font-black text-sm uppercase tracking-wide truncate ${textColor}`}>
-                        {entry.displayName || "Anonymous Champion"}
-                        {isCurrentUser && <span className="ml-1.5 font-bold text-[8px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">You</span>}
+                      <h4 className={`font-black text-sm uppercase tracking-wide truncate flex items-center gap-1.5 ${textColor}`}>
+                        <span>{entry.displayName || "Anonymous Champion"}</span>
+                        {isCurrentUser && <span className="font-bold text-[8px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">You</span>}
+                        {(entry.hasUltimateBadge || entry.purchasedItems?.includes("badge-ultimate") || (isCurrentUser && (settings?.hasUltimateBadge || settings?.purchasedItems?.includes("badge-ultimate")))) && (
+                          <span className="inline-flex items-center gap-0.5 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 shadow-sm border border-amber-300 animate-pulse" title="Ultimate Mythic Emblem">
+                            ⚜️ Mythic
+                          </span>
+                        )}
                       </h4>
                       
                       <div className="flex items-center gap-2 mt-1">
@@ -831,9 +835,9 @@ export function LeaderboardScreen({
                         </div>
 
                         <div className="flex items-center gap-1.5 text-[10px] font-black tracking-tight">
-                          <Flame size={11} className="text-orange-500" />
-                          <span className={subTextColor}>
-                            {entry.streak || 0} Day Streak
+                          <Flame size={11} className={isCurrentUser ? "text-orange-500" : "text-slate-400 opacity-60"} />
+                          <span className={isCurrentUser ? subTextColor : "text-slate-400 font-medium opacity-70"}>
+                            {isCurrentUser ? `${entry.streak || 0} Day Streak` : "Streak Hidden"}
                           </span>
                         </div>
                       </div>

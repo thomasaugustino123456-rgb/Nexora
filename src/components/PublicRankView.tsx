@@ -130,10 +130,10 @@ export function PublicRankView({ userId, onClose }: PublicRankViewProps) {
  
         <div className="grid grid-cols-2 gap-4 w-full mt-6">
            <div className="glass-card p-6 flex flex-col items-center gap-2">
-              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white">
+              <div className={`w-10 h-10 ${isOwner ? "bg-orange-500" : "bg-slate-400"} rounded-xl flex items-center justify-center text-white`}>
                 <Flame size={20} />
               </div>
-              <div className="text-xl font-black text-blue-900">{stats.streak}</div>
+              <div className="text-xl font-black text-blue-900">{isOwner ? (stats.streak || 0) : "🔒 Hidden"}</div>
               <p className="text-[8px] font-black text-blue-900/40 uppercase tracking-widest">Day Streak</p>
            </div>
            

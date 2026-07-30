@@ -82,7 +82,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   }, [setSettings, step, showToast]);
 
   const nextStep = useCallback((data?: any, skipped: boolean = false) => {
-    if (!skipped && settings.soundEnabled) {
+    if (!skipped && settings.soundEnabled && currentIdx < steps.length - 1) {
       play('continue');
     }
     if (!skipped) {
@@ -1724,8 +1724,16 @@ export const ReactionStep = React.memo(({ onComplete, activeSkin = 'none', setti
            </button>
          </div>
       ) : (
-        <button
+        <div
+          role="button"
+          tabIndex={0}
           onClick={handleClick}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleClick();
+            }
+          }}
           className={`w-72 h-72 sm:w-80 sm:h-80 rounded-full flex flex-col items-center justify-center transition-all duration-75 shadow-2xl border-8 border-white/80 active:scale-[0.97] cursor-pointer ${
             state === 'waiting' ? 'bg-[#1e293b]' :
             state === 'ready' ? 'bg-emerald-500' :
@@ -1759,7 +1767,7 @@ export const ReactionStep = React.memo(({ onComplete, activeSkin = 'none', setti
               <p className="font-bold text-lg">Loading...</p>
             </div>
           )}
-        </button>
+        </div>
       )}
     </div>
   );

@@ -46,6 +46,9 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
   const potStyles: Record<string, { body: string; shadow: string; accent: string }> = {
     'pot_cyber_01': { body: '#1e293b', shadow: '#0f172a', accent: '#f472b6' },
     'pot_zen_01': { body: '#d1d5db', shadow: '#9ca3af', accent: '#4b5563' },
+    'pot_quantum_pro_01': { body: '#082f49', shadow: '#0c4a6e', accent: '#38bdf8' },
+    'pot_gold_pro_01': { body: '#78350f', shadow: '#451a03', accent: '#fbbf24' },
+    'pot_cyber_pro_01': { body: '#0f172a', shadow: '#020617', accent: '#e879f9' },
   };
 
   const getPotStyle = () => potStyles[activePot || ''] || { body: '#F39E7D', shadow: '#E0E0E0', accent: '#BDBDBD' };
@@ -53,6 +56,79 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
   const renderPotWrapper = (defaultPot: React.ReactNode) => {
     if (activePot) {
       const style = getPotStyle();
+
+      if (activePot === 'pot_quantum_pro_01') {
+        return (
+          <g>
+            {/* Magnetic Levitation Beam */}
+            <motion.ellipse
+              cx="100" cy="202" rx="40" ry="8"
+              fill="#0284c7" opacity="0.3" filter="url(#glow)"
+              animate={{ scale: [0.9, 1.1, 0.9], opacity: [0.2, 0.5, 0.2] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            {/* Zero-G Floating Pot Base */}
+            <motion.g
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <path d="M 55,140 L 145,140 L 132,190 L 68,190 Z" fill={style.body} stroke="#38bdf8" strokeWidth="3" />
+              <path d="M 55,140 L 145,140 L 140,150 L 60,150 Z" fill={style.shadow} />
+              <motion.rect
+                x="70" y="165" width="60" height="5" fill="#38bdf8" rx="2.5"
+                animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity }}
+              />
+              <ellipse cx="100" cy="140" rx="42" ry="7" fill="#0369a1" stroke="#38bdf8" strokeWidth="2" />
+            </motion.g>
+          </g>
+        );
+      }
+
+      if (activePot === 'pot_gold_pro_01') {
+        return (
+          <g>
+            {/* Metallic Gold Obsidian Pot */}
+            <path d="M 55,140 L 145,140 L 130,195 L 70,195 Z" fill="#262626" stroke="#fbbf24" strokeWidth="4" />
+            <path d="M 55,140 L 145,140 L 142,152 L 58,152 Z" fill="#fbbf24" />
+            <path d="M 70,165 L 130,165" stroke="#f59e0b" strokeWidth="3" strokeDasharray="4 2" />
+            <ellipse cx="100" cy="140" rx="42" ry="7" fill="#451a03" stroke="#f59e0b" strokeWidth="2" />
+            {/* Gold Leaf Sparkles */}
+            {[...Array(4)].map((_, i) => (
+              <motion.circle
+                key={i}
+                cx={65 + i * 22}
+                cy={175}
+                r="2"
+                fill="#fef08a"
+                animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1.5, 0.8] }}
+                transition={{ duration: 1.5, delay: i * 0.4, repeat: Infinity }}
+              />
+            ))}
+          </g>
+        );
+      }
+
+      if (activePot === 'pot_cyber_pro_01') {
+        return (
+          <g>
+            {/* RGB Cyber Pot */}
+            <path d="M 55,140 L 145,140 L 130,195 L 70,195 Z" fill="#0f172a" stroke="#e879f9" strokeWidth="3" />
+            <path d="M 55,140 L 145,140 L 140,150 L 60,150 Z" fill="#1e1b4b" />
+            <motion.rect
+              x="62" y="160" width="76" height="4" fill="#22d3ee" rx="2"
+              animate={{ fill: ["#22d3ee", "#e879f9", "#facc15", "#22d3ee"] }}
+              transition={{ duration: 3, repeat: Infinity }}
+            />
+            <motion.rect
+              x="72" y="180" width="56" height="4" fill="#e879f9" rx="2"
+              animate={{ fill: ["#e879f9", "#facc15", "#22d3ee", "#e879f9"] }}
+              transition={{ duration: 3, repeat: Infinity }}
+            />
+            <ellipse cx="100" cy="140" rx="42" ry="7" fill="#312e81" stroke="#e879f9" strokeWidth="2" />
+          </g>
+        );
+      }
+
       return (
         <g>
           <path d="M 55,140 L 145,140 L 130,195 L 70,195 Z" fill={style.body} stroke="#1e293b" strokeWidth="4" />
@@ -3272,8 +3348,35 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
         <SunRenderer />
       )}
 
+      {/* HYPERION SOL SPHERE (Pro Growth Tech Upgrade) */}
+      {activeEcosystemItemIds.includes('eco_uv_pro_01') && !isDead && (
+        <div className="absolute top-2 right-2 pointer-events-none z-10 flex items-center justify-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+            className="relative w-16 h-16 flex items-center justify-center"
+          >
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 blur-md opacity-80 animate-pulse" />
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-300 to-amber-500 shadow-lg border-2 border-white flex items-center justify-center">
+              <span className="text-xs">☀️</span>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* NEBULA AURORA CANVAS (Pro Visual Canvas) */}
+      {activeEcosystemItemIds.includes('eco_nebula_pro_01') && (
+        <div className="absolute inset-0 pointer-events-none z-[1] rounded-3xl overflow-hidden opacity-30 bg-gradient-to-b from-indigo-950 via-purple-900 to-slate-950">
+          <motion.div
+            animate={{ opacity: [0.3, 0.7, 0.3], scale: [1, 1.1, 1] }}
+            transition={{ duration: 6, repeat: Infinity }}
+            className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(168,85,247,0.4),transparent_70%)]"
+          />
+        </div>
+      )}
+
       {/* ECOSYSTEM COMPANIONS - RENDERED OUTSIDE SVG IN RELATIVE DIV */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
         <div className="relative w-72 h-72 overflow-visible">
           <AnimatePresence>
             {activeEcosystemItemIds.includes('eco_nanobees_01') && !isDead && (
@@ -3284,12 +3387,13 @@ export const PlantRenderer: React.FC<PlantRendererProps> = ({
             )}
           </AnimatePresence>
 
-          {/* DRAGGABLE GARDENER DRONE */}
-          {activeEcosystemItemIds.includes('eco_drone_01') && !isDead && (
+          {/* DRAGGABLE GARDENER DRONES */}
+          {(activeEcosystemItemIds.includes('eco_drone_01') || activeEcosystemItemIds.includes('eco_drone_pro_01')) && !isDead && (
             <GardenerDrone 
               mood={isThirsty ? 'working' : 'idle'} 
               targetPos={droneTargetPos}
               onPositionChange={onDronePositionChange}
+              isPro={activeEcosystemItemIds.includes('eco_drone_pro_01')}
               className="pointer-events-auto"
             />
           )}

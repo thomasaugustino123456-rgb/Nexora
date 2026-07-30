@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
-import { UserStats } from "../types";
+import { DailyProgress, UserStats } from "../types";
 import { MascotV2 } from "./MascotV2";
 import { XpRewardsScreen } from "./XpRewardsScreen";
 import { useSound } from "../hooks/useSound";
@@ -17,6 +17,7 @@ const playChestAudio = (type: "reveal" | "click" | "land", soundEnabled?: boolea
   if (soundEnabled === false) return;
   try {
     const audio = new Audio(CHEST_SOUNDS[type]);
+    audio.volume = 0.25;
     audio.play().catch(e => console.warn("Chest sound play failed:", e));
   } catch (err) {
     console.warn("Chest audio error:", err);
@@ -27,6 +28,7 @@ interface RewardsScreenProps {
   stats: UserStats;
   onUpdateStats: (newStats: Partial<UserStats> | ((prev: UserStats) => UserStats)) => void;
   settings?: any;
+  dailyProgress?: DailyProgress;
   onFinish: () => void;
   isCustomPlan?: boolean;
 }
@@ -35,6 +37,7 @@ export function RewardsScreen({
   stats,
   onUpdateStats,
   settings,
+  dailyProgress,
   onFinish,
   isCustomPlan,
 }: RewardsScreenProps) {
@@ -100,7 +103,7 @@ export function RewardsScreen({
         osc.frequency.exponentialRampToValueAtTime(35, now + 0.25);
 
         gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.5, now + 0.01);
+        gainNode.gain.linearRampToValueAtTime(0.2, now + 0.01);
         gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
 
         // Chain metal clink rattle simulation
@@ -110,7 +113,7 @@ export function RewardsScreen({
           rattleOsc.type = "sine";
           rattleOsc.frequency.setValueAtTime(1800 + i * 500, now);
           rattleGain.gain.setValueAtTime(0, now);
-          rattleGain.gain.linearRampToValueAtTime(0.05, now + 0.01 + i * 0.01);
+          rattleGain.gain.linearRampToValueAtTime(0.02, now + 0.01 + i * 0.01);
           rattleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08 + i * 0.02);
           
           rattleOsc.connect(rattleGain);
@@ -134,7 +137,7 @@ export function RewardsScreen({
         osc.frequency.exponentialRampToValueAtTime(45, now + 0.25);
 
         gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.5, now + 0.01);
+        gainNode.gain.linearRampToValueAtTime(0.2, now + 0.01);
         gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
 
         // Chain metal clink rattle simulation (higher pitch)
@@ -144,7 +147,7 @@ export function RewardsScreen({
           rattleOsc.type = "sine";
           rattleOsc.frequency.setValueAtTime(2200 + i * 600, now);
           rattleGain.gain.setValueAtTime(0, now);
-          rattleGain.gain.linearRampToValueAtTime(0.06, now + 0.01 + i * 0.01);
+          rattleGain.gain.linearRampToValueAtTime(0.02, now + 0.01 + i * 0.01);
           rattleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08 + i * 0.02);
           
           rattleOsc.connect(rattleGain);
@@ -260,52 +263,26 @@ export function RewardsScreen({
     setTapCount(nextTap);
 
     if (nextTap === 1) {
-      // Tap 1: Play click, strong vibration, and schedule landing sound
+      // Tap 1: Play clean physical thud & vibration
       vibrate(100);
-      if (settings?.soundEnabled !== false) {
-        play("chest_click");
-      }
       playSoundEffect("thud1");
       setStatusText("2 Taps Remaining...");
       setStatusColor("#788f9a");
-      setTimeout(() => {
-        if (settings?.soundEnabled !== false) {
-          play("chest_land");
-        }
-        vibrate(60);
-      }, 300);
     } else if (nextTap === 2) {
-      // Tap 2: Play click, even stronger vibration, and schedule landing sound
+      // Tap 2: Play tension thud & vibration
       vibrate(130);
-      if (settings?.soundEnabled !== false) {
-        play("chest_click");
-      }
       playSoundEffect("thud2");
       setStatusText("FINAL TAP INITIALIZED!!!");
       setStatusColor("#FF9600");
-      setTimeout(() => {
-        if (settings?.soundEnabled !== false) {
-          play("chest_land");
-        }
-        vibrate(90);
-      }, 430);
     } else if (nextTap === 3) {
-      // Tap 3: Play click & reveal, massive vibration, and schedule landing sound on impact
+      // Tap 3: Play reveal audio & launch blast cleanly
       vibrate([180, 50, 180]);
       if (settings?.soundEnabled !== false) {
-        play("chest_click");
-        play("chest_reveal");
+        playChestAudio("reveal", settings?.soundEnabled);
       }
       playSoundEffect("launch");
       setStatusText("Protocol Rewards Disbursed!");
       setStatusColor("#FFD000");
-
-      setTimeout(() => {
-        if (settings?.soundEnabled !== false) {
-          play("chest_land");
-        }
-        vibrate(220);
-      }, 620);
 
       // Dim out instruction text
       setTimeout(() => {
@@ -833,7 +810,21 @@ export function RewardsScreen({
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   vibrate(20);
-                  const shouldShowXp = !isCustomPlan && !stats.hasClaimedXpChest;
+                  const isProUser = Boolean(settings?.isPro || settings?.proTestActive || (stats as any)?.isPro);
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  const lastClaimDate = stats.lastXpChestClaimDate;
+
+                  let shouldShowXp = false;
+                  if (!isCustomPlan) {
+                    if (isProUser) {
+                      shouldShowXp = lastClaimDate !== todayStr;
+                    } else {
+                      const completions = dailyProgress?.completionsCount ?? 1;
+                      const claimedToday = lastClaimDate === todayStr;
+                      shouldShowXp = !claimedToday && completions <= 1;
+                    }
+                  }
+
                   if (shouldShowXp) {
                     setCurrentStage("xp");
                   } else {
@@ -842,7 +833,24 @@ export function RewardsScreen({
                 }}
                 className="px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl shadow-yellow-500/20 flex items-center gap-2 border-2 border-yellow-300 transition-all cursor-pointer relative z-[1001]"
               >
-                {!isCustomPlan && !stats.hasClaimedXpChest ? "Continue to Magical Chest" : "Continue to Trophies"}
+                {(() => {
+                  const isProUser = Boolean(settings?.isPro || settings?.proTestActive || (stats as any)?.isPro);
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  const lastClaimDate = stats.lastXpChestClaimDate;
+
+                  let shouldShowXp = false;
+                  if (!isCustomPlan) {
+                    if (isProUser) {
+                      shouldShowXp = lastClaimDate !== todayStr;
+                    } else {
+                      const completions = dailyProgress?.completionsCount ?? 1;
+                      const claimedToday = lastClaimDate === todayStr;
+                      shouldShowXp = !claimedToday && completions <= 1;
+                    }
+                  }
+
+                  return shouldShowXp ? "Continue to Magical Chest" : "Continue to Trophies";
+                })()}
                 <ChevronRight size={18} />
               </motion.button>
             )}

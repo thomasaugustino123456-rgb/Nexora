@@ -7,6 +7,12 @@ import {
 } from 'lucide-react';
 import { LibraryItem, UserStats, UserSettings, NexusVideo } from '../types';
 import { translate } from '../lib/translations';
+import { AnimatedSunglasses } from './AnimatedSunglasses';
+import { AnimatedNinjaMask } from './AnimatedNinjaMask';
+import { AnimatedVikingHat } from './AnimatedVikingHat';
+import { AnimatedDetectiveKit } from './AnimatedDetectiveKit';
+import { AnimatedWizardHat } from './AnimatedWizardHat';
+import { AnimatedRoyalCrown } from './AnimatedRoyalCrown';
 
 interface LibraryScreenProps {
   items: LibraryItem[];
@@ -169,7 +175,19 @@ export function LibraryScreen({
                                   ? 'bg-[#FAF7F2] border-[#69C496]/40 text-[#4F3F34]' 
                                   : 'bg-white border-[#E9E4D4]/50'
                               }`}>
-                                {typeof item.icon === 'string' || typeof item.icon === 'number' ? item.icon : '🎁'}
+                                {item.itemId === 'skin-cool' ? (
+                                  <AnimatedSunglasses className="w-8 h-5" animate={false} />
+                                ) : item.itemId === 'skin-ninja' ? (
+                                  <AnimatedNinjaMask className="w-7 h-7" animate={false} />
+                                ) : item.itemId === 'skin-viking' ? (
+                                  <AnimatedVikingHat className="w-7 h-7" animate={false} />
+                                ) : item.itemId === 'skin-detective' ? (
+                                  <AnimatedDetectiveKit className="w-7 h-7" animate={false} />
+                                ) : item.itemId === 'skin-wizard' ? (
+                                  <AnimatedWizardHat className="w-7 h-7" animate={false} />
+                                ) : item.itemId === 'skin-crown' ? (
+                                  <AnimatedRoyalCrown className="w-7 h-7" animate={false} />
+                                ) : typeof item.icon === 'string' || typeof item.icon === 'number' ? item.icon : '🎁'}
                               </div>
                               {active && (
                                 <span className="absolute -top-1 -right-1 flex h-2 w-2">

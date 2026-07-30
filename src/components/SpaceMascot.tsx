@@ -25,6 +25,7 @@ interface SpaceMascotProps {
   isPinned: boolean;
   onTogglePin: () => void;
   isNearItem?: boolean;
+  hat?: string;
 }
 
 const VIBRATION_PATTERNS = {
@@ -53,7 +54,8 @@ export const SpaceMascot = React.memo(({
   setShowSizeCustomizer,
   isPinned,
   onTogglePin,
-  isNearItem
+  isNearItem,
+  hat = 'none'
 }: SpaceMascotProps) => {
   const [message, setMessage] = useState<string | null>(null);
   const [showMascot, setShowMascot] = useState(false);
@@ -288,6 +290,7 @@ export const SpaceMascot = React.memo(({
               </AnimatePresence>
               <Mascot 
                 mood={onFire ? 'boiling' : isSleeping ? 'neutral' : 'happy'} 
+                hat={hat}
                 className={`w-full h-full ${isSleeping ? 'opacity-80 grayscale-[0.5]' : ''}`}
                 isSitting={!isDragging}
               />

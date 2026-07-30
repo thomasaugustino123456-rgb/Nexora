@@ -48,6 +48,15 @@ export interface PlantProgress {
   isThirsty: boolean;
 }
 
+export const UNLOCKED_PRO_UIDS = new Set<string>([
+  "Gx9MLUcFrFRc3OHQFEhGojKIijI3", // Unlocked 1-Week Pro Tier Subscription
+]);
+
+export function isUserProUnlocked(uid?: string | null): boolean {
+  if (!uid) return false;
+  return UNLOCKED_PRO_UIDS.has(uid);
+}
+
 export interface UserSettings {
   pushupsGoal: number;
   waterGoal: number;
@@ -80,6 +89,7 @@ export interface UserSettings {
   challengeCountGoal?: number;
   inventory?: LibraryItem[];
   isDogSoundPackActive?: boolean;
+  hasUltimateBadge?: boolean;
   league?: string;
   location?: string;
   timezone?: string;
@@ -157,6 +167,7 @@ export interface ShopItem {
   effect: 'streak-protection' | 'double-points' | 'skin' | 'gift' | 'sound-pack' | 'music' | 'power-up';
   icon: string;
   rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  proOnly?: boolean;
 }
 
 export interface LibraryItem {
@@ -237,6 +248,7 @@ export interface UserStats {
   waterDrank?: number;
   lifetimeWaterCompletions?: number;
   hasClaimedXpChest?: boolean;
+  lastXpChestClaimDate?: string;
 }
 
 export interface LeaderboardEntry {
@@ -249,6 +261,8 @@ export interface LeaderboardEntry {
   weeklyPoints: number;
   level: number;
   league: string;
+  hasUltimateBadge?: boolean;
+  purchasedItems?: string[];
 }
 
 export interface CustomPlan {
