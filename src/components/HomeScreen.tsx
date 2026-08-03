@@ -16,6 +16,21 @@ import { GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
 import { MascotAIWrapper } from './SuspenseWrappers';
 import { formatDistanceToNow } from 'date-fns';
 
+export function formatCompactNumber(num: number | undefined | null): string {
+  if (num === undefined || num === null || isNaN(num)) return "0";
+  if (num < 1000) return num.toString();
+  if (num < 1000000) {
+    const formatted = (num / 1000).toFixed(1);
+    return formatted.endsWith('.0') ? `${Math.floor(num / 1000)}K` : `${formatted}K`;
+  }
+  if (num < 1000000000) {
+    const formatted = (num / 1000000).toFixed(1);
+    return formatted.endsWith('.0') ? `${Math.floor(num / 1000000)}M` : `${formatted}M`;
+  }
+  const formatted = (num / 1000000000).toFixed(1);
+  return formatted.endsWith('.0') ? `${Math.floor(num / 1000000000)}B` : `${formatted}B`;
+}
+
 function CountdownToMidnight() {
   const [timeLeft, setTimeLeft] = useState('');
 
@@ -250,8 +265,8 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                     <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/15 flex-shrink-0">
                       <Flame size={14} strokeWidth={2.2} />
                     </div>
-                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible">
-                      {stats.streak}
+                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible" title={`${stats.streak} days`}>
+                      {formatCompactNumber(stats.streak)}
                     </span>
                   </div>
                 </motion.div>
@@ -269,8 +284,8 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                     <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#69C496] to-[#58B383] flex items-center justify-center text-white shadow-md shadow-[#69C496]/15 flex-shrink-0">
                       <Star size={14} strokeWidth={2.2} />
                     </div>
-                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible">
-                      {stats.xp || 0}
+                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible" title={`${stats.xp || 0} XP`}>
+                      {formatCompactNumber(stats.xp || 0)}
                     </span>
                   </div>
                 </motion.div>
@@ -288,8 +303,8 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                     <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-500/15 flex-shrink-0">
                       <Coins size={14} strokeWidth={2.2} />
                     </div>
-                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible">
-                      {stats.coins || 0}
+                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible" title={`${stats.coins || 0} Coins`}>
+                      {formatCompactNumber(stats.coins || 0)}
                     </span>
                   </div>
                 </motion.div>

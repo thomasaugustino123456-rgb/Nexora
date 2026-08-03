@@ -170,21 +170,31 @@ function getBestPlantState(...candidates: (any)[]): any {
     };
   }
 
+  // Union of ALL unlockedTypes across ALL candidates so no unlocked plants are EVER lost
   const allUnlocked = Array.from(new Set(
     valid.flatMap(c => Array.isArray(c.unlockedTypes) ? c.unlockedTypes : ['sprout'])
   ));
 
   const best = valid.reduce((acc, curr) => {
+    const currUnlockedCount = Array.isArray(curr.unlockedTypes) ? curr.unlockedTypes.length : 1;
+    const accUnlockedCount = Array.isArray(acc.unlockedTypes) ? acc.unlockedTypes.length : 1;
+
+    // Never pick a default sprout stage <= 1 over a non-sprout or higher stage or more unlocked plant
+    const currIsDefault = curr.type === 'sprout' && (curr.stage || 0) <= 1 && currUnlockedCount <= 1;
+    const accIsDefault = acc.type === 'sprout' && (acc.stage || 0) <= 1 && accUnlockedCount <= 1;
+
+    if (currIsDefault && !accIsDefault) return acc;
+    if (!currIsDefault && accIsDefault) return curr;
+
     if (!curr.isDead && acc.isDead) return curr;
     if (curr.isDead && !acc.isDead) return acc;
 
-    const currScore = (curr.stage || 0) * 1000 + (curr.growthPoints || 0);
-    const accScore = (acc.stage || 0) * 1000 + (acc.growthPoints || 0);
+    // Compare progress score + unlocked types count
+    const currScore = (curr.stage || 0) * 1000 + (curr.growthPoints || 0) + (currUnlockedCount * 10000);
+    const accScore = (acc.stage || 0) * 1000 + (acc.growthPoints || 0) + (accUnlockedCount * 10000);
 
     if (currScore > accScore) return curr;
     if (accScore > currScore) return acc;
-
-    if ((curr.unlockedTypes?.length || 0) > (acc.unlockedTypes?.length || 0)) return curr;
 
     return acc;
   }, valid[0]);
@@ -202,15 +212,27 @@ function getMergedPlantsProgress(...progressMaps: (Record<string, any> | undefin
     for (const [key, prog] of Object.entries(map)) {
       if (!prog || typeof prog !== 'object') continue;
       if (!merged[key]) {
-        merged[key] = prog;
+        merged[key] = { ...prog };
       } else {
         const existing = merged[key];
         const progScore = (prog.stage || 0) * 1000 + (prog.growthPoints || 0);
         const existScore = (existing.stage || 0) * 1000 + (existing.growthPoints || 0);
         if (!prog.isDead && existing.isDead) {
-          merged[key] = prog;
-        } else if (progScore > existScore) {
-          merged[key] = prog;
+          merged[key] = { ...existing, ...prog };
+        } else if (progScore >= existScore) {
+          merged[key] = {
+            ...existing,
+            ...prog,
+            stage: Math.max(existing.stage || 0, prog.stage || 0),
+            growthPoints: (prog.stage || 0) > (existing.stage || 0) ? (prog.growthPoints || 0) : Math.max(existing.growthPoints || 0, prog.growthPoints || 0),
+            unlocked: Boolean(existing.unlocked || prog.unlocked),
+          };
+        } else {
+          merged[key] = {
+            ...prog,
+            ...existing,
+            unlocked: Boolean(existing.unlocked || prog.unlocked),
+          };
         }
       }
     }
@@ -382,54 +404,32 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
     ? dbSettings.mascotPinnedItemId
     : (localSettings.mascotPinnedItemId !== undefined ? localSettings.mascotPinnedItemId : null);
 
-  // Merge plantState - if one is empty but the other has progress, use the one with progress.
-  // Growth stage and points indicate progress.
-  // Special rule: if one is alive (isDead === false) and the other is dead (isDead === true), ALWAYS prefer the alive one!
-  const dbPlant = dbSettings.plantState;
-  const localPlant = localSettings.plantState;
-  if (dbPlant && localPlant) {
-    if (dbPlant.type !== localPlant.type) {
-      // Different plant types! We must compare their lastCheckDate to see which one is the most recent switch/user action.
-      const dbTime = dbPlant.lastCheckDate ? new Date(dbPlant.lastCheckDate).getTime() : 0;
-      const localTime = localPlant.lastCheckDate ? new Date(localPlant.lastCheckDate).getTime() : 0;
-      merged.plantState = localTime >= dbTime ? localPlant : dbPlant;
-    } else {
-      // Same plant type. Merge based on death status and progress.
-      const dbIsDead = !!dbPlant.isDead;
-      const localIsDead = !!localPlant.isDead;
-      if (dbIsDead !== localIsDead) {
-        merged.plantState = !localIsDead ? localPlant : dbPlant;
+  // Merge plantState safely so unlockedTypes and higher plant progress are preserved
+  merged.plantState = getBestPlantState(dbSettings.plantState, localSettings.plantState, defaultSettings.plantState);
+
+  // Merge plantsProgress using getMergedPlantsProgress
+  const mergedPlantsProgress = getMergedPlantsProgress(dbSettings.plantsProgress, localSettings.plantsProgress);
+
+  // Ensure every unlocked plant type has a progress object initialized in plantsProgress
+  if (merged.plantState && Array.isArray(merged.plantState.unlockedTypes)) {
+    merged.plantState.unlockedTypes.forEach((typeKey: string) => {
+      if (!mergedPlantsProgress[typeKey]) {
+        mergedPlantsProgress[typeKey] = {
+          stage: typeKey === merged.plantState.type ? (merged.plantState.stage || 0) : 0,
+          growthPoints: typeKey === merged.plantState.type ? (merged.plantState.growthPoints || 0) : 0,
+          lastGrowthDate: null,
+          lastCheckDate: new Date().toISOString(),
+          health: 100,
+          isDead: false,
+          isThirsty: false,
+          unlocked: true,
+        };
       } else {
-        const dbProgress = (dbPlant.stage || 0) * 1000 + (dbPlant.growthPoints || 0);
-        const localProgress = (localPlant.stage || 0) * 1000 + (localPlant.growthPoints || 0);
-        merged.plantState = localProgress >= dbProgress ? localPlant : dbPlant;
+        mergedPlantsProgress[typeKey].unlocked = true;
       }
-    }
-  } else {
-    merged.plantState = dbPlant || localPlant;
+    });
   }
 
-  // Merge plantsProgress
-  const dbPlantsProgress = dbSettings.plantsProgress || {};
-  const localPlantsProgress = localSettings.plantsProgress || {};
-  const mergedPlantsProgress: any = { ...dbPlantsProgress };
-  for (const key of Object.keys(localPlantsProgress)) {
-    const localProg = localPlantsProgress[key as any];
-    const dbProg = dbPlantsProgress[key as any];
-    if (localProg && dbProg) {
-      const dbIsDead = !!dbProg.isDead;
-      const localIsDead = !!localProg.isDead;
-      if (dbIsDead !== localIsDead) {
-        mergedPlantsProgress[key] = !localIsDead ? localProg : dbProg;
-      } else {
-        const localProgVal = (localProg.stage || 0) * 1000 + (localProg.growthPoints || 0);
-        const dbProgVal = (dbProg.stage || 0) * 1000 + (dbProg.growthPoints || 0);
-        mergedPlantsProgress[key] = localProgVal >= dbProgVal ? localProg : dbProg;
-      }
-    } else {
-      mergedPlantsProgress[key] = dbProg || localProg;
-    }
-  }
   merged.plantsProgress = mergedPlantsProgress;
 
   return merged;
@@ -1747,7 +1747,7 @@ export function useNexoraData(
               }
             }
 
-            const writePayload = {
+            const writePayload = cleanPayload({
               name: settings.displayName || user.displayName || 'Champion',
               displayName: settings.displayName || user.displayName || 'Champion',
               photoFileName: settings.profilePic || user.photoURL || '',
@@ -1764,9 +1764,9 @@ export function useNexoraData(
               isTodayCompleted: dailyProgress.completed,
               updatedAt: serverTimestamp(),
               onboardingCompleted: settings.onboardingCompleted || false,
-            };
+            });
 
-            const rewardsPayload = {
+            const rewardsPayload = cleanPayload({
               uid: user.uid,
               userName: settings.displayName || user.displayName || 'Champion',
               streak: stats.streak || 0,
@@ -1780,9 +1780,9 @@ export function useNexoraData(
               pointsByCategory: stats.pointsByCategory || { physical: 0, mental: 0, creative: 0 },
               updatedAt: serverTimestamp(),
               finishedAt: new Date().toISOString(),
-            };
+            });
 
-            const plantSectionPayload = {
+            const plantSectionPayload = cleanPayload({
               uid: user.uid,
               plantOnboardingCompleted: settings.plantOnboardingCompleted || false,
               plantState: settings.plantState || null,
@@ -1791,14 +1791,14 @@ export function useNexoraData(
               purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
               activeEcosystemItemIds: settings.activeEcosystemItemIds || [],
               updatedAt: serverTimestamp(),
-            };
+            });
 
-            const onboardingPayload = {
+            const onboardingPayload = cleanPayload({
               uid: user.uid,
               newUsersOnboardingCompleted: settings.onboardingCompleted || false,
               plantSectionOnboardingCompleted: settings.plantOnboardingCompleted || false,
               updatedAt: serverTimestamp(),
-            };
+            });
 
             const rewardsDocRef = doc(db, "users", user.uid, "rewards", "main");
             const plantSectionDocRef = doc(db, "users", user.uid, "plant_section", "main");
@@ -1820,17 +1820,26 @@ export function useNexoraData(
             console.log("9. The exact writePayload being sent to Firestore:", JSON.stringify(writePayload));
             console.log("======================================");
 
+            // Core Document Write
             await setDoc(userRef, writePayload, { merge: true });
             console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote core document to: ${userRef.path}`);
 
-            await setDoc(userSingularRef, writePayload, { merge: true });
-            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote singular core document to: ${userSingularRef.path}`);
+            try {
+              await setDoc(userSingularRef, writePayload, { merge: true });
+              console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote singular core document to: ${userSingularRef.path}`);
+            } catch (uSingErr) {
+              console.warn(`[PERSISTENCE AUDIT] Non-critical error writing singular user doc:`, uSingErr);
+            }
 
-            await setDoc(rewardsDocRef, rewardsPayload, { merge: true });
-            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote rewards subdocument to: ${rewardsDocRef.path}`);
+            try {
+              await setDoc(rewardsDocRef, rewardsPayload, { merge: true });
+              console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote rewards subdocument to: ${rewardsDocRef.path}`);
+            } catch (rErr) {
+              console.warn(`[PERSISTENCE AUDIT] Non-critical error writing rewards subdoc:`, rErr);
+            }
 
             const statsMainDocRef = doc(db, "users", user.uid, "stats", "main");
-            const statsMainPayload = {
+            const statsMainPayload = cleanPayload({
               streak: stats.streak || 0,
               bestStreak: stats.bestStreak || 0,
               totalPoints: stats.totalPoints || 0,
@@ -1844,24 +1853,44 @@ export function useNexoraData(
               trophies: stats.trophies || [],
               achievements: stats.achievements || [],
               drawings: stats.drawings || []
-            };
-            await setDoc(statsMainDocRef, statsMainPayload, { merge: true });
-            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote stats main subdocument to: ${statsMainDocRef.path}`);
+            });
+            try {
+              await setDoc(statsMainDocRef, statsMainPayload, { merge: true });
+              console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote stats main subdocument to: ${statsMainDocRef.path}`);
+            } catch (smErr) {
+              console.warn(`[PERSISTENCE AUDIT] Non-critical error writing stats main subdoc:`, smErr);
+            }
 
-            await setDoc(plantSectionDocRef, plantSectionPayload, { merge: true });
-            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote plant section subdocument to: ${plantSectionDocRef.path}`);
+            try {
+              await setDoc(plantSectionDocRef, plantSectionPayload, { merge: true });
+              console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote plant section subdocument to: ${plantSectionDocRef.path}`);
+            } catch (psErr) {
+              console.warn(`[PERSISTENCE AUDIT] Non-critical error writing plant section subdoc:`, psErr);
+            }
 
-            await setDoc(onboardingDocRef, onboardingPayload, { merge: true });
-            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote onboarding subdocument to: ${onboardingDocRef.path}`);
+            try {
+              await setDoc(onboardingDocRef, onboardingPayload, { merge: true });
+              console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote onboarding subdocument to: ${onboardingDocRef.path}`);
+            } catch (obErr) {
+              console.warn(`[PERSISTENCE AUDIT] Non-critical error writing onboarding doc:`, obErr);
+            }
 
-            await setDoc(onboardingSubdocRef, onboardingPayload, { merge: true });
-            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote onboarding subcollection document to: ${onboardingSubdocRef.path}`);
+            try {
+              await setDoc(onboardingSubdocRef, onboardingPayload, { merge: true });
+              console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote onboarding subcollection document to: ${onboardingSubdocRef.path}`);
+            } catch (obsErr) {
+              console.warn(`[PERSISTENCE AUDIT] Non-critical error writing onboarding subdoc:`, obsErr);
+            }
             
             // Top-level /rewards/{user.uid}
-            const rewardsTopRef = doc(db, "rewards", user.uid);
-            await setDoc(rewardsTopRef, rewardsPayload, { merge: true });
+            try {
+              const rewardsTopRef = doc(db, "rewards", user.uid);
+              await setDoc(rewardsTopRef, rewardsPayload, { merge: true });
+            } catch (rtErr) {
+              console.warn(`[PERSISTENCE AUDIT] Non-critical error writing top rewards doc:`, rtErr);
+            }
 
-            // Top-level /rank/{user.uid}
+            // Top-level /rank/{user.uid} and /leaderboard/{user.uid}
             const rankDocRef = doc(db, "rank", user.uid);
             const currentMaxPoints = Math.max(
               stats.weeklyPoints || 0,
@@ -1869,7 +1898,7 @@ export function useNexoraData(
               stats.totalPoints || 0,
               stats.xp || 0
             );
-            const rankPayload = {
+            const rankPayload = cleanPayload({
               uid: user.uid,
               userId: user.uid,
               name: settings.displayName || user.displayName || 'Champion',
@@ -1885,98 +1914,127 @@ export function useNexoraData(
               streak: stats.streak || 0,
               level: stats.level || Math.floor(currentMaxPoints / 100) + 1,
               updatedAt: serverTimestamp(),
-            };
+            });
             if (!settings.proTestActive) {
-              await setDoc(rankDocRef, rankPayload, { merge: true });
+              try {
+                await setDoc(rankDocRef, rankPayload, { merge: true });
+              } catch (rkErr) {
+                console.warn(`[PERSISTENCE AUDIT] Non-critical error writing rank doc:`, rkErr);
+              }
 
               // Top-level /leaderboard/{user.uid}
-              const leaderboardTopRef = doc(db, "leaderboard", user.uid);
-              await setDoc(leaderboardTopRef, rankPayload, { merge: true });
+              try {
+                const leaderboardTopRef = doc(db, "leaderboard", user.uid);
+                await setDoc(leaderboardTopRef, rankPayload, { merge: true });
+                console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote leaderboard document to: ${leaderboardTopRef.path}`);
+              } catch (lbErr: any) {
+                console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Failed to write leaderboard document to: leaderboard/${user.uid}. Error:`, lbErr);
+              }
             }
 
             // Top-level /notebooks/{user.uid}
-            const notebookRef = doc(db, "notebooks", user.uid);
-            await setDoc(notebookRef, {
-              uid: user.uid,
-              userId: user.uid,
-              userName: settings.displayName || user.displayName || 'Champion',
-              userEmail: user.email || `${user.uid}@nexora.app`,
-              notes: stats.gratitudeEntries || [],
-              gratitudeEntries: stats.gratitudeEntries || [],
-              drawings: stats.drawings || [],
-              updatedAt: serverTimestamp(),
-            }, { merge: true });
+            try {
+              const notebookRef = doc(db, "notebooks", user.uid);
+              await setDoc(notebookRef, cleanPayload({
+                uid: user.uid,
+                userId: user.uid,
+                userName: settings.displayName || user.displayName || 'Champion',
+                userEmail: user.email || `${user.uid}@nexora.app`,
+                notes: stats.gratitudeEntries || [],
+                gratitudeEntries: stats.gratitudeEntries || [],
+                drawings: stats.drawings || [],
+                updatedAt: serverTimestamp(),
+              }), { merge: true });
+            } catch (nbErr) {
+              console.warn(`[PERSISTENCE AUDIT] Non-critical error writing notebooks doc:`, nbErr);
+            }
 
             // Top-level /shop/{user.uid} and /shop_purchases/{user.uid}
-            const shopDocRef = doc(db, "shop", user.uid);
-            const shopPurchasesDocRef = doc(db, "shop_purchases", user.uid);
-            const userShopDocRef = doc(db, "users", user.uid, "shop", "main");
-            const shopPayload = {
-              uid: user.uid,
-              userId: user.uid,
-              userName: settings.displayName || user.displayName || 'Champion',
-              userEmail: user.email || `${user.uid}@nexora.app`,
-              purchasedItems: settings.purchasedItems || [],
-              inventory: settings.inventory || [],
-              purchasedHouseItemIds: settings.purchasedHouseItemIds || [],
-              purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
-              updatedAt: serverTimestamp(),
-            };
-            await setDoc(shopDocRef, shopPayload, { merge: true });
-            await setDoc(shopPurchasesDocRef, shopPayload, { merge: true });
-            await setDoc(userShopDocRef, shopPayload, { merge: true });
+            try {
+              const shopDocRef = doc(db, "shop", user.uid);
+              const shopPurchasesDocRef = doc(db, "shop_purchases", user.uid);
+              const userShopDocRef = doc(db, "users", user.uid, "shop", "main");
+              const shopPayload = cleanPayload({
+                uid: user.uid,
+                userId: user.uid,
+                userName: settings.displayName || user.displayName || 'Champion',
+                userEmail: user.email || `${user.uid}@nexora.app`,
+                purchasedItems: settings.purchasedItems || [],
+                inventory: settings.inventory || [],
+                purchasedHouseItemIds: settings.purchasedHouseItemIds || [],
+                purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
+                updatedAt: serverTimestamp(),
+              });
+              await setDoc(shopDocRef, shopPayload, { merge: true });
+              await setDoc(shopPurchasesDocRef, shopPayload, { merge: true });
+              await setDoc(userShopDocRef, shopPayload, { merge: true });
+            } catch (spErr) {
+              console.warn(`[PERSISTENCE AUDIT] Non-critical error writing shop docs:`, spErr);
+            }
 
             // 1. Plants Collection Sync
-            const plantsDocRef = doc(db, "plants", user.uid);
-            const plantsPayload = {
-              userId: user.uid,
-              userName: settings.displayName || user.displayName || 'Champion',
-              userEmail: user.email || `${user.uid}@nexora.app`,
-              plantState: settings.plantState || null,
-              plantsProgress: settings.plantsProgress || {},
-              gardenState: gardenState || null,
-              seedsInventory: gardenState?.inventory || {},
-              purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
-              lastLuckySeedDrop: gardenState?.pendingLootSeed || null,
-              updatedAt: serverTimestamp()
-            };
-            await setDoc(plantsDocRef, plantsPayload, { merge: true });
-            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote plants collection to: ${plantsDocRef.path}`);
+            try {
+              const plantsDocRef = doc(db, "plants", user.uid);
+              const plantsPayload = cleanPayload({
+                userId: user.uid,
+                userName: settings.displayName || user.displayName || 'Champion',
+                userEmail: user.email || `${user.uid}@nexora.app`,
+                plantState: settings.plantState || null,
+                plantsProgress: settings.plantsProgress || {},
+                gardenState: gardenState || null,
+                seedsInventory: gardenState?.inventory || {},
+                purchasedEcosystemItemIds: settings.purchasedEcosystemItemIds || [],
+                lastLuckySeedDrop: gardenState?.pendingLootSeed || null,
+                updatedAt: serverTimestamp()
+              });
+              await setDoc(plantsDocRef, plantsPayload, { merge: true });
+              console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote plants collection to: ${plantsDocRef.path}`);
+            } catch (plErr) {
+              console.warn(`[PERSISTENCE AUDIT] Non-critical error writing plants doc:`, plErr);
+            }
 
             // 2. Stats Collection Sync
-            const statsDocRef = doc(db, "stats", user.uid);
-            const statsPayload = {
-              userId: user.uid,
-              userName: settings.displayName || user.displayName || 'Champion',
-              userEmail: user.email || `${user.uid}@nexora.app`,
-              stats: stats,
-              dailyProgress: dailyProgress,
-              updatedAt: serverTimestamp()
-            };
-            await setDoc(statsDocRef, statsPayload, { merge: true });
-            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote stats collection to: ${statsDocRef.path}`);
+            try {
+              const statsDocRef = doc(db, "stats", user.uid);
+              const statsPayload = cleanPayload({
+                userId: user.uid,
+                userName: settings.displayName || user.displayName || 'Champion',
+                userEmail: user.email || `${user.uid}@nexora.app`,
+                stats: stats,
+                dailyProgress: dailyProgress,
+                updatedAt: serverTimestamp()
+              });
+              await setDoc(statsDocRef, statsPayload, { merge: true });
+              console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote stats collection to: ${statsDocRef.path}`);
+            } catch (stErr) {
+              console.warn(`[PERSISTENCE AUDIT] Non-critical error writing stats collection doc:`, stErr);
+            }
 
             // 3. Library Collection Sync
-            const libraryDocRef = doc(db, "library", user.uid);
-            const userLibraryDocRef = doc(db, "users", user.uid, "library", "main");
-            const libraryPayload = {
-              uid: user.uid,
-              userId: user.uid,
-              userName: settings.displayName || user.displayName || 'Champion',
-              userEmail: user.email || `${user.uid}@nexora.app`,
-              inventory: settings.inventory || [],
-              purchasedItems: settings.purchasedItems || [],
-              savedVideos: settings.savedVideoIds || [],
-              savedVideoIds: settings.savedVideoIds || [],
-              savedTrophyIds: settings.savedTrophyIds || [],
-              savedDrawings: stats.drawings || [],
-              savedChallengeIds: settings.savedChallengeIds || [],
-              savedPostIds: settings.savedPostIds || [],
-              updatedAt: serverTimestamp()
-            };
-            await setDoc(libraryDocRef, libraryPayload, { merge: true });
-            await setDoc(userLibraryDocRef, libraryPayload, { merge: true });
-            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote library collection to: ${libraryDocRef.path}`);
+            try {
+              const libraryDocRef = doc(db, "library", user.uid);
+              const userLibraryDocRef = doc(db, "users", user.uid, "library", "main");
+              const libraryPayload = cleanPayload({
+                uid: user.uid,
+                userId: user.uid,
+                userName: settings.displayName || user.displayName || 'Champion',
+                userEmail: user.email || `${user.uid}@nexora.app`,
+                inventory: settings.inventory || [],
+                purchasedItems: settings.purchasedItems || [],
+                savedVideos: settings.savedVideoIds || [],
+                savedVideoIds: settings.savedVideoIds || [],
+                savedTrophyIds: settings.savedTrophyIds || [],
+                savedDrawings: stats.drawings || [],
+                savedChallengeIds: settings.savedChallengeIds || [],
+                savedPostIds: settings.savedPostIds || [],
+                updatedAt: serverTimestamp()
+              });
+              await setDoc(libraryDocRef, libraryPayload, { merge: true });
+              await setDoc(userLibraryDocRef, libraryPayload, { merge: true });
+              console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote library collection to: ${libraryDocRef.path}`);
+            } catch (libErr) {
+              console.warn(`[PERSISTENCE AUDIT] Non-critical error writing library docs:`, libErr);
+            }
 
             console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${userRef.path}`);
             const postSnap = await getDoc(userRef);

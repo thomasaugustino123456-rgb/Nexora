@@ -2027,14 +2027,38 @@ export default function App() {
         lastCheckDate: new Date().toISOString(),
         health: 100,
         isThirsty: false,
+        unlocked: true,
       };
+
+      const updatedPlantsProgress = {
+        ...plants,
+        [type]: updatedPlantProgress,
+      };
+
+      // Ensure every unlocked plant type is preserved in plantsProgress dictionary
+      newUnlocked.forEach((uType) => {
+        if (!updatedPlantsProgress[uType]) {
+          updatedPlantsProgress[uType] = {
+            stage: 0,
+            growthPoints: 0,
+            lastGrowthDate: null,
+            lastCheckDate: new Date().toISOString(),
+            health: 100,
+            isDead: false,
+            isThirsty: false,
+            unlocked: true,
+          };
+        } else {
+          updatedPlantsProgress[uType] = {
+            ...updatedPlantsProgress[uType],
+            unlocked: true,
+          };
+        }
+      });
 
       return {
         ...prev,
-        plantsProgress: {
-          ...plants,
-          [type]: updatedPlantProgress,
-        },
+        plantsProgress: updatedPlantsProgress,
         plantState: {
           ...prev.plantState,
           type,
@@ -2443,9 +2467,20 @@ export default function App() {
     imageUrl?: string;
   } | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
+  const [isUpdateSnoozed, setIsUpdateSnoozed] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState<string | null>(
     localStorage.getItem("nexora_last_update_time"),
   );
+
+  const handleSnoozeUpdate = () => {
+    vibrate(VIBRATION_PATTERNS.LIGHT);
+    setIsUpdateSnoozed(true);
+    setShowUpdatePopup(false);
+    showToast(
+      "Update Snoozed! Tap '⚡ UPDATE' in the top bar anytime when you finish your task.",
+      "info",
+    );
+  };
 
   // Background Music Logic (Only plays when manually started by user to prevent auto-play on reload/login)
   useEffect(() => {
@@ -2645,21 +2680,25 @@ export default function App() {
               dismissedVersion,
             );
 
-            if (dismissedVersion !== data.version) {
+            if (data.version && data.version !== currentAppVersion) {
               console.log(
-                "PWA: New version or unseen update detected:",
+                "PWA: New version detected:",
                 data.version,
               );
               setUpdateInfo(data);
-              setShowUpdatePopup(true);
 
-              // If it's a new version, we should also ensure the badge is set immediately
+              // Show popup if version is new and user hasn't dismissed or snoozed it in this session
+              if (dismissedVersion !== data.version && !isUpdateSnoozed) {
+                setShowUpdatePopup(true);
+              }
+
+              // Set badge
               if ("setAppBadge" in navigator) {
                 console.log("PWA: Setting initial update badge");
                 (navigator as any).setAppBadge(1).catch(console.error);
               }
             } else {
-              console.log("PWA: No new update or already dismissed");
+              console.log("PWA: No new update or running latest version");
             }
           } else {
             const text = await response.text();
@@ -2699,31 +2738,12 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Automatic update reload logic with safety checks for active challenges (Official or User-Created)
+  // Log update status - User retains total control over when to apply updates via Update Now / Update Later
   useEffect(() => {
     if (!updateInfo || !updateInfo.version) return;
-    
-    // Only auto-reload if the fetched version is indeed newer than the current version running
     if (updateInfo.version === currentAppVersion) return;
-
-    // Check if the user is currently taking App Official Challenges or User Created Challenges plan
-    // If activeScreen is "challenge" or there's an active challengeStep, do NOT reload right now.
-    const isInChallenge = activeScreen === "challenge" || challengeStep !== null;
-
-    if (!isInChallenge) {
-      console.log(`PWA: Automatic Reload Triggered! Updating to v${updateInfo.version}`);
-      showToast("🚀 Installing Nexora Update... Reloading!", "info");
-      
-      // Delay slightly so the toast is visible to the user
-      const timeout = setTimeout(() => {
-        handleUpdate(updateInfo);
-      }, 1500);
-
-      return () => clearTimeout(timeout);
-    } else {
-      console.log("PWA: Update is pending but deferred because user is actively taking a challenge.");
-    }
-  }, [updateInfo, activeScreen, challengeStep]);
+    console.log(`PWA: Update v${updateInfo.version} available! User can click 'Update Now' or tap '⚡ UPDATE' in the top bar anytime.`);
+  }, [updateInfo, currentAppVersion]);
 
   const sendTestNotification = async () => {
     // Diagnose health first if needed
@@ -3226,13 +3246,83 @@ export default function App() {
     ];
   });
 
+  // Offline Pending Custom Plans Helpers
+  const getPendingCustomPlans = (): CustomPlan[] => {
+    try {
+      const saved = localStorage.getItem("nexora_pending_custom_plans");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.warn("Failed to read pending custom plans queue:", e);
+    }
+    return [];
+  };
+
+  const savePendingCustomPlans = (plans: CustomPlan[]) => {
+    try {
+      localStorage.setItem("nexora_pending_custom_plans", JSON.stringify(plans));
+    } catch (e) {
+      console.warn("Failed to write pending custom plans queue:", e);
+    }
+  };
+
+  const addPendingCustomPlan = (plan: CustomPlan) => {
+    const current = getPendingCustomPlans();
+    const filtered = current.filter((p) => p.id !== plan.id);
+    filtered.push(plan);
+    savePendingCustomPlans(filtered);
+  };
+
+  const removePendingCustomPlan = (planId: string) => {
+    const current = getPendingCustomPlans();
+    const updated = current.filter((p) => p.id !== planId);
+    savePendingCustomPlans(updated);
+  };
+
+  const syncPendingCustomPlans = useCallback(async (currentUserId: string) => {
+    if (typeof window !== "undefined" && !window.navigator.onLine) return;
+    const pending = getPendingCustomPlans();
+    const userPending = pending.filter((p) => !p.userId || p.userId === currentUserId);
+    if (userPending.length === 0) return;
+
+    for (const plan of userPending) {
+      try {
+        const planWithUser = { ...plan, userId: currentUserId };
+        const planRef = doc(db, "customPlans", plan.id);
+        await setDoc(planRef, planWithUser);
+        removePendingCustomPlan(plan.id);
+        console.log(`[Offline Sync] Synced custom plan "${plan.name}" to Firestore.`);
+      } catch (err) {
+        console.warn(`[Offline Sync] Could not sync custom plan "${plan.name}" yet:`, err);
+      }
+    }
+  }, []);
+
   const [customPlans, setCustomPlans] = useState<CustomPlan[]>(() => {
     try {
       const saved = localStorage.getItem("nexora_custom_plans_cache");
+      const pending = localStorage.getItem("nexora_pending_custom_plans");
+      let cachedPlans: CustomPlan[] = [];
+      let pendingPlans: CustomPlan[] = [];
+
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) cachedPlans = parsed;
       }
+      if (pending) {
+        const parsed = JSON.parse(pending);
+        if (Array.isArray(parsed)) pendingPlans = parsed;
+      }
+
+      // Merge cached and pending offline plans uniquely by ID
+      const planMap = new Map<string, CustomPlan>();
+      cachedPlans.forEach((p) => planMap.set(p.id, p));
+      pendingPlans.forEach((p) => planMap.set(p.id, p));
+
+      const allPlans = Array.from(planMap.values());
+      if (allPlans.length > 0) return allPlans;
     } catch (e) {
       console.warn("Failed to read cached custom plans:", e);
     }
@@ -3241,6 +3331,9 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
+      // Background sync any pending offline plans if connected
+      syncPendingCustomPlans(user.uid);
+
       const q = query(
         collection(db, "customPlans"),
         where("userId", "==", user.uid),
@@ -3248,18 +3341,29 @@ export default function App() {
       const unsubscribe = onSnapshot(
         q,
         (snapshot) => {
-          const plans = snapshot.docs.map(
+          const firestorePlans = snapshot.docs.map(
             (doc) => ({ id: doc.id, ...doc.data() }) as CustomPlan,
           );
+
+          // Preserve pending offline plans that haven't hit Firestore yet
+          const pendingPlans = getPendingCustomPlans().filter(
+            (p) => !p.userId || p.userId === user.uid,
+          );
+          const firestoreIds = new Set(firestorePlans.map((p) => p.id));
+          const missingPending = pendingPlans.filter((p) => !firestoreIds.has(p.id));
+
+          const combinedPlans = [...missingPending, ...firestorePlans];
+
           // Sort in memory to bypass composite index constraints
-          plans.sort((a, b) => {
+          combinedPlans.sort((a, b) => {
             const timeA = a.createdAt ? (typeof a.createdAt === "string" ? new Date(a.createdAt).getTime() : (typeof a.createdAt === "object" && a.createdAt && "seconds" in a.createdAt ? (a.createdAt as any).seconds * 1000 : 0)) : 0;
             const timeB = b.createdAt ? (typeof b.createdAt === "string" ? new Date(b.createdAt).getTime() : (typeof b.createdAt === "object" && b.createdAt && "seconds" in b.createdAt ? (b.createdAt as any).seconds * 1000 : 0)) : 0;
             return timeB - timeA;
           });
-          setCustomPlans(plans);
+
+          setCustomPlans(combinedPlans);
           try {
-            localStorage.setItem("nexora_custom_plans_cache", JSON.stringify(plans));
+            localStorage.setItem("nexora_custom_plans_cache", JSON.stringify(combinedPlans));
           } catch (e) {
             console.warn("Failed to write custom plans cache:", e);
           }
@@ -3272,9 +3376,19 @@ export default function App() {
           }
         },
       );
-      return () => unsubscribe();
+
+      // Listener for when browser reconnects to internet
+      const handleOnline = () => {
+        syncPendingCustomPlans(user.uid);
+      };
+      window.addEventListener("online", handleOnline);
+
+      return () => {
+        unsubscribe();
+        window.removeEventListener("online", handleOnline);
+      };
     }
-  }, [user]);
+  }, [user, syncPendingCustomPlans]);
 
   // Daily & Custom Plan Reminder Timer
   useEffect(() => {
@@ -3492,28 +3606,61 @@ export default function App() {
 
   const handleSaveCustomPlan = async (plan: CustomPlan) => {
     if (!user) return;
+    const planWithUser = { ...plan, userId: user.uid };
+
+    // 1. Instantly update React state & cache so the new challenge plan appears immediately
+    setCustomPlans((prev) => {
+      const updated = [planWithUser, ...prev.filter((p) => p.id !== planWithUser.id)];
+      try {
+        localStorage.setItem("nexora_custom_plans_cache", JSON.stringify(updated));
+      } catch (e) {
+        console.warn("Failed to write custom plans cache:", e);
+      }
+      return updated;
+    });
+
+    // 2. Persist to pending offline sync queue so it persists if app reloads offline
+    addPendingCustomPlan(planWithUser);
+
+    showToast("Plan created successfully! 🎯", "success");
+    setActiveScreen("home");
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
+
+    // 3. Attempt Firestore write
     try {
-      const planWithUser = { ...plan, userId: user.uid };
       const planRef = doc(db, "customPlans", plan.id);
       await setDoc(planRef, planWithUser);
-      showToast("Plan created successfully!", "success");
-      setActiveScreen("home");
-      vibrate(VIBRATION_PATTERNS.SUCCESS);
+      // Success: remove from pending sync queue
+      removePendingCustomPlan(plan.id);
+      console.log(`[CustomPlan] Saved "${plan.name}" to Firestore successfully.`);
     } catch (error) {
-      console.error("Plan save error:", error);
-      showToast("Could not save plan bro. Check connection.", "error");
+      console.warn("[CustomPlan] Offline mode: saved locally and queued for auto-sync.", error);
       try {
         handleFirestoreError(error, OperationType.WRITE, "customPlans");
       } catch (e) {
         console.error("Firestore error handled:", e);
       }
-      // Force exit builder if it hangs on network
-      setActiveScreen("home");
     }
   };
 
   const handleDeleteCustomPlan = useCallback(async (planId: string) => {
     if (!user) return;
+
+    // 1. Immediately remove from React state & local cache
+    setCustomPlans((prev) => {
+      const updated = prev.filter((p) => p.id !== planId);
+      try {
+        localStorage.setItem("nexora_custom_plans_cache", JSON.stringify(updated));
+      } catch (e) {
+        console.warn("Failed to write custom plans cache on delete:", e);
+      }
+      return updated;
+    });
+
+    // 2. Remove from pending offline queue if present
+    removePendingCustomPlan(planId);
+
+    // 3. Attempt delete from Firestore
     try {
       await deleteDoc(doc(db, "customPlans", planId));
       showToast("Plan deleted", "info");
@@ -3528,6 +3675,11 @@ export default function App() {
 
   const handleClaimRankReward = async (rank: number, rewardCoins: number) => {
     if (!user) return;
+    if (!navigator.onLine) {
+      showToast("Internet connection required to claim Rank section rewards.", "error");
+      vibrate(VIBRATION_PATTERNS.ERROR);
+      return;
+    }
     const startOfWeekStr = new Date(
       new Date().setDate(new Date().getDate() - new Date().getDay())
     )
@@ -5386,6 +5538,20 @@ export default function App() {
                     </button>
                   )}
 
+                  {updateInfo && updateInfo.version !== currentAppVersion && (
+                    <button
+                      onClick={() => {
+                        if (settings.soundEnabled) play("header_switch");
+                        setShowUpdatePopup(true);
+                      }}
+                      className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 border border-emerald-300/40 animate-pulse flex items-center gap-1.5 shrink-0 hover:scale-105 active:scale-95 transition-all"
+                      title="Update Available! Click to review & install."
+                    >
+                      <RefreshCw size={13} className="animate-spin duration-3000" />
+                      <span>⚡ UPDATE v{updateInfo.version}</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => {
                       if (settings.soundEnabled) play("header_switch");
@@ -5984,58 +6150,65 @@ export default function App() {
                       settings={settings}
                       stats={stats}
                       onUpdateSettings={onUpdateSettings}
-                      onActivatePro={() => {
-                        onUpdateSettings({ isPro: true });
-                        showToast(
-                          "NEXORA PRO ACTIVATED! WELCOME TO THE LEGION! 🔥",
-                          "success",
-                        );
-                        vibrate(VIBRATION_PATTERNS.SUCCESS);
-                      }}
-                      onStartProTest={() => {
-                        const now = new Date();
-
-                        // 7-day cooldown check - Hardened with precise timestamp
-                        if (settings.proTestLastUsedAt) {
-                          const lastUsed = new Date(settings.proTestLastUsedAt);
-                          const msSince = now.getTime() - lastUsed.getTime();
-                          const daysSince = msSince / (1000 * 60 * 60 * 24);
-                          if (daysSince < 7) {
-                            const remainingDays = Math.ceil(7 - daysSince);
-                            showToast(
-                              `NEXORA RESTRICTION: BRO, WAIT ${remainingDays} MORE DAYS TO TEST AGAIN! ⏳`,
-                              "error",
-                            );
-                            vibrate(VIBRATION_PATTERNS.ERROR);
-                            return;
-                          }
+                      onStartProTest={async () => {
+                        if (!navigator.onLine) {
+                          showToast(
+                            "Internet connection required to verify trial eligibility.",
+                            "error",
+                          );
+                          vibrate(VIBRATION_PATTERNS.ERROR);
+                          return;
                         }
+                        try {
+                          const userDocRef = doc(db, "users", user.uid);
+                          const userSnap = await getDoc(userDocRef);
+                          const userData = userSnap.exists() ? userSnap.data() : null;
+                          const lastUsedStr = userData?.proTestLastUsedAt || userData?.settings?.proTestLastUsedAt || settings.proTestLastUsedAt;
 
-                        // Adjusted duration: 15 minutes for a balanced test experience
-                        const expiry = new Date(now.getTime() + 15 * 60 * 1000);
-                        const settingsUpdate = {
-                          proTestStartedAt: now.toISOString(),
-                          proTestExpiresAt: expiry.toISOString(),
-                          proTestLastUsedAt: now.toISOString(),
-                          proTestActive: true,
-                        };
-                        onUpdateSettings(settingsUpdate);
+                          if (lastUsedStr) {
+                            const lastUsed = new Date(lastUsedStr);
+                            const msSince = Date.now() - lastUsed.getTime();
+                            const daysSince = msSince / (1000 * 60 * 60 * 24);
+                            if (daysSince < 7) {
+                              const remainingDays = Math.ceil(7 - daysSince);
+                              showToast(
+                                `NEXORA RESTRICTION: Please wait ${remainingDays} more days before testing again! ⏳`,
+                                "error",
+                              );
+                              vibrate(VIBRATION_PATTERNS.ERROR);
+                              return;
+                            }
+                          }
 
-                        // CRITICAL: Force immediate sync to Firestore with originalStatsBeforeProTest snapshot
-                        if (user) {
-                          firestoreSetDoc(doc(db, "users", user.uid), settingsUpdate, {
-                            merge: true,
-                          }).catch((e) =>
-                            console.error("Pro Test immediate sync failed:", e),
+                          const now = new Date();
+                          const expiry = new Date(now.getTime() + 15 * 60 * 1000);
+                          const settingsUpdate = {
+                            proTestStartedAt: now.toISOString(),
+                            proTestExpiresAt: expiry.toISOString(),
+                            proTestLastUsedAt: now.toISOString(),
+                            proTestActive: true,
+                          };
+                          onUpdateSettings(settingsUpdate);
+
+                          if (user) {
+                            await firestoreSetDoc(doc(db, "users", user.uid), settingsUpdate, {
+                              merge: true,
+                            });
+                          }
+
+                          showToast(
+                            "PRO PROTOCOL ACTIVATED! 15 MINUTES OF UNLIMITED POWER! ⏳",
+                            "info",
+                          );
+                          vibrate(VIBRATION_PATTERNS.SUCCESS);
+                          setActiveScreen("home");
+                        } catch (err) {
+                          console.error("Trial verification error:", err);
+                          showToast(
+                            "Failed to verify trial status. Internet connection required.",
+                            "error",
                           );
                         }
-
-                        showToast(
-                          "PRO PROTOCOL ACTIVATED! 15 MINUTES OF UNLIMITED POWER! ⏳",
-                          "info",
-                        );
-                        vibrate(VIBRATION_PATTERNS.SUCCESS);
-                        setActiveScreen("home");
                       }}
                     />
                   </Suspense>
@@ -6579,6 +6752,10 @@ export default function App() {
                         onUpdateSettings((prev) => {
                           const currentType = prev.plantState?.type || "sprout";
                           const plants = prev.plantsProgress || {};
+                          const currentUnlocked = Array.from(new Set([
+                            ...(prev.plantState?.unlockedTypes || ["sprout"]),
+                            type
+                          ]));
                           
                           // Save current plant state to plantsProgress
                           const updatedPlants = {
@@ -6591,6 +6768,7 @@ export default function App() {
                               health: prev.plantState?.health ?? 100,
                               isDead: prev.plantState?.isDead ?? false,
                               isThirsty: prev.plantState?.isThirsty ?? false,
+                              unlocked: true,
                             }
                           };
 
@@ -6603,6 +6781,7 @@ export default function App() {
                             health: rawProgress?.health ?? 100,
                             isDead: rawProgress?.isDead ?? false,
                             isThirsty: rawProgress?.isThirsty ?? false,
+                            unlocked: true,
                           };
 
                           return {
@@ -6618,6 +6797,7 @@ export default function App() {
                               health: nextPlantProgress.health,
                               isDead: nextPlantProgress.isDead,
                               isThirsty: nextPlantProgress.isThirsty,
+                              unlockedTypes: currentUnlocked,
                             },
                           };
                         });
@@ -6959,78 +7139,101 @@ export default function App() {
           <AnimatePresence>
             {showUpdatePopup && updateInfo && (
               <motion.div
-                initial={{ opacity: 0, y: 50, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 50, scale: 0.9 }}
-                className="fixed bottom-24 left-6 right-6 z-[60]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md"
+                onClick={handleSnoozeUpdate}
               >
-                <div className="glass-card p-6 border-2 border-blue-500/30 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-indigo-500 to-blue-400 animate-pulse" />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                  className="bg-slate-900 border-2 border-emerald-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative overflow-hidden text-white"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Top glowing bar */}
+                  <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 animate-pulse" />
 
-                  <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/10 border border-blue-100 overflow-hidden">
-                      <img
-                        src={
-                          updateInfo.imageUrl ||
-                          nexoraAppIcon
-                        }
-                        alt="Mascot"
-                        className="w-12 h-12 object-cover rounded-xl"
-                        referrerPolicy="no-referrer"
-                      />
+                  {/* Close / Dismiss button in corner */}
+                  <button
+                    onClick={handleSnoozeUpdate}
+                    className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                    title="Update Later"
+                  >
+                    <X size={20} />
+                  </button>
+
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    {/* App Logo Display */}
+                    <div className="relative group">
+                      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 p-1 border border-emerald-400/30 shadow-xl shadow-emerald-500/20 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={updateInfo.imageUrl || nexoraAppIconImg || nexoraAppIcon}
+                          alt="Nexora App Logo"
+                          className="w-full h-full object-cover rounded-xl"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-slate-950 p-1 rounded-full shadow-lg border border-slate-900">
+                        <Sparkles size={12} />
+                      </span>
                     </div>
 
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="text-lg font-black text-blue-900">
-                          Nexora Update v{updateInfo.version}
-                        </h3>
-                        <button
-                          onClick={() => {
-                            if (updateInfo) {
-                              localStorage.setItem(
-                                "nexora_dismissed_version",
-                                updateInfo.version,
-                              );
-                            }
-                            setShowUpdatePopup(false);
-                          }}
-                          className="p-1 hover:bg-blue-50 rounded-lg text-blue-400"
-                        >
-                          <X size={18} />
-                        </button>
-                      </div>
+                    {/* Header info */}
+                    <div className="space-y-1">
+                      <span className="px-3 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-black uppercase tracking-widest">
+                        New Version Ready: v{updateInfo.version}
+                      </span>
+                      <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-1">
+                        Nexora Update Available! 🚀
+                      </h3>
+                      <p className="text-xs text-slate-300 font-medium">
+                        A fresh update with stability fixes & new features is ready to install.
+                      </p>
+                    </div>
 
-                      <div className="space-y-2 mb-4">
-                        <p className="text-xs font-bold text-blue-900/60 uppercase tracking-wider">
-                          What's New:
+                    {/* Release Notes */}
+                    {updateInfo.releaseNotes && updateInfo.releaseNotes.length > 0 && (
+                      <div className="w-full bg-slate-950/60 rounded-2xl p-4 border border-white/5 text-left space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                          What's New in v{updateInfo.version}:
                         </p>
-                        <ul className="space-y-1">
+                        <ul className="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar">
                           {updateInfo.releaseNotes.map((note, i) => (
-                            <li
-                              key={i}
-                              className="text-xs text-blue-900/80 flex items-start gap-2"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 shrink-0" />
-                              {note}
+                            <li key={i} className="text-xs text-slate-200 flex items-start gap-2 leading-relaxed">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
+                              <span>{note}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
+                    )}
+
+                    {/* Action Buttons: UPDATE NOW and UPDATE LATER */}
+                    <div className="w-full space-y-2.5 pt-2">
+                      <button
+                        onClick={() => handleUpdate(updateInfo)}
+                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all active:scale-95 group"
+                      >
+                        <RefreshCw size={18} className="group-hover:rotate-180 transition-transform duration-500" />
+                        <span>UPDATE NOW</span>
+                      </button>
 
                       <button
-                        onClick={handleUpdate}
-                        className="w-full bg-blue-500 hover:bg-blue-600 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-xl shadow-blue-500/30 transition-all active:scale-95 group"
+                        onClick={handleSnoozeUpdate}
+                        className="w-full py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-extrabold text-xs uppercase tracking-wider border border-white/10 flex items-center justify-center gap-2 transition-all active:scale-95"
                       >
-                        <RefreshCw
-                          size={18}
-                          className="group-active:rotate-180 transition-transform duration-500"
-                        />
-                        UPGRADE SYSTEM PROTOCOL
+                        <Clock size={16} className="text-slate-400" />
+                        <span>UPDATE LATER (AFTER MY TASK)</span>
                       </button>
                     </div>
+
+                    <p className="text-[10px] text-slate-400 font-medium italic">
+                      If you click "Update Later", tap the glowing <span className="text-emerald-400 font-bold">⚡ UPDATE</span> badge in the top header whenever you're ready!
+                    </p>
                   </div>
-                </div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>

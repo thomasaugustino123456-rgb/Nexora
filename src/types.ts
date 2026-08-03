@@ -43,9 +43,11 @@ export interface PlantProgress {
   stage: number; // 0-5
   growthPoints: number;
   lastGrowthDate: string | null;
+  lastCheckDate?: string | null;
   health: number; // 0-100
   isDead: boolean;
   isThirsty: boolean;
+  unlocked?: boolean;
 }
 
 export const UNLOCKED_PRO_UIDS = new Set<string>([
@@ -397,6 +399,7 @@ export interface SocialComment {
   content: string;
   createdAt: string;
   parentId?: string; // For replies
+  parentUserName?: string; // For Reddit-style recipient attribution
   likes?: number;
   likedBy?: string[];
 }

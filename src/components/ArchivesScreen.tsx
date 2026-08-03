@@ -108,7 +108,8 @@ function AestheticImage({ src, alt, className }: { src: string; alt: string; cla
         src={src}
         alt={alt}
         referrerPolicy="no-referrer"
-        loading="lazy"
+        decoding="async"
+        loading="eager"
         onLoad={() => setLoaded(true)}
         className={`${className} ${loaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'} transition-all duration-500 ease-out`}
       />

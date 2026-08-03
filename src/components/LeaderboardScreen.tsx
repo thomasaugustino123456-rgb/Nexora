@@ -13,7 +13,8 @@ import {
   Shield,
   Zap,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  WifiOff
 } from 'lucide-react';
 import { FirebaseUser } from '../firebase';
 import { LeaderboardEntry, UserSettings, UserStats } from '../types';
@@ -217,10 +218,22 @@ export function LeaderboardScreen({
   const { play } = useSound();
 
   const [displayList, setDisplayList] = useState<LeaderboardEntry[]>(() => leaderboard);
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [isAnimatingRank, setIsAnimatingRank] = useState<boolean>(false);
   const [showCelebrationSpot, setShowCelebrationSpot] = useState<boolean>(false);
   const [animationPreviousRank, setAnimationPreviousRank] = useState<number | null>(null);
   const [climbPhase, setClimbPhase] = useState<'idle' | 'anticipation' | 'shooting' | 'impact' | 'celebrate'>('idle');
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const scrollToUser = (instant = false) => {
     const attempt = () => {
@@ -597,6 +610,11 @@ export function LeaderboardScreen({
                         ? `You are Rank #${userRank}. Excellent effort! Keep pushing to reach the Top 6 for coin rewards.`
                         : `Complete your active habits to climb the ranks and unlock weekly chest rewards!`}
                 </p>
+                {!isOnline && userRank > 0 && userRank <= 6 && !hasClaimedThisWeek && (
+                  <p className="text-[10px] text-rose-500 font-extrabold flex items-center gap-1 mt-1.5 bg-rose-50 border border-rose-200/80 px-2.5 py-1 rounded-lg">
+                    <WifiOff size={12} /> Internet connection required to claim Rank section rewards.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -615,6 +633,14 @@ export function LeaderboardScreen({
                     <CheckCircle2 size={14} className="text-emerald-500" />
                     <span>Claimed</span>
                   </div>
+                ) : !isOnline ? (
+                  <button
+                    disabled
+                    className="bg-slate-200 text-slate-400 font-black text-xs uppercase tracking-widest px-4 py-2.5 rounded-xl border border-slate-300 flex items-center gap-1.5 cursor-not-allowed opacity-80"
+                  >
+                    <WifiOff size={14} />
+                    <span>Online Required</span>
+                  </button>
                 ) : (
                   <button
                     onClick={() => {
@@ -803,7 +829,8 @@ export function LeaderboardScreen({
                           alt={entry.displayName} 
                           className="w-11 h-11 rounded-xl object-cover ring-2 ring-white/35 shadow-sm flex-shrink-0" 
                           referrerPolicy="no-referrer" 
-                          loading="lazy" 
+                          decoding="async"
+                          loading="eager" 
                         />
                       ) : (
                         <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm bg-gradient-to-tr from-slate-100 to-slate-250 text-slate-500 ring-2 ring-white/35 shadow-sm">

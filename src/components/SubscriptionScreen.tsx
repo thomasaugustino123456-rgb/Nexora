@@ -25,10 +25,15 @@ import {
   CheckCircle2,
   Globe,
   Star,
-  ExternalLink
+  ExternalLink,
+  WifiOff,
+  AlertCircle
 } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { Mascot } from './Mascot';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { isUserProUnlocked } from '../types';
 
 interface SubscriptionScreenProps {
   onBack: () => void;
@@ -49,14 +54,128 @@ export function SubscriptionScreen({
   settings,
   stats = { streak: 0, xp: 0, coins: 0, level: 1 }
 }: SubscriptionScreenProps) {
-  const [scrollY, setScrollY] = useState(0);
+  const scrollY = 0;
   const [activeTab, setActiveTab] = useState<'coach' | 'soundscapes' | 'auras'>('coach');
   const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'USDT' | 'BTC' | 'ALL'>('ALL');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [selectedPlanId, setSelectedPlanId] = useState<'yearly' | 'monthly' | 'weekly'>('yearly');
+  const [selectedPlanId, setSelectedPlanId] = useState<'yearly' | 'monthly' | 'weekly'>('monthly');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'USDT' | 'BTC' | 'm-GURUSH'>('USDT');
+
+  // Network online state
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [verificationResult, setVerificationResult] = useState<{
+    isPro: boolean;
+    plan?: string;
+    activatedAt?: string;
+    expiresAt?: string;
+    message?: string;
+    checkedAt?: string;
+  } | null>(null);
 
   // Determine if Pro (or Pro Test mode) is currently active
   const isPro = settings?.isPro || settings?.proTestActive;
+
+  // Track online status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Online-only verification logic with Firebase
+  const handleCheckProStatus = async () => {
+    if (!navigator.onLine) {
+      setIsOnline(false);
+      return;
+    }
+    setIsVerifying(true);
+    try {
+      const userDocRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userDocRef);
+
+      let firestoreIsPro = false;
+      let plan = settings?.proPlan || "Monthly";
+      let activatedAt = settings?.proActivatedAt || "";
+      let expiresAt = settings?.proExpiresAt || "";
+
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        firestoreIsPro = isUserProUnlocked(userId) || Boolean(data.isPro) || Boolean(data.settings?.isPro) || Boolean(data.subscription?.active);
+        plan = data.proPlan || data.settings?.proPlan || data.subscription?.plan || plan;
+        activatedAt = data.proActivatedAt || data.settings?.proActivatedAt || data.subscription?.activatedAt || activatedAt;
+        expiresAt = data.proExpiresAt || data.settings?.proExpiresAt || data.subscription?.expiresAt || expiresAt;
+      } else {
+        firestoreIsPro = isUserProUnlocked(userId);
+      }
+
+      const todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+      if (firestoreIsPro) {
+        const finalPlan = plan || "Monthly";
+        const finalAct = activatedAt || todayStr;
+        const finalExp = expiresAt || "Auto-Renewing";
+
+        if (onUpdateSettings) {
+          onUpdateSettings({
+            isPro: true,
+            proPlan: finalPlan,
+            proActivatedAt: finalAct,
+            proExpiresAt: finalExp,
+          });
+        }
+
+        setVerificationResult({
+          isPro: true,
+          plan: finalPlan,
+          activatedAt: finalAct,
+          expiresAt: finalExp,
+          message: "Confirmation: Pro features are active for your account.",
+          checkedAt: new Date().toLocaleTimeString()
+        });
+      } else {
+        if (onUpdateSettings && !settings?.proTestActive) {
+          onUpdateSettings({ isPro: false });
+        }
+
+        setVerificationResult({
+          isPro: false,
+          plan: "Free Tier",
+          activatedAt: "-",
+          expiresAt: "-",
+          message: "You are currently using the Free plan.",
+          checkedAt: new Date().toLocaleTimeString()
+        });
+      }
+    } catch (err) {
+      console.error("Firebase subscription verification error:", err);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // Auto-verify on mount if online
+  useEffect(() => {
+    if (isOnline && userId) {
+      handleCheckProStatus();
+    }
+  }, [userId, isOnline]);
+
+  // Handle WhatsApp upgrade request
+  const handleOpenWhatsApp = (planId: 'yearly' | 'monthly' | 'weekly') => {
+    if (!isOnline) return;
+    vibrate(VIBRATION_PATTERNS.SUCCESS);
+    const planNameFormatted = planId === 'yearly' ? 'Yearly' : planId === 'weekly' ? 'Weekly' : 'Monthly';
+    
+    const whatsappMsg = `Hello, I want to upgrade to Nexora Pro.\nUID: ${userId}\nSelected plan: ${planNameFormatted}\nPayment method: ${selectedPaymentMethod}\n\nRequesting payment verification for Nexora Pro subscription.`;
+
+    window.open(`https://api.whatsapp.com/send?phone=211929635502&text=${encodeURIComponent(whatsappMsg)}`, '_blank');
+  };
 
   // Crypto conversion rate reference (approx 1 BTC = $66,666, 1 USDT = $1.00 USD)
   const plans = [
@@ -124,15 +243,6 @@ export function SubscriptionScreen({
     setCopiedKey(label);
     setTimeout(() => setCopiedKey(null), 2500);
   };
-
-  // Track scroll position for dynamic styling
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   // ==========================================
   // FEATURE 1: AI COACH STATE & GENERATOR
@@ -407,8 +517,23 @@ export function SubscriptionScreen({
           </div>
         </div>
 
+        {/* Offline Warning Banner */}
+        {!isOnline && (
+          <div className="mb-8 p-4 sm:p-5 rounded-3xl bg-rose-500/10 border-2 border-rose-500/30 text-rose-300 backdrop-blur-xl flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+            <div className="p-3 bg-rose-500/20 rounded-2xl text-rose-400 shrink-0">
+              <WifiOff size={24} />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-extrabold text-sm sm:text-base text-white">Offline Mode Active</h4>
+              <p className="text-xs text-rose-200/90 font-medium mt-0.5">
+                Internet connection required to verify your subscription status and manage Nexora Pro.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Hero Section */}
-        <div className="flex flex-col items-center text-center mb-12 space-y-4 relative">
+        <div className="flex flex-col items-center text-center mb-10 space-y-4 relative">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -431,46 +556,138 @@ export function SubscriptionScreen({
 
           {/* Risk Free Guarantee Banner */}
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-extrabold text-slate-400 pt-2">
-            <span className="flex items-center gap-1 text-emerald-400"><ShieldCheck size={14} /> 7-Day Money Back Guarantee</span>
+            <span className="flex items-center gap-1 text-emerald-400"><ShieldCheck size={14} /> Verified Firebase Status</span>
             <span className="hidden sm:inline text-slate-600">•</span>
             <span className="flex items-center gap-1 text-slate-300"><CheckCircle2 size={14} /> Cancel Anytime</span>
             <span className="hidden sm:inline text-slate-600">•</span>
-            <span className="flex items-center gap-1 text-amber-400"><Zap size={14} /> Instant Activation</span>
+            <span className="flex items-center gap-1 text-amber-400"><Zap size={14} /> Instant WhatsApp Activation</span>
           </div>
         </div>
 
         {/* ======================================================== */}
-        {/* NEW CRYPTO & CURRENCY SELECTOR STRIP */}
+        {/* FIREBASE SUBSCRIPTION STATUS & VERIFICATION CARD */}
         {/* ======================================================== */}
-        <div className="mb-10 p-4 sm:p-6 rounded-3xl bg-slate-900/90 border border-white/10 backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+        <div className="mb-12 p-6 sm:p-8 rounded-[2.5rem] bg-slate-900/90 border-2 border-white/10 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className={`p-3 rounded-2xl ${isPro ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-800 text-slate-400'}`}>
+                <ShieldCheck size={28} />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Firebase Subscription Verification</span>
+                <h3 className="text-xl font-black text-white flex items-center gap-2">
+                  Subscription Status
+                  {isPro && <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PRO ACTIVE</span>}
+                </h3>
+              </div>
+            </div>
+
+            <button
+              onClick={handleCheckProStatus}
+              disabled={!isOnline || isVerifying}
+              className={`px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
+                !isOnline 
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5' 
+                  : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95'
+              }`}
+            >
+              <RefreshCw size={14} className={isVerifying ? 'animate-spin' : ''} />
+              <span>{isVerifying ? 'Verifying with Firebase...' : 'Check Pro status'}</span>
+            </button>
+          </div>
+
+          {/* Status details depending on Pro vs Free Tier */}
+          {isPro ? (
+            <div className="space-y-4">
+              <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-emerald-400 font-black text-lg">
+                    <Crown size={20} />
+                    <span>Nexora Pro Active</span>
+                  </div>
+                  <p className="text-xs font-medium text-emerald-300/80 mt-1">
+                    {verificationResult?.message || "Confirmation: Pro features are active for your account."}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs font-bold">
+                  <div className="px-3 py-1.5 rounded-xl bg-slate-950/60 border border-emerald-500/30">
+                    <span className="text-slate-400 font-normal">Plan: </span>
+                    <span className="text-emerald-300 font-black uppercase">{verificationResult?.plan || settings?.proPlan || 'Monthly'}</span>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-xl bg-slate-950/60 border border-emerald-500/30">
+                    <span className="text-slate-400 font-normal">Activated: </span>
+                    <span className="text-white">{verificationResult?.activatedAt || settings?.proActivatedAt || 'Verified'}</span>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-xl bg-slate-950/60 border border-emerald-500/30">
+                    <span className="text-slate-400 font-normal">Expires: </span>
+                    <span className="text-amber-300">{verificationResult?.expiresAt || settings?.proExpiresAt || 'Auto-Renewing'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-5 rounded-2xl bg-slate-950/60 border border-white/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-base font-extrabold text-slate-200">You are currently using the Free plan</h4>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400">FREE TIER</span>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                Upgrade to Nexora Pro to unlock the Architect Lab, custom focus soundscapes, unlimited daily goal stages, and high-fidelity mascot skins.
+              </p>
+              <button
+                onClick={() => {
+                  const plansElem = document.getElementById('subscription-plans-section');
+                  if (plansElem) {
+                    plansElem.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                disabled={!isOnline}
+                className={`mt-2 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
+                  !isOnline 
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
+                    : 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-lg shadow-amber-500/20 hover:scale-105'
+                }`}
+              >
+                <span>Upgrade to Pro</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ======================================================== */}
+        {/* PAYMENT METHOD SELECTOR & CURRENCY SELECTOR STRIP */}
+        {/* ======================================================== */}
+        <div id="subscription-plans-section" className="mb-10 p-4 sm:p-6 rounded-3xl bg-slate-900/90 border border-white/10 backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
           <div className="flex items-center gap-3 text-center md:text-left">
             <div className="p-3 bg-emerald-500/20 rounded-2xl text-emerald-400 shrink-0">
               <Coins size={22} />
             </div>
             <div>
-              <h3 className="font-extrabold text-sm sm:text-base text-white">Display Currency & Crypto Rates</h3>
-              <p className="text-xs text-slate-400 font-medium">Select your preferred viewing format (USD, USDT, or Bitcoin BTC equivalent)</p>
+              <h3 className="font-extrabold text-sm sm:text-base text-white">Choose Preferred Payment Method</h3>
+              <p className="text-xs text-slate-400 font-medium">Included automatically when sending WhatsApp activation request</p>
             </div>
           </div>
 
           <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-white/10 shrink-0">
-            {(['ALL', 'USD', 'USDT', 'BTC'] as const).map((curr) => (
+            {(['USDT', 'BTC', 'm-GURUSH'] as const).map((method) => (
               <button
-                key={curr}
+                key={method}
+                disabled={!isOnline}
                 onClick={() => {
+                  if (!isOnline) return;
                   vibrate(VIBRATION_PATTERNS.SUCCESS);
-                  setSelectedCurrency(curr);
+                  setSelectedPaymentMethod(method);
                 }}
                 className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all ${
-                  selectedCurrency === curr 
+                  selectedPaymentMethod === method 
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-lg shadow-emerald-500/20' 
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                {curr === 'ALL' && '✨ All Rates'}
-                {curr === 'USD' && '💵 USD ($)'}
-                {curr === 'USDT' && '🪙 USDT (Tether)'}
-                {curr === 'BTC' && '₿ BTC (Bitcoin)'}
+                {method === 'USDT' && '🪙 USDT'}
+                {method === 'BTC' && '₿ Bitcoin'}
+                {method === 'm-GURUSH' && '📱 m-GURUSH / Card'}
               </button>
             ))}
           </div>
@@ -543,21 +760,23 @@ export function SubscriptionScreen({
                 </div>
 
                 <button
+                  disabled={!isOnline}
                   onClick={(e) => {
                     e.stopPropagation();
-                    vibrate(VIBRATION_PATTERNS.SUCCESS);
-                    const whatsappMsg = `Hi Nexora, I'd like to subscribe to the ${plan.name} (${plan.usd} / ${plan.usdt} / ${plan.btc}). My UID: ${userId}`;
-                    window.open(`https://api.whatsapp.com/send?phone=211929635502&text=${encodeURIComponent(whatsappMsg)}`, '_blank');
+                    if (!isOnline) return;
+                    handleOpenWhatsApp(plan.id as any);
                   }}
                   className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg ${
-                    plan.id === 'yearly'
+                    !isOnline
+                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5 shadow-none'
+                      : plan.id === 'yearly'
                       ? 'bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-slate-950 shadow-emerald-500/20'
                       : plan.id === 'monthly'
                       ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20'
                       : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'
                   }`}
                 >
-                  <MessageSquare size={16} /> SUBSCRIBE VIA WHATSAPP
+                  <MessageSquare size={16} /> {isOnline ? 'UPGRADE VIA WHATSAPP' : 'OFFLINE - UPGRADE DISABLED'}
                 </button>
               </motion.div>
             );
@@ -583,20 +802,30 @@ export function SubscriptionScreen({
                     <span className="bg-blue-500 text-[9px] font-black px-2 py-0.5 rounded-full text-white uppercase tracking-widest">Free Trial</span>
                   </div>
                   <p className="text-blue-100 text-xs sm:text-sm font-medium leading-relaxed max-w-xl">
-                    Test every feature, custom plan, and exclusive item for 15 minutes before choosing your plan. Experience peak focus.
+                    Test every feature, custom plan, and exclusive item for 15 minutes before choosing your plan. Verified through Firebase with 7-day cooldown requirement.
                   </p>
                 </div>
               </div>
 
               {(() => {
+                if (!isOnline) {
+                  return (
+                    <div className="w-full md:w-auto px-6 py-4 bg-white/10 rounded-2xl border border-white/20 text-center opacity-70 shrink-0">
+                      <p className="text-[9px] font-black uppercase text-rose-300 tracking-widest mb-0.5">Offline</p>
+                      <p className="text-xs font-black text-white">INTERNET REQUIRED</p>
+                    </div>
+                  );
+                }
+
                 const now = new Date();
-                const lastTest = settings?.proTestStartedAt ? new Date(settings.proTestStartedAt) : null;
+                const lastTest = settings?.proTestLastUsedAt || settings?.proTestStartedAt ? new Date(settings.proTestLastUsedAt || settings.proTestStartedAt) : null;
                 const cooldownDays = 7;
                 const canRetry = !lastTest || (now.getTime() - lastTest.getTime() > cooldownDays * 24 * 60 * 60 * 1000);
                 
                 if (canRetry) {
                   return (
                     <button 
+                      disabled={!isOnline}
                       onClick={() => {
                         vibrate(VIBRATION_PATTERNS.SUCCESS);
                         onStartProTest();
@@ -987,25 +1216,19 @@ export function SubscriptionScreen({
 
             <div className="w-full lg:w-80 flex flex-col justify-center gap-3 shrink-0">
               <button 
-                onClick={() => window.open(`https://api.whatsapp.com/send?phone=211929635502&text=${encodeURIComponent(`Hi Nexora, I'd like to activate Pro manually. My UID is: ${userId}`)}`, '_blank')}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 py-4 rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2"
+                disabled={!isOnline}
+                onClick={() => {
+                  if (!isOnline) return;
+                  handleOpenWhatsApp(selectedPlanId);
+                }}
+                className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-xl flex items-center justify-center gap-2 ${
+                  !isOnline
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5 shadow-none'
+                    : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-emerald-500/20'
+                }`}
               >
-                <MessageSquare size={18} /> OPEN WHATSAPP CHAT
+                <MessageSquare size={18} /> {isOnline ? 'OPEN WHATSAPP CHAT' : 'OFFLINE - CHAT DISABLED'}
               </button>
-
-              {onActivatePro && (
-                <button 
-                  onClick={() => {
-                    if (confirm("Admin Verification Mode: Instantly activate Pro on this device?")) {
-                      onActivatePro();
-                      onBack();
-                    }
-                  }}
-                  className="py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors text-center"
-                >
-                  ⚡ Admin Quick Verify
-                </button>
-              )}
             </div>
           </div>
         </div>

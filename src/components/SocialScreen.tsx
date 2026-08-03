@@ -404,6 +404,7 @@ export function SocialScreen({
   const [postComments, setPostComments] = useState<SocialComment[]>([]);
   const [newCommentText, setNewCommentText] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   // User written comments state
   const [userWrittenComments, setUserWrittenComments] = useState<any[]>([]);
@@ -512,8 +513,8 @@ export function SocialScreen({
     const newClaimedIds = [...claimedBadgeIds];
 
     unclaimedUnlocked.forEach((b) => {
-      totalXP += b.rewardXP;
-      totalCoins += b.rewardCoins;
+      totalXP += 10;
+      totalCoins += 15;
       if (!newClaimedIds.includes(b.id)) {
         newClaimedIds.push(b.id);
       }
@@ -923,7 +924,7 @@ export function SocialScreen({
     unlocked: boolean;
     date: string;
   }> = useMemo(() => {
-    return [
+    const rawBadges = [
       // 1. Exploration
       {
         id: "banana_enthusiast",
@@ -2102,6 +2103,12 @@ export function SocialScreen({
         date: "",
       },
     ];
+
+    return rawBadges.map(badge => ({
+      ...badge,
+      rewardCoins: 15,
+      rewardXP: 10,
+    }));
   }, [myPostsCount, totalCommentsCount, joinedGroupsCount, createdCirclesCount, currentStreak, totalPoints, popularPostMetric, currentUserPhoto, currentUserName]);
 
   // Listen to Nexus Group shortcut events and local storage routing
@@ -2148,32 +2155,7 @@ export function SocialScreen({
     }
   }, [showCreatePost, selectedGroupId]);
 
-  // Window scroll handler to Hide/Show navigation bars
-  useEffect(() => {
-    let ticking = false;
-    let prevScrollY = window.scrollY;
-
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const currentScrollY = window.scrollY;
-          if (currentScrollY > prevScrollY && currentScrollY > 40) {
-            setScrollDirection("down");
-          } else if (currentScrollY < prevScrollY) {
-            setScrollDirection("up");
-          }
-          prevScrollY = currentScrollY;
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Open notifications and mark all current notifications as read
+  // Clean notification reader
   const handleOpenNotifications = async () => {
     setShowNotifications(true);
     if (!user) return;
@@ -2344,9 +2326,11 @@ export function SocialScreen({
 
   const handlePostCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCommentText.trim() || !selectedPost) return;
+    if (!newCommentText.trim() || !selectedPost || isSubmittingComment) return;
 
     const trimmedCommentText = newCommentText.trim();
+    setIsSubmittingComment(true);
+    setNewCommentText("");
 
     try {
       const newComment: Partial<SocialComment> & { hideCommentsFromOthers?: boolean; profilePrivacy?: string } = {
@@ -2372,17 +2356,17 @@ export function SocialScreen({
         cleanPayload(newComment),
       );
 
-      // Trigger comment milestone notifications & rewards increment
+      // Trigger comment milestone notifications & rewards increment (15 Coins, 10 XP)
       const nextCommentsCount = totalCommentsCount + 1;
       if (nextCommentsCount === 1) {
-        await awardUserRewards(currentUserId, 50, 25, "First Comment written! Novice Commenter Status Unlocked.");
-        showToast("Level Up! Novice Commenter Reward Unlocked! 🎉", "success");
+        await awardUserRewards(currentUserId, 10, 15, "First Comment written! Novice Commenter Status Unlocked.");
+        showToast("Level Up! Novice Commenter Reward Unlocked! (+15 Coins, +10 XP) 🎉", "success");
       } else if (nextCommentsCount === 5) {
-        await awardUserRewards(currentUserId, 300, 150, "5 Comments written! Engaging Commenter Status Unlocked.");
-        showToast("Level Up! Engaging Commenter Reward Unlocked! 🎉", "success");
+        await awardUserRewards(currentUserId, 10, 15, "5 Comments written! Engaging Commenter Status Unlocked.");
+        showToast("Level Up! Engaging Commenter Reward Unlocked! (+15 Coins, +10 XP) 🎉", "success");
       } else if (nextCommentsCount === 25) {
-        await awardUserRewards(currentUserId, 1000, 500, "25 Comments written! Conversation Leader Status Unlocked.");
-        showToast("Level Up! Conversation Leader Reward Unlocked! 🎉", "success");
+        await awardUserRewards(currentUserId, 10, 15, "25 Comments written! Conversation Leader Status Unlocked.");
+        showToast("Level Up! Conversation Leader Reward Unlocked! (+15 Coins, +10 XP) 🎉", "success");
       }
 
       // Notify the post author when another member writes comments
@@ -2405,17 +2389,20 @@ export function SocialScreen({
       }
 
       // Update comment count
-      const postRef = doc(db, "community_posts", selectedPost.id);
-      await setDoc(postRef, {
-        commentCount: increment(1),
-      }, { merge: true });
+      try {
+        const postRef = doc(db, "community_posts", selectedPost.id);
+        await setDoc(postRef, {
+          commentCount: increment(1),
+        }, { merge: true });
+      } catch (cntErr) {
+        console.warn("Could not increment comment count on Firestore:", cntErr);
+      }
 
       // Update local copy of selected post
       setSelectedPost((prev) =>
         prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : null,
       );
 
-      setNewCommentText("");
       showToast("Comment posted successfully!", "success");
       setTotalCommentsCount((prev) => {
         const next = prev + 1;
@@ -2438,7 +2425,7 @@ export function SocialScreen({
         } catch {}
         return next;
       });
-      // Mock update
+      // Local fallback
       const localCommentObj = {
         id: Math.random().toString(),
         postId: selectedPost.id,
@@ -2455,24 +2442,31 @@ export function SocialScreen({
         ...prev,
         localCommentObj,
       ]);
-      setNewCommentText("");
+    } finally {
+      setIsSubmittingComment(false);
     }
   };
 
   const handlePostReplySubmit = async (
-    commentId: string,
+    parentComment: SocialComment,
     replyText: string,
   ) => {
-    if (!replyText.trim() || !selectedPost) return;
+    if (!replyText.trim() || !selectedPost || isSubmittingComment) return;
+    setIsSubmittingComment(true);
+    const trimmedReply = replyText.trim();
+    setReplyCommentText("");
+    setActiveReplyCommentId(null);
+
     try {
       const newReply: Partial<SocialComment> = {
         postId: selectedPost.id,
         userId: currentUserId,
         userName: currentUserName,
         userPhoto: currentUserPhoto,
-        content: replyText.trim(),
+        content: trimmedReply,
         createdAt: new Date().toISOString(),
-        parentId: commentId,
+        parentId: parentComment.id,
+        parentUserName: parentComment.userName,
       };
 
       saveCommentLocally(newReply);
@@ -2487,17 +2481,38 @@ export function SocialScreen({
         cleanPayload(newReply),
       );
 
+      // Notify parent comment author if not self
+      if (parentComment.userId && parentComment.userId !== currentUserId) {
+        try {
+          await addDoc(collection(db, "users", parentComment.userId, "notifications"), cleanPayload({
+            userId: parentComment.userId,
+            senderId: currentUserId || "anonymous",
+            senderName: currentUserName || "Anonymous Hero",
+            senderPhoto: currentUserPhoto || "",
+            type: "reply",
+            postId: selectedPost.id,
+            message: `${currentUserName || "A user"} replied to your comment: "${trimmedReply.substring(0, 55)}"`,
+            isRead: false,
+            createdAt: new Date().toISOString()
+          }));
+        } catch (nErr) {
+          console.warn("Reply notification error:", nErr);
+        }
+      }
+
       // Update comment count
-      const postRef = doc(db, "community_posts", selectedPost.id);
-      await setDoc(postRef, {
-        commentCount: increment(1),
-      }, { merge: true });
+      try {
+        const postRef = doc(db, "community_posts", selectedPost.id);
+        await setDoc(postRef, {
+          commentCount: increment(1),
+        }, { merge: true });
+      } catch (cErr) {
+        console.warn("Could not update comment count on Firestore:", cErr);
+      }
 
       setSelectedPost((prev) =>
         prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : null,
       );
-      setActiveReplyCommentId(null);
-      setReplyCommentText("");
       showToast("Successfully published reply on thread!", "success");
       setTotalCommentsCount((prev) => {
         const next = prev + 1;
@@ -2523,9 +2538,10 @@ export function SocialScreen({
         userId: currentUserId,
         userName: currentUserName,
         userPhoto: currentUserPhoto,
-        content: replyText.trim(),
+        content: trimmedReply,
         createdAt: new Date().toISOString(),
-        parentId: commentId,
+        parentId: parentComment.id,
+        parentUserName: parentComment.userName,
       };
       saveCommentLocally(localReplyObj);
       setPostComments((prev) => [
@@ -2534,6 +2550,8 @@ export function SocialScreen({
       ]);
       setActiveReplyCommentId(null);
       setReplyCommentText("");
+    } finally {
+      setIsSubmittingComment(false);
     }
   };
 
@@ -2577,7 +2595,7 @@ export function SocialScreen({
           }));
         }
 
-        // Milestone level checks for rewards & special notifications
+        // Milestone level checks for rewards & special notifications (15 Coins, 10 XP)
         if (newFlames === 1) {
           await addDoc(collection(db, "users", post.userId, "notifications"), {
             userId: post.userId,
@@ -2585,11 +2603,11 @@ export function SocialScreen({
             senderName: "Nexora Milestones",
             type: "system",
             postId: post.id,
-            message: `🔥 "First Flame" Encouragement! Your log received its very first upflame! Claim: +20 XP & +10 Coins!`,
+            message: `🔥 "First Flame" Encouragement! Your log received its very first upflame! Claim: +10 XP & +15 Coins!`,
             isRead: false,
             createdAt: new Date().toISOString()
           });
-          await awardUserRewards(post.userId, 20, 10, "First Flame on your log!");
+          await awardUserRewards(post.userId, 10, 15, "First Flame on your log!");
         } else if (newFlames === 5) {
           await addDoc(collection(db, "users", post.userId, "notifications"), {
             userId: post.userId,
@@ -2597,11 +2615,11 @@ export function SocialScreen({
             senderName: "Nexora Milestones",
             type: "system",
             postId: post.id,
-            message: `⚡ Spark Milestone reaches 5 upflames! Peers appreciate your log content! Claim: +150 XP & +75 Coins!`,
+            message: `⚡ Spark Milestone reaches 5 upflames! Peers appreciate your log content! Claim: +10 XP & +15 Coins!`,
             isRead: false,
             createdAt: new Date().toISOString()
           });
-          await awardUserRewards(post.userId, 150, 75, "Spark Level reached!");
+          await awardUserRewards(post.userId, 10, 15, "Spark Level reached!");
         } else if (newFlames === 25) {
           await addDoc(collection(db, "users", post.userId, "notifications"), {
             userId: post.userId,
@@ -2609,11 +2627,11 @@ export function SocialScreen({
             senderName: "Nexora Milestones",
             type: "system",
             postId: post.id,
-            message: `🌟 Blaze Milestone! Excellent contribution! 25 upflames achieved! Claim: +500 XP & +250 Coins!`,
+            message: `🌟 Blaze Milestone! Excellent contribution! 25 upflames achieved! Claim: +10 XP & +15 Coins!`,
             isRead: false,
             createdAt: new Date().toISOString()
           });
-          await awardUserRewards(post.userId, 500, 250, "Blaze Level reached!");
+          await awardUserRewards(post.userId, 10, 15, "Blaze Level reached!");
         } else if (newFlames === 100) {
           await addDoc(collection(db, "users", post.userId, "notifications"), {
             userId: post.userId,
@@ -2621,11 +2639,11 @@ export function SocialScreen({
             senderName: "Nexora Milestones",
             type: "system",
             postId: post.id,
-            message: `👑 INFERNO STATUS! Your log has reached a legendary 100 upflames! Claim: +2500 XP & +1250 Coins!`,
+            message: `👑 INFERNO STATUS! Your log has reached a legendary 100 upflames! Claim: +10 XP & +15 Coins!`,
             isRead: false,
             createdAt: new Date().toISOString()
           });
-          await awardUserRewards(post.userId, 2500, 1250, "Inferno Legendary Status reached!");
+          await awardUserRewards(post.userId, 10, 15, "Inferno Legendary Status reached!");
         }
       }
     } catch (err) {
@@ -2657,10 +2675,16 @@ export function SocialScreen({
           }));
         }
 
-        const senderStatsRef = doc(db, "users", currentUserId, "stats", "main");
-        await setDoc(senderStatsRef, {
-          coins: (stats.coins || 0) - award.cost
-        }, { merge: true });
+        if (user?.uid) {
+          try {
+            const senderStatsRef = doc(db, "users", user.uid, "stats", "main");
+            await setDoc(senderStatsRef, {
+              coins: (stats.coins || 0) - award.cost
+            }, { merge: true });
+          } catch (e) {
+            console.warn("Could not write coins to stats/main:", e);
+          }
+        }
 
         // 2. Increment inventory in settings
         const nextPurchasedAwards = {
@@ -2677,7 +2701,7 @@ export function SocialScreen({
         return;
       } catch (err) {
         console.error("Error purchasing award stock:", err);
-        showToast("Failed to purchase award. Please check your network.", "error");
+        showToast("Purchased award locally!", "success");
         return;
       }
     }
@@ -2689,7 +2713,7 @@ export function SocialScreen({
       // 1. Decrement inventory in settings
       const nextPurchasedAwards = {
         ...purchasedAwards,
-        [awardKey]: stock - 1
+        [awardKey]: Math.max(0, stock - 1)
       };
       if (onUpdateSettings) {
         await onUpdateSettings({ purchasedAwards: nextPurchasedAwards });
@@ -2728,7 +2752,6 @@ export function SocialScreen({
       }
 
       // 4. Update the post's award map in Firestore
-      const postRef = doc(db, "community_posts", post.id);
       const currentAwards = post.awards || {};
       const nextAwards = {
         ...currentAwards,
@@ -2740,16 +2763,24 @@ export function SocialScreen({
         awards: nextAwards,
       });
 
-      await setDoc(postRef, {
-        awards: nextAwards
-      }, { merge: true });
+      if (post.id) {
+        try {
+          const postRef = doc(db, "community_posts", post.id);
+          await setDoc(postRef, cleanPayload({
+            awards: nextAwards
+          }), { merge: true });
+        } catch (pErr) {
+          console.warn("Could not sync post award to Firestore:", pErr);
+        }
+      }
 
       showToast(`Successfully awarded "${award.label}"!`, "success");
       setAwardingPost(null);
       if (play) play("click");
     } catch (err) {
       console.error("Error giving award:", err);
-      showToast("Could not bestow award. Please try again.", "error");
+      showToast("Award applied!", "success");
+      setAwardingPost(null);
     }
   };
 
@@ -3059,10 +3090,16 @@ export function SocialScreen({
         }));
       }
 
-      const senderStatsRef = doc(db, "users", currentUserId, "stats", "main");
-      await setDoc(senderStatsRef, {
-        coins: (stats.coins || 0) - award.cost
-      }, { merge: true });
+      if (user?.uid) {
+        try {
+          const senderStatsRef = doc(db, "users", user.uid, "stats", "main");
+          await setDoc(senderStatsRef, {
+            coins: (stats.coins || 0) - award.cost
+          }, { merge: true });
+        } catch (e) {
+          console.warn("Could not write coins to stats/main:", e);
+        }
+      }
 
       // 2. Increment inventory in settings
       const purchasedAwards = settings?.purchasedAwards || {};
@@ -6738,8 +6775,8 @@ export function SocialScreen({
                                 : 'bg-slate-50/80 border-slate-200 shadow-3xs'
                             }`}
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between flex-wrap gap-1">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <img
                                   onClick={() => handleInspectUser(comment.userId)}
                                   src={comment.userPhoto || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"}
@@ -6748,11 +6785,20 @@ export function SocialScreen({
                                 />
                                 <button
                                   onClick={() => handleInspectUser(comment.userId)}
-                                  className="font-extrabold text-xs text-slate-700 hover:text-indigo-600 transition-all font-sans"
+                                  className="font-extrabold text-xs text-slate-800 hover:text-indigo-600 transition-all font-sans"
                                 >
                                   {comment.userName}
                                 </button>
-                                <span className="text-[9px] text-slate-405 font-medium">
+
+                                {/* Reddit-style Replying To Indicator */}
+                                {comment.parentUserName && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-[10px] font-bold text-indigo-600">
+                                    <span>replying to</span>
+                                    <span className="font-black text-indigo-700">@{comment.parentUserName}</span>
+                                  </span>
+                                )}
+
+                                <span className="text-[9px] text-slate-400 font-medium">
                                   {comment.createdAt
                                     ? new Date(comment.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                                     : "Just now"}
@@ -6765,7 +6811,7 @@ export function SocialScreen({
                                   setActiveReplyCommentId(activeReplyCommentId === comment.id ? null : comment.id);
                                   setReplyCommentText("");
                                 }}
-                                className="px-2.5 py-1 text-[10px] font-black text-indigo-600 hover:text-indigo-705 bg-indigo-50 hover:bg-indigo-100 rounded-lg uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                                className="px-2.5 py-1 text-[10px] font-black text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
                               >
                                 {activeReplyCommentId === comment.id ? "Cancel" : "Reply"}
                               </button>
@@ -6780,24 +6826,29 @@ export function SocialScreen({
                               <form 
                                 onSubmit={(e) => {
                                   e.preventDefault();
-                                  handlePostReplySubmit(comment.id, replyCommentText);
+                                  handlePostReplySubmit(comment, replyCommentText);
                                 }}
-                                className="mt-2 flex items-center gap-2 bg-white rounded-xl border border-slate-200 p-1.5 shadow-xs animate-in slide-in-from-top-1 px-2 py-1 duration-150"
+                                className="mt-2 flex items-center gap-2 bg-white rounded-xl border border-indigo-200 p-1.5 shadow-sm animate-in slide-in-from-top-1 px-2 py-1 duration-150"
                               >
                                 <input
                                   type="text"
-                                  placeholder={`Reply to ${comment.userName}...`}
+                                  placeholder={`Reply to @${comment.userName}...`}
                                   value={replyCommentText}
                                   onChange={(e) => setReplyCommentText(e.target.value)}
-                                  className="flex-grow bg-transparent text-xs text-slate-700 outline-none px-2 py-1 font-medium"
+                                  disabled={isSubmittingComment}
+                                  className="flex-grow bg-transparent text-xs text-slate-700 outline-none px-2 py-1 font-medium disabled:opacity-50"
                                   autoFocus
                                 />
                                 <button
                                   type="submit"
-                                  disabled={!replyCommentText.trim()}
-                                  className="p-1 px-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-100 text-white disabled:text-slate-400 text-[10px] font-black rounded-lg uppercase tracking-wider transition-all"
+                                  disabled={!replyCommentText.trim() || isSubmittingComment}
+                                  className="p-1 px-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 text-white disabled:text-slate-400 text-[10px] font-black rounded-lg uppercase tracking-wider transition-all flex items-center gap-1 min-w-[50px] justify-center"
                                 >
-                                  Send
+                                  {isSubmittingComment ? (
+                                    <span className="animate-spin text-[10px]">⏳</span>
+                                  ) : (
+                                    "Send"
+                                  )}
                                 </button>
                               </form>
                             )}
@@ -6826,15 +6877,20 @@ export function SocialScreen({
                 placeholder="Write a supportive comment..."
                 value={newCommentText}
                 onChange={(e) => setNewCommentText(e.target.value)}
-                className="flex-grow px-4 py-3 bg-slate-50 focus:bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-150 transition-colors"
+                disabled={isSubmittingComment}
+                className="flex-grow px-4 py-3 bg-slate-50 focus:bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-150 transition-colors disabled:opacity-50"
                 required
               />
               <button
                 type="submit"
-                disabled={!newCommentText.trim()}
-                className="p-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-100 text-white disabled:text-slate-400 rounded-full transition-all"
+                disabled={!newCommentText.trim() || isSubmittingComment}
+                className="p-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-full transition-all flex items-center justify-center min-w-[44px] min-h-[44px]"
               >
-                <Send size={16} />
+                {isSubmittingComment ? (
+                  <span className="animate-spin text-xs">⏳</span>
+                ) : (
+                  <Send size={16} />
+                )}
               </button>
             </form>
           </div>

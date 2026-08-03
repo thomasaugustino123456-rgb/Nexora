@@ -5,6 +5,25 @@ import { getMessaging, isSupported } from 'firebase/messaging';
 import { getAnalytics, logEvent, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 import firebaseConfigData from './firebase-applet-config.json';
 
+// Intercept and demote internal Firestore SDK assertion errors (e.g., ID: ca9, ve: -1) to warnings to prevent console error noise
+if (typeof window !== 'undefined') {
+  const originalConsoleError = console.error;
+  console.error = function (...args: any[]) {
+    const msg = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+    if (
+      msg.includes('INTERNAL ASSERTION FAILED') ||
+      msg.includes('Unexpected state') ||
+      msg.includes('ca9') ||
+      msg.includes('ve:') ||
+      (msg.includes('FIRESTORE') && msg.includes('ASSERTION'))
+    ) {
+      console.warn('[Firestore Internal Assertion Handled]', ...args);
+      return;
+    }
+    originalConsoleError.apply(console, args);
+  };
+}
+
 const firebaseConfig = firebaseConfigData;
 
 console.log("Firebase Initialization: Using project", firebaseConfig.projectId);

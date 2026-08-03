@@ -24,7 +24,8 @@ export const BottomNav = ({
   translate: (text: string, lang: string) => string;
   isRankGlowActive?: boolean;
 }) => {
-  const [isVisible, setIsVisible] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isVisibleRef = useRef(true);
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
@@ -34,23 +35,37 @@ export const BottomNav = ({
       const scrollY = window.scrollY;
 
       // Always show near top of the page
-      if (scrollY < 50) {
-        setIsVisible(true);
+      if (scrollY < 60) {
+        if (!isVisibleRef.current) {
+          isVisibleRef.current = true;
+          if (containerRef.current) {
+            containerRef.current.style.transform = "translateY(0px)";
+            containerRef.current.style.opacity = "1";
+          }
+        }
         lastScrollY = scrollY;
         ticking = false;
         return;
       }
 
       const diff = scrollY - lastScrollY;
-      
-      // Filter out small scroll vibrations
-      if (Math.abs(diff) > 8) {
-        if (diff > 0) {
-          // Scrolling down -> Hide
-          setIsVisible(false);
-        } else {
-          // Scrolling up -> Show
-          setIsVisible(true);
+
+      // Filter out small scroll jitter (< 10px) to prevent stutter
+      if (Math.abs(diff) > 10) {
+        if (diff > 0 && isVisibleRef.current) {
+          // Scrolling down -> Hide BottomNav smoothly via GPU transform
+          isVisibleRef.current = false;
+          if (containerRef.current) {
+            containerRef.current.style.transform = "translateY(110%)";
+            containerRef.current.style.opacity = "0";
+          }
+        } else if (diff < 0 && !isVisibleRef.current) {
+          // Scrolling up -> Show BottomNav smoothly
+          isVisibleRef.current = true;
+          if (containerRef.current) {
+            containerRef.current.style.transform = "translateY(0px)";
+            containerRef.current.style.opacity = "1";
+          }
         }
         lastScrollY = scrollY;
       }
@@ -64,23 +79,14 @@ export const BottomNav = ({
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
-    <motion.div
-      initial={{ y: 0, opacity: 1 }}
-      animate={{ 
-        y: isVisible ? 0 : 100, 
-        opacity: isVisible ? 1 : 0 
-      }}
-      transition={{ 
-        type: "spring", 
-        stiffness: 260, 
-        damping: 26 
-      }}
-      className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[80]"
+    <div
+      ref={containerRef}
+      className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[80] transition-all duration-300 ease-out will-change-transform"
     >
       <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-2 py-1 rounded-[2rem] flex items-center justify-around gap-0.5 pointer-events-auto w-[96%] max-w-[370px] sm:max-w-[440px] h-[60px] sm:h-[66px] overflow-hidden select-none">
         {(settings.navOrder || Object.keys(navItems)).map(
@@ -111,6 +117,6 @@ export const BottomNav = ({
           },
         )}
       </nav>
-    </motion.div>
+    </div>
   );
 };

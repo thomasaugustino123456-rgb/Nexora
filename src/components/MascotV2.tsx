@@ -41,13 +41,13 @@ export const MascotV2 = React.memo(({ className, isSmiling }: MascotV2Props) => 
 
         /* 5. Mouth Swapping (Concentrated vs Smile) */
         @keyframes toggleSmile {
-          0%, 48% { opacity: 0; transform: scale(0.8); }
-          55%, 85% { opacity: 1; transform: scale(1); }
+          0%, 49.9% { opacity: 0; transform: scale(0.8); }
+          50%, 89.9% { opacity: 1; transform: scale(1); }
           90%, 100% { opacity: 0; transform: scale(0.8); }
         }
         @keyframes toggleConc {
-          0%, 48% { opacity: 1; transform: scale(1); }
-          55%, 85% { opacity: 0; transform: scale(0.8); }
+          0%, 49.9% { opacity: 1; transform: scale(1); }
+          50%, 89.9% { opacity: 0; transform: scale(0.8); }
           90%, 100% { opacity: 1; transform: scale(1); }
         }
 
@@ -154,12 +154,24 @@ export const MascotV2 = React.memo(({ className, isSmiling }: MascotV2Props) => 
             </g>
 
             {/* Writing Mouth (Concentrated line) */}
-            <g className="v2-mouth-concentrated" style={isSmiling === true ? { display: 'none' } : undefined}>
+            <g
+              className={isSmiling === undefined ? "v2-mouth-concentrated" : undefined}
+              style={{
+                display: isSmiling === true ? 'none' : 'block',
+                ...(isSmiling !== undefined ? { animation: 'none', opacity: 1, transform: 'scale(1)', transformOrigin: '200px 190px' } : {})
+              }}
+            >
               <path d="M 194,188 Q 200,192 206,188" fill="none" stroke="#001a33" strokeWidth="3" strokeLinecap="round"/>
             </g>
 
             {/* Smiling Mouth (Breaks 4th wall) */}
-            <g className="v2-mouth-smiling" style={isSmiling === false ? { display: 'none' } : undefined}>
+            <g
+              className={isSmiling === undefined ? "v2-mouth-smiling" : undefined}
+              style={{
+                display: isSmiling === false ? 'none' : 'block',
+                ...(isSmiling !== undefined ? { animation: 'none', opacity: 1, transform: 'scale(1)', transformOrigin: '200px 190px' } : {})
+              }}
+            >
               <path d="M 190,185 Q 200,195 210,185" fill="none" stroke="#001a33" strokeWidth="3" strokeLinecap="round"/>
               <path d="M 190,185 C 190,200 210,200 210,185 Z" fill="#ff4d4d" />
               <path d="M 194,190 C 194,198 206,198 206,190 Z" fill="#b30000" /> 
