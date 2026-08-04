@@ -581,11 +581,23 @@
   will-change: transform, opacity;
 }
 
- 
- 
- 
- 
-[diff_block_end]
+/* Hardware accelerated smooth scroll and touch response performance */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.custom-scrollbar,
+.no-scrollbar,
+main,
+section {
+  -webkit-overflow-scrolling: touch;
+}
+
+.will-change-transform {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
 
 
 

@@ -1600,7 +1600,7 @@ export default function App() {
           totalPoints: stats.totalPoints || 0,
           weeklyXP: stats.weeklyXP || 0,
           weeklyPoints: stats.weeklyPoints || 0,
-          level: stats.level || Math.floor((stats.totalPoints || 0) / 100) + 1,
+          level: stats.level || 1,
           league: settings.league || "Bronze",
         },
         { merge: true },
@@ -3689,7 +3689,7 @@ export default function App() {
     setStats((prev) => {
       const nextCoins = (prev.coins || 0) + rewardCoins;
       let nextXP = prev.xp || 0;
-      let nextLevel = prev.level || Math.floor((prev.totalPoints || 0) / 100) + 1;
+      let nextLevel = prev.level || 1;
       let nextTrophies = [...(prev.trophies || [])];
       let msg = `Weekly Reward Claimed! +${rewardCoins} Coins! 🎁`;
 
@@ -3765,7 +3765,7 @@ export default function App() {
       }
 
       // League Synchronization (Bronze, Silver, Gold, Platinum, Diamond, Master, Champion, Divine, Nexus)
-      const currentLvl = stats.level || Math.floor((stats.totalPoints || 0) / 100) + 1;
+      const currentLvl = stats.level || 1;
       const getLeagueForLevel = (lvl: number) => {
         if (lvl >= 40) return 'Nexus';
         if (lvl >= 35) return 'Divine';
@@ -3848,8 +3848,7 @@ export default function App() {
 
         const level = Math.max(
           Number(d.level || 1),
-          Number(d.stats?.level || 1),
-          Math.floor(maxPts / 100) + 1
+          Number(d.stats?.level || 1)
         );
 
         const league = d.league || d.stats?.league || "Bronze";
@@ -3978,8 +3977,7 @@ export default function App() {
         const authoritativeStreak = Math.max(existingUser?.streak || 0, stats.streak || 0);
         const authoritativeLevel = Math.max(
           existingUser?.level || 1,
-          stats.level || 1,
-          Math.floor(authoritativeMaxPts / 100) + 1
+          stats.level || 1
         );
 
         const currentUserEntry = {
@@ -4972,18 +4970,25 @@ export default function App() {
 
   const handleLogout = async () => {
     vibrate(VIBRATION_PATTERNS.CLICK);
+    showToast("Logging out...", "info");
+
+    // Fast best-effort sync with 1.2s safety timeout so logout is instant and never gets stuck
     try {
-      showToast("Syncing user stats and progress, please wait...", "info");
-      await forceSyncData();
+      await Promise.race([
+        forceSyncData(),
+        new Promise((resolve) => setTimeout(resolve, 1200))
+      ]);
     } catch (syncErr) {
-      console.warn("Pre-logout sync failed:", syncErr);
+      console.warn("Pre-logout sync skipped/failed:", syncErr);
     }
+
     try {
       await signOut(auth);
-      showToast("Logout successful.", "success");
     } catch (error) {
-      console.error("Error signing out:", error);
-      showToast("Logout error, bro.", "error");
+      console.warn("Firebase signOut error handled, clearing local session safely:", error);
+    } finally {
+      localStorage.removeItem("nexora_cached_user");
+      showToast("Logged out successfully.", "success");
     }
   };
 
@@ -5979,8 +5984,13 @@ export default function App() {
                           }
 
                           let activeHat = prev.activeHat;
+                          let activeSkin = prev.activeSkin;
                           if (isSkin) {
-                            activeHat = item.id.replace("skin-", "").replace("pro-skin-", "");
+                            if (['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(item.id)) {
+                              activeSkin = item.id;
+                            } else {
+                              activeHat = item.id.replace("skin-", "").replace("pro-skin-", "");
+                            }
                           }
 
                           let isDogSoundPackActive = prev.isDogSoundPackActive;
@@ -6016,7 +6026,7 @@ export default function App() {
 
                           return {
                             ...prev,
-                            activeSkin: prev.activeSkin,
+                            activeSkin,
                             activeHat,
                             isDogSoundPackActive,
                             hasUltimateBadge,

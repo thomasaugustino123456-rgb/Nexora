@@ -882,7 +882,7 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
         )}
 
         <div className="absolute bottom-8 right-8 w-24 h-24 pointer-events-none opacity-40">
-          <Mascot mood={!onboardingCompleted ? 'happy' : plantState.isDead ? 'angry' : 'happy'} className="w-full h-full" />
+          <Mascot mood={!onboardingCompleted ? 'happy' : plantState.isDead ? 'sad' : plantState.isThirsty ? 'concerned' : 'happy'} className="w-full h-full" />
         </div>
       </div>
       <AnimatePresence>

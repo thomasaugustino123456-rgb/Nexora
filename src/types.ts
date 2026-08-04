@@ -70,6 +70,8 @@ export interface UserSettings {
   profilePic?: string; // base64
   themeColor?: string;
   soundEnabled?: boolean;
+  mascotSoundEnabled?: boolean;
+  mascotVibrationEnabled?: boolean;
   notificationsEnabled?: boolean;
   showQuotes?: boolean;
   pushMotivationEnabled?: boolean;
@@ -321,7 +323,7 @@ export interface NexusVideo {
   repostCount?: number;
 }
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion' | 'home';
-export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling' | 'surprised';
+export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling' | 'surprised' | 'sad' | 'grieving' | 'concerned' | 'pouty' | 'sleeping' | 'hyped';
 
 export interface SocialCircle {
   id: string;

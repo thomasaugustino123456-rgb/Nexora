@@ -38,14 +38,10 @@ export function StatsCharts({
   dailyProgress?: DailyProgress; 
   settings?: UserSettings; 
 }) {
-  const [mounted, setMounted] = React.useState(false);
+  const [mounted, setMounted] = React.useState(true);
 
   React.useEffect(() => {
-    // Wait for the slide/fade anims of progress screen components to settle completely
-    const timer = setTimeout(() => {
-      setMounted(true);
-    }, 550);
-    return () => clearTimeout(timer);
+    setMounted(true);
   }, []);
 
   if (!mounted) {
@@ -286,6 +282,86 @@ export function StatsCharts({
                 />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Skills Architecture Matrix */}
+      <div className="safe-glass bg-white border border-[#E9E4D4] rounded-3xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-xl bg-[#69C496]/10 flex items-center justify-center text-[#69C496] font-black text-xs">
+              ⚡
+            </div>
+            <div>
+              <h3 className="text-xs font-black text-[#4F3F34] uppercase tracking-widest">Skills Architecture</h3>
+              <p className="text-[10px] text-[#7D6B58] font-medium">Domain mastery, physical rigor, & mental agility</p>
+            </div>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-wider text-[#69C496] bg-[#69C496]/10 px-2.5 py-1 rounded-full">
+            Tier {Math.min(10, Math.floor((stats?.totalPoints || 0) / 200) + 1)}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          {/* Physical Rigor */}
+          <div className="bg-[#FAF8F5] border border-[#E9E4D4] rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-1.5">
+              <span className="text-xs font-bold text-[#4F3F34]">Physical Rigor</span>
+              <span className="text-xs font-black text-[#69C496]">{valPhysical} XP</span>
+            </div>
+            <div className="w-full bg-[#E9E4D4] h-2 rounded-full overflow-hidden mb-1">
+              <div 
+                className="bg-[#69C496] h-full rounded-full transition-all duration-500" 
+                style={{ width: `${Math.min(100, Math.max(15, (valPhysical / 500) * 100))}%` }} 
+              />
+            </div>
+            <p className="text-[10px] text-[#7D6B58]">Pushups, football, stamina & energy output</p>
+          </div>
+
+          {/* Mental Clarity */}
+          <div className="bg-[#FAF8F5] border border-[#E9E4D4] rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-1.5">
+              <span className="text-xs font-bold text-[#4F3F34]">Mental Clarity</span>
+              <span className="text-xs font-black text-[#7D6B58]">{valMental} XP</span>
+            </div>
+            <div className="w-full bg-[#E9E4D4] h-2 rounded-full overflow-hidden mb-1">
+              <div 
+                className="bg-[#7D6B58] h-full rounded-full transition-all duration-500" 
+                style={{ width: `${Math.min(100, Math.max(15, (valMental / 500) * 100))}%` }} 
+              />
+            </div>
+            <p className="text-[10px] text-[#7D6B58]">Meditation, focus, memory & breathwork</p>
+          </div>
+
+          {/* Creative Flow */}
+          <div className="bg-[#FAF8F5] border border-[#E9E4D4] rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-1.5">
+              <span className="text-xs font-bold text-[#4F3F34]">Creative Flow</span>
+              <span className="text-xs font-black text-[#A39587]">{valCreative} XP</span>
+            </div>
+            <div className="w-full bg-[#E9E4D4] h-2 rounded-full overflow-hidden mb-1">
+              <div 
+                className="bg-[#A39587] h-full rounded-full transition-all duration-500" 
+                style={{ width: `${Math.min(100, Math.max(15, (valCreative / 500) * 100))}%` }} 
+              />
+            </div>
+            <p className="text-[10px] text-[#7D6B58]">Drawing, expressive journal & gratitude</p>
+          </div>
+
+          {/* Hydration Efficiency */}
+          <div className="bg-[#FAF8F5] border border-[#E9E4D4] rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-1.5">
+              <span className="text-xs font-bold text-[#4F3F34]">Hydration Optimization</span>
+              <span className="text-xs font-black text-[#0EA5E9]">{valHydration} XP</span>
+            </div>
+            <div className="w-full bg-[#E9E4D4] h-2 rounded-full overflow-hidden mb-1">
+              <div 
+                className="bg-[#0EA5E9] h-full rounded-full transition-all duration-500" 
+                style={{ width: `${Math.min(100, Math.max(15, (valHydration / 300) * 100))}%` }} 
+              />
+            </div>
+            <p className="text-[10px] text-[#7D6B58]">Daily water intake & cellular recovery</p>
           </div>
         </div>
       </div>

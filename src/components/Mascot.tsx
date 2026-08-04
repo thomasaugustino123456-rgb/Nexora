@@ -3,7 +3,8 @@ import { motion } from 'motion/react';
 import { useSound } from '../hooks/useSound';
 
 
-export type MascotMood = 'happy' | 'angry' | 'boiling' | 'neutral' | 'surprised';
+import { MascotMood } from '../types';
+export type { MascotMood };
 
 export interface MascotProps {
   className?: string;
@@ -96,6 +97,61 @@ export const Mascot = React.memo(({
 
   const getThemeColors = () => {
     switch (theme) {
+      case 'fire-slim':
+        return {
+          bodyStart: '#ffffff',
+          bodyStop1: '#fde047',
+          bodyStop2: '#ff5500',
+          bodyEnd: '#dc2626',
+          armEnd: '#ff5500',
+          stroke: '#991b1b',
+          halo1: '#fef08a',
+          halo2: '#ff8c00',
+        };
+      case 'water-slim':
+        return {
+          bodyStart: '#ffffff',
+          bodyStop1: '#a5f3fc',
+          bodyStop2: '#06b6d4',
+          bodyEnd: '#0e7490',
+          armEnd: '#06b6d4',
+          stroke: '#164e63',
+          halo1: '#e0f2fe',
+          halo2: '#0284c7',
+        };
+      case 'shield-slim':
+        return {
+          bodyStart: '#ffffff',
+          bodyStop1: '#c7d2fe',
+          bodyStop2: '#4338ca',
+          bodyEnd: '#1e1b4b',
+          armEnd: '#4338ca',
+          stroke: '#312e81',
+          halo1: '#e0e7ff',
+          halo2: '#6366f1',
+        };
+      case 'lightning-slim':
+        return {
+          bodyStart: '#ffffff',
+          bodyStop1: '#fef08a',
+          bodyStop2: '#eab308',
+          bodyEnd: '#a16207',
+          armEnd: '#eab308',
+          stroke: '#713f12',
+          halo1: '#fef9c3',
+          halo2: '#00e5ff',
+        };
+      case 'earth-slim':
+        return {
+          bodyStart: '#ffffff',
+          bodyStop1: '#bbf7d0',
+          bodyStop2: '#22c55e',
+          bodyEnd: '#15803d',
+          armEnd: '#22c55e',
+          stroke: '#14532d',
+          halo1: '#dcfce7',
+          halo2: '#16a34a',
+        };
       case 'gold':
         return {
           bodyStart: '#ffffff',

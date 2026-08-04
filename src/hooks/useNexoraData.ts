@@ -54,6 +54,23 @@ export function extractRealProfilePic(docData: any, currentUser?: any): string {
   return "";
 }
 
+async function getDocSafely(docRef: any) {
+  try {
+    return await getDoc(docRef);
+  } catch (e: any) {
+    try {
+      const cached = await getDocFromCache(docRef);
+      if (cached) return cached;
+    } catch {
+      // ignore
+    }
+    return {
+      exists: () => false,
+      data: () => null
+    };
+  }
+}
+
 export function autoRestoreInventoryFromPurchased(purchasedItems: string[], existingInventory: any[]): any[] {
   const inventoryMap = new Map();
 
@@ -708,10 +725,21 @@ export function useNexoraData(
     let loadTimeout: any = null;
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       console.log(`[STARTUP] AUTH STATE RESOLVED - User UID: ${currentUser?.uid || "null"}`);
-      setUser(currentUser);
 
       if (currentUser) {
+        setUser(currentUser);
         localStorage.setItem("nexora_cached_user", currentUser.uid);
+
+        // Optimization: If this exact user is already loaded and ready, preserve state to prevent flickering/logouts
+        if (lastLoadedUserIdRef.current === currentUser.uid && dataLoadedFromFirestore.current) {
+          console.log(`[STARTUP] User ${currentUser.uid} already initialized & loaded. Maintaining session state.`);
+          setAuthLoading(false);
+          setIsDataReady(true);
+          setLoading(false);
+          return;
+        }
+
+        lastLoadedUserIdRef.current = currentUser.uid;
         setLoading(true);
         setIsDataReady(false);
         setIsStateHydrated(false);
@@ -1216,7 +1244,7 @@ export function useNexoraData(
               finalBestStreak = Math.max(docData.bestStreak || 0, docData.stats?.bestStreak || 0, rewardsData?.bestStreak || 0, rewardsTopData?.bestStreak || 0, rankTopData?.bestStreak || 0, leaderboardTopData?.bestStreak || 0, statsMainData?.bestStreak || 0, statsTopData?.bestStreak || 0, DEFAULT_STATS.bestStreak);
               finalTotalPoints = maxOverallPoints;
               finalXP = Math.max(docData.xp || 0, docData.stats?.xp || 0, rewardsData?.xp || 0, rewardsTopData?.xp || 0, rankTopData?.xp || 0, leaderboardTopData?.xp || 0, statsMainData?.xp || 0, statsTopData?.xp || 0, maxOverallPoints, DEFAULT_STATS.xp);
-              finalLevel = Math.max(docData.level || 1, docData.stats?.level || 1, rewardsData?.level || 1, rewardsTopData?.level || 1, rankTopData?.level || 1, leaderboardTopData?.level || 1, statsMainData?.level || 1, statsTopData?.level || 1, Math.floor(maxOverallPoints / 100) + 1);
+              finalLevel = Math.max(docData.level || 1, docData.stats?.level || 1, rewardsData?.level || 1, rewardsTopData?.level || 1, rankTopData?.level || 1, leaderboardTopData?.level || 1, statsMainData?.level || 1, statsTopData?.level || 1, DEFAULT_STATS.level || 1);
               finalCoins = Math.max(
                 docData.coins || 0,
                 docData.stats?.coins || 0,
@@ -1497,37 +1525,24 @@ export function useNexoraData(
           }
         }
       } else {
-        console.log(`[STARTUP] AUTH STATE RESOLVED - User logged out. Resetting local state.`);
+        // Double-check if auth.currentUser exists synchronously to guard against transient nulls during SDK setup or updates
+        if (auth.currentUser) {
+          console.log("[STARTUP] Transient auth null intercepted. auth.currentUser is active:", auth.currentUser.uid);
+          setUser(auth.currentUser);
+          return;
+        }
+
+        console.log(`[STARTUP] AUTH STATE RESOLVED - No active user session.`);
+        lastLoadedUserIdRef.current = null;
         setUser(null);
-        rawSetSettings(DEFAULT_SETTINGS);
-        rawSetStats(DEFAULT_STATS);
-        rawSetGardenState(createInitialGardenState());
-        rawSetDailyProgress({
-          date: today,
-          completed: false,
-          pushupsDone: false,
-          waterDrank: 0,
-          breathingDone: false,
-          drawingDone: false,
-          footballDone: false,
-          bubblesDone: false,
-          completionsCount: 0,
-          customPlanCompleted: false,
-          nextRestorationTime: null,
-        });
-        localStorage.removeItem("nexora_settings");
-        localStorage.removeItem("nexora_stats");
-        localStorage.removeItem("nexora_garden");
-        localStorage.removeItem("nexora_progress");
         localStorage.removeItem("nexora_cached_user");
-        localStorage.removeItem("nexora_onboarding_completed");
 
         dataLoadedFromFirestore.current = false;
         setIsHydrated(false);
         setIsStateLoaded(false, "No user session");
         hasMatchedHydratedStateRef.current = false;
         setIsStateHydrated(false);
-        setNeedsOnboarding(true);
+        setNeedsOnboarding(false);
         setAuthLoading(false);
         setIsDataReady(true);
         setLoading(false);
@@ -1591,7 +1606,7 @@ export function useNexoraData(
           
           try {
             console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${userRef.path}`);
-            const preSnap = await getDoc(userRef);
+            const preSnap = await getDocSafely(userRef);
             const dbData = preSnap.exists() ? preSnap.data() : null;
             console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${userRef.path}:`, dbData ? JSON.stringify(dbData) : "Document does not exist");
             
@@ -1912,7 +1927,7 @@ export function useNexoraData(
               totalPoints: stats.totalPoints || currentMaxPoints,
               xp: stats.xp || currentMaxPoints,
               streak: stats.streak || 0,
-              level: stats.level || Math.floor(currentMaxPoints / 100) + 1,
+              level: stats.level || 1,
               updatedAt: serverTimestamp(),
             });
             if (!settings.proTestActive) {
@@ -2037,7 +2052,7 @@ export function useNexoraData(
             }
 
             console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${userRef.path}`);
-            const postSnap = await getDoc(userRef);
+            const postSnap = await getDocSafely(userRef);
             console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${userRef.path}:`, postSnap.exists() ? JSON.stringify(postSnap.data()) : "Document does not exist");
           } catch (err: any) {
             handleFirestoreError(err, OperationType.WRITE, userRef.path);
@@ -2050,7 +2065,7 @@ export function useNexoraData(
         console.log(`[PERSISTENCE AUDIT] Exact Firestore path: ${progressRef.path}`);
         try {
           console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${progressRef.path}`);
-          const preProgSnap = await getDoc(progressRef);
+          const preProgSnap = await getDocSafely(progressRef);
           const dbProg = preProgSnap.exists() ? preProgSnap.data() as DailyProgress : null;
           console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${progressRef.path}:`, dbProg ? JSON.stringify(dbProg) : "Document does not exist");
           
@@ -2104,7 +2119,7 @@ export function useNexoraData(
           console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote progress document to: ${progressRef.path}`);
           
           console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${progressRef.path}`);
-          const postProgSnap = await getDoc(progressRef);
+          const postProgSnap = await getDocSafely(progressRef);
           console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${progressRef.path}:`, postProgSnap.exists() ? JSON.stringify(postProgSnap.data()) : "Document does not exist");
         } catch (err: any) {
           handleFirestoreError(err, OperationType.WRITE, progressRef.path);
@@ -2126,7 +2141,7 @@ export function useNexoraData(
           console.log(`[PERSISTENCE AUDIT] Exact Firestore path: ${leaderboardRef.path}`);
           try {
             console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${leaderboardRef.path}`);
-            const preLbSnap = await getDoc(leaderboardRef);
+            const preLbSnap = await getDocSafely(leaderboardRef);
             const preData = preLbSnap.exists() ? preLbSnap.data() : {};
             const rankDocRef = doc(db, "rank", user.uid);
             
@@ -2155,7 +2170,7 @@ export function useNexoraData(
               weeklyXP: maxPts,
               weeklyPoints: maxPts,
               xp: maxPts,
-              level: Math.max(preData.level || 1, stats.level || 1, Math.floor(maxPts / 100) + 1),
+              level: Math.max(preData.level || 1, stats.level || 1),
               league: settings.league || preData.league || "Bronze",
             };
             console.log(`[PERSISTENCE AUDIT] Write payload for leaderboard document:`, JSON.stringify(writePayload));
@@ -2293,7 +2308,7 @@ export function useNexoraData(
       // 1. Core Doc Force Write
       try {
         console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${userRef.path}`);
-        const preSnap = await getDoc(userRef);
+        const preSnap = await getDocSafely(userRef);
         const dbData = preSnap.exists() ? preSnap.data() : null;
         console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${userRef.path}:`, dbData ? JSON.stringify(dbData) : "Document does not exist");
 
@@ -2612,16 +2627,17 @@ export function useNexoraData(
         await setDoc(userShopDocRef, shopPayload, { merge: true });
 
         console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${userRef.path}`);
-        const postSnap = await getDoc(userRef);
+        const postSnap = await getDocSafely(userRef);
         console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${userRef.path}:`, postSnap.exists() ? JSON.stringify(postSnap.data()) : "Document does not exist");
       } catch (err: any) {
+        handleFirestoreError(err, OperationType.WRITE, userRef.path);
         console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Force sync failed to write core document to: ${userRef.path}. Error:`, err);
       }
 
       // 2. Progress Doc Force Write
       try {
         console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${progressRef.path}`);
-        const preProgSnap = await getDoc(progressRef);
+        const preProgSnap = await getDocSafely(progressRef);
         const dbProg = preProgSnap.exists() ? preProgSnap.data() as DailyProgress : null;
         console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${progressRef.path}:`, dbProg ? JSON.stringify(dbProg) : "Document does not exist");
 
@@ -2675,7 +2691,7 @@ export function useNexoraData(
         console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote progress document to: ${progressRef.path}`);
 
         console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${progressRef.path}`);
-        const postProgSnap = await getDoc(progressRef);
+        const postProgSnap = await getDocSafely(progressRef);
         console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${progressRef.path}:`, postProgSnap.exists() ? JSON.stringify(postProgSnap.data()) : "Document does not exist");
       } catch (err: any) {
         console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Force sync failed to write progress document to: ${progressRef.path}. Error:`, err);
@@ -2684,7 +2700,7 @@ export function useNexoraData(
       // 3. Leaderboard Doc Force Write
       try {
         console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${leaderboardRef.path}`);
-        const preLbSnap = await getDoc(leaderboardRef);
+        const preLbSnap = await getDocSafely(leaderboardRef);
         console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${leaderboardRef.path}:`, preLbSnap.exists() ? JSON.stringify(preLbSnap.data()) : "Document does not exist");
 
         const writePayload = {
@@ -2695,7 +2711,7 @@ export function useNexoraData(
           totalPoints: stats.totalPoints || 0,
           weeklyXP: stats.weeklyXP || 0,
           weeklyPoints: stats.weeklyPoints || 0,
-          level: stats.level || Math.floor((stats.totalPoints || 0) / 100) + 1,
+          level: stats.level || 1,
           league: settings.league || "Bronze",
         };
         console.log(`[PERSISTENCE AUDIT] Force sync payload for leaderboard document:`, JSON.stringify(writePayload));
@@ -2704,7 +2720,7 @@ export function useNexoraData(
         console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote leaderboard document to: ${leaderboardRef.path}`);
 
         console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${leaderboardRef.path}`);
-        const postLbSnap = await getDoc(leaderboardRef);
+        const postLbSnap = await getDocSafely(leaderboardRef);
         console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${leaderboardRef.path}:`, postLbSnap.exists() ? JSON.stringify(postLbSnap.data()) : "Document does not exist");
       } catch (err: any) {
         handleFirestoreError(err, OperationType.WRITE, leaderboardRef.path);

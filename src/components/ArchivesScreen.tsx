@@ -94,10 +94,16 @@ const ICON_MAP: Record<string, any> = {
 // Beautiful native vector illustrations for book covers – high quality, animated, and no watermarks!
 function AestheticImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
   const [loaded, setLoaded] = React.useState(false);
+  const imgRef = React.useRef<HTMLImageElement>(null);
+
+  React.useEffect(() => {
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setLoaded(true);
+    }
+  }, [src]);
 
   return (
     <div className="relative w-full h-full bg-[#FAF7F2] flex items-center justify-center overflow-hidden">
-      {/* Sleek, soft pulsing vector placeholder prior to asset rendering */}
       {!loaded && (
         <div className="absolute inset-0 bg-[#E9E4D4] animate-pulse flex items-center justify-center">
           <BookIcon className="w-8 h-8 text-[#7D6B58] opacity-35" />
@@ -105,13 +111,14 @@ function AestheticImage({ src, alt, className }: { src: string; alt: string; cla
       )}
       
       <img
+        ref={imgRef}
         src={src}
         alt={alt}
         referrerPolicy="no-referrer"
         decoding="async"
         loading="eager"
         onLoad={() => setLoaded(true)}
-        className={`${className} ${loaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'} transition-all duration-500 ease-out`}
+        className={`${className} ${loaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'} transition-all duration-300 ease-out`}
       />
     </div>
   );

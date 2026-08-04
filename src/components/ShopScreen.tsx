@@ -9,6 +9,7 @@ import { AnimatedVikingHat } from "./AnimatedVikingHat";
 import { AnimatedDetectiveKit } from "./AnimatedDetectiveKit";
 import { AnimatedWizardHat } from "./AnimatedWizardHat";
 import { AnimatedRoyalCrown } from "./AnimatedRoyalCrown";
+import { MascotCollectionSection } from "./MascotCollectionSection";
 
 export const SHOP_ITEMS: ShopItem[] = [
   // Power-ups
@@ -545,6 +546,16 @@ export function ShopScreen({
               />
             ))}
           </div>
+        </section>
+
+        <section>
+          <MascotCollectionSection
+            coins={coins}
+            activeMascotSkin={settings?.activeSkin || 'blue-slim'}
+            purchasedItems={purchasedItems}
+            onEquip={(mascotId) => onBuy({ id: mascotId, name: mascotId, price: 0, coinPrice: 0, effect: 'skin', icon: '✨', description: '' }, 'coins')}
+            onBuy={(item, currency) => onBuy({ id: item.id, name: item.name, price: 0, coinPrice: item.coinPrice, effect: 'skin', icon: '✨', description: '' }, 'coins')}
+          />
         </section>
 
         <section>

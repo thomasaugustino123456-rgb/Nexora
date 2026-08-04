@@ -39,6 +39,16 @@ const SOUNDS = {
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775223411/mixkit-g-eazy-nba-type-403_kai44j.mp3",
   "music-complicated":
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775223497/mixkit-complicated-281_iqtv8a.mp3",
+  "music-lofi":
+    "https://res.cloudinary.com/dfoty883a/video/upload/v1775223016/mixkit-funkee-monkeee-1140_od4pxc.mp3",
+  "music-cyber":
+    "https://res.cloudinary.com/dfoty883a/video/upload/v1775223304/mixkit-cbpd-400_hxdsvf.mp3",
+  "music-nature":
+    "https://res.cloudinary.com/dfoty883a/video/upload/v1775223233/mixkit-forest-treasure-138_a82rdf.mp3",
+  "music-synthwave":
+    "https://res.cloudinary.com/dfoty883a/video/upload/v1775223411/mixkit-g-eazy-nba-type-403_kai44j.mp3",
+  "pro-music-quantum-zen":
+    "https://res.cloudinary.com/dfoty883a/video/upload/v1775223058/mixkit-funky-triplets-1141_yeizgw.mp3",
   coin: "",
   water:
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775302429/mixkit-liquid-bubble-3000_dvewrr.wav",
@@ -90,6 +100,7 @@ const SOUNDS = {
     "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088375/mixkit-quick-win-video-game-notification-269_ec7wwz.wav",
   chest_land:
     "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088375/mixkit-martial-arts-punch-2052_l0noe5.wav",
+  mascotPop: "",
 };
 
 // Advanced Audio Engine
@@ -206,8 +217,10 @@ if (typeof window !== "undefined") {
 const getMusicNode = async (key: string) => {
   if (musicNodes[key]) return musicNodes[key];
 
-  const url = (SOUNDS as any)[key];
-  if (!url) return null;
+  let url = (SOUNDS as any)[key];
+  if (!url) {
+    url = (SOUNDS as any)["music-funkee"] || "https://res.cloudinary.com/dfoty883a/video/upload/v1775223016/mixkit-funkee-monkeee-1140_od4pxc.mp3";
+  }
 
   try {
     const audio = new Audio(url);
@@ -546,6 +559,59 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
         subOsc.start(now + idx * 0.08);
         subOsc.stop(now + idx * 0.08 + 0.4);
       });
+    } else if (soundKey === "catHappy" || soundKey === "meow") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(540, now);
+      osc.frequency.exponentialRampToValueAtTime(820, now + 0.12);
+      osc.frequency.exponentialRampToValueAtTime(450, now + 0.32);
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.25, now + 0.03);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    } else if (soundKey === "catHungry") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(480, now);
+      osc.frequency.linearRampToValueAtTime(700, now + 0.15);
+      osc.frequency.linearRampToValueAtTime(390, now + 0.38);
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.22, now + 0.04);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else if (soundKey === "dogHappy" || soundKey === "bark") {
+      [0, 0.12].forEach((delay) => {
+        const subOsc = ctx.createOscillator();
+        const subGain = ctx.createGain();
+        subOsc.type = "triangle";
+        subOsc.frequency.setValueAtTime(340, now + delay);
+        subOsc.frequency.exponentialRampToValueAtTime(150, now + delay + 0.09);
+        subGain.gain.setValueAtTime(0.28, now + delay);
+        subGain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.09);
+        subOsc.connect(subGain);
+        subGain.connect(ctx.destination);
+        subOsc.start(now + delay);
+        subOsc.stop(now + delay + 0.095);
+      });
+    } else if (soundKey === "dogHungry" || soundKey === "dogAngry") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(280, now);
+      osc.frequency.exponentialRampToValueAtTime(120, now + 0.14);
+      gainNode.gain.setValueAtTime(0.24, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else if (soundKey === "mascotPop" || soundKey === "pop") {
+      // Soft, warm, bubbly pop sound (< 220ms) under 250ms
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(340, now);
+      osc.frequency.exponentialRampToValueAtTime(820, now + 0.07);
+      osc.frequency.exponentialRampToValueAtTime(450, now + 0.18);
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.18, now + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.19);
+      osc.start(now);
+      osc.stop(now + 0.20);
     } else {
       osc.type = "sine";
       osc.frequency.setValueAtTime(440, now);

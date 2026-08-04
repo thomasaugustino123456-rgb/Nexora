@@ -12,6 +12,7 @@ import { GardenState } from '../types/garden';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { translate } from '../lib/translations';
 import { Mascot } from './Mascot';
+import { LivingMascot } from './LivingMascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
 import { MascotAIWrapper } from './SuspenseWrappers';
 import { formatDistanceToNow } from 'date-fns';
@@ -116,7 +117,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
   const layoutConfig = settings.layoutConfig || {};
-  const sectionOrder = layoutConfig.sectionOrder || ['stats', 'protocol', 'quests', 'plans', 'mascot'];
+  const sectionOrder = layoutConfig.sectionOrder || ['mascot', 'stats', 'protocol', 'quests', 'plans'];
   const lang = settings.language || 'en';
 
   const quotes = [
@@ -146,14 +147,46 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
   const [lastY, setLastY] = useState<number | null>(null);
   const [moveCount, setMoveCount] = useState(0);
 
-  // Determine Mascot Mood
+  // Determine Mascot Mood & Contextual Speech
+  const isPlantDead = settings.plantState?.isDead;
+  const isPlantThirsty = settings.plantState?.isThirsty || (settings.plantState?.health !== undefined && settings.plantState.health < 30);
+
   let mascotMood: MascotMood = 'neutral';
+  let companionSpeech = "";
+
   if (tapCount >= 6) {
     mascotMood = 'boiling';
+    companionSpeech = "🔥 MAXIMUM OVERDRIVE! NO EXCUSES TODAY!";
   } else if (tapCount >= 5) {
     mascotMood = 'angry';
-  } else if (tapCount > 0) {
+    companionSpeech = "⚡ Hey! Easy on the taps! Focus on your habits!";
+  } else if (tapCount === 4) {
+    mascotMood = 'hyped';
+    companionSpeech = "🔥 I'm supercharged! Ready to crush today's protocol?";
+  } else if (tapCount === 3) {
     mascotMood = 'happy';
+    companionSpeech = "✨ Bounce bounce! Every bit of discipline builds massive momentum!";
+  } else if (tapCount === 2) {
+    mascotMood = 'happy';
+    companionSpeech = "Hehe! That tickles! Let's conquer today's goals together!";
+  } else if (tapCount === 1) {
+    mascotMood = 'happy';
+    companionSpeech = "Hey friend! Ready to level up today? 🌟";
+  } else if (isPlantDead) {
+    mascotMood = 'sad';
+    companionSpeech = "Oh no... Our plant wilted while you were away 🥀! Let's visit the Garden to revive or plant a new seed!";
+  } else if (isPlantThirsty) {
+    mascotMood = 'concerned';
+    companionSpeech = "Gasp! Our plant is thirsty and needs water! 💧 Log water or fertilizer in the Garden before it wilts!";
+  } else if (isCompletedToday) {
+    mascotMood = 'hyped';
+    companionSpeech = `🎉 Unstoppable! You finished today's protocol! Active streak: ${stats.currentStreak || 1} days! 🔥`;
+  } else if ((stats.currentStreak || 0) >= 3) {
+    mascotMood = 'happy';
+    companionSpeech = `🔥 Look at you go! ${stats.currentStreak}-day streak active! Let's keep building momentum!`;
+  } else {
+    mascotMood = 'neutral';
+    companionSpeech = `☘️ "${quote}"`;
   }
 
   const triggerJump = async () => {
@@ -543,57 +576,55 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
 
       case 'mascot':
         if (layoutConfig.hideMascot) return null;
-        
-        // Define dynamic status dialogue text based on the mascot's current mood state
-        let companionSpeech = "";
-        if (mascotMood === 'boiling') {
-          companionSpeech = "🔥 COGENT VELOCITY ENGAGED! NO EXCUSES TODAY!";
-        } else if (mascotMood === 'angry') {
-          companionSpeech = "⚡ Hey! Less tapping, more high performance habits!";
-        } else if (mascotMood === 'happy') {
-          companionSpeech = "✨ Yes! Every bit of discipline builds massive momentum!";
-        } else {
-          companionSpeech = `☘️ "${quote}"`;
-        }
 
         return (
-          <div key="mascot" className="relative w-full aspect-square sm:w-[500px] sm:h-[520px] lg:w-[580px] lg:h-[600px] flex flex-col items-center justify-center flex-shrink-0 mx-auto py-4 select-none">
-            {/* Soft Ambient Shadow Underlay */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-[#69C496]/5 via-amber-500/[0.02] to-transparent blur-[60px] rounded-full" />
-            
-            {/* Elegant Duolingo style Dialogue Speech Bubble */}
-            <motion.div 
-              initial={{ opacity: 0, y: 15, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 20 }}
-              className="relative mb-6 max-w-[85%] bg-white border-2 border-[#E9E4D4] p-4 rounded-3xl shadow-md text-center group cursor-pointer hover:border-[#69C496]/40 transition-colors"
-              onClick={triggerJump}
-            >
-              <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-r-2 border-b-2 border-[#E9E4D4] rotate-45" />
-              <p className="text-[#4F3F34] text-xs font-black tracking-wide leading-relaxed">
-                {companionSpeech}
-              </p>
-              <div className="text-[9px] font-extrabold text-[#7D6B58] uppercase tracking-[0.12em] mt-1.5 opacity-60 group-hover:text-[#69C496] transition-colors">
-                TAP COMPANION TO JUMP • {stats.streak} DAYS STRONG
-              </div>
-            </motion.div>
+          <div key="mascot" className="relative w-full flex flex-row items-center justify-between gap-3 sm:gap-4 md:gap-6 pt-1 pb-2 mb-1 select-none overflow-visible">
+            {/* Mascot Character on Left (Horizontal arrangement, SVG up to 610px x 610px) */}
+            <div className="relative z-20 flex-shrink-0 w-[140px] h-[140px] xs:w-[190px] xs:h-[190px] sm:w-[320px] sm:h-[320px] md:w-[460px] md:h-[460px] lg:w-[610px] lg:h-[610px] max-w-full aspect-square flex items-center justify-center overflow-visible">
+              <motion.div 
+                animate={mascotControls} 
+                style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+                className="w-full h-full cursor-pointer flex items-center justify-center overflow-visible"
+              >
+                <LivingMascot 
+                  className="w-full h-full object-contain overflow-visible" 
+                  mascotId={settings.activeSkin || 'blue-slim'}
+                  mood={mascotMood}
+                  hat={settings.activeHat || 'none'}
+                  soundEnabled={settings.mascotSoundEnabled !== false}
+                  soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'}
+                  vibrationEnabled={settings.mascotVibrationEnabled !== false}
+                  onClick={handleMascotTap}
+                  showSpeech={false}
+                  speechText={companionSpeech}
+                />
+              </motion.div>
+            </div>
 
-            {/* Mascot Container */}
-            <motion.div 
-              animate={mascotControls} 
-              className="w-[95%] h-[95%] relative z-10 cursor-pointer"
-            >
-              <Mascot 
-                className="w-full h-full" 
-                mood={mascotMood}
-                hat={settings.activeHat || 'none'}
-                theme={settings.activeSkin || 'standard'}
-                soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'}
-                onClick={handleMascotTap}
-                onPointerMove={handleMascotPointerMove}
-                onPointerLeave={handleMascotPointerLeave}
-              />
-            </motion.div>
+            {/* Mascot Speech Bubble Message on Right (Horizontal arrangement, dynamic expand with clean gap) */}
+            <AnimatePresence mode="wait">
+              <motion.div 
+                key={companionSpeech}
+                style={{ willChange: 'transform, opacity' }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: [0.95, 1.02, 1.00] }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className="flex-1 min-w-[150px] max-w-2xl relative z-10 bg-white/95 border-2 border-[#E9E4D4] px-4 py-3 sm:px-5 sm:py-4 rounded-2xl sm:rounded-3xl shadow-md shadow-amber-900/5 cursor-pointer hover:border-[#69C496]/50 transition-colors my-auto"
+                onClick={triggerJump}
+              >
+                {/* Speech Arrow pointing left towards mascot */}
+                <motion.div 
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.2, delay: 0.05 }}
+                  className="absolute top-1/2 -left-[8px] -translate-y-1/2 w-3.5 h-3.5 bg-white border-b-2 border-l-2 border-[#E9E4D4] rotate-45 z-0" 
+                />
+                <p className="text-[#4F3F34] text-xs sm:text-sm md:text-base font-semibold tracking-normal leading-relaxed relative z-10 break-words whitespace-normal text-left">
+                  {companionSpeech}
+                </p>
+              </motion.div>
+            </AnimatePresence>
           </div>
         );
 
@@ -646,7 +677,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
           const content = renderSection(id);
           if (!content) return null;
           // Span certain wide elements across two columns on desktop to maximize clarity
-          const isFullWidth = id === 'protocol' || id === 'plans';
+          const isFullWidth = id === 'protocol' || id === 'plans' || id === 'mascot';
           return (
             <div key={id} className={`${isFullWidth ? 'md:col-span-2' : ''} w-full`}>
               {content}
