@@ -318,6 +318,25 @@ const startScheduler = () => {
           }
         }
 
+        // 1.5 WATER CHALLENGE HYDRATION REMINDERS (Morning 10:00, Midday 14:00, Evening 20:00)
+        const isWaterDone = userData.isWaterDone === true || userData.hydrationLastCompletedDate === todayStr || (userData.hydrationWaterLevel || 0) >= 0.999;
+        if (!isWaterDone && ['10:00', '14:00', '20:00'].includes(userTimeStr)) {
+          const waterKey = `${userId}_water_${userTimeStr}`;
+          if (sentNotifications.get(waterKey) !== todayStr) {
+            sentNotifications.set(waterKey, todayStr);
+            let waterTitle = "Water Challenge Reminder! 💧";
+            let waterBody = "Hydration Alert! Take a fresh glass of water now to fuel your focus & health, bro!";
+            if (userTimeStr === '10:00') {
+              waterBody = "Morning Hydration Alert! 🌅 You haven't logged your water goal yet today. Drink a fresh glass now, bro!";
+            } else if (userTimeStr === '14:00') {
+              waterBody = "Midday Hydration Alert! ☀️ Halfway through the day and your bottle needs a fill! Take a drink now to keep your stamina up, bro!";
+            } else if (userTimeStr === '20:00') {
+              waterBody = "Evening Hydration Alert! 🌙 Don't let your water streak slip! Complete your Water Challenge goal before bed, bro!";
+            }
+            await sendPush(fcmToken, waterTitle, waterBody);
+          }
+        }
+
         // 2. PRE-MIDNIGHT STREAK AT RISK (Extreme Duolingo Urgency)
         if (userTimeStr === '22:00' && !isTodayCompleted) {
           const rKey = `${userId}_streak_22:00`;

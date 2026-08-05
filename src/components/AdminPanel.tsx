@@ -153,61 +153,130 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const fetchAdminData = async () => {
     setIsLoading(true);
     try {
-      // 1. Fetch Users
-      const usersSnap = await getDocs(collection(db, "users"));
-      const parsedUsers: UserDetail[] = [];
-      
-      usersSnap.forEach((docSnap) => {
-        const data = docSnap.data();
-        const userStats = data.stats || {};
-        
-        parsedUsers.push({
-          uid: docSnap.id,
-          email: data.email || "No Email",
-          displayName: data.displayName || "Anonymous User",
-          role: data.role || "user",
-          streak: typeof data.streak === "number" ? data.streak : (userStats.streak || 0),
-          bestStreak: typeof data.bestStreak === "number" ? data.bestStreak : (userStats.bestStreak || 0),
-          totalPoints: typeof data.totalPoints === "number" ? data.totalPoints : (userStats.totalPoints || 0),
-          level: typeof data.level === "number" ? data.level : (userStats.level || 1),
-          coins: typeof data.coins === "number" ? data.coins : (userStats.coins || 0),
-          xp: typeof data.xp === "number" ? data.xp : (userStats.xp || 0),
-          plantState: data.plantState,
-          garden: data.garden,
-          purchasedItems: data.purchasedItems || [],
-          purchasedHouseItemIds: data.purchasedHouseItemIds || []
-        });
-      });
-      setUsersList(parsedUsers);
+      // 1. Fetch Users, Leaderboard, and Rank in parallel safely
+      const [usersResult, lbResult, rankResult] = await Promise.allSettled([
+        getDocs(collection(db, "users")),
+        getDocs(collection(db, "leaderboard")),
+        getDocs(collection(db, "rank"))
+      ]);
 
-      // 2. Fetch Feedbacks
-      const feedbackSnap = await getDocs(collection(db, "feedback"));
-      const parsedFeedbacks: FeedbackLog[] = [];
-      feedbackSnap.forEach((fbDoc) => {
-        const fbData = fbDoc.data();
-        parsedFeedbacks.push({
-          id: fbDoc.id,
-          category: fbData.category || "General",
-          message: fbData.message || "",
-          userEmail: fbData.userEmail || "Anonymous",
-          userName: fbData.userName || "user",
-          rating: fbData.rating || 5,
-          createdAt: fbData.createdAt
+      const userMap = new Map<string, UserDetail>();
+
+      const processDocData = (docId: string, data: any) => {
+        if (!data || docId.startsWith("bot-")) return;
+        const uid = docId;
+        const userStats = data.stats || {};
+
+        const existing = userMap.get(uid);
+
+        const email = data.email || data.Email || data["Email address"] || existing?.email || "No Email";
+        const displayName = data.displayName || data.accountName || data.name || data.Name || existing?.displayName || "Anonymous User";
+        const role = data.role || existing?.role || "user";
+        
+        const streak = Math.max(
+          typeof data.streak === "number" ? data.streak : 0,
+          typeof userStats.streak === "number" ? userStats.streak : 0,
+          existing?.streak || 0
+        );
+        const bestStreak = Math.max(
+          typeof data.bestStreak === "number" ? data.bestStreak : 0,
+          typeof userStats.bestStreak === "number" ? userStats.bestStreak : 0,
+          existing?.bestStreak || 0
+        );
+        const totalPoints = Math.max(
+          typeof data.totalPoints === "number" ? data.totalPoints : 0,
+          typeof data.weeklyPoints === "number" ? data.weeklyPoints : 0,
+          typeof data.points === "number" ? data.points : 0,
+          typeof userStats.totalPoints === "number" ? userStats.totalPoints : 0,
+          existing?.totalPoints || 0
+        );
+        const level = Math.max(
+          typeof data.level === "number" ? data.level : 1,
+          typeof userStats.level === "number" ? userStats.level : 1,
+          existing?.level || 1
+        );
+        const coins = Math.max(
+          typeof data.coins === "number" ? data.coins : 0,
+          typeof userStats.coins === "number" ? userStats.coins : 0,
+          existing?.coins || 0
+        );
+        const xp = Math.max(
+          typeof data.xp === "number" ? data.xp : 0,
+          typeof data.weeklyXP === "number" ? data.weeklyXP : 0,
+          typeof userStats.xp === "number" ? userStats.xp : 0,
+          totalPoints,
+          existing?.xp || 0
+        );
+
+        const plantState = data.plantState || userStats.plantState || existing?.plantState;
+        const garden = data.garden || userStats.garden || existing?.garden;
+        const purchasedItems = data.purchasedItems || userStats.purchasedItems || existing?.purchasedItems || [];
+        const purchasedHouseItemIds = data.purchasedHouseItemIds || existing?.purchasedHouseItemIds || [];
+
+        userMap.set(uid, {
+          uid,
+          email,
+          displayName,
+          role,
+          streak,
+          bestStreak,
+          totalPoints,
+          level,
+          coins,
+          xp,
+          createdAt: data.createdAt || existing?.createdAt,
+          plantState,
+          garden,
+          purchasedItems,
+          purchasedHouseItemIds
         });
-      });
-      
-      // Sort Feedbacks by Date descending
-      parsedFeedbacks.sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
-        return timeB - timeA;
-      });
-      
-      setFeedbacks(parsedFeedbacks);
-      
-      // Set the first feedback as selected as default in details panel
-      if (parsedFeedbacks.length > 0) {
-        setSelectedFeedback(parsedFeedbacks[0]);
+      };
+
+      if (usersResult.status === "fulfilled") {
+        usersResult.value.forEach((docSnap) => processDocData(docSnap.id, docSnap.data()));
+      }
+      if (lbResult.status === "fulfilled") {
+        lbResult.value.forEach((docSnap) => processDocData(docSnap.id, docSnap.data()));
+      }
+      if (rankResult.status === "fulfilled") {
+        rankResult.value.forEach((docSnap) => processDocData(docSnap.id, docSnap.data()));
+      }
+
+      const parsedUsers = Array.from(userMap.values());
+      setUsersList(parsedUsers);
+      if (parsedUsers.length > 0 && !selectedUser) {
+        setSelectedUser(parsedUsers[0]);
+      }
+
+      // 2. Fetch Feedbacks safely
+      try {
+        const feedbackSnap = await getDocs(collection(db, "feedback"));
+        const parsedFeedbacks: FeedbackLog[] = [];
+        feedbackSnap.forEach((fbDoc) => {
+          const fbData = fbDoc.data();
+          parsedFeedbacks.push({
+            id: fbDoc.id,
+            category: fbData.category || "General",
+            message: fbData.message || "",
+            userEmail: fbData.userEmail || "Anonymous",
+            userName: fbData.userName || "user",
+            rating: fbData.rating || 5,
+            createdAt: fbData.createdAt
+          });
+        });
+        
+        parsedFeedbacks.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          return timeB - timeA;
+        });
+        
+        setFeedbacks(parsedFeedbacks);
+        if (parsedFeedbacks.length > 0 && !selectedFeedback) {
+          setSelectedFeedback(parsedFeedbacks[0]);
+        }
+      } catch (fbErr) {
+        console.warn("Could not fetch feedback logs:", fbErr);
       }
     } catch (error) {
       console.error("AdminPanel: Error loading cloud database metrics:", error);
@@ -1233,25 +1302,35 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </span>
                       {selectedUser.purchasedItems && selectedUser.purchasedItems.length > 0 ? (
                         <div className="flex flex-wrap gap-1.5">
-                          {selectedUser.purchasedItems.map((itemId) => (
-                            <span
-                              key={itemId}
-                              className="px-2 py-0.5 bg-slate-950 text-amber-300 border border-amber-500/10 rounded text-[9px] font-black uppercase font-mono"
-                            >
-                              {itemId.replace("skin-", "").replace("sound-", "")}
-                            </span>
-                          ))}
+                          {selectedUser.purchasedItems.map((item: any, idx: number) => {
+                            const itemStr = typeof item === "string" ? item : (item?.itemId || item?.id || item?.name || "");
+                            const displayName = typeof item === "object" && item && "name" in item ? item.name : itemStr.replace("skin-", "").replace("sound-", "");
+                            const key = typeof item === "string" ? item : (item?.id || item?.itemId || `item-${idx}`);
+                            return (
+                              <span
+                                key={key}
+                                className="px-2 py-0.5 bg-slate-950 text-amber-300 border border-amber-500/10 rounded text-[9px] font-black uppercase font-mono"
+                              >
+                                {displayName}
+                              </span>
+                            );
+                          })}
                         </div>
                       ) : selectedUser.purchasedHouseItemIds && selectedUser.purchasedHouseItemIds.length > 0 ? (
                         <div className="flex flex-wrap gap-1.5">
-                          {selectedUser.purchasedHouseItemIds.map((itemId) => (
-                            <span
-                              key={itemId}
-                              className="px-2 py-0.5 bg-slate-950 text-amber-300 border border-amber-500/10 rounded text-[9px] font-black uppercase font-mono"
-                            >
-                              {itemId.replace("house-", "")}
-                            </span>
-                          ))}
+                          {selectedUser.purchasedHouseItemIds.map((item: any, idx: number) => {
+                            const itemStr = typeof item === "string" ? item : (item?.itemId || item?.id || item?.name || "");
+                            const displayName = typeof item === "object" && item && "name" in item ? item.name : itemStr.replace("house-", "");
+                            const key = typeof item === "string" ? item : (item?.id || item?.itemId || `house-item-${idx}`);
+                            return (
+                              <span
+                                key={key}
+                                className="px-2 py-0.5 bg-slate-950 text-amber-300 border border-amber-500/10 rounded text-[9px] font-black uppercase font-mono"
+                              >
+                                {displayName}
+                              </span>
+                            );
+                          })}
                         </div>
                       ) : (
                         <p className="text-[10.5px] text-slate-500 font-semibold italic">No shop purchase histories reported</p>

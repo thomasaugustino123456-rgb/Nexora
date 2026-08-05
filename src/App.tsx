@@ -104,6 +104,7 @@ import {
   PlantState,
   isUserProUnlocked,
 } from "./types";
+import { createInitialGardenState } from "./types/garden";
 import { HOUSE_ITEMS } from "./constants/houseItems";
 import { NexoraStudio } from "./components/NexoraStudio";
 import { BottomNav } from "./components/BottomNav";
@@ -533,6 +534,19 @@ export default function App() {
     setHydrationConsecutiveDays(nextDays);
     setHydrationWaterLevel(nextLevel);
     setHydrationLastCompletedDate(todayStr);
+
+    if (user) {
+      try {
+        const userRef = doc(db, "users", user.uid);
+        setDoc(userRef, {
+          hydrationLastCompletedDate: todayStr,
+          hydrationWaterLevel: nextLevel,
+          isWaterDone: true,
+        }, { merge: true });
+      } catch (e) {
+        console.error("Failed to sync water completion to Firestore:", e);
+      }
+    }
 
     // Water plant & grow plant on water challenge completion!
     growPlant();
@@ -3013,28 +3027,35 @@ export default function App() {
     if (user && fcmToken) {
       const saveToken = async () => {
         try {
-          /*
           const userRef = doc(db, "users", user.uid);
-          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          let tz = 'UTC';
+          try {
+            tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+          } catch (err) {
+            console.warn("Could not determine timezone:", err);
+          }
           await setDoc(userRef, {
             fcmToken: fcmToken,
             notificationsEnabled: true,
             timezone: tz,
+            reminderTime: settings.reminderTime || "08:00",
+            reminderTime2: settings.reminderTime2 || "21:00",
+            motivationTime: settings.motivationTime || "12:00",
             "settings.fcmToken": fcmToken,
             "settings.notificationsEnabled": true,
             "settings.timezone": tz,
+            "settings.reminderTime": settings.reminderTime || "08:00",
+            "settings.reminderTime2": settings.reminderTime2 || "21:00",
+            "settings.motivationTime": settings.motivationTime || "12:00",
           }, { merge: true });
-          console.log("FCM: Token and Timezone saved to Firestore.");
-          */
-          console.log("FCM: Token saving to Firestore is temporarily disabled.");
-
+          console.log("FCM: Token, Timezone, and Reminder times saved to Firestore successfully.");
         } catch (e) {
           console.error("FCM: Failed to save token:", e);
         }
       };
       saveToken();
     }
-  }, [user, fcmToken]);
+  }, [user, fcmToken, settings.reminderTime, settings.reminderTime2, settings.motivationTime]);
 
   // Foreground Notification Listener
   useEffect(() => {
@@ -3565,6 +3586,47 @@ export default function App() {
         }
       }
 
+      // Water Challenge Hydration Reminders (Morning, Midday, Evening if water goal/level not completed)
+      const isWaterCompletedToday = hydrationLastCompletedDate === todayStr || (dailyProgress && dailyProgress.waterDone === true) || hydrationWaterLevel >= 0.999;
+      
+      if (!isWaterCompletedToday) {
+        // Morning Hydration Check (10:00)
+        if (currentTimeStr === "10:00") {
+          const lastWaterMorningKey = `nexora_water_morning_${todayStr}`;
+          if (!localStorage.getItem(lastWaterMorningKey)) {
+            sendNotification("Water Challenge Reminder! 💧", {
+              body: "Morning Hydration Alert! 🌅 You haven't logged your water goal yet today. Drink a fresh glass of water now to boost your focus, bro!",
+              icon: nexoraAppIcon,
+            });
+            localStorage.setItem(lastWaterMorningKey, "true");
+          }
+        }
+
+        // Midday Hydration Check (14:00)
+        if (currentTimeStr === "14:00") {
+          const lastWaterMiddayKey = `nexora_water_midday_${todayStr}`;
+          if (!localStorage.getItem(lastWaterMiddayKey)) {
+            sendNotification("Water Challenge Reminder! 💧", {
+              body: "Midday Hydration Alert! ☀️ Halfway through the day and your bottle needs a fill! Take a drink now to keep your stamina up, bro!",
+              icon: nexoraAppIcon,
+            });
+            localStorage.setItem(lastWaterMiddayKey, "true");
+          }
+        }
+
+        // Evening Hydration Check (20:00)
+        if (currentTimeStr === "20:00") {
+          const lastWaterEveningKey = `nexora_water_evening_${todayStr}`;
+          if (!localStorage.getItem(lastWaterEveningKey)) {
+            sendNotification("Water Challenge Reminder! 💧", {
+              body: "Evening Hydration Alert! 🌙 Don't let your water streak slip! Complete your Water Challenge goal before bed, bro!",
+              icon: nexoraAppIcon,
+            });
+            localStorage.setItem(lastWaterEveningKey, "true");
+          }
+        }
+      }
+
       // Custom Plan Reminders
       customPlans.forEach((plan) => {
         if (
@@ -3602,6 +3664,9 @@ export default function App() {
     settings.reminderTime2,
     settings.motivationTime,
     customPlans,
+    hydrationWaterLevel,
+    hydrationLastCompletedDate,
+    dailyProgress?.waterDone,
   ]);
 
   const handleSaveCustomPlan = async (plan: CustomPlan) => {
@@ -3811,13 +3876,12 @@ export default function App() {
   ]);
 
   // Dedicated stable Leaderboard Listener with multi-collection real-time sync and local cache saving
+  const leaderboardDocsRef = useRef<any[]>([]);
+  const usersDocsRef = useRef<any[]>([]);
+  const rankDocsRef = useRef<any[]>([]);
+
   useEffect(() => {
-    if (!isDataReady || !isStateHydrated) return;
-
-    let leaderboardDocs: any[] = [];
-    let usersDocs: any[] = [];
-    let rankDocs: any[] = [];
-
+    // Synchronize real users immediately from Firestore without waiting for background hydration flags
     const processAndSetLeaderboard = () => {
       const allDataMap = new Map<string, any>();
 
@@ -3826,7 +3890,14 @@ export default function App() {
         const uid = d.uid || d.userId || d.id || defaultDocId;
         if (!uid || uid.startsWith("bot-")) return;
 
-        const displayName = d.displayName || d.accountName || d.name || d.Name || d.account_name || "Anonymous";
+        let displayName = d.displayName || d.accountName || d.name || d.Name || d.account_name || d.username;
+        if ((!displayName || displayName === "Anonymous") && d.email && typeof d.email === "string") {
+          displayName = d.email.split('@')[0];
+        }
+        if (!displayName) {
+          displayName = "Anonymous";
+        }
+
         const photoURL = d.photoURL || d.profilePic || d.photoFileName || d["Photo file name"] || d["Profile image"] || "";
         
         const maxPts = Math.max(
@@ -3889,9 +3960,9 @@ export default function App() {
         }
       };
 
-      leaderboardDocs.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
-      usersDocs.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
-      rankDocs.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
+      leaderboardDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
+      usersDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
+      rankDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
 
       // BOT SYSTEM: Always add competitive AI players alongside real users
       const bots = [
@@ -3982,7 +4053,7 @@ export default function App() {
 
         const currentUserEntry = {
           uid: user.uid,
-          displayName: settings.displayName || existingUser?.displayName || user.displayName || "Champion",
+          displayName: settings.displayName || existingUser?.displayName || user.displayName || (user.email ? user.email.split('@')[0] : "Champion"),
           photoURL: settings.profilePic || existingUser?.photoURL || user.photoURL || "",
           weeklyXP: authoritativeMaxPts,
           weeklyPoints: authoritativeMaxPts,
@@ -3995,6 +4066,10 @@ export default function App() {
         };
 
         allDataMap.set(user.uid, currentUserEntry);
+
+        // Instantly write user to /leaderboard and /rank so other real users can see them immediately
+        setDoc(doc(db, "leaderboard", user.uid), currentUserEntry, { merge: true }).catch(() => {});
+        setDoc(doc(db, "rank", user.uid), currentUserEntry, { merge: true }).catch(() => {});
 
         if (firestoreUserMaxPts > currentLocalMaxPts) {
           setStats((prev) => ({
@@ -4033,10 +4108,35 @@ export default function App() {
     };
 
     const qLb = query(collection(db, "leaderboard"), limit(150));
+    const qUsers = query(collection(db, "users"), limit(150));
+    const qRank = query(collection(db, "rank"), limit(150));
+
+    // Immediate fast pass for instant hydration of real users before onSnapshot handshake
+    getDocs(qLb).then((snap) => {
+      if (snap.docs.length > 0) {
+        leaderboardDocsRef.current = snap.docs;
+        processAndSetLeaderboard();
+      }
+    }).catch(() => {});
+
+    getDocs(qUsers).then((snap) => {
+      if (snap.docs.length > 0) {
+        usersDocsRef.current = snap.docs;
+        processAndSetLeaderboard();
+      }
+    }).catch(() => {});
+
+    getDocs(qRank).then((snap) => {
+      if (snap.docs.length > 0) {
+        rankDocsRef.current = snap.docs;
+        processAndSetLeaderboard();
+      }
+    }).catch(() => {});
+
     const unsubLb = onSnapshot(
       qLb,
       (snapshot) => {
-        leaderboardDocs = snapshot.docs;
+        leaderboardDocsRef.current = snapshot.docs;
         processAndSetLeaderboard();
       },
       (error) => {
@@ -4048,11 +4148,10 @@ export default function App() {
       }
     );
 
-    const qUsers = query(collection(db, "users"), limit(150));
     const unsubUsers = onSnapshot(
       qUsers,
       (snapshot) => {
-        usersDocs = snapshot.docs;
+        usersDocsRef.current = snapshot.docs;
         processAndSetLeaderboard();
       },
       (error) => {
@@ -4064,11 +4163,10 @@ export default function App() {
       }
     );
 
-    const qRank = query(collection(db, "rank"), limit(150));
     const unsubRank = onSnapshot(
       qRank,
       (snapshot) => {
-        rankDocs = snapshot.docs;
+        rankDocsRef.current = snapshot.docs;
         processAndSetLeaderboard();
       },
       (error) => {
@@ -4087,8 +4185,6 @@ export default function App() {
     };
   }, [
     user,
-    isDataReady,
-    isStateHydrated,
     settings.league,
     settings.displayName,
     settings.profilePic,
@@ -4803,7 +4899,7 @@ export default function App() {
         updatedAt: serverTimestamp(),
       };
 
-      setDoc(userRef, { stats: updatedStats, streak: updatedStats.streak, lastCompletedDate: updatedStats.lastCompletedDate, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+      setDoc(userRef, { coins: updatedStats.coins, xp: updatedStats.xp, totalPoints: updatedStats.totalPoints, stats: updatedStats, streak: updatedStats.streak, lastCompletedDate: updatedStats.lastCompletedDate, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
       setDoc(userStatsMainRef, coreStatsPayload, { merge: true }).catch(() => {});
       setDoc(userTopStatsRef, coreStatsPayload, { merge: true }).catch(() => {});
 
@@ -4987,7 +5083,19 @@ export default function App() {
     } catch (error) {
       console.warn("Firebase signOut error handled, clearing local session safely:", error);
     } finally {
-      localStorage.removeItem("nexora_cached_user");
+      // Complete localStorage wipe for account isolation
+      Object.keys(localStorage).forEach((key) => {
+        if (
+          key.startsWith("nexora_") ||
+          key.startsWith("hydration_") ||
+          key === "admin_read_feedback_ids"
+        ) {
+          localStorage.removeItem(key);
+        }
+      });
+      setSettings(DEFAULT_SETTINGS);
+      setStats(DEFAULT_STATS);
+      setGardenState(createInitialGardenState());
       showToast("Logged out successfully.", "success");
     }
   };

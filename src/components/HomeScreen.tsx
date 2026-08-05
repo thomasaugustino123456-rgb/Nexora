@@ -180,10 +180,10 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
     companionSpeech = "Gasp! Our plant is thirsty and needs water! 💧 Log water or fertilizer in the Garden before it wilts!";
   } else if (isCompletedToday) {
     mascotMood = 'hyped';
-    companionSpeech = `🎉 Unstoppable! You finished today's protocol! Active streak: ${stats.currentStreak || 1} days! 🔥`;
-  } else if ((stats.currentStreak || 0) >= 3) {
+    companionSpeech = `🎉 Unstoppable! You finished today's protocol! Active streak: ${stats.streak || 1} days! 🔥`;
+  } else if ((stats.streak || 0) >= 3) {
     mascotMood = 'happy';
-    companionSpeech = `🔥 Look at you go! ${stats.currentStreak}-day streak active! Let's keep building momentum!`;
+    companionSpeech = `🔥 Look at you go! ${stats.streak}-day streak active! Let's keep building momentum!`;
   } else {
     mascotMood = 'neutral';
     companionSpeech = `☘️ "${quote}"`;

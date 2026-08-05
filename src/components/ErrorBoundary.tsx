@@ -24,6 +24,19 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   public static getDerivedStateFromError(error: Error): State {
     const errorMsg = error.message || '';
+    
+    // Ignore internal Firestore SDK transient assertions to prevent UI crash
+    if (
+      errorMsg.includes('INTERNAL ASSERTION FAILED') ||
+      errorMsg.includes('Unexpected state') ||
+      errorMsg.includes('ca9') ||
+      errorMsg.includes('ve:') ||
+      errorMsg.includes('FIRESTORE')
+    ) {
+      console.warn("Ignored transient internal Firestore assertion in ErrorBoundary:", errorMsg);
+      return { hasError: false, error: null };
+    }
+
     const isUpdating = 
       errorMsg.includes('Failed to fetch dynamically imported module') ||
       errorMsg.includes('loading chunk') ||

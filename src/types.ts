@@ -190,6 +190,7 @@ export interface DailyProgress {
   completionsCount: number; // Number of times the flow was completed today
   pushupsDone: boolean;
   waterDrank: number;
+  waterDone?: boolean;
   breathingDone: boolean;
   drawingDone: boolean;
   footballDone: boolean;

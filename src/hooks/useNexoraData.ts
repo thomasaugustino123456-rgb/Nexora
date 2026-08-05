@@ -71,7 +71,7 @@ async function getDocSafely(docRef: any) {
   }
 }
 
-export function autoRestoreInventoryFromPurchased(purchasedItems: string[], existingInventory: any[]): any[] {
+export function autoRestoreInventoryFromPurchased(purchasedItems: (string | any)[], existingInventory: any[]): any[] {
   const inventoryMap = new Map();
 
   (existingInventory || []).forEach((item: any) => {
@@ -90,8 +90,10 @@ export function autoRestoreInventoryFromPurchased(purchasedItems: string[], exis
     }
   });
 
-  (purchasedItems || []).forEach((purchasedId) => {
-    if (!purchasedId) return;
+  (purchasedItems || []).forEach((rawItem) => {
+    if (!rawItem) return;
+    const purchasedId = typeof rawItem === "string" ? rawItem : (rawItem.itemId || rawItem.id || rawItem.name);
+    if (!purchasedId || typeof purchasedId !== "string") return;
     const hasKey = Array.from(inventoryMap.values()).some(
       (inv: any) => inv?.itemId === purchasedId || inv?.id === purchasedId
     );
@@ -367,9 +369,21 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
   // Merge arrays uniquely
   merged.joinedCircleIds = Array.from(new Set([...(dbSettings.joinedCircleIds || []), ...(localSettings.joinedCircleIds || [])]));
   merged.notifEnabledCircleIds = Array.from(new Set([...(dbSettings.notifEnabledCircleIds || []), ...(localSettings.notifEnabledCircleIds || [])]));
-  merged.purchasedEcosystemItemIds = Array.from(new Set([...(dbSettings.purchasedEcosystemItemIds || []), ...(localSettings.purchasedEcosystemItemIds || [])]));
-  merged.activeEcosystemItemIds = Array.from(new Set([...(dbSettings.activeEcosystemItemIds || []), ...(localSettings.activeEcosystemItemIds || [])]));
-  merged.purchasedHouseItemIds = Array.from(new Set([...(dbSettings.purchasedHouseItemIds || []), ...(localSettings.purchasedHouseItemIds || [])]));
+  merged.purchasedEcosystemItemIds = Array.from(new Set([
+    ...(dbSettings.purchasedEcosystemItemIds || []),
+    ...(localSettings.purchasedEcosystemItemIds || [])
+  ].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean)));
+  
+  merged.activeEcosystemItemIds = Array.from(new Set([
+    ...(dbSettings.activeEcosystemItemIds || []),
+    ...(localSettings.activeEcosystemItemIds || [])
+  ].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean)));
+  
+  merged.purchasedHouseItemIds = Array.from(new Set([
+    ...(dbSettings.purchasedHouseItemIds || []),
+    ...(localSettings.purchasedHouseItemIds || [])
+  ].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean)));
+  
   merged.readBookIds = Array.from(new Set([...(dbSettings.readBookIds || []), ...(localSettings.readBookIds || [])]));
   
   const rawInventory = [
@@ -379,7 +393,7 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
   const mergedPurchasedItems = Array.from(new Set([
     ...(Array.isArray(dbSettings.purchasedItems) ? dbSettings.purchasedItems : []),
     ...(Array.isArray(localSettings.purchasedItems) ? localSettings.purchasedItems : [])
-  ].filter(Boolean)));
+  ].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean)));
 
   merged.inventory = autoRestoreInventoryFromPurchased(mergedPurchasedItems, rawInventory);
   merged.purchasedItems = mergedPurchasedItems;
@@ -726,12 +740,55 @@ export function useNexoraData(
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       console.log(`[STARTUP] AUTH STATE RESOLVED - User UID: ${currentUser?.uid || "null"}`);
 
+      // Capture previous cached user ID before updating localStorage to correctly detect user switches
+      const previousCachedUserId = localStorage.getItem("nexora_cached_user");
+
       if (currentUser) {
         setUser(currentUser);
+
+        const isUserSwitch = Boolean(previousCachedUserId && previousCachedUserId !== currentUser.uid);
+
+        if (isUserSwitch) {
+          console.log(`[ACCOUNT ISOLATION] Switch detected: '${previousCachedUserId}' -> '${currentUser.uid}'. Wiping cached session data.`);
+          
+          // Clear all user-specific cached local storage
+          Object.keys(localStorage).forEach((key) => {
+            if (
+              key.startsWith("nexora_") ||
+              key.startsWith("hydration_") ||
+              key === "admin_read_feedback_ids"
+            ) {
+              localStorage.removeItem(key);
+            }
+          });
+
+          // Reset React memory states immediately so previous user's state never leaks or gets saved to new user
+          rawSetSettings(DEFAULT_SETTINGS);
+          rawSetStats(DEFAULT_STATS);
+          rawSetGardenState(createInitialGardenState());
+          rawSetDailyProgress({
+            date: today,
+            completed: false,
+            pushupsDone: false,
+            waterDrank: 0,
+            breathingDone: false,
+            drawingDone: false,
+            footballDone: false,
+            bubblesDone: false,
+            completionsCount: 0,
+            customPlanCompleted: false,
+            nextRestorationTime: null,
+          });
+          dataLoadedFromFirestore.current = false;
+          hasMatchedHydratedStateRef.current = false;
+          lastSyncedRef.current = null;
+          hydratedStateRef.current = null;
+        }
+
         localStorage.setItem("nexora_cached_user", currentUser.uid);
 
         // Optimization: If this exact user is already loaded and ready, preserve state to prevent flickering/logouts
-        if (lastLoadedUserIdRef.current === currentUser.uid && dataLoadedFromFirestore.current) {
+        if (!isUserSwitch && lastLoadedUserIdRef.current === currentUser.uid && dataLoadedFromFirestore.current) {
           console.log(`[STARTUP] User ${currentUser.uid} already initialized & loaded. Maintaining session state.`);
           setAuthLoading(false);
           setIsDataReady(true);
@@ -884,6 +941,87 @@ export function useNexoraData(
           }
           
           if (docData) {
+            // FAST PASS 1: Immediately hydrate User Coins and Core Rewards Progress from primary document (~50ms)
+            // This prevents waiting for auxiliary subcollections before rendering user coins and core stats.
+            try {
+              const savedOrigStats = docData.originalStatsBeforeProTest || docData.settings?.originalStatsBeforeProTest;
+              const isTestActive = Boolean(docData.proTestActive ?? docData.settings?.proTestActive) && Boolean(docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt) && new Date((docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt)!).getTime() > Date.now();
+
+              let fastCoins: number;
+              let fastXP: number;
+              let fastStreak: number;
+              let fastBestStreak: number;
+              let fastTotalPoints: number;
+              let fastLevel: number;
+
+              if (!isTestActive && savedOrigStats && typeof savedOrigStats === "object") {
+                fastStreak = Math.max(0, Number(savedOrigStats.streak) || 0);
+                fastBestStreak = Math.max(fastStreak, Number(savedOrigStats.bestStreak) || 0);
+                fastTotalPoints = Math.max(0, Number(savedOrigStats.totalPoints ?? savedOrigStats.xp) || 0);
+                fastXP = Math.max(0, Number(savedOrigStats.xp) || 0);
+                fastLevel = Math.max(1, Number(savedOrigStats.level) || 1);
+                fastCoins = Math.max(0, Number(savedOrigStats.coins) || 0);
+              } else {
+                fastCoins = Math.max(
+                  docData.coins || 0,
+                  docData.stats?.coins || 0,
+                  DEFAULT_STATS.coins
+                );
+                fastXP = Math.max(
+                  docData.xp || 0,
+                  docData.stats?.xp || 0,
+                  DEFAULT_STATS.xp
+                );
+                fastStreak = Math.max(
+                  docData.streak || 0,
+                  docData.stats?.streak || 0,
+                  DEFAULT_STATS.streak
+                );
+                fastBestStreak = Math.max(
+                  docData.bestStreak || 0,
+                  docData.stats?.bestStreak || 0,
+                  fastStreak,
+                  DEFAULT_STATS.bestStreak
+                );
+                fastTotalPoints = Math.max(
+                  docData.totalPoints || 0,
+                  docData.stats?.totalPoints || 0,
+                  docData.weeklyPoints || 0,
+                  docData.weeklyXP || 0,
+                  fastXP,
+                  DEFAULT_STATS.totalPoints
+                );
+                fastLevel = Math.max(
+                  docData.level || 1,
+                  docData.stats?.level || 1,
+                  DEFAULT_STATS.level || 1
+                );
+              }
+
+              const fastStatsObj: UserStats = {
+                ...DEFAULT_STATS,
+                ...(docData.stats || {}),
+                streak: fastStreak,
+                bestStreak: fastBestStreak,
+                totalPoints: fastTotalPoints,
+                xp: fastXP,
+                level: fastLevel,
+                coins: fastCoins,
+                weeklyPoints: Math.max(docData.weeklyPoints || 0, docData.stats?.weeklyPoints || 0, DEFAULT_STATS.weeklyPoints),
+                weeklyXP: Math.max(docData.weeklyXP || 0, docData.stats?.weeklyXP || 0, DEFAULT_STATS.weeklyXP),
+                gems: docData.gems ?? docData.stats?.gems ?? DEFAULT_STATS.gems ?? 0,
+                totalCompletedDays: docData.totalCompletedDays ?? docData.stats?.totalCompletedDays ?? DEFAULT_STATS.totalCompletedDays,
+                lastCompletedDate: docData.lastCompletedDate ?? docData.stats?.lastCompletedDate ?? DEFAULT_STATS.lastCompletedDate ?? null,
+                lastGiftDate: docData.lastGiftDate ?? docData.stats?.lastGiftDate ?? DEFAULT_STATS.lastGiftDate ?? null,
+              };
+
+              rawSetStats((prev) => mergeStats(fastStatsObj, prev, DEFAULT_STATS));
+              const existingCache = getCachedJson("nexora_stats", DEFAULT_STATS);
+              localStorage.setItem("nexora_stats", JSON.stringify(mergeStats(fastStatsObj, existingCache, DEFAULT_STATS)));
+            } catch (err) {
+              console.warn("[FAST PASS HYDRATION] Early stats calculation skipped:", err);
+            }
+
             // Robust multi-layered parallel fetch of all auxiliary documents/subcollections
             let onboardingData: any = null;
             let rewardsData: any = null;
@@ -1077,7 +1215,7 @@ export function useNexoraData(
               ...(shopTopData?.purchasedItems || []),
               ...(userShopData?.purchasedItems || []),
               ...(libraryTopData?.purchasedItems || [])
-            ].filter(Boolean)));
+            ].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean)));
 
             // Build set of itemIds currently present in inventory
             const existingInventoryKeys = new Set(
@@ -1123,7 +1261,7 @@ export function useNexoraData(
               ...(docData.purchasedHouseItemIds || docData.settings?.purchasedHouseItemIds || []),
               ...(shopTopData?.purchasedHouseItemIds || []),
               ...(shopPurchasesTopData?.purchasedHouseItemIds || [])
-            ].filter(Boolean)));
+            ].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean)));
 
             const mappedSettings = {
               ...DEFAULT_SETTINGS,
@@ -1401,7 +1539,8 @@ export function useNexoraData(
             let resolvedStats = mappedStats;
             let resolvedGarden = mappedGarden;
 
-            if (hasLocalStorage && cachedUser === currentUser.uid) {
+            // Strict account isolation guard: only merge local storage if it was created by THIS exact user
+            if (hasLocalStorage && previousCachedUserId === currentUser.uid && !isUserSwitch) {
               console.log("[PERSISTENCE] Matching local cache found. Performing safe merge...");
               const latestLocalSettings = getCachedJson("nexora_settings", DEFAULT_SETTINGS);
               const latestLocalStats = getCachedJson("nexora_stats", DEFAULT_STATS);
@@ -1463,7 +1602,7 @@ export function useNexoraData(
                 resolvedProgress = progressSnap.data() as DailyProgress;
               }
 
-              if (hasLocalStorage && cachedUser === currentUser.uid) {
+              if (hasLocalStorage && previousCachedUserId === currentUser.uid && !isUserSwitch) {
                 const latestLocalProgress = getCachedJson("nexora_progress", defaultProgress);
                 if (latestLocalProgress.date === today) {
                   resolvedProgress = mergeProgress(resolvedProgress, latestLocalProgress, defaultProgress);
@@ -1535,7 +1674,34 @@ export function useNexoraData(
         console.log(`[STARTUP] AUTH STATE RESOLVED - No active user session.`);
         lastLoadedUserIdRef.current = null;
         setUser(null);
-        localStorage.removeItem("nexora_cached_user");
+        
+        // Wipe all user-specific local storage keys to ensure strict account isolation
+        Object.keys(localStorage).forEach((key) => {
+          if (
+            key.startsWith("nexora_") ||
+            key.startsWith("hydration_") ||
+            key === "admin_read_feedback_ids"
+          ) {
+            localStorage.removeItem(key);
+          }
+        });
+
+        rawSetSettings(DEFAULT_SETTINGS);
+        rawSetStats(DEFAULT_STATS);
+        rawSetGardenState(createInitialGardenState());
+        rawSetDailyProgress({
+          date: today,
+          completed: false,
+          pushupsDone: false,
+          waterDrank: 0,
+          breathingDone: false,
+          drawingDone: false,
+          footballDone: false,
+          bubblesDone: false,
+          completionsCount: 0,
+          customPlanCompleted: false,
+          nextRestorationTime: null,
+        });
 
         dataLoadedFromFirestore.current = false;
         setIsHydrated(false);
@@ -1714,9 +1880,9 @@ export function useNexoraData(
                       onboardingCompleted: dbData.onboardingCompleted ?? dbSettings.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
                       plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbSettings.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
                       spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbSettings.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
-                      purchasedItems: Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].filter(Boolean))),
+                      purchasedItems: Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean))),
                       inventory: autoRestoreInventoryFromPurchased(
-                        Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].filter(Boolean))),
+                        Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean))),
                         Array.from(new Map([...(prev.inventory || []), ...(dbData.inventory || []), ...(dbSettings.inventory || [])].map((item: any) => [item.id || item.itemId || item.name, item])).values())
                       ),
                       plantState: dbData.plantState ?? dbSettings.plantState ?? DEFAULT_SETTINGS.plantState,
@@ -2417,9 +2583,9 @@ export function useNexoraData(
                   onboardingCompleted: dbData.onboardingCompleted ?? dbSettings.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
                   plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbSettings.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
                   spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbSettings.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
-                  purchasedItems: Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].filter(Boolean))),
+                  purchasedItems: Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean))),
                   inventory: autoRestoreInventoryFromPurchased(
-                    Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].filter(Boolean))),
+                    Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean))),
                     Array.from(new Map([...(prev.inventory || []), ...(dbData.inventory || []), ...(dbSettings.inventory || [])].map((item: any) => [item.id || item.itemId || item.name, item])).values())
                   ),
                   plantState: dbData.plantState ?? dbSettings.plantState ?? DEFAULT_SETTINGS.plantState,

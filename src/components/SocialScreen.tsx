@@ -513,8 +513,8 @@ export function SocialScreen({
     const newClaimedIds = [...claimedBadgeIds];
 
     unclaimedUnlocked.forEach((b) => {
-      totalXP += 10;
-      totalCoins += 15;
+      totalXP += b.rewardXP;
+      totalCoins += b.rewardCoins;
       if (!newClaimedIds.includes(b.id)) {
         newClaimedIds.push(b.id);
       }
@@ -583,12 +583,46 @@ export function SocialScreen({
   const awardUserRewards = async (targetUserId: string, xp: number, coins: number, reason: string) => {
     try {
       if (!targetUserId) return;
-      const statsRef = doc(db, "users", targetUserId, "stats", "main");
       const { increment } = await import("firebase/firestore");
+      const userRef = doc(db, "users", targetUserId);
+      const statsRef = doc(db, "users", targetUserId, "stats", "main");
+      const userSettingsRef = doc(db, "users", targetUserId, "settings", "main");
+
+      await setDoc(userRef, {
+        totalPoints: increment(xp),
+        xp: increment(xp),
+        coins: increment(coins),
+        points: increment(coins)
+      }, { merge: true });
+
       await setDoc(statsRef, {
         totalPoints: increment(xp),
         coins: increment(coins)
       }, { merge: true });
+
+      await setDoc(userSettingsRef, {
+        points: increment(coins),
+        coins: increment(coins)
+      }, { merge: true });
+
+      if (targetUserId === currentUserId) {
+        if (onUpdateStats) {
+          onUpdateStats((prev: any) => ({
+            ...prev,
+            totalPoints: (prev?.totalPoints || 0) + xp,
+            xp: (prev?.xp || 0) + xp,
+            coins: (prev?.coins || 0) + coins,
+          }));
+        }
+        if (onUpdateSettings) {
+          const currentCoins = (settings as any)?.points || (settings as any)?.coins || 0;
+          onUpdateSettings({
+            points: currentCoins + coins,
+            coins: currentCoins + coins,
+          });
+        }
+      }
+
       // Register a system reward notification card
       await addDoc(collection(db, "users", targetUserId, "notifications"), cleanPayload({
         userId: targetUserId,
@@ -772,13 +806,20 @@ export function SocialScreen({
 
   const cleanPayload = (obj: any): any => {
     if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(cleanPayload);
+    if (Array.isArray(obj)) {
+      return obj
+        .map(cleanPayload)
+        .filter((item) => item !== undefined && item !== null);
+    }
     if (typeof obj === "object") {
       const cleaned: any = {};
       for (const key of Object.keys(obj)) {
         const val = obj[key];
-        if (val !== undefined) {
-          cleaned[key] = cleanPayload(val);
+        if (val !== undefined && val !== null) {
+          const cleanedVal = cleanPayload(val);
+          if (cleanedVal !== undefined && cleanedVal !== null) {
+            cleaned[key] = cleanedVal;
+          }
         }
       }
       return cleaned;
@@ -794,9 +835,9 @@ export function SocialScreen({
       try {
         const stripped = posts.map((p) => ({
           ...p,
-          image: p.image && p.image.length > 50000 ? undefined : p.image,
-          imageUrl: p.imageUrl && p.imageUrl.length > 50000 ? undefined : p.imageUrl,
-          images: p.images?.map((img) => (img.length > 50000 ? "" : img)),
+          image: p.image && p.image.length > 250000 ? undefined : p.image,
+          imageUrl: p.imageUrl && p.imageUrl.length > 250000 ? undefined : p.imageUrl,
+          images: p.images?.map((img) => (img.length > 250000 ? "" : img)),
         }));
         localStorage.setItem("nexora_local_posts", JSON.stringify(stripped));
       } catch (e2) {
@@ -805,7 +846,7 @@ export function SocialScreen({
     }
   };
 
-  const compressImageFile = (file: File, maxWidth = 720, maxHeight = 720, quality = 0.65): Promise<string> => {
+  const compressImageFile = (file: File, maxWidth = 600, maxHeight = 600, quality = 0.5): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -908,6 +949,32 @@ export function SocialScreen({
     return { maxComments, maxFlames };
   }, [allPosts, currentUserId]);
 
+  const recordCommunityActiveDay = () => {
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const datesJson = localStorage.getItem("nexora_community_active_dates");
+      const datesList: string[] = datesJson ? JSON.parse(datesJson) : [];
+      if (!datesList.includes(todayStr)) {
+        datesList.push(todayStr);
+        localStorage.setItem("nexora_community_active_dates", JSON.stringify(datesList));
+      }
+    } catch {}
+  };
+
+  const communityActiveDays = useMemo(() => {
+    try {
+      const datesJson = localStorage.getItem("nexora_community_active_dates");
+      const datesList: string[] = datesJson ? JSON.parse(datesJson) : [];
+      return Math.max(datesList.length, (myPostsCount > 0 || totalCommentsCount > 0) ? 1 : 0);
+    } catch {
+      return (myPostsCount > 0 || totalCommentsCount > 0) ? 1 : 0;
+    }
+  }, [myPostsCount, totalCommentsCount]);
+
+  const communityKarma = useMemo(() => {
+    return (myPostsCount * 30) + (totalCommentsCount * 15) + (popularPostMetric.maxFlames * 20) + (joinedGroupsCount * 25) + (createdCirclesCount * 60);
+  }, [myPostsCount, totalCommentsCount, popularPostMetric.maxFlames, joinedGroupsCount, createdCirclesCount]);
+
   const achievements: Array<{
     id: string;
     category: string;
@@ -930,17 +997,17 @@ export function SocialScreen({
         id: "banana_enthusiast",
         category: "exploration",
         title: "Banana Enthusiast",
-        description: "Earned by keeping close track of focus analytics, exploring metrics, and being a top explorer.",
+        description: "Earned by keeping close track of focus analytics, exploring metrics, and being a top community contributor.",
         icon: "🍌",
         bgGradient: "from-amber-400 via-yellow-350 to-orange-500",
-        metricName: "Visits",
-        helperText: "Keep up-to-date with your explore metrics screen.",
+        metricName: "Community Karma",
+        helperText: "Earn 100 Community Karma points in Nexora.",
         rewardXP: 100,
         rewardCoins: 50,
-        currentValue: 1,
-        targetValue: 1,
-        unlocked: true,
-        date: "5/24/26",
+        currentValue: Math.min(100, communityKarma),
+        targetValue: 100,
+        unlocked: communityKarma >= 100,
+        date: "",
       },
       {
         id: "new_share",
@@ -956,7 +1023,7 @@ export function SocialScreen({
         currentValue: myPostsCount >= 1 ? 1 : 0,
         targetValue: 1,
         unlocked: myPostsCount >= 1,
-        date: "5/23/26",
+        date: "",
       },
       {
         id: "conv_starter",
@@ -972,7 +1039,7 @@ export function SocialScreen({
         currentValue: totalCommentsCount,
         targetValue: 1,
         unlocked: totalCommentsCount >= 1,
-        date: "5/23/26",
+        date: "",
       },
       {
         id: "quality_comment",
@@ -988,7 +1055,7 @@ export function SocialScreen({
         currentValue: totalCommentsCount,
         targetValue: 2,
         unlocked: totalCommentsCount >= 2,
-        date: "5/22/26",
+        date: "",
       },
       {
         id: "cool_comment",
@@ -1004,7 +1071,7 @@ export function SocialScreen({
         currentValue: totalCommentsCount,
         targetValue: 1,
         unlocked: totalCommentsCount >= 1,
-        date: "5/22/26",
+        date: "",
       },
       {
         id: "banana_baby",
@@ -1020,7 +1087,7 @@ export function SocialScreen({
         currentValue: myPostsCount >= 1 ? 1 : 0,
         targetValue: 1,
         unlocked: myPostsCount >= 1,
-        date: "5/20/26",
+        date: "",
       },
       {
         id: "banana_beginner",
@@ -1036,7 +1103,7 @@ export function SocialScreen({
         currentValue: myPostsCount,
         targetValue: 2,
         unlocked: myPostsCount >= 2,
-        date: "5/20/26",
+        date: "",
       },
       {
         id: "sharing_enthusiast",
@@ -1052,23 +1119,23 @@ export function SocialScreen({
         currentValue: myPostsCount,
         targetValue: 3,
         unlocked: myPostsCount >= 3,
-        date: "3/10 shares",
+        date: "",
       },
       {
         id: "banana_aficionado",
         category: "exploration",
         title: "Banana Aficionado",
-        description: "Collect high amounts of track time and logs over your focus journey.",
+        description: "Collect high amounts of community engagement over your focus journey.",
         icon: "🍌",
         bgGradient: "from-amber-500 to-orange-600",
-        metricName: "Bananas",
-        helperText: "Achieve a premium total index of 10,000 bananas.",
+        metricName: "Community Karma",
+        helperText: "Achieve 500 Community Karma points.",
         rewardXP: 1000,
         rewardCoins: 500,
-        currentValue: 2913,
-        targetValue: 10000,
-        unlocked: false,
-        date: "2,913/10,000 bananas",
+        currentValue: Math.min(500, communityKarma),
+        targetValue: 500,
+        unlocked: communityKarma >= 500,
+        date: "",
       },
       {
         id: "hometown_hero",
@@ -1138,48 +1205,48 @@ export function SocialScreen({
         id: "banana_master",
         category: "exploration",
         title: "Banana Master",
-        description: "Collect massive amounts of track metrics for standard evaluation.",
+        description: "Collect massive amounts of community interactions and helpful posts.",
         icon: "🍌",
         bgGradient: "from-orange-500 to-red-500",
-        metricName: "Bananas",
-        helperText: "Gather a total tracker record of 12,000 bananas.",
+        metricName: "Community Karma",
+        helperText: "Gather 1,200 Community Karma points.",
         rewardXP: 2000,
         rewardCoins: 1000,
-        currentValue: 5000,
-        targetValue: 12000,
-        unlocked: false,
+        currentValue: Math.min(1200, communityKarma),
+        targetValue: 1200,
+        unlocked: communityKarma >= 1200,
         date: "",
       },
       {
         id: "banana_legend",
         category: "exploration",
         title: "Banana Legend",
-        description: "Become an absolute legend in tracking metrics for self-evaluation.",
+        description: "Become an absolute legend in community participation and feedback.",
         icon: "🍌",
         bgGradient: "from-yellow-400 to-red-600",
-        metricName: "Bananas",
-        helperText: "Unlock a legendary baseline index of 20,000 bananas.",
+        metricName: "Community Karma",
+        helperText: "Unlock 2,500 Community Karma points.",
         rewardXP: 4000,
         rewardCoins: 2000,
-        currentValue: 8000,
-        targetValue: 20000,
-        unlocked: false,
+        currentValue: Math.min(2500, communityKarma),
+        targetValue: 2500,
+        unlocked: communityKarma >= 2500,
         date: "",
       },
       {
         id: "potassium_overlord",
         category: "exploration",
         title: "Potassium Overlord",
-        description: "Complete authority on focus tracking, logging parameters and analytics.",
+        description: "Complete authority on community discussions, circle leadership, and shared posts.",
         icon: "👑",
         bgGradient: "from-rose-500 to-violet-600 animate-pulse",
-        metricName: "Bananas",
-        helperText: "Obtain an ultimate sum of 50,000 bananas.",
+        metricName: "Community Karma",
+        helperText: "Obtain an ultimate sum of 5,000 Community Karma.",
         rewardXP: 10000,
         rewardCoins: 5000,
-        currentValue: 15000,
-        targetValue: 50000,
-        unlocked: false,
+        currentValue: Math.min(5000, communityKarma),
+        targetValue: 5000,
+        unlocked: communityKarma >= 5000,
         date: "",
       },
       {
@@ -1505,101 +1572,101 @@ export function SocialScreen({
         date: "5/18/26",
       },
 
-      // 3. Reddit Streak
+      // 3. Reddit Streak (Community Active Days)
       {
         id: "streak_5",
         category: "streak",
-        title: "5-Day Streak",
-        description: "Keep the mental clarity check-ins burning for five consecutive days.",
+        title: "5 Community Days",
+        description: "Engage in posts, comments, or circle discussions across 5 active community days.",
         icon: "🕯️",
         bgGradient: "from-orange-400 via-amber-400 to-red-500",
-        metricName: "Streak",
-        helperText: "Maintain a current streak of 5 days or more.",
+        metricName: "Community Days",
+        helperText: "Participate in community feeds across 5 unique days.",
         rewardXP: 250,
         rewardCoins: 125,
-        currentValue: currentStreak,
+        currentValue: communityActiveDays,
         targetValue: 5,
-        unlocked: currentStreak >= 5,
-        date: "5/22/26",
+        unlocked: communityActiveDays >= 5,
+        date: "",
       },
       {
         id: "streak_10",
         category: "streak",
-        title: "10-Day Streak",
-        description: "Mindfulness practitioner! Maintain the streak flame glowing persistently.",
+        title: "10 Community Days",
+        description: "Community practitioner! Share feedback and posts across 10 active days.",
         icon: "🔥",
         bgGradient: "from-red-500 via-orange-400 to-yellow-500",
-        metricName: "Streak",
-        helperText: "Maintain a current habit streak of 10 days or more.",
+        metricName: "Community Days",
+        helperText: "Participate in community feeds across 10 unique days.",
         rewardXP: 500,
         rewardCoins: 250,
-        currentValue: currentStreak,
+        currentValue: communityActiveDays,
         targetValue: 10,
-        unlocked: currentStreak >= 10,
-        date: "5/27/26",
+        unlocked: communityActiveDays >= 10,
+        date: "",
       },
       {
         id: "streak_20",
         category: "streak",
-        title: "20-Day Streak",
-        description: "A supreme champion status of solid consistency and focus power.",
+        title: "20 Community Days",
+        description: "A supreme community champion status of solid engagement and valuable posts.",
         icon: "👑",
         bgGradient: "from-blue-600 via-indigo-500 to-violet-600",
-        metricName: "Streak",
-        helperText: "Maintain an ultimate level streak of 20 days or more.",
+        metricName: "Community Days",
+        helperText: "Participate in community feeds across 20 unique days.",
         rewardXP: 1000,
         rewardCoins: 500,
-        currentValue: currentStreak,
+        currentValue: communityActiveDays,
         targetValue: 20,
-        unlocked: currentStreak >= 20,
-        date: "5/28/26",
+        unlocked: communityActiveDays >= 20,
+        date: "",
       },
       {
         id: "streak_30",
         category: "streak",
-        title: "30-Day Streak",
-        description: "An unbelievable active run tracking and finishing daily mindfulness cycles.",
+        title: "30 Community Days",
+        description: "An unbelievable active run publishing and interacting with community circles.",
         icon: "🔥",
         bgGradient: "from-indigo-500 to-pink-500",
-        metricName: "Streak",
-        helperText: "Achieve a solid continuous streak of 30 days.",
+        metricName: "Community Days",
+        helperText: "Participate in community feeds across 30 unique days.",
         rewardXP: 1500,
         rewardCoins: 750,
-        currentValue: currentStreak,
+        currentValue: communityActiveDays,
         targetValue: 30,
-        unlocked: currentStreak >= 30,
+        unlocked: communityActiveDays >= 30,
         date: "",
       },
       {
         id: "streak_75",
         category: "streak",
-        title: "75-Day Streak",
-        description: "Remarkable dedication level to personal growth and focus routines.",
+        title: "75 Community Days",
+        description: "Remarkable dedication level to community topics and peer growth.",
         icon: "🔥",
         bgGradient: "from-rose-500 to-orange-500",
-        metricName: "Streak",
-        helperText: "Maintain an active streak of 75 days.",
+        metricName: "Community Days",
+        helperText: "Participate in community feeds across 75 unique days.",
         rewardXP: 2500,
         rewardCoins: 1250,
-        currentValue: currentStreak,
+        currentValue: communityActiveDays,
         targetValue: 75,
-        unlocked: currentStreak >= 75,
+        unlocked: communityActiveDays >= 75,
         date: "",
       },
       {
         id: "streak_100",
         category: "streak",
-        title: "100-Day Streak",
-        description: "The absolute centurion! A milestone of incredible proportion.",
+        title: "100 Community Days",
+        description: "The absolute centurion! A community milestone of incredible proportion.",
         icon: "💯",
         bgGradient: "from-red-600 to-rose-600 animate-bounce",
-        metricName: "Streak",
-        helperText: "Maintain an active streak of 100 days.",
+        metricName: "Community Days",
+        helperText: "Participate in community feeds across 100 unique days.",
         rewardXP: 4000,
         rewardCoins: 2000,
-        currentValue: currentStreak,
+        currentValue: communityActiveDays,
         targetValue: 100,
-        unlocked: currentStreak >= 100,
+        unlocked: communityActiveDays >= 100,
         date: "",
       },
       {
@@ -1791,10 +1858,10 @@ export function SocialScreen({
         helperText: "Configure custom username or bio settings.",
         rewardXP: 100,
         rewardCoins: 50,
-        currentValue: 1,
+        currentValue: currentUserName && currentUserName !== "Anonymous Hero" ? 1 : 0,
         targetValue: 1,
-        unlocked: true,
-        date: "5/23/26",
+        unlocked: !!(currentUserName && currentUserName !== "Anonymous Hero"),
+        date: "",
       },
       {
         id: "pers_of_interests",
@@ -1807,10 +1874,10 @@ export function SocialScreen({
         helperText: "Customize display portrait picture under settings.",
         rewardXP: 100,
         rewardCoins: 50,
-        currentValue: 1,
+        currentValue: currentUserPhoto && currentUserPhoto !== "" ? 1 : 0,
         targetValue: 1,
-        unlocked: true,
-        date: "5/18/26",
+        unlocked: !!(currentUserPhoto && currentUserPhoto !== ""),
+        date: "",
       },
       {
         id: "newcomer",
@@ -1826,7 +1893,7 @@ export function SocialScreen({
         currentValue: joinedGroupsCount >= 1 ? 1 : 0,
         targetValue: 1,
         unlocked: joinedGroupsCount >= 1,
-        date: "5/18/26",
+        date: "",
       },
       {
         id: "joined_reddit",
@@ -1835,14 +1902,14 @@ export function SocialScreen({
         description: "Establish official account credentials and log initial metrics.",
         icon: "🎂",
         bgGradient: "from-orange-400 to-yellow-500",
-        metricName: "Account Age",
+        metricName: "Account Setup",
         helperText: "Set up and register your Nexora membership profile.",
         rewardXP: 100,
         rewardCoins: 50,
-        currentValue: 1,
+        currentValue: (user && user.uid && !user.isAnonymous) ? 1 : 0,
         targetValue: 1,
-        unlocked: true,
-        date: "5/18/26",
+        unlocked: !!(user && user.uid && !user.isAnonymous),
+        date: "",
       },
       {
         id: "secured_account",
@@ -1852,13 +1919,13 @@ export function SocialScreen({
         icon: "🛡️",
         bgGradient: "from-sky-400 to-indigo-600",
         metricName: "Security Info",
-        helperText: "Complete security protocols and credential checks.",
+        helperText: "Verify account credentials or reach 200 total XP.",
         rewardXP: 100,
         rewardCoins: 50,
-        currentValue: 1,
+        currentValue: (user?.emailVerified || totalPoints >= 200) ? 1 : 0,
         targetValue: 1,
-        unlocked: true,
-        date: "5/18/26",
+        unlocked: !!(user?.emailVerified || totalPoints >= 200),
+        date: "",
       },
       {
         id: "profile_perfectionist",
@@ -1871,9 +1938,9 @@ export function SocialScreen({
         helperText: "Maintain complete personalization of details.",
         rewardXP: 200,
         rewardCoins: 100,
-        currentValue: currentUserName && currentUserName !== "Anonymous Hero" ? 1 : 0,
+        currentValue: (currentUserName && currentUserName !== "Anonymous Hero" && currentUserPhoto) ? 1 : 0,
         targetValue: 1,
-        unlocked: !!(currentUserName && currentUserName !== "Anonymous Hero"),
+        unlocked: !!(currentUserName && currentUserName !== "Anonymous Hero" && currentUserPhoto),
         date: "",
       },
       {
@@ -1884,12 +1951,12 @@ export function SocialScreen({
         icon: "🔍",
         bgGradient: "from-emerald-400 to-teal-500",
         metricName: "Feed Search",
-        helperText: "Scroll and filter community streams.",
+        helperText: "Engage with community feeds by joining a circle, posting, or commenting.",
         rewardXP: 100,
         rewardCoins: 50,
-        currentValue: 1,
+        currentValue: (myPostsCount + totalCommentsCount + joinedGroupsCount) >= 1 ? 1 : 0,
         targetValue: 1,
-        unlocked: true,
+        unlocked: (myPostsCount + totalCommentsCount + joinedGroupsCount) >= 1,
         date: "",
       },
 
@@ -1902,13 +1969,13 @@ export function SocialScreen({
         icon: "🎒",
         bgGradient: "from-sky-400 to-slate-500",
         metricName: "Rules Prepared",
-        helperText: "Equip your basecamp safety awareness handbook.",
+        helperText: "Earn 100 Community Karma to equip the basecamp handbook.",
         rewardXP: 100,
         rewardCoins: 50,
-        currentValue: 1,
+        currentValue: communityKarma >= 100 ? 1 : 0,
         targetValue: 1,
-        unlocked: true,
-        date: "5/20/26",
+        unlocked: communityKarma >= 100,
+        date: "",
       },
       {
         id: "grand_sprouting",
@@ -1924,7 +1991,7 @@ export function SocialScreen({
         currentValue: createdCirclesCount,
         targetValue: 1,
         unlocked: createdCirclesCount >= 1,
-        date: "5/25/26",
+        date: "",
       },
       {
         id: "support_network",
@@ -1950,12 +2017,12 @@ export function SocialScreen({
         icon: "🐥",
         bgGradient: "from-yellow-300 to-orange-400",
         metricName: "Mod Level",
-        helperText: "Advance to 100 total profile points.",
+        helperText: "Advance to 100 Community Karma points.",
         rewardXP: 250,
         rewardCoins: 125,
-        currentValue: totalPoints,
+        currentValue: communityKarma,
         targetValue: 100,
-        unlocked: totalPoints >= 100,
+        unlocked: communityKarma >= 100,
         date: "",
       },
       {
@@ -1966,12 +2033,12 @@ export function SocialScreen({
         icon: "🦁",
         bgGradient: "from-amber-400 to-rose-600",
         metricName: "Mod Level",
-        helperText: "Advance to 500 total profile points.",
+        helperText: "Advance to 500 Community Karma points.",
         rewardXP: 600,
         rewardCoins: 300,
-        currentValue: totalPoints,
+        currentValue: communityKarma,
         targetValue: 500,
-        unlocked: totalPoints >= 500,
+        unlocked: communityKarma >= 500,
         date: "",
       },
       {
@@ -2004,7 +2071,7 @@ export function SocialScreen({
         currentValue: popularPostMetric.maxFlames >= 1 ? 5 : 0,
         targetValue: 5,
         unlocked: popularPostMetric.maxFlames >= 1,
-        date: "5/15/26",
+        date: "",
       },
       {
         id: "visitors_25",
@@ -2104,12 +2171,8 @@ export function SocialScreen({
       },
     ];
 
-    return rawBadges.map(badge => ({
-      ...badge,
-      rewardCoins: 15,
-      rewardXP: 10,
-    }));
-  }, [myPostsCount, totalCommentsCount, joinedGroupsCount, createdCirclesCount, currentStreak, totalPoints, popularPostMetric, currentUserPhoto, currentUserName]);
+    return rawBadges;
+  }, [myPostsCount, totalCommentsCount, joinedGroupsCount, createdCirclesCount, communityActiveDays, communityKarma, popularPostMetric, currentUserPhoto, currentUserName]);
 
   // Listen to Nexus Group shortcut events and local storage routing
   useEffect(() => {
@@ -2328,6 +2391,7 @@ export function SocialScreen({
     e.preventDefault();
     if (!newCommentText.trim() || !selectedPost || isSubmittingComment) return;
 
+    recordCommunityActiveDay();
     const trimmedCommentText = newCommentText.trim();
     setIsSubmittingComment(true);
     setNewCommentText("");
@@ -2557,6 +2621,7 @@ export function SocialScreen({
 
   // Flame (like) toggle helper
   const handleToggleFlame = async (post: Post) => {
+    recordCommunityActiveDay();
     const isLiked = post.likedBy?.includes(currentUserId);
     const newLikedBy = isLiked
       ? (post.likedBy || []).filter((uid) => uid !== currentUserId)
@@ -2653,6 +2718,7 @@ export function SocialScreen({
 
   // Reddit Award Post handler using new cute animated stock-based CUTE_AWARDS
   const handleAwardPost = async (post: Post, awardKey: string) => {
+    recordCommunityActiveDay();
     const award = CUTE_AWARDS.find(a => a.key === awardKey);
     if (!award) return;
 
@@ -2787,6 +2853,7 @@ export function SocialScreen({
   // Group Joining helper
   const handleJoinGroup = async (group: SocialCircle) => {
     if (!onUpdateSettings) return;
+    recordCommunityActiveDay();
     const currentJoined = settings.joinedCircleIds || [];
     const isJoined = currentJoined.includes(group.id);
     const newJoined = isJoined
@@ -2807,6 +2874,19 @@ export function SocialScreen({
         followerIds: newFollowerIds,
         memberCount: newMemberCount
       });
+
+      if (!isJoined && group.ownerId && group.ownerId !== currentUserId) {
+        await addDoc(collection(db, "users", group.ownerId, "notifications"), cleanPayload({
+          userId: group.ownerId,
+          senderId: currentUserId || "anonymous",
+          senderName: currentUserName || "A user",
+          senderPhoto: currentUserPhoto || "",
+          type: "system",
+          message: `🎉 ${currentUserName || "A user"} joined your circle "${group.name}"!`,
+          isRead: false,
+          createdAt: new Date().toISOString()
+        }));
+      }
     } catch (err) {
       console.warn("Could not sync circle followers on Firestore:", err);
     }
@@ -2926,6 +3006,7 @@ export function SocialScreen({
     }
     if (isSubmittingPost) return;
 
+    recordCommunityActiveDay();
     setIsSubmittingPost(true);
     try {
       // Play publishing sound and physical haptic click once instantly on trigger click!
@@ -2990,6 +3071,24 @@ export function SocialScreen({
           ...cleanedPostData,
           id: realPostId,
         });
+
+        if (targetCircle?.ownerId && targetCircle.ownerId !== currentUserId) {
+          try {
+            await addDoc(collection(db, "users", targetCircle.ownerId, "notifications"), cleanPayload({
+              userId: targetCircle.ownerId,
+              senderId: currentUserId || "anonymous",
+              senderName: currentUserName || "A user",
+              senderPhoto: currentUserPhoto || "",
+              type: "system",
+              postId: realPostId,
+              message: `📢 ${currentUserName || "A user"} published a new post in your circle "${targetCircle.name}": "${postTitle.trim().substring(0, 40)}${postTitle.trim().length > 40 ? "..." : ""}"`,
+              isRead: false,
+              createdAt: new Date().toISOString()
+            }));
+          } catch (nErr) {
+            console.warn("Could not notify circle owner:", nErr);
+          }
+        }
       } catch (firestoreErr) {
         console.error("Firestore save error:", firestoreErr);
         try {
