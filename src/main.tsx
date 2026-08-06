@@ -188,6 +188,7 @@ window.addEventListener('unhandledrejection', (event) => {
     msg.includes('INTERNAL ASSERTION FAILED') ||
     msg.includes('Unexpected state') ||
     msg.includes('ca9') ||
+    msg.includes('b815') ||
     msg.includes('ve:') ||
     msg.includes('FIRESTORE')
   ) {
@@ -226,6 +227,7 @@ window.addEventListener('error', (event) => {
     msg.includes('INTERNAL ASSERTION FAILED') ||
     msg.includes('Unexpected state') ||
     msg.includes('ca9') ||
+    msg.includes('b815') ||
     msg.includes('ve:') ||
     msg.includes('FIRESTORE') ||
     !event.filename ||

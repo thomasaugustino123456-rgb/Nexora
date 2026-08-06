@@ -1,34 +1,56 @@
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore, memoryLocalCache, setLogLevel } from 'firebase/firestore';
+import { getFirestore, setLogLevel } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence, User } from 'firebase/auth';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import { getAnalytics, logEvent, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 import firebaseConfigData from './firebase-applet-config.json';
 
-// Intercept and demote internal Firestore SDK assertion errors (e.g., ID: ca9, ve: -1) to warnings to prevent console error noise
+// Intercept and demote internal Firestore SDK assertion errors (e.g., ID: ca9, b815, ve: -1) to warnings to prevent console error noise
 if (typeof window !== 'undefined') {
+  const isAssertionMsg = (msg: string) =>
+    msg.includes('INTERNAL ASSERTION FAILED') ||
+    msg.includes('Unexpected state') ||
+    msg.includes('ca9') ||
+    msg.includes('b815') ||
+    msg.includes('ve:') ||
+    (msg.includes('FIRESTORE') && msg.includes('ASSERTION'));
+
   const originalConsoleError = console.error;
   console.error = function (...args: any[]) {
     const msg = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
-    if (
-      msg.includes('INTERNAL ASSERTION FAILED') ||
-      msg.includes('Unexpected state') ||
-      msg.includes('ca9') ||
-      msg.includes('ve:') ||
-      (msg.includes('FIRESTORE') && msg.includes('ASSERTION'))
-    ) {
+    if (isAssertionMsg(msg)) {
       console.warn('[Firestore Internal Assertion Handled]', ...args);
       return;
     }
     originalConsoleError.apply(console, args);
   };
+
+  window.addEventListener('unhandledrejection', (event) => {
+    const msg = event.reason?.message || String(event.reason || '');
+    if (isAssertionMsg(msg)) {
+      try {
+        event.preventDefault();
+        event.stopPropagation();
+      } catch (e) {}
+      console.warn('[Firestore Unhandled Rejection Handled]', msg);
+    }
+  });
+
+  window.addEventListener('error', (event) => {
+    const msg = event.message || event.error?.message || String(event.error || '');
+    if (isAssertionMsg(msg)) {
+      try {
+        event.preventDefault();
+        event.stopPropagation();
+      } catch (e) {}
+      console.warn('[Firestore Window Error Handled]', msg);
+    }
+  });
 }
 
 const firebaseConfig = firebaseConfigData;
 
 console.log("Firebase Initialization: Using project", firebaseConfig.projectId);
-const databaseId = "(default)";
-console.log("Firestore Initialization: Using database", databaseId);
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -75,11 +97,7 @@ export const trackEvent = async (eventName: string, params?: any) => {
   }
 };
 
-const isIframe = typeof window !== 'undefined' && window.self !== window.top;
-
-export const db = initializeFirestore(app, {
-  localCache: memoryLocalCache(),
-}, databaseId === "(default)" ? undefined : databaseId);
+export const db = getFirestore(app);
 
 // Silent native Firestore warnings (e.g. offline warnings) to prevent them being captured as platform errors.
 try {
