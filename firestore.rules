@@ -384,6 +384,10 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /deleted_users/{userId} {
+      allow read, write: if true;
+    }
+
     match /feedback/{feedbackId} {
       allow read, write: if true;
     }
@@ -433,6 +437,13 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
+      allow read, write: if true;
+      match /{allChildren=**} {
+        allow read, write: if true;
+      }
+    }
+
+    match /community_reports/{reportId} {
       allow read, write: if true;
       match /{allChildren=**} {
         allow read, write: if true;

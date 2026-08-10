@@ -14,8 +14,9 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
   activeScreen = 'home',
   challengeStep,
 }) => {
-  // Check if current screen is a Challenge/Task screen or Rewards page
+  // Never show on onboarding or excluded screens
   const isExcludedScreen =
+    activeScreen === 'onboarding' ||
     activeScreen === 'challenge' ||
     activeScreen === 'trophy-rewards' ||
     activeScreen === 'rewards' ||
@@ -42,17 +43,22 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
     return null;
   });
 
-  // Track how many times user clicked "X" close button (Max 5 times)
+  // Track how many times user clicked "X" close button in this session (Max 5 times)
   const [dismissCount, setDismissCount] = useState<number>(() => {
     if (typeof window === 'undefined') return 0;
     return parseInt(sessionStorage.getItem('nexora_pwa_dismiss_count') || '0', 10);
+  });
+
+  const [landingDismissed, setLandingDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem('nexora_pwa_landing_dismissed') === 'true';
   });
 
   const [isOpen, setIsOpen] = useState(false);
   const [showManualGuide, setShowManualGuide] = useState(false);
   const [logoSrc, setLogoSrc] = useState('/icon-192.png');
 
-  // Track section switches so banner shows after every 2 section changes
+  // Track section switches inside app so banner shows every 2 section changes
   const sectionSwitchesRef = useRef<number>(0);
   const prevScreenRef = useRef<string>(activeScreen);
   const prevLoggedInRef = useRef<boolean>(isLoggedIn);
@@ -132,61 +138,46 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
     };
   }, []);
 
-  // 1. Initial trigger on landing page / initial app load
+  // 1. Initial trigger on landing page (logged out) - shows ONLY ONCE
   useEffect(() => {
-    if (isStandalone || dismissCount >= 5 || isExcludedScreen) return;
+    if (isStandalone || landingDismissed || dismissCount >= 5 || isExcludedScreen) return;
 
-    if (!isLoggedIn && dismissCount < 5) {
+    if (!isLoggedIn) {
       initialShowTimerRef.current = setTimeout(() => {
-        if (!isStandalone && dismissCount < 5 && !isExcludedScreen) {
+        if (!isStandalone && !landingDismissed && dismissCount < 5 && !isExcludedScreen) {
           setIsOpen(true);
         }
-      }, 1500);
+      }, 2000);
     }
 
     return () => {
       if (initialShowTimerRef.current) clearTimeout(initialShowTimerRef.current);
     };
-  }, [isLoggedIn, isStandalone, dismissCount, isExcludedScreen]);
+  }, [isLoggedIn, isStandalone, landingDismissed, dismissCount, isExcludedScreen]);
 
-  // 2. Trigger after user logs in or signs up
-  useEffect(() => {
-    if (isStandalone || dismissCount >= 5 || isExcludedScreen) return;
-
-    if (isLoggedIn && !prevLoggedInRef.current && dismissCount < 5) {
-      const loginTimer = setTimeout(() => {
-        if (!isStandalone && dismissCount < 5 && !isExcludedScreen) {
-          setIsOpen(true);
-        }
-      }, 4000);
-      return () => clearTimeout(loginTimer);
-    }
-    prevLoggedInRef.current = isLoggedIn;
-  }, [isLoggedIn, isStandalone, dismissCount, isExcludedScreen]);
-
-  // 3. Section switch handler - immediately hide on excluded screens (Challenge, Tasks, Rewards)
+  // 2. Section switch handler inside app (logged in): triggers every 2 section changes
   useEffect(() => {
     if (isExcludedScreen) {
       if (isOpen) setIsOpen(false);
       return;
     }
 
-    if (isStandalone || dismissCount >= 5) return;
+    if (!isLoggedIn || isStandalone || dismissCount >= 5) return;
 
     if (activeScreen !== prevScreenRef.current) {
       prevScreenRef.current = activeScreen;
       sectionSwitchesRef.current += 1;
 
-      if (sectionSwitchesRef.current % 4 === 0 && !isOpen && dismissCount < 5) {
+      if (sectionSwitchesRef.current % 2 === 0 && !isOpen && dismissCount < 5) {
         const timer = setTimeout(() => {
           if (!isStandalone && dismissCount < 5 && !isOpen && !isExcludedScreen) {
             setIsOpen(true);
           }
-        }, 1200);
+        }, 1000);
         return () => clearTimeout(timer);
       }
     }
-  }, [activeScreen, isStandalone, dismissCount, isOpen, isExcludedScreen]);
+  }, [activeScreen, isLoggedIn, isStandalone, dismissCount, isOpen, isExcludedScreen]);
 
   const handleDismiss = () => {
     if (navigator.vibrate) {
@@ -194,6 +185,11 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
     }
     setIsOpen(false);
     setShowManualGuide(false);
+
+    if (!isLoggedIn) {
+      setLandingDismissed(true);
+      sessionStorage.setItem('nexora_pwa_landing_dismissed', 'true');
+    }
 
     const nextCount = dismissCount + 1;
     setDismissCount(nextCount);

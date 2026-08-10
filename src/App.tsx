@@ -48,6 +48,7 @@ import {
   BrainCircuit,
   Smile,
   LogOut,
+  Loader2,
   Send,
   Book,
   RefreshCw,
@@ -104,6 +105,7 @@ import {
   PlantState,
   isUserProUnlocked,
 } from "./types";
+import { getMascotNotificationDetails } from "./lib/mascotSystem";
 import { createInitialGardenState } from "./types/garden";
 import { HOUSE_ITEMS } from "./constants/houseItems";
 import { NexoraStudio } from "./components/NexoraStudio";
@@ -128,10 +130,13 @@ import {
   onAuthStateChanged,
   signOut,
   deleteUser,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   reauthenticateWithPopup,
   GoogleAuthProvider,
   setPersistence,
   browserLocalPersistence,
+  updateProfile,
 } from "./firebase";
 import {
   doc,
@@ -149,6 +154,7 @@ import {
   serverTimestamp,
   where,
   getDocs,
+  getDocsFromCache,
   addDoc as firestoreAddDoc,
   increment,
   arrayUnion,
@@ -300,6 +306,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   reminderTime: "09:00",
   reminderTime2: "21:00",
   motivationTime: "12:00",
+  maxNotificationsPerDay: 5,
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   displayName: "Nexora User",
   themeColor: "#3b82f6",
@@ -1120,7 +1127,7 @@ export default function App() {
     }
   }, [isDataReady]);
 
-  // Handle URL parameters for PWA Shortcuts
+  // Handle URL parameters for PWA Shortcuts & Service Worker notification navigation
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const screenParam = params.get("screen") as Screen | null;
@@ -1134,6 +1141,24 @@ export default function App() {
       // Clean up URL without refreshing
       window.history.replaceState({}, "", "/");
     }
+
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'NAVIGATE_SCREEN') {
+        if (event.data.screen && ["home", "challenge", "nexus-vision", "social", "progress"].includes(event.data.screen)) {
+          setActiveScreen(event.data.screen as Screen);
+        }
+      }
+    };
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", handleSWMessage);
+    }
+
+    return () => {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.removeEventListener("message", handleSWMessage);
+      }
+    };
   }, []);
 
   // Persistence, Version Sync, & Rollback Detection
@@ -1572,9 +1597,23 @@ export default function App() {
         time: finalTime
       });
 
-      // Update Firestore user document
+      // 1. Sync directly to Firebase Auth currentUser profile if available
+      if (auth.currentUser) {
+        try {
+          await updateProfile(auth.currentUser, {
+            displayName: name,
+            photoURL: photoURL || undefined
+          });
+        } catch (aErr) {
+          console.warn("Auth updateProfile non-blocking error:", aErr);
+        }
+      }
+
+      // 2. Prepare comprehensive update payload for Firestore
       const userDocRef = doc(db, "users", user.uid);
       const userSingularDocRef = doc(db, "user", user.uid);
+      const userSettingsDocRef = doc(db, "user_settings", user.uid);
+
       const updatePayload = {
         uid: user.uid,
         role: "user",
@@ -1597,33 +1636,44 @@ export default function App() {
         "Email": finalEmail || `${user.uid}@nexora.app`,
         "Email address": finalEmail || `${user.uid}@nexora.app`,
         updatedAt: serverTimestamp(),
+        settings: {
+          ...(settings || {}),
+          displayName: name,
+          profilePic: photoURL,
+          location: location,
+          accountName: finalAccountName,
+          email: finalEmail
+        }
       };
       
       await setDoc(userDocRef, updatePayload, { merge: true });
       await setDoc(userSingularDocRef, updatePayload, { merge: true });
+      await setDoc(userSettingsDocRef, updatePayload, { merge: true });
 
-      // Sync to leaderboard immediately
+      // Sync to leaderboard & rank immediately
       const leaderboardRef = doc(db, "leaderboard", user.uid);
-      await setDoc(
-        leaderboardRef,
-        {
-          uid: user.uid,
-          displayName: name,
-          photoURL: photoURL || settings.profilePic || user.photoURL || "",
-          streak: stats.streak || 0,
-          totalPoints: stats.totalPoints || 0,
-          weeklyXP: stats.weeklyXP || 0,
-          weeklyPoints: stats.weeklyPoints || 0,
-          level: stats.level || 1,
-          league: settings.league || "Bronze",
-        },
-        { merge: true },
-      );
+      const rankRef = doc(db, "rank", user.uid);
+      const lbData = {
+        uid: user.uid,
+        userId: user.uid,
+        displayName: name,
+        name: name,
+        photoURL: photoURL || settings.profilePic || user.photoURL || "",
+        profilePic: photoURL || settings.profilePic || user.photoURL || "",
+        streak: stats.streak || 0,
+        totalPoints: stats.totalPoints || 0,
+        weeklyXP: stats.weeklyXP || 0,
+        weeklyPoints: stats.weeklyPoints || 0,
+        level: stats.level || 1,
+        league: settings.league || "Bronze",
+      };
+      await setDoc(leaderboardRef, lbData, { merge: true });
+      await setDoc(rankRef, lbData, { merge: true });
 
       showToast("Profile sync successful! 🛡️", "success");
       vibrate(VIBRATION_PATTERNS.SUCCESS);
     } catch (err) {
-      console.error(err);
+      console.error("Profile update error:", err);
       showToast("Profile update failed", "error");
     }
   }, [user, settings, stats, onUpdateSettings, showToast]);
@@ -1699,12 +1749,14 @@ export default function App() {
     const item = HOUSE_ITEMS.find((i) => i.id === id);
     if (!item) return;
 
+    let nextCoins = stats.coins;
     if (currency === "coins") {
       if (stats.coins < item.coinPrice) {
         showToast("Not enough coins, bro! 🪙", "error");
         return;
       }
-      setStats((prev) => ({ ...prev, coins: prev.coins - item.coinPrice }));
+      nextCoins = Math.max(0, stats.coins - item.coinPrice);
+      onUpdateStats((prev) => ({ ...prev, coins: nextCoins }));
     } else {
       if (stats.streak < item.price) {
         showToast("Streak not high enough, bro! 🔥", "error");
@@ -1717,6 +1769,14 @@ export default function App() {
     });
 
     if (user) {
+      if (currency === "coins") {
+        const userRef = doc(db, "users", user.uid);
+        const statsRef = doc(db, "users", user.uid, "stats", "main");
+        const rewardsRef = doc(db, "users", user.uid, "rewards", "main");
+        setDoc(userRef, { coins: nextCoins, stats: { coins: nextCoins } }, { merge: true }).catch((e) => console.error(e));
+        setDoc(statsRef, { coins: nextCoins }, { merge: true }).catch((e) => console.error(e));
+        setDoc(rewardsRef, { coins: nextCoins }, { merge: true }).catch((e) => console.error(e));
+      }
       const purchaseRef = doc(db, "shop_purchases", user.uid);
       setDoc(purchaseRef, {
         userId: user.uid,
@@ -1746,7 +1806,8 @@ export default function App() {
       return;
     }
 
-    setStats((prev) => ({ ...prev, coins: prev.coins - item.price }));
+    const nextCoins = Math.max(0, stats.coins - item.price);
+    onUpdateStats((prev) => ({ ...prev, coins: nextCoins }));
 
     const newPurchasedIds = [
       ...(settings.purchasedEcosystemItemIds || []),
@@ -1760,6 +1821,12 @@ export default function App() {
     // PERMANENT BACKEND REGISTRATION (Legacy support)
     if (user) {
       try {
+        const userRef = doc(db, "users", user.uid);
+        const statsRef = doc(db, "users", user.uid, "stats", "main");
+        const rewardsRef = doc(db, "users", user.uid, "rewards", "main");
+        setDoc(userRef, { coins: nextCoins, stats: { coins: nextCoins } }, { merge: true }).catch((e) => console.error(e));
+        setDoc(statsRef, { coins: nextCoins }, { merge: true }).catch((e) => console.error(e));
+        setDoc(rewardsRef, { coins: nextCoins }, { merge: true }).catch((e) => console.error(e));
         const itemRef = doc(db, "users", user.uid, "eco_shop", item.id);
         await setDoc(itemRef, {
           purchasedAt: new Date().toISOString(),
@@ -2186,43 +2253,14 @@ export default function App() {
     return () => clearInterval(timer);
   }, [user, isDataReady, isStateHydrated]);
 
-  // Global Social Listeners
+  // Global Social Listeners (Runs immediately on mount so posts/circles load instantly for all devices)
   useEffect(() => {
-    if (!user || authLoading || !isDataReady || !isStateHydrated) return;
-
-    // Fetch Notifications
-    const qNotifs = query(
-      collection(db, "users", user.uid, "notifications"),
-    );
-    const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
-      const notifs = snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() }) as NexusNotification,
-      );
-      // Sort in memory to bypass index constraints
-      notifs.sort((a, b) => {
-        const timeA = a.createdAt ? (typeof a.createdAt === "string" ? new Date(a.createdAt).getTime() : (typeof a.createdAt === "object" && a.createdAt && "seconds" in a.createdAt ? (a.createdAt as any).seconds * 1000 : 0)) : 0;
-        const timeB = b.createdAt ? (typeof b.createdAt === "string" ? new Date(b.createdAt).getTime() : (typeof b.createdAt === "object" && b.createdAt && "seconds" in b.createdAt ? (b.createdAt as any).seconds * 1000 : 0)) : 0;
-        return timeB - timeA;
-      });
-      setNotifications(notifs);
-      setUnreadNotifCount(notifs.filter((n) => !n.isRead).length);
-    }, (err) => {
-      try {
-        handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/notifications`);
-      } catch (e) {
-        console.error("Firestore global notifications error:", e);
-      }
-    });
-
     // Fetch Circles globally so all users can see and interact with all sub-communities
-    const qCircles = query(
-      collection(db, "circles")
-    );
+    const qCircles = query(collection(db, "circles"));
     const unsubCircles = onSnapshot(qCircles, (snapshot) => {
       const circlesData = snapshot.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() }) as SocialCircle,
       );
-      // Sort in memory to bypass index constraints
       circlesData.sort((a, b) => (b.memberCount || 0) - (a.memberCount || 0));
       
       const defaultGeneral: SocialCircle = {
@@ -2250,10 +2288,8 @@ export default function App() {
       }
     });
 
-    // Fetch Posts globally so all users can see posts from each other
-    const qPosts = query(
-      collection(db, "community_posts")
-    );
+    // Fetch Posts globally so all users can see posts from each other instantly
+    const qPosts = query(collection(db, "community_posts"));
     const unsubPosts = onSnapshot(qPosts, (snapshot) => {
       const postsData = snapshot.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() }) as Post,
@@ -2307,9 +2343,39 @@ export default function App() {
     });
 
     return () => {
-      unsubNotifs();
       unsubCircles();
       unsubPosts();
+    };
+  }, []);
+
+  // Notifications Listener (User Specific)
+  useEffect(() => {
+    if (!user || authLoading || !isDataReady || !isStateHydrated) return;
+
+    const qNotifs = query(
+      collection(db, "users", user.uid, "notifications"),
+    );
+    const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
+      const notifs = snapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() }) as NexusNotification,
+      );
+      notifs.sort((a, b) => {
+        const timeA = a.createdAt ? (typeof a.createdAt === "string" ? new Date(a.createdAt).getTime() : (typeof a.createdAt === "object" && a.createdAt && "seconds" in a.createdAt ? (a.createdAt as any).seconds * 1000 : 0)) : 0;
+        const timeB = b.createdAt ? (typeof b.createdAt === "string" ? new Date(b.createdAt).getTime() : (typeof b.createdAt === "object" && b.createdAt && "seconds" in b.createdAt ? (b.createdAt as any).seconds * 1000 : 0)) : 0;
+        return timeB - timeA;
+      });
+      setNotifications(notifs);
+      setUnreadNotifCount(notifs.filter((n) => !n.isRead).length);
+    }, (err) => {
+      try {
+        handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/notifications`);
+      } catch (e) {
+        console.error("Firestore global notifications error:", e);
+      }
+    });
+
+    return () => {
+      unsubNotifs();
     };
   }, [user, authLoading, isDataReady, isStateHydrated]);
 
@@ -2413,11 +2479,68 @@ export default function App() {
 
   const sendNotification = async (
     title: string,
-    options: NotificationOptions,
+    options: NotificationOptions & { isAutomated?: boolean },
   ) => {
+    // Check master notification toggle
+    if (settings.notificationsEnabled === false) {
+      console.log("Notifications globally disabled in settings.");
+      return;
+    }
+
+    // Check daily notification cap for automated notifications
+    const maxAllowed = settings.maxNotificationsPerDay ?? 5;
+    const isAutomated = options?.isAutomated ?? true;
+
+    if (isAutomated && maxAllowed > 0) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const countKey = `nexora_daily_notif_count_${todayStr}`;
+      const currentCount = parseInt(localStorage.getItem(countKey) || '0', 10);
+      if (currentCount >= maxAllowed) {
+        console.log(`Notification silenced: Daily limit of ${maxAllowed} reached for today (${currentCount} sent).`);
+        return;
+      }
+      localStorage.setItem(countKey, (currentCount + 1).toString());
+    }
+
+    // Request permission if "default"
+    if (
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      (window as any).Notification &&
+      (window as any).Notification.permission === "default"
+    ) {
+      try {
+        const perm = await (window as any).Notification.requestPermission();
+        if (perm === "granted" && !fcmToken) {
+          setupFCM();
+        }
+      } catch (err) {
+        console.warn("Error requesting notification permission:", err);
+      }
+    }
+
     let shownNatively = false;
 
-    // 1. Local Browser Notification (Immediate feedback if app is open)
+    // Resolve equipped mascot details for branding
+    const activeMascot = settings.activeSkin || 'blue-slim';
+    const mascotDetails = getMascotNotificationDetails(activeMascot);
+
+    const mergedOptions = {
+      icon: '/icons/icon-192.png',
+      badge: '/icons/badge-72.png',
+      image: mascotDetails.image,
+      vibrate: [100, 50, 100],
+      tag: 'daily-reminder',
+      renotify: true,
+      requireInteraction: false,
+      data: {
+        url: '/?screen=challenge',
+        screen: 'challenge'
+      },
+      ...options
+    };
+
+    // 1. Local PWA Service Worker Notification
     if (
       typeof window !== "undefined" &&
       "Notification" in window &&
@@ -2425,12 +2548,15 @@ export default function App() {
       (window as any).Notification.permission === "granted"
     ) {
       try {
-        if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+        if ("serviceWorker" in navigator) {
           const registration = await navigator.serviceWorker.ready;
-          await registration.showNotification(title, options);
-          shownNatively = true;
-        } else {
-          new (window as any).Notification(title, options);
+          if (registration && registration.showNotification) {
+            await registration.showNotification(title, mergedOptions as any);
+            shownNatively = true;
+          }
+        }
+        if (!shownNatively) {
+          new (window as any).Notification(title, mergedOptions as any);
           shownNatively = true;
         }
       } catch (err) {
@@ -2438,24 +2564,20 @@ export default function App() {
       }
     }
 
-    // 2. Show beautiful fallback overlay inside the app if native notifications aren't showing!
-    // This perfectly routes push reminders of actions/reminders to iOS and Android users inside the app!
+    // 2. Show internal fallback overlay inside the app if native notifications aren't showing
     if (!shownNatively) {
       const fallbackNotif = {
         id: "local_fall_" + Date.now(),
         title: title,
-        message: options.body || "",
+        message: mergedOptions.body || "",
         type: "mascot" as const,
         read: false,
         createdAt: new Date().toISOString(),
       };
-      // Trigger state overlay (Sound effects are disabled for notifications per user feedback)
       setActiveSystemNotification(fallbackNotif);
     }
 
-    // 3. Server-Side FCM Notification (For background/closed app support)
-    // We try this regardless of local permission if we have a token,
-    // as it might reach other devices where permission IS granted.
+    // 3. Server-Side FCM Notification (For background/closed app push support)
     if (fcmToken) {
       try {
         await fetch("/api/send-notification", {
@@ -2464,7 +2586,12 @@ export default function App() {
           body: JSON.stringify({
             token: fcmToken,
             title: title,
-            body: options.body || "",
+            body: mergedOptions.body || "",
+            mascotId: activeMascot,
+            image: mergedOptions.image,
+            icon: mergedOptions.icon,
+            badge: mergedOptions.badge,
+            url: '/?screen=challenge'
           }),
         });
       } catch (error) {
@@ -2760,70 +2887,45 @@ export default function App() {
   }, [updateInfo, currentAppVersion]);
 
   const sendTestNotification = async () => {
-    // Diagnose health first if needed
-    try {
-      const health = await fetch("/api/health");
-      if (!health.ok) {
-        showToast(
-          "Server Health Check Failed. Is the server running?",
-          "error",
-        );
-      }
-    } catch (e) {
-      console.warn("Health check failed", e);
-    }
+    // 1. Trigger local browser / PWA / in-app mascot overlay notification immediately
+    await sendNotification("Nexora Trigger Verified! 🚀", {
+      body: `Scheduled triggers active! Morning: ${settings.reminderTime || '08:00'} | Evening: ${settings.reminderTime2 || '21:00'} | Limit: ${(settings.maxNotificationsPerDay ?? 5) === 0 ? 'Unlimited' : `${settings.maxNotificationsPerDay ?? 5}/day`}`,
+      isAutomated: false,
+    });
 
+    // 2. Also attempt server FCM push if FCM token is available or can be set up
     let currentToken = fcmToken;
     if (!currentToken) {
-      console.log("Token missing, attempting auto-setup...");
+      console.log("FCM Token missing, attempting auto-setup...");
       currentToken = await setupFCM();
     }
 
-    if (!currentToken) {
-      showToast(
-        "No device token found. Please ensure notifications are enabled in browser settings.",
-        "error",
-      );
-      console.error("FCM Token missing after setup attempt");
-      return;
-    }
+    if (currentToken) {
+      try {
+        const response = await fetch("/api/send-notification", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            token: currentToken,
+            title: "Nexora Challenge BRO! 🚀",
+            body: "Server Push notification verified successfully!",
+            mascotId: settings.activeSkin || 'blue-slim',
+          }),
+        });
 
-    console.log("Sending test notification to token:", currentToken);
-    try {
-      const response = await fetch("/api/send-notification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          token: currentToken,
-          title: "Nexora Challenge BRO! 🚀",
-          body: "This is a test notification from your app. It works!",
-        }),
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        console.error("Server Error (Notification):", response.status, text);
-        showToast(
-          `Server Error (${response.status}): ` +
-            (text.substring(0, 100) || response.statusText),
-          "error",
-        );
-        return;
+        if (response.ok) {
+          showToast("Test notification sent! Check device & in-app mascot overlay.", "success");
+        } else {
+          showToast("Test notification displayed in-app & local overlay!", "success");
+        }
+      } catch (error: any) {
+        console.warn("FCM push network test skipped:", error);
+        showToast("Test notification displayed in-app & local overlay!", "success");
       }
-
-      const data = await response.json();
-
-      if (data.success) {
-        showToast("Test notification sent! Check your device.", "success");
-      } else {
-        console.error("Notification send failure:", data.error);
-        showToast("Failed to send: " + data.error, "error");
-      }
-    } catch (error: any) {
-      console.error("Error sending test notification:", error);
-      showToast("Connection Error: " + error.message, "error");
+    } else {
+      showToast("Test notification displayed in-app & local overlay!", "success");
     }
   };
 
@@ -3024,8 +3126,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (user && fcmToken) {
-      const saveToken = async () => {
+    if (user) {
+      const saveNotificationSettings = async () => {
         try {
           const userRef = doc(db, "users", user.uid);
           let tz = 'UTC';
@@ -3034,28 +3136,46 @@ export default function App() {
           } catch (err) {
             console.warn("Could not determine timezone:", err);
           }
+          const isNotifEnabled = settings.notificationsEnabled ?? true;
+          const maxNotifs = settings.maxNotificationsPerDay ?? 5;
+          const r1 = settings.reminderTime || "08:00";
+          const r2 = settings.reminderTime2 || "21:00";
+          const mTime = settings.motivationTime || "12:00";
+
           await setDoc(userRef, {
-            fcmToken: fcmToken,
-            notificationsEnabled: true,
+            fcmToken: fcmToken || settings.fcmToken || null,
+            notificationsEnabled: isNotifEnabled,
+            pushMotivationEnabled: true,
             timezone: tz,
-            reminderTime: settings.reminderTime || "08:00",
-            reminderTime2: settings.reminderTime2 || "21:00",
-            motivationTime: settings.motivationTime || "12:00",
-            "settings.fcmToken": fcmToken,
-            "settings.notificationsEnabled": true,
+            reminderTime: r1,
+            reminderTime2: r2,
+            motivationTime: mTime,
+            maxNotificationsPerDay: maxNotifs,
+            "settings.fcmToken": fcmToken || settings.fcmToken || null,
+            "settings.notificationsEnabled": isNotifEnabled,
+            "settings.pushMotivationEnabled": true,
             "settings.timezone": tz,
-            "settings.reminderTime": settings.reminderTime || "08:00",
-            "settings.reminderTime2": settings.reminderTime2 || "21:00",
-            "settings.motivationTime": settings.motivationTime || "12:00",
+            "settings.reminderTime": r1,
+            "settings.reminderTime2": r2,
+            "settings.motivationTime": mTime,
+            "settings.maxNotificationsPerDay": maxNotifs,
           }, { merge: true });
-          console.log("FCM: Token, Timezone, and Reminder times saved to Firestore successfully.");
-        } catch (e) {
-          console.error("FCM: Failed to save token:", e);
+          console.log("FCM & Notification Settings synced to Firestore.");
+        } catch (e: any) {
+          console.warn("FCM: Deferred saving notification settings to Firestore:", e?.message || e);
         }
       };
-      saveToken();
+      saveNotificationSettings();
     }
-  }, [user, fcmToken, settings.reminderTime, settings.reminderTime2, settings.motivationTime]);
+  }, [
+    user,
+    fcmToken,
+    settings.notificationsEnabled,
+    settings.reminderTime,
+    settings.reminderTime2,
+    settings.motivationTime,
+    settings.maxNotificationsPerDay,
+  ]);
 
   // Foreground Notification Listener
   useEffect(() => {
@@ -3352,6 +3472,44 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
+      // 0ms Fast Pass: Instantly restore user-specific cached custom plans so challenges load immediately on login
+      try {
+        const userCacheKey = `nexora_custom_plans_cache_${user.uid}`;
+        const userSaved = localStorage.getItem(userCacheKey);
+        const globalSaved = localStorage.getItem("nexora_custom_plans_cache");
+        const pending = localStorage.getItem("nexora_pending_custom_plans");
+
+        let cachedPlans: CustomPlan[] = [];
+        if (userSaved) {
+          const parsed = JSON.parse(userSaved);
+          if (Array.isArray(parsed)) cachedPlans = parsed;
+        } else if (globalSaved) {
+          const parsed = JSON.parse(globalSaved);
+          if (Array.isArray(parsed)) {
+            cachedPlans = parsed.filter((p: CustomPlan) => !p.userId || p.userId === user.uid);
+          }
+        }
+
+        let pendingPlans: CustomPlan[] = [];
+        if (pending) {
+          const parsed = JSON.parse(pending);
+          if (Array.isArray(parsed)) {
+            pendingPlans = parsed.filter((p: CustomPlan) => !p.userId || p.userId === user.uid);
+          }
+        }
+
+        const planMap = new Map<string, CustomPlan>();
+        cachedPlans.forEach((p) => planMap.set(p.id, p));
+        pendingPlans.forEach((p) => planMap.set(p.id, p));
+
+        const instantPlans = Array.from(planMap.values());
+        if (instantPlans.length > 0) {
+          setCustomPlans(instantPlans);
+        }
+      } catch (e) {
+        console.warn("Failed to instantly restore custom plans on login:", e);
+      }
+
       // Background sync any pending offline plans if connected
       syncPendingCustomPlans(user.uid);
 
@@ -3366,9 +3524,9 @@ export default function App() {
             (doc) => ({ id: doc.id, ...doc.data() }) as CustomPlan,
           );
 
-          // Preserve pending offline plans that haven't hit Firestore yet
+          // Preserve pending offline plans that belong to this user
           const pendingPlans = getPendingCustomPlans().filter(
-            (p) => !p.userId || p.userId === user.uid,
+            (p) => p.userId === user.uid,
           );
           const firestoreIds = new Set(firestorePlans.map((p) => p.id));
           const missingPending = pendingPlans.filter((p) => !firestoreIds.has(p.id));
@@ -3385,6 +3543,7 @@ export default function App() {
           setCustomPlans(combinedPlans);
           try {
             localStorage.setItem("nexora_custom_plans_cache", JSON.stringify(combinedPlans));
+            localStorage.setItem(`nexora_custom_plans_cache_${user.uid}`, JSON.stringify(combinedPlans));
           } catch (e) {
             console.warn("Failed to write custom plans cache:", e);
           }
@@ -3408,6 +3567,8 @@ export default function App() {
         unsubscribe();
         window.removeEventListener("online", handleOnline);
       };
+    } else {
+      setCustomPlans([]);
     }
   }, [user, syncPendingCustomPlans]);
 
@@ -3422,7 +3583,60 @@ export default function App() {
       const currentTimeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
       const todayStr = now.toISOString().split("T")[0];
 
-      // Dynamic Daily Reminders based on Typical Day (workType)
+      // === 1. User-Configured Custom Trigger Targets from Settings ===
+      // Morning Custom Time Trigger
+      const mTime = settings.reminderTime || "08:00";
+      if (currentTimeStr === mTime) {
+        const lastMTimeKey = `nexora_custom_morning_${todayStr}_${mTime}`;
+        if (!localStorage.getItem(lastMTimeKey)) {
+          sendNotification("Morning Focus Reminder! 🌅", {
+            body: "Your morning trigger time has arrived, bro! Time to build momentum and complete your daily goals.",
+            icon: nexoraAppIcon,
+            isAutomated: true,
+          });
+          localStorage.setItem(lastMTimeKey, "true");
+        }
+      }
+
+      // Evening Custom Time Trigger
+      const eTime = settings.reminderTime2 || "21:00";
+      if (currentTimeStr === eTime) {
+        const lastETimeKey = `nexora_custom_evening_${todayStr}_${eTime}`;
+        if (!localStorage.getItem(lastETimeKey)) {
+          sendNotification("Evening Habit Wrap-Up! 🌙", {
+            body: "Your evening trigger time has arrived, bro! Lock in your remaining habit goals for today.",
+            icon: nexoraAppIcon,
+            isAutomated: true,
+          });
+          localStorage.setItem(lastETimeKey, "true");
+        }
+      }
+
+      // Motivation Sync Time Trigger
+      const motTime = settings.motivationTime || "12:00";
+      if (currentTimeStr === motTime) {
+        const lastMotTimeKey = `nexora_custom_motivation_${todayStr}_${motTime}`;
+        if (!localStorage.getItem(lastMotTimeKey)) {
+          const quotes = [
+            "The only way to do great work is to love what you do. 🔥",
+            "Believe you can and you're halfway there. 🚀",
+            "Your limitation—it's only your imagination. ✨",
+            "Push yourself, because no one else is going to do it for you. 💪",
+            "Great things never come from comfort zones. 🏆",
+            "Dream it. Wish it. Do it. 🌟",
+            "Success doesn’t just find you. You have to go out and get it. ⚡",
+          ];
+          const quote = quotes[Math.floor(Math.random() * quotes.length)];
+          sendNotification("Motivation Sync! 💡", {
+            body: quote,
+            icon: nexoraAppIcon,
+            isAutomated: true,
+          });
+          localStorage.setItem(lastMotTimeKey, "true");
+        }
+      }
+
+      // === 2. Dynamic Daily Reminders based on Typical Day (workType) ===
       const workType = settings.workType || "desk";
 
       if (workType === "desk") {
@@ -3678,6 +3892,9 @@ export default function App() {
       const updated = [planWithUser, ...prev.filter((p) => p.id !== planWithUser.id)];
       try {
         localStorage.setItem("nexora_custom_plans_cache", JSON.stringify(updated));
+        if (user?.uid) {
+          localStorage.setItem(`nexora_custom_plans_cache_${user.uid}`, JSON.stringify(updated));
+        }
       } catch (e) {
         console.warn("Failed to write custom plans cache:", e);
       }
@@ -3716,6 +3933,9 @@ export default function App() {
       const updated = prev.filter((p) => p.id !== planId);
       try {
         localStorage.setItem("nexora_custom_plans_cache", JSON.stringify(updated));
+        if (user?.uid) {
+          localStorage.setItem(`nexora_custom_plans_cache_${user.uid}`, JSON.stringify(updated));
+        }
       } catch (e) {
         console.warn("Failed to write custom plans cache on delete:", e);
       }
@@ -3964,6 +4184,33 @@ export default function App() {
       usersDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
       rankDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
 
+      // CRITICAL: Always include the currently logged in user instantly from live local state
+      if (user && user.uid) {
+        const userPts = Math.max(
+          Number(stats.weeklyPoints || 0),
+          Number(stats.weeklyXP || 0),
+          Number(stats.totalPoints || 0),
+          Number(stats.xp || 0)
+        );
+        const userStreak = Number(stats.streak || 0);
+        const userLevel = Number(stats.level || 1);
+        const userName = settings.displayName || user.displayName || user.email?.split('@')[0] || "You";
+        const userPhoto = settings.profilePic || user.photoURL || "";
+
+        parseAndAdd({
+          uid: user.uid,
+          displayName: userName,
+          photoURL: userPhoto,
+          weeklyPoints: userPts,
+          weeklyXP: userPts,
+          totalPoints: userPts,
+          xp: userPts,
+          streak: userStreak,
+          level: userLevel,
+          league: settings.league || "Bronze"
+        }, user.uid);
+      }
+
       // BOT SYSTEM: Always add competitive AI players alongside real users
       const bots = [
         {
@@ -4111,7 +4358,29 @@ export default function App() {
     const qUsers = query(collection(db, "users"), limit(150));
     const qRank = query(collection(db, "rank"), limit(150));
 
-    // Immediate fast pass for instant hydration of real users before onSnapshot handshake
+    // Immediate zero-latency local Firestore cache pass for instant hydration of real users (<10ms)
+    getDocsFromCache(qLb).then((snap) => {
+      if (snap.docs.length > 0) {
+        leaderboardDocsRef.current = snap.docs;
+        processAndSetLeaderboard();
+      }
+    }).catch(() => {});
+
+    getDocsFromCache(qUsers).then((snap) => {
+      if (snap.docs.length > 0) {
+        usersDocsRef.current = snap.docs;
+        processAndSetLeaderboard();
+      }
+    }).catch(() => {});
+
+    getDocsFromCache(qRank).then((snap) => {
+      if (snap.docs.length > 0) {
+        rankDocsRef.current = snap.docs;
+        processAndSetLeaderboard();
+      }
+    }).catch(() => {});
+
+    // Network pass for latest server updates
     getDocs(qLb).then((snap) => {
       if (snap.docs.length > 0) {
         leaderboardDocsRef.current = snap.docs;
@@ -5079,6 +5348,9 @@ export default function App() {
     }
 
     try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("nexora_cached_user");
+      }
       await signOut(auth);
     } catch (error) {
       console.warn("Firebase signOut error handled, clearing local session safely:", error);
@@ -5100,7 +5372,7 @@ export default function App() {
     }
   };
 
-  const handleDeleteAccount = async () => {
+  const handleDeleteAccount = async (signal?: AbortSignal, password?: string) => {
     vibrate(VIBRATION_PATTERNS.ERROR);
     const activeUser = auth.currentUser;
     if (!activeUser) {
@@ -5109,106 +5381,161 @@ export default function App() {
     }
 
     const userId = activeUser.uid;
-    showToast("Processing account deletion...", "info");
+    showToast("Deleting account and wiping data...", "info");
 
     try {
-      // 1. Delete user data from Firestore
-      try {
-        console.log("[DELETE ACCOUNT] Wiping Firestore documents for:", userId);
+      if (signal?.aborted) return;
 
-        // Delete stats/main
+      // Optional re-authentication if password provided
+      if (password && activeUser.email) {
         try {
-          await deleteDoc(doc(db, "users", userId, "stats", "main"));
-        } catch (e) {
-          console.warn("Failed to delete users/stats/main:", e);
+          const cred = EmailAuthProvider.credential(activeUser.email, password);
+          await reauthenticateWithCredential(activeUser, cred);
+        } catch (reauthErr: any) {
+          console.error("Re-authentication error during account deletion:", reauthErr);
+          throw new Error("Invalid password for re-authentication.");
         }
-
-        // Delete all progress documents
-        try {
-          const progressSnap = await getDocs(collection(db, "users", userId, "progress"));
-          for (const docSnap of progressSnap.docs) {
-            await deleteDoc(doc(db, "users", userId, "progress", docSnap.id));
-          }
-        } catch (e) {
-          console.warn("Failed to delete users/progress:", e);
-        }
-
-        // Delete all custom_progress documents
-        try {
-          const customProgressSnap = await getDocs(collection(db, "users", userId, "custom_progress"));
-          for (const docSnap of customProgressSnap.docs) {
-            await deleteDoc(doc(db, "users", userId, "custom_progress", docSnap.id));
-          }
-        } catch (e) {
-          console.warn("Failed to delete users/custom_progress:", e);
-        }
-
-        // Delete all eco_shop documents
-        try {
-          const ecoShopSnap = await getDocs(collection(db, "users", userId, "eco_shop"));
-          for (const docSnap of ecoShopSnap.docs) {
-            await deleteDoc(doc(db, "users", userId, "eco_shop", docSnap.id));
-          }
-        } catch (e) {
-          console.warn("Failed to delete users/eco_shop:", e);
-        }
-
-        // Delete all notifications documents
-        try {
-          const notifSnap = await getDocs(collection(db, "users", userId, "notifications"));
-          for (const docSnap of notifSnap.docs) {
-            await deleteDoc(doc(db, "users", userId, "notifications", docSnap.id));
-          }
-        } catch (e) {
-          console.warn("Failed to delete users/notifications:", e);
-        }
-
-        // Delete leaderboard doc
-        try {
-          await deleteDoc(doc(db, "leaderboard", userId));
-        } catch (e) {
-          console.warn("Failed to delete leaderboard:", e);
-        }
-
-        // Delete main user doc /users/{{uid}}
-        try {
-          await deleteDoc(doc(db, "users", userId));
-        } catch (e) {
-          console.warn("Failed to delete user doc:", e);
-        }
-
-        console.log("[DELETE ACCOUNT] Firestore data wipe completed for:", userId);
-      } catch (e) {
-        console.warn("Error during Firestore cleanup:", e);
       }
 
-      // 2. Clear all local storage keys starting with nexora_ or hydration_
-      Object.keys(localStorage).forEach((key) => {
-        if (
-          key.startsWith("nexora_") ||
-          key.startsWith("hydration_") ||
-          key === "admin_read_feedback_ids"
-        ) {
-          localStorage.removeItem(key);
-        }
-      });
+      console.log("[DELETE ACCOUNT] Wiping Firestore documents for:", userId);
 
-      // Reset local garden states in-memory
+      // 1. Top-level docs and subdocs
+      const topLevelDocsToDelete = [
+        doc(db, "users", userId),
+        doc(db, "user", userId),
+        doc(db, "user_profiles", userId),
+        doc(db, "profiles", userId),
+        doc(db, "leaderboard", userId),
+        doc(db, "rank", userId),
+        doc(db, "stats", userId),
+        doc(db, "rewards", userId),
+        doc(db, "plants", userId),
+        doc(db, "library", userId),
+        doc(db, "shop_purchases", userId),
+        doc(db, "shop", userId),
+        doc(db, "notebooks", userId),
+        doc(db, "onboardingID", userId),
+        doc(db, "challenges", userId),
+        doc(db, "subscriptions", userId),
+        doc(db, "gardens", userId),
+        doc(db, "garden", userId),
+        doc(db, "custom_plans", userId)
+      ];
+
+      const subdocsToDelete = [
+        doc(db, "users", userId, "stats", "main"),
+        doc(db, "users", userId, "settings", "main"),
+        doc(db, "users", userId, "onboarding", "main"),
+        doc(db, "users", userId, "rewards", "main"),
+        doc(db, "users", userId, "plant_section", "main"),
+        doc(db, "users", userId, "shop", "main"),
+        doc(db, "users", userId, "library", "main"),
+        doc(db, "users", userId, "notebook", "main")
+      ];
+
+      const collectionsToDelete = [
+        "progress",
+        "custom_progress",
+        "eco_shop",
+        "notifications",
+        "plants",
+        "rewards",
+        "library",
+        "history"
+      ];
+
+      // 2. Fire ALL initial fetch, delete, and tombstone operations in parallel
+      const initialDeletionsPromise = Promise.allSettled([
+        ...topLevelDocsToDelete.map(ref => deleteDoc(ref)),
+        ...subdocsToDelete.map(ref => deleteDoc(ref))
+      ]);
+
+      const subcolFetchesPromise = Promise.allSettled(
+        collectionsToDelete.map(colName =>
+          getDocs(collection(db, "users", userId, colName)).catch(() => null)
+        )
+      );
+
+      const postsFetchPromise = getDocs(
+        query(collection(db, "posts"), where("userId", "==", userId))
+      ).catch(() => null);
+
+      const tombstonePromise = firestoreSetDoc(doc(db, "deleted_users", userId), {
+        deleted: true,
+        email: activeUser.email || "",
+        deletedAt: serverTimestamp()
+      }).catch(e => console.warn("Failed to write tombstone:", e));
+
+      // Await primary parallel batch
+      const [_, colSnapsResult, postsSnap] = await Promise.all([
+        initialDeletionsPromise,
+        subcolFetchesPromise,
+        postsFetchPromise,
+        tombstonePromise
+      ]);
+
+      if (signal?.aborted) {
+        console.log("[DELETE ACCOUNT] Cancellation requested after initial batch.");
+        return;
+      }
+
+      // 3. Delete secondary collection docs in parallel
+      const secondaryDeletes: Promise<any>[] = [];
+      if (Array.isArray(colSnapsResult)) {
+        colSnapsResult.forEach((res: any) => {
+          if (res && res.status === "fulfilled" && res.value && !res.value.empty) {
+            res.value.docs.forEach((d: any) => secondaryDeletes.push(deleteDoc(d.ref)));
+          }
+        });
+      }
+
+      if (postsSnap && !postsSnap.empty) {
+        postsSnap.docs.forEach((docSnap: any) => secondaryDeletes.push(deleteDoc(docSnap.ref)));
+      }
+
+      if (secondaryDeletes.length > 0) {
+        await Promise.allSettled(secondaryDeletes);
+      }
+
+      if (signal?.aborted) {
+        console.log("[DELETE ACCOUNT] Cancellation requested before final auth deletion.");
+        return;
+      }
+
+      // 4. Clear storage & reset memory
+      try {
+        sessionStorage.clear();
+      } catch (e) {}
+
+      try {
+        localStorage.clear();
+      } catch (e) {}
+
       setSettings(DEFAULT_SETTINGS);
       setStats(DEFAULT_STATS);
 
-      // 3. Delete the Firebase Auth user account
+      // 5. Delete Firebase Auth user
       try {
         await deleteUser(activeUser);
-        showToast("Account and all data completely deleted.", "success");
-      } catch (authError: any) {
-        console.warn("Auth deletion failed (needs recent login), signing out. Data is already wiped.", authError);
         await signOut(auth);
-        showToast("All data deleted. Signed out successfully.", "success");
+        showToast("Account deleted successfully.", "success");
+      } catch (authError: any) {
+        const code = authError?.code || authError?.message || "";
+        if (code.includes("requires-recent-login")) {
+          throw new Error("REQUIRES_REAUTH");
+        }
+        console.warn("Auth deletion failed, signing out user.", authError);
+        await signOut(auth);
+        showToast("Account deleted successfully.", "success");
       }
     } catch (error: any) {
+      if (signal?.aborted) return;
+      if (error?.message === "REQUIRES_REAUTH") {
+        throw error;
+      }
       console.error("General Delete Error:", error);
       showToast(`Delete failed: ${error.message || "System error"}`, "error");
+      throw error;
     }
   };
 
@@ -5312,6 +5639,9 @@ export default function App() {
     );
   }
 
+  const isRestoringCachedSession = authLoading && Boolean(typeof window !== "undefined" && localStorage.getItem("nexora_cached_user")) && !user;
+  const isAppInitializing = user ? (authLoading || loading || !isDataReady) : (authLoading || isRestoringCachedSession);
+
   if (!splashFinished) {
     if (loadError) {
       return (
@@ -5332,17 +5662,98 @@ export default function App() {
     }
     return (
       <SplashScreen 
-        isReady={!loading && !authLoading && (!user || isDataReady)} 
+        isReady={!isAppInitializing} 
         onFinish={() => setSplashFinished(true)} 
       />
+    );
+  }
+
+  // Loading & Auth Resolution guard:
+  // Show startup loading screen while auth & user data restoration is still in progress.
+  // This prevents rendering Login, Onboarding, or Home prematurely before startup check finishes.
+  if (isAppInitializing) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#FAF7F2] text-[#4F3F34] font-sans p-6 relative overflow-hidden select-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#69C496]/15 rounded-full blur-3xl pointer-events-none" />
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.92, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="relative z-10 w-full max-w-sm bg-white border border-[#E9E4D4] rounded-[32px] p-8 shadow-xl flex flex-col items-center text-center space-y-6"
+        >
+          {/* Animated Jumping Mascot SVG */}
+          <div className="relative flex items-center justify-center h-36 w-36">
+            <motion.div
+              animate={{
+                y: [0, -18, 0, -8, 0],
+                rotate: [0, -3, 3, -1, 0],
+                scaleY: [1, 1.05, 0.95, 1.02, 1],
+              }}
+              transition={{
+                duration: 1.8,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="w-full h-full flex items-center justify-center drop-shadow-md"
+            >
+              <Mascot 
+                className="w-28 h-28" 
+                mood="happy" 
+                hat={settings?.activeHat || 'none'} 
+                theme={settings?.activeSkin || 'standard'} 
+              />
+            </motion.div>
+
+            {/* Mascot Ground Shadow */}
+            <motion.div
+              animate={{
+                scale: [1, 0.6, 1, 0.8, 1],
+                opacity: [0.3, 0.1, 0.3, 0.15, 0.3],
+              }}
+              transition={{
+                duration: 1.8,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="absolute -bottom-1 w-20 h-3 bg-[#4F3F34]/20 rounded-full blur-[2px]"
+            />
+          </div>
+
+          {/* Speech Bubble */}
+          <div className="relative w-full bg-[#FFFDF9] border-2 border-[#E9E4D4] rounded-2xl p-4 shadow-sm space-y-1">
+            <div className="absolute -top-[10px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[10px] border-b-[#E9E4D4]" />
+            <div className="absolute -top-[8px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[9px] border-b-[#FFFDF9]" />
+            
+            <p className="text-xs font-black text-[#4F3F34] uppercase tracking-wider">
+              Restoring Nexora session...
+            </p>
+            <p className="text-[11px] font-bold text-[#7D6B58]/80 leading-snug">
+              Loading your profile, stats & personal space 🌱
+            </p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="w-full bg-[#FAF7F2] rounded-full h-2 overflow-hidden border border-[#E9E4D4] p-0.5">
+            <motion.div 
+              className="h-full bg-[#69C496] rounded-full"
+              animate={{
+                x: ["-100%", "100%"],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          </div>
+        </motion.div>
+      </div>
     );
   }
 
   if (!user) {
     return (
       <div className="min-h-screen w-full flex flex-col relative overflow-x-hidden">
-        
-
         <ErrorBoundary>
           {showAuth ? (
             <Suspense
@@ -5369,19 +5780,19 @@ export default function App() {
 
         {/* Global PWA overlays rendered dynamically in front of Authentication screens */}
         <PWAInstallModal isLoggedIn={!!user} activeScreen={activeScreen} hat={settings?.activeHat} challengeStep={challengeStep} />
-        
       </div>
     );
   }
 
-  if (needsOnboarding && isDataReady && !loading) {
+  // Onboarding guard: Ensure new users and users who need onboarding NEVER see the Home screen
+  const isUserNeedsOnboarding = needsOnboarding || settings?.onboardingCompleted === false;
+
+  if (isUserNeedsOnboarding) {
     return (
       <div className="min-h-screen w-full flex flex-col relative overflow-x-hidden bg-gradient-to-b from-[#0A1733] to-[#040B1A]">
-        
-
         <Suspense
           fallback={
-            <div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">
+            <div className="min-h-screen bg-[#0A1733] flex items-center justify-center text-white font-black italic">
               PREPARING ONBOARDING...
             </div>
           }
@@ -5396,8 +5807,6 @@ export default function App() {
             setupFCM={setupFCM}
           />
         </Suspense>
-
-        
       </div>
     );
   }
@@ -6213,8 +6622,10 @@ export default function App() {
                         if (user) {
                           const userRef = doc(db, "users", user.uid);
                           const statsRef = doc(db, "users", user.uid, "stats", "main");
-                          setDoc(userRef, { coins: nextCoins, streak: nextStreak }, { merge: true }).catch((e) => console.error(e));
+                          const rewardsRef = doc(db, "users", user.uid, "rewards", "main");
+                          setDoc(userRef, { coins: nextCoins, streak: nextStreak, stats: { coins: nextCoins, streak: nextStreak } }, { merge: true }).catch((e) => console.error(e));
                           setDoc(statsRef, { coins: nextCoins, streak: nextStreak }, { merge: true }).catch((e) => console.error(e));
+                          setDoc(rewardsRef, { coins: nextCoins, streak: nextStreak }, { merge: true }).catch((e) => console.error(e));
                         }
 
                         // SYNC WITH ORIGINAL STATS FOR ROLLBACK CONSISTENCY

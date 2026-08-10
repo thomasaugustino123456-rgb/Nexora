@@ -154,6 +154,20 @@ const generateMotivationalQuote = async (): Promise<{ title: string; body: strin
 
 // Keep track of sent notifications in memory to prevent double sending within the same minute or day
 const sentNotifications = new Map<string, string>(); // key: userId_type_time, value: date_string (YYYY-MM-DD)
+const userDailyPushCounts = new Map<string, number>(); // key: userId_YYYY-MM-DD, value: count
+
+const canSendUserPush = (userId: string, todayStr: string, maxAllowed: number, isAutomated: boolean = true): boolean => {
+  if (!isAutomated || maxAllowed === 0) return true; // 0 = Unlimited
+  const countKey = `${userId}_${todayStr}`;
+  const currentCount = userDailyPushCounts.get(countKey) || 0;
+  return currentCount < maxAllowed;
+};
+
+const recordUserPush = (userId: string, todayStr: string) => {
+  const countKey = `${userId}_${todayStr}`;
+  const currentCount = userDailyPushCounts.get(countKey) || 0;
+  userDailyPushCounts.set(countKey, currentCount + 1);
+};
 
 // Background Scheduler for Reminders and Plant/Trophy Status Warnings
 const startScheduler = () => {
@@ -201,6 +215,7 @@ const startScheduler = () => {
         const fcmToken = userData.fcmToken || settings.fcmToken;
         if (!fcmToken) continue;
         
+        const userMascot = userData.activeSkin || settings.activeSkin || 'blue-slim';
         const tz = settings.timezone || userData.timezone || 'UTC';
 
         // Calculate user timezone precise time & date strings
@@ -291,6 +306,8 @@ const startScheduler = () => {
           return messages[Math.floor(Math.random() * messages.length)];
         };
 
+        const maxAllowedNotifs = settings.maxNotificationsPerDay ?? userData.maxNotificationsPerDay ?? 5;
+
         // 1. STANDARD REMINDERS (With guaranteed defaults if not customized by user)
         const customReminder1 = settings.reminderTime || userData.reminderTime;
         const customReminder2 = settings.reminderTime2 || userData.reminderTime2;
@@ -312,8 +329,11 @@ const startScheduler = () => {
             const rKey = `${userId}_standard_${userTimeStr}`;
             if (sentNotifications.get(rKey) !== todayStr) {
               sentNotifications.set(rKey, todayStr);
-              const duolingoNotif = getDuolingoStyleNotification(streakVal);
-              await sendPush(fcmToken, duolingoNotif.title, duolingoNotif.body);
+              if (canSendUserPush(userId, todayStr, maxAllowedNotifs, true)) {
+                const duolingoNotif = getDuolingoStyleNotification(streakVal);
+                await sendPush(fcmToken, duolingoNotif.title, duolingoNotif.body, userMascot);
+                recordUserPush(userId, todayStr);
+              }
             }
           }
         }
@@ -324,16 +344,19 @@ const startScheduler = () => {
           const waterKey = `${userId}_water_${userTimeStr}`;
           if (sentNotifications.get(waterKey) !== todayStr) {
             sentNotifications.set(waterKey, todayStr);
-            let waterTitle = "Water Challenge Reminder! 💧";
-            let waterBody = "Hydration Alert! Take a fresh glass of water now to fuel your focus & health, bro!";
-            if (userTimeStr === '10:00') {
-              waterBody = "Morning Hydration Alert! 🌅 You haven't logged your water goal yet today. Drink a fresh glass now, bro!";
-            } else if (userTimeStr === '14:00') {
-              waterBody = "Midday Hydration Alert! ☀️ Halfway through the day and your bottle needs a fill! Take a drink now to keep your stamina up, bro!";
-            } else if (userTimeStr === '20:00') {
-              waterBody = "Evening Hydration Alert! 🌙 Don't let your water streak slip! Complete your Water Challenge goal before bed, bro!";
+            if (canSendUserPush(userId, todayStr, maxAllowedNotifs, true)) {
+              let waterTitle = "Water Challenge Reminder! 💧";
+              let waterBody = "Hydration Alert! Take a fresh glass of water now to fuel your focus & health, bro!";
+              if (userTimeStr === '10:00') {
+                waterBody = "Morning Hydration Alert! 🌅 You haven't logged your water goal yet today. Drink a fresh glass now, bro!";
+              } else if (userTimeStr === '14:00') {
+                waterBody = "Midday Hydration Alert! ☀️ Halfway through the day and your bottle needs a fill! Take a drink now to keep your stamina up, bro!";
+              } else if (userTimeStr === '20:00') {
+                waterBody = "Evening Hydration Alert! 🌙 Don't let your water streak slip! Complete your Water Challenge goal before bed, bro!";
+              }
+              await sendPush(fcmToken, waterTitle, waterBody, userMascot);
+              recordUserPush(userId, todayStr);
             }
-            await sendPush(fcmToken, waterTitle, waterBody);
           }
         }
 
@@ -349,7 +372,7 @@ const startScheduler = () => {
               "Is your bed more important than your discipline? 👀 Complete your habit!"
             ];
             const extremeMsg = highUrgencyMessages[Math.floor(Math.random() * highUrgencyMessages.length)];
-            await sendPush(fcmToken, 'Streak at Risk! ⚠️', extremeMsg);
+            await sendPush(fcmToken, 'Streak at Risk! ⚠️', extremeMsg, userMascot);
           }
         }
 
@@ -396,13 +419,13 @@ const startScheduler = () => {
             const rKey = `${userId}_trophy_ice_${todayStr}`;
             if (sentNotifications.get(rKey) !== todayStr) {
               sentNotifications.set(rKey, todayStr);
-              await sendPush(fcmToken, 'Trophy Alert! 🧊', 'One of your trophies just turned to ICE! Complete a challenge now to save it, bro!');
+              await sendPush(fcmToken, 'Trophy Alert! 🧊', 'One of your trophies just turned to ICE! Complete a challenge now to save it, bro!', userMascot);
             }
           } else if (hadBrokenTransition) {
             const rKey = `${userId}_trophy_broken_${todayStr}`;
             if (sentNotifications.get(rKey) !== todayStr) {
               sentNotifications.set(rKey, todayStr);
-              await sendPush(fcmToken, 'Trophy Alert! 💔', 'Oh no! A trophy has BROKEN! Don\'t let more break, bro!');
+              await sendPush(fcmToken, 'Trophy Alert! 💔', 'Oh no! A trophy has BROKEN! Don\'t let more break, bro!', userMascot);
             }
           }
 
@@ -460,7 +483,7 @@ const startScheduler = () => {
                 const rKey = `${userId}_plant_death`;
                 if (sentNotifications.get(rKey) !== todayStr) {
                   sentNotifications.set(rKey, todayStr);
-                  await sendPush(fcmToken, 'Your Nexora Ecosystem has died... 🥀', 'Bro, your plants need discipline! Restore the room and try again.');
+                  await sendPush(fcmToken, 'Your Nexora Ecosystem has died... 🥀', 'Bro, your plants need discipline! Restore the room and try again.', userMascot);
                 }
               } else if (diffHours >= thirstThreshold && !plantState.isThirsty) {
                 // Plant becomes thirsty
@@ -487,7 +510,7 @@ const startScheduler = () => {
                   const rKey = `${userId}_plant_thirst_${userTimeStr}`;
                   if (sentNotifications.get(rKey) !== todayStr) {
                     sentNotifications.set(rKey, todayStr);
-                    await sendPush(fcmToken, 'Water Needed! 💧', `Your ${type} is drying out, bro! Give it some water now!`);
+                    await sendPush(fcmToken, 'Water Needed! 💧', `Your ${type} is drying out, bro! Give it some water now!`, userMascot);
                   }
                 }
               }
@@ -505,23 +528,26 @@ const startScheduler = () => {
             if (sentNotifications.get(pKey) !== todayStr) {
               sentNotifications.set(pKey, todayStr);
               const customPlanNotif = getCustomPlanDuolingoStyleNotification(plan.name);
-              await sendPush(fcmToken, customPlanNotif.title, customPlanNotif.body);
+              await sendPush(fcmToken, customPlanNotif.title, customPlanNotif.body, userMascot);
             }
           }
         }
 
         // 6. MOTIVATIONAL SYSTEM
-        const pushMotivationEnabled = settings.pushMotivationEnabled === true || userData.pushMotivationEnabled === true;
-        const motivationTime = settings.motivationTime || userData.motivationTime || "09:00";
+        const pushMotivationEnabled = settings.notificationsEnabled !== false;
+        const motivationTime = settings.motivationTime || userData.motivationTime || "12:00";
         if (pushMotivationEnabled && userTimeStr === motivationTime) {
-          const mKey = `${userId}_motivation`;
+          const mKey = `${userId}_motivation_${userTimeStr}`;
           if (sentNotifications.get(mKey) !== todayStr) {
             sentNotifications.set(mKey, todayStr);
-            try {
-              const quote = await generateMotivationalQuote();
-              await sendPush(fcmToken, quote.title, quote.body);
-            } catch (quoteErr) {
-              console.error("Failed to generate scheduler motivation:", quoteErr);
+            if (canSendUserPush(userId, todayStr, maxAllowedNotifs, true)) {
+              try {
+                const quote = await generateMotivationalQuote();
+                await sendPush(fcmToken, quote.title, quote.body, userMascot);
+                recordUserPush(userId, todayStr);
+              } catch (quoteErr) {
+                console.error("Failed to generate scheduler motivation:", quoteErr);
+              }
             }
           }
         }
@@ -590,14 +616,50 @@ const startVersionWatcher = () => {
   }, 600000); // Check every 10 minutes
 };
 
-const sendPush = async (token: string, title: string, body: string) => {
+const getMascotNotificationImage = (mascotId?: string) => {
+  const mId = mascotId || 'blue-slim';
+  if (mId === 'fire-slim') return '/mascots/fire-slim-notification.png';
+  if (mId === 'earth-slim') return '/mascots/earth-slim-notification.png';
+  if (mId === 'water-slim') return '/mascots/water-slim-notification.png';
+  if (mId === 'shield-slim') return '/mascots/shield-slim-notification.png';
+  if (mId === 'lightning-slim') return '/mascots/lightning-slim-notification.png';
+  return '/mascots/blue-slim-notification.png';
+};
+
+const sendPush = async (token: string, title: string, body: string, mascotId: string = 'blue-slim', url: string = '/?screen=challenge') => {
   try {
+    const mascotImg = getMascotNotificationImage(mascotId);
     await admin.messaging().send({
       token,
-      notification: { title, body },
+      notification: { title, body, image: mascotImg },
+      data: {
+        title,
+        body,
+        icon: '/icons/icon-192.png',
+        badge: '/icons/badge-72.png',
+        image: mascotImg,
+        tag: 'daily-reminder',
+        url: url
+      },
+      webpush: {
+        headers: { TTL: "86400" },
+        notification: {
+          title,
+          body,
+          icon: '/icons/icon-192.png',
+          badge: '/icons/badge-72.png',
+          image: mascotImg,
+          vibrate: [100, 50, 100],
+          tag: 'daily-reminder',
+          renotify: true,
+          requireInteraction: false,
+          data: { url: url, screen: 'challenge' }
+        },
+        fcmOptions: { link: url }
+      },
       android: { priority: 'high' },
       apns: { payload: { aps: { sound: 'default' } } }
-    });
+    } as any);
   } catch (err: any) {
     if (err.message && err.message.includes("cloudmessaging.messages.create")) {
       console.warn("FCM permission denied, skipping push notification.");
@@ -776,7 +838,7 @@ async function startServer() {
 
   // Push Notification Endpoint
   app.post("/api/send-notification", async (req, res) => {
-    const { token, title, body, type, email } = req.body;
+    const { token, title, body, type, email, mascotId, image, icon, badge, url } = req.body;
 
     if (!token && type !== 'email') {
       return res.status(400).json({ error: "Token is required" });
@@ -815,28 +877,49 @@ async function startServer() {
         return res.json({ success: true, messageId: data?.id });
       }
 
-      // Push Notification
+      // PWA Push Notification
+      const mascotImg = image || getMascotNotificationImage(mascotId);
+      const notifIcon = icon || '/icons/icon-192.png';
+      const notifBadge = badge || '/icons/badge-72.png';
+      const notifUrl = url || '/?screen=challenge';
+      const notifTitle = title || "Blue Slim is waiting for you";
+      const notifBody = body || "You have 2 challenges left today. Let’s grow together.";
+
       const message = {
         notification: {
-          title: title || "Nexora Alert",
-          body: body || "You have a new message from Nexora!",
+          title: notifTitle,
+          body: notifBody,
+          image: mascotImg
+        },
+        data: {
+          title: notifTitle,
+          body: notifBody,
+          icon: notifIcon,
+          badge: notifBadge,
+          image: mascotImg,
+          tag: 'daily-reminder',
+          url: notifUrl
         },
         webpush: {
+          headers: { TTL: "86400" },
           notification: {
-            icon: '/mascot.png',
-            badge: '/mascot.png',
-            vibrate: [200, 100, 200],
-            tag: 'nexora-alert',
-            renotify: true
+            title: notifTitle,
+            body: notifBody,
+            icon: notifIcon,
+            badge: notifBadge,
+            image: mascotImg,
+            vibrate: [100, 50, 100],
+            tag: 'daily-reminder',
+            renotify: true,
+            requireInteraction: false,
+            data: { url: notifUrl, screen: 'challenge' }
           },
-          fcmOptions: {
-            link: 'https://ais-pre-fhmpooizvatwhyk3zv744s-317478625149.europe-west2.run.app'
-          }
+          fcmOptions: { link: notifUrl }
         },
         token: token,
       };
 
-      console.log("Sending push notification:", message);
+      console.log("Sending PWA push notification:", JSON.stringify(message, null, 2));
       try {
         const pushRes = await admin.messaging().send(message as any);
         res.json({ success: true, messageId: pushRes });

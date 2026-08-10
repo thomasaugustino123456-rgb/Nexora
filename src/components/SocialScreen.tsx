@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   Compass,
   Bell,
@@ -34,6 +34,10 @@ import {
   EyeOff,
   MessageSquareOff,
   Loader2,
+  ChevronDown,
+  ChevronUp,
+  CornerDownRight,
+  Lock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { vibrate, VIBRATION_PATTERNS } from "../lib/vibrate";
@@ -285,6 +289,62 @@ export function SocialScreen({
   setActiveScreen,
   onPostCreated,
 }: SocialScreenProps) {
+  return (
+    <div className="w-full text-slate-800 select-none relative pb-12">
+      {/* ─── HEADER BAR ─── */}
+      <header className="flex items-center justify-between pb-4 border-b border-slate-200/50 mb-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-slate-100 rounded-2xl transition-all text-slate-650 active:scale-95"
+            title="Go Back to Hub"
+          >
+            <ArrowLeft size={22} />
+          </button>
+          <div>
+            <span className="text-xs font-bold text-indigo-600 tracking-wider uppercase leading-none block">
+              NEXORA PRO
+            </span>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tighter leading-tight drop-shadow-sm flex items-center gap-1.5">
+              <span>Community</span>
+            </h1>
+          </div>
+        </div>
+      </header>
+
+      {/* LOCKED / COMING SOON SECTION */}
+      <div className="flex flex-col items-center justify-center min-h-[420px] p-8 sm:p-12 text-center bg-white/90 backdrop-blur-md rounded-[2.5rem] border border-slate-200/80 shadow-sm my-6 relative overflow-hidden">
+        {/* Decorative background glow */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="w-20 h-20 rounded-3xl bg-indigo-50 border border-indigo-100/80 flex items-center justify-center text-indigo-600 shadow-inner mb-6 animate-pulse">
+          <Lock size={38} />
+        </div>
+
+        <span className="px-4 py-1.5 bg-amber-100/90 text-amber-900 border border-amber-200 rounded-full text-xs font-extrabold uppercase tracking-widest mb-4 shadow-2xs">
+          🔒 Locked • Coming Soon
+        </span>
+
+        <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight mb-3">
+          Community Section Under Upgrade
+        </h2>
+
+        <p className="text-sm font-medium text-slate-600 max-w-md leading-relaxed mb-8">
+          We are upgrading the Nexora Community Hub to deliver an enhanced experience with faster live discussions, verified circles, and exclusive group challenges! Stay tuned, bro.
+        </p>
+
+        <button
+          onClick={onBack}
+          className="px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-2xl shadow-md transition-all active:scale-95 text-sm flex items-center gap-2"
+        >
+          <ArrowLeft size={18} />
+          Return to Dashboard
+        </button>
+      </div>
+    </div>
+  );
+
   // Tab Navigation inside Community Section
   // 'home' = Feed, 'groups' = Sub-communities list, 'rewards' = Achievements/Rewards cabinet, 'library' = Saved list, 'profile' = User profile
   const [activeTab, setActiveTab] = useState<
@@ -337,6 +397,7 @@ export function SocialScreen({
     string | null
   >(null);
   const [replyCommentText, setReplyCommentText] = useState("");
+  const [expandedThreadIds, setExpandedThreadIds] = useState<Record<string, boolean>>({});
 
   // Multi-image upload states
   const [postImagesBase64, setPostImagesBase64] = useState<string[]>([]);
@@ -372,9 +433,92 @@ export function SocialScreen({
   const [activeActionsPostId, setActiveActionsPostId] = useState<string | null>(
     null,
   );
+  const [activeActionsCommentId, setActiveActionsCommentId] = useState<string | null>(
+    null,
+  );
 
-  // Hidden Post IDs state (Not Interested / Deleted)
-  const [hiddenPostIds, setHiddenPostIds] = useState<string[]>([]);
+  // Hidden Post & Comment IDs state (Persistent across sessions & reloads)
+  const [hiddenPostIds, setHiddenPostIds] = useState<string[]>(() => {
+    try {
+      const local = localStorage.getItem("nexora_hidden_post_ids") || "[]";
+      const device = localStorage.getItem("nexora_device_hidden_post_ids") || "[]";
+      const parsedLocal = JSON.parse(local);
+      const parsedDevice = JSON.parse(device);
+      return Array.from(new Set([...parsedLocal, ...parsedDevice]));
+    } catch {
+      return [];
+    }
+  });
+
+  const [hiddenCommentIds, setHiddenCommentIds] = useState<string[]>(() => {
+    try {
+      const local = localStorage.getItem("nexora_hidden_comment_ids") || "[]";
+      const device = localStorage.getItem("nexora_device_hidden_comment_ids") || "[]";
+      const parsedLocal = JSON.parse(local);
+      const parsedDevice = JSON.parse(device);
+      return Array.from(new Set([...parsedLocal, ...parsedDevice]));
+    } catch {
+      return [];
+    }
+  });
+
+  // Helper function to hide post persistently
+  const hidePost = useCallback((postId: string) => {
+    if (!postId) return;
+    setHiddenPostIds((prev) => {
+      if (prev.includes(postId)) return prev;
+      const next = [...prev, postId];
+      try {
+        localStorage.setItem("nexora_hidden_post_ids", JSON.stringify(next));
+        localStorage.setItem("nexora_device_hidden_post_ids", JSON.stringify(next));
+      } catch (e) {
+        console.warn("Could not save hidden post to localStorage:", e);
+      }
+      if (user?.uid) {
+        setDoc(doc(db, "users", user.uid), { hiddenPostIds: next }, { merge: true }).catch(() => {});
+        setDoc(doc(db, "user_settings", user.uid), { hiddenPostIds: next }, { merge: true }).catch(() => {});
+      }
+      return next;
+    });
+  }, [user?.uid]);
+
+  // Helper function to hide comment persistently
+  const hideComment = useCallback((commentId: string) => {
+    if (!commentId) return;
+    setHiddenCommentIds((prev) => {
+      if (prev.includes(commentId)) return prev;
+      const next = [...prev, commentId];
+      try {
+        localStorage.setItem("nexora_hidden_comment_ids", JSON.stringify(next));
+        localStorage.setItem("nexora_device_hidden_comment_ids", JSON.stringify(next));
+      } catch (e) {
+        console.warn("Could not save hidden comment to localStorage:", e);
+      }
+      if (user?.uid) {
+        setDoc(doc(db, "users", user.uid), { hiddenCommentIds: next }, { merge: true }).catch(() => {});
+        setDoc(doc(db, "user_settings", user.uid), { hiddenCommentIds: next }, { merge: true }).catch(() => {});
+      }
+      return next;
+    });
+  }, [user?.uid]);
+
+  // Sync settings hidden lists on load if available
+  useEffect(() => {
+    if (settings && (settings as any).hiddenPostIds && Array.isArray((settings as any).hiddenPostIds)) {
+      setHiddenPostIds((prev) => {
+        const merged = Array.from(new Set([...prev, ...(settings as any).hiddenPostIds]));
+        try { localStorage.setItem("nexora_hidden_post_ids", JSON.stringify(merged)); } catch {}
+        return merged;
+      });
+    }
+    if (settings && (settings as any).hiddenCommentIds && Array.isArray((settings as any).hiddenCommentIds)) {
+      setHiddenCommentIds((prev) => {
+        const merged = Array.from(new Set([...prev, ...(settings as any).hiddenCommentIds]));
+        try { localStorage.setItem("nexora_hidden_comment_ids", JSON.stringify(merged)); } catch {}
+        return merged;
+      });
+    }
+  }, [(settings as any)?.hiddenPostIds, (settings as any)?.hiddenCommentIds]);
 
   // Post forms state
   const [postTitle, setPostTitle] = useState("");
@@ -389,6 +533,33 @@ export function SocialScreen({
   const [editTargetGroup, setEditTargetGroup] = useState<string>("public");
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
 
+  // Edit comment state
+  const [editingComment, setEditingComment] = useState<SocialComment | null>(null);
+  const [editCommentText, setEditCommentText] = useState("");
+
+  // Generalized Report Target state
+  const [reportedItem, setReportedItem] = useState<{
+    type: "post" | "comment";
+    id: string;
+    postId: string;
+    content: string;
+    postTitle?: string;
+    userId: string;
+    userName: string;
+    userEmail?: string;
+    userPhoto?: string;
+  } | null>(null);
+  const [customReportNotes, setCustomReportNotes] = useState("");
+
+  // Community Moderation Status Check
+  const isCommunityBanned = useMemo(() => {
+    if (settings?.communityBannedPermanent) return true;
+    if (settings?.communityBannedUntil) {
+      return new Date(settings.communityBannedUntil) > new Date();
+    }
+    return false;
+  }, [settings]);
+
   // Group creation state
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupDesc, setNewGroupDesc] = useState("");
@@ -399,6 +570,7 @@ export function SocialScreen({
   const [reportStep, setReportStep] = useState<1 | 2 | 3>(1);
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   // Post Detail / Comments
   const [postComments, setPostComments] = useState<SocialComment[]>([]);
@@ -2277,8 +2449,6 @@ export function SocialScreen({
         return true;
       });
 
-      list.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
-
       // Merge with local comments for this post
       const localKey = `nexora_comments_${selectedPost.id}`;
       let localList: any[] = [];
@@ -2288,7 +2458,17 @@ export function SocialScreen({
       } catch {}
 
       const combined = [...list, ...localList];
-      const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id || (t.content === v.content && t.userId === v.userId)) === i);
+      // Robust map-based deduplication by ID, fallback to content + userId + parentId
+      const uniqueMap = new Map<string, any>();
+      for (const item of combined) {
+        if (!item) continue;
+        const key = item.id || `${item.userId}_${item.content}_${item.parentId || 'root'}`;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, item);
+        }
+      }
+      const unique = Array.from(uniqueMap.values());
+      unique.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
       setPostComments(unique);
     } catch (err) {
       console.warn("Failed retrieving standard comments: ", err);
@@ -2365,12 +2545,15 @@ export function SocialScreen({
         userPhoto: comment.userPhoto,
         content: comment.content || comment.text || "",
         createdAt: comment.createdAt || new Date().toISOString(),
+        parentId: comment.parentId || null,
+        parentUserName: comment.parentUserName || null,
       };
 
       // 1. Save to user comments
       const userKey = `nexora_comments_${currentUserId}`;
       const savedUserLocal = localStorage.getItem(userKey);
-      const userLocalList = savedUserLocal ? JSON.parse(savedUserLocal) : [];
+      let userLocalList = savedUserLocal ? JSON.parse(savedUserLocal) : [];
+      userLocalList = userLocalList.filter((c: any) => c.id !== preparedCommentObj.id && !(c.content === preparedCommentObj.content && c.userId === preparedCommentObj.userId));
       userLocalList.unshift(preparedCommentObj);
       localStorage.setItem(userKey, JSON.stringify(userLocalList));
 
@@ -2378,7 +2561,8 @@ export function SocialScreen({
       if (comment.postId) {
         const postKey = `nexora_comments_${comment.postId}`;
         const savedPostLocal = localStorage.getItem(postKey);
-        const postLocalList = savedPostLocal ? JSON.parse(savedPostLocal) : [];
+        let postLocalList = savedPostLocal ? JSON.parse(savedPostLocal) : [];
+        postLocalList = postLocalList.filter((c: any) => c.id !== preparedCommentObj.id && !(c.content === preparedCommentObj.content && c.userId === preparedCommentObj.userId));
         postLocalList.push(preparedCommentObj);
         localStorage.setItem(postKey, JSON.stringify(postLocalList));
       }
@@ -2397,7 +2581,11 @@ export function SocialScreen({
     setNewCommentText("");
 
     try {
+      const commentDocRef = doc(collection(db, "community_posts", selectedPost.id, "comments"));
+      const newCommentId = commentDocRef.id;
+
       const newComment: Partial<SocialComment> & { hideCommentsFromOthers?: boolean; profilePrivacy?: string } = {
+        id: newCommentId,
         postId: selectedPost.id,
         userId: currentUserId,
         userName: currentUserName,
@@ -2410,15 +2598,19 @@ export function SocialScreen({
 
       saveCommentLocally(newComment);
 
+      // Optimistic state update so comment appears instantly without duplication
+      setPostComments((prev) => {
+        const exists = prev.some((c) => c.id === newCommentId || (c.content === trimmedCommentText && c.userId === currentUserId && new Date().getTime() - new Date(c.createdAt || 0).getTime() < 10000));
+        if (exists) return prev;
+        return [...prev, newComment as SocialComment];
+      });
+
       // Optimistic UI update for comment count
       updatePostOverride(selectedPost.id, {
         commentCount: (selectedPost.commentCount || 0) + 1,
       });
 
-      await addDoc(
-        collection(db, "community_posts", selectedPost.id, "comments"),
-        cleanPayload(newComment),
-      );
+      await setDoc(commentDocRef, cleanPayload(newComment));
 
       // Trigger comment milestone notifications & rewards increment (15 Coins, 10 XP)
       const nextCommentsCount = totalCommentsCount + 1;
@@ -2475,13 +2667,9 @@ export function SocialScreen({
         } catch {}
         return next;
       });
-      fetchComments();
       if (play) play("click");
     } catch (err) {
-      showToast(
-        "Successfully published comment on feedback channel!",
-        "success",
-      );
+      showToast("Successfully published comment!", "success");
       setTotalCommentsCount((prev) => {
         const next = prev + 1;
         try {
@@ -2489,23 +2677,6 @@ export function SocialScreen({
         } catch {}
         return next;
       });
-      // Local fallback
-      const localCommentObj = {
-        id: Math.random().toString(),
-        postId: selectedPost.id,
-        userId: currentUserId,
-        userName: currentUserName,
-        userPhoto: currentUserPhoto,
-        content: trimmedCommentText,
-        createdAt: new Date().toISOString(),
-        hideCommentsFromOthers: settings.hideCommentsFromOthers || false,
-        profilePrivacy: settings.profilePrivacy || "public",
-      };
-      saveCommentLocally(localCommentObj);
-      setPostComments((prev) => [
-        ...prev,
-        localCommentObj,
-      ]);
     } finally {
       setIsSubmittingComment(false);
     }
@@ -2522,7 +2693,11 @@ export function SocialScreen({
     setActiveReplyCommentId(null);
 
     try {
+      const replyDocRef = doc(collection(db, "community_posts", selectedPost.id, "comments"));
+      const newReplyId = replyDocRef.id;
+
       const newReply: Partial<SocialComment> = {
+        id: newReplyId,
         postId: selectedPost.id,
         userId: currentUserId,
         userName: currentUserName,
@@ -2535,15 +2710,27 @@ export function SocialScreen({
 
       saveCommentLocally(newReply);
 
+      // Auto expand thread for parent comment
+      const topLevelParentId = parentComment.parentId || parentComment.id;
+      setExpandedThreadIds((prev) => ({
+        ...prev,
+        [topLevelParentId]: true,
+        [parentComment.id]: true,
+      }));
+
+      // Optimistic state update so reply appears instantly
+      setPostComments((prev) => {
+        const exists = prev.some((c) => c.id === newReplyId || (c.content === trimmedReply && c.userId === currentUserId && new Date().getTime() - new Date(c.createdAt || 0).getTime() < 10000));
+        if (exists) return prev;
+        return [...prev, newReply as SocialComment];
+      });
+
       // Optimistic UI update for comment count
       updatePostOverride(selectedPost.id, {
         commentCount: (selectedPost.commentCount || 0) + 1,
       });
 
-      await addDoc(
-        collection(db, "community_posts", selectedPost.id, "comments"),
-        cleanPayload(newReply),
-      );
+      await setDoc(replyDocRef, cleanPayload(newReply));
 
       // Notify parent comment author if not self
       if (parentComment.userId && parentComment.userId !== currentUserId) {
@@ -2585,7 +2772,6 @@ export function SocialScreen({
         } catch {}
         return next;
       });
-      fetchComments();
       if (play) play("click");
     } catch (err) {
       showToast("Successfully published reply!", "success");
@@ -2596,24 +2782,6 @@ export function SocialScreen({
         } catch {}
         return next;
       });
-      const localReplyObj = {
-        id: Math.random().toString(),
-        postId: selectedPost.id,
-        userId: currentUserId,
-        userName: currentUserName,
-        userPhoto: currentUserPhoto,
-        content: trimmedReply,
-        createdAt: new Date().toISOString(),
-        parentId: parentComment.id,
-        parentUserName: parentComment.userName,
-      };
-      saveCommentLocally(localReplyObj);
-      setPostComments((prev) => [
-        ...prev,
-        localReplyObj,
-      ]);
-      setActiveReplyCommentId(null);
-      setReplyCommentText("");
     } finally {
       setIsSubmittingComment(false);
     }
@@ -2915,9 +3083,9 @@ export function SocialScreen({
     setActiveActionsPostId(null);
   };
 
-  // Hide post locally
+  // Hide post locally and persistently
   const handleHidePost = (postId: string) => {
-    setHiddenPostIds((prev) => [...prev, postId]);
+    hidePost(postId);
     showToast("Marked as not interested!", "info");
     setActiveActionsPostId(null);
   };
@@ -3065,54 +3233,45 @@ export function SocialScreen({
         onPostCreated(fullPostTemp);
       }
 
-      try {
-        const { setDoc } = await import("firebase/firestore");
-        await setDoc(postDocRef, {
-          ...cleanedPostData,
-          id: realPostId,
-        });
-
-        if (targetCircle?.ownerId && targetCircle.ownerId !== currentUserId) {
-          try {
-            await addDoc(collection(db, "users", targetCircle.ownerId, "notifications"), cleanPayload({
-              userId: targetCircle.ownerId,
-              senderId: currentUserId || "anonymous",
-              senderName: currentUserName || "A user",
-              senderPhoto: currentUserPhoto || "",
-              type: "system",
-              postId: realPostId,
-              message: `📢 ${currentUserName || "A user"} published a new post in your circle "${targetCircle.name}": "${postTitle.trim().substring(0, 40)}${postTitle.trim().length > 40 ? "..." : ""}"`,
-              isRead: false,
-              createdAt: new Date().toISOString()
-            }));
-          } catch (nErr) {
-            console.warn("Could not notify circle owner:", nErr);
-          }
-        }
-      } catch (firestoreErr) {
-        console.error("Firestore save error:", firestoreErr);
-        try {
-          handleFirestoreError(firestoreErr, OperationType.WRITE, `community_posts/${realPostId}`);
-        } catch (e) {}
-      }
-
-      // Reset forms
+      // Reset forms & UI state immediately so button never hangs
       setPostTitle("");
       setPostContent("");
       setPostImageBase64("");
       setPostImagesBase64([]);
       setPostTargetGroup("public");
       setShowCreatePost(false);
+      setIsSubmittingPost(false);
       showToast(
         "Posted successfully! Everyone in Nexora can see it. 📡",
         "success",
       );
       if (play) play("click");
+
+      // Non-blocking background Firestore sync
+      setDoc(postDocRef, {
+        ...cleanedPostData,
+        id: realPostId,
+      }).then(() => {
+        if (targetCircle?.ownerId && targetCircle.ownerId !== currentUserId) {
+          addDoc(collection(db, "users", targetCircle.ownerId, "notifications"), cleanPayload({
+            userId: targetCircle.ownerId,
+            senderId: currentUserId || "anonymous",
+            senderName: currentUserName || "A user",
+            senderPhoto: currentUserPhoto || "",
+            type: "system",
+            postId: realPostId,
+            message: `📢 ${currentUserName || "A user"} published a new post in your circle "${targetCircle.name}": "${postTitle.trim().substring(0, 40)}${postTitle.trim().length > 40 ? "..." : ""}"`,
+            isRead: false,
+            createdAt: new Date().toISOString()
+          })).catch(() => {});
+        }
+      }).catch((firestoreErr) => {
+        console.warn("Background Firestore save notice:", firestoreErr);
+      });
     } catch (err) {
       console.error("Post creation failed:", err);
       showToast("Post created locally. Syncing with community server...", "info");
       setShowCreatePost(false);
-    } finally {
       setIsSubmittingPost(false);
     }
   };
@@ -3152,7 +3311,15 @@ export function SocialScreen({
         }
       }
 
-      // 2. Also update in local added posts
+      // 2. Update local post overrides so UI immediately updates everywhere
+      updatePostOverride(editingPost.id, updatedFields);
+
+      // 3. Update selected post if open
+      if (selectedPost && selectedPost.id === editingPost.id) {
+        setSelectedPost((prev) => (prev ? { ...prev, ...updatedFields } : null));
+      }
+
+      // 4. Also update in local added posts
       setLocalAddedPosts((prev) => {
         const next = prev.map((p) =>
           p.id === editingPost.id ? { ...p, ...updatedFields } : p
@@ -3168,6 +3335,122 @@ export function SocialScreen({
       setEditingPost(null);
     } finally {
       setIsSubmittingPost(false);
+    }
+  };
+
+  // Submit Comment Edit
+  const handleEditCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingComment || !editCommentText.trim() || isSubmittingComment) return;
+
+    setIsSubmittingComment(true);
+    try {
+      playPostPublishedSound();
+      vibrate(15);
+
+      const trimmedText = editCommentText.trim();
+      const updatedTime = new Date().toISOString();
+
+      // 1. Update postComments state immediately
+      setPostComments((prev) =>
+        prev.map((c) => (c.id === editingComment.id ? { ...c, content: trimmedText, updatedAt: updatedTime } : c))
+      );
+
+      // 2. Update user written comments state if present
+      setUserWrittenComments((prev) =>
+        prev.map((c) => (c.id === editingComment.id ? { ...c, content: trimmedText, updatedAt: updatedTime } : c))
+      );
+
+      // 3. Update local storage for this post's comments
+      const postId = editingComment.postId;
+      if (postId) {
+        try {
+          const stored = localStorage.getItem(`nexora_comments_${postId}`);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            const updated = parsed.map((c: any) =>
+              c.id === editingComment.id ? { ...c, content: trimmedText, updatedAt: updatedTime } : c
+            );
+            localStorage.setItem(`nexora_comments_${postId}`, JSON.stringify(updated));
+          }
+        } catch {}
+      }
+
+      // 4. Update Firestore non-blocking
+      if (postId && editingComment.id && !editingComment.id.startsWith("local_c_")) {
+        try {
+          await updateDoc(doc(db, "community_posts", postId, "comments", editingComment.id), {
+            content: trimmedText,
+            updatedAt: updatedTime,
+          });
+        } catch (dbErr) {
+          console.warn("Firestore comment update deferred:", dbErr);
+        }
+      }
+
+      showToast("Comment updated successfully! ✏️", "success");
+      setEditingComment(null);
+      setEditCommentText("");
+    } catch (err) {
+      showToast("Comment updated.", "success");
+      setEditingComment(null);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  // Delete comment / reply
+  const handleDeleteComment = async (comment: SocialComment) => {
+    const isOwner = comment.userId === currentUserId;
+    const isAdmin =
+      currentUserId === "G77faQhRPfe5jr4hbY0O0L4fNUs2" ||
+      currentUserEmail === "thomasaugustino12345678@gmail.com";
+    if (!isOwner && !isAdmin) {
+      showToast("Cannot delete another user's comment!", "error");
+      return;
+    }
+
+    try {
+      playTrashCrunchSound();
+      vibrate([35, 15, 35]);
+
+      // 1. Remove locally from postComments state
+      setPostComments((prev) => prev.filter((c) => c.id !== comment.id && c.parentId !== comment.id));
+      setUserWrittenComments((prev) => prev.filter((c) => c.id !== comment.id));
+
+      // 2. Remove from local storage
+      const postId = comment.postId || selectedPost?.id;
+      if (postId) {
+        try {
+          const stored = localStorage.getItem(`nexora_comments_${postId}`);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            const filtered = parsed.filter((c: any) => c.id !== comment.id && c.parentId !== comment.id);
+            localStorage.setItem(`nexora_comments_${postId}`, JSON.stringify(filtered));
+          }
+        } catch {}
+
+        // Decrement comment count on post override
+        updatePostOverride(postId, {
+          commentCount: Math.max(0, (selectedPost?.commentCount || 1) - 1),
+        });
+      }
+
+      // 3. Remove from Firestore if online
+      if (postId && comment.id && !comment.id.startsWith("local_c_")) {
+        try {
+          await deleteDoc(doc(db, "community_posts", postId, "comments", comment.id));
+        } catch (e) {
+          console.warn("Firestore comment delete deferred:", e);
+        }
+      }
+
+      showToast("Comment deleted successfully.", "success");
+      setActiveActionsCommentId(null);
+    } catch (err) {
+      console.error("Delete comment error:", err);
+      showToast("Comment removed.", "info");
+      setActiveActionsCommentId(null);
     }
   };
 
@@ -3273,27 +3556,85 @@ export function SocialScreen({
   // Submit Report
   const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reportedPost) return;
+    if (isSubmittingReport) return;
+
+    const target = reportedItem || (reportedPost ? {
+      type: "post" as const,
+      id: reportedPost.id,
+      postId: reportedPost.id,
+      content: reportedPost.content || reportedPost.title || "",
+      postTitle: reportedPost.title,
+      userId: reportedPost.userId || "",
+      userName: reportedPost.userName || "User",
+      userEmail: reportedPost.userEmail || "",
+      userPhoto: reportedPost.userPhoto || "",
+    } : null);
+
+    if (!target) return;
+
+    setIsSubmittingReport(true);
 
     try {
+      const reportId = `rep_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const finalReason = reportReason === "Other (Type manually)" ? (customReportNotes.trim() || "Custom user report") : (reportReason || "Violation of rules");
+      const finalDetails = reportDetails.trim() || customReportNotes.trim() || finalReason;
+
       const reportPayload = {
-        postId: reportedPost.id,
-        postTitle: reportedPost.title || "Untitled Post",
-        reportedUserId: reportedPost.userId,
-        reportedUserName: reportedPost.userName,
-        reportedUserEmail: reportedPost.userEmail || "unknown@nexora.io",
-        reporterUserId: currentUserId,
-        reporterUserName: currentUserName,
-        reporterUserEmail: currentUserEmail,
-        reason: reportReason,
-        details: reportDetails.trim(),
+        id: reportId,
+        targetType: target.type,
+        targetId: target.id,
+        postId: target.postId || target.id,
+        postTitle: target.postTitle || (target.type === "post" ? "Community Post" : "Comment Thread"),
+        targetContent: target.content || target.postTitle || "Content",
+        reportedUserId: target.userId || "unknown",
+        reportedUserName: target.userName || "Anonymous",
+        reportedUserEmail: target.userEmail || "user@nexora.io",
+        reportedUserPhoto: target.userPhoto || "",
+        reporterId: currentUserId || "anonymous",
+        reporterUserId: currentUserId || "anonymous",
+        reporterName: currentUserName || "Nexora User",
+        reporterUserName: currentUserName || "Nexora User",
+        reporterEmail: currentUserEmail || "user@nexora.io",
+        reporterUserEmail: currentUserEmail || "user@nexora.io",
+        reporterUserPhoto: currentUserPhoto || "",
+        reason: finalReason,
+        details: finalDetails,
+        customNotes: finalDetails,
+        status: "pending",
         createdAt: new Date().toISOString(),
       };
 
-      await addDoc(collection(db, "reports"), reportPayload);
+      // 1. Save to LocalStorage immediately for instant Admin Panel display
+      try {
+        const existingStored = localStorage.getItem("nexora_community_reports");
+        const parsed = existingStored ? JSON.parse(existingStored) : [];
+        const updated = [reportPayload, ...parsed];
+        localStorage.setItem("nexora_community_reports", JSON.stringify(updated));
+      } catch (lsErr) {
+        console.warn("localStorage reports error:", lsErr);
+      }
+
+      // 2. Hide reported item immediately & persistently across reloads/logouts
+      if (target.type === "post") {
+        hidePost(target.id);
+      } else {
+        hideComment(target.id);
+      }
+
+      // 3. Write to Firestore community_reports collection ONCE
+      setDoc(doc(db, "community_reports", reportId), reportPayload).catch((fErr) => {
+        console.warn("community_reports setDoc deferred:", fErr);
+      });
+
+      // Brief animation buffer for clear user feedback
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      setIsSubmittingReport(false);
       setReportStep(3); // Completed step
-      showToast("Thank you! Report filed with security audit.", "success");
+      showToast("Thank you! Report filed with community moderation team.", "success");
     } catch (err) {
+      console.error("Report submit error:", err);
+      setIsSubmittingReport(false);
       setReportStep(3);
     }
   };
@@ -3303,11 +3644,6 @@ export function SocialScreen({
     const filtered = allPosts.filter((post) => {
       if (post.deleted) return false;
       if (hiddenPostIds.includes(post.id)) return false;
-
-      // Privacy check: If another user has enabled "Hide My Posts", skip rendering for non-public posts
-      if (post.userId !== currentUserId && (post as any).hidePostsFromOthers === true && post.circleId !== "public") {
-        return false;
-      }
 
       // Search filter
       if (searchQuery.trim() !== "") {
@@ -3526,13 +3862,26 @@ export function SocialScreen({
 
                 <button
                   onClick={() => {
-                    setReportedPost(post);
+                    setReportedItem({
+                      type: "post",
+                      id: post.id,
+                      postId: post.id,
+                      content: post.content || "",
+                      postTitle: post.title,
+                      userId: post.userId,
+                      userName: post.userName,
+                      userEmail: post.userEmail,
+                      userPhoto: post.userPhoto,
+                    });
                     setReportStep(1);
+                    setReportReason("");
+                    setReportDetails("");
+                    setCustomReportNotes("");
                     setActiveActionsPostId(null);
                   }}
                   className="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-2"
                 >
-                  <Flag size={14} />
+                  <Flag size={14} className="text-amber-500" />
                   Report Post
                 </button>
 
@@ -6857,22 +7206,29 @@ export function SocialScreen({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {/* Render top-level comments first, then their child replies recursively */}
+                    {/* Render top-level comments first, with Reddit-style collapsible reply threads */}
                     {(() => {
-                      const topLevelComments = postComments.filter(c => !c.parentId);
-                      
-                      const renderCommentNode = (comment: SocialComment, depth: number = 0) => {
-                        const childReplies = postComments.filter(c => c.parentId === comment.id);
-                        
+                      const activePostComments = postComments.filter(c => !hiddenCommentIds.includes(c.id));
+                      const topLevelComments = activePostComments.filter(c => !c.parentId);
+
+                      const getAllChildReplies = (parentId: string): SocialComment[] => {
+                        const direct = activePostComments.filter(c => c.parentId === parentId);
+                        let all: SocialComment[] = [...direct];
+                        for (const child of direct) {
+                          all = [...all, ...getAllChildReplies(child.id)];
+                        }
+                        return all;
+                      };
+
+                      return topLevelComments.map((comment) => {
+                        const allReplies = getAllChildReplies(comment.id);
+                        const isExpanded = Boolean(expandedThreadIds[comment.id]);
+                        const replyCount = allReplies.length;
+
                         return (
                           <div 
                             key={comment.id} 
-                            style={{ marginLeft: `${depth > 0 ? (depth > 3 ? 12 : 16) : 0}px` }}
-                            className={`border-l-2 p-3.5 pl-4 rounded-r-2xl space-y-2 mt-3 transition-all ${
-                              depth > 0 
-                                ? 'bg-slate-50/40 border-indigo-200/50 shadow-2xs' 
-                                : 'bg-slate-50/80 border-slate-200 shadow-3xs'
-                            }`}
+                            className="bg-slate-50/90 border border-slate-200/80 p-3.5 sm:p-4 rounded-2xl space-y-2.5 transition-all shadow-3xs"
                           >
                             <div className="flex items-center justify-between flex-wrap gap-1">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -6880,7 +7236,7 @@ export function SocialScreen({
                                   onClick={() => handleInspectUser(comment.userId)}
                                   src={comment.userPhoto || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"}
                                   alt="commenter"
-                                  className="w-[22px] h-[22px] rounded-full object-cover border border-slate-200 cursor-pointer hover:border-indigo-400 transition-colors"
+                                  className="w-[26px] h-[26px] rounded-full object-cover border border-slate-200 cursor-pointer hover:border-indigo-400 transition-colors"
                                 />
                                 <button
                                   onClick={() => handleInspectUser(comment.userId)}
@@ -6888,35 +7244,94 @@ export function SocialScreen({
                                 >
                                   {comment.userName}
                                 </button>
-
-                                {/* Reddit-style Replying To Indicator */}
-                                {comment.parentUserName && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-[10px] font-bold text-indigo-600">
-                                    <span>replying to</span>
-                                    <span className="font-black text-indigo-700">@{comment.parentUserName}</span>
-                                  </span>
-                                )}
-
-                                <span className="text-[9px] text-slate-400 font-medium">
+                                <span className="text-[10px] text-slate-400 font-medium">
                                   {comment.createdAt
                                     ? new Date(comment.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                                     : "Just now"}
                                 </span>
                               </div>
-                              
-                              {/* Reply Button on every comment */}
-                              <button
-                                onClick={() => {
-                                  setActiveReplyCommentId(activeReplyCommentId === comment.id ? null : comment.id);
-                                  setReplyCommentText("");
-                                }}
-                                className="px-2.5 py-1 text-[10px] font-black text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
-                              >
-                                {activeReplyCommentId === comment.id ? "Cancel" : "Reply"}
-                              </button>
+
+                              <div className="flex items-center gap-1.5">
+                                {/* Reply Button on main comment */}
+                                <button
+                                  onClick={() => {
+                                    setActiveReplyCommentId(activeReplyCommentId === comment.id ? null : comment.id);
+                                    setReplyCommentText("");
+                                  }}
+                                  className="px-2.5 py-1 text-[10px] font-black text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg uppercase tracking-wider transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                                >
+                                  <MessageCircle size={12} />
+                                  <span>{activeReplyCommentId === comment.id ? "Cancel" : "Reply"}</span>
+                                </button>
+
+                                {/* Three Dots Options Menu for Top Level Comment */}
+                                <div className="relative">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveActionsCommentId(activeActionsCommentId === comment.id ? null : comment.id);
+                                    }}
+                                    className="p-1 hover:bg-slate-200/80 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                                    title="Comment options"
+                                  >
+                                    <MoreVertical size={14} />
+                                  </button>
+
+                                  {activeActionsCommentId === comment.id && (
+                                    <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-2 animate-in zoom-in-95 duration-100 text-xs">
+                                      <button
+                                        onClick={() => {
+                                          setReportedItem({
+                                            type: "comment",
+                                            id: comment.id,
+                                            postId: comment.postId || selectedPost?.id || "",
+                                            content: comment.content,
+                                            userId: comment.userId,
+                                            userName: comment.userName,
+                                            userPhoto: comment.userPhoto
+                                          });
+                                          setReportStep(1);
+                                          setReportReason("");
+                                          setReportDetails("");
+                                          setCustomReportNotes("");
+                                          setActiveActionsCommentId(null);
+                                        }}
+                                        className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 font-bold flex items-center gap-2"
+                                      >
+                                        <Flag size={13} className="text-amber-500" />
+                                        Report Comment
+                                      </button>
+
+                                      {comment.userId === currentUserId && (
+                                        <button
+                                          onClick={() => {
+                                            setEditingComment(comment);
+                                            setEditCommentText(comment.content);
+                                            setActiveActionsCommentId(null);
+                                          }}
+                                          className="w-full text-left px-3 py-1.5 hover:bg-indigo-50/70 text-indigo-600 font-bold flex items-center gap-2 border-t border-slate-100 mt-1 pt-1.5"
+                                        >
+                                          <Edit size={13} />
+                                          Edit Comment
+                                        </button>
+                                      )}
+
+                                      {(comment.userId === currentUserId || currentUserId === "G77faQhRPfe5jr4hbY0O0L4fNUs2" || currentUserEmail === "thomasaugustino12345678@gmail.com") && (
+                                        <button
+                                          onClick={() => handleDeleteComment(comment)}
+                                          className="w-full text-left px-3 py-1.5 hover:bg-rose-50 text-rose-600 font-bold flex items-center gap-2 border-t border-slate-100 mt-1 pt-1.5"
+                                        >
+                                          <Trash2 size={13} />
+                                          Delete Comment
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
 
-                            <p className="text-xs text-slate-600 font-medium leading-relaxed max-w-full overflow-hidden break-all">
+                            <p className="text-xs text-slate-700 font-medium leading-relaxed max-w-full overflow-hidden break-all">
                               <NexusLinkRenderer text={comment.content} circles={initialCircles} showToast={showToast} />
                             </p>
 
@@ -6952,13 +7367,213 @@ export function SocialScreen({
                               </form>
                             )}
 
-                            {/* Recursively render replies */}
-                            {childReplies.map(reply => renderCommentNode(reply, depth + 1))}
+                            {/* Reddit-style Reply Thread Summary & Toggle Button */}
+                            {replyCount > 0 && (
+                              <div className="pt-1.5 flex items-center justify-between border-t border-slate-100 mt-2">
+                                <button
+                                  onClick={() =>
+                                    setExpandedThreadIds((prev) => ({
+                                      ...prev,
+                                      [comment.id]: !prev[comment.id],
+                                    }))
+                                  }
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-black transition-all active:scale-95 cursor-pointer shadow-3xs"
+                                >
+                                  <CornerDownRight size={13} className="text-indigo-600" />
+                                  <span>
+                                    {isExpanded
+                                      ? "Hide replies"
+                                      : `See ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`}
+                                  </span>
+                                  <ChevronDown
+                                    size={14}
+                                    className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+                                  />
+                                </button>
+                                <span className="text-[10px] font-bold text-slate-400">
+                                  {replyCount} {replyCount === 1 ? "reply" : "replies"}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Expanded Nested Replies with Animation */}
+                            <AnimatePresence>
+                              {isExpanded && replyCount > 0 && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: "auto" }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                                  className="overflow-hidden space-y-2.5 pt-2 pl-3 sm:pl-4 border-l-2 border-indigo-200/80 ml-2"
+                                >
+                                  {allReplies.map((reply) => (
+                                    <div
+                                      key={reply.id}
+                                      className="bg-white border border-slate-150 p-3 rounded-xl space-y-1.5 shadow-3xs relative"
+                                    >
+                                      <div className="flex items-center justify-between flex-wrap gap-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <img
+                                            onClick={() => handleInspectUser(reply.userId)}
+                                            src={reply.userPhoto || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"}
+                                            alt="replyer"
+                                            className="w-5 h-5 rounded-full object-cover border border-slate-200 cursor-pointer hover:border-indigo-400 transition-colors"
+                                          />
+                                          <button
+                                            onClick={() => handleInspectUser(reply.userId)}
+                                            className="font-black text-[11px] text-slate-800 hover:text-indigo-600 transition-all font-sans"
+                                          >
+                                            {reply.userName}
+                                          </button>
+
+                                          {/* Direct Link Tag: who this reply belongs to */}
+                                          {reply.parentUserName && (
+                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-[9px] font-bold text-indigo-600">
+                                              <span>replying to</span>
+                                              <span className="font-black text-indigo-700">@{reply.parentUserName}</span>
+                                            </span>
+                                          )}
+
+                                          <span className="text-[9px] text-slate-400 font-medium">
+                                            {reply.createdAt
+                                              ? new Date(reply.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                              : "Just now"}
+                                          </span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1.5">
+                                          <button
+                                            onClick={() => {
+                                              setActiveReplyCommentId(activeReplyCommentId === reply.id ? null : reply.id);
+                                              setReplyCommentText("");
+                                            }}
+                                            className="px-2 py-0.5 text-[9px] font-black text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md uppercase tracking-wider transition-all cursor-pointer"
+                                          >
+                                            {activeReplyCommentId === reply.id ? "Cancel" : "Reply"}
+                                          </button>
+
+                                          {/* Three Dots Options Menu for Reply */}
+                                          <div className="relative">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveActionsCommentId(activeActionsCommentId === reply.id ? null : reply.id);
+                                              }}
+                                              className="p-1 hover:bg-slate-200/80 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                                              title="Reply options"
+                                            >
+                                              <MoreVertical size={13} />
+                                            </button>
+
+                                            {activeActionsCommentId === reply.id && (
+                                              <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-2 animate-in zoom-in-95 duration-100 text-xs">
+                                                <button
+                                                  onClick={() => {
+                                                    setReportedItem({
+                                                      type: "comment",
+                                                      id: reply.id,
+                                                      postId: reply.postId || selectedPost?.id || "",
+                                                      content: reply.content,
+                                                      userId: reply.userId,
+                                                      userName: reply.userName,
+                                                      userPhoto: reply.userPhoto
+                                                    });
+                                                    setReportStep(1);
+                                                    setReportReason("");
+                                                    setReportDetails("");
+                                                    setCustomReportNotes("");
+                                                    setActiveActionsCommentId(null);
+                                                  }}
+                                                  className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 font-bold flex items-center gap-2"
+                                                >
+                                                  <Flag size={13} className="text-amber-500" />
+                                                  Report Comment
+                                                </button>
+
+                                                {reply.userId === currentUserId && (
+                                                  <button
+                                                    onClick={() => {
+                                                      setEditingComment(reply);
+                                                      setEditCommentText(reply.content);
+                                                      setActiveActionsCommentId(null);
+                                                    }}
+                                                    className="w-full text-left px-3 py-1.5 hover:bg-indigo-50/70 text-indigo-600 font-bold flex items-center gap-2 border-t border-slate-100 mt-1 pt-1.5"
+                                                  >
+                                                    <Edit size={13} />
+                                                    Edit Comment
+                                                  </button>
+                                                )}
+
+                                                {(reply.userId === currentUserId || currentUserId === "G77faQhRPfe5jr4hbY0O0L4fNUs2" || currentUserEmail === "thomasaugustino12345678@gmail.com") && (
+                                                  <button
+                                                    onClick={() => handleDeleteComment(reply)}
+                                                    className="w-full text-left px-3 py-1.5 hover:bg-rose-50 text-rose-600 font-bold flex items-center gap-2 border-t border-slate-100 mt-1 pt-1.5"
+                                                  >
+                                                    <Trash2 size={13} />
+                                                    Delete Comment
+                                                  </button>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <p className="text-[11px] text-slate-600 font-medium leading-relaxed max-w-full overflow-hidden break-all">
+                                        <NexusLinkRenderer text={reply.content} circles={initialCircles} showToast={showToast} />
+                                      </p>
+
+                                      {/* Sub-reply inline form */}
+                                      {activeReplyCommentId === reply.id && (
+                                        <form
+                                          onSubmit={(e) => {
+                                            e.preventDefault();
+                                            handlePostReplySubmit(reply, replyCommentText);
+                                          }}
+                                          className="mt-2 flex items-center gap-2 bg-slate-50 rounded-xl border border-indigo-200 p-1.5 shadow-sm animate-in slide-in-from-top-1 px-2 py-1 duration-150"
+                                        >
+                                          <input
+                                            type="text"
+                                            placeholder={`Reply to @${reply.userName}...`}
+                                            value={replyCommentText}
+                                            onChange={(e) => setReplyCommentText(e.target.value)}
+                                            disabled={isSubmittingComment}
+                                            className="flex-grow bg-transparent text-[11px] text-slate-700 outline-none px-2 py-1 font-medium disabled:opacity-50"
+                                            autoFocus
+                                          />
+                                          <button
+                                            type="submit"
+                                            disabled={!replyCommentText.trim() || isSubmittingComment}
+                                            className="p-1 px-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 text-white disabled:text-slate-400 text-[9px] font-black rounded-lg uppercase tracking-wider transition-all flex items-center gap-1 min-w-[45px] justify-center"
+                                          >
+                                            {isSubmittingComment ? "⏳" : "Send"}
+                                          </button>
+                                        </form>
+                                      )}
+                                    </div>
+                                  ))}
+
+                                  {/* Bottom "Hide" button at end of replies */}
+                                  <div className="pt-1 flex justify-end">
+                                    <button
+                                      onClick={() =>
+                                        setExpandedThreadIds((prev) => ({
+                                          ...prev,
+                                          [comment.id]: false,
+                                        }))
+                                      }
+                                      className="inline-flex items-center gap-1 text-[10px] font-black text-slate-400 hover:text-indigo-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                                    >
+                                      <ChevronUp size={12} />
+                                      <span>Hide replies</span>
+                                    </button>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
                         );
-                      };
-
-                      return topLevelComments.map(comment => renderCommentNode(comment, 0));
+                      });
                     })()}
                   </div>
                 )}
@@ -7094,7 +7709,7 @@ export function SocialScreen({
       </AnimatePresence>
 
       {/* ─── YOUTUBE GRADE REPORT WIZARD SCREEN ─── */}
-      {reportedPost && (
+      {(reportedItem || reportedPost) && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[700] flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
             <header className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -7103,14 +7718,16 @@ export function SocialScreen({
                   SECURITY CENTER
                 </span>
                 <h3 className="text-lg font-black text-slate-800 tracking-tight leading-none mt-0.5">
-                  Report Material
+                  Report {reportedItem?.type === "comment" ? "Comment" : "Post"}
                 </h3>
               </div>
               <button
                 onClick={() => {
+                  setReportedItem(null);
                   setReportedPost(null);
                   setReportReason("");
                   setReportDetails("");
+                  setReportStep(1);
                 }}
                 className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-400 transition-all"
               >
@@ -7124,8 +7741,7 @@ export function SocialScreen({
                 <div className="p-3.5 bg-rose-50 rounded-2xl border-2 border-rose-100 flex gap-3 text-rose-700">
                   <AlertTriangle size={24} className="flex-shrink-0" />
                   <p className="text-xs font-bold leading-normal">
-                    Reported materials are instantly sent to Nexora Feedback &
-                    Audit path. Help secure the biological ecosystem of Nexora.
+                    Reported materials are instantly sent to Nexora Security & Admin Audit Center.
                   </p>
                 </div>
 
@@ -7136,7 +7752,7 @@ export function SocialScreen({
                   {[
                     "Spam or misleading content",
                     "Harassment or bullying actions",
-                    "Inappropriate or dangerous post",
+                    "Inappropriate or dangerous content",
                   ].map((reason) => (
                     <button
                       key={reason}
@@ -7169,13 +7785,13 @@ export function SocialScreen({
                     <p>
                       Name:{" "}
                       <span className="text-indigo-600">
-                        {reportedPost.userName}
+                        {reportedItem?.userName || reportedPost?.userName || "User"}
                       </span>
                     </p>
                     <p>
                       Email:{" "}
                       <span className="text-indigo-500">
-                        {reportedPost.userEmail || "unknown@nexora.io"}
+                        {reportedItem?.userEmail || reportedPost?.userEmail || "unknown@nexora.io"}
                       </span>
                     </p>
                     <p className="text-[11px] text-slate-400 mt-1 uppercase">
@@ -7186,24 +7802,30 @@ export function SocialScreen({
 
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                    Provide additional details
+                    Provide additional details (Optional)
                   </label>
                   <textarea
-                    rows={4}
-                    placeholder="Briefly describe what exactly is wrong with this post..."
+                    rows={3}
+                    placeholder={`Optionally describe what is wrong with this ${reportedItem?.type || "content"}...`}
                     value={reportDetails}
                     onChange={(e) => setReportDetails(e.target.value)}
-                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 outline-none"
-                    required
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 outline-none focus:border-rose-400 transition-all"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  disabled={!reportDetails.trim()}
-                  className="w-full py-4 bg-rose-600 hover:bg-rose-700 text-white disabled:bg-slate-100 disabled:text-slate-400 font-black text-xs uppercase tracking-widest rounded-2xl transition-all"
+                  disabled={isSubmittingReport}
+                  className="w-full py-4 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white disabled:bg-rose-400 font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-md shadow-rose-200 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  Submit Official Report 📡
+                  {isSubmittingReport ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                      <span>Submitting Report...</span>
+                    </>
+                  ) : (
+                    <span>Submit Official Report 📡</span>
+                  )}
                 </button>
               </form>
             ) : (
@@ -7217,14 +7839,19 @@ export function SocialScreen({
                     Report Submitted!
                   </h4>
                   <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1">
-                    Thank you, Nexora security researchers will Audit this post
-                    within 12 hours. The offensive content has been hidden from
-                    your local feed.
+                    Thank you, Nexora security researchers will audit this material within 12 hours.
                   </p>
                 </div>
                 <button
                   onClick={() => {
-                    setHiddenPostIds((prev) => [...prev, reportedPost.id]);
+                    if (reportedItem?.type === "post") {
+                      hidePost(reportedItem.id);
+                    } else if (reportedItem?.type === "comment") {
+                      hideComment(reportedItem.id);
+                    } else if (reportedPost) {
+                      hidePost(reportedPost.id);
+                    }
+                    setReportedItem(null);
                     setReportedPost(null);
                     setReportReason("");
                     setReportDetails("");

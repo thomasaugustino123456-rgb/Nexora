@@ -49,14 +49,16 @@ const SOUNDS = {
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775223411/mixkit-g-eazy-nba-type-403_kai44j.mp3",
   "pro-music-quantum-zen":
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775223058/mixkit-funky-triplets-1141_yeizgw.mp3",
-  coin: "",
+  coin:
+    "https://res.cloudinary.com/dfoty883a/video/upload/v1775215724/mixkit-winning-a-coin-video-game-2069_tfy0tj.wav",
   water:
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775302429/mixkit-liquid-bubble-3000_dvewrr.wav",
   nav_switch:
     "https://res.cloudinary.com/ddtfq9acc/video/upload/v1777215538/mixkit-retro-arcade-casino-notification-211_chrmoj.wav",
   header_switch:
     "https://res.cloudinary.com/ddtfq9acc/video/upload/v1777215960/mixkit-explainer-video-game-alert-sweep-236_xmqkot.wav",
-  fire_streak: "",
+  fire_streak:
+    "https://res.cloudinary.com/ddtfq9acc/video/upload/v1778320170/mixkit-completion-of-a-level-2063_1_l36yrp.wav",
   fire_ambient: "",
   challenge_unlock:
     "https://res.cloudinary.com/ddtfq9acc/video/upload/v1778320911/mixkit-unlock-new-item-game-notification-254_wdigpd.wav",
@@ -103,112 +105,94 @@ const SOUNDS = {
   mascotPop: "",
 };
 
-// Advanced Audio Engine
+// Advanced Audio Engine with zero-latency instant feedback
 let audioContext: AudioContext | null = null;
 const bufferCache: { [key: string]: AudioBuffer } = {};
+const rawBuffers: { [key: string]: ArrayBuffer } = {};
+const audioCacheMap: Map<string, HTMLAudioElement> = new Map();
+const lastPlayTimestamps: Map<string, number> = new Map();
+
 const musicNodes: {
   [key: string]: { audio: HTMLAudioElement; gain: GainNode };
 } = {};
 let activeMusicKey: string | null = null;
-let initialized = false;
 
-async function initContext() {
-  if (initialized) return audioContext;
-
+function getOrCreateAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
   if (!audioContext) {
-    audioContext = new (
-      window.AudioContext || (window as any).webkitAudioContext
-    )();
+    const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioCtxClass) {
+      audioContext = new AudioCtxClass();
+    }
   }
-
-  if (audioContext.state === "suspended") {
-    await audioContext.resume();
+  if (audioContext && audioContext.state === "suspended") {
+    audioContext.resume().catch(() => {});
   }
-
-  initialized = true;
   return audioContext;
 }
 
-// Global Interaction Listener to unlock AudioContext
-if (typeof window !== "undefined") {
-  const unlock = () => {
-    initContext();
-    document.removeEventListener("touchstart", unlock);
-    document.removeEventListener("mousedown", unlock);
-    document.removeEventListener("keydown", unlock);
-  };
-  document.addEventListener("touchstart", unlock);
-  document.addEventListener("mousedown", unlock);
-  document.addEventListener("keydown", unlock);
+function decodeAllRawBuffers() {
+  const ctx = getOrCreateAudioContext();
+  if (!ctx) return;
+
+  Object.entries(rawBuffers).forEach(([key, ab]) => {
+    if (!bufferCache[key] && ab && ab.byteLength > 0) {
+      try {
+        ctx.decodeAudioData(
+          ab.slice(0),
+          (decoded) => {
+            bufferCache[key] = decoded;
+          },
+          () => {}
+        ).catch(() => {});
+      } catch {
+        // Ignore decode sync exceptions
+      }
+    }
+  });
 }
 
-// Preload buffers (Effects only at module load)
+// Unlock audio context and trigger immediate decoding on any user interaction
 if (typeof window !== "undefined") {
-  Object.entries(SOUNDS).forEach(async ([key, url]) => {
-    if (!key.startsWith("music")) {
-      if (!url) {
-        // Skip empty URLs to avoid redundant requests and console warnings
-        return;
-      }
+  const unlock = () => {
+    const ctx = getOrCreateAudioContext();
+    if (ctx) {
+      decodeAllRawBuffers();
+    }
+  };
+  window.addEventListener("touchstart", unlock, { passive: true });
+  window.addEventListener("mousedown", unlock, { passive: true });
+  window.addEventListener("keydown", unlock, { passive: true });
+  window.addEventListener("pointerdown", unlock, { passive: true });
+}
+
+// Immediate Preload & Cache at module load
+if (typeof window !== "undefined") {
+  Object.entries(SOUNDS).forEach(([key, url]) => {
+    if (url) {
+      // Pre-instantiate HTMLAudioElement cache for instant playback
       try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          console.warn(`Audio: Preload failed for ${key} due to status ${response.status}`);
-          return;
-        }
-        const contentType = response.headers.get("content-type") || "";
-        if (contentType.includes("text/html")) {
-          console.warn(`Audio: Preload failed for ${key} - returned HTML instead of audio`);
-          return;
-        }
+        const audio = new Audio(url);
+        audio.preload = "auto";
+        audioCacheMap.set(key, audio);
+      } catch {}
 
-        const arrayBuffer = await response.arrayBuffer();
-        if (arrayBuffer.byteLength === 0) {
-          console.warn(`Audio: Preload failed for ${key} - empty arrayBuffer`);
-          return;
-        }
-
-        let isDecoded = false;
-        let attemptsCount = 0;
-        // We wait for the first user interaction to decode
-        const checkCtx = () => {
-          if (isDecoded) return true;
-          if (attemptsCount > 30) {
-            // Stop trying after several attempts
-            return true;
-          }
-          if (audioContext && audioContext.state !== "suspended") {
-            attemptsCount++;
-            try {
-              audioContext.decodeAudioData(
-                arrayBuffer,
-                (buffer) => {
-                  bufferCache[key] = buffer;
-                  isDecoded = true;
-                },
-                (err) => {
-                  console.warn(`Audio: Error decoding ${key}:`, err);
-                  isDecoded = true; // stop trying
-                }
-              ).catch((err) => {
-                console.warn(`Audio: Promise caught error decoding ${key}:`, err);
-                isDecoded = true; // stop trying
-              });
-            } catch (err) {
-              console.warn(`Audio: Sync catch error decoding ${key}:`, err);
-              isDecoded = true; // stop trying
+      // Pre-fetch raw buffer for Web Audio zero-latency decoding
+      if (!key.startsWith("music")) {
+        fetch(url)
+          .then((res) => {
+            if (!res.ok) return null;
+            const ct = res.headers.get("content-type") || "";
+            if (ct.includes("text/html")) return null;
+            return res.arrayBuffer();
+          })
+          .then((ab) => {
+            if (ab && ab.byteLength > 0) {
+              rawBuffers[key] = ab;
+              decodeAllRawBuffers();
             }
-            return true;
-          }
-          return false;
-        };
-
-        // Polling check or wait for first play
-        const interval = setInterval(() => {
-          if (checkCtx() || isDecoded) clearInterval(interval);
-        }, 1000);
-      } catch (e) {
-        console.warn(`Failed to preload ${key}:`, e);
+          })
+          .catch(() => {});
       }
     }
   });
@@ -631,52 +615,65 @@ export function useSound() {
     activeMusicKey,
   );
 
-  const play = useCallback(async (soundKey: keyof typeof SOUNDS) => {
+  const play = useCallback((soundKey: keyof typeof SOUNDS) => {
+    if (!soundKey) return;
+
+    // Duplicate Prevention (Debounce 90ms for exact same sound key)
+    const now = Date.now();
+    const keyStr = String(soundKey);
+    const lastTime = lastPlayTimestamps.get(keyStr) || 0;
+    if (now - lastTime < 90) {
+      return; // Suppress duplicate play call within 90ms
+    }
+    lastPlayTimestamps.set(keyStr, now);
+
     try {
-      const ctx = await initContext();
-      if (!ctx) return;
-      let buffer = bufferCache[soundKey];
+      const ctx = getOrCreateAudioContext();
+      const buffer = bufferCache[keyStr];
 
-      if (!buffer && !soundKey.startsWith("music")) {
-        // Try decoding now if it was fetched but not decoded
-        const url = SOUNDS[soundKey];
-        if (url) {
-          try {
-            const resp = await fetch(url);
-            if (resp.ok) {
-              const contentType = resp.headers.get("content-type") || "";
-              if (!contentType.includes("text/html")) {
-                const ab = await resp.arrayBuffer();
-                if (ab.byteLength > 0) {
-                  buffer = await ctx.decodeAudioData(ab);
-                  bufferCache[soundKey] = buffer;
-                }
-              }
-            }
-          } catch (fetchErr) {
-            console.warn(`Audio: On-demand fetch/decode failed for ${soundKey}:`, fetchErr);
-          }
-        }
-      }
-
-      if (buffer) {
+      if (ctx && buffer) {
+        // High-speed zero-latency Web Audio Buffer playback (< 1ms)
         const source = ctx.createBufferSource();
         const gainNode = ctx.createGain();
-        // Calibrate master effect gain to comfortable 0.35 volume (prevents 1.0 raw audio clipping)
         gainNode.gain.setValueAtTime(0.35, ctx.currentTime);
         source.buffer = buffer;
         source.connect(gainNode);
         gainNode.connect(ctx.destination);
         source.start(0);
       } else {
-        // Fallback programmatic synthesizer if no buffer could be downloaded/decoded!
-        console.log(`Audio: Fallback browser-synthesizer invoked for ${soundKey}`);
-        synthesizeFallbackSound(soundKey as string, ctx);
+        // Preloaded HTML5 Audio element playback
+        const cachedAudio = audioCacheMap.get(keyStr);
+        if (cachedAudio) {
+          cachedAudio.currentTime = 0;
+          cachedAudio.volume = 0.35;
+          cachedAudio.play().catch((err) => {
+            console.warn(`Cached audio play deferred for ${keyStr}:`, err);
+          });
+        } else {
+          // Direct HTML5 Audio fallback
+          const url = SOUNDS[soundKey];
+          if (url) {
+            const audio = new Audio(url);
+            audio.volume = 0.35;
+            audio.play().catch((err) => {
+              console.warn(`Audio play failed for ${soundKey}:`, err);
+            });
+          }
+        }
       }
     } catch (e) {
-      console.error("Audio Engine Error:", e);
+      console.warn("Audio Engine Error:", e);
     }
   }, []);
+
+  const playButtonClick = useCallback(() => play("nav_switch"), [play]);
+  const playSectionSwitch = useCallback(() => play("nav_switch"), [play]);
+  const playShopPurchase = useCallback(() => play("coin"), [play]);
+  const playChestClick = useCallback(() => play("chest_click"), [play]);
+  const playChestLand = useCallback(() => play("chest_land"), [play]);
+  const playChestReveal = useCallback(() => play("chest_reveal"), [play]);
+  const playFlameComplete = useCallback(() => play("flame_complete"), [play]);
+  const playMascotCelebration = useCallback(() => play("stadium"), [play]);
 
   const stop = useCallback(async (soundKey: keyof typeof SOUNDS) => {
     const node = await getMusicNode(soundKey as string);
@@ -741,5 +738,19 @@ export function useSound() {
     setCurrentMusic(null);
   }, []);
 
-  return { play, stop, playMusic, stopAllMusic, currentMusic };
+  return {
+    play,
+    playButtonClick,
+    playSectionSwitch,
+    playShopPurchase,
+    playChestClick,
+    playChestLand,
+    playChestReveal,
+    playFlameComplete,
+    playMascotCelebration,
+    stop,
+    playMusic,
+    stopAllMusic,
+    currentMusic,
+  };
 }

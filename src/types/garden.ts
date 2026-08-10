@@ -1,6 +1,7 @@
 export type SeedRarity = "Common" | "Rare" | "Epic" | "Legendary";
 
-export type MascotMood = 'happy' | 'neutral' | 'sad' | 'angry';
+import type { MascotMood } from '../types';
+export type { MascotMood };
 
 export interface MascotState {
   mood: MascotMood;

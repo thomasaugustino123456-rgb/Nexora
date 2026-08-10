@@ -131,7 +131,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
   ];
   const quote = quotes[new Date().getDay() % quotes.length];
 
-  // Mascot Interaction State
+  // Mascot Interaction & Onboarding Sequence State
   const [tapCount, setTapCount] = useState(0);
   const mascotControls = useAnimationControls();
   const isHomeScreenMountedRef = useRef(false);
@@ -143,6 +143,91 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
     };
   }, []);
 
+  // Mascot Welcome Sequence & Session Greeting State
+  const isExistingUser = Boolean(
+    settings.onboardingCompleted || 
+    settings.hasCompletedFirstChallenge || 
+    (stats.totalCompletedDays && stats.totalCompletedDays > 0) || 
+    (stats.xp && stats.xp > 0) || 
+    (stats.coins && stats.coins > 0) || 
+    (stats.streak && stats.streak > 0) || 
+    (history && history.length > 0) || 
+    isCompletedToday || 
+    localStorage.getItem('nexora_first_challenge_done') === 'true' ||
+    localStorage.getItem('nexora_onboarding_completed') === 'true'
+  );
+
+  // First-time onboarding step: 0 = welcome message, 1 = start first challenge instruction, 2 = task completed celebration, 3 = tutorial complete
+  const [welcomeStep, setWelcomeStep] = useState<number>(() => {
+    return isExistingUser ? 3 : 0;
+  });
+
+  // Automatically ensure existing users skip new-user intro when cloud state hydrates
+  useEffect(() => {
+    if (isExistingUser && welcomeStep < 3) {
+      setWelcomeStep(3);
+    }
+  }, [isExistingUser, welcomeStep]);
+
+  // Session greeting for opening/revisiting the app - only once per browser session
+  const [showSessionGreeting, setShowSessionGreeting] = useState<boolean>(() => {
+    try {
+      return !sessionStorage.getItem('nexora_session_greeted_v1');
+    } catch {
+      return true;
+    }
+  });
+  const [isSpeechVisible, setIsSpeechVisible] = useState<boolean>(true);
+
+  // Mark session as greeted so switching tabs or completing tasks won't re-trigger session greeting
+  useEffect(() => {
+    try {
+      if (showSessionGreeting) {
+        sessionStorage.setItem('nexora_session_greeted_v1', 'true');
+      }
+    } catch {}
+  }, [showSessionGreeting]);
+
+  // Auto advance to Celebration step 2 when first task is completed
+  useEffect(() => {
+    if (welcomeStep === 1 && (isCompletedToday || (stats.totalCompletedDays && stats.totalCompletedDays > 0))) {
+      setWelcomeStep(2);
+      setIsSpeechVisible(true);
+    }
+  }, [isCompletedToday, stats.totalCompletedDays, welcomeStep]);
+
+  // Auto-advance or hide greeting speech bubble after 6 seconds of reading time
+  useEffect(() => {
+    if (!isSpeechVisible) return;
+
+    if (showSessionGreeting || welcomeStep < 3) {
+      const timer = setTimeout(() => {
+        if (welcomeStep === 0) {
+          setWelcomeStep(1);
+        } else if (welcomeStep === 1 || welcomeStep === 2) {
+          setWelcomeStep(3);
+          localStorage.setItem('nexora_first_challenge_done', 'true');
+        } else if (showSessionGreeting) {
+          setShowSessionGreeting(false);
+          try {
+            sessionStorage.setItem('nexora_session_greeted_v1', 'true');
+          } catch {}
+        }
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSessionGreeting, welcomeStep, isSpeechVisible]);
+
+  // Reset tap count back to 0 after 6 seconds of inactivity so speech bubble reverts to clean quote/streak state
+  useEffect(() => {
+    if (tapCount > 0) {
+      const timer = setTimeout(() => {
+        setTapCount(0);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [tapCount]);
+
   // Calming down state
   const [lastY, setLastY] = useState<number | null>(null);
   const [moveCount, setMoveCount] = useState(0);
@@ -153,40 +238,74 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
 
   let mascotMood: MascotMood = 'neutral';
   let companionSpeech = "";
+  let isWaving = false;
 
-  if (tapCount >= 6) {
+  const userDisplayName = settings.displayName || settings.accountName || 'Champion';
+
+  if (welcomeStep === 0) {
+    // 1st Message: Welcome message ONLY for genuine brand-new user
+    mascotMood = 'welcoming';
+    companionSpeech = `Welcome to Nexora, ${userDisplayName}! 🎉 I'm your Nexus productivity companion, so excited to build epic habits & conquer goals with you!`;
+    isWaving = true;
+  } else if (welcomeStep === 1) {
+    // 2nd Message: Directive message to start first challenge
+    mascotMood = 'motivational';
+    companionSpeech = `To start your journey, select your very first Challenge below and complete your daily goal! 🔥 Let's smash it!`;
+    isWaving = false;
+  } else if (welcomeStep === 2) {
+    // Celebration Message after finishing first task
+    mascotMood = 'celebrating';
+    companionSpeech = `WOOHOO! 🎉 You crushed your first task! You're officially on a roll, ${userDisplayName}! Keep building momentum! 🔥`;
+    isWaving = false;
+  } else if (showSessionGreeting) {
+    // Session opening greeting for returning/existing user opening or logging back into the app
+    mascotMood = 'welcoming';
+    companionSpeech = `Hey ${userDisplayName}! Welcome back from your journey, friend! 🌟 Great to see you back on your quest!`;
+    isWaving = true;
+  } else if (tapCount >= 6) {
     mascotMood = 'boiling';
     companionSpeech = "🔥 MAXIMUM OVERDRIVE! NO EXCUSES TODAY!";
-  } else if (tapCount >= 5) {
+    isWaving = false;
+  } else if (tapCount === 5) {
     mascotMood = 'angry';
     companionSpeech = "⚡ Hey! Easy on the taps! Focus on your habits!";
+    isWaving = false;
   } else if (tapCount === 4) {
     mascotMood = 'hyped';
     companionSpeech = "🔥 I'm supercharged! Ready to crush today's protocol?";
+    isWaving = false;
   } else if (tapCount === 3) {
     mascotMood = 'happy';
     companionSpeech = "✨ Bounce bounce! Every bit of discipline builds massive momentum!";
+    isWaving = false;
   } else if (tapCount === 2) {
     mascotMood = 'happy';
     companionSpeech = "Hehe! That tickles! Let's conquer today's goals together!";
+    isWaving = false;
   } else if (tapCount === 1) {
     mascotMood = 'happy';
-    companionSpeech = "Hey friend! Ready to level up today? 🌟";
+    companionSpeech = `Hey ${userDisplayName}! Ready to level up today? 🌟`;
+    isWaving = false;
   } else if (isPlantDead) {
     mascotMood = 'sad';
     companionSpeech = "Oh no... Our plant wilted while you were away 🥀! Let's visit the Garden to revive or plant a new seed!";
+    isWaving = false;
   } else if (isPlantThirsty) {
     mascotMood = 'concerned';
     companionSpeech = "Gasp! Our plant is thirsty and needs water! 💧 Log water or fertilizer in the Garden before it wilts!";
+    isWaving = false;
   } else if (isCompletedToday) {
-    mascotMood = 'hyped';
+    mascotMood = 'celebrating';
     companionSpeech = `🎉 Unstoppable! You finished today's protocol! Active streak: ${stats.streak || 1} days! 🔥`;
-  } else if ((stats.streak || 0) >= 3) {
+    isWaving = false;
+  } else if ((stats.streak || 0) >= 1) {
     mascotMood = 'happy';
     companionSpeech = `🔥 Look at you go! ${stats.streak}-day streak active! Let's keep building momentum!`;
+    isWaving = false;
   } else {
-    mascotMood = 'neutral';
+    mascotMood = 'happy';
     companionSpeech = `☘️ "${quote}"`;
+    isWaving = false;
   }
 
   const triggerJump = async () => {
@@ -225,8 +344,45 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
     } catch (e) {}
   };
 
-  const handleMascotTap = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMascotTap = (e?: React.MouseEvent<HTMLDivElement>) => {
     triggerMascotSimpleTapReaction();
+    vibrate(VIBRATION_PATTERNS.CLICK);
+
+    if (welcomeStep === 0) {
+      setWelcomeStep(1);
+      setIsSpeechVisible(true);
+      triggerJump();
+      return;
+    }
+
+    if (welcomeStep === 1) {
+      setWelcomeStep(3);
+      setTapCount(1);
+      setIsSpeechVisible(true);
+      triggerJump();
+      return;
+    }
+
+    if (welcomeStep === 2) {
+      setWelcomeStep(3);
+      localStorage.setItem('nexora_first_challenge_done', 'true');
+      setTapCount(1);
+      setIsSpeechVisible(true);
+      triggerJump();
+      return;
+    }
+
+    if (showSessionGreeting) {
+      setShowSessionGreeting(false);
+      try {
+        sessionStorage.setItem('nexora_session_greeted_v1', 'true');
+      } catch {}
+      setTapCount(1);
+      setIsSpeechVisible(true);
+      triggerJump();
+      return;
+    }
+
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300;
 
@@ -236,11 +392,13 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
         mascotTapTimeoutRef.current = null;
       }
       triggerMascotDoubleTapReaction();
+      setTapCount(prev => (prev >= 6 ? 1 : prev + 1));
+      setIsSpeechVisible(true);
     } else {
       lastMascotTapRef.current = now;
       mascotTapTimeoutRef.current = setTimeout(() => {
-        vibrate(VIBRATION_PATTERNS.CLICK);
-        setTapCount(prev => prev + 1);
+        setTapCount(prev => (prev >= 6 ? 1 : prev + 1));
+        setIsSpeechVisible(true);
         if (tapCount < 5) {
           triggerJump();
         }
@@ -597,33 +755,36 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   onClick={handleMascotTap}
                   showSpeech={false}
                   speechText={companionSpeech}
+                  isWaving={isWaving}
                 />
               </motion.div>
             </div>
 
             {/* Mascot Speech Bubble Message on Right (Horizontal arrangement, dynamic expand with clean gap) */}
             <AnimatePresence mode="wait">
-              <motion.div 
-                key={companionSpeech}
-                style={{ willChange: 'transform, opacity' }}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: [0.95, 1.02, 1.00] }}
-                exit={{ opacity: 0, scale: 0.96 }}
-                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                className="flex-1 min-w-[150px] max-w-2xl relative z-10 bg-white/95 border-2 border-[#E9E4D4] px-4 py-3 sm:px-5 sm:py-4 rounded-2xl sm:rounded-3xl shadow-md shadow-amber-900/5 cursor-pointer hover:border-[#69C496]/50 transition-colors my-auto"
-                onClick={triggerJump}
-              >
-                {/* Speech Arrow pointing left towards mascot */}
+              {isSpeechVisible && companionSpeech && (
                 <motion.div 
-                  initial={{ scale: 0.8 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.2, delay: 0.05 }}
-                  className="absolute top-1/2 -left-[8px] -translate-y-1/2 w-3.5 h-3.5 bg-white border-b-2 border-l-2 border-[#E9E4D4] rotate-45 z-0" 
-                />
-                <p className="text-[#4F3F34] text-xs sm:text-sm md:text-base font-semibold tracking-normal leading-relaxed relative z-10 break-words whitespace-normal text-left">
-                  {companionSpeech}
-                </p>
-              </motion.div>
+                  key={companionSpeech}
+                  style={{ willChange: 'transform, opacity' }}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: [0.95, 1.02, 1.00] }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex-1 min-w-[150px] max-w-2xl relative z-10 bg-white/95 border-2 border-[#E9E4D4] px-4 py-3 sm:px-5 sm:py-4 rounded-2xl sm:rounded-3xl shadow-md shadow-amber-900/5 cursor-pointer hover:border-[#69C496]/50 transition-colors my-auto"
+                  onClick={() => handleMascotTap()}
+                >
+                  {/* Speech Arrow pointing left towards mascot */}
+                  <motion.div 
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.2, delay: 0.05 }}
+                    className="absolute top-1/2 -left-[8px] -translate-y-1/2 w-3.5 h-3.5 bg-white border-b-2 border-l-2 border-[#E9E4D4] rotate-45 z-0" 
+                  />
+                  <p className="text-[#4F3F34] text-xs sm:text-sm md:text-base font-semibold tracking-normal leading-relaxed relative z-10 break-words whitespace-normal text-left">
+                    {companionSpeech}
+                  </p>
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
         );

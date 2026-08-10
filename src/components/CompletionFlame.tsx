@@ -74,9 +74,6 @@ export function CompletionFlame({
     // 1. 350ms: Ultra-light warning tick (compression tension)
     setTimeout(() => {
       triggerHaptic(12);
-      if (settings?.soundEnabled !== false) {
-        play("fire_streak");
-      }
     }, 350);
 
     // 2. 1300ms: Soft rising sound + Heavy impact pulse (Perfect sync with flame climax)

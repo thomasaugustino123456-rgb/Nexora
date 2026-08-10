@@ -378,3 +378,35 @@ export function getMascotDialogue(
   const list = mascot.dialogues[context] || mascot.dialogues.morning;
   return list[Math.floor(Math.random() * list.length)];
 }
+
+export function getMascotNotificationDetails(mascotId: string = 'blue-slim', challengesLeft: number = 2) {
+  const normId = mascotId || 'blue-slim';
+  let image = '/mascots/blue-slim-notification.png';
+  let title = 'Blue Slim is waiting for you';
+  let body = `You have ${challengesLeft} challenges left today. Let’s grow together.`;
+
+  if (normId === 'fire-slim') {
+    image = '/mascots/fire-slim-notification.png';
+    title = 'Fire Slim is ignited! 🔥';
+    body = `Keep your streak burning hot! You have ${challengesLeft} challenges left today. Let's destroy them!`;
+  } else if (normId === 'earth-slim') {
+    image = '/mascots/earth-slim-notification.png';
+    title = 'Earth Slim is grounding you 🌿';
+    body = `Bloom and grow! You have ${challengesLeft} challenges left today. Let’s nurture your streak.`;
+  } else if (normId === 'water-slim') {
+    image = '/mascots/water-slim-notification.png';
+    title = 'Water Slim is flowing 💧';
+    body = `Flow like water! ${challengesLeft} challenges remaining today. Stay serene and focused.`;
+  } else if (normId === 'shield-slim') {
+    image = '/mascots/shield-slim-notification.png';
+    title = 'Shield Slim standing guard 🛡️';
+    body = `Guard your streak! Complete your ${challengesLeft} remaining challenges and lock in victory.`;
+  } else if (normId === 'lightning-slim') {
+    image = '/mascots/lightning-slim-notification.png';
+    title = 'Lightning Slim supercharged! ⚡';
+    body = `Speed through your goals! ${challengesLeft} challenges left. 2 minutes at lightspeed!`;
+  }
+
+  return { image, title, body, mascotId: normId };
+}
+

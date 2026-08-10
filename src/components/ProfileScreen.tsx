@@ -21,6 +21,7 @@ import {
   Layout,
   Book,
   ArrowLeft,
+  Loader2
 } from "lucide-react";
 import { FirebaseUser } from "../firebase";
 import { UserSettings, UserStats, SocialCircle, Screen } from "../types";
@@ -66,6 +67,7 @@ export function ProfileScreen({
     : (user?.displayName || settings.accountName || "Nexora User");
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [editName, setEditName] = useState(effectiveName);
   const [editPhoto, setEditPhoto] = useState(
     settings.profilePic || user?.photoURL || "",
@@ -535,23 +537,31 @@ export function ProfileScreen({
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <button
-            onClick={() => {
+            disabled={isDeleting}
+            onClick={async () => {
               if (
                 confirm(
                   "Are you sure? This will permanently delete your account and all data.",
                 )
               ) {
-                deleteAccount();
+                setIsDeleting(true);
+                try {
+                  await deleteAccount();
+                } catch (e) {
+                  console.error(e);
+                } finally {
+                  setIsDeleting(false);
+                }
               }
             }}
-            className="glass-card p-6 flex flex-col items-center text-center gap-4 hover:border-red-400 group transition-all"
+            className="glass-card p-6 flex flex-col items-center text-center gap-4 hover:border-red-400 group transition-all disabled:opacity-50 cursor-pointer"
           >
             <div className="p-3 bg-red-50 rounded-2xl text-red-500 group-hover:scale-110 transition-transform">
-              <Zap size={24} />
+              {isDeleting ? <Loader2 size={24} className="animate-spin" /> : <Zap size={24} />}
             </div>
             <div>
               <p className="font-black text-blue-900 text-[10px] uppercase tracking-widest">
-                Delete Account
+                {isDeleting ? "Deleting..." : "Delete Account"}
               </p>
               <p className="text-[8px] text-blue-400 font-bold uppercase mt-1">
                 Permanent Removal

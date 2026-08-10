@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Settings, LogOut, Bell, Shield, User, Globe, Mail, MessageSquare, 
+  Settings, LogOut, Bell, BellRing, Shield, User, Globe, Mail, MessageSquare, 
   Trash2, ChevronLeft, RefreshCw, Smartphone, Zap, Flame, 
   Droplets, Target, Clock, Volume2, Palette, Sparkles, 
   ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle, Video,
-  Layout, BoxSelect, Lock, Key, EyeOff, MessageSquareOff
+  Layout, BoxSelect, Lock, Key, EyeOff, MessageSquareOff, Loader2
 } from 'lucide-react';
 // import { auth, FirebaseUser, EmailAuthProvider, linkWithCredential, updatePassword, sendPasswordResetEmail, GoogleAuthProvider, reauthenticateWithPopup } from '../firebase';
 // FirebaseUser is now defined locally or imported elsewhere, check imports
@@ -23,7 +23,7 @@ interface SettingsScreenProps {
   isPro: boolean;
   onBack: () => void;
   onLogout: () => void;
-  onDeleteAccount: () => void;
+  onDeleteAccount: (signal?: AbortSignal, password?: string) => Promise<void> | void;
   fcmToken: string | null;
   fcmError: string | null;
   onRetryFCM: () => Promise<string | null>;
@@ -63,7 +63,52 @@ export function SettingsScreen({
   const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
   const [showPrivacyModal, setShowPrivacyModal] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+  const [needsReauth, setNeedsReauth] = React.useState(false);
+  const [reauthPassword, setReauthPassword] = React.useState('');
+  const [reauthError, setReauthError] = React.useState('');
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  const handleConfirmDeleteAccount = async () => {
+    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    setIsDeletingAccount(true);
+    setReauthError('');
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    try {
+      await onDeleteAccount(controller.signal, reauthPassword || undefined);
+      setShowDeleteConfirm(false);
+    } catch (err: any) {
+      if (err?.message === "REQUIRES_REAUTH") {
+        setNeedsReauth(true);
+        setReauthError("Firebase requires password confirmation to complete deletion.");
+      } else if (err?.name !== 'AbortError' && !controller.signal?.aborted) {
+        setReauthError(err?.message || "Delete account error");
+        console.error("Delete account error:", err);
+      }
+    } finally {
+      if (!controller.signal?.aborted) {
+        setIsDeletingAccount(false);
+      }
+    }
+  };
+
+  const handleCancelDeleteAccount = () => {
+    vibrate(10);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (isDeletingAccount) {
+      showToast('Account deletion stopped.', 'info');
+    }
+    setIsDeletingAccount(false);
+    setShowDeleteConfirm(false);
+    setNeedsReauth(false);
+    setReauthPassword('');
+    setReauthError('');
+  };
   const [mascotError, setMascotError] = React.useState(false);
 
   // Password actions state
@@ -213,40 +258,67 @@ export function SettingsScreen({
               className="bg-white rounded-[32px] p-8 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden border border-[#E9E4D4]"
               id="delete-account-modal"
             >
-              <div className="absolute top-0 left-0 w-full h-2 bg-red-500" />
+              <div className="absolute top-0 left-0 w-full h-2 bg-red-600" />
               <div className="flex items-center gap-4 text-red-600">
-                <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center shadow-sm border border-red-100">
+                <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center shadow-sm border border-red-100 shrink-0">
                   <Trash2 size={24} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black leading-tight">Terminal Action</h3>
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Account Deletion Protocol</p>
+                  <h3 className="text-2xl font-black leading-tight text-[#4F3F34]">Delete account?</h3>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-red-600">Permanent Action</p>
                 </div>
               </div>
               
-              <div className="space-y-4 text-blue-900/70 text-sm font-medium leading-relaxed">
-                <p className="font-bold text-red-600">Warning: This action is irreversible, bro.</p>
-                <p>Deleting your account will permanently erase your Bio-ID, workout history, and all earned trophies from our secure servers.</p>
+              <div className="p-4 bg-red-50/80 border border-red-100 rounded-2xl text-center space-y-2">
+                <p className="text-xs text-red-900/90 font-medium leading-relaxed">
+                  This action is permanent and cannot be undone.
+                </p>
+                <p className="text-xs text-red-800/80 font-normal leading-relaxed">
+                  Delete all your plants, streaks, XP, coins, rewards, profile, subscription data, and account permanently.
+                </p>
               </div>
+
+              {reauthError && (
+                <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold rounded-xl text-center">
+                  {reauthError}
+                </div>
+              )}
+
+              {needsReauth && (
+                <div className="space-y-2 bg-gray-50 p-3.5 rounded-2xl border border-gray-200">
+                  <p className="text-xs font-bold text-[#4F3F34]">Password verification required:</p>
+                  <input
+                    type="password"
+                    placeholder="Enter account password"
+                    value={reauthPassword}
+                    onChange={(e) => setReauthPassword(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-red-500"
+                  />
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <button 
-                  onClick={() => { vibrate(10); setShowDeleteConfirm(false); }}
-                  className="flex-1 bg-gray-100 text-gray-500 py-4 rounded-2xl font-black shadow-sm hover:bg-gray-200 active:scale-95 transition-all text-xs"
+                  onClick={handleCancelDeleteAccount}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-[#4F3F34] py-4 rounded-2xl font-black shadow-sm active:scale-95 transition-all text-xs uppercase tracking-wider border border-gray-200 cursor-pointer flex items-center justify-center gap-1"
                   id="cancel-delete-btn"
                 >
-                  CANCEL
+                  Cancel
                 </button>
                 <button 
-                  onClick={() => {
-                    vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
-                    onDeleteAccount();
-                    setShowDeleteConfirm(false);
-                  }}
-                  className="flex-1 bg-red-600 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-red-700 active:scale-95 transition-all text-xs"
+                  disabled={isDeletingAccount}
+                  onClick={handleConfirmDeleteAccount}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
                   id="confirm-delete-btn"
                 >
-                  DELETE DATA
+                  {isDeletingAccount ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <span>Delete permanently</span>
+                  )}
                 </button>
               </div>
             </motion.div>
@@ -607,6 +679,49 @@ export function SettingsScreen({
                           </div>
                         </div>
 
+                        {/* Daily Limit Cap */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-[10px] font-black text-[#4F3F34]/40 uppercase tracking-widest pl-1">
+                              Max Notifications Per Day
+                            </h4>
+                            <span className="text-[10px] font-bold text-[#69C496] bg-[#69C496]/10 px-2.5 py-0.5 rounded-full">
+                              {(settings.maxNotificationsPerDay ?? 5) === 0 ? "Unlimited" : `${settings.maxNotificationsPerDay ?? 5} / Day`}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-5 gap-1.5">
+                            {[
+                              { label: '1 / day', val: 1 },
+                              { label: '2 / day', val: 2 },
+                              { label: '3 / day', val: 3 },
+                              { label: '5 / day', val: 5 },
+                              { label: 'Unlimited', val: 0 },
+                            ].map((opt) => {
+                              const isSelected = (settings.maxNotificationsPerDay ?? 5) === opt.val;
+                              return (
+                                <button
+                                  key={opt.val}
+                                  type="button"
+                                  onClick={() => {
+                                    vibrate(5);
+                                    setSettings({ maxNotificationsPerDay: opt.val });
+                                  }}
+                                  className={`py-2 px-1 text-[9px] font-black uppercase rounded-xl transition-all border ${
+                                    isSelected
+                                      ? 'bg-[#4F3F34] text-[#FCFAF6] border-[#4F3F34] shadow-sm'
+                                      : 'bg-[#FAF7F2] text-[#4F3F34]/70 border-[#E9E4D4]/60 hover:bg-[#FAF7F2]/80'
+                                  }`}
+                                >
+                                  {opt.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[9px] text-[#4F3F34]/50 font-medium px-1">
+                            Limits total automated daily pings to keep your notifications clean & non-disruptive, bro.
+                          </p>
+                        </div>
+
                         {/* Frequency settings checkboxes */}
                         <div className="space-y-2">
                           <h4 className="text-[10px] font-black text-[#4F3F34]/40 uppercase tracking-widest pl-1">Frequency Channels</h4>
@@ -626,6 +741,38 @@ export function SettingsScreen({
                               </button>
                             </div>
                           ))}
+                        </div>
+
+                        {/* Test Notification Trigger */}
+                        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/60 rounded-2xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-blue-600 p-2.5 rounded-xl text-white shadow-sm shrink-0">
+                              <BellRing size={18} />
+                            </div>
+                            <div>
+                              <p className="text-[11px] text-blue-950 font-black uppercase tracking-wide">Test Scheduled Triggers</p>
+                              <p className="text-[9px] text-blue-800/70 font-bold leading-normal">
+                                Test custom triggers & verify mascot push styling now!
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              vibrate(10);
+                              if (onSendTestNotification) {
+                                onSendTestNotification();
+                              } else {
+                                sendNotification(
+                                  "Test Trigger Verified! 🚀",
+                                  `Scheduled triggers active: Morning ${settings.reminderTime || '08:00'} | Evening ${settings.reminderTime2 || '21:00'} | Limit: ${(settings.maxNotificationsPerDay ?? 5) === 0 ? 'Unlimited' : `${settings.maxNotificationsPerDay ?? 5}/day`}`
+                                );
+                              }
+                            }}
+                            className="p-2 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all shrink-0"
+                          >
+                            Send Test
+                          </button>
                         </div>
 
                         {/* FCM Token block */}
@@ -1321,6 +1468,33 @@ export function SettingsScreen({
                     >
                       <LogOut size={18} /> Log Out
                     </button>
+
+                    {/* DANGER ZONE / ACCOUNT DELETION */}
+                    <div className="pt-5 border-t border-red-100 space-y-3">
+                      <div className="flex items-center gap-2 text-red-600 font-black text-xs uppercase tracking-wider">
+                        <Trash2 size={16} /> Danger Zone - Account Deletion
+                      </div>
+                      <p className="text-xs text-[#4F3F34]/70 font-medium leading-relaxed">
+                        Need to completely erase your account and all saved progress from Firestore? Click below to delete your account.
+                      </p>
+                      <button 
+                        disabled={isDeletingAccount}
+                        onClick={() => { vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT); setShowDeleteConfirm(true); }}
+                        className="w-full py-4 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                        id="subpage-delete-account-trigger-btn"
+                      >
+                        {isDeletingAccount ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" />
+                            <span>Deleting Account...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 size={16} /> Delete Account Permanently
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

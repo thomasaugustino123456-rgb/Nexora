@@ -27,12 +27,22 @@ import {
   CheckCircle,
   Inbox,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Flag,
+  ShieldAlert,
+  Trash2,
+  UserX,
+  CheckCircle2,
+  Filter
 } from "lucide-react";
 import {
   collection,
   getDocs,
-  addDoc
+  addDoc,
+  doc,
+  setDoc,
+  deleteDoc,
+  updateDoc
 } from "firebase/firestore";
 import { db } from "../firebase";
 import {
@@ -95,14 +105,33 @@ interface FeedbackLog {
   createdAt: any;
 }
 
+export interface CommunityReport {
+  id: string;
+  reporterId: string;
+  reporterName?: string;
+  reporterEmail?: string;
+  reportedUserId: string;
+  reportedUserName?: string;
+  targetType: "post" | "comment";
+  targetId: string;
+  postId?: string;
+  targetContent: string;
+  reason: string;
+  details?: string;
+  customNotes?: string;
+  status: "pending" | "reviewed" | "resolved" | "dismissed";
+  createdAt: any;
+}
+
 // Active tabs mapping
 // default tab: 'overview' (displays nice high-level stats cards & beautiful charts)
 // 'tab_population': deep dive into current registrants list
 // 'tab_cultivated': list of users who have planted botanical companions
 // 'tab_arsenal': greenhouse inventories of all users
 // 'tab_signals': signals & feedback messaging logs with read/unread tracking
+// 'tab_reports': community incident reports (post & comment reporting + bans)
 // 'tab_broadcast': broadcaster workspace
-type AdminSectionTab = "overview" | "tab_population" | "tab_cultivated" | "tab_arsenal" | "tab_signals" | "tab_broadcast";
+type AdminSectionTab = "overview" | "tab_population" | "tab_cultivated" | "tab_arsenal" | "tab_signals" | "tab_reports" | "tab_broadcast";
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
   currentUserId,
@@ -112,6 +141,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 }) => {
   const [usersList, setUsersList] = useState<UserDetail[]>([]);
   const [feedbacks, setFeedbacks] = useState<FeedbackLog[]>([]);
+  const [reports, setReports] = useState<CommunityReport[]>([]);
+  const [selectedReport, setSelectedReport] = useState<CommunityReport | null>(null);
+  const [reportFilter, setReportFilter] = useState<"all" | "pending" | "resolved" | "post" | "comment">("all");
+  const [banDurationModalUser, setBanDurationModalUser] = useState<{ uid: string; userName: string; reportId?: string } | null>(null);
+  const [banReasonInput, setBanReasonInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -278,11 +312,218 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       } catch (fbErr) {
         console.warn("Could not fetch feedback logs:", fbErr);
       }
+
+      // 3. Fetch Community Reports safely (Firestore + LocalStorage)
+      try {
+        const parsedReports: CommunityReport[] = [];
+
+        // Fetch from community_reports collection
+        try {
+          const reportsSnap = await getDocs(collection(db, "community_reports"));
+          reportsSnap.forEach((rDoc) => {
+            const rData = rDoc.data();
+            const id = rDoc.id || rData.id;
+            parsedReports.push({
+              id: id,
+              reporterId: rData.reporterId || rData.reporterUserId || "",
+              reporterName: rData.reporterName || rData.reporterUserName || "Anonymous",
+              reporterEmail: rData.reporterEmail || rData.reporterUserEmail || "",
+              reportedUserId: rData.reportedUserId || "",
+              reportedUserName: rData.reportedUserName || "Unknown User",
+              targetType: rData.targetType || "post",
+              targetId: rData.targetId || "",
+              postId: rData.postId || "",
+              targetContent: rData.targetContent || "",
+              reason: rData.reason || "Inappropriate Content",
+              details: rData.details || rData.customNotes || "",
+              customNotes: rData.customNotes || rData.details || "",
+              status: rData.status || "pending",
+              createdAt: rData.createdAt
+            });
+          });
+        } catch (e) {
+          console.warn("Error reading community_reports collection:", e);
+        }
+
+        // Fetch from legacy reports collection for compatibility
+        try {
+          const legacySnap = await getDocs(collection(db, "reports"));
+          legacySnap.forEach((rDoc) => {
+            const rData = rDoc.data();
+            const id = rDoc.id || rData.id;
+            if (!parsedReports.some((pr) => pr.id === id)) {
+              parsedReports.push({
+                id: id,
+                reporterId: rData.reporterId || rData.reporterUserId || "",
+                reporterName: rData.reporterName || rData.reporterUserName || "Anonymous",
+                reporterEmail: rData.reporterEmail || rData.reporterUserEmail || "",
+                reportedUserId: rData.reportedUserId || "",
+                reportedUserName: rData.reportedUserName || "Unknown User",
+                targetType: rData.targetType || "post",
+                targetId: rData.targetId || "",
+                postId: rData.postId || "",
+                targetContent: rData.targetContent || "",
+                reason: rData.reason || "Inappropriate Content",
+                details: rData.details || rData.customNotes || "",
+                customNotes: rData.customNotes || rData.details || "",
+                status: rData.status || "pending",
+                createdAt: rData.createdAt
+              });
+            }
+          });
+        } catch (e) {
+          console.warn("Error reading legacy reports collection:", e);
+        }
+
+        // Merge local storage reports if any are missing from Firestore
+        try {
+          const localStored = localStorage.getItem("nexora_community_reports");
+          if (localStored) {
+            const localArr: any[] = JSON.parse(localStored);
+            localArr.forEach((lRep) => {
+              if (lRep && lRep.id && !parsedReports.some((pr) => pr.id === lRep.id)) {
+                parsedReports.push({
+                  id: lRep.id,
+                  reporterId: lRep.reporterId || lRep.reporterUserId || "",
+                  reporterName: lRep.reporterName || lRep.reporterUserName || "Anonymous",
+                  reporterEmail: lRep.reporterEmail || lRep.reporterUserEmail || "",
+                  reportedUserId: lRep.reportedUserId || "",
+                  reportedUserName: lRep.reportedUserName || "Unknown User",
+                  targetType: lRep.targetType || "post",
+                  targetId: lRep.targetId || "",
+                  postId: lRep.postId || "",
+                  targetContent: lRep.targetContent || "",
+                  reason: lRep.reason || "Inappropriate Content",
+                  details: lRep.details || lRep.customNotes || "",
+                  customNotes: lRep.customNotes || lRep.details || "",
+                  status: lRep.status || "pending",
+                  createdAt: lRep.createdAt
+                });
+              }
+            });
+          }
+        } catch (e) {
+          console.warn("Error reading local reports", e);
+        }
+
+        parsedReports.sort((a, b) => {
+          const getTime = (val: any) => {
+            if (typeof val === "number") return val;
+            if (typeof val === "string") return new Date(val).getTime() || 0;
+            if (val?.seconds) return val.seconds * 1000;
+            return 0;
+          };
+          return getTime(b.createdAt) - getTime(a.createdAt);
+        });
+
+        // Deduplicate reports by targetId and targetType so each reported post/comment appears as 1 single entry
+        const dedupedMap = new Map<string, CommunityReport>();
+        parsedReports.forEach((rep) => {
+          const key = (rep.targetId && rep.targetType) ? `${rep.targetType}_${rep.targetId}` : rep.id;
+          if (!dedupedMap.has(key)) {
+            dedupedMap.set(key, rep);
+          } else {
+            const existing = dedupedMap.get(key)!;
+            if (existing.status !== "pending" && rep.status === "pending") {
+              dedupedMap.set(key, rep);
+            }
+          }
+        });
+        const finalReportsList = Array.from(dedupedMap.values());
+
+        setReports(finalReportsList);
+        if (finalReportsList.length > 0 && !selectedReport) {
+          setSelectedReport(finalReportsList[0]);
+        }
+      } catch (repErr) {
+        console.warn("Could not fetch community reports:", repErr);
+      }
     } catch (error) {
       console.error("AdminPanel: Error loading cloud database metrics:", error);
       showToast("Sync Failure: Restricted operational path", "error");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteReportedContent = async (rep: CommunityReport) => {
+    try {
+      if (rep.targetType === "post") {
+        await deleteDoc(doc(db, "posts", rep.targetId)).catch((e) => console.warn(e));
+        await deleteDoc(doc(db, "community_posts", rep.targetId)).catch((e) => console.warn(e));
+
+        try {
+          const localPosts = localStorage.getItem("nexora_community_posts");
+          if (localPosts) {
+            const parsed = JSON.parse(localPosts);
+            const filtered = parsed.filter((p: any) => p.id !== rep.targetId);
+            localStorage.setItem("nexora_community_posts", JSON.stringify(filtered));
+          }
+        } catch (e) {}
+      } else if (rep.targetType === "comment") {
+        if (rep.postId) {
+          await deleteDoc(doc(db, "posts", rep.postId, "comments", rep.targetId)).catch((e) => console.warn(e));
+          await deleteDoc(doc(db, "community_posts", rep.postId, "comments", rep.targetId)).catch((e) => console.warn(e));
+        }
+        await deleteDoc(doc(db, "comments", rep.targetId)).catch((e) => console.warn(e));
+      }
+
+      const updatedReports = reports.map((r) => r.id === rep.id ? { ...r, status: "resolved" as const } : r);
+      setReports(updatedReports);
+      localStorage.setItem("nexora_community_reports", JSON.stringify(updatedReports));
+      await setDoc(doc(db, "community_reports", rep.id), { status: "resolved" }, { merge: true }).catch((e) => console.warn(e));
+
+      showToast(`Reported ${rep.targetType} deleted & report resolved!`, "success");
+    } catch (err) {
+      console.error("Error deleting reported content:", err);
+      showToast("Error deleting reported content", "error");
+    }
+  };
+
+  const handleBanUser = async (reportedUserId: string, banType: "7d" | "30d" | "permanent" | "unban", reportId?: string) => {
+    try {
+      const isBanning = banType !== "unban";
+      let bannedUntil: string | null = null;
+      let isPermanent = false;
+
+      if (banType === "7d") {
+        bannedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      } else if (banType === "30d") {
+        bannedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      } else if (banType === "permanent") {
+        bannedUntil = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString();
+        isPermanent = true;
+      }
+
+      const banPayload = {
+        communityBanned: isBanning,
+        communityBannedUntil: bannedUntil,
+        communityBannedPermanent: isPermanent,
+        communityBanReason: banReasonInput || "Violation of community rules",
+        bannedAt: isBanning ? new Date().toISOString() : null
+      };
+
+      await setDoc(doc(db, "users", reportedUserId), banPayload, { merge: true }).catch((e) => console.warn(e));
+      await setDoc(doc(db, "user_settings", reportedUserId), banPayload, { merge: true }).catch((e) => console.warn(e));
+
+      if (reportId) {
+        const updatedReports = reports.map((r) => r.id === reportId ? { ...r, status: "resolved" as const } : r);
+        setReports(updatedReports);
+        localStorage.setItem("nexora_community_reports", JSON.stringify(updatedReports));
+        await setDoc(doc(db, "community_reports", reportId), { status: "resolved" }, { merge: true }).catch((e) => console.warn(e));
+      }
+
+      setBanDurationModalUser(null);
+      setBanReasonInput("");
+
+      if (isBanning) {
+        showToast(`User banned successfully (${banType === "7d" ? "1 week" : banType === "30d" ? "1 month" : "Permanent"})!`, "success");
+      } else {
+        showToast("User unbanned successfully!", "success");
+      }
+    } catch (err) {
+      console.error("Error setting user ban:", err);
+      showToast("Error setting user ban", "error");
     }
   };
 
@@ -613,6 +854,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             💬 Signal Transmissions ({totalFeedbackCount})
             {feedbacks.some((fb) => !readFeedbackIds.includes(fb.id)) && (
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-bounce" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("tab_reports")}
+            className={`px-6 py-3.5 text-xs font-black uppercase tracking-wider rounded-2xl transition-all whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "tab_reports"
+                ? "bg-slate-800 text-white shadow-md border border-white/5"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            🛡️ Incident Reports ({reports.length})
+            {reports.some((r) => r.status === "pending") && (
+              <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" />
             )}
           </button>
           <button
@@ -1106,6 +1360,208 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               )}
 
+              {/* TAB: COMMUNITY INCIDENT REPORTS & MODERATION */}
+              {activeTab === "tab_reports" && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-6">
+                  {/* Left Column: Report List & Filtering */}
+                  <div className="lg:col-span-5 flex flex-col gap-3 max-h-[620px] overflow-y-auto pr-2">
+                    <div className="flex items-center justify-between pb-1">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                        Incident Reports ({reports.length})
+                      </span>
+                      <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-white/5">
+                        <button
+                          onClick={() => setReportFilter("all")}
+                          className={`px-2 py-1 text-[8.5px] font-black uppercase rounded-lg transition-all ${
+                            reportFilter === "all" ? "bg-red-500 text-white" : "text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          All
+                        </button>
+                        <button
+                          onClick={() => setReportFilter("pending")}
+                          className={`px-2 py-1 text-[8.5px] font-black uppercase rounded-lg transition-all ${
+                            reportFilter === "pending" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          Pending
+                        </button>
+                        <button
+                          onClick={() => setReportFilter("post")}
+                          className={`px-2 py-1 text-[8.5px] font-black uppercase rounded-lg transition-all ${
+                            reportFilter === "post" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          Posts
+                        </button>
+                        <button
+                          onClick={() => setReportFilter("comment")}
+                          className={`px-2 py-1 text-[8.5px] font-black uppercase rounded-lg transition-all ${
+                            reportFilter === "comment" ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          Comments
+                        </button>
+                      </div>
+                    </div>
+
+                    {reports.length === 0 ? (
+                      <div className="bg-slate-900 border border-white/5 p-8 rounded-3xl text-center shadow-xl">
+                        <Shield className="mx-auto text-emerald-500 mb-2" size={32} />
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wide">No incident reports registered</p>
+                        <p className="text-[10px] text-slate-500 mt-1">Community environment is safe and calm</p>
+                      </div>
+                    ) : (
+                      reports
+                        .filter((r) => {
+                          if (reportFilter === "pending") return r.status === "pending";
+                          if (reportFilter === "resolved") return r.status === "resolved";
+                          if (reportFilter === "post") return r.targetType === "post";
+                          if (reportFilter === "comment") return r.targetType === "comment";
+                          return true;
+                        })
+                        .map((rep) => {
+                          const isCurrentlySelected = selectedReport?.id === rep.id;
+                          return (
+                            <div
+                              key={rep.id}
+                              onClick={() => setSelectedReport(rep)}
+                              className={`p-4 rounded-2xl cursor-pointer border transition-all flex flex-col gap-2 relative ${
+                                isCurrentlySelected
+                                  ? "bg-slate-800 border-red-500/50 shadow-inner"
+                                  : "bg-slate-900 border-white/5 hover:border-white/10"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`px-2 py-0.5 text-[8.5px] font-black uppercase rounded-md ${
+                                    rep.targetType === "post" ? "bg-blue-500/20 text-blue-400" : "bg-emerald-500/20 text-emerald-400"
+                                  }`}>
+                                    {rep.targetType}
+                                  </span>
+                                  <span className={`px-2 py-0.5 text-[8.5px] font-black uppercase rounded-md ${
+                                    rep.status === "pending" ? "bg-amber-500/20 text-amber-400 animate-pulse" : "bg-slate-800 text-slate-400"
+                                  }`}>
+                                    {rep.status}
+                                  </span>
+                                </div>
+                                <span className="text-[9px] font-mono text-slate-500">
+                                  {rep.createdAt ? new Date(typeof rep.createdAt === "number" ? rep.createdAt : (rep.createdAt?.seconds ? rep.createdAt.seconds * 1000 : Date.now())).toLocaleDateString() : "Recent"}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-white font-black text-xs truncate">
+                                  Offender: {rep.reportedUserName || "Unknown User"}
+                                </span>
+                                <span className="text-[10px] text-red-400 font-bold truncate">
+                                  Reason: {rep.reason}
+                                </span>
+                              </div>
+
+                              <p className="text-[11px] text-slate-300 line-clamp-2 bg-slate-950/60 p-2.5 rounded-xl border border-white/5 italic">
+                                "{rep.targetContent || "No preview text"}"
+                              </p>
+                            </div>
+                          );
+                        })
+                    )}
+                  </div>
+
+                  {/* Right Column: Detailed Report Inspection & Admin Action Controls */}
+                  <div className="lg:col-span-7 bg-slate-900 border border-white/5 p-6 rounded-3xl shadow-xl min-h-[440px] flex flex-col justify-between relative">
+                    {selectedReport ? (
+                      <div className="flex flex-col gap-5">
+                        <div className="flex justify-between items-start border-b border-white/5 pb-4 flex-wrap gap-2">
+                          <div>
+                            <span className="text-[8.5px] font-black text-red-400 uppercase tracking-widest font-mono flex items-center gap-1">
+                              <ShieldAlert size={12} /> Community Moderation Case
+                            </span>
+                            <h3 className="text-lg font-black text-white uppercase mt-0.5">
+                              Reported User: {selectedReport.reportedUserName || "Unknown User"}
+                            </h3>
+                            <span className="text-xs text-slate-400 font-mono select-all block mt-0.5">
+                              User ID: {selectedReport.reportedUserId}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-1">
+                            <span className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${
+                              selectedReport.status === "pending" ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                            }`}>
+                              {selectedReport.status}
+                            </span>
+                            <span className="text-[9.5px] text-slate-500 font-mono mt-0.5">Report ID: {selectedReport.id}</span>
+                          </div>
+                        </div>
+
+                        {/* Reported Content Box */}
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[9.5px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                            <Flag size={12} className="text-red-400" /> Reported {selectedReport.targetType} Content:
+                          </span>
+                          <div className="bg-slate-950 p-4 rounded-2xl border border-red-500/20 text-slate-100 text-sm font-semibold leading-relaxed whitespace-pre-wrap select-all shadow-inner">
+                            "{selectedReport.targetContent || "No text content available"}"
+                          </div>
+                        </div>
+
+                        {/* Report Reason & Details */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="bg-slate-950 p-3.5 rounded-2xl border border-white/5 flex flex-col gap-1">
+                            <span className="text-[8.5px] font-black text-slate-500 uppercase tracking-wider">Primary Violation Category</span>
+                            <span className="text-xs font-black text-red-400 uppercase">{selectedReport.reason}</span>
+                            {selectedReport.details && (
+                              <span className="text-[10.5px] text-slate-400 mt-1">{selectedReport.details}</span>
+                            )}
+                          </div>
+
+                          <div className="bg-slate-950 p-3.5 rounded-2xl border border-white/5 flex flex-col gap-1">
+                            <span className="text-[8.5px] font-black text-slate-500 uppercase tracking-wider">Reporter Identification</span>
+                            <span className="text-xs font-bold text-slate-200">{selectedReport.reporterName || "Anonymous Reporter"}</span>
+                            <span className="text-[10px] text-slate-400 font-mono truncate">{selectedReport.reporterEmail || selectedReport.reporterId}</span>
+                          </div>
+                        </div>
+
+                        {/* Custom Notes if provided */}
+                        {selectedReport.customNotes && (
+                          <div className="bg-slate-950/80 p-3.5 rounded-2xl border border-white/5 flex flex-col gap-1">
+                            <span className="text-[8.5px] font-black text-slate-500 uppercase tracking-wider">Reporter's Additional Statement</span>
+                            <p className="text-xs text-slate-300 italic">"{selectedReport.customNotes}"</p>
+                          </div>
+                        )}
+
+                        {/* Admin Action Buttons */}
+                        <div className="border-t border-white/5 pt-4 flex flex-wrap gap-3 items-center justify-between">
+                          <button
+                            onClick={() => handleDeleteReportedContent(selectedReport)}
+                            className="px-4 py-2.5 bg-red-600/90 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95"
+                          >
+                            <Trash2 size={14} /> Delete Reported {selectedReport.targetType}
+                          </button>
+
+                          <button
+                            onClick={() => setBanDurationModalUser({
+                              uid: selectedReport.reportedUserId,
+                              userName: selectedReport.reportedUserName || "User",
+                              reportId: selectedReport.id
+                            })}
+                            className="px-4 py-2.5 bg-amber-600/90 hover:bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95"
+                          >
+                            <UserX size={14} /> Ban User Account
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full py-20 text-slate-500 gap-2">
+                        <Flag size={36} className="text-slate-600 mb-1" />
+                        <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Select an Incident Report to moderate</span>
+                        <p className="text-[10px] text-slate-500 uppercase text-center">Inspect content violations and execute moderation actions</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* TAB 6: HEADQUARTERS BROADCASTER WORKSPACE */}
               {activeTab === "tab_broadcast" && (
                 <div className="bg-slate-900 border border-white/5 p-6 rounded-3xl shadow-xl flex flex-col gap-5 max-w-2xl mx-auto pb-8">
@@ -1356,6 +1812,82 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   Return to Control Deck
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Ban User Duration Selection Modal */}
+      <AnimatePresence>
+        {banDurationModalUser && (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-slate-900 border border-white/10 p-6 rounded-3xl max-w-md w-full shadow-2xl flex flex-col gap-4"
+            >
+              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <div className="flex items-center gap-2">
+                  <UserX className="text-red-400" size={20} />
+                  <h3 className="text-sm font-black uppercase text-white">Ban User: {banDurationModalUser.userName}</h3>
+                </div>
+                <button
+                  onClick={() => setBanDurationModalUser(null)}
+                  className="text-slate-400 hover:text-white text-xs font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-300">
+                Select the ban duration for user <span className="font-bold text-amber-400">{banDurationModalUser.userName}</span>. Banned users will be blocked from community actions.
+              </p>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-slate-400 font-bold uppercase">Reason for Ban (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Repeated harassment or inappropriate language"
+                  value={banReasonInput}
+                  onChange={(e) => setBanReasonInput(e.target.value)}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5 pt-2">
+                <button
+                  onClick={() => handleBanUser(banDurationModalUser.uid, "7d", banDurationModalUser.reportId)}
+                  className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-amber-300 font-black text-xs uppercase tracking-wider rounded-xl transition-all border border-amber-500/20 flex items-center justify-center gap-2"
+                >
+                  ⏱️ Ban for 1 Week (7 Days)
+                </button>
+                <button
+                  onClick={() => handleBanUser(banDurationModalUser.uid, "30d", banDurationModalUser.reportId)}
+                  className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-orange-400 font-black text-xs uppercase tracking-wider rounded-xl transition-all border border-orange-500/20 flex items-center justify-center gap-2"
+                >
+                  📅 Ban for 1 Month (30 Days)
+                </button>
+                <button
+                  onClick={() => handleBanUser(banDurationModalUser.uid, "permanent", banDurationModalUser.reportId)}
+                  className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  🚫 Ban Permanently
+                </button>
+                <button
+                  onClick={() => handleBanUser(banDurationModalUser.uid, "unban", banDurationModalUser.reportId)}
+                  className="w-full py-2.5 bg-slate-950 hover:bg-slate-900 text-emerald-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all border border-emerald-500/20 flex items-center justify-center gap-2"
+                >
+                  ✅ Unban / Lift Ban
+                </button>
+              </div>
+
+              <button
+                onClick={() => setBanDurationModalUser(null)}
+                className="w-full py-2 text-slate-500 hover:text-slate-300 font-bold text-xs uppercase tracking-wider transition-colors mt-1"
+              >
+                Cancel
+              </button>
             </motion.div>
           </div>
         )}

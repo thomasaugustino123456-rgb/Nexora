@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { User as FirebaseUser } from "firebase/auth";
+import { User as FirebaseUser, signOut } from "firebase/auth";
 import {
   doc,
   getDoc,
@@ -15,35 +15,40 @@ import { db, auth, handleFirestoreError, OperationType, onAuthStateChanged } fro
 import { UserSettings, UserStats, DailyProgress, isUserProUnlocked } from "../types";
 import { GardenState, createInitialGardenState } from "../types/garden";
 import { SHOP_ITEMS } from "../components/ShopScreen";
+import { MASCOTS_DATA, MascotId } from "../lib/mascotSystem";
+import { HOUSE_ITEMS } from "../constants/houseItems";
 
 export function extractRealDisplayName(docData: any, currentUser?: any): string {
-  const candidates = [
-    docData?.settings?.displayName,
+  const primaryCandidates = [
     docData?.displayName,
+    docData?.settings?.displayName,
     docData?.name,
     docData?.["Name"],
     docData?.accountName,
     docData?.["Account name"],
     docData?.settings?.accountName,
     currentUser?.displayName,
-    currentUser?.email ? currentUser.email.split('@')[0] : ""
   ];
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.trim() !== "" && c.trim() !== "Champion" && c.trim() !== "Nexora User" && c.trim() !== "Nexora Citizen") {
+  for (const c of primaryCandidates) {
+    if (typeof c === 'string' && c.trim() !== "" && c.trim() !== "Nexora User" && c.trim() !== "Nexora Citizen") {
       return c.trim();
     }
   }
-  return docData?.displayName || docData?.name || currentUser?.displayName || "Champion";
+  if (currentUser?.email) {
+    const emailPrefix = currentUser.email.split('@')[0];
+    if (emailPrefix && emailPrefix.trim() !== "") return emailPrefix.trim();
+  }
+  return docData?.displayName || docData?.settings?.displayName || docData?.name || currentUser?.displayName || "Champion";
 }
 
 export function extractRealProfilePic(docData: any, currentUser?: any): string {
   const candidates = [
     docData?.profilePic,
+    docData?.settings?.profilePic,
     docData?.photoFileName,
     docData?.["Photo file name"],
     docData?.["Profile image"],
     docData?.photoURL,
-    docData?.settings?.profilePic,
     currentUser?.photoURL
   ];
   for (const c of candidates) {
@@ -109,6 +114,42 @@ export function autoRestoreInventoryFromPurchased(purchasedItems: (string | any)
           type: shopMatch.effect === "skin" ? "skin" : shopMatch.effect === "sound-pack" ? "sound-pack" : shopMatch.effect === "music" ? "music" : shopMatch.effect === "gift" ? "gift" : "power-up",
           purchasedAt: new Date().toISOString()
         });
+      } else {
+        const mascotMatch = MASCOTS_DATA[purchasedId as MascotId];
+        if (mascotMatch) {
+          inventoryMap.set(mascotMatch.id, {
+            id: `${mascotMatch.id}-restored`,
+            itemId: mascotMatch.id,
+            name: mascotMatch.name,
+            icon: "🐉",
+            activated: true,
+            type: "skin",
+            purchasedAt: new Date().toISOString()
+          });
+        } else {
+          const houseMatch = HOUSE_ITEMS.find((hi) => hi.id === purchasedId);
+          if (houseMatch) {
+            inventoryMap.set(houseMatch.id, {
+              id: `${houseMatch.id}-restored`,
+              itemId: houseMatch.id,
+              name: houseMatch.name,
+              icon: typeof houseMatch.icon === "string" || typeof houseMatch.icon === "number" ? String(houseMatch.icon) : "🏠",
+              activated: true,
+              type: "power-up",
+              purchasedAt: new Date().toISOString()
+            });
+          } else {
+            inventoryMap.set(purchasedId, {
+              id: `${purchasedId}-restored`,
+              itemId: purchasedId,
+              name: purchasedId,
+              icon: "✨",
+              activated: true,
+              type: "power-up",
+              purchasedAt: new Date().toISOString()
+            });
+          }
+        }
       }
     }
   });
@@ -259,6 +300,34 @@ function getMergedPlantsProgress(...progressMaps: (Record<string, any> | undefin
   return merged;
 }
 
+export function isUserOnboardingCompleted(
+  docData: any,
+  onboardingData?: any,
+  settingsObj?: any,
+  uid?: string
+): boolean {
+  if (uid && typeof localStorage !== 'undefined') {
+    if (localStorage.getItem(`nexora_onboarding_completed_${uid}`) === "true") return true;
+  }
+  if (!docData) return false;
+  if (docData.onboardingCompleted === true) return true;
+  if (docData.settings?.onboardingCompleted === true) return true;
+  if (docData.newUsersOnboardingCompleted === true) return true;
+  if (onboardingData?.newUsersOnboardingCompleted === true) return true;
+  if (onboardingData?.onboardingCompleted === true) return true;
+  if (settingsObj?.onboardingCompleted === true) return true;
+  if (docData.hasEnteredGarden === true) return true;
+  if (docData.plantOnboardingCompleted === true) return true;
+  if (docData.plantSectionOnboardingCompleted === true) return true;
+  if (docData.settings?.plantOnboardingCompleted === true) return true;
+  if (docData.settings?.plantSectionOnboardingCompleted === true) return true;
+  if ((docData.stats?.totalPoints || 0) > 0) return true;
+  if ((docData.stats?.streak || 0) > 0) return true;
+  if ((docData.coins || 0) > 0) return true;
+
+  return false;
+}
+
 // ============================================================================
 // Robust Bi-Directional State Merging Functions to Prevent Data Loss
 // ============================================================================
@@ -279,7 +348,7 @@ function mergeStats(dbStats: UserStats, localStats: UserStats, defaultStats: Use
     totalPoints: Math.max(dbStats.totalPoints || 0, localStats.totalPoints || 0),
     xp: Math.max(dbStats.xp || 0, localStats.xp || 0),
     level: Math.max(dbStats.level || 1, localStats.level || 1),
-    coins: Math.max(dbStats.coins || 0, localStats.coins || 0),
+    coins: typeof dbStats.coins === "number" ? dbStats.coins : (localStats.coins ?? defaultStats.coins),
     gems: Math.max(dbStats.gems || 0, localStats.gems || 0),
     totalCompletedDays: Math.max(dbStats.totalCompletedDays || 0, localStats.totalCompletedDays || 0),
     weeklyPoints: Math.max(dbStats.weeklyPoints || 0, localStats.weeklyPoints || 0),
@@ -350,6 +419,12 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
     return { ...defaultSettings, ...dbSettings, displayName: finalName, profilePic: finalPic, isPro };
   }
 
+  const finalOnboardingDone = typeof dbSettings.onboardingCompleted === "boolean"
+    ? dbSettings.onboardingCompleted
+    : typeof localSettings.onboardingCompleted === "boolean"
+      ? localSettings.onboardingCompleted
+      : false;
+
   const merged: UserSettings = {
     ...defaultSettings,
     ...localSettings,
@@ -357,7 +432,7 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
 
     displayName: finalName,
     profilePic: finalPic,
-    onboardingCompleted: dbSettings.onboardingCompleted || localSettings.onboardingCompleted || false,
+    onboardingCompleted: finalOnboardingDone,
     plantOnboardingCompleted: dbSettings.plantOnboardingCompleted || localSettings.plantOnboardingCompleted || false,
     spaceOnboardingCompleted: dbSettings.spaceOnboardingCompleted || localSettings.spaceOnboardingCompleted || false,
     spaceHouseUnlocked: dbSettings.spaceHouseUnlocked || localSettings.spaceHouseUnlocked || false,
@@ -580,12 +655,17 @@ export function useNexoraData(
     }
   };
 
-  const cachedOnboarding =
-    localStorage.getItem("nexora_onboarding_completed") === "true";
   const cachedUserId = localStorage.getItem("nexora_cached_user") || null;
+  const cachedOnboarding =
+    localStorage.getItem("nexora_onboarding_completed") === "true" ||
+    (cachedUserId ? localStorage.getItem(`nexora_onboarding_completed_${cachedUserId}`) === "true" : false);
+
+  const currentAuthUser = auth.currentUser;
+  const hasCachedUser = Boolean(cachedUserId);
+  const isCachedUserValid = Boolean(currentAuthUser ? cachedUserId === currentAuthUser.uid : hasCachedUser);
 
   const [user, setUser] = useState<FirebaseUser | null>(
-    cachedUserId ? ({ uid: cachedUserId } as FirebaseUser) : null,
+    currentAuthUser || (cachedUserId ? ({ uid: cachedUserId } as FirebaseUser) : null),
   );
 
   // If the user has completed onboarding and we have a cached session, we immediately skip the splash loader.
@@ -596,11 +676,11 @@ export function useNexoraData(
   const [isDataReady, setIsDataReady] = useState(false);
   const [isStateHydrated, setIsStateHydrated] = useState(false);
 
-  const cachedSettings = getCachedJson("nexora_settings", DEFAULT_SETTINGS);
-  const cachedStats = getCachedJson("nexora_stats", DEFAULT_STATS);
-  const cachedProgress = getCachedJson("nexora_progress", null);
+  const cachedSettings = isCachedUserValid ? getCachedJson("nexora_settings", DEFAULT_SETTINGS) : DEFAULT_SETTINGS;
+  const cachedStats = isCachedUserValid ? getCachedJson("nexora_stats", DEFAULT_STATS) : DEFAULT_STATS;
+  const cachedProgress = isCachedUserValid ? getCachedJson("nexora_progress", null) : null;
   
-  const rawCachedGarden = getCachedJson("nexora_garden", createInitialGardenState());
+  const rawCachedGarden = isCachedUserValid ? getCachedJson("nexora_garden", createInitialGardenState()) : createInitialGardenState();
   const initialGardenDefault = createInitialGardenState();
   const cachedGarden = {
     ...initialGardenDefault,
@@ -622,7 +702,7 @@ export function useNexoraData(
   const [settings, rawSetSettings] = useState<UserSettings>(cachedSettings);
   const [stats, rawSetStats] = useState<UserStats>(cachedStats);
   const [dailyProgress, rawSetDailyProgress] = useState<DailyProgress>(
-    cachedProgress?.date === today
+    (cachedProgress?.date === today && isCachedUserValid)
       ? cachedProgress
       : {
           date: today,
@@ -639,7 +719,9 @@ export function useNexoraData(
   );
   const [gardenState, rawSetGardenState] = useState<GardenState>(cachedGarden);
 
-  const [needsOnboarding, rawSetNeedsOnboarding] = useState(!cachedOnboarding);
+  const [needsOnboarding, rawSetNeedsOnboarding] = useState(
+    hasCachedUser ? !cachedOnboarding : true
+  );
 
   // Safe Firestore setDoc wrapper
   const setDoc = useCallback(async (reference: any, data: any, options?: any) => {
@@ -734,6 +816,7 @@ export function useNexoraData(
 
   const hasMatchedHydratedStateRef = useRef(false);
   const hydratedStateRef = useRef<any>(null);
+  const isInitialAuthResolutionDone = useRef(false);
 
   useEffect(() => {
     let loadTimeout: any = null;
@@ -742,14 +825,15 @@ export function useNexoraData(
 
       // Capture previous cached user ID before updating localStorage to correctly detect user switches
       const previousCachedUserId = localStorage.getItem("nexora_cached_user");
+      const isSameUser = Boolean(previousCachedUserId && previousCachedUserId === currentUser?.uid);
+      const isUserSwitch = Boolean(currentUser && (!isSameUser || (lastLoadedUserIdRef.current !== null && lastLoadedUserIdRef.current !== currentUser.uid)));
 
       if (currentUser) {
+        isInitialAuthResolutionDone.current = true;
         setUser(currentUser);
 
-        const isUserSwitch = Boolean(previousCachedUserId && previousCachedUserId !== currentUser.uid);
-
         if (isUserSwitch) {
-          console.log(`[ACCOUNT ISOLATION] Switch detected: '${previousCachedUserId}' -> '${currentUser.uid}'. Wiping cached session data.`);
+          console.log(`[ACCOUNT ISOLATION] Account switch or fresh login detected: '${previousCachedUserId || "none"}' -> '${currentUser.uid}'. Wiping previous session cache and resetting states.`);
           
           // Clear all user-specific cached local storage
           Object.keys(localStorage).forEach((key) => {
@@ -766,6 +850,7 @@ export function useNexoraData(
           rawSetSettings(DEFAULT_SETTINGS);
           rawSetStats(DEFAULT_STATS);
           rawSetGardenState(createInitialGardenState());
+          rawSetNeedsOnboarding(true);
           rawSetDailyProgress({
             date: today,
             completed: false,
@@ -826,24 +911,77 @@ export function useNexoraData(
           setAuthLoading(true);
           const userDocRef = doc(db, "users", currentUser.uid);
           const userSingularDocRef = doc(db, "user", currentUser.uid);
+          const deletedUserRef = doc(db, "deleted_users", currentUser.uid);
+
+          // Safe non-blocking check for deleted user account to ensure deleted_users permissions never block user profile load
+          getDoc(deletedUserRef).then(async (deletedSnap) => {
+            if (deletedSnap.exists()) {
+              console.warn(`[FIRESTORE] Account ${currentUser.uid} was deleted. Signing out automatically.`);
+              await signOut(auth);
+              setUser(null);
+              setAuthLoading(false);
+              setLoading(false);
+              setIsDataReady(true);
+            }
+          }).catch((err) => {
+            console.warn("[FIRESTORE] Non-critical check on deleted_users collection:", err);
+          });
+
+          // ZERO-LATENCY INSTANT LOCAL CACHE PRE-PASS (<10ms) - ONLY for matching same user
+          if (isSameUser && !isUserSwitch) {
+            try {
+              const [cacheUserSnap, cacheRewardsSnap, cacheStatsSnap] = await Promise.all([
+                getDocFromCache(userDocRef).catch(() => null),
+                getDocFromCache(doc(db, "users", currentUser.uid, "rewards", "main")).catch(() => null),
+                getDocFromCache(doc(db, "users", currentUser.uid, "stats", "main")).catch(() => null),
+              ]);
+
+              if (cacheUserSnap?.exists()) {
+                const cData = cacheUserSnap.data();
+                const rData = cacheRewardsSnap?.exists() ? cacheRewardsSnap.data() : null;
+                const sData = cacheStatsSnap?.exists() ? cacheStatsSnap.data() : null;
+
+                const instantCoins = typeof cData.coins === "number"
+                  ? cData.coins
+                  : typeof cData.stats?.coins === "number"
+                    ? cData.stats.coins
+                    : (getCachedJson("nexora_stats", DEFAULT_STATS)?.coins ?? DEFAULT_STATS.coins);
+
+                if (instantCoins > 0) {
+                  rawSetStats((prev) => ({
+                    ...prev,
+                    coins: instantCoins,
+                    xp: Math.max(prev.xp || 0, cData.xp || 0, cData.stats?.xp || 0, rData?.xp || 0, sData?.xp || 0),
+                    streak: Math.max(prev.streak || 0, cData.streak || 0, cData.stats?.streak || 0, rData?.streak || 0, sData?.streak || 0),
+                  }));
+                }
+              }
+            } catch (cacheErr) {
+              // Non-critical local cache read error
+            }
+          }
+
           let userDocSnap = await getDoc(userDocRef);
-          
           let docData: any = null;
           
           if (!userDocSnap.exists()) {
             console.log(`[FIRESTORE] User not found at '${userDocRef.path}'. Checking fallback '${userSingularDocRef.path}'...`);
-            const userSingularSnap = await getDoc(userSingularDocRef);
-            if (userSingularSnap.exists()) {
-              console.log(`[FIRESTORE] User document found in Legacy '/user' path! Restoring profile from fallback...`);
-              userDocSnap = userSingularSnap;
-              docData = userSingularSnap.data();
-              // Backfill the '/users' collection immediately
-              await setDoc(userDocRef, docData);
+            try {
+              const userSingularSnap = await getDoc(userSingularDocRef);
+              if (userSingularSnap.exists()) {
+                console.log(`[FIRESTORE] User document found in Legacy '/user' path! Restoring profile from fallback...`);
+                userDocSnap = userSingularSnap;
+                docData = userSingularSnap.data();
+                // Backfill the '/users' collection asynchronously
+                setDoc(userDocRef, docData).catch(() => {});
+              }
+            } catch (fallbackErr) {
+              console.warn("[FIRESTORE] Legacy fallback check failed:", fallbackErr);
             }
           }
           
           if (!userDocSnap.exists()) {
-            console.log(`[FIRESTORE] User not found in DB. Creating new user document at ${userDocRef.path} and ${userSingularDocRef.path}`);
+            console.log(`[FIRESTORE] User not found in DB. Creating new user document at ${userDocRef.path}`);
             
             const accountNameVal = currentUser.displayName || currentUser.email?.split('@')[0] || "Champion";
             const newUserData = {
@@ -880,13 +1018,14 @@ export function useNexoraData(
             };
             
             await setDoc(userDocRef, newUserData);
-            await setDoc(userSingularDocRef, newUserData);
+            setDoc(userSingularDocRef, newUserData).catch(() => {});
             docData = newUserData;
+            rawSetNeedsOnboarding(true);
           } else {
             docData = userDocSnap.data();
             console.log(`[FIRESTORE] Loaded existing user document data:`, docData);
             
-            // Backfill profile fields if missing
+            // Asynchronously backfill missing profile fields without blocking profile loading
             const updates: any = {};
             let needsUpdate = false;
             
@@ -933,17 +1072,70 @@ export function useNexoraData(
             }
             
             if (needsUpdate) {
-              console.log(`[FIRESTORE] Backfilling missing profile fields for existing user doc:`, updates);
-              await setDoc(userDocRef, updates, { merge: true });
-              await setDoc(userSingularDocRef, updates, { merge: true });
+              console.log(`[FIRESTORE] Asynchronously backfilling missing profile fields for existing user doc:`, updates);
               docData = { ...docData, ...updates };
+              setDoc(userDocRef, updates, { merge: true }).catch(() => {});
+              setDoc(userSingularDocRef, updates, { merge: true }).catch(() => {});
             }
           }
           
           if (docData) {
-            // FAST PASS 1: Immediately hydrate User Coins and Core Rewards Progress from primary document (~50ms)
-            // This prevents waiting for auxiliary subcollections before rendering user coins and core stats.
+            // FAST PASS 1: Immediately hydrate User Profile, Coins, Plant Onboarding, and Core Stats from primary document (~50ms)
             try {
+              const fastDisplayName = extractRealDisplayName(docData, currentUser);
+              const fastProfilePic = extractRealProfilePic(docData, currentUser);
+              const fastAccountName = docData.accountName || docData["Account name"] || docData.settings?.accountName || currentUser?.displayName || currentUser?.email?.split('@')[0] || "Champion";
+              const fastEmail = docData.email || docData["Email"] || docData.settings?.email || currentUser?.email || "";
+              const fastLocation = docData.location || docData["Location"] || docData.settings?.location || "";
+
+              const localCacheSettings = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_settings", DEFAULT_SETTINGS) : DEFAULT_SETTINGS;
+              const localCacheGarden = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_garden", createInitialGardenState()) : createInitialGardenState();
+              const localCacheStats = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_stats", DEFAULT_STATS) : DEFAULT_STATS;
+
+              // Comprehensive fast calculation for Plant Onboarding across docData, settings, localCache, garden, and ecosystem
+              const fastPlantOnboardingCompleted = 
+                (docData.plantSectionOnboardingCompleted === true) || 
+                (docData.plantOnboardingCompleted === true) || 
+                (docData.settings?.plantOnboardingCompleted === true) || 
+                (docData.settings?.plantSectionOnboardingCompleted === true) ||
+                (docData.hasEnteredGarden === true) ||
+                (docData.settings?.hasEnteredGarden === true) ||
+                (localCacheSettings?.plantOnboardingCompleted === true) ||
+                (localCacheSettings?.plantSectionOnboardingCompleted === true) ||
+                (localCacheSettings?.hasEnteredGarden === true) ||
+                Boolean((docData.plantState || docData.settings?.plantState || localCacheSettings?.plantState) && (((docData.plantState?.stage || docData.settings?.plantState?.stage || localCacheSettings?.plantState?.stage) || 0) > 0 || ((docData.plantState?.growthPoints || docData.settings?.plantState?.growthPoints || localCacheSettings?.plantState?.growthPoints) || 0) > 0)) ||
+                Boolean((docData.purchasedEcosystemItemIds?.length || 0) > 0 || (docData.activeEcosystemItemIds?.length || 0) > 0 || (localCacheSettings?.purchasedEcosystemItemIds?.length || 0) > 0) ||
+                Boolean(localCacheGarden?.tiles?.some((t: any) => t.plantType || t.itemId || t.occupied));
+
+              const fastOnboardingCompleted = isUserOnboardingCompleted(docData, null, localCacheSettings, currentUser.uid);
+              if (fastOnboardingCompleted) {
+                localStorage.setItem(`nexora_onboarding_completed_${currentUser.uid}`, "true");
+              } else {
+                localStorage.removeItem(`nexora_onboarding_completed_${currentUser.uid}`);
+              }
+
+              const fastPlantState = docData.plantState || docData.settings?.plantState || localCacheSettings?.plantState || DEFAULT_SETTINGS.plantState;
+              const fastPlantsProgress = docData.plantsProgress || docData.settings?.plantsProgress || localCacheSettings?.plantsProgress || DEFAULT_SETTINGS.plantsProgress;
+
+              const fastSettingsObj: UserSettings = {
+                ...DEFAULT_SETTINGS,
+                ...(localCacheSettings || {}),
+                ...(docData.settings || {}),
+                displayName: fastDisplayName,
+                profilePic: fastProfilePic,
+                accountName: fastAccountName,
+                email: fastEmail,
+                location: fastLocation,
+                plantOnboardingCompleted: fastPlantOnboardingCompleted,
+                onboardingCompleted: fastOnboardingCompleted,
+                plantState: fastPlantState,
+                plantsProgress: fastPlantsProgress,
+              };
+
+              rawSetSettings((prev) => mergeSettings(fastSettingsObj, prev, DEFAULT_SETTINGS, currentUser.uid));
+              rawSetNeedsOnboarding(!fastOnboardingCompleted);
+              localStorage.setItem("nexora_settings", JSON.stringify(mergeSettings(fastSettingsObj, localCacheSettings, DEFAULT_SETTINGS, currentUser.uid)));
+
               const savedOrigStats = docData.originalStatsBeforeProTest || docData.settings?.originalStatsBeforeProTest;
               const isTestActive = Boolean(docData.proTestActive ?? docData.settings?.proTestActive) && Boolean(docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt) && new Date((docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt)!).getTime() > Date.now();
 
@@ -962,25 +1154,28 @@ export function useNexoraData(
                 fastLevel = Math.max(1, Number(savedOrigStats.level) || 1);
                 fastCoins = Math.max(0, Number(savedOrigStats.coins) || 0);
               } else {
-                fastCoins = Math.max(
-                  docData.coins || 0,
-                  docData.stats?.coins || 0,
-                  DEFAULT_STATS.coins
-                );
+                fastCoins = typeof docData.coins === "number"
+                  ? docData.coins
+                  : typeof docData.stats?.coins === "number"
+                    ? docData.stats.coins
+                    : (localCacheStats?.coins ?? DEFAULT_STATS.coins);
                 fastXP = Math.max(
                   docData.xp || 0,
                   docData.stats?.xp || 0,
+                  localCacheStats?.xp || 0,
                   DEFAULT_STATS.xp
                 );
                 fastStreak = Math.max(
                   docData.streak || 0,
                   docData.stats?.streak || 0,
+                  localCacheStats?.streak || 0,
                   DEFAULT_STATS.streak
                 );
                 fastBestStreak = Math.max(
                   docData.bestStreak || 0,
                   docData.stats?.bestStreak || 0,
                   fastStreak,
+                  localCacheStats?.bestStreak || 0,
                   DEFAULT_STATS.bestStreak
                 );
                 fastTotalPoints = Math.max(
@@ -989,17 +1184,20 @@ export function useNexoraData(
                   docData.weeklyPoints || 0,
                   docData.weeklyXP || 0,
                   fastXP,
+                  localCacheStats?.totalPoints || 0,
                   DEFAULT_STATS.totalPoints
                 );
                 fastLevel = Math.max(
                   docData.level || 1,
                   docData.stats?.level || 1,
+                  localCacheStats?.level || 1,
                   DEFAULT_STATS.level || 1
                 );
               }
 
               const fastStatsObj: UserStats = {
                 ...DEFAULT_STATS,
+                ...(localCacheStats || {}),
                 ...(docData.stats || {}),
                 streak: fastStreak,
                 bestStreak: fastBestStreak,
@@ -1007,19 +1205,28 @@ export function useNexoraData(
                 xp: fastXP,
                 level: fastLevel,
                 coins: fastCoins,
-                weeklyPoints: Math.max(docData.weeklyPoints || 0, docData.stats?.weeklyPoints || 0, DEFAULT_STATS.weeklyPoints),
-                weeklyXP: Math.max(docData.weeklyXP || 0, docData.stats?.weeklyXP || 0, DEFAULT_STATS.weeklyXP),
-                gems: docData.gems ?? docData.stats?.gems ?? DEFAULT_STATS.gems ?? 0,
-                totalCompletedDays: docData.totalCompletedDays ?? docData.stats?.totalCompletedDays ?? DEFAULT_STATS.totalCompletedDays,
-                lastCompletedDate: docData.lastCompletedDate ?? docData.stats?.lastCompletedDate ?? DEFAULT_STATS.lastCompletedDate ?? null,
-                lastGiftDate: docData.lastGiftDate ?? docData.stats?.lastGiftDate ?? DEFAULT_STATS.lastGiftDate ?? null,
+                weeklyPoints: Math.max(docData.weeklyPoints || 0, docData.stats?.weeklyPoints || 0, localCacheStats?.weeklyPoints || 0, DEFAULT_STATS.weeklyPoints),
+                weeklyXP: Math.max(docData.weeklyXP || 0, docData.stats?.weeklyXP || 0, localCacheStats?.weeklyXP || 0, DEFAULT_STATS.weeklyXP),
+                gems: Math.max(docData.gems || 0, docData.stats?.gems || 0, localCacheStats?.gems || 0, DEFAULT_STATS.gems || 0),
+                totalCompletedDays: docData.totalCompletedDays ?? docData.stats?.totalCompletedDays ?? localCacheStats?.totalCompletedDays ?? DEFAULT_STATS.totalCompletedDays,
+                lastCompletedDate: docData.lastCompletedDate ?? docData.stats?.lastCompletedDate ?? localCacheStats?.lastCompletedDate ?? DEFAULT_STATS.lastCompletedDate ?? null,
+                lastGiftDate: docData.lastGiftDate ?? docData.stats?.lastGiftDate ?? localCacheStats?.lastGiftDate ?? DEFAULT_STATS.lastGiftDate ?? null,
               };
 
               rawSetStats((prev) => mergeStats(fastStatsObj, prev, DEFAULT_STATS));
-              const existingCache = getCachedJson("nexora_stats", DEFAULT_STATS);
-              localStorage.setItem("nexora_stats", JSON.stringify(mergeStats(fastStatsObj, existingCache, DEFAULT_STATS)));
+              localStorage.setItem("nexora_stats", JSON.stringify(mergeStats(fastStatsObj, localCacheStats, DEFAULT_STATS)));
+
+              // Fast calculation for Garden State so plant tiles render immediately
+              const fastGardenState: GardenState = {
+                ...createInitialGardenState(),
+                ...(localCacheGarden || {}),
+                ...(docData.garden || {}),
+                ...(docData.gardenState || {}),
+              };
+              rawSetGardenState(fastGardenState);
+              localStorage.setItem("nexora_garden", JSON.stringify(fastGardenState));
             } catch (err) {
-              console.warn("[FAST PASS HYDRATION] Early stats calculation skipped:", err);
+              console.warn("[FAST PASS HYDRATION] Early settings/stats calculation skipped:", err);
             }
 
             // Robust multi-layered parallel fetch of all auxiliary documents/subcollections
@@ -1141,11 +1348,7 @@ export function useNexoraData(
               console.error("[FIRESTORE] Error reading subcollection/auxiliary documents:", pErr);
             }
 
-            const finalOnboardingCompleted = 
-              (onboardingData?.newUsersOnboardingCompleted === true) || 
-              (docData.onboardingCompleted === true) || 
-              (docData.settings?.onboardingCompleted === true) || 
-              false;
+            const finalOnboardingCompleted = isUserOnboardingCompleted(docData, onboardingData, docData.settings, currentUser.uid);
               
             const finalSpaceOnboardingCompleted = 
               (docData.spaceOnboardingCompleted === true) ||
@@ -1173,7 +1376,7 @@ export function useNexoraData(
               (docData.plantOnboardingCompleted === true) || 
               (docData.settings?.plantOnboardingCompleted === true) || 
               (plantsTopData?.plantOnboardingCompleted === true) ||
-              Boolean(finalPlantState && ((finalPlantState.stage || 0) > 0 || (finalPlantState.growthPoints || 0) > 0 || Boolean(finalPlantState.type))) ||
+              Boolean(finalPlantState && ((finalPlantState.stage || 0) > 0 || (finalPlantState.growthPoints || 0) > 0)) ||
               false;
 
             const finalPurchasedEcosystemItemIds = Array.from(new Set([
@@ -1223,24 +1426,7 @@ export function useNexoraData(
             );
 
             // Auto-restore inventory item for any purchased item that is missing from inventory
-            mergedPurchasedItems.forEach((purchasedId) => {
-              if (!existingInventoryKeys.has(purchasedId)) {
-                const shopMatch = SHOP_ITEMS.find((si) => si.id === purchasedId);
-                if (shopMatch) {
-                  const autoInventoryItem = {
-                    id: `${shopMatch.id}-restored`,
-                    itemId: shopMatch.id,
-                    name: shopMatch.name,
-                    icon: typeof shopMatch.icon === "string" || typeof shopMatch.icon === "number" ? String(shopMatch.icon) : "🛒",
-                    activated: true,
-                    type: shopMatch.effect === "skin" ? "skin" : shopMatch.effect === "sound-pack" ? "sound-pack" : shopMatch.effect === "music" ? "music" : shopMatch.effect === "gift" ? "gift" : "power-up",
-                    purchasedAt: new Date().toISOString()
-                  };
-                  mergedInventory.push(autoInventoryItem);
-                  existingInventoryKeys.add(purchasedId);
-                }
-              }
-            });
+            mergedInventory = autoRestoreInventoryFromPurchased(mergedPurchasedItems, mergedInventory);
 
             const mergedSavedChallenges = Array.from(new Set([
               ...(docData.savedChallengeIds || docData.settings?.savedChallengeIds || []),
@@ -1272,6 +1458,7 @@ export function useNexoraData(
               reminderTime: docData.reminderTime ?? docData.settings?.reminderTime ?? DEFAULT_SETTINGS.reminderTime,
               reminderTime2: docData.reminderTime2 ?? docData.settings?.reminderTime2 ?? DEFAULT_SETTINGS.reminderTime2,
               motivationTime: docData.motivationTime ?? docData.settings?.motivationTime ?? DEFAULT_SETTINGS.motivationTime,
+              maxNotificationsPerDay: docData.maxNotificationsPerDay ?? docData.settings?.maxNotificationsPerDay ?? DEFAULT_SETTINGS.maxNotificationsPerDay ?? 5,
               displayName: extractRealDisplayName(docData, currentUser),
               age: docData.age ?? docData.settings?.age ?? DEFAULT_SETTINGS.age,
               gender: docData.gender ?? docData.settings?.gender,
@@ -1383,17 +1570,15 @@ export function useNexoraData(
               finalTotalPoints = maxOverallPoints;
               finalXP = Math.max(docData.xp || 0, docData.stats?.xp || 0, rewardsData?.xp || 0, rewardsTopData?.xp || 0, rankTopData?.xp || 0, leaderboardTopData?.xp || 0, statsMainData?.xp || 0, statsTopData?.xp || 0, maxOverallPoints, DEFAULT_STATS.xp);
               finalLevel = Math.max(docData.level || 1, docData.stats?.level || 1, rewardsData?.level || 1, rewardsTopData?.level || 1, rankTopData?.level || 1, leaderboardTopData?.level || 1, statsMainData?.level || 1, statsTopData?.level || 1, DEFAULT_STATS.level || 1);
-              finalCoins = Math.max(
-                docData.coins || 0,
-                docData.stats?.coins || 0,
-                statsMainData?.coins || 0,
-                rewardsData?.coins || 0,
-                rewardsTopData?.coins || 0,
-                rankTopData?.coins || 0,
-                leaderboardTopData?.coins || 0,
-                statsTopData?.coins || 0,
-                DEFAULT_STATS.coins
-              );
+              finalCoins = typeof docData.coins === "number"
+                ? docData.coins
+                : typeof docData.stats?.coins === "number"
+                  ? docData.stats.coins
+                  : typeof statsMainData?.coins === "number"
+                    ? statsMainData.coins
+                    : typeof rewardsData?.coins === "number"
+                      ? rewardsData.coins
+                      : DEFAULT_STATS.coins;
               finalWeeklyPoints = Math.max(docData.weeklyPoints || 0, docData.stats?.weeklyPoints || 0, rewardsData?.weeklyPoints || 0, rewardsTopData?.weeklyPoints || 0, rankTopData?.weeklyPoints || 0, leaderboardTopData?.weeklyPoints || 0, statsMainData?.weeklyPoints || 0, statsTopData?.weeklyPoints || 0, maxOverallPoints, DEFAULT_STATS.weeklyPoints);
               finalWeeklyXP = Math.max(docData.weeklyXP || 0, docData.stats?.weeklyXP || 0, rewardsData?.weeklyXP || 0, rewardsTopData?.weeklyXP || 0, rankTopData?.weeklyXP || 0, leaderboardTopData?.weeklyXP || 0, statsMainData?.weeklyXP || 0, statsTopData?.weeklyXP || 0, finalXP, maxOverallPoints, DEFAULT_STATS.weeklyXP);
             }
@@ -1540,7 +1725,7 @@ export function useNexoraData(
             let resolvedGarden = mappedGarden;
 
             // Strict account isolation guard: only merge local storage if it was created by THIS exact user
-            if (hasLocalStorage && previousCachedUserId === currentUser.uid && !isUserSwitch) {
+            if (hasLocalStorage && isSameUser && !isUserSwitch) {
               console.log("[PERSISTENCE] Matching local cache found. Performing safe merge...");
               const latestLocalSettings = getCachedJson("nexora_settings", DEFAULT_SETTINGS);
               const latestLocalStats = getCachedJson("nexora_stats", DEFAULT_STATS);
@@ -1602,7 +1787,7 @@ export function useNexoraData(
                 resolvedProgress = progressSnap.data() as DailyProgress;
               }
 
-              if (hasLocalStorage && previousCachedUserId === currentUser.uid && !isUserSwitch) {
+              if (hasLocalStorage && isSameUser && !isUserSwitch) {
                 const latestLocalProgress = getCachedJson("nexora_progress", defaultProgress);
                 if (latestLocalProgress.date === today) {
                   resolvedProgress = mergeProgress(resolvedProgress, latestLocalProgress, defaultProgress);
@@ -1628,15 +1813,17 @@ export function useNexoraData(
               };
             } catch (pErr) {
               console.warn("[FIRESTORE] Handled error/offline status loading progress data:", pErr);
-              const latestLocalProgress = getCachedJson("nexora_progress", defaultProgress);
+              const latestLocalProgress = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_progress", defaultProgress) : defaultProgress;
               rawSetDailyProgress(latestLocalProgress);
             }
             
             setNeedsOnboarding(!finalOnboardingCompleted);
             if (finalOnboardingCompleted) {
               localStorage.setItem("nexora_onboarding_completed", "true");
+              localStorage.setItem(`nexora_onboarding_completed_${currentUser.uid}`, "true");
             } else {
               localStorage.removeItem("nexora_onboarding_completed");
+              localStorage.removeItem(`nexora_onboarding_completed_${currentUser.uid}`);
             }
           }
           
@@ -1667,9 +1854,29 @@ export function useNexoraData(
         // Double-check if auth.currentUser exists synchronously to guard against transient nulls during SDK setup or updates
         if (auth.currentUser) {
           console.log("[STARTUP] Transient auth null intercepted. auth.currentUser is active:", auth.currentUser.uid);
+          isInitialAuthResolutionDone.current = true;
           setUser(auth.currentUser);
           return;
         }
+
+        const cachedUserKey = localStorage.getItem("nexora_cached_user");
+        if (cachedUserKey && !isInitialAuthResolutionDone.current) {
+          console.log(`[STARTUP] Cached user session detected ('${cachedUserKey}'). Polling for Firebase Auth token restoration...`);
+          let restoredUser = auth.currentUser;
+          const startTime = Date.now();
+          while (!restoredUser && Date.now() - startTime < 2500) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            restoredUser = auth.currentUser;
+          }
+
+          if (restoredUser) {
+            console.log("[STARTUP] Firebase Auth session restored during grace period:", restoredUser.uid);
+            isInitialAuthResolutionDone.current = true;
+            setUser(restoredUser);
+            return;
+          }
+        }
+        isInitialAuthResolutionDone.current = true;
 
         console.log(`[STARTUP] AUTH STATE RESOLVED - No active user session.`);
         lastLoadedUserIdRef.current = null;
@@ -1835,7 +2042,7 @@ export function useNexoraData(
                 streakOverwritten ||
                 plantOverwritten
               ) {
-                console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in syncData! Attempted to overwrite positive Firestore data with empty local states or degraded streak/plant. DB Stats Has Progress: ${dbHasProgress}, Local Is Empty Stats: ${localIsEmptyStats}. DB Garden Has Data: ${dbHasGarden}, Local Is Empty Garden: ${localIsEmptyGarden}. DB Settings Has Info: ${dbHasSettings}, Local Is Empty Settings: ${localIsEmptySettings}. Streak Overwritten: ${streakOverwritten}, Plant Overwritten: ${plantOverwritten}. Aborting write to prevent data loss.`);
+                console.warn(`[PERSISTENCE SYSTEM] Auto-rehydrating local state from Firestore data in syncData. DB Stats Has Progress: ${dbHasProgress}, Local Is Empty Stats: ${localIsEmptyStats}. DB Garden Has Data: ${dbHasGarden}, Local Is Empty Garden: ${localIsEmptyGarden}. DB Settings Has Info: ${dbHasSettings}, Local Is Empty Settings: ${localIsEmptySettings}. Streak Overwritten: ${streakOverwritten}, Plant Overwritten: ${plantOverwritten}. Aborting write to protect data.`);
                 
                 // Trigger emergency recovery: update local state to match database
                 if (dbData.stats || dbData.xp !== undefined || dbData.coins !== undefined) {
@@ -1871,14 +2078,28 @@ export function useNexoraData(
                 if (dbData.settings || dbData.displayName || dbData.onboardingCompleted !== undefined) {
                   setSettings((prev: any) => {
                     const dbSettings = dbData.settings || {};
+                    const isPlantOnboardingDone = 
+                      (dbData.plantOnboardingCompleted === true) || 
+                      (dbData.plantSectionOnboardingCompleted === true) || 
+                      (dbSettings.plantOnboardingCompleted === true) || 
+                      (dbSettings.plantSectionOnboardingCompleted === true) || 
+                      Boolean((dbData.plantState || dbSettings.plantState) && (((dbData.plantState?.stage || dbSettings.plantState?.stage) || 0) > 0 || ((dbData.plantState?.growthPoints || dbSettings.plantState?.growthPoints) || 0) > 0)) ||
+                      Boolean(prev.plantOnboardingCompleted);
+
+                    const isOnboardingDone = 
+                      (dbData.onboardingCompleted === true) || 
+                      (dbData.newUsersOnboardingCompleted === true) || 
+                      (dbSettings.onboardingCompleted === true) || 
+                      Boolean(prev.onboardingCompleted);
+
                     return {
                       ...DEFAULT_SETTINGS,
                       ...prev,
                       ...dbSettings,
                       displayName: extractRealDisplayName(dbData, user) || dbSettings.displayName || DEFAULT_SETTINGS.displayName,
                       profilePic: extractRealProfilePic(dbData, user) || dbSettings.profilePic || DEFAULT_SETTINGS.profilePic,
-                      onboardingCompleted: dbData.onboardingCompleted ?? dbSettings.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
-                      plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbSettings.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
+                      onboardingCompleted: isOnboardingDone,
+                      plantOnboardingCompleted: isPlantOnboardingDone,
                       spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbSettings.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
                       purchasedItems: Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean))),
                       inventory: autoRestoreInventoryFromPurchased(
@@ -1941,6 +2162,14 @@ export function useNexoraData(
               email: user.email || `${user.uid}@nexora.app`,
               role: 'user',
               stats: stats,
+              coins: stats.coins || 0,
+              xp: stats.xp || 0,
+              streak: stats.streak || 0,
+              bestStreak: stats.bestStreak || 0,
+              totalPoints: stats.totalPoints || 0,
+              level: stats.level || 1,
+              plantOnboardingCompleted: settings.plantOnboardingCompleted || false,
+              plantSectionOnboardingCompleted: settings.plantOnboardingCompleted || false,
               garden: gardenState,
               isTodayCompleted: dailyProgress.completed,
               updatedAt: serverTimestamp(),
@@ -2272,7 +2501,7 @@ export function useNexoraData(
             );
 
             if (dbHasProgress && localIsEmptyProgress) {
-              console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in syncData for progress! Attempted to overwrite positive/completed Firestore progress with empty local state. DB Progress: ${JSON.stringify(dbProg)}, Local Progress: ${JSON.stringify(dailyProgress)}. Aborting write to prevent data loss.`);
+              console.warn(`[PERSISTENCE SYSTEM] Re-hydrating progress state from Firestore data in syncData. DB Progress: ${JSON.stringify(dbProg)}, Local Progress: ${JSON.stringify(dailyProgress)}. Aborting write to protect data.`);
               
               // Trigger emergency recovery: update local state to match database progress
               setDailyProgress(dbProg);
@@ -2455,7 +2684,7 @@ export function useNexoraData(
       console.warn(`[PERSISTENCE FIX] Writes are strictly locked to prevent data loss. Initial user profile failed to load or timed out. Aborting forceSyncData.`);
       return;
     }
-    if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
+    if (!user || !auth.currentUser || !isDataReady || !dataLoadedFromFirestore.current) return;
     if (!isStateLoadedRef.current || !hasMatchedHydratedStateRef.current) {
       console.warn(`[PERSISTENCE AUDIT] forceSyncData called but hydration is not complete. Blocking write to prevent data loss.`);
       return;
@@ -2538,7 +2767,7 @@ export function useNexoraData(
             streakOverwritten ||
             plantOverwritten
           ) {
-            console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in forceSyncData! Attempted to overwrite positive Firestore data with empty local states or degraded streak/plant. DB Stats Has Progress: ${dbHasProgress}, Local Is Empty Stats: ${localIsEmptyStats}. DB Garden Has Data: ${dbHasGarden}, Local Is Empty Garden: ${localIsEmptyGarden}. DB Settings Has Info: ${dbHasSettings}, Local Is Empty Settings: ${localIsEmptySettings}. Streak Overwritten: ${streakOverwritten}, Plant Overwritten: ${plantOverwritten}. Aborting write to prevent data loss.`);
+            console.warn(`[PERSISTENCE SYSTEM] Auto-rehydrating local state from Firestore data in forceSyncData. DB Stats Has Progress: ${dbHasProgress}, Local Is Empty Stats: ${localIsEmptyStats}. DB Garden Has Data: ${dbHasGarden}, Local Is Empty Garden: ${localIsEmptyGarden}. DB Settings Has Info: ${dbHasSettings}, Local Is Empty Settings: ${localIsEmptySettings}. Streak Overwritten: ${streakOverwritten}, Plant Overwritten: ${plantOverwritten}. Aborting write to protect data.`);
             
             // Trigger emergency recovery: update local state to match database
             if (dbData.stats || dbData.xp !== undefined || dbData.coins !== undefined) {
@@ -2574,14 +2803,28 @@ export function useNexoraData(
             if (dbData.settings || dbData.displayName || dbData.onboardingCompleted !== undefined) {
               setSettings((prev: any) => {
                 const dbSettings = dbData.settings || {};
+                const isPlantOnboardingDone = 
+                  (dbData.plantOnboardingCompleted === true) || 
+                  (dbData.plantSectionOnboardingCompleted === true) || 
+                  (dbSettings.plantOnboardingCompleted === true) || 
+                  (dbSettings.plantSectionOnboardingCompleted === true) || 
+                  Boolean((dbData.plantState || dbSettings.plantState) && (((dbData.plantState?.stage || dbSettings.plantState?.stage) || 0) > 0 || ((dbData.plantState?.growthPoints || dbSettings.plantState?.growthPoints) || 0) > 0)) ||
+                  Boolean(prev.plantOnboardingCompleted);
+
+                const isOnboardingDone = 
+                  (dbData.onboardingCompleted === true) || 
+                  (dbData.newUsersOnboardingCompleted === true) || 
+                  (dbSettings.onboardingCompleted === true) || 
+                  Boolean(prev.onboardingCompleted);
+
                 return {
                   ...DEFAULT_SETTINGS,
                   ...prev,
                   ...dbSettings,
                   displayName: extractRealDisplayName(dbData, user) || dbSettings.displayName || DEFAULT_SETTINGS.displayName,
                   profilePic: extractRealProfilePic(dbData, user) || dbSettings.profilePic || DEFAULT_SETTINGS.profilePic,
-                  onboardingCompleted: dbData.onboardingCompleted ?? dbSettings.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
-                  plantOnboardingCompleted: dbData.plantOnboardingCompleted ?? dbSettings.plantOnboardingCompleted ?? DEFAULT_SETTINGS.plantOnboardingCompleted,
+                  onboardingCompleted: isOnboardingDone,
+                  plantOnboardingCompleted: isPlantOnboardingDone,
                   spaceOnboardingCompleted: dbData.spaceOnboardingCompleted ?? dbSettings.spaceOnboardingCompleted ?? DEFAULT_SETTINGS.spaceOnboardingCompleted,
                   purchasedItems: Array.from(new Set([...(prev.purchasedItems || []), ...(dbData.purchasedItems || []), ...(dbSettings.purchasedItems || [])].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean))),
                   inventory: autoRestoreInventoryFromPurchased(
@@ -2638,6 +2881,14 @@ export function useNexoraData(
           email: user.email || `${user.uid}@nexora.app`,
           role: 'user',
           stats: stats,
+          coins: stats.coins || 0,
+          xp: stats.xp || 0,
+          streak: stats.streak || 0,
+          bestStreak: stats.bestStreak || 0,
+          totalPoints: stats.totalPoints || 0,
+          level: stats.level || 1,
+          plantOnboardingCompleted: settings.plantOnboardingCompleted || false,
+          plantSectionOnboardingCompleted: settings.plantOnboardingCompleted || false,
           garden: gardenState,
           isTodayCompleted: dailyProgress.completed,
           updatedAt: serverTimestamp(),
@@ -2844,7 +3095,7 @@ export function useNexoraData(
           );
 
           if (dbHasProgress && localIsEmptyProgress) {
-            console.error(`[CRITICAL BLOCKED WRITE] Emergency block triggered in forceSyncData for progress! Attempted to overwrite positive/completed Firestore progress with empty local state. DB Progress: ${JSON.stringify(dbProg)}, Local Progress: ${JSON.stringify(dailyProgress)}. Aborting write to prevent data loss.`);
+            console.warn(`[PERSISTENCE SYSTEM] Re-hydrating progress state from Firestore data in forceSyncData. DB Progress: ${JSON.stringify(dbProg)}, Local Progress: ${JSON.stringify(dailyProgress)}. Aborting write to protect data.`);
             
             // Trigger emergency recovery: update local state to match database progress
             setDailyProgress(dbProg);

@@ -5,19 +5,18 @@ import {
   signInWithEmailAndPassword, 
   sendPasswordResetEmail, 
   GoogleAuthProvider, 
-  signInWithPopup 
+  signInWithPopup,
+  signOut,
+  deleteUser
 } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 
-import { motion, useAnimationControls } from "motion/react";
-import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { motion, useAnimationControls, AnimatePresence } from "motion/react";
+import { Mail, Lock, AlertCircle, Eye, EyeOff, X } from "lucide-react";
 import { Mascot, MascotMood } from "./Mascot";
 import { ArrowLeft } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
 import { MascotImage } from "./MascotImage";
-import nexoraAppIconImg from "../assets/images/nexora_app_icon.png";
-
-const nexoraAppIcon = "/mascot.png";
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -51,9 +50,12 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [customMoodOverride, setCustomMoodOverride] = useState<MascotMood | null>(null);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [resetSuccessMessage, setResetSuccessMessage] = useState("");
   const [isInIframe, setIsInIframe] = useState(false);
+
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setIsInIframe(window.self !== window.top);
@@ -71,6 +73,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
   }, []);
 
@@ -78,16 +81,137 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
   const [lastY, setLastY] = useState<number | null>(null);
   const [moveCount, setMoveCount] = useState(0);
 
+  // Helper to trigger mascot lowering / disappointed animation
+  const triggerLowerMascot = async (yOffset: number = 12) => {
+    if (!isMountedRef.current) return;
+    try {
+      await mascotControls.start({
+        y: yOffset,
+        transition: { type: "spring", stiffness: 300, damping: 15 },
+      });
+    } catch (err) {
+      // Safe fallback
+    }
+  };
+
+  // Helper to trigger celebration jump animation
+  const triggerCelebrationJump = async () => {
+    if (!isMountedRef.current) return;
+    try {
+      await mascotControls.start({
+        y: [-24, 0, -12, 0],
+        scale: [1, 1.22, 1.05, 1],
+        transition: { duration: 0.65, ease: "easeOut" },
+      });
+    } catch (err) {
+      // Safe fallback
+    }
+  };
+
+  // Helper to set animated error with auto-dismiss
+  const setAnimatedError = (msg: string, mood: MascotMood, yOffset: number = 12) => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    setError(msg);
+    setCustomMoodOverride(mood);
+    triggerLowerMascot(yOffset);
+
+    errorTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        setError("");
+        setCustomMoodOverride(null);
+        mascotControls.start({
+          y: 0,
+          transition: { type: "spring", stiffness: 300, damping: 15 },
+        });
+      }
+    }, 5000); // Disappears automatically after 5 seconds
+  };
+
+  const clearErrorState = () => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    setError("");
+    setCustomMoodOverride(null);
+    mascotControls.start({
+      y: 0,
+      transition: { type: "spring", stiffness: 300, damping: 15 },
+    });
+  };
+
+  // Map Firebase errors to friendly messages & mascot moods
+  const parseFirebaseAuthError = (err: any, isSignUpMode: boolean): { message: string; mood: MascotMood; yOffset: number } => {
+    const code = err?.code || "";
+    const rawMsg = err?.message || "";
+
+    if (rawMsg.includes("ACCOUNT_DELETED_OR_NOT_FOUND") || code === "auth/user-not-found" || rawMsg.includes("user-not-found")) {
+      return {
+        message: "This account no longer exists. Please create a new account.",
+        mood: "concerned",
+        yOffset: 12,
+      };
+    }
+
+    if (code === "auth/invalid-email" || rawMsg.includes("invalid-email")) {
+      return {
+        message: "Please enter a valid email address.",
+        mood: "concerned",
+        yOffset: 8,
+      };
+    }
+
+    if (code === "auth/too-many-requests" || rawMsg.includes("too-many-requests")) {
+      return {
+        message: "Too many login attempts. Please try again later.",
+        mood: "pouty",
+        yOffset: 14,
+      };
+    }
+
+    if (code === "auth/email-already-in-use" || rawMsg.includes("email-already-in-use")) {
+      return {
+        message: "An account with this email already exists.",
+        mood: "sad",
+        yOffset: 10,
+      };
+    }
+
+    if (code === "auth/weak-password" || rawMsg.includes("weak-password")) {
+      return {
+        message: "Password must be at least 6 characters.",
+        mood: "neutral",
+        yOffset: 6,
+      };
+    }
+
+    if (code === "auth/network-request-failed" || rawMsg.includes("network")) {
+      return {
+        message: "Network connection issue. Please check your internet connection.",
+        mood: "concerned",
+        yOffset: 8,
+      };
+    }
+
+    // Default friendly fallback
+    return {
+      message: isSignUpMode
+        ? "Could not create account. Please check your details and try again."
+        : "Incorrect email or password.",
+      mood: "sad",
+      yOffset: 12,
+    };
+  };
+
   // Determine Mascot Mood
   let mascotMood: MascotMood = "neutral";
   if (isSuccess) {
     mascotMood = "happy";
+  } else if (customMoodOverride) {
+    mascotMood = customMoodOverride;
   } else if (tapCount >= 6) {
     mascotMood = "boiling";
   } else if (tapCount >= 5) {
     mascotMood = "angry";
   } else if (error) {
-    mascotMood = "angry";
+    mascotMood = "sad";
   } else if (isTyping) {
     mascotMood = "happy";
   } else if (tapCount > 0) {
@@ -124,11 +248,10 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
       if (lastY !== null) {
         const deltaY = Math.abs(e.clientY - lastY);
         if (deltaY > 15) {
-          // significant vertical movement
           setMoveCount((prev) => {
             const newCount = prev + 1;
             if (newCount > 8) {
-              setTapCount(0); // calm down
+              setTapCount(0);
               setLastY(null);
               return 0;
             }
@@ -150,13 +273,13 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     setIsTyping(true);
-    if (error) setError("");
+    if (error) clearErrorState();
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
     setIsTyping(true);
-    if (error) setError("");
+    if (error) clearErrorState();
   };
 
   const handleBlur = () => {
@@ -166,40 +289,72 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     vibrate(20);
-    if (isSigningIn || !email || !password) return;
+    if (isSigningIn) return;
+
+    const trimmedEmail = email.trim();
+
+    // 1. Validation before Firebase
+    if (!trimmedEmail) {
+      setAnimatedError("Email is required.", "concerned", 8);
+      return;
+    }
+
+    if (!password) {
+      setAnimatedError("Password is required.", "concerned", 8);
+      return;
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setAnimatedError("Please enter a valid email address.", "concerned", 8);
+      return;
+    }
+
+    // Password length validation for signup
+    if (isSignUp && password.length < 6) {
+      setAnimatedError("Password must be at least 6 characters.", "neutral", 6);
+      return;
+    }
 
     setIsSigningIn(true);
-    setError("");
+    clearErrorState();
     setIsTyping(false);
 
     try {
       if (isSignUp) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
         
         const signUpData = {
-            name: 'Champion',
-            displayName: 'Champion',
-            "Name": 'Champion',
-            email: email,
-            "Email": email,
-            photoFileName: '',
-            "Photo file name": '',
-            profilePic: '',
-            "Profile image": '',
-            location: '',
-            "Location": '',
-            time: new Date().toISOString(),
-            "Time": new Date().toISOString(),
-            date: new Date().toISOString(),
-            "Date": new Date().toISOString(),
-            "Email address": email,
-            uid: userCredential.user.uid,
-            role: 'user',
-            accountName: 'Champion',
-            "Account name": 'Champion',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+          name: 'Champion',
+          displayName: 'Champion',
+          "Name": 'Champion',
+          email: trimmedEmail,
+          "Email": trimmedEmail,
+          photoFileName: '',
+          "Photo file name": '',
+          profilePic: '',
+          "Profile image": '',
+          location: '',
+          "Location": '',
+          time: new Date().toISOString(),
+          "Time": new Date().toISOString(),
+          date: new Date().toISOString(),
+          "Date": new Date().toISOString(),
+          "Email address": trimmedEmail,
+          uid: userCredential.user.uid,
+          role: 'user',
+          accountName: 'Champion',
+          "Account name": 'Champion',
+          onboardingCompleted: false,
+          settings: {
+            onboardingCompleted: false,
+          },
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         };
+        localStorage.setItem("nexora_onboarding_completed", "false");
+        localStorage.setItem("nexora_cached_user", userCredential.user.uid);
         await setDoc(doc(db, "users", userCredential.user.uid), signUpData);
         await setDoc(doc(db, "user", userCredential.user.uid), signUpData);
         const initialLbData = {
@@ -223,13 +378,32 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
         await setDoc(doc(db, "leaderboard", userCredential.user.uid), initialLbData, { merge: true });
         await setDoc(doc(db, "rank", userCredential.user.uid), initialLbData, { merge: true });
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
+        const uid = userCredential.user.uid;
+        
+        // Check if user was marked deleted or wiped from Firestore
+        const [deletedSnap, userSnap] = await Promise.all([
+          getDoc(doc(db, "deleted_users", uid)),
+          getDoc(doc(db, "users", uid))
+        ]);
+
+        if (deletedSnap.exists() || (userSnap.exists() && userSnap.data()?.deleted === true) || !userSnap.exists()) {
+          console.warn("[AUTH] Login rejected: Account is deleted or does not exist in Firestore.");
+          try {
+            await deleteUser(userCredential.user);
+          } catch (e) {
+            await signOut(auth);
+          }
+          throw new Error("ACCOUNT_DELETED_OR_NOT_FOUND");
+        }
       }
       setIsSuccess(true);
-      triggerJump();
+      setCustomMoodOverride("happy");
+      await triggerCelebrationJump();
     } catch (err: any) {
-      console.warn("Handled email auth error info:", err.message);
-      setError(`Auth error: ${err.message}`);
+      console.warn("Handled email auth error info:", err?.code || err?.message);
+      const mapped = parseFirebaseAuthError(err, isSignUp);
+      setAnimatedError(mapped.message, mapped.mood, mapped.yOffset);
     } finally {
       setIsSigningIn(false);
     }
@@ -237,25 +411,33 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
 
   const handleForgotPassword = async () => {
     vibrate(15);
-    setError("");
+    clearErrorState();
     setResetSuccessMessage("");
-    if (!email) {
-      setError(
-        "Please type your email address first so we know where to send the link!",
-      );
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setAnimatedError("Email is required.", "concerned", 8);
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setAnimatedError("Please enter a valid email address.", "concerned", 8);
       return;
     }
 
     setIsResettingPassword(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, trimmedEmail);
       setResetSuccessMessage(
         "Reset request submitted! ✉️ Check your email inbox for the reset link! 🚀",
       );
+      setCustomMoodOverride("happy");
       triggerJump();
     } catch (err: any) {
-      console.warn("Forgot password request failed:", err);
-      setError(`Failed to send password reset: ${err.message}`);
+      console.warn("Forgot password request failed:", err?.code || err?.message);
+      const mapped = parseFirebaseAuthError(err, false);
+      setAnimatedError(mapped.message, mapped.mood, mapped.yOffset);
     } finally {
       setIsResettingPassword(false);
     }
@@ -265,12 +447,14 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     vibrate(15);
     if (isSigningIn) return;
     setIsSigningIn(true);
-    setError("");
+    clearErrorState();
     setIsTyping(false);
 
     if (window.self !== window.top) {
-      setError(
-        "Google Sign-In is blocked inside the iframe preview by browser cross-origin security rules. Please click the 'Open in New Tab' icon in the top-right corner of the window to use Google Sign-In, or log in instantly using Email & Password above!"
+      setAnimatedError(
+        "Google Sign-In is restricted inside preview mode. Please click 'Open in New Tab' in top right, or log in with Email & Password.",
+        "concerned",
+        8
       );
       setIsSigningIn(false);
       return;
@@ -286,28 +470,28 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     try {
       const result = await signInWithPopup(auth, provider);
       const googleUserData = {
-          name: result.user.displayName || 'Champion',
-          displayName: result.user.displayName || 'Champion',
-          "Name": result.user.displayName || 'Champion',
-          email: result.user.email || `${result.user.uid}@nexora.app`,
-          "Email": result.user.email || `${result.user.uid}@nexora.app`,
-          photoFileName: result.user.photoURL || '',
-          "Photo file name": result.user.photoURL || '',
-          profilePic: result.user.photoURL || '',
-          "Profile image": result.user.photoURL || '',
-          location: '',
-          "Location": '',
-          time: new Date().toISOString(),
-          "Time": new Date().toISOString(),
-          date: new Date().toISOString(),
-          "Date": new Date().toISOString(),
-          "Email address": result.user.email || `${result.user.uid}@nexora.app`,
-          uid: result.user.uid,
-          role: 'user',
-          accountName: result.user.displayName || 'Champion',
-          "Account name": result.user.displayName || 'Champion',
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
+        name: result.user.displayName || 'Champion',
+        displayName: result.user.displayName || 'Champion',
+        "Name": result.user.displayName || 'Champion',
+        email: result.user.email || `${result.user.uid}@nexora.app`,
+        "Email": result.user.email || `${result.user.uid}@nexora.app`,
+        photoFileName: result.user.photoURL || '',
+        "Photo file name": result.user.photoURL || '',
+        profilePic: result.user.photoURL || '',
+        "Profile image": result.user.photoURL || '',
+        location: '',
+        "Location": '',
+        time: new Date().toISOString(),
+        "Time": new Date().toISOString(),
+        date: new Date().toISOString(),
+        "Date": new Date().toISOString(),
+        "Email address": result.user.email || `${result.user.uid}@nexora.app`,
+        uid: result.user.uid,
+        role: 'user',
+        accountName: result.user.displayName || 'Champion',
+        "Account name": result.user.displayName || 'Champion',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
       await setDoc(doc(db, "users", result.user.uid), googleUserData, { merge: true });
       await setDoc(doc(db, "user", result.user.uid), googleUserData, { merge: true });
@@ -332,10 +516,16 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
       await setDoc(doc(db, "leaderboard", result.user.uid), initialGoogleLbData, { merge: true });
       await setDoc(doc(db, "rank", result.user.uid), initialGoogleLbData, { merge: true });
       setIsSuccess(true);
-      triggerJump();
+      setCustomMoodOverride("happy");
+      await triggerCelebrationJump();
     } catch (err: any) {
-      console.warn("Error signing in with Google:", err);
-      setError(`Failed to sign in with Google: ${err.message}`);
+      console.warn("Error signing in with Google:", err?.code || err?.message);
+      if (err?.code === "auth/popup-closed-by-user") {
+        setAnimatedError("Sign-in window was closed before completing.", "concerned", 6);
+      } else {
+        const mapped = parseFirebaseAuthError(err, false);
+        setAnimatedError(mapped.message, mapped.mood, mapped.yOffset);
+      }
     } finally {
       setIsSigningIn(false);
     }
@@ -390,35 +580,51 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
           </p>
         </div>
 
-        {error && (
-          <div className="w-full bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium flex flex-col gap-2 text-left">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-            {error.includes("Invalid email or password") && (
-              <p className="text-[10px] text-red-500 font-bold uppercase pl-7 leading-normal">
-                Tip: If you originally joined via Google, please sign in with
-                Google or enter your email & tap "Forgot/Set Password" to add a
-                password to your Google account!
-              </p>
-            )}
-            {error.includes("already exists") && (
-              <button
-                onClick={() => {
-                  setIsSignUp(false);
-                  setError("");
-                }}
-                className="text-xs font-bold text-red-700 underline pl-7 hover:text-red-900 text-left"
-              >
-                Click here to Sign In instead
-              </button>
-            )}
-          </div>
-        )}
+        {/* Nexora-Style Error Card */}
+        <AnimatePresence mode="wait">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -12, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.96 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="w-full bg-rose-50/95 border border-rose-200/90 text-rose-900 p-4 rounded-2xl text-sm font-semibold flex flex-col gap-2 text-left shadow-md shadow-rose-900/5 relative overflow-hidden"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="bg-rose-100 p-1.5 rounded-xl text-rose-600 shrink-0 mt-0.5">
+                    <AlertCircle className="w-4 h-4" />
+                  </div>
+                  <span className="font-bold text-rose-900 leading-snug pt-0.5">{error}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearErrorState}
+                  className="text-rose-400 hover:text-rose-700 p-1 rounded-lg transition-colors shrink-0"
+                  aria-label="Dismiss error"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {error === "An account with this email already exists." && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(false);
+                    clearErrorState();
+                  }}
+                  className="text-xs font-bold text-rose-700 underline pl-8 hover:text-rose-950 text-left transition-colors"
+                >
+                  Click here to Sign In instead
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {resetSuccessMessage && (
-          <div className="w-full bg-green-50 text-green-700 p-3.5 rounded-xl text-sm font-semibold flex items-start gap-2 text-left border border-green-100">
+          <div className="w-full bg-green-50 text-green-700 p-3.5 rounded-2xl text-sm font-semibold flex items-start gap-2 text-left border border-green-100 shadow-sm">
             <span className="text-lg">✉️</span>
             <div>
               <p className="font-bold leading-relaxed">{resetSuccessMessage}</p>
@@ -430,7 +636,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
           </div>
         )}
 
-        <form onSubmit={handleEmailAuth} className="w-full space-y-4">
+        <form onSubmit={handleEmailAuth} noValidate className="w-full space-y-4">
           <div className="space-y-3">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-blue-900/40">
@@ -438,7 +644,6 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
               </div>
               <input
                 type="email"
-                required
                 value={email}
                 onChange={handleEmailChange}
                 onBlur={handleBlur}
@@ -452,12 +657,10 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
               </div>
               <input
                 type={showPassword ? "text" : "password"}
-                required
                 value={password}
                 onChange={handlePasswordChange}
                 onBlur={handleBlur}
                 placeholder="Password"
-                minLength={6}
                 className="w-full pl-11 pr-12 py-3 bg-white/50 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-blue-900 placeholder:text-blue-900/40 font-medium transition-all"
               />
               <button
@@ -542,7 +745,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
             type="button"
             onClick={() => {
               setIsSignUp(!isSignUp);
-              setError("");
+              clearErrorState();
               setTapCount(0);
             }}
             className="text-blue-600 font-bold hover:underline"
@@ -554,3 +757,4 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     </motion.div>
   );
 }
+

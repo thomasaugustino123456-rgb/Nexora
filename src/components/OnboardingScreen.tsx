@@ -22,7 +22,7 @@ import {
   FlameKindling
 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db, auth, signOut } from '../firebase';
 import { UserSettings } from '../types';
 import { vibrate } from '../lib/vibrate';
 import { MascotV2 } from './MascotV2';
@@ -110,6 +110,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   const [commitmentLevel, setCommitmentLevel] = useState<'casual' | 'consistent' | 'intense'>('consistent');
   const [isHoveringContinue, setIsHoveringContinue] = useState(false);
   const [buttonPulse, setButtonPulse] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   // The Display step indicators mapping (total of 14 key stages in progress bar)
   const displayTotalSteps = 14;
@@ -131,6 +132,9 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   }, [step]);
 
   const handleComplete = async () => {
+    if (isCompleting) return;
+    setIsCompleting(true);
+    vibrate(20);
     try {
       const user = auth.currentUser;
       const updates: any = { onboardingCompleted: true };
@@ -207,7 +211,9 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
       console.error("Critical error in handleComplete:", error);
     } finally {
       console.log("Forcing onComplete");
-      onComplete();
+      setTimeout(() => {
+        onComplete();
+      }, 350);
     }
   };
 
@@ -242,9 +248,11 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
         setIntroStep(prev => prev - 1);
       } else {
         try {
-          // await signOut(auth);
+          localStorage.setItem("nexora_onboarding_completed", "false");
+          localStorage.removeItem("nexora_cached_user");
+          await signOut(auth);
         } catch (error) {
-          console.error("Error signing out:", error);
+          console.error("Error signing out from onboarding back button:", error);
         }
       }
     }
@@ -508,7 +516,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
       </div>
 
       {/* Back Button */}
-      {((step > 1 && step < 16) || (step === 1 && introStep > 0)) && (
+      {step < 16 && (
         <button 
           onClick={handleBack}
           className="absolute top-6 left-6 p-3 rounded-full bg-white border border-[#E9E4D4] text-[#7D6B58] hover:bg-[#FAF7F2] hover:text-[#4F3F34] hover:scale-105 active:scale-95 transition-all z-20 shadow-sm flex items-center justify-center cursor-pointer"
@@ -1177,14 +1185,25 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
                 </p>
               </div>
 
-              {/* Start My Journey button */}
+              {/* Start My Journey / Pair button */}
               <button 
                 onClick={handleComplete} 
+                disabled={isCompleting}
                 onMouseEnter={() => handleButtonHover(true)}
                 onMouseLeave={() => handleButtonHover(false)}
-                className="bg-[#69C496] hover:bg-[#5bb385] text-white py-4 px-8 rounded-2xl font-black shadow-lg shadow-[#69C496]/20 transition-all w-full flex justify-center items-center gap-2 text-xs uppercase tracking-widest cursor-pointer leading-none"
+                className="bg-[#69C496] hover:bg-[#5bb385] active:scale-[0.98] disabled:opacity-90 text-white py-4 px-8 rounded-2xl font-black shadow-lg shadow-[#69C496]/20 transition-all w-full flex justify-center items-center gap-3 text-xs uppercase tracking-widest cursor-pointer leading-none min-h-[52px]"
               >
-                Start My Journey → <CheckCircle2 size={18} />
+                {isCompleting ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin text-white shrink-0" />
+                    <span>Pairing & Launching...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Start My Journey</span>
+                    <ChevronRight size={18} />
+                  </>
+                )}
               </button>
             </motion.div>
           )}

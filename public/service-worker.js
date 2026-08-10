@@ -1,46 +1,121 @@
-const CACHE_NAME = 'nexora-v7.1.0'; // Bumped cache name to bust old service worker cache and load new AI Mascot updates
+const CACHE_NAME = 'nexora-pwa-v8.5.0';
 const ASSETS_TO_CACHE = [
   '/',
+  '/?screen=challenge',
   '/index.html',
   '/manifest.json',
-  '/mascot.png',
+  '/icons/icon-192.png',
+  '/icons/badge-72.png',
+  '/mascots/blue-slim-notification.png',
+  '/mascots/fire-slim-notification.png',
+  '/mascots/earth-slim-notification.png',
+  '/mascots/water-slim-notification.png',
+  '/mascots/shield-slim-notification.png',
+  '/mascots/lightning-slim-notification.png',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap',
   'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js'
 ];
 
-// Import Firebase compat scripts (required for FCM in SW)
+// Import Firebase compat scripts
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
 // Initialize Firebase in SW
 firebase.initializeApp({
-  apiKey: "AIzaSyDzMyKhCPNckxUKzlTzKsSrfzUF7blGJkk",
-  authDomain: "gen-lang-client-0115801809.firebaseapp.com",
-  projectId: "gen-lang-client-0115801809",
-  storageBucket: "gen-lang-client-0115801809.firebasestorage.app",
-  messagingSenderId: "546238758641",
-  appId: "1:546238758641:web:366fb9e770c9a240787350"
+  apiKey: "AIzaSyAQkPQqVyHhzw-nkBiLpsAZ_ZatNQsvYrU",
+  authDomain: "nexora-bdd1d.firebaseapp.com",
+  projectId: "nexora-bdd1d",
+  storageBucket: "nexora-bdd1d.firebasestorage.app",
+  messagingSenderId: "317478625149",
+  appId: "1:317478625149:web:32cfc40cc8efecdc4dd0bc"
 });
 
 const messaging = firebase.messaging();
 
+function buildNotificationOptions(payload) {
+  const data = payload.data || {};
+  const notification = payload.notification || {};
+
+  const title = notification.title || data.title || 'Blue Slim is waiting for you';
+  const body = notification.body || data.body || "You have 2 challenges left today. Let’s grow together.";
+  const icon = data.icon || notification.icon || '/icons/icon-192.png';
+  const badge = data.badge || notification.badge || '/icons/badge-72.png';
+  const image = data.image || notification.image || '/mascots/blue-slim-notification.png';
+
+  return {
+    title,
+    options: {
+      body,
+      icon,
+      badge,
+      image,
+      vibrate: [100, 50, 100],
+      tag: data.tag || 'daily-reminder',
+      renotify: true,
+      requireInteraction: false,
+      data: {
+        url: data.url || '/?screen=challenge',
+        screen: 'challenge',
+        ...(data || {})
+      }
+    }
+  };
+}
+
 // Background FCM Messages
 messaging.onBackgroundMessage((payload) => {
-  console.log('[service-worker.js] Received background message ', payload);
-  const notificationTitle = payload.notification.title || 'Nexora 🔥';
-  const notificationOptions = {
-    body: payload.notification.body || 'Ready for your next win, bro?',
-    icon: '/mascot.png',
-    badge: '/mascot.png',
-    data: payload.data,
-    vibrate: [200, 100, 200],
-    tag: 'nexora-alert' // Groups notifications
-  };
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  console.log('[service-worker.js] Received background FCM message:', payload);
+  const { title, options } = buildNotificationOptions(payload);
+  self.registration.showNotification(title, options);
 });
 
-// Install event - caching assets
+// Push notification listener
+self.addEventListener('push', (event) => {
+  console.log('[service-worker.js] Push event received');
+  let payload = {};
+  try {
+    if (event.data) {
+      payload = event.data.json();
+    }
+  } catch (err) {
+    if (event.data) {
+      payload = { notification: { body: event.data.text() } };
+    }
+  }
+  const { title, options } = buildNotificationOptions(payload);
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Handle notification click: Open/focus Nexora PWA & navigate directly to Daily Challenges
+self.addEventListener('notificationclick', (event) => {
+  console.log('[service-worker.js] Notification click received');
+  event.notification.close();
+
+  const targetUrl = new URL(event.notification.data?.url || '/?screen=challenge', self.location.origin).href;
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // 1. Look for existing open window
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus().then(() => {
+            client.postMessage({
+              type: 'NAVIGATE_SCREEN',
+              screen: 'challenge'
+            });
+          });
+        }
+      }
+      // 2. Open new window if app was completely closed
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+
+// Install event - cache critical assets
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
@@ -51,7 +126,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate event - cleaning up old caches and taking control immediately
+// Activate event - clean up old caches & take control immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     Promise.all([
@@ -70,18 +145,28 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - Network-First strategy to ensure latest assets are always loaded
+// Fetch event - Network-First strategy
 self.addEventListener('fetch', (event) => {
-  // EXCLUDE API calls and non-GET requests from service worker interception completely
-  if (event.request.url.includes('/api/') || event.request.method !== 'GET') {
+  const url = event.request.url;
+
+  if (
+    event.request.method !== 'GET' ||
+    url.includes('/api/') ||
+    url.includes('firestore.googleapis.com') ||
+    url.includes('identitytoolkit.googleapis.com') ||
+    url.includes('fcmregistrations.googleapis.com') ||
+    url.includes('googleapis.com') ||
+    url.includes('firebase') ||
+    url.includes('cloudinary') ||
+    url.includes('google-analytics') ||
+    url.includes('googletagmanager')
+  ) {
     return;
   }
 
-  // Network-First Strategy
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
-        // Only cache successful GET responses from our own origin or trusted CDNs
         if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -93,12 +178,10 @@ self.addEventListener('fetch', (event) => {
         return networkResponse;
       })
       .catch(() => {
-        // Fallback to cache if network is offline or fails
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          // Only fallback to root index.html for HTML navigation requests, NEVER for JS/CSS assets
           const acceptHeader = event.request.headers.get('accept') || '';
           if (event.request.mode === 'navigate' || acceptHeader.includes('text/html')) {
             return caches.match('/');
@@ -106,32 +189,5 @@ self.addEventListener('fetch', (event) => {
           return new Response('', { status: 404, statusText: 'Not Found' });
         });
       })
-  );
-});
-
-// Handle background notifications
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(
-    clients.openWindow('/')
-  );
-});
-
-// Push notification listener (placeholder)
-self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {};
-  const options = {
-    body: data.body || 'Hey 👋 Ready for today’s challenge?',
-    icon: '/mascot.png',
-    badge: '/mascot.png',
-    vibrate: [100, 50, 100],
-    data: {
-      dateOfArrival: Date.now(),
-      primaryKey: '2'
-    }
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'Nexora 🔥', options)
   );
 });

@@ -82,9 +82,6 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   }, [setSettings, step, showToast]);
 
   const nextStep = useCallback((data?: any, skipped: boolean = false) => {
-    if (!skipped && settings.soundEnabled && currentIdx < steps.length - 1) {
-      play('continue');
-    }
     if (!skipped) {
       showToast('Step Complete! Keep going, bro! 🔥', 'success');
     }

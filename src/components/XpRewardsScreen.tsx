@@ -5,22 +5,6 @@ import { vibrate } from "../lib/vibrate";
 import { UserStats } from "../types";
 import { useSound } from "../hooks/useSound";
 
-const CHEST_SOUNDS = {
-  reveal: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088376/mixkit-game-experience-level-increased-2062_cyf4kz.wav",
-  click: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088375/mixkit-quick-win-video-game-notification-269_ec7wwz.wav",
-  land: "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088375/mixkit-martial-arts-punch-2052_l0noe5.wav"
-};
-
-const playChestAudio = (type: "reveal" | "click" | "land", soundEnabled?: boolean) => {
-  if (soundEnabled === false) return;
-  try {
-    const audio = new Audio(CHEST_SOUNDS[type]);
-    audio.play().catch(e => console.warn("Chest sound play failed:", e));
-  } catch (err) {
-    console.warn("Chest audio error:", err);
-  }
-};
-
 interface XpRewardsScreenProps {
   stats: UserStats;
   onUpdateStats: (newStats: Partial<UserStats> | ((prev: UserStats) => UserStats)) => void;
@@ -193,7 +177,6 @@ export function XpRewardsScreen({
       if (settings?.soundEnabled !== false) {
         play("chest_click");
       }
-      playSoundEffect("tap", 1);
       setStatusText("3 Taps Left... Feel the Magic!");
       setStatusColor("#00f0ff");
       setTimeout(() => {
@@ -208,7 +191,6 @@ export function XpRewardsScreen({
       if (settings?.soundEnabled !== false) {
         play("chest_click");
       }
-      playSoundEffect("tap", 2);
       setStatusText("2 Taps Left... Energy is Surging!");
       setStatusColor("#a832fc");
       setTimeout(() => {
@@ -223,7 +205,6 @@ export function XpRewardsScreen({
       if (settings?.soundEnabled !== false) {
         play("chest_click");
       }
-      playSoundEffect("tap", 3);
       setStatusText("FINAL TAP DEPLOYMENT INITIALIZED!!!");
       setStatusColor("#ff00d0");
       setTimeout(() => {
@@ -239,10 +220,8 @@ export function XpRewardsScreen({
   };
 
   const executeEpicFinalLaunch = () => {
-    // 1. Play massive launch chime + laser sweep + Sound 1 (reveal) + Sound 2 (click/launch)
-    playSoundEffect("epic_launch");
+    // 1. Play reveal sound for the final epic chest opening
     if (settings?.soundEnabled !== false) {
-      play("chest_click");
       play("chest_reveal");
     }
 

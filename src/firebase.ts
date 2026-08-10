@@ -1,23 +1,36 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, setLogLevel } from 'firebase/firestore';
-import { getAuth, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence, User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider, GoogleAuthProvider, setPersistence, browserLocalPersistence, User, updateProfile } from 'firebase/auth';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import { getAnalytics, logEvent, isSupported as isAnalyticsSupported } from 'firebase/analytics';
+import { initializeAppCheck, ReCaptchaV3Provider, CustomProvider } from 'firebase/app-check';
 import firebaseConfigData from './firebase-applet-config.json';
 
 // Intercept and demote internal Firestore SDK assertion errors (e.g., ID: ca9, b815, ve: -1) to warnings to prevent console error noise
 if (typeof window !== 'undefined') {
-  const isAssertionMsg = (msg: string) =>
-    msg.includes('INTERNAL ASSERTION FAILED') ||
-    msg.includes('Unexpected state') ||
-    msg.includes('ca9') ||
-    msg.includes('b815') ||
-    msg.includes('ve:') ||
-    (msg.includes('FIRESTORE') && msg.includes('ASSERTION'));
+  const isAssertionMsg = (msg: string) => {
+    if (!msg) return false;
+    const lower = msg.toLowerCase();
+    return (
+      lower.includes('internal assertion failed') ||
+      lower.includes('unexpected state') ||
+      lower.includes('ca9') ||
+      lower.includes('b815') ||
+      lower.includes('ve:') ||
+      (lower.includes('firestore') && lower.includes('assertion')) ||
+      (lower.includes('firestore') && lower.includes('internal'))
+    );
+  };
 
   const originalConsoleError = console.error;
   console.error = function (...args: any[]) {
-    const msg = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+    const msg = args.map((a) => {
+      if (!a) return '';
+      if (a instanceof Error) return `${a.name}: ${a.message}\n${a.stack}`;
+      if (typeof a === 'object') return `${a.message || ''} ${a.stack || ''} ${JSON.stringify(a)}`;
+      return String(a);
+    }).join(' ');
+
     if (isAssertionMsg(msg)) {
       console.warn('[Firestore Internal Assertion Handled]', ...args);
       return;
@@ -26,7 +39,7 @@ if (typeof window !== 'undefined') {
   };
 
   window.addEventListener('unhandledrejection', (event) => {
-    const msg = event.reason?.message || String(event.reason || '');
+    const msg = `${event.reason?.message || ''} ${event.reason?.stack || ''} ${String(event.reason || '')}`;
     if (isAssertionMsg(msg)) {
       try {
         event.preventDefault();
@@ -37,7 +50,7 @@ if (typeof window !== 'undefined') {
   });
 
   window.addEventListener('error', (event) => {
-    const msg = event.message || event.error?.message || String(event.error || '');
+    const msg = `${event.message || ''} ${event.error?.message || ''} ${event.error?.stack || ''} ${String(event.error || '')}`;
     if (isAssertionMsg(msg)) {
       try {
         event.preventDefault();
@@ -45,7 +58,7 @@ if (typeof window !== 'undefined') {
       } catch (e) {}
       console.warn('[Firestore Window Error Handled]', msg);
     }
-  });
+  }, true);
 }
 
 const firebaseConfig = firebaseConfigData;
@@ -54,28 +67,20 @@ console.log("Firebase Initialization: Using project", firebaseConfig.projectId);
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export { onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence };
+export { onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider, GoogleAuthProvider, setPersistence, browserLocalPersistence, updateProfile };
 export type FirebaseUser = User;
 
 // Initialize Analytics lazily
+let analyticsInstance: any = null;
 export const analytics = async () => {
   if (typeof window !== 'undefined') {
-    // Disable Firebase Analytics in development, preview, or sandboxed iframe environments
-    // to prevent IndexedDB Transaction QuotaExceeded errors inside iframe sandboxes.
-    const isDevPreview = 
-      import.meta.env.DEV || 
-      window.location.hostname.includes("localhost") || 
-      window.location.hostname.includes("run.app") || 
-      window.self !== window.top;
-
-    if (isDevPreview) {
-      console.log("[Analytics] Disabled in dev/preview iframe sandbox to prevent quota issues.");
-      return null;
-    }
-
+    if (analyticsInstance) return analyticsInstance;
     try {
       const supported = await isAnalyticsSupported();
-      return supported ? getAnalytics(app) : null;
+      if (supported) {
+        analyticsInstance = getAnalytics(app);
+        return analyticsInstance;
+      }
     } catch (e) {
       console.warn("Firebase Analytics support check failed:", e);
       return null;
@@ -96,6 +101,52 @@ export const trackEvent = async (eventName: string, params?: any) => {
     console.error(`[Analytics] Failed to track ${eventName}:`, err);
   }
 };
+
+// Initialize Firebase App Check safely
+export const initAppCheck = () => {
+  if (typeof window === 'undefined') return null;
+
+  const siteKey = (import.meta.env.VITE_RECAPTCHA_SITE_KEY as string) || (window as any).VITE_RECAPTCHA_SITE_KEY;
+  const isDevPreview = 
+    import.meta.env.DEV || 
+    window.location.hostname.includes("localhost") || 
+    window.location.hostname.includes("run.app") || 
+    window.self !== window.top;
+
+  try {
+    if (siteKey) {
+      console.log("[App Check] Initializing with reCAPTCHA v3 provider...");
+      return initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(siteKey),
+        isTokenAutoRefreshEnabled: true
+      });
+    } else if (isDevPreview) {
+      if ((window as any).FIREBASE_APPCHECK_DEBUG_TOKEN === true || typeof (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN === 'string') {
+        console.log("[App Check] Initializing in Debug Mode for preview environment...");
+        return initializeAppCheck(app, {
+          provider: new CustomProvider({
+            getToken: () => Promise.resolve({
+              token: typeof (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN === 'string' ? (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN : 'DEBUG_TOKEN',
+              expireTimeMillis: Date.now() + 3600000
+            })
+          }),
+          isTokenAutoRefreshEnabled: true
+        });
+      }
+      console.log("[App Check] System ready. Set VITE_RECAPTCHA_SITE_KEY in .env to enforce reCAPTCHA in production.");
+      return null;
+    }
+  } catch (err) {
+    console.warn("[App Check] Initialization check handled:", err);
+    return null;
+  }
+  return null;
+};
+
+// Auto-initialize App Check if siteKey or debug token is set
+if (typeof window !== 'undefined') {
+  initAppCheck();
+}
 
 export const db = getFirestore(app);
 

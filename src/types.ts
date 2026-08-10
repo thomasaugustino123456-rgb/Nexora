@@ -98,11 +98,13 @@ export interface UserSettings {
   location?: string;
   timezone?: string;
   fcmToken?: string;
+  maxNotificationsPerDay?: number;
   badgeSettings?: BadgeSettings;
   purchasedHouseItemIds?: string[];
   placedHouseItems?: PlacedHouseItem[];
   spaceOnboardingCompleted?: boolean;
   plantOnboardingCompleted?: boolean;
+  hasCompletedFirstChallenge?: boolean;
   spaceHouseUnlocked?: boolean;
   activeSpaceRoom?: number;
   plantState?: PlantState;
@@ -123,6 +125,8 @@ export interface UserSettings {
   hiddenNavItems?: string[];
   navOrder?: string[];
   archivedOfficialChallenges?: string[];
+  hiddenPostIds?: string[];
+  hiddenCommentIds?: string[];
   proTestActive?: boolean;
   proTestStartedAt?: string | null;
   proTestExpiresAt?: string | null;
@@ -160,6 +164,9 @@ export interface UserSettings {
   Date?: string;
   "Email address"?: string;
   purchasedAwards?: Record<string, number>;
+  communityBanned?: boolean;
+  communityBannedUntil?: string;
+  communityBannedPermanent?: boolean;
 }
 
 export interface ShopItem {
@@ -297,6 +304,27 @@ export interface UserReport {
   createdAt: string;
 }
 
+export interface CommunityReport {
+  id: string;
+  targetType: 'post' | 'comment';
+  targetId: string;
+  postId: string;
+  postTitle?: string;
+  targetContent: string;
+  reporterUserId: string;
+  reporterUserName: string;
+  reporterUserEmail: string;
+  reporterUserPhoto?: string;
+  reportedUserId: string;
+  reportedUserName: string;
+  reportedUserEmail: string;
+  reportedUserPhoto?: string;
+  reason: string;
+  customNotes?: string;
+  status: 'pending' | 'reviewed' | 'banned_temp' | 'banned_perm';
+  createdAt: string;
+}
+
 export interface NexusVideo {
   id: string;
   userId: string;
@@ -324,7 +352,7 @@ export interface NexusVideo {
   repostCount?: number;
 }
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion' | 'home';
-export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling' | 'surprised' | 'sad' | 'grieving' | 'concerned' | 'pouty' | 'sleeping' | 'hyped';
+export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling' | 'surprised' | 'sad' | 'grieving' | 'concerned' | 'pouty' | 'sleeping' | 'hyped' | 'welcoming' | 'celebrating' | 'motivational';
 
 export interface SocialCircle {
   id: string;

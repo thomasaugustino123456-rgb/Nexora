@@ -21,6 +21,7 @@ export interface LivingMascotProps {
   speechText?: string;
   onPowerTriggered?: () => void;
   sizeMultiplier?: number;
+  isWaving?: boolean;
 }
 
 export const LivingMascot = React.memo(({
@@ -36,7 +37,8 @@ export const LivingMascot = React.memo(({
   showSpeech = true,
   speechText,
   onPowerTriggered,
-  sizeMultiplier = 1
+  sizeMultiplier = 1,
+  isWaving = false
 }: LivingMascotProps) => {
   const { play } = useSound();
 
@@ -652,8 +654,80 @@ export const LivingMascot = React.memo(({
           )}
 
           {/* Arms */}
-          <ellipse cx="74" cy="225" rx="18" ry="24" fill={`url(#armGrad-${uid})`} transform="rotate(-15 74 225)" />
-          <ellipse cx="326" cy="225" rx="18" ry="24" fill={`url(#armGrad-${uid})`} transform="rotate(15 326 225)" />
+          {/* Left Arm */}
+          <motion.ellipse
+            cx="74"
+            cy="225"
+            rx="18"
+            ry="24"
+            fill={`url(#armGrad-${uid})`}
+            animate={mood === 'celebrating' ? { rotate: [-15, -42, -15], y: [0, -6, 0] } : { rotate: -15, y: 0 }}
+            transition={mood === 'celebrating' ? { repeat: Infinity, duration: 0.65, ease: 'easeInOut' } : { duration: 0.3 }}
+            style={{ transformOrigin: '74px 225px' }}
+          />
+
+          {/* Right Arm - Waving Motion */}
+          <motion.g
+            style={{ transformOrigin: '326px 225px' }}
+            animate={
+              isWaving
+                ? { rotate: [15, -45, 25, -45, 15], y: [0, -10, 0, -10, 0] }
+                : { rotate: 15, y: 0 }
+            }
+            transition={
+              isWaving
+                ? { repeat: Infinity, duration: 0.65, ease: 'easeInOut' }
+                : { duration: 0.3 }
+            }
+          >
+            <ellipse cx="326" cy="225" rx="18" ry="24" fill={`url(#armGrad-${uid})`} />
+            {isWaving && (
+              <g>
+                <motion.circle
+                  cx="344"
+                  cy="192"
+                  r="4.5"
+                  fill="#facc15"
+                  animate={{ scale: [0.8, 1.5, 0.8], opacity: [0.5, 1, 0.5] }}
+                  transition={{ repeat: Infinity, duration: 0.5 }}
+                />
+                <motion.path
+                  d="M348,196 Q356,188 348,180"
+                  stroke="#69C496"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  fill="none"
+                  animate={{ opacity: [0.2, 0.9, 0.2] }}
+                  transition={{ repeat: Infinity, duration: 0.5 }}
+                />
+              </g>
+            )}
+          </motion.g>
+
+          {/* Celebration / Welcome Sparkle Burst Overlay */}
+          {(mood === 'welcoming' || mood === 'celebrating') && (
+            <g className="pointer-events-none">
+              {[...Array(6)].map((_, i) => (
+                <motion.circle
+                  key={i}
+                  cx={120 + i * 32}
+                  cy={100 + (i % 2) * 20}
+                  r={i % 2 === 0 ? 3.5 : 5}
+                  fill={i % 3 === 0 ? '#facc15' : i % 3 === 1 ? '#60a5fa' : '#f43f5e'}
+                  animate={{
+                    y: [-8, -24, -8],
+                    opacity: [0.4, 1, 0.4],
+                    scale: [0.8, 1.3, 0.8],
+                  }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 1.1 + i * 0.15,
+                    delay: i * 0.12,
+                  }}
+                />
+              ))}
+            </g>
+          )}
 
           {/* Signature Permanent Pink Shy Cheeks (Blush) */}
           <ellipse
@@ -662,7 +736,7 @@ export const LivingMascot = React.memo(({
             rx="14"
             ry="8"
             fill="#ff6b8b"
-            opacity={isBlinking || isSmiling || mood === 'happy' ? 0.85 : 0.6}
+            opacity={isBlinking || isSmiling || mood === 'happy' || mood === 'welcoming' || mood === 'celebrating' ? 0.85 : 0.6}
             className="transition-opacity duration-300"
           />
           <ellipse
@@ -671,7 +745,7 @@ export const LivingMascot = React.memo(({
             rx="14"
             ry="8"
             fill="#ff6b8b"
-            opacity={isBlinking || isSmiling || mood === 'happy' ? 0.85 : 0.6}
+            opacity={isBlinking || isSmiling || mood === 'happy' || mood === 'welcoming' || mood === 'celebrating' ? 0.85 : 0.6}
             className="transition-opacity duration-300"
           />
 
@@ -685,6 +759,36 @@ export const LivingMascot = React.memo(({
                   {/* Blinking curved eyelids */}
                   <path d="M135,180 Q150,186 165,180" />
                   <path d="M235,180 Q250,186 265,180" />
+                </g>
+              );
+            }
+
+            if (mood === 'welcoming' || mood === 'celebrating' || mood === 'hyped') {
+              return (
+                <g>
+                  {/* Star Sparkling Eyes */}
+                  <g transform={`translate(${135 + currentEyeOffset}, 166) scale(0.85)`}>
+                    <polygon points="18,0 23,12 36,18 23,24 18,36 13,24 0,18 13,12" fill="#facc15" />
+                  </g>
+                  <g transform={`translate(${235 + currentEyeOffset}, 166) scale(0.85)`}>
+                    <polygon points="18,0 23,12 36,18 23,24 18,36 13,24 0,18 13,12" fill="#facc15" />
+                  </g>
+                </g>
+              );
+            }
+
+            if (mood === 'motivational') {
+              return (
+                <g>
+                  {/* Motivated Cheerful Eyes */}
+                  <circle cx={150 + currentEyeOffset} cy="180" r="15" fill={colors.eyeColor} />
+                  <circle cx={146 + currentEyeOffset} cy="174" r="6" fill="#fff" />
+                  <circle cx={152 + currentEyeOffset} cy="182" r="2.5" fill="#fff" />
+                  <circle cx={250 + currentEyeOffset} cy="180" r="15" fill={colors.eyeColor} />
+                  <circle cx={246 + currentEyeOffset} cy="174" r="6" fill="#fff" />
+                  <circle cx={252 + currentEyeOffset} cy="182" r="2.5" fill="#fff" />
+                  <path d="M135,160 Q150,154 165,162" stroke={colors.eyeColor} strokeWidth="4.5" strokeLinecap="round" fill="none" />
+                  <path d="M265,160 Q250,154 235,162" stroke={colors.eyeColor} strokeWidth="4.5" strokeLinecap="round" fill="none" />
                 </g>
               );
             }
@@ -724,20 +828,6 @@ export const LivingMascot = React.memo(({
 
                   {/* Sweat Drop on Forehead */}
                   <path d="M280,148 C276,154 276,162 280,166 C284,162 284,154 280,148 Z" fill="#60a5fa" className="animate-pulse" />
-                </g>
-              );
-            }
-
-            if (mood === 'hyped') {
-              return (
-                <g>
-                  {/* Star Sparkling Eyes */}
-                  <g transform={`translate(${135 + currentEyeOffset}, 166) scale(0.85)`}>
-                    <polygon points="18,0 23,12 36,18 23,24 18,36 13,24 0,18 13,12" fill="#facc15" />
-                  </g>
-                  <g transform={`translate(${235 + currentEyeOffset}, 166) scale(0.85)`}>
-                    <polygon points="18,0 23,12 36,18 23,24 18,36 13,24 0,18 13,12" fill="#facc15" />
-                  </g>
                 </g>
               );
             }
@@ -813,7 +903,7 @@ export const LivingMascot = React.memo(({
 
           {/* Mouth Expressions - Clean, Glitch-Free Vector Rendering */}
           <g>
-            {isTalking || isSmiling || mood === 'happy' || mood === 'hyped' ? (
+            {isTalking || isSmiling || mood === 'happy' || mood === 'hyped' || mood === 'welcoming' || mood === 'celebrating' || mood === 'motivational' ? (
               <g>
                 <path
                   d="M182,194 Q200,216 218,194 Q200,228 182,194 Z"

@@ -315,7 +315,10 @@ export function LeaderboardScreen({
     const prevRankStr = localStorage.getItem("nexora_previous_rank");
     const wasGlowActive = localStorage.getItem("nexora_scrolling_to_user_rank") === "true";
 
-    if (prevRankStr) {
+    // Always update displayList immediately so real users are visible instantly
+    setDisplayList(leaderboard);
+
+    if (prevRankStr && wasGlowActive) {
       const prevRank = parseInt(prevRankStr);
       if (prevRank > currentRank && prevRank <= leaderboard.length) {
         setAnimationPreviousRank(prevRank);
