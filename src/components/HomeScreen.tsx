@@ -455,11 +455,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   <span className="text-[9px] font-black text-orange-600/70 uppercase tracking-widest text-center block mb-1.5">{translate("Streak", lang)}</span>
                   <div className="flex flex-col items-center gap-2 w-full">
                     <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/15 flex-shrink-0">
-                      {isSyncing ? (
-                        <Loader2 size={14} className="animate-spin text-white" />
-                      ) : (
-                        <Flame size={14} strokeWidth={2.2} />
-                      )}
+                      {isSyncing ? <Loader2 size={14} className="animate-spin" /> : <Flame size={14} strokeWidth={2.2} />}
                     </div>
                     <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible" title={`${stats.streak} days`}>
                       {formatCompactNumber(stats.streak)}
@@ -478,11 +474,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   <span className="text-[9px] font-black text-emerald-600/70 uppercase tracking-widest text-center block mb-1.5">{translate("XP", lang)}</span>
                   <div className="flex flex-col items-center gap-2 w-full">
                     <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#69C496] to-[#58B383] flex items-center justify-center text-white shadow-md shadow-[#69C496]/15 flex-shrink-0">
-                      {isSyncing ? (
-                        <Loader2 size={14} className="animate-spin text-white" />
-                      ) : (
-                        <Star size={14} strokeWidth={2.2} />
-                      )}
+                      {isSyncing ? <Loader2 size={14} className="animate-spin" /> : <Star size={14} strokeWidth={2.2} />}
                     </div>
                     <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible" title={`${stats.xp || 0} XP`}>
                       {formatCompactNumber(stats.xp || 0)}
@@ -501,11 +493,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   <span className="text-[9px] font-black text-amber-600/70 uppercase tracking-widest text-center block mb-1.5">{translate("Coins", lang)}</span>
                   <div className="flex flex-col items-center gap-2 w-full">
                     <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-500/15 flex-shrink-0">
-                      {isSyncing ? (
-                        <Loader2 size={14} className="animate-spin text-white" />
-                      ) : (
-                        <Coins size={14} strokeWidth={2.2} />
-                      )}
+                      {isSyncing ? <Loader2 size={14} className="animate-spin" /> : <Coins size={14} strokeWidth={2.2} />}
                     </div>
                     <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible" title={`${stats.coins || 0} Coins`}>
                       {formatCompactNumber(stats.coins || 0)}

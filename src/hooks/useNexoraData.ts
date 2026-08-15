@@ -966,7 +966,7 @@ export function useNexoraData(
         setLoading(true);
         setIsDataReady(false);
         setIsStateHydrated(false);
-        setIsSyncingData(true);
+        setIsSyncingData(isUserSwitch);
         dataLoadedFromFirestore.current = false;
         hasMatchedHydratedStateRef.current = false;
         setIsStateLoaded(false, "User logging in, resetting states to load from Firestore.");

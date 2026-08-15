@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Droplets, Flame, Brain, Palette, Star, Quote, Heart, Activity, Target, Crown, Sparkles, X, ShieldCheck, Zap, MessageSquare, Send, Smartphone, Download, Share, HelpCircle, CheckCircle2, Clock } from 'lucide-react';
 import { Mascot } from './Mascot';
-import { TermsPage, PrivacyPage, SupportPage } from './LegalPages';
+import { TermsPage, PrivacyPage, SupportPage, LegalPagesContainer } from './LegalPages';
 import { vibrate } from '../lib/vibrate';
 import { MascotImage } from './MascotImage';
 import { ProgressiveImage } from './ProgressiveImage';
@@ -35,7 +35,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
   }, []);
 
   const [view, setView] = useState<'home' | 'terms' | 'privacy' | 'support'>('home');
-  const { scrollY } = useScroll();
+  const [activeDeviceTab, setActiveDeviceTab] = useState<'all' | 'phone' | 'tablet' | 'laptop'>('all');
   
   // Mascot customization states
   const [mascotTheme, setMascotTheme] = useState<string>('standard');
@@ -137,29 +137,26 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
     }
   };
 
-  // Optimize scroll transforms by reducing their range and impact
-  const bgOpacity = useTransform(scrollY, [0, 1000], [1, 0.8]);
-  const heroY = useTransform(scrollY, [0, 500], [0, 40]);
-
-  if (view === 'terms') return <TermsPage onBack={() => setView('home')} />;
-  if (view === 'privacy') return <PrivacyPage onBack={() => setView('home')} />;
-  if (view === 'support') return <SupportPage onBack={() => setView('home')} />;
+  if (view === 'terms' || view === 'privacy' || view === 'support') {
+    return <LegalPagesContainer onBack={() => setView('home')} initialTab={view} />;
+  }
 
   return (
-    <div className="min-h-screen bg-[#f4f8ff] flex flex-col items-center relative selection:bg-blue-100 selection:text-blue-900">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#f4f8ff] flex flex-col items-center relative selection:bg-blue-100 selection:text-blue-900">
       {/* Floating Interactive Live Notifications Stack */}
-      <div className="fixed top-24 right-6 z-50 flex flex-col gap-2 pointer-events-none max-w-sm">
+      <div className="fixed top-20 right-4 sm:right-6 z-50 flex flex-col gap-2 pointer-events-none max-w-xs sm:max-w-sm">
         <AnimatePresence>
           {notifications.map(n => (
             <motion.div
               key={n.id}
-              initial={{ opacity: 0, x: 50, y: -10, scale: 0.9 }}
-              animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 30, scale: 0.9 }}
-              className="bg-blue-950/90 text-white text-xs font-black tracking-wide px-5 py-3.5 rounded-2xl border border-blue-800 shadow-2xl flex items-center gap-2 pointer-events-auto backdrop-blur-md"
+              initial={{ opacity: 0, x: 30, scale: 0.95 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 20, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="bg-slate-900/95 text-white text-xs font-bold px-4 py-3 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-2 pointer-events-auto backdrop-blur-sm"
             >
-              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              {n.text}
+              <span className="flex h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
+              <span>{n.text}</span>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -168,16 +165,17 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       {/* Premium Upgrade Features Modal */}
       <AnimatePresence>
         {showUpgradeModal && (
-          <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
               className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative border border-blue-100"
             >
               <button
                 onClick={() => { vibrate(5); setShowUpgradeModal(false); }}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-blue-50 text-blue-900/60 transition-colors"
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-blue-50 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -186,8 +184,8 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 <div className="w-16 h-16 rounded-2xl bg-yellow-100 text-yellow-600 flex items-center justify-center shadow-lg shadow-yellow-500/10">
                   <Crown size={32} fill="currentColor" />
                 </div>
-                <h3 className="text-2xl font-black text-blue-950 tracking-tight">Nexora Architect Elite</h3>
-                <p className="text-blue-950/60 text-sm">Unlock the ultimate customized lifestyle environment with exclusive creator rewards and skins.</p>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Nexora Architect Elite</h3>
+                <p className="text-slate-600 text-sm">Unlock the ultimate customized lifestyle environment with exclusive creator rewards and skins.</p>
                 
                 <div className="w-full space-y-3 pt-4 text-left">
                   {[
@@ -203,7 +201,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
-                      <span className="text-sm text-blue-950/80 font-medium">{feat}</span>
+                      <span className="text-sm text-slate-700 font-medium">{feat}</span>
                     </div>
                   ))}
                 </div>
@@ -215,13 +213,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                       setShowUpgradeModal(false);
                       onGetStarted();
                     }}
-                    className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-[0.99]"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer active:scale-[0.99]"
                   >
                     Get Elite Access Now
                   </button>
                   <button
                     onClick={() => { vibrate(5); setShowUpgradeModal(false); }}
-                    className="w-full text-blue-900/40 text-xs font-bold uppercase tracking-widest py-2 hover:text-blue-950"
+                    className="w-full text-slate-500 text-xs font-bold uppercase tracking-widest py-2 hover:text-slate-900 cursor-pointer"
                   >
                     Continue Sandbox Tour
                   </button>
@@ -232,440 +230,261 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         )}
       </AnimatePresence>
 
-
-
-      {/* Animated Background Mesh with Scroll Interaction - Optimized for Performance */}
-      <motion.div 
-        style={{ opacity: bgOpacity }}
-        className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
-      >
-        {/* Main "Warm Blue" Lighting Glows - removed heavy blurs */}
-        <motion.div 
-          animate={{
-            rotate: [0, 360],
-            scale: [1, 1.05, 1],
-          }}
-          transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-[20%] -left-[20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_center,rgba(186,230,253,0.4)_0%,rgba(219,234,254,0.2)_30%,transparent_50%)]" 
-          style={{ willChange: 'transform' }}
-        />
-        <motion.div 
-          animate={{
-            rotate: [360, 0],
-            scale: [1.05, 1, 1.05],
-          }}
-          transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-[30%] -right-[30%] w-[150%] h-[150%] bg-[radial-gradient(circle_at_center,rgba(199,210,254,0.3)_0%,rgba(224,231,255,0.15)_40%,transparent_50%)]" 
-          style={{ willChange: 'transform' }}
-        />
-        
-        {/* Accent blobs for "warmth" */}
-        <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] bg-blue-100/20 rounded-full blur-[100px]" />
-        <div className="absolute top-1/2 right-1/3 w-[500px] h-[500px] bg-indigo-50/30 rounded-full blur-[100px]" />
-
-        {/* Floating Particles - Reduced count and simplified animation for performance */}
-        {[...Array(6)].map((_, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0 }}
-            animate={{ 
-              opacity: [0, 0.4, 0],
-              y: [0, -100 - (i * 20)],
-              x: [0, i % 2 === 0 ? 50 : -50],
-            }}
-            transition={{ 
-              duration: 12 + i, 
-              repeat: Infinity, 
-              delay: i * 1.5,
-              ease: "easeInOut"
-            }}
-            className="absolute bg-blue-300/20 rounded-full blur-xl"
-            style={{
-              width: `${20 + (i * 15)}px`,
-              height: `${20 + (i * 15)}px`,
-              left: `${15 + (i * 12)}%`,
-              bottom: '-10%',
-              willChange: 'transform, opacity'
-            }}
-          />
-        ))}
-      </motion.div>
+      {/* Lightweight Static Ambient Mesh Background - 0% Scroll CPU Overhead */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute -top-[10%] -left-[10%] w-[120%] h-[700px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-200/40 via-blue-100/20 to-transparent" />
+        <div className="absolute top-[40%] right-[-10%] w-[500px] h-[500px] bg-[radial-gradient(circle_at_center,rgba(224,231,255,0.3)_0%,transparent_70%)]" />
+      </div>
 
       {/* Header */}
       <header className="w-full max-w-7xl mx-auto p-6 md:p-10 flex justify-between items-center z-20 relative">
-        <motion.div 
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="flex items-center gap-4 group cursor-pointer"
-        >
+        <div className="flex items-center gap-4 group cursor-pointer">
           <div className="relative">
-            <motion.div 
-              animate={{ rotate: [0, 360], scale: [1, 1.05, 1] }}
-              transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-              className="absolute -inset-3 bg-gradient-to-tr from-blue-400 via-indigo-300 to-cyan-400 rounded-full opacity-30 group-hover:opacity-60 transition-opacity blur-xl"
-            />
             <MascotImage 
               alt="Nexora Logo" 
-              className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-2xl relative z-10 shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 border border-white/20"
+              className="w-14 h-14 md:w-16 md:h-16 object-cover rounded-2xl relative z-10 shadow-md border border-white/60"
             />
           </div>
-          <span className="text-3xl md:text-5xl font-black text-blue-950 tracking-tighter drop-shadow-sm">Nexora</span>
-        </motion.div>
+          <span className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Nexora</span>
+        </div>
         
-        <motion.div 
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="flex items-center gap-4 md:gap-8"
-        >
-          <motion.button 
-            whileHover={{ scale: 1.05, rotate: -2 }}
-            whileTap={{ scale: 0.95 }}
+        <div className="flex items-center gap-3 sm:gap-6">
+          <button 
             onClick={() => {
               vibrate(10);
               setShowUpgradeModal(true);
             }}
-            className="hidden sm:flex items-center gap-2 text-red-500 font-black px-5 py-2.5 bg-white/60 backdrop-blur-md rounded-full border border-red-100 shadow-sm transition-all"
+            className="hidden sm:flex items-center gap-2 text-amber-600 font-bold px-4 py-2 bg-amber-50 hover:bg-amber-100 rounded-full border border-amber-200 shadow-2xs transition-all cursor-pointer"
           >
-            <Crown size={16} fill="currentColor" />
-            <span className="text-[10px] uppercase tracking-[0.2em]">Upgrade</span>
-          </motion.button>
+            <Crown size={15} fill="currentColor" />
+            <span className="text-xs uppercase tracking-wider">Upgrade</span>
+          </button>
           <button 
             onClick={() => {
               vibrate(10);
               onGetStarted();
             }}
-            className="text-blue-900/60 font-black hover:text-blue-600 transition-colors px-4 py-2 hover:translate-y-[-2px] duration-300 text-sm tracking-wide"
+            className="text-slate-600 font-bold hover:text-blue-600 transition-colors px-3 py-2 text-sm tracking-wide cursor-pointer"
           >
             LOG IN
           </button>
-          <motion.button
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.98 }}
+          <button
             onClick={onGetStarted}
-            className="bg-blue-950 text-white px-6 py-3 rounded-xl font-black text-xs tracking-widest uppercase shadow-xl shadow-blue-950/20 hover:shadow-blue-950/40 transition-all hidden md:block"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs tracking-wider uppercase shadow-md shadow-blue-500/20 transition-all hidden md:block cursor-pointer active:scale-95"
           >
             Get Started
-          </motion.button>
-        </motion.div>
+          </button>
+        </div>
       </header>
 
       {/* Hero Section */}
-      <main className="flex-1 w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-center p-6 md:p-12 gap-16 lg:gap-24 z-10 relative">
-        <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left space-y-10">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5 }}
-              className="inline-flex items-center gap-3 bg-white/60 backdrop-blur-md text-blue-600 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] mb-8 border border-white/80 shadow-sm cursor-pointer hover:bg-white transition-all"
+      <main className="flex-1 w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-center p-6 md:p-12 gap-12 lg:gap-16 z-10 relative">
+        <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6">
+          <div className="space-y-4">
+            <div 
+              className="inline-flex items-center gap-2 bg-white text-blue-600 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border border-blue-100 shadow-2xs cursor-pointer hover:border-blue-200 transition-all"
               onClick={() => {
                 vibrate(10);
                 setShowUpgradeModal(true);
               }}
             >
-              <span className="flex h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse ring-4 ring-blue-100" />
-              Next Evolution of Wellness
-            </motion.div>
-            <h1 className="text-7xl md:text-9xl font-black text-blue-950 tracking-tighter leading-[0.85] mb-4">
+              <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+              <span>Next Evolution of Wellness</span>
+            </div>
+            
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-slate-900 tracking-tight leading-[1.05]">
               Unlock Your<br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-indigo-600 to-cyan-500 bg-[length:200%_auto] animate-gradient-x drop-shadow-xl">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600">
                 True Potential
               </span>
             </h1>
-            <p className="mt-10 text-xl md:text-2xl text-blue-950/50 max-w-2xl font-medium leading-[1.6]">
-              Escape the mundane routine. Nexora gamifies your growth with an AI-powered ritual system and a mascot that reflects your success.
+            
+            <p className="text-base sm:text-lg text-slate-600 max-w-xl font-medium leading-relaxed">
+              Escape the mundane routine. Nexora gamifies your daily growth with an intuitive ritual system and a living mascot that evolves with your success.
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex flex-col sm:flex-row gap-4 sm:gap-6 w-full sm:w-auto"
-          >
-            <motion.button 
-              whileHover={{ scale: 1.02, y: -4 }}
-              whileTap={{ scale: 0.98 }}
+          {/* Call to Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pt-2">
+            <button 
               onClick={() => {
                 vibrate(20);
                 onGetStarted();
               }}
-              className="group relative bg-blue-600 text-white px-10 py-5 sm:px-12 sm:py-6 rounded-2xl font-black text-xl shadow-[0_20px_50px_rgba(37,99,235,0.3)] hover:shadow-[0_30px_60px_rgba(37,99,235,0.4)] transition-all flex items-center justify-center gap-4 overflow-hidden"
+              className="group relative bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 sm:px-10 sm:py-4.5 rounded-2xl font-bold text-base sm:text-lg shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-95"
             >
-              <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
-              START FLOWING <ArrowRight size={28} className="group-hover:translate-x-2 transition-transform duration-500" />
-            </motion.button>
+              <span>START FLOWING</span>
+              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
 
-          </motion.div>
-
-          {/* Features Grid - Quick Preview connected directly to active presets */}
-          <div className="space-y-3 w-full">
+          {/* Quick Preset Test Pills */}
+          <div className="space-y-2.5 w-full pt-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black text-blue-900/40 uppercase tracking-[0.25em]">Try interactive presets</span>
-              <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full animate-pulse">💡 Click any card below to test!</span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Try Interactive Presets:</span>
+              <span className="text-[10px] font-bold text-blue-700 bg-blue-100/80 px-2.5 py-0.5 rounded-full">💡 Tap to preview</span>
             </div>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7 }}
-              className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full"
-            >
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full">
               {[
-                { icon: <Droplets />, color: 'blue', text: 'HYDRATION', preset: 'hydration' as const },
-                { icon: <Flame />, color: 'orange', text: 'KINETIC', preset: 'kinetic' as const },
-                { icon: <Brain />, color: 'emerald', text: 'NEURAL', preset: 'neural' as const },
-                { icon: <Palette />, color: 'purple', text: 'CREATIVE', preset: 'creative' as const }
+                { icon: <Droplets />, bg: 'bg-cyan-50 text-cyan-700 border-cyan-200/70', badgeBg: 'bg-cyan-500', text: 'Hydration', preset: 'hydration' as const },
+                { icon: <Flame />, bg: 'bg-orange-50 text-orange-700 border-orange-200/70', badgeBg: 'bg-orange-500', text: 'Kinetic', preset: 'kinetic' as const },
+                { icon: <Brain />, bg: 'bg-emerald-50 text-emerald-700 border-emerald-200/70', badgeBg: 'bg-emerald-500', text: 'Neural', preset: 'neural' as const },
+                { icon: <Palette />, bg: 'bg-purple-50 text-purple-700 border-purple-200/70', badgeBg: 'bg-purple-500', text: 'Creative', preset: 'creative' as const }
               ].map((f, i) => (
-                <motion.button 
+                <button 
                   key={i}
-                  whileHover={{ y: -6, scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
                   onClick={() => applyPreset(f.preset)}
-                  className="glass-card p-5 flex flex-col items-center gap-3 border border-white/60 bg-white/40 shadow-lg group text-center cursor-pointer hover:bg-white/80 transition-all outline-none"
+                  className={`p-3 rounded-2xl border flex items-center gap-2.5 font-bold text-xs shadow-2xs hover:shadow-xs transition-all active:scale-95 cursor-pointer bg-white ${f.bg}`}
                 >
-                  <div className={`w-12 h-12 rounded-2xl bg-${f.color}-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-${f.color}-500/20 group-hover:rotate-12 transition-transform`}>
-                    {React.cloneElement(f.icon as React.ReactElement<any>, { size: 24, strokeWidth: 2.5 })}
+                  <div className={`w-8 h-8 rounded-xl ${f.badgeBg} text-white flex items-center justify-center shrink-0`}>
+                    {React.cloneElement(f.icon as React.ReactElement<any>, { size: 16, strokeWidth: 2.5 })}
                   </div>
-                  <div className="text-[10px] font-black text-blue-950/70 tracking-[0.2em]">{f.text}</div>
-                </motion.button>
+                  <span>{f.text}</span>
+                </button>
               ))}
-            </motion.div>
+            </div>
           </div>
         </div>
 
-        {/* Hero Illustration with Parallax and NEW Interactive Sandbox Panel */}
-        <div className="flex-1 w-full max-w-lg flex flex-col items-center">
-          <motion.div 
-            style={{ y: heroY }}
-            initial={{ opacity: 0, scale: 0.4, rotate: -25 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            transition={{ 
-              duration: 1.2, 
-              type: "spring", 
-              stiffness: 80, 
-              damping: 15,
-              delay: 0.3
-            }}
-            className="w-full relative perspective-1000"
-          >
-            {/* Main Glowing Orb */}
-            <motion.div 
-              animate={{ 
-                scale: [1, 1.2, 1],
-                opacity: [0.2, 0.4, 0.2]
-              }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute inset-x-0 bottom-1/4 h-[80%] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.5)_0%,transparent_50%)]" 
-              style={{ willChange: 'transform, opacity' }}
-            />
-            
-            <div className="relative z-10">
-              <motion.div
-                animate={{ 
-                  y: [0, -12, 0],
-                  rotateZ: [0, 1.5, 0]
+        {/* Hero Interactive Mascot + Live Preview Panel */}
+        <div className="flex-1 w-full max-w-md lg:max-w-lg flex flex-col items-center">
+          <div className="w-full relative flex flex-col items-center">
+            {/* Mascot Centerpiece */}
+            <div className="relative z-10 w-60 h-60 sm:w-68 sm:h-68 flex items-center justify-center">
+              <div 
+                className="relative z-10 w-full h-full cursor-pointer flex items-center justify-center"
+                onClick={() => {
+                  vibrate(10);
+                  addNotification("✨ Tapped Nexo Mascot!");
                 }}
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                className="drop-shadow-[0_30px_30px_rgba(30,58,138,0.2)]"
-                style={{ willChange: 'transform' }}
               >
                 <Mascot 
-                  className="w-full h-auto cursor-pointer" 
+                  className="w-full h-full object-contain" 
                   theme={mascotTheme}
                   hat={mascotHat}
                   mood={mascotMood}
                   effect={mascotEffect}
-                  onClick={() => {
-                    vibrate(10);
-                    addNotification("✨ Hello! Tapped Nexo Mascot.");
-                  }}
                 />
-              </motion.div>
+              </div>
             </div>
 
-            {/* Floating Data Indicators synced with simulator states */}
-            <motion.div 
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1, duration: 1 }}
-              className="absolute -top-10 -left-12 glass-card p-5 rounded-2xl shadow-2xl border border-white backdrop-blur-md z-20 hidden lg:block"
-            >
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping" />
-                  <span className="text-xs font-black text-blue-950 tracking-widest uppercase">
-                    {breathingActive ? `NEURAL BREATH: ${breathPhase}` : "NEXO LINKED"}
-                  </span>
+            {/* Compact Live Studio Control Panel */}
+            <div className="w-full bg-white border border-slate-200/80 rounded-3xl p-5 shadow-lg shadow-blue-900/5 space-y-4 z-20 mt-2">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Crown size={16} className="text-amber-500 fill-amber-500" />
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Nexo Live Studio</span>
                 </div>
-                <div className="h-1.5 w-32 bg-blue-100 rounded-full overflow-hidden relative">
-                  <motion.div 
-                    animate={{ width: `${(waterLogged / 2000) * 100}%` }}
-                    transition={{ type: "spring", stiffness: 80 }}
-                    className="h-full bg-blue-500 rounded-full"
-                  />
-                  {breathingActive && (
-                    <motion.div 
-                      animate={{ scaleX: breathPercent / 100 }}
-                      className="absolute inset-0 bg-emerald-400 origin-left"
-                    />
-                  )}
-                </div>
-                <span className="text-[9px] font-black text-blue-900/60 tracking-wider">
-                  {breathingActive ? `SIMULATING PATTERN` : `WATER: ${waterLogged}ml / 2000ml`}
-                </span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Interactive</span>
               </div>
-            </motion.div>
 
-            <motion.div 
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1.2, duration: 1 }}
-              className="absolute -bottom-6 -right-12 glass-card p-5 rounded-2xl shadow-2xl border border-white backdrop-blur-md z-20 hidden lg:block"
-            >
-              <div className="flex items-center gap-4">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1">STRENGTH STAT</span>
-                  <span className="text-3xl font-black text-blue-950 leading-none">{pushupsLogged} DONE</span>
+              {/* Skin Theme selector */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-[11px] font-bold text-slate-600">
+                  <span>Mascot Theme Skin</span>
+                  <span className="text-blue-600 capitalize">{mascotTheme.replace('_', ' ')}</span>
                 </div>
-                <div className="w-12 h-12 bg-orange-100 text-orange-500 rounded-xl flex items-center justify-center">
-                  <Flame size={24} strokeWidth={3} />
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { value: 'standard', name: 'Classic', color: 'bg-sky-500' },
+                    { value: 'cosmic', name: 'Cosmic', color: 'bg-purple-600' },
+                    { value: 'neon', name: 'Neon', color: 'bg-pink-500' },
+                    { value: 'fire', name: 'Fire', color: 'bg-orange-500' },
+                    { value: 'ice', name: 'Ice', color: 'bg-cyan-500' },
+                    { value: 'nature', name: 'Nature', color: 'bg-emerald-500' },
+                    { value: 'royal_gold', name: 'Gold', color: 'bg-amber-500' },
+                  ].map(th => (
+                    <button
+                      key={th.value}
+                      onClick={() => {
+                        vibrate(5);
+                        setMascotTheme(th.value);
+                        addNotification(`🎨 Theme: ${th.name}`);
+                      }}
+                      className={`px-3 py-1 rounded-full text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
+                        mascotTheme === th.value
+                          ? `${th.color} text-white shadow-xs ring-2 ring-blue-300/40`
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${mascotTheme === th.value ? 'bg-white' : th.color}`} />
+                      <span>{th.name}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
 
-          {/* Interactive Live Sandbox Control Panel */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-            className="glass-card bg-white/70 backdrop-blur-md border border-white/80 rounded-3xl p-5 mt-6 shadow-xl space-y-5 w-full z-20 relative max-w-md"
-          >
-            <div className="flex items-center justify-between border-b border-blue-100/50 pb-2">
-              <span className="text-xs font-black text-blue-950 uppercase tracking-widest flex items-center gap-1.5">
-                <Crown size={14} className="text-yellow-500 fill-yellow-500 animate-pulse" />
-                Nexo Live Sandbox
-              </span>
-              <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Interactive Live Preview</span>
-            </div>
+              {/* Hats & Aura Tabs */}
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-600 block">Accessories</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { id: 'none', label: 'None' },
+                      { id: 'crown', label: '👑' },
+                      { id: 'cool', label: '🕶️' },
+                      { id: 'wizard', label: '🧙' },
+                      { id: 'artist', label: '🎨' },
+                      { id: 'viking', label: '🪓' },
+                    ].map(h => (
+                      <button
+                        key={h.id}
+                        onClick={() => {
+                          vibrate(5);
+                          setMascotHat(h.id);
+                        }}
+                        className={`h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          mascotHat === h.id ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        {h.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Custom Theme Skin Selectors */}
-            <div className="space-y-1.5">
-              <span className="text-[9px] font-black text-blue-900/50 uppercase tracking-widest">Select Premium Mascot Theme Skin:</span>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { value: 'standard', color: 'bg-sky-400 border-sky-300', name: 'Classic' },
-                  { value: 'cosmic', color: 'bg-purple-500 border-purple-400', name: 'Cosmic' },
-                  { value: 'neon', color: 'bg-pink-500 border-pink-400', name: 'Neon' },
-                  { value: 'fire', color: 'bg-orange-500 border-orange-400', name: 'Fire' },
-                  { value: 'ice', color: 'bg-cyan-500 border-cyan-400', name: 'Ice' },
-                  { value: 'nature', color: 'bg-emerald-500 border-emerald-400', name: 'Nature' },
-                  { value: 'royal_gold', color: 'bg-yellow-500 border-yellow-400', name: 'Gold' },
-                ].map(th => (
-                  <button
-                    key={th.value}
-                    onClick={() => {
-                      vibrate(5);
-                      setMascotTheme(th.value);
-                      addNotification(`🎨 Equipped Skin: ${th.name}`);
-                    }}
-                    title={th.name}
-                    className={`h-6 px-2.5 rounded-full border text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 active:scale-95 ${
-                      mascotTheme === th.value 
-                        ? `${th.color} text-white shadow-md shadow-blue-500/10 scale-105` 
-                        : 'bg-white text-blue-900/60 hover:text-blue-950 border-blue-100'
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${mascotTheme === th.value ? 'bg-white' : th.color.split(' ')[0]}`} />
-                    {th.name}
-                  </button>
-                ))}
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-600 block">Auras</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { id: 'none', label: 'Off' },
+                      { id: 'sparkles', label: '✨' },
+                      { id: 'embers', label: '🔥' },
+                      { id: 'orbs', label: '🔮' },
+                      { id: 'neon_glow', label: '🌈' },
+                      { id: 'gold_dust', label: '⭐' },
+                    ].map(a => (
+                      <button
+                        key={a.id}
+                        onClick={() => {
+                          vibrate(5);
+                          setMascotEffect(a.id);
+                        }}
+                        className={`h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          mascotEffect === a.id ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Equip Hats Selectors */}
-            <div className="space-y-1.5">
-              <span className="text-[9px] font-black text-blue-900/50 uppercase tracking-widest">Equip Accessory Hat:</span>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  { id: 'none', label: '❌ None' },
-                  { id: 'crown', label: '👑 Crown' },
-                  { id: 'cool', label: '🕶️ Glasses' },
-                  { id: 'wizard', label: '🧙 Wizard' },
-                  { id: 'artist', label: '🎨 Beret' },
-                  { id: 'viking', label: '🪓 Viking' },
-                ].map(hatOption => (
-                  <button
-                    key={hatOption.id}
-                    onClick={() => {
-                      vibrate(5);
-                      setMascotHat(hatOption.id);
-                      addNotification(`🤠 Equipped Hat: ${hatOption.label.split(' ')[1] || 'None'}`);
-                    }}
-                    className={`py-1 px-2 rounded-xl text-[10px] font-bold border transition-all active:scale-95 ${
-                      mascotHat === hatOption.id
-                        ? 'bg-blue-600 text-white border-blue-500 shadow-md'
-                        : 'bg-white text-blue-950 hover:bg-blue-50 border-blue-100'
-                    }`}
-                  >
-                    {hatOption.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Special Particle Effects */}
-            <div className="space-y-1.5">
-              <span className="text-[9px] font-black text-blue-900/50 uppercase tracking-widest">Active Particle Environment Aura:</span>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  { id: 'none', label: '❌ Clear' },
-                  { id: 'sparkles', label: '✨ Stars' },
-                  { id: 'embers', label: '🔥 Fire' },
-                  { id: 'orbs', label: '🔮 Orbs' },
-                  { id: 'neon_glow', label: '🌈 Glow' },
-                  { id: 'gold_dust', label: '⭐ Gold' },
-                ].map(effOption => (
-                  <button
-                    key={effOption.id}
-                    onClick={() => {
-                      vibrate(5);
-                      setMascotEffect(effOption.id);
-                      addNotification(`✨ Aura Set: ${effOption.label.split(' ')[1] || 'Clear'}`);
-                    }}
-                    className={`py-1 px-2 rounded-xl text-[10px] font-bold border transition-all active:scale-95 ${
-                      mascotEffect === effOption.id
-                        ? 'bg-blue-600 text-white border-blue-500 shadow-md'
-                        : 'bg-white text-blue-950 hover:bg-blue-50 border-blue-100'
-                    }`}
-                  >
-                    {effOption.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Live Interactive Ritual Simulators */}
-            <div className="space-y-2 pt-2 border-t border-blue-100/50">
-              <span className="text-[9px] font-black text-blue-900/50 uppercase tracking-widest block">Simulate App Habits:</span>
-              <div className="flex flex-col sm:flex-row gap-2">
+              {/* Ritual Simulator Actions */}
+              <div className="pt-2 border-t border-slate-100 flex gap-2">
                 <button
                   onClick={() => {
                     vibrate(10);
                     setWaterLogged(prev => prev + 250);
                     setMascotMood('happy');
-                    addNotification("💧 Drank +250ml water! Mascot sloshed!");
+                    addNotification("💧 Logged +250ml Water!");
                   }}
-                  className="flex-1 py-2 px-3 rounded-xl bg-cyan-50 hover:bg-cyan-100 border border-cyan-100 text-[10px] font-black text-cyan-800 uppercase tracking-wide flex items-center justify-center gap-1.5 transition-all"
+                  className="flex-1 py-2 px-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
                 >
-                  <Droplets size={12} fill="currentColor" />
-                  Feed +250ml Water
+                  <Droplets size={14} className="text-sky-600" />
+                  <span>+250ml</span>
                 </button>
 
                 <button
@@ -673,490 +492,635 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                     vibrate(15);
                     setPushupsLogged(prev => prev + 5);
                     setMascotMood('surprised');
-                    addNotification("🔥 Strength check! +5 pushups logged!");
+                    addNotification("🔥 Logged +5 Pushups!");
                   }}
-                  className="flex-1 py-2 px-3 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-100 text-[10px] font-black text-orange-800 uppercase tracking-wide flex items-center justify-center gap-1.5 transition-all"
+                  className="flex-1 py-2 px-2.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
                 >
-                  <Flame size={12} fill="currentColor" />
-                  Do 5 Pushups
+                  <Flame size={14} className="text-orange-600" />
+                  <span>+5 Pushups</span>
                 </button>
 
                 <button
                   onClick={startBreathingSim}
-                  className={`flex-1 py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-wide flex items-center justify-center gap-1.5 transition-all ${
+                  className={`flex-1 py-2 px-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
                     breathingActive 
-                      ? 'bg-emerald-600 text-white border-emerald-500 animate-pulse'
-                      : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-100 text-emerald-800'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
                   }`}
                 >
-                  <Brain size={12} fill="currentColor" />
-                  {breathingActive ? breathPhase : "Breathe Live"}
+                  <Brain size={14} />
+                  <span>{breathingActive ? breathPhase : "Breathe"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Smooth Continuous Auto-Scrolling Ticker Strip */}
+      <div className="w-full bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 py-2.5 sm:py-3 overflow-hidden relative z-20 shadow-sm select-none border-y border-white/20">
+        <div className="animate-marquee-continuous flex items-center">
+          {[
+            "Gamified Daily Rituals",
+            "Living Mascot Companion",
+            "Real-Time Cloud Sync",
+            "Mindful Breathing Sanctuary",
+            "Smart Hydration Tracking",
+            "Daily Push-Up Milestones",
+            "Creative Digital Sketch Canvas",
+            "Legendary Outfits & Auras",
+            "Synced Across Phone, Tablet & Laptop",
+            "Zen Garden Habit Growth",
+            "Zero-Ad Private & Encrypted Ecosystem",
+            "Daily XP Boosts & League Ranks",
+            "Gamified Daily Rituals",
+            "Living Mascot Companion",
+            "Real-Time Cloud Sync",
+            "Mindful Breathing Sanctuary",
+            "Smart Hydration Tracking",
+            "Daily Push-Up Milestones",
+            "Creative Digital Sketch Canvas",
+            "Legendary Outfits & Auras",
+            "Synced Across Phone, Tablet & Laptop",
+            "Zen Garden Habit Growth",
+            "Zero-Ad Private & Encrypted Ecosystem",
+            "Daily XP Boosts & League Ranks"
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-2.5 sm:gap-3.5 text-white font-extrabold text-[11px] sm:text-xs uppercase tracking-wider px-4 sm:px-6 whitespace-nowrap shrink-0">
+              <Sparkles size={13} className="text-yellow-300 shrink-0 animate-pulse" />
+              <span className="shrink-0 drop-shadow-xs">{item}</span>
+              <span className="text-white/40 w-1.5 h-1.5 rounded-full bg-current shrink-0 ml-2" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Visual 3-Pillar Story Section with Lightweight Scroll Reveal */}
+      <section className="w-full bg-white py-16 sm:py-24 relative z-10">
+        <div className="max-w-6xl mx-auto px-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            style={{ willChange: 'opacity, transform' }}
+            className="text-center max-w-3xl mx-auto space-y-3 mb-12 sm:mb-16"
+          >
+            <span className="text-blue-600 font-extrabold text-xs uppercase tracking-widest">The Nexora Philosophy</span>
+            <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+              Greatness is built one <span className="text-blue-600">small ritual</span> at a time.
+            </h2>
+            <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed">
+              Nexora synchronizes your mental, physical, and creative energies. When you thrive, Nexo thrives with you.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: <Target size={24} />,
+                badgeBg: 'bg-blue-100 text-blue-600',
+                title: 'Gamified Momentum',
+                desc: 'Transform daily routines into enjoyable micro-challenges. Level up streaks, earn coins, and unlock cosmetic rewards naturally.'
+              },
+              {
+                icon: <Heart size={24} />,
+                badgeBg: 'bg-emerald-100 text-emerald-600',
+                title: 'Living Digital Pet',
+                desc: 'Your companion reflects your balance. Feed it water when you drink, exercise together, and keep its mood glowing brightly.'
+              },
+              {
+                icon: <Brain size={24} />,
+                badgeBg: 'bg-purple-100 text-purple-600',
+                title: 'Holistic Mind & Body',
+                desc: 'A complete sanctuary combining physical hydration and push-ups with mindful breathing cycles and freeform creative drawing.'
+              }
+            ].map((pillar, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.1 }}
+                transition={{ duration: 0.35, delay: i * 0.1, ease: "easeOut" }}
+                style={{ willChange: 'opacity, transform' }}
+                className="bg-slate-50/80 border border-slate-200/80 rounded-3xl p-7 space-y-4 hover:shadow-md transition-all"
+              >
+                <div className={`w-12 h-12 rounded-2xl ${pillar.badgeBg} flex items-center justify-center`}>
+                  {pillar.icon}
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">{pillar.title}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  {pillar.desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 2x2 Bento Grid: Core Feature Arsenal with Lightweight Scroll Reveal */}
+      <section className="w-full py-16 sm:py-24 bg-[#f8fbff] relative z-10 border-t border-slate-200/60">
+        <div className="max-w-6xl mx-auto px-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            style={{ willChange: 'opacity, transform' }}
+            className="text-center max-w-2xl mx-auto mb-12 space-y-2"
+          >
+            <span className="text-blue-600 font-extrabold text-xs uppercase tracking-widest">Core Feature Suite</span>
+            <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Everything you need to thrive</h2>
+            <p className="text-base text-slate-600">Four essential daily pillars designed to keep you focused and balanced.</p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Bento Card 1: Hydration */}
+            <motion.div 
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.1 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              style={{ willChange: 'opacity, transform' }}
+              className="bg-white rounded-3xl p-7 sm:p-8 border border-slate-200/80 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-6"
+            >
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-100 text-cyan-600 flex items-center justify-center">
+                  <Droplets size={26} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900">Hydration Tracking</h3>
+                  <p className="text-slate-600 text-sm mt-1.5 leading-relaxed">
+                    Set customized daily hydration targets and log water in one tap. Keep your energy high and mental clarity razor sharp.
+                  </p>
+                </div>
+              </div>
+              <div className="bg-cyan-50/70 border border-cyan-100 rounded-2xl p-4 flex items-center justify-between">
+                <span className="text-xs font-bold text-cyan-900">Daily Target</span>
+                <span className="text-sm font-black text-cyan-700">2,000 ml / day</span>
+              </div>
+            </motion.div>
+
+            {/* Bento Card 2: Push-ups */}
+            <motion.div 
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.1 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              style={{ willChange: 'opacity, transform' }}
+              className="bg-white rounded-3xl p-7 sm:p-8 border border-slate-200/80 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-6"
+            >
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center">
+                  <Flame size={26} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900">Daily Strength & Push-ups</h3>
+                  <p className="text-slate-600 text-sm mt-1.5 leading-relaxed">
+                    Build functional bodyweight strength with incremental daily push-up goals. Start small and build lasting physical resilience.
+                  </p>
+                </div>
+              </div>
+              <div className="bg-orange-50/70 border border-orange-100 rounded-2xl p-4 flex items-center justify-between">
+                <span className="text-xs font-bold text-orange-900">Progressive Overload</span>
+                <span className="text-sm font-black text-orange-700">Daily XP Bonuses</span>
+              </div>
+            </motion.div>
+
+            {/* Bento Card 3: Mindful Breathing */}
+            <motion.div 
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.1 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              style={{ willChange: 'opacity, transform' }}
+              className="bg-white rounded-3xl p-7 sm:p-8 border border-slate-200/80 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-6"
+            >
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <Brain size={26} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900">Guided Mindful Breathing</h3>
+                  <p className="text-slate-600 text-sm mt-1.5 leading-relaxed">
+                    Immerse in visual rhythm-guided breathing exercises engineered to dissolve stress, reduce cortisol, and restore focus.
+                  </p>
+                </div>
+              </div>
+              <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-4 flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-900">4-4-4 Box Technique</span>
+                <span className="text-sm font-black text-emerald-700">Instant Calm</span>
+              </div>
+            </motion.div>
+
+            {/* Bento Card 4: Creative Drawing */}
+            <motion.div 
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.1 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              style={{ willChange: 'opacity, transform' }}
+              className="bg-white rounded-3xl p-7 sm:p-8 border border-slate-200/80 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-6"
+            >
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center">
+                  <Palette size={26} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900">Creative Drawing Studio</h3>
+                  <p className="text-slate-600 text-sm mt-1.5 leading-relaxed">
+                    Unleash your imagination on a responsive canvas. Doodle, sketch, and unwind while your companion cheers your creativity.
+                  </p>
+                </div>
+              </div>
+              <div className="bg-purple-50/70 border border-purple-100 rounded-2xl p-4 flex items-center justify-between">
+                <span className="text-xs font-bold text-purple-900">Multi-Tool Canvas</span>
+                <span className="text-sm font-black text-purple-700">Auto-Saved</span>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Multi-Device Showcase Section - Clean, Floating & Free of Card Boxes */}
+      <section className="w-full bg-white py-14 sm:py-20 relative z-10 border-t border-slate-200/60" id="device-experience-section">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            style={{ willChange: 'opacity, transform' }}
+            className="text-center max-w-2xl mx-auto mb-8 space-y-2"
+          >
+            <span className="text-blue-600 font-extrabold text-xs uppercase tracking-widest">Multi-Device Synergy</span>
+            <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Nexora Across All Your Screens</h2>
+            <p className="text-sm sm:text-base text-slate-600">
+              Seamlessly transition between smartphone, tablet, and laptop with real-time cloud synchronization.
+            </p>
+          </motion.div>
+
+          {/* Clean Device Selector Tabs (No Icons) */}
+          <div className="flex justify-center mb-8">
+            <div className="bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/80 flex flex-wrap justify-center gap-1 sm:gap-2 max-w-full">
+              {[
+                { id: 'all', label: 'All Devices' },
+                { id: 'phone', label: 'Mobile' },
+                { id: 'tablet', label: 'Tablet' },
+                { id: 'laptop', label: 'Laptop' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    vibrate(8);
+                    setActiveDeviceTab(tab.id as any);
+                  }}
+                  className={`px-4 sm:px-6 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                    activeDeviceTab === tab.id
+                      ? 'bg-blue-600 text-white shadow-sm scale-[1.02]'
+                      : 'text-slate-700 hover:bg-slate-200/70 hover:text-slate-900'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Clean Floating Device Showcase (No Card Boxes Behind Image) */}
+          <div className="w-full max-w-4xl mx-auto flex flex-col items-center mb-12">
+            <div className="w-full relative flex items-center justify-center min-h-[260px] sm:min-h-[380px] md:min-h-[440px] py-4">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeDeviceTab}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                  className="w-full flex items-center justify-center"
+                >
+                  <img 
+                    src={
+                      activeDeviceTab === 'phone' 
+                        ? phoneMockup
+                        : activeDeviceTab === 'tablet'
+                        ? tabletMockup
+                        : activeDeviceTab === 'laptop'
+                        ? laptopMockup
+                        : combinedMockup
+                    }
+                    alt={`Nexora on ${activeDeviceTab}`} 
+                    className="w-full max-w-3xl h-auto max-h-[460px] object-contain drop-shadow-xl"
+                    loading="eager"
+                    decoding="async"
+                    crossOrigin="anonymous"
+                  />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Context Summary for Active Device */}
+            <div className="w-full pt-6 mt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+              <div>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600">
+                  {activeDeviceTab === 'all' && 'Unified Cloud Experience'}
+                  {activeDeviceTab === 'phone' && 'On-The-Go Companion'}
+                  {activeDeviceTab === 'tablet' && 'Generous Creative Canvas'}
+                  {activeDeviceTab === 'laptop' && 'Deep Productivity Station'}
+                </span>
+                <h4 className="text-lg sm:text-xl font-black text-slate-900">
+                  {activeDeviceTab === 'all' && 'All-in-One Synchronized Ecosystem'}
+                  {activeDeviceTab === 'phone' && 'Pocket Habit Tracker & Fast Logging'}
+                  {activeDeviceTab === 'tablet' && 'Interactive Studio & Breathing Sanctuary'}
+                  {activeDeviceTab === 'laptop' && 'Full Widescreen Dashboard & Analytics'}
+                </h4>
+                <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-xl">
+                  {activeDeviceTab === 'all' && 'Real-time Firestore synchronization guarantees your mascot, hydration logs, push-ups, and streaks update effortlessly across every screen.'}
+                  {activeDeviceTab === 'phone' && 'Designed for quick thumb taps, instant water reminders, rapid push-up entries, and pocket notifications.'}
+                  {activeDeviceTab === 'tablet' && 'Spacious touch screen interface perfectly tuned for mindful breathing relaxation and full-screen digital sketch drawing.'}
+                  {activeDeviceTab === 'laptop' && 'Multi-widget layout featuring comprehensive streak graphs, mascot wardrobing, and leaderboard tracking.'}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  vibrate(10);
+                  onGetStarted();
+                }}
+                className="shrink-0 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2"
+              >
+                <span>Launch Nexora</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* 3 Dedicated Device Floating Previews (Free of Card Boxes) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto pt-6">
+            {/* 1: Mobile */}
+            <div 
+              onClick={() => {
+                vibrate(5);
+                setActiveDeviceTab('phone');
+              }}
+              className="flex flex-col items-center text-center cursor-pointer group space-y-3"
+            >
+              <div className="w-full h-44 flex items-center justify-center p-2">
+                <img 
+                  src={phoneMockup} 
+                  alt="Nexora Mobile" 
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-md"
+                  loading="lazy"
+                  decoding="async"
+                  crossOrigin="anonymous"
+                />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Mobile</h3>
+                <p className="text-xs text-slate-600 leading-relaxed max-w-xs">
+                  Fast single-hand ritual logging, instant water tally, and push-up counter on the move.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-blue-600 flex items-center gap-1 group-hover:gap-1.5 transition-all">
+                <span>View Mobile</span>
+                <ArrowRight size={13} />
+              </span>
+            </div>
+
+            {/* 2: Tablet */}
+            <div 
+              onClick={() => {
+                vibrate(5);
+                setActiveDeviceTab('tablet');
+              }}
+              className="flex flex-col items-center text-center cursor-pointer group space-y-3"
+            >
+              <div className="w-full h-44 flex items-center justify-center p-2">
+                <img 
+                  src={tabletMockup} 
+                  alt="Nexora Tablet" 
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-md"
+                  loading="lazy"
+                  decoding="async"
+                  crossOrigin="anonymous"
+                />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Tablet</h3>
+                <p className="text-xs text-slate-600 leading-relaxed max-w-xs">
+                  Expansive touch surface for relaxing breathing circles and stylus sketch doodling.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-blue-600 flex items-center gap-1 group-hover:gap-1.5 transition-all">
+                <span>View Tablet</span>
+                <ArrowRight size={13} />
+              </span>
+            </div>
+
+            {/* 3: Laptop */}
+            <div 
+              onClick={() => {
+                vibrate(5);
+                setActiveDeviceTab('laptop');
+              }}
+              className="flex flex-col items-center text-center cursor-pointer group space-y-3"
+            >
+              <div className="w-full h-44 flex items-center justify-center p-2">
+                <img 
+                  src={laptopMockup} 
+                  alt="Nexora Laptop" 
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-md"
+                  loading="lazy"
+                  decoding="async"
+                  crossOrigin="anonymous"
+                />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Laptop</h3>
+                <p className="text-xs text-slate-600 leading-relaxed max-w-xs">
+                  Wide workstation dashboard for deep planning, full analytics, and live companion tracking.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-blue-600 flex items-center gap-1 group-hover:gap-1.5 transition-all">
+                <span>View Laptop</span>
+                <ArrowRight size={13} />
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Community Testimonials - Light, Crisp, & Elegant Aesthetic */}
+      <section className="w-full bg-gradient-to-b from-white via-sky-50/20 to-slate-50 py-16 sm:py-24 relative z-10 border-t border-slate-200/60">
+        <div className="max-w-6xl mx-auto px-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            style={{ willChange: 'opacity, transform' }}
+            className="text-center max-w-2xl mx-auto mb-12 space-y-2"
+          >
+            <span className="text-blue-600 font-extrabold text-xs uppercase tracking-widest">Community Love</span>
+            <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900">Trusted by our community</h2>
+            <p className="text-slate-600 text-base">See how Nexora is empowering people to cultivate daily health rituals.</p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                text: `"Nexora completely changed how I relax. The mindful breathing exercises are a lifesaver after a long day at work. It's my daily reset button!"`,
+                name: 'Sarah J.',
+                streak: '🔥 42-day streak',
+                avatarBg: 'bg-blue-600',
+                initials: 'SJ'
+              },
+              {
+                text: `"I used to always forget to hydrate. Now my little mascot reminds me, and I'm drinking 2 liters a day effortlessly. My body feels energized!"`,
+                name: 'Marcus T.',
+                streak: '💧 60-day streak',
+                avatarBg: 'bg-cyan-600',
+                initials: 'MT'
+              },
+              {
+                text: `"The push-up challenge starts small and builds steady strength without feeling overwhelming. Taking care of my digital pet feels rewarding!"`,
+                name: 'Emily R.',
+                streak: '🔥 30-day streak',
+                avatarBg: 'bg-orange-600',
+                initials: 'ER'
+              }
+            ].map((review, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.1 }}
+                transition={{ duration: 0.35, delay: i * 0.1, ease: "easeOut" }}
+                style={{ willChange: 'opacity, transform' }}
+                className="bg-white border border-slate-200/80 rounded-3xl p-7 flex flex-col justify-between space-y-5 shadow-2xs hover:shadow-xs transition-all"
+              >
+                <div className="space-y-3">
+                  <div className="flex text-amber-400">
+                    {[...Array(5)].map((_, idx) => <Star key={idx} size={16} fill="currentColor" />)}
+                  </div>
+                  <p className="text-slate-700 text-sm leading-relaxed font-medium">
+                    {review.text}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
+                  <div className={`w-9 h-9 ${review.avatarBg} rounded-full flex items-center justify-center font-bold text-xs text-white`}>
+                    {review.initials}
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm text-slate-900">{review.name}</div>
+                    <div className="text-[11px] text-blue-600 font-semibold">{review.streak}</div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Founder Message - Compact & Authentic Card with Lightweight Scroll Reveal */}
+      <section className="w-full py-16 sm:py-20 relative z-10 bg-slate-50/50 border-t border-slate-200/60">
+        <div className="max-w-3xl mx-auto px-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            style={{ willChange: 'opacity, transform' }}
+            className="bg-white rounded-3xl p-8 sm:p-12 border border-slate-200/80 shadow-xs relative"
+          >
+            <Quote className="absolute top-6 right-6 w-16 h-16 text-blue-100" />
+            
+            <div className="space-y-5">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold">
+                <span>💬</span> Note from the Founder
+              </div>
+              
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                "Our mission is to make personal wellness enjoyable, not a chore."
+              </h2>
+              
+              <p className="text-slate-600 text-sm sm:text-base leading-relaxed font-medium">
+                Hey everyone, I'm Thomas, the founder of Nexora. We built this app with a simple purpose: to help you drink more water, stay active with daily push-ups, and find moments to genuinely relax. If Nexora helps even one person build a healthier, happier routine, every line of code was worth it.
+              </p>
+
+              <div className="pt-4 border-t border-slate-100 flex items-center gap-3.5">
+                <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-2xs">
+                  T
+                </div>
+                <div>
+                  <div className="font-bold text-slate-900 text-sm">Thomas</div>
+                  <div className="text-xs text-blue-600 font-medium">Founder, Nexora</div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Final Radiant Call to Action with Lightweight Scroll Reveal */}
+      <section className="w-full bg-gradient-to-b from-slate-50/50 to-white py-16 sm:py-24 relative z-10 border-t border-slate-200/60 overflow-hidden">
+        <div className="max-w-4xl mx-auto px-6 relative">
+          <motion.div 
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            style={{ willChange: 'opacity, transform' }}
+            className="relative bg-gradient-to-br from-blue-600 via-blue-500 to-sky-500 rounded-3xl p-8 sm:p-14 text-center text-white shadow-xl shadow-blue-500/20 overflow-hidden"
+          >
+            <div className="relative z-10 max-w-2xl mx-auto space-y-6">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 text-white border border-white/20 text-xs font-bold uppercase tracking-wider">
+                <Sparkles size={14} className="text-yellow-300" />
+                <span>Start Your Companion Journey</span>
+              </div>
+              
+              <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
+                Ready to meet your companion?
+              </h2>
+              
+              <p className="text-blue-50 text-base sm:text-lg max-w-lg mx-auto font-medium leading-relaxed">
+                Join Nexora today and begin cultivating joyful daily rituals that last a lifetime.
+              </p>
+              
+              <div className="pt-2">
+                <button 
+                  onClick={() => {
+                    vibrate(20);
+                    onGetStarted();
+                  }}
+                  className="bg-white hover:bg-slate-50 text-blue-600 px-9 py-4 sm:px-11 sm:py-4.5 rounded-2xl font-black text-base sm:text-lg shadow-lg shadow-blue-950/20 transition-all inline-flex items-center justify-center gap-3 cursor-pointer active:scale-95"
+                >
+                  <span>Start Your Journey</span>
+                  <ArrowRight size={20} />
                 </button>
               </div>
             </div>
           </motion.div>
         </div>
-      </main>
-
-      {/* Floating Section Dividers / Stats */}
-      <div className="w-full bg-blue-950 py-6 md:py-8 overflow-hidden relative z-20 shadow-[0_-10px_50px_rgba(30,58,138,0.4)]">
-        <motion.div 
-          animate={{ x: [0, -2000] }}
-          transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
-          className="flex gap-16 whitespace-nowrap px-10"
-        >
-          {[...Array(20)].map((_, i) => (
-            <div key={i} className="flex items-center gap-6 text-blue-300 font-black text-sm uppercase tracking-[0.3em] italic">
-              <Sparkles size={16} className="text-blue-500 animate-pulse" />
-              EVOLVE YOUR HABITS
-              <span className="text-blue-800/50 w-2 h-2 rounded-full bg-current" />
-              BUILD MASSIVE FOCUS
-              <Sparkles size={16} className="text-indigo-500 animate-pulse" />
-              BECOME A LEGEND
-            </div>
-          ))}
-        </motion.div>
-      </div>
-
-
-      <section className="w-full bg-white py-32 relative z-10">
-        <div className="max-w-5xl mx-auto px-6">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-center space-y-12"
-          >
-            <span className="text-blue-600 font-black text-xs tracking-[0.4em] uppercase">The Philosophy</span>
-            <h2 className="text-5xl md:text-7xl font-black text-blue-950 tracking-tighter max-w-4xl mx-auto leading-[0.95]">
-              Greatness is built one<br/>
-              <span className="text-blue-500 italic">small ritual</span> at a time.
-            </h2>
-            <p className="text-xl md:text-2xl text-blue-950/60 leading-relaxed font-semibold max-w-3xl mx-auto">
-              Nexora isn't another rigid productivity tool. It's a living ecosystem where your mental, physical, and creative energies are synchronized. When you thrive, Nexo thrives. When you slack, Nexo feels it. It's mutual growth, redefined.
-            </p>
-            <div className="pt-10 flex justify-center gap-4">
-              <div className="w-16 h-1 bg-blue-100 rounded-full" />
-              <div className="w-4 h-1 bg-blue-500 rounded-full" />
-              <div className="w-16 h-1 bg-blue-100 rounded-full" />
-            </div>
-          </motion.div>
-        </div>
-      </section>
-      {/* About Section */}
-      <section className="w-full bg-white py-32 relative z-10">
-        <motion.div 
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.8 }}
-          className="max-w-4xl mx-auto px-6 text-center space-y-8"
-        >
-          <h2 className="text-4xl md:text-6xl font-black text-blue-950 tracking-tighter">More than just a tracker.</h2>
-          <p className="text-xl text-blue-900/60 leading-relaxed font-medium">
-            Nexora is your interactive companion for a healthier, more balanced lifestyle. By combining physical activities like hydration and exercise with mental wellness practices like breathing and drawing, Nexora provides a holistic approach to your well-being. As you complete your daily goals, your personal mascot grows, thrives, and celebrates alongside you!
-          </p>
-        </motion.div>
       </section>
 
-      {/* Deep Dive Features */}
-      <section className="w-full py-24 relative z-10">
-        <div className="max-w-6xl mx-auto px-6">
-          <motion.div 
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl font-black text-blue-900">Everything you need to thrive</h2>
-            <p className="text-lg text-blue-900/60 mt-4">Simple, effective tools to build a better routine.</p>
-          </motion.div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-4 hover:-translate-y-2 transition-transform"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-cyan-100 text-cyan-500 flex items-center justify-center">
-                <Droplets size={32} />
-              </div>
-              <h3 className="text-xl font-bold text-blue-900">Hydration Tracking</h3>
-              <p className="text-blue-900/60">Log your daily water intake and hit your personalized goals to keep your body energized and your mind sharp.</p>
-            </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-4 hover:-translate-y-2 transition-transform"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-orange-100 text-orange-500 flex items-center justify-center">
-                <Flame size={32} />
-              </div>
-              <h3 className="text-xl font-bold text-blue-900">Daily Push-ups</h3>
-              <p className="text-blue-900/60">Build foundational strength with customizable daily push-up targets. Start small and grow incredibly strong over time.</p>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-4 hover:-translate-y-2 transition-transform"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-500 flex items-center justify-center">
-                <Brain size={32} />
-              </div>
-              <h3 className="text-xl font-bold text-blue-900">Mindful Breathing</h3>
-              <p className="text-blue-900/60">Take a moment to center yourself with guided breathing exercises designed to reduce stress and improve focus.</p>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="glass-card p-8 flex flex-col items-center text-center space-y-4 hover:-translate-y-2 transition-transform"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-purple-100 text-purple-500 flex items-center justify-center">
-                <Palette size={32} />
-              </div>
-              <h3 className="text-xl font-bold text-blue-900">Creative Drawing</h3>
-              <p className="text-blue-900/60">Unleash your creativity and relax your mind with our built-in drawing canvas. A perfect way to unwind.</p>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Devices Showcase Section */}
-      <section className="w-full bg-[#fafbfd] py-24 relative z-10 border-t border-b border-blue-100/50" id="device-experience-section">
-        <div className="max-w-6xl mx-auto px-6">
-          <motion.div 
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16 space-y-4"
-          >
-            <span className="text-blue-600 font-black text-xs tracking-[0.4em] uppercase">Multi-Device Synergy</span>
-            <h2 className="text-4xl md:text-5xl font-black text-blue-950 tracking-tighter">Nexora Across All Your Screens</h2>
-            <p className="text-lg text-blue-950/60 max-w-2xl mx-auto font-medium">
-              Seamlessly transition between interfaces. Nexora is designed to scale beautifully, bringing a native companion experience to whichever screen you prefer.
-            </p>
-          </motion.div>
-
-          {/* Large Hero Combined Device Showcase (All Screens) */}
-          <div className="mb-24">
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.8 }}
-              className="flex flex-col items-center text-center space-y-6"
-            >
-              <div className="w-full max-w-4xl">
-                <ProgressiveImage 
-                  src={combinedMockup} 
-                  alt="Nexora Synced Multi-Device Mockup" 
-                  aspectRatioClass=""
-                  plain={true}
-                  className="w-full h-auto transition-transform duration-500 hover:scale-[1.02]"
-                />
-              </div>
-              <div className="max-w-2xl space-y-3 mt-4">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-wider">
-                  🔄 Synced Ecosystem
-                </div>
-                <h3 className="text-2xl md:text-3xl font-black text-blue-950 tracking-tight">Instant Cross-Platform Flow</h3>
-                <p className="text-base text-blue-950/70 leading-relaxed font-medium">
-                  Your companion stays perfectly aligned on every device you own. Full Firestore cloud synchronization ensures that your daily streak, XP rewards, shop coins, and customized mascot skins are beautifully synced across all phone, tablet, and laptop screens.
-                </p>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* 3-Column Responsive Grid for individual devices */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-16 pt-8 border-t border-blue-100/30 items-start">
-            {/* Laptop Mockup */}
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="flex flex-col space-y-5 text-center md:text-left"
-            >
-              <div className="w-full flex justify-center md:justify-start">
-                <ProgressiveImage 
-                  src={laptopMockup} 
-                  alt="Nexora Laptop Desktop Mockup" 
-                  aspectRatioClass=""
-                  plain={true}
-                  className="w-full h-auto transition-transform duration-500 hover:scale-[1.03]"
-                />
-              </div>
-              <div className="space-y-2.5">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full text-[10px] font-black uppercase tracking-wider">
-                  💻 Desktop Experience
-                </div>
-                <h3 className="text-xl font-black text-blue-950">Spacious Feature-Rich Dashboard</h3>
-                <p className="text-sm text-blue-950/60 leading-relaxed font-medium">
-                  Enjoy an expansive, high-fidelity workspace on your laptop or desktop monitor. View multiple companion widgets side-by-side, access comprehensive data visualizers, and manage your learning and habit schedules in a beautifully structured widescreen interface.
-                </p>
-              </div>
-            </motion.div>
-
-            {/* Tablet Mockup */}
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="flex flex-col space-y-5 text-center md:text-left"
-            >
-              <div className="w-full flex justify-center md:justify-start">
-                <ProgressiveImage 
-                  src={tabletMockup} 
-                  alt="Nexora Tablet iPad Mockup" 
-                  aspectRatioClass=""
-                  plain={true}
-                  className="w-full h-auto transition-transform duration-500 hover:scale-[1.03]"
-                />
-              </div>
-              <div className="space-y-2.5">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider">
-                  📟 Versatile Tablet
-                </div>
-                <h3 className="text-xl font-black text-blue-950">The Harmonious Golden Canvas</h3>
-                <p className="text-sm text-blue-950/60 leading-relaxed font-medium">
-                  The ideal middle ground for mindful productivity. Utilize the generous tablet layout for immersive breathing animations, organic sketching on our creative drawing canvas, or managing interactive challenges in a comfortable, relaxed form factor.
-                </p>
-              </div>
-            </motion.div>
-
-            {/* Phone Mockup */}
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-col space-y-5 text-center md:text-left"
-            >
-              <div className="w-full flex justify-center">
-                <ProgressiveImage 
-                  src={phoneMockup} 
-                  alt="Nexora Mobile Phone Mockup" 
-                  aspectRatioClass=""
-                  plain={true}
-                  className="w-full max-w-[280px] h-auto transition-transform duration-500 hover:scale-[1.03]"
-                />
-              </div>
-              <div className="space-y-2.5">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-sky-50 text-sky-700 rounded-full text-[10px] font-black uppercase tracking-wider">
-                  📱 Mobile Companion
-                </div>
-                <h3 className="text-xl font-black text-blue-950">Interactive Focus in Your Pocket</h3>
-                <p className="text-sm text-blue-950/60 leading-relaxed font-medium">
-                  Keep your rituals and mascot right in your pocket. The mobile layout is hyper-focused and perfectly compact—enabling immediate water logging, snappy push-up check-ins, micro-breathing sessions, and active floating notifications to keep you on track.
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="w-full bg-blue-900 text-white py-24 relative z-10">
-        <div className="max-w-6xl mx-auto px-6">
-          <motion.div 
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl font-black">Trusted by our community</h2>
-            <p className="text-blue-200 mt-4 text-lg">See how Nexora is changing daily routines.</p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Review 1 */}
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="bg-white/10 p-6 rounded-2xl border border-white/10 backdrop-blur-sm"
-            >
-              <div className="flex text-yellow-400 mb-4">
-                {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
-              </div>
-              <p className="text-blue-50 mb-6 leading-relaxed">"Nexora completely changed how I relax. The mindful breathing exercises are a lifesaver after a long, stressful day at work. It's my daily reset button!"</p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center font-bold">SJ</div>
-                <div className="font-medium">Sarah J.</div>
-              </div>
-            </motion.div>
-
-            {/* Review 2 */}
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="bg-white/10 p-6 rounded-2xl border border-white/10 backdrop-blur-sm"
-            >
-              <div className="flex text-yellow-400 mb-4">
-                {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
-              </div>
-              <p className="text-blue-50 mb-6 leading-relaxed">"I used to always forget to hydrate. Now, my little mascot reminds me, and I'm drinking 2 liters a day effortlessly. My body feels so much healthier and energized."</p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center font-bold">MT</div>
-                <div className="font-medium">Marcus T.</div>
-              </div>
-            </motion.div>
-
-            {/* Review 3 */}
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="bg-white/10 p-6 rounded-2xl border border-white/10 backdrop-blur-sm"
-            >
-              <div className="flex text-yellow-400 mb-4">
-                {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
-              </div>
-              <p className="text-blue-50 mb-6 leading-relaxed">"The daily push-up challenge is exactly what I needed. It starts small, but I've built so much strength over the last month without feeling overwhelmed."</p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center font-bold">ER</div>
-                <div className="font-medium">Emily R.</div>
-              </div>
-            </motion.div>
-
-            {/* Review 4 */}
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="bg-white/10 p-6 rounded-2xl border border-white/10 backdrop-blur-sm"
-            >
-              <div className="flex text-yellow-400 mb-4">
-                {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
-              </div>
-              <p className="text-blue-50 mb-6 leading-relaxed">"I love the creative drawing aspect! It's such a unique way to unwind. Nexo isn't just a health app; it's a daily companion that brings joy to my routine."</p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center font-bold">DL</div>
-                <div className="font-medium">David L.</div>
-              </div>
-            </motion.div>
-
-            {/* Review 5 */}
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="bg-white/10 p-6 rounded-2xl border border-white/10 backdrop-blur-sm lg:col-start-2"
-            >
-              <div className="flex text-yellow-400 mb-4">
-                {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
-              </div>
-              <p className="text-blue-50 mb-6 leading-relaxed">"Finally, a habit tracker that doesn't feel like a chore. Taking care of my digital pet by taking care of myself is genius. I feel amazing both mentally and physically."</p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center font-bold">CM</div>
-                <div className="font-medium">Chloe M.</div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Founder Message */}
-      <section className="w-full py-24 relative z-10 bg-gradient-to-b from-blue-50 to-white">
-        <div className="max-w-3xl mx-auto px-6">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95, y: 40 }}
-            whileInView={{ opacity: 1, scale: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8 }}
-            className="glass-card p-10 md:p-14 relative overflow-hidden"
-          >
-            <Quote className="absolute top-6 left-6 w-24 h-24 text-blue-500/10 -rotate-12" />
-            
-            <div className="relative z-10 space-y-6">
-              <h2 className="text-3xl font-black text-blue-900">A message from the Founder</h2>
-              
-              <div className="space-y-4 text-lg text-blue-900/80 leading-relaxed font-medium">
-                <p>Hey everyone, I'm Thomas, the founder of Nexora (or Nexo for short!).</p>
-                
-                <p>We built this app with a simple mission: to help you drink more water, stay active with daily push-ups, and find time to truly relax.</p>
-                
-                <p>We wanted to create something that wasn't just another boring tracker, but an experience you can actually enjoy and have fun with. While we love making it fun, our true focus is your health.</p>
-                
-                <p>If Nexora helps even one person live a healthier, happier life, then all our work was worth it. That shows our effort didn't go to waste.</p>
-                
-                <p className="font-bold text-blue-900">Stay healthy, be good, and enjoy the journey! Bye!</p>
-              </div>
-
-              <div className="pt-6 border-t border-blue-100 flex items-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-black text-xl shadow-lg">
-                  T
-                </div>
-                <div>
-                  <div className="font-black text-blue-900 text-lg">Thomas</div>
-                  <div className="text-blue-600 font-medium text-sm">Founder, Nexora</div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="w-full bg-white py-24 relative z-10 border-t border-blue-50">
-        <motion.div 
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.8 }}
-          className="max-w-4xl mx-auto px-6 text-center space-y-8"
-        >
-          <h2 className="text-4xl md:text-5xl font-black text-blue-900 tracking-tighter">Ready to meet your new companion?</h2>
-          <p className="text-xl text-blue-900/60 font-medium">Join our community today and start building habits that stick.</p>
-          <button 
-            onClick={onGetStarted}
-            className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-xl shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-1 transition-all inline-flex items-center justify-center gap-2 mt-4"
-          >
-            Start Your Journey <ArrowRight size={24} />
-          </button>
-        </motion.div>
-      </section>
-
-      {/* Footer */}
-      <footer className="w-full bg-blue-950 text-blue-200 py-12 relative z-10">
+      {/* Clean Light-Themed Footer */}
+      <footer className="w-full bg-white text-slate-600 py-10 relative z-10 border-t border-slate-200/80">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <MascotImage 
               alt="Nexora Logo" 
-              className="w-14 h-14 md:w-16 md:h-16 object-cover rounded-xl border border-white/20 shadow-md"
+              className="w-10 h-10 object-cover rounded-xl shadow-2xs"
             />
-            <span className="text-3xl font-black text-white tracking-tighter">Nexora</span>
+            <span className="text-2xl font-black text-slate-900 tracking-tight">Nexora</span>
           </div>
           
-          <div className="flex gap-8 text-sm font-medium">
-            <button onClick={() => setView('terms')} className="hover:text-white transition-colors">Terms of Service</button>
-            <button onClick={() => setView('privacy')} className="hover:text-white transition-colors">Privacy Policy</button>
-            <button onClick={() => setView('support')} className="hover:text-white transition-colors">Support & FAQ</button>
+          <div className="flex flex-wrap justify-center gap-6 text-xs sm:text-sm font-semibold text-slate-500">
+            <button onClick={() => setView('terms')} className="hover:text-blue-600 transition-colors cursor-pointer">Terms of Service</button>
+            <button onClick={() => setView('privacy')} className="hover:text-blue-600 transition-colors cursor-pointer">Privacy Policy</button>
+            <button onClick={() => setView('support')} className="hover:text-blue-600 transition-colors cursor-pointer">Support & FAQ</button>
           </div>
           
-          <div className="text-sm text-blue-400">
+          <div className="text-xs text-slate-400 font-medium">
             © {new Date().getFullYear()} Nexora. All rights reserved.
           </div>
         </div>

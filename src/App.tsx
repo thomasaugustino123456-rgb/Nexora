@@ -477,6 +477,16 @@ export default function App() {
   const [pendingHydrationCoinsAdded, setPendingHydrationCoinsAdded] = useState<boolean>(false);
 
   const previousUserUidRef = useRef<string | null>(null);
+  const hasAppMountedRef = useRef<boolean>(false);
+
+  // Track authenticated app mounting to ensure background sync never triggers the gateway
+  useEffect(() => {
+    if (user && !needsOnboarding && settings?.onboardingCompleted !== false) {
+      hasAppMountedRef.current = true;
+    } else if (!user) {
+      hasAppMountedRef.current = false;
+    }
+  }, [user, needsOnboarding, settings?.onboardingCompleted]);
 
   // Reload hydration state when the logged-in user changes to prevent cross-account leaks
   useEffect(() => {
@@ -3375,7 +3385,19 @@ export default function App() {
       const saved = localStorage.getItem("nexora_leaderboard_cache");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const sanitized = parsed.filter((item) => {
+            if (!item || !item.uid) return false;
+            if (item.uid.startsWith("bot-")) return true;
+            if (item.deleted || item.isDeleted) return false;
+            const name = item.displayName;
+            if (!name || name === "Anonymous" || name === "Anonymous Champion" || name === "Anonymous User") {
+              return false;
+            }
+            return true;
+          });
+          if (sanitized.length > 0) return sanitized;
+        }
       }
     } catch (e) {
       console.warn("Failed to read cached leaderboard:", e);
@@ -4097,27 +4119,63 @@ export default function App() {
     settings.league,
   ]);
 
-  // Dedicated stable Leaderboard Listener with multi-collection real-time sync and local cache saving
+  // Dedicated stable Leaderboard Listener with multi-collection real-time sync, deleted users exclusion, and local cache saving
   const leaderboardDocsRef = useRef<any[]>([]);
   const usersDocsRef = useRef<any[]>([]);
   const rankDocsRef = useRef<any[]>([]);
+  const deletedDocsRef = useRef<any[]>([]);
 
   useEffect(() => {
     // Synchronize real users immediately from Firestore without waiting for background hydration flags
     const processAndSetLeaderboard = () => {
       const allDataMap = new Map<string, any>();
 
+      // Set of all deleted user IDs to prevent ghost/demo entries from ever appearing
+      const deletedUserIds = new Set<string>();
+      deletedDocsRef.current.forEach((docSnap) => {
+        if (!docSnap) return;
+        const id = docSnap.id;
+        const data = typeof docSnap.data === "function" ? docSnap.data() : docSnap;
+        if (id) deletedUserIds.add(id);
+        if (data?.uid) deletedUserIds.add(data.uid);
+        if (data?.userId) deletedUserIds.add(data.userId);
+      });
+
       const parseAndAdd = (d: any, defaultDocId: string) => {
         if (!d) return;
         const uid = d.uid || d.userId || d.id || defaultDocId;
         if (!uid || uid.startsWith("bot-")) return;
 
+        // CRITICAL PROTECTION: If this user ID was deleted, or document is marked deleted, skip immediately!
+        if (
+          deletedUserIds.has(uid) ||
+          d.deleted === true ||
+          d.isDeleted === true ||
+          d.is_deleted === true ||
+          d.status === "deleted"
+        ) {
+          // Asynchronously clean up lingering stale doc in leaderboard/rank if it belongs to a deleted account
+          if (defaultDocId === uid) {
+            deleteDoc(doc(db, "leaderboard", uid)).catch(() => {});
+            deleteDoc(doc(db, "rank", uid)).catch(() => {});
+          }
+          return;
+        }
+
         let displayName = d.displayName || d.accountName || d.name || d.Name || d.account_name || d.username;
-        if ((!displayName || displayName === "Anonymous") && d.email && typeof d.email === "string") {
+        if ((!displayName || displayName === "Anonymous" || displayName === "Anonymous Champion" || displayName === "Anonymous User") && d.email && typeof d.email === "string") {
           displayName = d.email.split('@')[0];
         }
-        if (!displayName) {
-          displayName = "Anonymous";
+
+        // CRITICAL PROTECTION: Reject orphaned / blank user records (e.g. from deleted accounts with wiped profiles)
+        // Only permit if it is the currently authenticated user or has an actual real user profile name
+        const isCurrentAuthUser = user && user.uid === uid;
+        if (!displayName || displayName === "Anonymous" || displayName === "Anonymous Champion" || displayName === "Anonymous User") {
+          if (!isCurrentAuthUser) {
+            // Orphaned deleted account residue: skip to avoid creating demo user
+            return;
+          }
+          displayName = settings.displayName || user?.displayName || (user?.email ? user.email.split('@')[0] : "You");
         }
 
         const photoURL = d.photoURL || d.profilePic || d.photoFileName || d["Photo file name"] || d["Profile image"] || "";
@@ -4151,7 +4209,7 @@ export default function App() {
           const mergedPts = Math.max(existing.weeklyPoints || 0, maxPts);
           const mergedStreak = Math.max(existing.streak || 0, streak);
           const mergedLevel = Math.max(existing.level || 1, level);
-          const finalName = (displayName && displayName !== "Anonymous") ? displayName : (existing.displayName || "Anonymous");
+          const finalName = (displayName && displayName !== "Anonymous") ? displayName : (existing.displayName || displayName);
           const finalPhoto = photoURL || existing.photoURL || "";
 
           allDataMap.set(uid, {
@@ -4169,7 +4227,7 @@ export default function App() {
         } else {
           allDataMap.set(uid, {
             uid,
-            displayName: displayName || "Anonymous",
+            displayName: displayName,
             photoURL: photoURL || "",
             weeklyPoints: maxPts,
             weeklyXP: maxPts,
@@ -4186,8 +4244,13 @@ export default function App() {
       usersDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
       rankDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
 
-      // CRITICAL: Always include the currently logged in user instantly from live local state
-      if (user && user.uid) {
+      // Explicitly purge any deleted user IDs from the map
+      deletedUserIds.forEach((delId) => {
+        allDataMap.delete(delId);
+      });
+
+      // CRITICAL: Always include the currently logged in user instantly from live local state if not deleted
+      if (user && user.uid && !deletedUserIds.has(user.uid)) {
         const userPts = Math.max(
           Number(stats.weeklyPoints || 0),
           Number(stats.weeklyXP || 0),
@@ -4284,7 +4347,7 @@ export default function App() {
       });
 
       // Handle logged-in current user: ensure local state and server state are synced
-      if (user) {
+      if (user && !deletedUserIds.has(user.uid)) {
         const existingUser = allDataMap.get(user.uid);
         const currentLocalMaxPts = Math.max(
           stats.weeklyPoints || 0,
@@ -4333,7 +4396,17 @@ export default function App() {
         }
       }
 
-      const rawList = Array.from(allDataMap.values());
+      const rawList = Array.from(allDataMap.values()).filter((item) => {
+        if (!item || !item.uid) return false;
+        if (item.uid.startsWith("bot-")) return true;
+        if (deletedUserIds.has(item.uid)) return false;
+        if (item.deleted || item.isDeleted) return false;
+        const name = item.displayName;
+        if (!name || name === "Anonymous" || name === "Anonymous Champion" || name === "Anonymous User") {
+          return !!(user && user.uid === item.uid);
+        }
+        return true;
+      });
 
       const sorted = rawList.sort((a, b) => {
         const aPoints = a.weeklyPoints !== undefined ? a.weeklyPoints : (a.weeklyXP || a.totalPoints || a.xp || 0);
@@ -4359,8 +4432,16 @@ export default function App() {
     const qLb = query(collection(db, "leaderboard"), limit(150));
     const qUsers = query(collection(db, "users"), limit(150));
     const qRank = query(collection(db, "rank"), limit(150));
+    const qDeleted = query(collection(db, "deleted_users"), limit(300));
 
     // Immediate zero-latency local Firestore cache pass for instant hydration of real users (<10ms)
+    getDocsFromCache(qDeleted).then((snap) => {
+      if (snap.docs.length > 0) {
+        deletedDocsRef.current = snap.docs;
+        processAndSetLeaderboard();
+      }
+    }).catch(() => {});
+
     getDocsFromCache(qLb).then((snap) => {
       if (snap.docs.length > 0) {
         leaderboardDocsRef.current = snap.docs;
@@ -4383,6 +4464,13 @@ export default function App() {
     }).catch(() => {});
 
     // Network pass for latest server updates
+    getDocs(qDeleted).then((snap) => {
+      if (snap.docs.length > 0) {
+        deletedDocsRef.current = snap.docs;
+        processAndSetLeaderboard();
+      }
+    }).catch(() => {});
+
     getDocs(qLb).then((snap) => {
       if (snap.docs.length > 0) {
         leaderboardDocsRef.current = snap.docs;
@@ -4403,6 +4491,15 @@ export default function App() {
         processAndSetLeaderboard();
       }
     }).catch(() => {});
+
+    const unsubDeleted = onSnapshot(
+      qDeleted,
+      (snapshot) => {
+        deletedDocsRef.current = snapshot.docs;
+        processAndSetLeaderboard();
+      },
+      () => {}
+    );
 
     const unsubLb = onSnapshot(
       qLb,
@@ -4450,6 +4547,7 @@ export default function App() {
     );
 
     return () => {
+      unsubDeleted();
       unsubLb();
       unsubUsers();
       unsubRank();
@@ -5641,8 +5739,10 @@ export default function App() {
     );
   }
 
-  const isRestoringCachedSession = authLoading && Boolean(typeof window !== "undefined" && localStorage.getItem("nexora_cached_user")) && !user;
-  const isAppInitializing = user ? (authLoading || loading || !isDataReady) : (authLoading || isRestoringCachedSession);
+  // The gateway must ONLY appear during the initial authentication check before deciding which screen to render.
+  // It must NEVER be triggered by Firestore loading, profile fetches, coin sync, plant restoration, rank updates, rewards loading, or background sync.
+  // Once the app has mounted for an authenticated user, the gateway is never shown again during this session.
+  const isInitialAuthChecking = !hasAppMountedRef.current && authLoading && !user && Boolean(typeof window !== "undefined" && localStorage.getItem("nexora_cached_user"));
 
   if (!splashFinished) {
     if (loadError) {
@@ -5664,16 +5764,16 @@ export default function App() {
     }
     return (
       <SplashScreen 
-        isReady={!isAppInitializing} 
+        isReady={!authLoading} 
         onFinish={() => setSplashFinished(true)} 
       />
     );
   }
 
-  // Loading & Auth Resolution guard:
-  // Show startup loading screen while auth & user data restoration is still in progress.
-  // This prevents rendering Login, Onboarding, or Home prematurely before startup check finishes.
-  if (isAppInitializing) {
+  // Initial Auth Resolution Guard:
+  // Only shows while initial authentication decision is pending before rendering Home.
+  // Firestore sync continues silently in the background without unmounting Home.
+  if (isInitialAuthChecking) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#FAF7F2] text-[#4F3F34] font-sans p-6 relative overflow-hidden select-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#69C496]/15 rounded-full blur-3xl pointer-events-none" />
@@ -6108,9 +6208,9 @@ export default function App() {
                       referrerPolicy="no-referrer"
                     />
                     {isSyncingData && (
-                      <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                       </span>
                     )}
                   </button>

@@ -21,7 +21,7 @@ export function MascotImage({ className = "w-16 h-16 rounded-2xl", alt = "Nexora
       <img 
         src={nexoraAppIconImg} 
         alt={alt}
-        className="w-full h-full object-contain filter drop-shadow-[0_4px_10px_rgba(59,130,246,0.2)] select-none"
+        className="w-full h-full object-contain filter drop-shadow-[0_4px_10px_rgba(59,130,246,0.2)] select-none pointer-events-none"
         style={{
           imageRendering: "auto",
           WebkitFontSmoothing: "antialiased"
@@ -33,8 +33,8 @@ export function MascotImage({ className = "w-16 h-16 rounded-2xl", alt = "Nexora
         fetchPriority="high"
         onError={(e) => {
           const target = e.currentTarget;
-          if (target.src !== "/mascot.png" && !target.src.endsWith("/mascot.png")) {
-            target.src = "/mascot.png";
+          if (target.src !== "/nexora_mascot_new.png" && !target.src.endsWith("/nexora_mascot_new.png")) {
+            target.src = "/nexora_mascot_new.png";
           }
         }}
       />

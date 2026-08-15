@@ -203,13 +203,12 @@ export function ProfileScreen({
           <div className="w-32 h-32 rounded-[2.5rem] bg-white border-4 border-white shadow-2xl relative z-10 overflow-hidden">
             <img
               src={editPhoto || "/icon-512.png"}
-              className={`w-full h-full object-cover shadow-inner transition-opacity duration-300 ${isSyncing ? "opacity-75" : "opacity-100"}`}
+              className={`w-full h-full object-cover shadow-inner transition-opacity duration-300 ${isSyncing ? "opacity-50" : "opacity-100"}`}
               referrerPolicy="no-referrer"
             />
             {isSyncing && (
-              <div className="absolute inset-0 bg-black/25 backdrop-blur-[1px] flex flex-col items-center justify-center text-white gap-1 z-10">
-                <Loader2 size={24} className="animate-spin text-white drop-shadow" />
-                <span className="text-[9px] font-black uppercase tracking-wider drop-shadow">Syncing...</span>
+              <div className="absolute inset-0 flex items-center justify-center bg-white/30 backdrop-blur-sm z-20">
+                <Loader2 size={32} className="text-blue-600 animate-spin" />
               </div>
             )}
           </div>

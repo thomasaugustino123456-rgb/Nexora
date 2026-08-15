@@ -307,8 +307,19 @@ export function LeaderboardScreen({
 
   // Set up the moving animation if there's a stored previous rank or if glowing button was clicked
   useEffect(() => {
-    if (!user || leaderboard.length === 0 || currentRank <= 0) {
-      setDisplayList(leaderboard);
+    const sanitizedLeaderboard = (leaderboard || []).filter((item) => {
+      if (!item || !item.uid) return false;
+      if (item.uid.startsWith("bot-")) return true;
+      if ((item as any).deleted || (item as any).isDeleted) return false;
+      const name = item.displayName;
+      if (!name || name === "Anonymous" || name === "Anonymous Champion" || name === "Anonymous User") {
+        return !!(user && user.uid === item.uid);
+      }
+      return true;
+    });
+
+    if (!user || sanitizedLeaderboard.length === 0 || currentRank <= 0) {
+      setDisplayList(sanitizedLeaderboard);
       return;
     }
 
@@ -316,15 +327,15 @@ export function LeaderboardScreen({
     const wasGlowActive = localStorage.getItem("nexora_scrolling_to_user_rank") === "true";
 
     // Always update displayList immediately so real users are visible instantly
-    setDisplayList(leaderboard);
+    setDisplayList(sanitizedLeaderboard);
 
     if (prevRankStr && wasGlowActive) {
       const prevRank = parseInt(prevRankStr);
-      if (prevRank > currentRank && prevRank <= leaderboard.length) {
+      if (prevRank > currentRank && prevRank <= sanitizedLeaderboard.length) {
         setAnimationPreviousRank(prevRank);
         setIsAnimatingRank(true);
 
-        const listCopy = [...leaderboard];
+        const listCopy = [...sanitizedLeaderboard];
         const curIdx = listCopy.findIndex(l => l.uid === user.uid);
         if (curIdx !== -1) {
           const userEntry = listCopy[curIdx];

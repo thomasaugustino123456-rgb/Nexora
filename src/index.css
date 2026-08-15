@@ -599,5 +599,26 @@ section {
   backface-visibility: hidden;
 }
 
+/* Continuous Auto-Scrolling Ticker Marquee (60fps GPU Accelerated) */
+@keyframes marqueeContinuous {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-marquee-continuous {
+  display: flex;
+  width: max-content;
+  animation: marqueeContinuous 35s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-continuous:hover {
+  animation-play-state: paused;
+}
+
 
 

@@ -44,6 +44,7 @@ interface AuthScreenProps {
 }
 
 export function AuthScreen({ onBack }: AuthScreenProps) {
+  const [authView, setAuthView] = useState<"options" | "form">("options");
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
@@ -535,225 +536,397 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 bg-blue-50 flex items-center justify-center p-6 overflow-y-auto"
+      className="fixed inset-0 h-screen h-[100dvh] max-h-[100dvh] w-full flex flex-col justify-between items-center px-5 py-4 sm:px-8 sm:py-6 overflow-hidden z-50 select-none bg-sky-200"
+      style={{
+        backgroundImage: "url('/login-bg.jpg'), linear-gradient(180deg, #dbeafe 0%, #bae6fd 50%, #7dd3fc 100%)",
+        backgroundSize: "cover",
+        backgroundPosition: "center center",
+        backgroundRepeat: "no-repeat"
+      }}
     >
-      {onBack && (
-        <button
-          onClick={() => {
-            vibrate(10);
-            onBack();
-          }}
-          className="absolute top-6 left-6 p-3 rounded-full bg-white/50 text-blue-900/60 hover:bg-white/80 hover:text-blue-900 transition-all z-20 shadow-sm"
-          aria-label="Go back"
-        >
-          <ArrowLeft size={24} />
-        </button>
-      )}
-
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="glass-card p-8 md:p-10 flex flex-col items-center gap-6 text-center max-w-md w-full my-auto relative"
-      >
-        {/* Mascot Container */}
-        <motion.div animate={mascotControls} className="w-32 h-32 -mt-20 z-10">
-          <Mascot
-            mood={mascotMood}
-            onClick={handleMascotTap}
-            onPointerMove={handleMascotPointerMove}
-            onPointerLeave={handleMascotPointerLeave}
-          />
-        </motion.div>
-
-        <div className="space-y-2 mt-2 flex flex-col items-center">
-          <div className="flex flex-col items-center gap-6">
-            <MascotImage
-              alt="Nexora Logo"
-              className="w-48 h-48 object-cover rounded-[36px] shadow-2xl border-4 border-white/50"
-            />
-            <h1 className="text-7xl md:text-8xl font-black text-blue-900 tracking-tighter">
-              Nexora
-            </h1>
-          </div>
-          <p className="text-blue-900/60 font-medium text-2xl">
-            Your personal flow companion
-          </p>
-        </div>
-
-        {/* Nexora-Style Error Card */}
-        <AnimatePresence mode="wait">
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -12, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -12, scale: 0.96 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="w-full bg-rose-50/95 border border-rose-200/90 text-rose-900 p-4 rounded-2xl text-sm font-semibold flex flex-col gap-2 text-left shadow-md shadow-rose-900/5 relative overflow-hidden"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5">
-                  <div className="bg-rose-100 p-1.5 rounded-xl text-rose-600 shrink-0 mt-0.5">
-                    <AlertCircle className="w-4 h-4" />
-                  </div>
-                  <span className="font-bold text-rose-900 leading-snug pt-0.5">{error}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={clearErrorState}
-                  className="text-rose-400 hover:text-rose-700 p-1 rounded-lg transition-colors shrink-0"
-                  aria-label="Dismiss error"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              {error === "An account with this email already exists." && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSignUp(false);
-                    clearErrorState();
-                  }}
-                  className="text-xs font-bold text-rose-700 underline pl-8 hover:text-rose-950 text-left transition-colors"
-                >
-                  Click here to Sign In instead
-                </button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {resetSuccessMessage && (
-          <div className="w-full bg-green-50 text-green-700 p-3.5 rounded-2xl text-sm font-semibold flex items-start gap-2 text-left border border-green-100 shadow-sm">
-            <span className="text-lg">✉️</span>
-            <div>
-              <p className="font-bold leading-relaxed">{resetSuccessMessage}</p>
-              <p className="text-[10px] text-green-600 font-bold uppercase mt-1">
-                Security confirmation: All garden items, stats, levels, and
-                notes remain 100% saved!
-              </p>
-            </div>
-          </div>
+      {/* Top Bar / Back Navigation */}
+      <div className="w-full max-w-md flex items-center justify-between z-20 pt-1 sm:pt-2 shrink-0">
+        {authView === "form" ? (
+          <button
+            onClick={() => {
+              vibrate(10);
+              setAuthView("options");
+              clearErrorState();
+            }}
+            className="p-2 sm:p-2.5 rounded-full bg-white/70 backdrop-blur-md text-blue-950 hover:bg-white transition-all shadow-md active:scale-95 border border-white/60 cursor-pointer"
+            aria-label="Back to options"
+          >
+            <ArrowLeft size={18} className="text-blue-900 sm:w-5 sm:h-5" />
+          </button>
+        ) : onBack ? (
+          <button
+            onClick={() => {
+              vibrate(10);
+              onBack();
+            }}
+            className="p-2 sm:p-2.5 rounded-full bg-white/70 backdrop-blur-md text-blue-950 hover:bg-white transition-all shadow-md active:scale-95 border border-white/60 cursor-pointer"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={18} className="text-blue-900 sm:w-5 sm:h-5" />
+          </button>
+        ) : (
+          <div className="w-8 h-8" />
         )}
+      </div>
 
-        <form onSubmit={handleEmailAuth} noValidate className="w-full space-y-4">
-          <div className="space-y-3">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-blue-900/40">
-                <Mail size={20} />
+      <AnimatePresence mode="wait">
+        {authView === "options" ? (
+          /* ==================================================================== */
+          /* VIEW 1: Clean Gateway / Overview (Matches Mockup Exactly)            */
+          /* ==================================================================== */
+          <motion.div
+            key="options-view"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="w-full max-w-sm sm:max-w-md h-full flex flex-col justify-between items-center my-auto flex-1 py-1 sm:py-3 overflow-hidden min-h-0"
+          >
+            {/* Upper Hero Section: Celestial Mascot Emblem + Nexora Brand */}
+            <div className="flex flex-col items-center text-center mt-1 sm:mt-3 shrink-0">
+              {/* Celestial Mascot Emblem */}
+              <motion.div
+                animate={mascotControls}
+                onClick={handleMascotTap}
+                className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+              >
+                {/* 8-Point Ice Crystal Starburst Compass Background */}
+                <svg
+                  viewBox="0 0 200 200"
+                  className="absolute inset-0 w-full h-full filter drop-shadow-[0_0_16px_rgba(56,189,248,0.65)]"
+                >
+                  {/* Outer Glow Ring */}
+                  <circle cx="100" cy="100" r="76" fill="none" stroke="rgba(186,230,253,0.85)" strokeWidth="2.5" />
+                  <circle cx="100" cy="100" r="70" fill="rgba(224,242,254,0.3)" />
+
+                  {/* Primary 4 Star Points (North, South, East, West) */}
+                  <polygon points="100,10 112,85 100,75 88,85" fill="#38bdf8" />
+                  <polygon points="100,190 112,115 100,125 88,115" fill="#0284c7" />
+                  <polygon points="190,100 115,112 125,100 115,88" fill="#38bdf8" />
+                  <polygon points="10,100 85,112 75,100 85,88" fill="#0284c7" />
+
+                  {/* Diagonal 4 Star Points */}
+                  <polygon points="160,40 115,90 108,82 110,80" fill="#7dd3fc" />
+                  <polygon points="40,160 85,110 92,118 90,120" fill="#0369a1" />
+                  <polygon points="160,160 110,115 118,108 120,110" fill="#0284c7" />
+                  <polygon points="40,40 90,85 82,92 80,90" fill="#7dd3fc" />
+                </svg>
+
+                {/* Floating Halo above Mascot */}
+                <div className="absolute top-1 sm:top-2 w-12 sm:w-14 md:w-16 h-3 sm:h-3.5 md:h-4 rounded-full border-2 border-white/90 bg-white/40 shadow-[0_0_12px_rgba(255,255,255,0.9)] z-20 transform -rotate-3" />
+
+                {/* Central Mascot Image */}
+                <div className="relative w-22 h-22 sm:w-26 sm:h-26 md:w-30 md:h-30 rounded-full overflow-hidden z-10 border-2 border-white/80 shadow-inner bg-gradient-to-b from-sky-200/80 to-blue-400/90 flex items-center justify-center">
+                  <MascotImage
+                    alt="Nexora Mascot"
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Glowing "N" Crest on Mascot Chest */}
+                  <div className="absolute bottom-1.5 sm:bottom-2 left-1/2 -translate-x-1/2 bg-blue-600/90 border border-white/70 text-white font-black text-[9px] sm:text-[10px] md:text-xs px-2 py-0.5 rounded-full shadow-md tracking-wider">
+                    N
+                  </div>
+                </div>
+
+                {/* Gold Badge (1) on Bottom-Right */}
+                <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 z-30 w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 border-2 border-white shadow-lg flex items-center justify-center text-amber-950 font-black text-xs sm:text-sm ring-2 ring-amber-400/50">
+                  1
+                </div>
+              </motion.div>
+
+              {/* Title & Tagline */}
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight mt-1.5 sm:mt-2 drop-shadow-[0_2px_4px_rgba(255,255,255,0.8)]">
+                Nexora
+              </h1>
+              <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1 text-slate-800/90 font-bold text-xs sm:text-sm drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">
+                <span className="text-sky-600 text-xs">🍃</span>
+                <span>Your personal flow companion</span>
+                <span className="text-sky-600 text-xs">🍃</span>
               </div>
-              <input
-                type="email"
-                value={email}
-                onChange={handleEmailChange}
-                onBlur={handleBlur}
-                placeholder="Email address"
-                className="w-full pl-11 pr-4 py-3 bg-white/50 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-blue-900 placeholder:text-blue-900/40 font-medium transition-all"
-              />
             </div>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-blue-900/40">
-                <Lock size={20} />
-              </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={handlePasswordChange}
-                onBlur={handleBlur}
-                placeholder="Password"
-                className="w-full pl-11 pr-12 py-3 bg-white/50 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-blue-900 placeholder:text-blue-900/40 font-medium transition-all"
-              />
+
+            {/* Middle Breathing Room */}
+            <div className="flex-1 min-h-[12px] sm:min-h-[20px]" />
+
+            {/* Bottom Actions Section */}
+            <div className="w-full space-y-2.5 sm:space-y-3 mt-auto pb-1 shrink-0">
+              {/* Error Message if any */}
+              {error && (
+                <div className="w-full bg-rose-500/90 backdrop-blur-md text-white p-2.5 sm:p-3 rounded-xl text-xs font-bold text-center shadow-lg border border-rose-300/60 animate-shake">
+                  {error}
+                </div>
+              )}
+
+              {/* Button 1: Continue with email */}
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-blue-900/40 hover:text-blue-900/60 transition-colors"
-                tabIndex={-1}
+                onClick={() => {
+                  vibrate(15);
+                  setIsSignUp(false);
+                  setAuthView("form");
+                  clearErrorState();
+                }}
+                className="w-full h-11 sm:h-12 md:h-13 bg-[#258bfb] hover:bg-[#1c7ee9] active:scale-[0.98] text-white font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-blue-500/30 border border-blue-400/40 flex items-center justify-center gap-2.5 transition-all cursor-pointer"
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-white stroke-[2.4]" />
+                <span>Continue with email</span>
               </button>
+
+              {/* Button 2: Continue with Google */}
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={isSigningIn}
+                className="w-full h-11 sm:h-12 md:h-13 bg-white/95 hover:bg-white active:scale-[0.98] text-slate-800 font-bold text-sm sm:text-base rounded-2xl shadow-md border border-white/80 flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-70"
+              >
+                {isSigningIn ? (
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <GoogleIcon />
+                    <span>Continue with Google</span>
+                  </>
+                )}
+              </button>
+
+              {/* Footer Switcher */}
+              <div className="text-center pt-0.5 sm:pt-1">
+                <p className="text-xs sm:text-sm font-semibold text-slate-900 drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]">
+                  Don’t have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      vibrate(15);
+                      setIsSignUp(true);
+                      setAuthView("form");
+                      clearErrorState();
+                    }}
+                    className="text-blue-700 font-black hover:text-blue-900 underline ml-1 cursor-pointer transition-colors"
+                  >
+                    Sign up
+                  </button>
+                </p>
+              </div>
+
+              {isInIframe && (
+                <div className="w-full bg-white/80 backdrop-blur-md border border-amber-300/70 text-amber-950 p-2 rounded-xl text-[10px] font-semibold text-center shadow-sm">
+                  ⚠️ Preview Mode: To sign in with Google popup, use <span className="font-bold underline">Open in New Tab</span>, or use Continue with Email.
+                </div>
+              )}
             </div>
-            {!isSignUp && (
-              <div className="flex justify-end pt-1">
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  disabled={isResettingPassword}
-                  className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline transition-all focus:outline-none"
+          </motion.div>
+        ) : (
+          /* ==================================================================== */
+          /* VIEW 2: Email & Password Form (Fully Functional & Interactive)        */
+          /* ==================================================================== */
+          <motion.div
+            key="form-view"
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -15 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="w-full max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto bg-white/90 backdrop-blur-xl border border-white/80 rounded-3xl p-5 sm:p-7 flex flex-col items-center gap-3.5 sm:gap-4 text-center my-auto relative shadow-2xl z-10 scrollbar-none"
+          >
+            {/* Interactive Mascot Top */}
+            <motion.div 
+              animate={mascotControls} 
+              className="w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-transform pt-1"
+            >
+              <Mascot
+                mood={mascotMood}
+                onClick={handleMascotTap}
+                onPointerMove={handleMascotPointerMove}
+                onPointerLeave={handleMascotPointerLeave}
+              />
+            </motion.div>
+
+            {/* Form Title */}
+            <div className="space-y-1">
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                {isSignUp ? "Create your account" : "Welcome back"}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">
+                {isSignUp ? "Join Nexora and grow your daily flow garden" : "Enter your email and password to continue"}
+              </p>
+            </div>
+
+            {/* Error Card */}
+            <AnimatePresence mode="wait">
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="w-full bg-rose-50 border border-rose-200 text-rose-900 p-3.5 rounded-2xl text-xs font-semibold flex flex-col gap-1.5 text-left shadow-sm relative"
                 >
-                  {isResettingPassword
-                    ? "Sending security link..."
-                    : "Forgot/Set Password for Google Account Users"}
-                </button>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <span className="font-bold leading-snug">{error}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={clearErrorState}
+                      className="text-rose-400 hover:text-rose-700 p-0.5 rounded-lg"
+                      aria-label="Dismiss error"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+
+                  {error === "An account with this email already exists." && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSignUp(false);
+                        clearErrorState();
+                      }}
+                      className="text-xs font-bold text-rose-700 underline pl-6 hover:text-rose-950 text-left"
+                    >
+                      Click here to Sign In instead
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Reset Password Success Message */}
+            {resetSuccessMessage && (
+              <div className="w-full bg-emerald-50 text-emerald-800 p-3 rounded-2xl text-xs font-semibold flex items-start gap-2 text-left border border-emerald-200 shadow-sm">
+                <span className="text-base">✉️</span>
+                <div>
+                  <p className="font-bold leading-relaxed">{resetSuccessMessage}</p>
+                  <p className="text-[10px] text-emerald-700 font-bold uppercase mt-0.5">
+                    Security: All plants, stats, coins, and levels remain 100% safe!
+                  </p>
+                </div>
               </div>
             )}
-          </div>
 
-          <button
-            type="submit"
-            disabled={isSigningIn}
-            className={`w-full text-white py-3.5 rounded-xl font-bold text-lg transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 ${
-              isSigningIn
-                ? "bg-blue-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/20"
-            }`}
-          >
-            {isSigningIn ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : isSignUp ? (
-              "Create Account"
-            ) : (
-              "Sign In"
-            )}
-          </button>
-        </form>
+            {/* Form Fields */}
+            <form onSubmit={handleEmailAuth} noValidate className="w-full space-y-3.5">
+              <div className="space-y-3 text-left">
+                <div>
+                  <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 block mb-1">
+                    Email address
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <Mail size={18} />
+                    </div>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={handleEmailChange}
+                      onBlur={handleBlur}
+                      placeholder="name@example.com"
+                      className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900 placeholder:text-slate-400 font-medium text-sm transition-all shadow-inner"
+                    />
+                  </div>
+                </div>
 
-        <div className="w-full flex items-center gap-4">
-          <div className="flex-1 h-px bg-blue-900/10"></div>
-          <span className="text-xs font-bold text-blue-900/40 uppercase tracking-wider">
-            Or continue with
-          </span>
-          <div className="flex-1 h-px bg-blue-900/10"></div>
-        </div>
+                <div>
+                  <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 block mb-1">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <Lock size={18} />
+                    </div>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={handlePasswordChange}
+                      onBlur={handleBlur}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-11 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900 placeholder:text-slate-400 font-medium text-sm transition-all shadow-inner"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
 
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          disabled={isSigningIn}
-          className={`w-full bg-white text-blue-900 py-3.5 rounded-xl font-bold text-lg transition-all shadow-sm border border-blue-100 active:scale-95 flex items-center justify-center gap-3 ${
-            isSigningIn
-              ? "opacity-70 cursor-not-allowed"
-              : "hover:bg-blue-50 hover:shadow-md"
-          }`}
-        >
-          <GoogleIcon />
-          Google
-        </button>
+                {!isSignUp && (
+                  <div className="flex justify-end pt-0.5">
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      disabled={isResettingPassword}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline transition-all focus:outline-none"
+                    >
+                      {isResettingPassword
+                        ? "Sending security link..."
+                        : "Forgot Password?"}
+                    </button>
+                  </div>
+                )}
+              </div>
 
-        {isInIframe && (
-          <div className="w-full bg-amber-50/70 border border-amber-200/50 text-amber-800 p-3 rounded-xl text-[11px] font-semibold leading-relaxed text-left flex items-start gap-2 shadow-sm">
-            <span className="text-sm">⚠️</span>
-            <div>
-              <span className="font-bold text-amber-900 block mb-0.5">Iframe Preview Mode:</span>
-              Browser cross-origin security blocks Google popups inside frames. To sign in with Google, click the <span className="font-bold text-blue-600 underline">Open in New Tab</span> icon in the top right, or use the Email & Password fields above.
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isSigningIn}
+                className="w-full h-12 bg-[#258bfb] hover:bg-[#1c7ee9] text-white font-bold text-base rounded-xl transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {isSigningIn ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : isSignUp ? (
+                  "Create Account"
+                ) : (
+                  "Sign In"
+                )}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="w-full flex items-center gap-3">
+              <div className="flex-1 h-px bg-slate-200"></div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Or
+              </span>
+              <div className="flex-1 h-px bg-slate-200"></div>
             </div>
-          </div>
-        )}
 
-        <p className="text-sm text-blue-900/60 font-medium pt-2">
-          {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-          <button
-            type="button"
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              clearErrorState();
-              setTapCount(0);
-            }}
-            className="text-blue-600 font-bold hover:underline"
-          >
-            {isSignUp ? "Sign In" : "Sign Up"}
-          </button>
-        </p>
-      </motion.div>
+            {/* Google Alternative in Form View */}
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={isSigningIn}
+              className="w-full h-12 bg-white text-slate-800 font-bold text-sm rounded-xl transition-all shadow-sm border border-slate-200 active:scale-[0.98] flex items-center justify-center gap-2.5 hover:bg-slate-50 cursor-pointer disabled:opacity-70"
+            >
+              <GoogleIcon />
+              <span>Continue with Google</span>
+            </button>
+
+            {/* Form Footer Switcher */}
+            <p className="text-xs text-slate-600 font-medium pt-1">
+              {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  vibrate(10);
+                  setIsSignUp(!isSignUp);
+                  clearErrorState();
+                  setTapCount(0);
+                }}
+                className="text-blue-600 font-bold hover:underline cursor-pointer"
+              >
+                {isSignUp ? "Sign In" : "Sign Up"}
+              </button>
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

@@ -187,17 +187,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const fetchAdminData = async () => {
     setIsLoading(true);
     try {
-      // 1. Fetch Users, Leaderboard, and Rank in parallel safely
-      const [usersResult, lbResult, rankResult] = await Promise.allSettled([
+      // 1. Fetch Users, Leaderboard, Rank, and Deleted Users in parallel safely
+      const [usersResult, lbResult, rankResult, deletedResult] = await Promise.allSettled([
         getDocs(collection(db, "users")),
         getDocs(collection(db, "leaderboard")),
-        getDocs(collection(db, "rank"))
+        getDocs(collection(db, "rank")),
+        getDocs(collection(db, "deleted_users"))
       ]);
+
+      const deletedIds = new Set<string>();
+      if (deletedResult.status === "fulfilled") {
+        deletedResult.value.forEach((d) => {
+          deletedIds.add(d.id);
+          const data = d.data();
+          if (data?.uid) deletedIds.add(data.uid);
+          if (data?.userId) deletedIds.add(data.userId);
+        });
+      }
 
       const userMap = new Map<string, UserDetail>();
 
       const processDocData = (docId: string, data: any) => {
-        if (!data || docId.startsWith("bot-")) return;
+        if (!data || docId.startsWith("bot-") || deletedIds.has(docId) || data.deleted === true || data.isDeleted === true) return;
         const uid = docId;
         const userStats = data.stats || {};
 
