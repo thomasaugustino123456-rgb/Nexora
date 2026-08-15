@@ -46,7 +46,7 @@ export function extractRealDisplayName(docData: any, currentUser?: any): string 
   return docData?.displayName || docData?.settings?.displayName || docData?.name || currentUser?.displayName || "Champion";
 }
 
-export function extractRealProfilePic(docData: any, currentUser?: any): string {
+export function extractRealProfilePic(docData: any, currentUser?: any, fallbackPic?: string): string {
   const candidates = [
     docData?.profilePic,
     docData?.settings?.profilePic,
@@ -59,7 +59,8 @@ export function extractRealProfilePic(docData: any, currentUser?: any): string {
     docData?.photoURL,
     docData?.settings?.photoFileName,
     docData?.settings?.photoURL,
-    currentUser?.photoURL
+    currentUser?.photoURL,
+    fallbackPic
   ];
   for (const c of candidates) {
     if (typeof c === 'string' && c.trim() !== "") {
@@ -1071,6 +1072,15 @@ export function useNexoraData(
           ]);
 
           let userDocSnap = userDocSnapResult.status === "fulfilled" ? userDocSnapResult.value : null;
+          
+          if (!userDocSnap || !userDocSnap.exists()) {
+            try {
+              userDocSnap = await getDocFromCache(userDocRef);
+            } catch (cacheErr) {
+              console.warn("[FIRESTORE] Cache fallback check for user doc:", cacheErr);
+            }
+          }
+
           const earlyRewardsSnap = rewardsDocSnapResult.status === "fulfilled" ? rewardsDocSnapResult.value : null;
           const earlyStatsSnap = statsDocSnapResult.status === "fulfilled" ? statsDocSnapResult.value : null;
 
@@ -1196,16 +1206,16 @@ export function useNexoraData(
           if (docData) {
             // FAST PASS 1: Immediately hydrate User Profile, Coins, Plant Onboarding, and Core Stats from primary document (~50ms)
             try {
+              const localCacheSettings = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_settings", DEFAULT_SETTINGS) : DEFAULT_SETTINGS;
+              const localCacheGarden = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_garden", createInitialGardenState()) : createInitialGardenState();
+              const localCacheStats = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_stats", DEFAULT_STATS) : DEFAULT_STATS;
+
               const fastDisplayName = extractRealDisplayName(docData, currentUser);
-              const fastProfilePic = extractRealProfilePic(docData, currentUser);
+              const fastProfilePic = extractRealProfilePic(docData, currentUser, localCacheSettings?.profilePic);
               const fastAccountName = extractRealAccountName(docData, currentUser);
               const fastEmail = docData.email || docData["Email"] || docData.settings?.email || currentUser?.email || "";
               const fastLocation = extractRealLocation(docData);
               const fastBio = extractRealBio(docData);
-
-              const localCacheSettings = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_settings", DEFAULT_SETTINGS) : DEFAULT_SETTINGS;
-              const localCacheGarden = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_garden", createInitialGardenState()) : createInitialGardenState();
-              const localCacheStats = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_stats", DEFAULT_STATS) : DEFAULT_STATS;
 
               // Comprehensive fast calculation for Plant Onboarding across docData, settings, localCache, garden, and ecosystem
               const fastPlantOnboardingCompleted = 
@@ -1429,6 +1439,11 @@ export function useNexoraData(
                 getDoc(notebookRef)
               ]);
 
+              const rejectedAuxResults = results.filter(r => r.status === "rejected");
+              if (rejectedAuxResults.length > 0) {
+                console.warn("[FIRESTORE] Some auxiliary documents could not be fetched or do not exist yet. Gracefully continuing with available data.", rejectedAuxResults.length);
+              }
+
               const onboardingIDSnap = results[0].status === "fulfilled" ? results[0].value : null;
               const onboardingSubdocSnap = results[1].status === "fulfilled" ? results[1].value : null;
               const rewardsSnap = results[2].status === "fulfilled" ? results[2].value : null;
@@ -1493,7 +1508,7 @@ export function useNexoraData(
                 }
               }
             } catch (pErr) {
-              console.error("[FIRESTORE] Error reading subcollection/auxiliary documents:", pErr);
+              console.warn("[FIRESTORE] Warning reading subcollection/auxiliary documents:", pErr);
             }
 
             const finalOnboardingCompleted = isUserOnboardingCompleted(docData, onboardingData, docData.settings, currentUser.uid);
@@ -1610,7 +1625,7 @@ export function useNexoraData(
               displayName: extractRealDisplayName(docData, currentUser),
               age: docData.age ?? docData.settings?.age ?? DEFAULT_SETTINGS.age,
               gender: docData.gender ?? docData.settings?.gender,
-              profilePic: extractRealProfilePic(docData, currentUser),
+              profilePic: extractRealProfilePic(docData, currentUser, currentUser?.photoURL),
               themeColor: docData.themeColor ?? docData.settings?.themeColor ?? DEFAULT_SETTINGS.themeColor,
               soundEnabled: docData.soundEnabled ?? docData.settings?.soundEnabled ?? DEFAULT_SETTINGS.soundEnabled,
               notificationsEnabled: docData.notificationsEnabled ?? docData.settings?.notificationsEnabled ?? DEFAULT_SETTINGS.notificationsEnabled,
@@ -1989,7 +2004,33 @@ export function useNexoraData(
         } catch (error) {
           handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
           
-          // Fallback to local storage if offline/error so app continues functioning
+          // Fallback to local storage if offline/error so app continues functioning with full user data
+          console.warn("[PERSISTENCE] Critical fetch error. Activating Offline Cache Mode with Write Lock to protect user data.");
+          try {
+            const cachedSettings = getCachedJson("nexora_settings", DEFAULT_SETTINGS);
+            const cachedStats = getCachedJson("nexora_stats", DEFAULT_STATS);
+            const cachedGarden = getCachedJson("nexora_garden", createInitialGardenState());
+            const cachedProgress = getCachedJson("nexora_progress", {
+              date: today,
+              completed: false,
+              pushupsDone: false,
+              waterDrank: 0,
+              breathingDone: false,
+              drawingDone: false,
+              footballDone: false,
+              bubblesDone: false,
+              completionsCount: 0,
+              customPlanCompleted: false,
+              nextRestorationTime: null,
+            });
+            rawSetSettings(cachedSettings);
+            rawSetStats(cachedStats);
+            rawSetGardenState(cachedGarden);
+            rawSetDailyProgress(cachedProgress);
+          } catch (cacheRestoreErr) {
+            console.warn("[PERSISTENCE] Cache recovery warning:", cacheRestoreErr);
+          }
+          blockAllWritesRef.current = true;
           dataLoadedFromFirestore.current = true;
           setIsHydrated(true);
           setIsStateLoaded(true, "Auth load failed, fallback to local cache");
@@ -2110,6 +2151,7 @@ export function useNexoraData(
 
       if (lastSyncedRef.current && deepEqual(currentState, lastSyncedRef.current)) return;
 
+      setIsSyncingData(true);
       try {
         const userRef = doc(db, "users", user.uid);
         const userSingularRef = doc(db, "user", user.uid);
@@ -2767,13 +2809,15 @@ export function useNexoraData(
         } else {
           console.error("Sync error:", e);
         }
+      } finally {
+        setIsSyncingData(false);
       }
     };
 
-    // 1-second debounce for faster background sync (Ensures no data loss on immediate exits)
+    // Short debounce for ultra-fast background sync (Ensures user data syncs swiftly)
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
 
-    syncTimeoutRef.current = setTimeout(syncData, 1000);
+    syncTimeoutRef.current = setTimeout(syncData, 400);
 
     return () => {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
@@ -2868,6 +2912,7 @@ export function useNexoraData(
     }
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     if (quotaExceededRef.current) return;
+    setIsSyncingData(true);
     try {
       const userRef = doc(db, "users", user.uid);
       const progressRef = doc(db, "users", user.uid, "progress", today);
@@ -3348,6 +3393,8 @@ export function useNexoraData(
       handleFirestoreError(e, OperationType.WRITE, user?.uid ? `users/${user.uid}` : 'users');
       console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Force sync failed for user UID: ${user?.uid}. Error:`, e);
       console.error("Hooks: Force sync failed", e);
+    } finally {
+      setIsSyncingData(false);
     }
   }, [user, isDataReady, settings, stats, dailyProgress, gardenState]);
 

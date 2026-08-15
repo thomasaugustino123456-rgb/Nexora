@@ -1601,9 +1601,10 @@ export default function App() {
       // 1. Sync directly to Firebase Auth currentUser profile if available
       if (auth.currentUser) {
         try {
+          const authPhoto = (photoURL && !photoURL.startsWith('data:') && photoURL.length < 2048) ? photoURL : undefined;
           await updateProfile(auth.currentUser, {
             displayName: name,
-            photoURL: photoURL || undefined
+            ...(authPhoto !== undefined ? { photoURL: authPhoto } : {})
           });
         } catch (aErr) {
           console.warn("Auth updateProfile non-blocking error:", aErr);
