@@ -436,6 +436,7 @@ export default function App() {
     authLoading,
     isDataReady,
     isStateHydrated,
+    isSyncingData,
     settings,
     setSettings,
     stats,
@@ -6093,7 +6094,7 @@ export default function App() {
                       if (settings.soundEnabled) play("header_switch");
                       setActiveScreen("profile");
                     }}
-                    className={`p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl transition-all shadow-sm border shrink-0 flex items-center justify-center ${
+                    className={`p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl transition-all shadow-sm border shrink-0 flex items-center justify-center relative ${
                       activeScreen === "profile" 
                         ? "bg-gradient-to-br from-[#69C496] to-[#58B383] text-white border-[#69C496]/50 scale-105" 
                         : "text-[#4F3F34]/70 bg-white hover:bg-slate-50 border-[#E9E4D4]"
@@ -6105,6 +6106,12 @@ export default function App() {
                       className="w-[18px] h-[18px] rounded-full object-cover border border-[#E9E4D4] shrink-0"
                       referrerPolicy="no-referrer"
                     />
+                    {isSyncingData && (
+                      <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+                      </span>
+                    )}
                   </button>
 
                   {(user?.uid === "G77faQhRPfe5jr4hbY0O0L4fNUs2" || user?.email === "thomasaugustino12345678@gmail.com") && (
@@ -6200,6 +6207,7 @@ export default function App() {
                       showToast={showToast}
                       onArchiveChallenge={handleArchiveChallenge}
                       gardenState={gardenState}
+                      isSyncing={isSyncingData}
                     />
                   </motion.div>
                 )
@@ -6263,6 +6271,7 @@ export default function App() {
                       circles={circles}
                       onUpdateProfile={handleUpdateProfile}
                       deleteAccount={handleDeleteAccount}
+                      isSyncing={isSyncingData}
                     />
                   </Suspense>
                 </motion.div>

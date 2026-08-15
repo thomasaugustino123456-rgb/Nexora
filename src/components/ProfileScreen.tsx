@@ -40,6 +40,7 @@ export function ProfileScreen({
   circles,
   onUpdateProfile,
   deleteAccount,
+  isSyncing,
 }: {
   settings: UserSettings;
   setSettings: (
@@ -56,6 +57,7 @@ export function ProfileScreen({
     extraFields?: { accountName?: string; email?: string }
   ) => void;
   deleteAccount: () => Promise<void>;
+  isSyncing?: boolean;
 }) {
   const [showArchitect, setShowArchitect] = useState(false);
   const currentXP = stats.xp || 0;
@@ -201,9 +203,15 @@ export function ProfileScreen({
           <div className="w-32 h-32 rounded-[2.5rem] bg-white border-4 border-white shadow-2xl relative z-10 overflow-hidden">
             <img
               src={editPhoto || "/icon-512.png"}
-              className="w-full h-full object-cover shadow-inner"
+              className={`w-full h-full object-cover shadow-inner transition-opacity duration-300 ${isSyncing ? "opacity-75" : "opacity-100"}`}
               referrerPolicy="no-referrer"
             />
+            {isSyncing && (
+              <div className="absolute inset-0 bg-black/25 backdrop-blur-[1px] flex flex-col items-center justify-center text-white gap-1 z-10">
+                <Loader2 size={24} className="animate-spin text-white drop-shadow" />
+                <span className="text-[9px] font-black uppercase tracking-wider drop-shadow">Syncing...</span>
+              </div>
+            )}
           </div>
           <button
             onClick={() => fileInputRef.current?.click()}

@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { 
   AlertCircle, Star, Bell, Flame, Trophy as TrophyIcon, 
   Plus, Trash2, Clock, Target, ChevronRight, Sprout, LogOut, Save, CheckCircle2,
-  Infinity, Zap, Crown, Coins, Brain, Sparkles, BookOpen, Flower2, Compass, Map
+  Infinity, Zap, Crown, Coins, Brain, Sparkles, BookOpen, Flower2, Compass, Map, Loader2
 } from 'lucide-react';
 import { 
   UserStats, UserSettings, DailyProgress, MascotMood, ChallengeStep, CustomPlan 
@@ -109,10 +109,11 @@ export interface HomeScreenProps {
   onArchiveChallenge?: (id: string) => void,
   onSelectTask: (taskId: string) => void,
   onOpenGarden: () => void,
-  gardenState?: GardenState
+  gardenState?: GardenState,
+  isSyncing?: boolean
 }
 
-export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenArchives, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask, onOpenGarden, gardenState }: HomeScreenProps) => {
+export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenArchives, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask, onOpenGarden, gardenState, isSyncing = false }: HomeScreenProps) => {
 
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
@@ -449,12 +450,16 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border border-[#E9E4D4] shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 hover:border-orange-500/30 transition-colors"
+                  className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border border-[#E9E4D4] shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 hover:border-orange-500/30 transition-colors relative overflow-hidden"
                 >
                   <span className="text-[9px] font-black text-orange-600/70 uppercase tracking-widest text-center block mb-1.5">{translate("Streak", lang)}</span>
                   <div className="flex flex-col items-center gap-2 w-full">
                     <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/15 flex-shrink-0">
-                      <Flame size={14} strokeWidth={2.2} />
+                      {isSyncing ? (
+                        <Loader2 size={14} className="animate-spin text-white" />
+                      ) : (
+                        <Flame size={14} strokeWidth={2.2} />
+                      )}
                     </div>
                     <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible" title={`${stats.streak} days`}>
                       {formatCompactNumber(stats.streak)}
@@ -468,12 +473,16 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border border-[#E9E4D4] shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 hover:border-emerald-500/30 transition-colors"
+                  className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border border-[#E9E4D4] shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 hover:border-emerald-500/30 transition-colors relative overflow-hidden"
                 >
                   <span className="text-[9px] font-black text-emerald-600/70 uppercase tracking-widest text-center block mb-1.5">{translate("XP", lang)}</span>
                   <div className="flex flex-col items-center gap-2 w-full">
                     <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#69C496] to-[#58B383] flex items-center justify-center text-white shadow-md shadow-[#69C496]/15 flex-shrink-0">
-                      <Star size={14} strokeWidth={2.2} />
+                      {isSyncing ? (
+                        <Loader2 size={14} className="animate-spin text-white" />
+                      ) : (
+                        <Star size={14} strokeWidth={2.2} />
+                      )}
                     </div>
                     <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible" title={`${stats.xp || 0} XP`}>
                       {formatCompactNumber(stats.xp || 0)}
@@ -487,12 +496,16 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border border-[#E9E4D4] shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 hover:border-amber-500/30 transition-colors"
+                  className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border border-[#E9E4D4] shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 hover:border-amber-500/30 transition-colors relative overflow-hidden"
                 >
                   <span className="text-[9px] font-black text-amber-600/70 uppercase tracking-widest text-center block mb-1.5">{translate("Coins", lang)}</span>
                   <div className="flex flex-col items-center gap-2 w-full">
                     <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-500/15 flex-shrink-0">
-                      <Coins size={14} strokeWidth={2.2} />
+                      {isSyncing ? (
+                        <Loader2 size={14} className="animate-spin text-white" />
+                      ) : (
+                        <Coins size={14} strokeWidth={2.2} />
+                      )}
                     </div>
                     <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible" title={`${stats.coins || 0} Coins`}>
                       {formatCompactNumber(stats.coins || 0)}

@@ -24,9 +24,14 @@ export function extractRealDisplayName(docData: any, currentUser?: any): string 
     docData?.settings?.displayName,
     docData?.name,
     docData?.["Name"],
+    docData?.["displayName"],
+    docData?.["display_name"],
+    docData?.["full_name"],
+    docData?.["username"],
     docData?.accountName,
     docData?.["Account name"],
     docData?.settings?.accountName,
+    docData?.settings?.name,
     currentUser?.displayName,
   ];
   for (const c of primaryCandidates) {
@@ -48,8 +53,72 @@ export function extractRealProfilePic(docData: any, currentUser?: any): string {
     docData?.photoFileName,
     docData?.["Photo file name"],
     docData?.["Profile image"],
+    docData?.["profilePic"],
+    docData?.["photoURL"],
+    docData?.["avatar"],
     docData?.photoURL,
+    docData?.settings?.photoFileName,
+    docData?.settings?.photoURL,
     currentUser?.photoURL
+  ];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim() !== "") {
+      return c.trim();
+    }
+  }
+  return "";
+}
+
+export function extractRealAccountName(docData: any, currentUser?: any): string {
+  const candidates = [
+    docData?.accountName,
+    docData?.["Account name"],
+    docData?.settings?.accountName,
+    docData?.username,
+    docData?.["Username"],
+    docData?.displayName,
+    docData?.name,
+    docData?.["Name"],
+    currentUser?.displayName,
+  ];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim() !== "") {
+      return c.trim();
+    }
+  }
+  if (currentUser?.email) {
+    const emailPrefix = currentUser.email.split('@')[0];
+    if (emailPrefix && emailPrefix.trim() !== "") return emailPrefix.trim();
+  }
+  return "Champion";
+}
+
+export function extractRealLocation(docData: any): string {
+  const candidates = [
+    docData?.location,
+    docData?.["Location"],
+    docData?.settings?.location,
+    docData?.settings?.["Location"],
+    docData?.city,
+    docData?.["City"]
+  ];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim() !== "") {
+      return c.trim();
+    }
+  }
+  return "";
+}
+
+export function extractRealBio(docData: any): string {
+  const candidates = [
+    docData?.bio,
+    docData?.["Bio"],
+    docData?.about,
+    docData?.["About"],
+    docData?.settings?.bio,
+    docData?.settings?.["Bio"],
+    docData?.settings?.about
   ];
   for (const c of candidates) {
     if (typeof c === 'string' && c.trim() !== "") {
@@ -348,7 +417,7 @@ function mergeStats(dbStats: UserStats, localStats: UserStats, defaultStats: Use
     totalPoints: Math.max(dbStats.totalPoints || 0, localStats.totalPoints || 0),
     xp: Math.max(dbStats.xp || 0, localStats.xp || 0),
     level: Math.max(dbStats.level || 1, localStats.level || 1),
-    coins: typeof dbStats.coins === "number" ? dbStats.coins : (localStats.coins ?? defaultStats.coins),
+    coins: Math.max(dbStats.coins || 0, localStats.coins || 0, defaultStats.coins || 0),
     gems: Math.max(dbStats.gems || 0, localStats.gems || 0),
     totalCompletedDays: Math.max(dbStats.totalCompletedDays || 0, localStats.totalCompletedDays || 0),
     weeklyPoints: Math.max(dbStats.weeklyPoints || 0, localStats.weeklyPoints || 0),
@@ -405,18 +474,26 @@ function mergeStats(dbStats: UserStats, localStats: UserStats, defaultStats: Use
 function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, defaultSettings: UserSettings, userId?: string): UserSettings {
   const localHasSettings = (localSettings.displayName && localSettings.displayName !== "Nexora User" && localSettings.displayName !== "Champion" && localSettings.displayName !== "Nexora Citizen") || localSettings.onboardingCompleted;
 
-  const dbName = (dbSettings.displayName && dbSettings.displayName !== "Nexora User" && dbSettings.displayName !== "Champion" && dbSettings.displayName !== "Nexora Citizen") ? dbSettings.displayName : undefined;
-  const localName = (localSettings.displayName && localSettings.displayName !== "Nexora User" && localSettings.displayName !== "Champion" && localSettings.displayName !== "Nexora Citizen") ? localSettings.displayName : undefined;
+  const dbName = (dbSettings.displayName && dbSettings.displayName.trim() !== "" && dbSettings.displayName !== "Nexora User" && dbSettings.displayName !== "Champion" && dbSettings.displayName !== "Nexora Citizen") ? dbSettings.displayName : undefined;
+  const localName = (localSettings.displayName && localSettings.displayName.trim() !== "" && localSettings.displayName !== "Nexora User" && localSettings.displayName !== "Champion" && localSettings.displayName !== "Nexora Citizen") ? localSettings.displayName : undefined;
   const finalName = dbName || localName || dbSettings.displayName || localSettings.displayName || defaultSettings.displayName || "Champion";
 
   const dbPic = (dbSettings.profilePic && dbSettings.profilePic.trim() !== "") ? dbSettings.profilePic : undefined;
   const localPic = (localSettings.profilePic && localSettings.profilePic.trim() !== "") ? localSettings.profilePic : undefined;
   const finalPic = dbPic || localPic || defaultSettings.profilePic || "";
 
+  const dbLoc = (dbSettings.location && dbSettings.location.trim() !== "") ? dbSettings.location : undefined;
+  const localLoc = (localSettings.location && localSettings.location.trim() !== "") ? localSettings.location : undefined;
+  const finalLoc = dbLoc || localLoc || defaultSettings.location || "";
+
+  const dbAccount = (dbSettings.accountName && dbSettings.accountName.trim() !== "" && dbSettings.accountName !== "Champion") ? dbSettings.accountName : undefined;
+  const localAccount = (localSettings.accountName && localSettings.accountName.trim() !== "" && localSettings.accountName !== "Champion") ? localSettings.accountName : undefined;
+  const finalAccount = dbAccount || localAccount || dbSettings.accountName || localSettings.accountName || defaultSettings.accountName || "Champion";
+
   const isPro = isUserProUnlocked(userId) || Boolean(dbSettings.isPro) || Boolean(localSettings.isPro);
 
   if (!localHasSettings) {
-    return { ...defaultSettings, ...dbSettings, displayName: finalName, profilePic: finalPic, isPro };
+    return { ...defaultSettings, ...dbSettings, displayName: finalName, profilePic: finalPic, location: finalLoc, accountName: finalAccount, isPro };
   }
 
   const finalOnboardingDone = typeof dbSettings.onboardingCompleted === "boolean"
@@ -432,6 +509,8 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
 
     displayName: finalName,
     profilePic: finalPic,
+    location: finalLoc,
+    accountName: finalAccount,
     onboardingCompleted: finalOnboardingDone,
     plantOnboardingCompleted: dbSettings.plantOnboardingCompleted || localSettings.plantOnboardingCompleted || false,
     spaceOnboardingCompleted: dbSettings.spaceOnboardingCompleted || localSettings.spaceOnboardingCompleted || false,
@@ -800,6 +879,7 @@ export function useNexoraData(
     return () => clearTimeout(authTimer);
   }, []);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isSyncingData, setIsSyncingData] = useState(false);
   const dataLoadedFromFirestore = useRef(false);
 
   const lastLoadedUserIdRef = useRef<string | null>(null);
@@ -885,6 +965,7 @@ export function useNexoraData(
         setLoading(true);
         setIsDataReady(false);
         setIsStateHydrated(false);
+        setIsSyncingData(true);
         dataLoadedFromFirestore.current = false;
         hasMatchedHydratedStateRef.current = false;
         setIsStateLoaded(false, "User logging in, resetting states to load from Firestore.");
@@ -940,17 +1021,38 @@ export function useNexoraData(
                 const cData = cacheUserSnap.data();
                 const rData = cacheRewardsSnap?.exists() ? cacheRewardsSnap.data() : null;
                 const sData = cacheStatsSnap?.exists() ? cacheStatsSnap.data() : null;
+                const localCacheStats = getCachedJson("nexora_stats", DEFAULT_STATS);
 
-                const instantCoins = typeof cData.coins === "number"
-                  ? cData.coins
-                  : typeof cData.stats?.coins === "number"
-                    ? cData.stats.coins
-                    : (getCachedJson("nexora_stats", DEFAULT_STATS)?.coins ?? DEFAULT_STATS.coins);
+                const instantDisplayName = extractRealDisplayName(cData, currentUser);
+                const instantProfilePic = extractRealProfilePic(cData, currentUser);
+                const instantAccountName = extractRealAccountName(cData, currentUser);
+                const instantLocation = extractRealLocation(cData);
+
+                if (instantDisplayName || instantProfilePic) {
+                  rawSetSettings((prev) => ({
+                    ...prev,
+                    displayName: instantDisplayName || prev.displayName,
+                    profilePic: instantProfilePic || prev.profilePic,
+                    accountName: instantAccountName || prev.accountName,
+                    location: instantLocation || prev.location,
+                  }));
+                }
+
+                const instantCoins = Math.max(
+                  cData.coins || 0,
+                  cData.stats?.coins || 0,
+                  rData?.coins || 0,
+                  rData?.stats?.coins || 0,
+                  sData?.coins || 0,
+                  sData?.stats?.coins || 0,
+                  localCacheStats?.coins || 0,
+                  DEFAULT_STATS.coins
+                );
 
                 if (instantCoins > 0) {
                   rawSetStats((prev) => ({
                     ...prev,
-                    coins: instantCoins,
+                    coins: Math.max(prev.coins || 0, instantCoins),
                     xp: Math.max(prev.xp || 0, cData.xp || 0, cData.stats?.xp || 0, rData?.xp || 0, sData?.xp || 0),
                     streak: Math.max(prev.streak || 0, cData.streak || 0, cData.stats?.streak || 0, rData?.streak || 0, sData?.streak || 0),
                   }));
@@ -961,10 +1063,22 @@ export function useNexoraData(
             }
           }
 
-          let userDocSnap = await getDoc(userDocRef);
+          // Fetch core user doc, rewards doc, and stats doc in parallel for instant fast hydration
+          const [userDocSnapResult, rewardsDocSnapResult, statsDocSnapResult] = await Promise.allSettled([
+            getDoc(userDocRef),
+            getDoc(doc(db, "users", currentUser.uid, "rewards", "main")),
+            getDoc(doc(db, "users", currentUser.uid, "stats", "main"))
+          ]);
+
+          let userDocSnap = userDocSnapResult.status === "fulfilled" ? userDocSnapResult.value : null;
+          const earlyRewardsSnap = rewardsDocSnapResult.status === "fulfilled" ? rewardsDocSnapResult.value : null;
+          const earlyStatsSnap = statsDocSnapResult.status === "fulfilled" ? statsDocSnapResult.value : null;
+
+          const earlyRewardsData = earlyRewardsSnap?.exists() ? earlyRewardsSnap.data() : null;
+          const earlyStatsData = earlyStatsSnap?.exists() ? earlyStatsSnap.data() : null;
           let docData: any = null;
           
-          if (!userDocSnap.exists()) {
+          if (!userDocSnap || !userDocSnap.exists()) {
             console.log(`[FIRESTORE] User not found at '${userDocRef.path}'. Checking fallback '${userSingularDocRef.path}'...`);
             try {
               const userSingularSnap = await getDoc(userSingularDocRef);
@@ -980,7 +1094,7 @@ export function useNexoraData(
             }
           }
           
-          if (!userDocSnap.exists()) {
+          if (!userDocSnap || !userDocSnap.exists()) {
             console.log(`[FIRESTORE] User not found in DB. Creating new user document at ${userDocRef.path}`);
             
             const accountNameVal = currentUser.displayName || currentUser.email?.split('@')[0] || "Champion";
@@ -1084,9 +1198,10 @@ export function useNexoraData(
             try {
               const fastDisplayName = extractRealDisplayName(docData, currentUser);
               const fastProfilePic = extractRealProfilePic(docData, currentUser);
-              const fastAccountName = docData.accountName || docData["Account name"] || docData.settings?.accountName || currentUser?.displayName || currentUser?.email?.split('@')[0] || "Champion";
+              const fastAccountName = extractRealAccountName(docData, currentUser);
               const fastEmail = docData.email || docData["Email"] || docData.settings?.email || currentUser?.email || "";
-              const fastLocation = docData.location || docData["Location"] || docData.settings?.location || "";
+              const fastLocation = extractRealLocation(docData);
+              const fastBio = extractRealBio(docData);
 
               const localCacheSettings = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_settings", DEFAULT_SETTINGS) : DEFAULT_SETTINGS;
               const localCacheGarden = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_garden", createInitialGardenState()) : createInitialGardenState();
@@ -1154,26 +1269,43 @@ export function useNexoraData(
                 fastLevel = Math.max(1, Number(savedOrigStats.level) || 1);
                 fastCoins = Math.max(0, Number(savedOrigStats.coins) || 0);
               } else {
-                fastCoins = typeof docData.coins === "number"
-                  ? docData.coins
-                  : typeof docData.stats?.coins === "number"
-                    ? docData.stats.coins
-                    : (localCacheStats?.coins ?? DEFAULT_STATS.coins);
+                fastCoins = Math.max(
+                  docData.coins || 0,
+                  docData.stats?.coins || 0,
+                  earlyRewardsData?.coins || 0,
+                  earlyRewardsData?.stats?.coins || 0,
+                  earlyStatsData?.coins || 0,
+                  earlyStatsData?.stats?.coins || 0,
+                  localCacheStats?.coins || 0,
+                  DEFAULT_STATS.coins
+                );
                 fastXP = Math.max(
                   docData.xp || 0,
                   docData.stats?.xp || 0,
+                  earlyRewardsData?.xp || 0,
+                  earlyRewardsData?.stats?.xp || 0,
+                  earlyStatsData?.xp || 0,
+                  earlyStatsData?.stats?.xp || 0,
                   localCacheStats?.xp || 0,
                   DEFAULT_STATS.xp
                 );
                 fastStreak = Math.max(
                   docData.streak || 0,
                   docData.stats?.streak || 0,
+                  earlyRewardsData?.streak || 0,
+                  earlyRewardsData?.stats?.streak || 0,
+                  earlyStatsData?.streak || 0,
+                  earlyStatsData?.stats?.streak || 0,
                   localCacheStats?.streak || 0,
                   DEFAULT_STATS.streak
                 );
                 fastBestStreak = Math.max(
                   docData.bestStreak || 0,
                   docData.stats?.bestStreak || 0,
+                  earlyRewardsData?.bestStreak || 0,
+                  earlyRewardsData?.stats?.bestStreak || 0,
+                  earlyStatsData?.bestStreak || 0,
+                  earlyStatsData?.stats?.bestStreak || 0,
                   fastStreak,
                   localCacheStats?.bestStreak || 0,
                   DEFAULT_STATS.bestStreak
@@ -1183,6 +1315,10 @@ export function useNexoraData(
                   docData.stats?.totalPoints || 0,
                   docData.weeklyPoints || 0,
                   docData.weeklyXP || 0,
+                  earlyRewardsData?.totalPoints || 0,
+                  earlyRewardsData?.points || 0,
+                  earlyStatsData?.totalPoints || 0,
+                  earlyStatsData?.points || 0,
                   fastXP,
                   localCacheStats?.totalPoints || 0,
                   DEFAULT_STATS.totalPoints
@@ -1190,6 +1326,10 @@ export function useNexoraData(
                 fastLevel = Math.max(
                   docData.level || 1,
                   docData.stats?.level || 1,
+                  earlyRewardsData?.level || 1,
+                  earlyRewardsData?.stats?.level || 1,
+                  earlyStatsData?.level || 1,
+                  earlyStatsData?.stats?.level || 1,
                   localCacheStats?.level || 1,
                   DEFAULT_STATS.level || 1
                 );
@@ -1225,6 +1365,14 @@ export function useNexoraData(
               };
               rawSetGardenState(fastGardenState);
               localStorage.setItem("nexora_garden", JSON.stringify(fastGardenState));
+
+              // INSTANT UI UNLOCK (<50ms): Core user profile & rewards are now fully calculated and in React state!
+              // Release loading and auth locks immediately so the user sees their Name, Profile Pic, Coins, and Stats with zero latency.
+              setAuthLoading(false);
+              setIsDataReady(true);
+              setLoading(false);
+              setIsHydrated(true);
+              setIsStateHydrated(true);
             } catch (err) {
               console.warn("[FAST PASS HYDRATION] Early settings/stats calculation skipped:", err);
             }
@@ -1488,7 +1636,7 @@ export function useNexoraData(
               inventory: mergedInventory,
               isDogSoundPackActive: docData.isDogSoundPackActive ?? docData.settings?.isDogSoundPackActive ?? DEFAULT_SETTINGS.isDogSoundPackActive,
               league: docData.league ?? docData.settings?.league ?? DEFAULT_SETTINGS.league,
-              location: docData.location ?? docData.settings?.location ?? DEFAULT_SETTINGS.location,
+              location: extractRealLocation(docData) || docData.location || docData.settings?.location || DEFAULT_SETTINGS.location,
               timezone: docData.timezone ?? docData.settings?.timezone ?? DEFAULT_SETTINGS.timezone,
               fcmToken: docData.fcmToken ?? docData.settings?.fcmToken,
               badgeSettings: docData.badgeSettings ?? docData.settings?.badgeSettings ?? DEFAULT_SETTINGS.badgeSettings,
@@ -1513,13 +1661,14 @@ export function useNexoraData(
               proTestExpiresAt: docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt ?? null,
               proTestLastUsedAt: docData.proTestLastUsedAt ?? docData.settings?.proTestLastUsedAt ?? null,
               
-              accountName: docData.accountName || docData["Account name"] || (docData.settings?.accountName) || currentUser.displayName || currentUser.email?.split('@')[0] || "Champion",
+              accountName: extractRealAccountName(docData, currentUser),
               email: docData.email || (docData.settings?.email) || currentUser.email || "",
               time: docData.time || docData["Time"] || (docData.settings?.time) || new Date().toISOString()
             };
             
             const savedOrigStats = docData.originalStatsBeforeProTest || docData.settings?.originalStatsBeforeProTest;
             const isTestActive = Boolean(docData.proTestActive ?? docData.settings?.proTestActive) && Boolean(docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt) && new Date((docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt)!).getTime() > Date.now();
+            const localCacheStats = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_stats", DEFAULT_STATS) : DEFAULT_STATS;
 
             let finalStreak: number;
             let finalBestStreak: number;
@@ -1570,15 +1719,20 @@ export function useNexoraData(
               finalTotalPoints = maxOverallPoints;
               finalXP = Math.max(docData.xp || 0, docData.stats?.xp || 0, rewardsData?.xp || 0, rewardsTopData?.xp || 0, rankTopData?.xp || 0, leaderboardTopData?.xp || 0, statsMainData?.xp || 0, statsTopData?.xp || 0, maxOverallPoints, DEFAULT_STATS.xp);
               finalLevel = Math.max(docData.level || 1, docData.stats?.level || 1, rewardsData?.level || 1, rewardsTopData?.level || 1, rankTopData?.level || 1, leaderboardTopData?.level || 1, statsMainData?.level || 1, statsTopData?.level || 1, DEFAULT_STATS.level || 1);
-              finalCoins = typeof docData.coins === "number"
-                ? docData.coins
-                : typeof docData.stats?.coins === "number"
-                  ? docData.stats.coins
-                  : typeof statsMainData?.coins === "number"
-                    ? statsMainData.coins
-                    : typeof rewardsData?.coins === "number"
-                      ? rewardsData.coins
-                      : DEFAULT_STATS.coins;
+              finalCoins = Math.max(
+                docData.coins || 0,
+                docData.stats?.coins || 0,
+                rewardsData?.coins || 0,
+                rewardsData?.stats?.coins || 0,
+                rewardsTopData?.coins || 0,
+                statsMainData?.coins || 0,
+                statsTopData?.coins || 0,
+                userShopData?.coins || 0,
+                shopPurchasesTopData?.coins || 0,
+                shopTopData?.coins || 0,
+                localCacheStats?.coins || 0,
+                DEFAULT_STATS.coins
+              );
               finalWeeklyPoints = Math.max(docData.weeklyPoints || 0, docData.stats?.weeklyPoints || 0, rewardsData?.weeklyPoints || 0, rewardsTopData?.weeklyPoints || 0, rankTopData?.weeklyPoints || 0, leaderboardTopData?.weeklyPoints || 0, statsMainData?.weeklyPoints || 0, statsTopData?.weeklyPoints || 0, maxOverallPoints, DEFAULT_STATS.weeklyPoints);
               finalWeeklyXP = Math.max(docData.weeklyXP || 0, docData.stats?.weeklyXP || 0, rewardsData?.weeklyXP || 0, rewardsTopData?.weeklyXP || 0, rankTopData?.weeklyXP || 0, leaderboardTopData?.weeklyXP || 0, statsMainData?.weeklyXP || 0, statsTopData?.weeklyXP || 0, finalXP, maxOverallPoints, DEFAULT_STATS.weeklyXP);
             }
@@ -1843,6 +1997,7 @@ export function useNexoraData(
           setIsStateHydrated(true);
           setNeedsOnboarding(false);
         } finally {
+          setIsSyncingData(false);
           if (loadTimeout) clearTimeout(loadTimeout);
           if (!isTimeoutActive) {
             setAuthLoading(false);
@@ -2149,15 +2304,37 @@ export function useNexoraData(
               }
             }
 
+            const resolvedDisplayName = settings.displayName || user.displayName || 'Champion';
+            const resolvedProfilePic = settings.profilePic || user.photoURL || '';
+            const resolvedAccountName = settings.accountName || resolvedDisplayName;
+            const resolvedLocation = settings.location || '';
+
             const writePayload = cleanPayload({
-              name: settings.displayName || user.displayName || 'Champion',
-              displayName: settings.displayName || user.displayName || 'Champion',
-              photoFileName: settings.profilePic || user.photoURL || '',
-              profilePic: settings.profilePic || user.photoURL || '',
-              location: settings.location || '',
+              name: resolvedDisplayName,
+              displayName: resolvedDisplayName,
+              ["Name"]: resolvedDisplayName,
+              ["Account name"]: resolvedAccountName,
+              accountName: resolvedAccountName,
+              username: resolvedAccountName,
+              photoFileName: resolvedProfilePic,
+              profilePic: resolvedProfilePic,
+              photoURL: resolvedProfilePic,
+              ["Photo file name"]: resolvedProfilePic,
+              ["Profile image"]: resolvedProfilePic,
+              avatar: resolvedProfilePic,
+              location: resolvedLocation,
+              ["Location"]: resolvedLocation,
               time: new Date().toISOString(),
               ...settings,
-              settings: settings,
+              settings: {
+                ...settings,
+                displayName: resolvedDisplayName,
+                profilePic: resolvedProfilePic,
+                accountName: resolvedAccountName,
+                photoFileName: resolvedProfilePic,
+                photoURL: resolvedProfilePic,
+                location: resolvedLocation,
+              },
               uid: user.uid,
               email: user.email || `${user.uid}@nexora.app`,
               role: 'user',
@@ -2868,15 +3045,37 @@ export function useNexoraData(
           }
         }
 
+        const resolvedDisplayName = settings.displayName || user.displayName || 'Champion';
+        const resolvedProfilePic = settings.profilePic || user.photoURL || '';
+        const resolvedAccountName = settings.accountName || resolvedDisplayName;
+        const resolvedLocation = settings.location || '';
+
         const writePayload = {
-          name: settings.displayName || user.displayName || 'Champion',
-          displayName: settings.displayName || user.displayName || 'Champion',
-          photoFileName: settings.profilePic || user.photoURL || '',
-          profilePic: settings.profilePic || user.photoURL || '',
-          location: settings.location || '',
+          name: resolvedDisplayName,
+          displayName: resolvedDisplayName,
+          ["Name"]: resolvedDisplayName,
+          ["Account name"]: resolvedAccountName,
+          accountName: resolvedAccountName,
+          username: resolvedAccountName,
+          photoFileName: resolvedProfilePic,
+          profilePic: resolvedProfilePic,
+          photoURL: resolvedProfilePic,
+          ["Photo file name"]: resolvedProfilePic,
+          ["Profile image"]: resolvedProfilePic,
+          avatar: resolvedProfilePic,
+          location: resolvedLocation,
+          ["Location"]: resolvedLocation,
           time: new Date().toISOString(),
           ...settings,
-          settings: settings,
+          settings: {
+            ...settings,
+            displayName: resolvedDisplayName,
+            profilePic: resolvedProfilePic,
+            accountName: resolvedAccountName,
+            photoFileName: resolvedProfilePic,
+            photoURL: resolvedProfilePic,
+            location: resolvedLocation,
+          },
           uid: user.uid,
           email: user.email || `${user.uid}@nexora.app`,
           role: 'user',
@@ -3178,6 +3377,7 @@ export function useNexoraData(
     authLoading,
     isDataReady,
     isStateHydrated,
+    isSyncingData,
     settings,
     setSettings: onUpdateSettings,
     stats,
