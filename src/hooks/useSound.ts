@@ -105,7 +105,7 @@ const SOUNDS = {
   mascotPop: "",
 };
 
-// Advanced Audio Engine with zero-latency instant feedback
+// Advanced resilient Audio Engine with zero-latency Web Audio + HTML5 Audio fallback + Harmonic Synthesizer fallback
 let audioContext: AudioContext | null = null;
 const bufferCache: { [key: string]: AudioBuffer } = {};
 const rawBuffers: { [key: string]: ArrayBuffer } = {};
@@ -119,16 +119,40 @@ let activeMusicKey: string | null = null;
 
 function getOrCreateAudioContext(): AudioContext | null {
   if (typeof window === "undefined") return null;
-  if (!audioContext) {
-    const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
-    if (AudioCtxClass) {
-      audioContext = new AudioCtxClass();
+  try {
+    if (!audioContext) {
+      const AudioCtxClass =
+        window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtxClass) {
+        audioContext = new AudioCtxClass();
+      }
     }
-  }
-  if (audioContext && audioContext.state === "suspended") {
-    audioContext.resume().catch(() => {});
+    if (audioContext && audioContext.state === "suspended") {
+      audioContext.resume().catch(() => {});
+    }
+  } catch (e) {
+    console.warn("AudioContext init notice:", e);
   }
   return audioContext;
+}
+
+function decodeBufferForKey(key: string, ab: ArrayBuffer) {
+  const ctx = getOrCreateAudioContext();
+  if (!ctx || bufferCache[key] || !ab || ab.byteLength === 0) return;
+
+  try {
+    ctx.decodeAudioData(
+      ab.slice(0),
+      (decoded) => {
+        bufferCache[key] = decoded;
+      },
+      (err) => {
+        console.warn(`Audio decode failed for ${key}:`, err);
+      }
+    ).catch(() => {});
+  } catch {
+    // Fallback sync decode
+  }
 }
 
 function decodeAllRawBuffers() {
@@ -137,59 +161,72 @@ function decodeAllRawBuffers() {
 
   Object.entries(rawBuffers).forEach(([key, ab]) => {
     if (!bufferCache[key] && ab && ab.byteLength > 0) {
-      try {
-        ctx.decodeAudioData(
-          ab.slice(0),
-          (decoded) => {
-            bufferCache[key] = decoded;
-          },
-          () => {}
-        ).catch(() => {});
-      } catch {
-        // Ignore decode sync exceptions
-      }
+      decodeBufferForKey(key, ab);
     }
   });
 }
 
-// Unlock audio context and trigger immediate decoding on any user interaction
-if (typeof window !== "undefined") {
-  const unlock = () => {
-    const ctx = getOrCreateAudioContext();
-    if (ctx) {
+// Full hardware audio unlocking for Mobile Chrome, Safari iOS, and PWAs
+let isAudioUnlocked = false;
+function unlockAudioEngine() {
+  if (isAudioUnlocked) return;
+  const ctx = getOrCreateAudioContext();
+  if (ctx) {
+    if (ctx.state === "suspended") {
+      ctx.resume().then(() => {
+        isAudioUnlocked = true;
+        decodeAllRawBuffers();
+      }).catch(() => {});
+    } else {
+      isAudioUnlocked = true;
       decodeAllRawBuffers();
     }
-  };
-  window.addEventListener("touchstart", unlock, { passive: true });
-  window.addEventListener("mousedown", unlock, { passive: true });
-  window.addEventListener("keydown", unlock, { passive: true });
-  window.addEventListener("pointerdown", unlock, { passive: true });
+
+    // Play 1-sample silent buffer to unlock iOS/Android hardware DAC
+    try {
+      const silentBuffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = silentBuffer;
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch {}
+  }
 }
 
-// Immediate Preload & Cache at module load
 if (typeof window !== "undefined") {
+  const unlockEvents = ["touchstart", "touchend", "pointerdown", "mousedown", "keydown", "click"];
+  const handleInteraction = () => {
+    unlockAudioEngine();
+  };
+  unlockEvents.forEach((evt) => {
+    window.addEventListener(evt, handleInteraction, { passive: true, capture: true });
+  });
+}
+
+// Preload critical sound assets immediately with high priority
+if (typeof window !== "undefined") {
+  // Pre-instantiate and warm HTML5 audio elements
   Object.entries(SOUNDS).forEach(([key, url]) => {
     if (url) {
-      // Pre-instantiate HTMLAudioElement cache for instant playback
       try {
-        const audio = new Audio(url);
+        const audio = new Audio();
+        audio.crossOrigin = "anonymous";
         audio.preload = "auto";
+        audio.src = url;
         audioCacheMap.set(key, audio);
       } catch {}
 
-      // Pre-fetch raw buffer for Web Audio zero-latency decoding
+      // Pre-fetch raw arrayBuffer for Web Audio decoding
       if (!key.startsWith("music")) {
-        fetch(url)
+        fetch(url, { mode: "cors" })
           .then((res) => {
             if (!res.ok) return null;
-            const ct = res.headers.get("content-type") || "";
-            if (ct.includes("text/html")) return null;
             return res.arrayBuffer();
           })
           .then((ab) => {
             if (ab && ab.byteLength > 0) {
               rawBuffers[key] = ab;
-              decodeAllRawBuffers();
+              decodeBufferForKey(key, ab);
             }
           })
           .catch(() => {});
@@ -203,15 +240,17 @@ const getMusicNode = async (key: string) => {
 
   let url = (SOUNDS as any)[key];
   if (!url) {
-    url = (SOUNDS as any)["music-funkee"] || "https://res.cloudinary.com/dfoty883a/video/upload/v1775223016/mixkit-funkee-monkeee-1140_od4pxc.mp3";
+    url =
+      (SOUNDS as any)["music-funkee"] ||
+      "https://res.cloudinary.com/dfoty883a/video/upload/v1775223016/mixkit-funkee-monkeee-1140_od4pxc.mp3";
   }
 
   try {
-    const audio = new Audio(url);
-    audio.preload = "auto";
+    const audio = new Audio();
     audio.crossOrigin = "anonymous";
+    audio.preload = "auto";
+    audio.src = url;
 
-    // Direct simple playback node — no Web Audio API wrap for maximum CORS / mobile compatibility!
     musicNodes[key] = { audio, gain: {} as any };
     return musicNodes[key];
   } catch (err) {
@@ -220,9 +259,14 @@ const getMusicNode = async (key: string) => {
   }
 };
 
-// High-fidelity fallback synthesizer for offline or 404 assets
+// High-fidelity fallback synthesizer for offline or loading states
 function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
   try {
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+
     const osc = ctx.createOscillator();
     const gainNode = ctx.createGain();
     osc.connect(gainNode);
@@ -235,23 +279,23 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
       osc.frequency.setValueAtTime(587.33, now); // D5
       osc.frequency.setValueAtTime(880, now + 0.08); // A5
       gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.06, now + 0.03);
+      gainNode.gain.linearRampToValueAtTime(0.12, now + 0.03);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
       osc.start(now);
       osc.stop(now + 0.35);
     } else if (soundKey === "nav_switch" || soundKey === "header_switch") {
       osc.type = "sine";
       osc.frequency.setValueAtTime(1000, now);
-      osc.frequency.exponentialRampToValueAtTime(300, now + 0.04);
-      gainNode.gain.setValueAtTime(0.02, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+      osc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
+      gainNode.gain.setValueAtTime(0.08, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
       osc.start(now);
-      osc.stop(now + 0.04);
+      osc.stop(now + 0.05);
     } else if (soundKey === "water") {
       osc.type = "sine";
       osc.frequency.setValueAtTime(120, now);
       osc.frequency.exponentialRampToValueAtTime(500, now + 0.12);
-      gainNode.gain.setValueAtTime(0.05, now);
+      gainNode.gain.setValueAtTime(0.1, now);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
       osc.start(now);
       osc.stop(now + 0.12);
@@ -259,7 +303,7 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
       osc.type = "triangle";
       osc.frequency.setValueAtTime(180, now);
       osc.frequency.linearRampToValueAtTime(60, now + 0.45);
-      gainNode.gain.setValueAtTime(0.07, now);
+      gainNode.gain.setValueAtTime(0.12, now);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
       osc.start(now);
       osc.stop(now + 0.45);
@@ -267,255 +311,48 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
       osc.type = "sawtooth";
       osc.frequency.setValueAtTime(500, now);
       osc.frequency.linearRampToValueAtTime(250, now + 0.2);
-      gainNode.gain.setValueAtTime(0.06, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
-      osc.start(now);
-      osc.stop(now + 0.25);
-    } else if (soundKey === "bubble_gum_pop") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(220, now);
-      osc.frequency.exponentialRampToValueAtTime(1100, now + 0.1);
-      gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.15, now + 0.02);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
-      osc.start(now);
-      osc.stop(now + 0.15);
-    } else if (soundKey === "slime_squish") {
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(150, now);
-      osc.frequency.linearRampToValueAtTime(60, now + 0.18);
-      gainNode.gain.setValueAtTime(0.12, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
-      osc.start(now);
-      osc.stop(now + 0.18);
-    } else if (soundKey === "fire_spark") {
-      osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(800, now);
-      osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
-      gainNode.gain.setValueAtTime(0.08, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
-      osc.start(now);
-      osc.stop(now + 0.15);
-    } else if (soundKey === "lunar_hum") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(220, now);
-      osc.frequency.setValueAtTime(440, now + 0.1);
-      gainNode.gain.setValueAtTime(0.1, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
-      osc.start(now);
-      osc.stop(now + 0.6);
-    } else if (soundKey === "silk_rustle") {
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(1200, now);
-      osc.frequency.exponentialRampToValueAtTime(400, now + 0.12);
-      gainNode.gain.setValueAtTime(0.05, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
-      osc.start(now);
-      osc.stop(now + 0.12);
-    } else if (soundKey === "dream_chord") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(329.63, now); // E4
-      osc.frequency.setValueAtTime(392.00, now + 0.08); // G4
-      osc.frequency.setValueAtTime(523.25, now + 0.16); // C5
-      osc.frequency.setValueAtTime(659.25, now + 0.24); // E5
-      gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.1, now + 0.05);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-      osc.start(now);
-      osc.stop(now + 0.55);
-    } else if (soundKey === "lotus_splash") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(180, now);
-      osc.frequency.exponentialRampToValueAtTime(900, now + 0.15);
-      gainNode.gain.setValueAtTime(0.08, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
-      osc.start(now);
-      osc.stop(now + 0.15);
-    } else if (soundKey === "fern_rustle") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(600, now);
-      osc.frequency.exponentialRampToValueAtTime(150, now + 0.1);
-      gainNode.gain.setValueAtTime(0.06, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
-      osc.start(now);
-      osc.stop(now + 0.1);
-    } else if (soundKey === "clover_shine") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, now);
-      osc.frequency.exponentialRampToValueAtTime(1760, now + 0.15);
-      gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.08, now + 0.02);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
-      osc.start(now);
-      osc.stop(now + 0.3);
-    } else if (soundKey === "orchid_spark") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(783.99, now); // G5
-      osc.frequency.setValueAtTime(1046.50, now + 0.06); // C6
-      gainNode.gain.setValueAtTime(0.1, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
-      osc.start(now);
-      osc.stop(now + 0.4);
-    } else if (soundKey === "cactus_prick") {
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(1500, now);
-      osc.frequency.setValueAtTime(100, now + 0.02);
-      gainNode.gain.setValueAtTime(0.12, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
-      osc.start(now);
-      osc.stop(now + 0.04);
-    } else if (soundKey === "cactus_bloom") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(261.63, now);
-      osc.frequency.linearRampToValueAtTime(523.25, now + 0.25);
       gainNode.gain.setValueAtTime(0.1, now);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
       osc.start(now);
       osc.stop(now + 0.25);
-    } else if (soundKey === "bamboo_knock") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(380, now);
-      gainNode.gain.setValueAtTime(0.15, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
-      osc.start(now);
-      osc.stop(now + 0.08);
-    } else if (soundKey === "star_chime") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(987.77, now); // B5
-      osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
-      gainNode.gain.setValueAtTime(0.12, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
-      osc.start(now);
-      osc.stop(now + 0.45);
-    } else if (soundKey === "sprout_pop") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(180, now);
-      osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
-      gainNode.gain.setValueAtTime(0.15, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
-      osc.start(now);
-      osc.stop(now + 0.08);
-    } else if (soundKey === "zen_gong") {
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(110, now);
-      gainNode.gain.setValueAtTime(0.2, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
-      osc.start(now);
-      osc.stop(now + 1.2);
-    } else if (soundKey === "desert_wind") {
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(130, now);
-      osc.frequency.exponentialRampToValueAtTime(80, now + 0.5);
-      gainNode.gain.setValueAtTime(0.05, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
-      osc.start(now);
-      osc.stop(now + 0.5);
-    } else if (soundKey === "tropical_chirp") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(900, now);
-      osc.frequency.linearRampToValueAtTime(1500, now + 0.08);
-      gainNode.gain.setValueAtTime(0.08, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
-      osc.start(now);
-      osc.stop(now + 0.08);
-    } else if (soundKey === "forest_rustle") {
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(300, now);
-      osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
-      gainNode.gain.setValueAtTime(0.05, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
-      osc.start(now);
-      osc.stop(now + 0.15);
-    } else if (soundKey === "meadow_breeze") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(200, now);
-      osc.frequency.exponentialRampToValueAtTime(100, now + 0.4);
-      gainNode.gain.setValueAtTime(0.06, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
-      osc.start(now);
-      osc.stop(now + 0.4);
-    } else if (soundKey === "crystal_ting") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(2048, now);
-      gainNode.gain.setValueAtTime(0.12, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
-      osc.start(now);
-      osc.stop(now + 0.35);
-    } else if (soundKey === "volcano_rumble") {
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(55, now);
-      osc.frequency.linearRampToValueAtTime(30, now + 0.8);
-      gainNode.gain.setValueAtTime(0.2, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
-      osc.start(now);
-      osc.stop(now + 0.8);
-    } else if (soundKey === "flower_sigh") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(400, now);
-      osc.frequency.exponentialRampToValueAtTime(200, now + 0.4);
-      gainNode.gain.setValueAtTime(0.1, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
-      osc.start(now);
-      osc.stop(now + 0.4);
-    } else if (soundKey === "sprout_cry") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(300, now);
-      osc.frequency.linearRampToValueAtTime(150, now + 0.6);
-      gainNode.gain.setValueAtTime(0.08, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
-      osc.start(now);
-      osc.stop(now + 0.6);
-    } else if (soundKey === "tulip_breeze") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(350, now);
-      osc.frequency.linearRampToValueAtTime(450, now + 0.15);
-      gainNode.gain.setValueAtTime(0.08, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
-      osc.start(now);
-      osc.stop(now + 0.15);
-    } else if (soundKey === "tulip_laugh") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(600, now);
-      osc.frequency.setValueAtTime(800, now + 0.05);
-      gainNode.gain.setValueAtTime(0.1, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
-      osc.start(now);
-      osc.stop(now + 0.15);
-    } else if (soundKey === "rose_sigh") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(350, now);
-      osc.frequency.linearRampToValueAtTime(200, now + 0.45);
-      gainNode.gain.setValueAtTime(0.08, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
-      osc.start(now);
-      osc.stop(now + 0.45);
-    } else if (soundKey === "shroom_glow") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.35);
-      gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.12, now + 0.05);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
-      osc.start(now);
-      osc.stop(now + 0.4);
     } else if (soundKey === "continue" || soundKey === "challenge_unlock" || soundKey === "flame_complete") {
       osc.type = "triangle";
       osc.frequency.setValueAtTime(261.63, now); // C4
       osc.frequency.setValueAtTime(329.63, now + 0.1); // E4
       osc.frequency.setValueAtTime(392.00, now + 0.2); // G4
       osc.frequency.setValueAtTime(523.25, now + 0.3); // C5
-
-      gainNode.gain.setValueAtTime(0.12, now);
+      gainNode.gain.setValueAtTime(0.18, now);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
-
       osc.start(now);
       osc.stop(now + 0.5);
+    } else if (soundKey === "stadium") {
+      // Warm rhythmic crowd cheer chord
+      [330, 440, 554.37, 659.25].forEach((f, idx) => {
+        const subOsc = ctx.createOscillator();
+        const subGain = ctx.createGain();
+        subOsc.type = "sine";
+        subOsc.frequency.setValueAtTime(f, now + idx * 0.04);
+        subGain.gain.setValueAtTime(0, now);
+        subGain.gain.linearRampToValueAtTime(0.15, now + 0.05);
+        subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+        subOsc.connect(subGain);
+        subGain.connect(ctx.destination);
+        subOsc.start(now);
+        subOsc.stop(now + 0.8);
+      });
+    } else if (soundKey === "fire_streak") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+      gainNode.gain.setValueAtTime(0.15, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
     } else if (soundKey === "chest_click") {
       osc.type = "sine";
       osc.frequency.setValueAtTime(600, now);
       osc.frequency.exponentialRampToValueAtTime(1200, now + 0.12);
-      gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.15, now + 0.02);
+      gainNode.gain.setValueAtTime(0.18, now);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
       osc.start(now);
       osc.stop(now + 0.12);
@@ -523,20 +360,19 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
       osc.type = "triangle";
       osc.frequency.setValueAtTime(110, now);
       osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
-      gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
+      gainNode.gain.setValueAtTime(0.3, now);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
       osc.start(now);
       osc.stop(now + 0.3);
     } else if (soundKey === "chest_reveal") {
-      const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99]; // C4, E4, G4, C5, E5, G5
+      const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99];
       notes.forEach((freq, idx) => {
         const subOsc = ctx.createOscillator();
         const subGain = ctx.createGain();
         subOsc.type = "sine";
         subOsc.frequency.setValueAtTime(freq, now + idx * 0.08);
         subGain.gain.setValueAtTime(0, now + idx * 0.08);
-        subGain.gain.linearRampToValueAtTime(0.12, now + idx * 0.08 + 0.02);
+        subGain.gain.linearRampToValueAtTime(0.16, now + idx * 0.08 + 0.02);
         subGain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 0.4);
         subOsc.connect(subGain);
         subGain.connect(ctx.destination);
@@ -553,16 +389,6 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
       osc.start(now);
       osc.stop(now + 0.35);
-    } else if (soundKey === "catHungry") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(480, now);
-      osc.frequency.linearRampToValueAtTime(700, now + 0.15);
-      osc.frequency.linearRampToValueAtTime(390, now + 0.38);
-      gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.22, now + 0.04);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
-      osc.start(now);
-      osc.stop(now + 0.4);
     } else if (soundKey === "dogHappy" || soundKey === "bark") {
       [0, 0.12].forEach((delay) => {
         const subOsc = ctx.createOscillator();
@@ -577,30 +403,11 @@ function synthesizeFallbackSound(soundKey: string, ctx: AudioContext) {
         subOsc.start(now + delay);
         subOsc.stop(now + delay + 0.095);
       });
-    } else if (soundKey === "dogHungry" || soundKey === "dogAngry") {
-      osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(280, now);
-      osc.frequency.exponentialRampToValueAtTime(120, now + 0.14);
-      gainNode.gain.setValueAtTime(0.24, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-      osc.start(now);
-      osc.stop(now + 0.15);
-    } else if (soundKey === "mascotPop" || soundKey === "pop") {
-      // Soft, warm, bubbly pop sound (< 220ms) under 250ms
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(340, now);
-      osc.frequency.exponentialRampToValueAtTime(820, now + 0.07);
-      osc.frequency.exponentialRampToValueAtTime(450, now + 0.18);
-      gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.18, now + 0.02);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.19);
-      osc.start(now);
-      osc.stop(now + 0.20);
     } else {
       osc.type = "sine";
       osc.frequency.setValueAtTime(440, now);
       gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.08, now + 0.04);
+      gainNode.gain.linearRampToValueAtTime(0.12, now + 0.04);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
       osc.start(now);
       osc.stop(now + 0.2);
@@ -618,51 +425,85 @@ export function useSound() {
   const play = useCallback((soundKey: keyof typeof SOUNDS) => {
     if (!soundKey) return;
 
-    // Duplicate Prevention (Debounce 90ms for exact same sound key)
+    // Responsive debounce (40ms) to ensure rapid tab switches aren't dropped
     const now = Date.now();
     const keyStr = String(soundKey);
     const lastTime = lastPlayTimestamps.get(keyStr) || 0;
-    if (now - lastTime < 90) {
-      return; // Suppress duplicate play call within 90ms
+    if (now - lastTime < 40) {
+      return;
     }
     lastPlayTimestamps.set(keyStr, now);
 
     try {
       const ctx = getOrCreateAudioContext();
+      if (ctx && ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+
       const buffer = bufferCache[keyStr];
 
+      // Tier 1: Zero-latency Web Audio Buffer playback
       if (ctx && buffer) {
-        // High-speed zero-latency Web Audio Buffer playback (< 1ms)
         const source = ctx.createBufferSource();
         const gainNode = ctx.createGain();
-        gainNode.gain.setValueAtTime(0.35, ctx.currentTime);
+        gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
         source.buffer = buffer;
         source.connect(gainNode);
         gainNode.connect(ctx.destination);
         source.start(0);
-      } else {
-        // Preloaded HTML5 Audio element playback
+        return;
+      }
+
+      // Tier 2: Pre-warmed or fresh HTML5 Audio Element playback
+      const url = SOUNDS[soundKey];
+      if (url) {
+        let played = false;
         const cachedAudio = audioCacheMap.get(keyStr);
-        if (cachedAudio) {
-          cachedAudio.currentTime = 0;
-          cachedAudio.volume = 0.35;
-          cachedAudio.play().catch((err) => {
-            console.warn(`Cached audio play deferred for ${keyStr}:`, err);
-          });
+
+        if (cachedAudio && cachedAudio.readyState >= 2) {
+          // Clone node to allow rapid overlapping taps without AbortErrors
+          const audioClone = cachedAudio.cloneNode() as HTMLAudioElement;
+          audioClone.volume = 0.4;
+          const playPromise = audioClone.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                played = true;
+              })
+              .catch(() => {
+                // If HTML Audio was blocked or rejected, fall back to synthesizer
+                if (ctx) synthesizeFallbackSound(keyStr, ctx);
+              });
+          }
         } else {
           // Direct HTML5 Audio fallback
-          const url = SOUNDS[soundKey];
-          if (url) {
-            const audio = new Audio(url);
-            audio.volume = 0.35;
-            audio.play().catch((err) => {
-              console.warn(`Audio play failed for ${soundKey}:`, err);
-            });
+          const directAudio = new Audio(url);
+          directAudio.crossOrigin = "anonymous";
+          directAudio.volume = 0.4;
+          const playPromise = directAudio.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                played = true;
+              })
+              .catch(() => {
+                if (ctx) synthesizeFallbackSound(keyStr, ctx);
+              });
           }
         }
+
+        // Tier 3: If buffer is still downloading and HTML audio is not ready, synthesize immediately
+        if (!played && ctx) {
+          synthesizeFallbackSound(keyStr, ctx);
+        }
+      } else if (ctx) {
+        // Tier 4: Procedural synthesis for local procedural sounds
+        synthesizeFallbackSound(keyStr, ctx);
       }
     } catch (e) {
-      console.warn("Audio Engine Error:", e);
+      console.warn("Audio Playback Notice:", e);
+      const ctx = getOrCreateAudioContext();
+      if (ctx) synthesizeFallbackSound(keyStr, ctx);
     }
   }, []);
 
@@ -681,25 +522,20 @@ export function useSound() {
       try {
         node.audio.pause();
         node.audio.currentTime = 0;
-      } catch {
-        // ignore pause errors
-      }
+      } catch {}
     }
   }, []);
 
   const playMusic = useCallback(async (musicKey: string | null) => {
     if (activeMusicKey === musicKey) return;
 
-    // Stop previous
     if (activeMusicKey) {
       const prevNode = await getMusicNode(activeMusicKey);
       if (prevNode) {
         try {
           prevNode.audio.pause();
           prevNode.audio.currentTime = 0;
-        } catch {
-          // ignore pause errors
-        }
+        } catch {}
       }
     }
 
@@ -711,7 +547,11 @@ export function useSound() {
         if (promise !== undefined) {
           promise.catch((e) => {
             const msg = String(e?.message || e || "");
-            if (e?.name !== "AbortError" && !msg.includes("interrupted") && !msg.includes("pause")) {
+            if (
+              e?.name !== "AbortError" &&
+              !msg.includes("interrupted") &&
+              !msg.includes("pause")
+            ) {
               console.warn("Audio play notice:", e);
             }
           });
@@ -730,9 +570,7 @@ export function useSound() {
       try {
         musicNodes[key].audio.pause();
         musicNodes[key].audio.currentTime = 0;
-      } catch {
-        // ignore pause errors
-      }
+      } catch {}
     });
     activeMusicKey = null;
     setCurrentMusic(null);
