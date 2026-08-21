@@ -398,6 +398,9 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
           throw new Error("ACCOUNT_DELETED_OR_NOT_FOUND");
         }
       }
+      try {
+        sessionStorage.setItem("nexora_fresh_login", "true");
+      } catch {}
       setIsSuccess(true);
       setCustomMoodOverride("happy");
       await triggerCelebrationJump();
@@ -516,6 +519,9 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
       };
       await setDoc(doc(db, "leaderboard", result.user.uid), initialGoogleLbData, { merge: true });
       await setDoc(doc(db, "rank", result.user.uid), initialGoogleLbData, { merge: true });
+      try {
+        sessionStorage.setItem("nexora_fresh_login", "true");
+      } catch {}
       setIsSuccess(true);
       setCustomMoodOverride("happy");
       await triggerCelebrationJump();
@@ -536,12 +542,9 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 h-screen h-[100dvh] max-h-[100dvh] w-full flex flex-col justify-between items-center px-5 py-4 sm:px-8 sm:py-6 overflow-hidden z-50 select-none bg-sky-200"
+      className="fixed inset-0 h-screen h-[100dvh] max-h-[100dvh] w-full flex flex-col justify-between items-center px-5 py-4 sm:px-8 sm:py-6 overflow-hidden z-50 select-none relative"
       style={{
-        backgroundImage: "url('/login-bg.jpg'), linear-gradient(180deg, #dbeafe 0%, #bae6fd 50%, #7dd3fc 100%)",
-        backgroundSize: "cover",
-        backgroundPosition: "center center",
-        backgroundRepeat: "no-repeat"
+        background: "linear-gradient(180deg, #dbeafe 0%, #bae6fd 50%, #7dd3fc 100%)"
       }}
     >
       {/* Top Bar / Back Navigation */}

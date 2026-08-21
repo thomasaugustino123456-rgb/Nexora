@@ -1,9 +1,11 @@
-const CACHE_NAME = 'nexora-pwa-v8.5.0';
+const CACHE_NAME = 'nexora-pwa-v8.5.1';
 const ASSETS_TO_CACHE = [
   '/',
   '/?screen=challenge',
   '/index.html',
   '/manifest.json',
+  '/login-bg.jpg',
+  '/login-emblem.jpg',
   '/icons/icon-192.png',
   '/icons/badge-72.png',
   '/mascots/blue-slim-notification.png',

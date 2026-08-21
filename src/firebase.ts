@@ -18,7 +18,10 @@ if (typeof window !== 'undefined') {
       lower.includes('b815') ||
       lower.includes('ve:') ||
       (lower.includes('firestore') && lower.includes('assertion')) ||
-      (lower.includes('firestore') && lower.includes('internal'))
+      (lower.includes('firestore') && lower.includes('internal')) ||
+      lower.includes('token-subscribe-failed') ||
+      lower.includes('messaging/token-subscribe-failed') ||
+      lower.includes('missing required authentication credential')
     );
   };
 
@@ -67,6 +70,13 @@ console.log("Firebase Initialization: Using project", firebaseConfig.projectId);
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+
+if (typeof window !== 'undefined') {
+  setPersistence(auth, browserLocalPersistence).catch((err) => {
+    console.warn("[Firebase Auth] Persistence initialization notice:", err);
+  });
+}
+
 export { onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider, GoogleAuthProvider, setPersistence, browserLocalPersistence, updateProfile };
 export type FirebaseUser = User;
 

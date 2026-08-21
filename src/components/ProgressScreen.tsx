@@ -5,7 +5,8 @@ import {
   TrendingUp, ChevronLeft, Droplets, Flame, 
   Clock, Zap, Star, Shield, BrainCircuit, 
   Palette, Dumbbell, Coins, Crown, BarChart2,
-  X, ShieldAlert, Sparkles, Plus, ChevronDown, ChevronUp, RotateCcw, Check, Trash2
+  X, ShieldAlert, Sparkles, Plus, ChevronDown, ChevronUp, RotateCcw, Check, Trash2,
+  Loader2
 } from 'lucide-react';
 import { UserStats, DailyProgress, UserSettings, Trophy as TrophyType, Screen } from '../types';
 import { Calendar } from './Calendar';
@@ -23,7 +24,8 @@ export function ProgressScreen({
   setStats,
   setDailyProgress,
   play,
-  showToast
+  showToast,
+  isSyncing,
 }: { 
   stats: UserStats, 
   history: DailyProgress[], 
@@ -35,7 +37,8 @@ export function ProgressScreen({
   setStats: (s: Partial<UserStats> | ((prev: UserStats) => UserStats)) => void,
   setDailyProgress: (p: Partial<DailyProgress> | ((prev: DailyProgress) => DailyProgress)) => void,
   play: (sound: string) => void,
-  showToast: (msg: string, type: 'success' | 'error' | 'info') => void
+  showToast: (msg: string, type: 'success' | 'error' | 'info') => void,
+  isSyncing?: boolean,
 }) {
   const [selectedTrophy, setSelectedTrophy] = useState<TrophyType | null>(null);
   const [waveOffset, setWaveOffset] = useState(0);
@@ -197,17 +200,17 @@ export function ProgressScreen({
           {/* Stats Grid */}
           <motion.div variants={item} className="grid grid-cols-2 gap-4">
             {[
-              { label: 'Hyper Streak', value: stats.streak || 0, sub: 'Daily Frequency', icon: <Flame className="text-amber-600 animate-pulse" />, bg: 'bg-amber-100/40' },
-              { label: 'Neural Score', value: stats.totalPoints || 0, sub: 'Lifetime Volts', icon: <Zap className="text-[#69C496]" />, bg: 'bg-emerald-100/40' },
-              { label: 'Nexus Rank', value: `#${userRank || '--'}`, sub: 'Global Standing', icon: <Star className="text-purple-600 animate-spin" style={{ animationDuration: '3s' }} />, bg: 'bg-purple-100/40' },
-              { label: 'Wallet', value: `${stats.coins || 0}N`, sub: 'Nexora Currency', icon: <Coins className="text-amber-500" />, bg: 'bg-amber-50' }
+              { label: 'Hyper Streak', value: isSyncing ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-amber-500" /> : (stats.streak || 0), sub: 'Daily Frequency', icon: <Flame className="text-amber-600 animate-pulse" />, bg: 'bg-amber-100/40' },
+              { label: 'Neural Score', value: isSyncing ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-[#69C496]" /> : (stats.totalPoints || 0), sub: 'Lifetime Volts', icon: <Zap className="text-[#69C496]" />, bg: 'bg-emerald-100/40' },
+              { label: 'Nexus Rank', value: isSyncing ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-purple-600" /> : `#${userRank || '--'}`, sub: 'Global Standing', icon: <Star className="text-purple-600 animate-spin" style={{ animationDuration: '3s' }} />, bg: 'bg-purple-100/40' },
+              { label: 'Wallet', value: isSyncing ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-amber-500" /> : `${stats.coins || 0}N`, sub: 'Nexora Currency', icon: <Coins className="text-amber-500" />, bg: 'bg-amber-50' }
             ].map((stat, i) => (
               <div key={i} className="bg-white border border-[#E9E4D4] rounded-3xl p-6 flex flex-col items-center text-center group transition-all duration-300 hover:scale-[1.02] shadow-sm">
                 <div className={`w-14 h-14 ${stat.bg} rounded-2xl flex items-center justify-center mb-4 shadow-sm transition-transform`}>
                   {stat.icon}
                 </div>
                 <p className="text-[10px] font-black text-[#4F3F34]/50 uppercase tracking-widest mb-1">{stat.label}</p>
-                <p className="text-2xl font-black text-[#4F3F34] leading-none">{stat.value}</p>
+                <div className="text-2xl font-black text-[#4F3F34] leading-none min-h-[24px] flex items-center justify-center">{stat.value}</div>
                 <p className="text-[9px] text-[#4F3F34]/60 font-bold uppercase mt-2 opacity-75">{stat.sub}</p>
               </div>
             ))}

@@ -311,12 +311,11 @@ export function LeaderboardScreen({
       if (!item || !item.uid) return false;
       if (item.uid.startsWith("bot-")) return true;
       if ((item as any).deleted || (item as any).isDeleted) return false;
-      const name = item.displayName;
-      if (!name || name === "Anonymous" || name === "Anonymous Champion" || name === "Anonymous User") {
-        return !!(user && user.uid === item.uid);
-      }
       return true;
-    });
+    }).map((item) => ({
+      ...item,
+      displayName: item.displayName || (item.uid.startsWith("bot-") ? "AI_Rival" : (item.uid === user?.uid ? (settings.displayName || user?.displayName || "You") : `Champion_${item.uid.slice(0, 4)}`))
+    }));
 
     if (!user || sanitizedLeaderboard.length === 0 || currentRank <= 0) {
       setDisplayList(sanitizedLeaderboard);
@@ -485,7 +484,34 @@ export function LeaderboardScreen({
       .split("T")[0];
   }, []);
 
-  const hasClaimedThisWeek = stats.lastRankRewardClaimWeek === startOfWeek;
+  const hasClaimedThisWeek = useMemo(() => {
+    if (!userRank || userRank > 6 || userRank < 1) return true;
+    const rankKey = `week_${startOfWeek}_rank_${userRank}`;
+    const alreadyClaimedKey = stats.claimedRankRewards?.[rankKey];
+
+    // If this specific rank was already claimed:
+    if (alreadyClaimedKey) {
+      // Can only reclaim if pushed down by another user and user retook their place:
+      const wasPushedDown = (stats.lowestRankSinceClaim || 0) > (stats.lastClaimedRank || 0);
+      const isRetakingPlace = wasPushedDown && userRank <= (stats.lastClaimedRank || 0);
+      if (isRetakingPlace) {
+        return false; // Eligible to claim again!
+      }
+      return true; // Already claimed
+    }
+
+    // Fallback check
+    if (stats.lastRankRewardClaimWeek === startOfWeek && stats.lastClaimedRank && stats.lastClaimedRank === userRank) {
+      const wasPushedDown = (stats.lowestRankSinceClaim || 0) > stats.lastClaimedRank;
+      const isRetakingPlace = wasPushedDown && userRank <= stats.lastClaimedRank;
+      if (isRetakingPlace) {
+        return false;
+      }
+      return true;
+    }
+
+    return false;
+  }, [userRank, startOfWeek, stats.claimedRankRewards, stats.lastRankRewardClaimWeek, stats.lastClaimedRank, stats.lowestRankSinceClaim]);
 
   // Filter or format the countdown statement
   const daysString = useMemo(() => {

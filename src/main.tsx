@@ -205,9 +205,14 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 window.addEventListener('error', (event) => {
-  const msg = event.message || event.error?.message || String(event.error || '');
+  const msg = (typeof event === 'string' ? event : event.message || event.error?.message || String(event.error || '')) || '';
+  const filename = event.filename || '';
   
   if (
+    !msg ||
+    msg === 'Script error.' ||
+    msg === 'Script error' ||
+    msg.toLowerCase().includes('script error') ||
     msg.includes('quota') || 
     msg.includes('Quota') || 
     msg.includes('Storage') || 
@@ -219,8 +224,6 @@ window.addEventListener('error', (event) => {
     msg.includes('dispatcher is null') ||
     msg.includes('useContext') ||
     msg.includes('Invalid hook call') ||
-    msg.includes('Script error') ||
-    msg.includes('script error') ||
     msg.includes('Unexpected token') ||
     msg.includes('SyntaxError') ||
     msg.includes("token '<'") ||
@@ -230,18 +233,19 @@ window.addEventListener('error', (event) => {
     msg.includes('b815') ||
     msg.includes('ve:') ||
     msg.includes('FIRESTORE') ||
-    !event.filename ||
-    event.filename.includes('extension')
+    !filename ||
+    filename.includes('extension') ||
+    filename.includes('chrome-extension')
   ) {
     try {
-      event.preventDefault();
-      event.stopPropagation();
+      if (typeof event.preventDefault === 'function') event.preventDefault();
+      if (typeof event.stopPropagation === 'function') event.stopPropagation();
     } catch (e) {}
-    console.warn('Ignored transient script syntax error or internal warning in global handler:', msg);
+    console.warn('Ignored transient or cross-origin script error in global handler:', msg);
     return;
   }
 
-  console.error('Global Error Captured:', msg, 'at', event.filename);
+  console.error('Global Error Captured:', msg, 'at', filename);
   
   // Create beautiful fallback banner only for truly unhandled raw errors
   const errDiv = document.createElement('div');

@@ -481,12 +481,12 @@ export default function App() {
 
   // Track authenticated app mounting to ensure background sync never triggers the gateway
   useEffect(() => {
-    if (user && !needsOnboarding && settings?.onboardingCompleted !== false) {
+    if (user && isDataReady && !authLoading && !needsOnboarding && settings?.onboardingCompleted === true) {
       hasAppMountedRef.current = true;
     } else if (!user) {
       hasAppMountedRef.current = false;
     }
-  }, [user, needsOnboarding, settings?.onboardingCompleted]);
+  }, [user, isDataReady, authLoading, needsOnboarding, settings?.onboardingCompleted]);
 
   // Reload hydration state when the logged-in user changes to prevent cross-account leaks
   useEffect(() => {
@@ -1658,11 +1658,10 @@ export default function App() {
         }
       };
       
+      // Write to primary user doc first
       await setDoc(userDocRef, updatePayload, { merge: true });
-      await setDoc(userSingularDocRef, updatePayload, { merge: true });
-      await setDoc(userSettingsDocRef, updatePayload, { merge: true });
 
-      // Sync to leaderboard & rank immediately
+      // Mirror to secondary documents and leaderboard safely
       const leaderboardRef = doc(db, "leaderboard", user.uid);
       const rankRef = doc(db, "rank", user.uid);
       const lbData = {
@@ -1679,14 +1678,22 @@ export default function App() {
         level: stats.level || 1,
         league: settings.league || "Bronze",
       };
-      await setDoc(leaderboardRef, lbData, { merge: true });
-      await setDoc(rankRef, lbData, { merge: true });
+
+      await Promise.allSettled([
+        setDoc(userSingularDocRef, updatePayload, { merge: true }),
+        setDoc(userSettingsDocRef, updatePayload, { merge: true }),
+        setDoc(leaderboardRef, lbData, { merge: true }),
+        setDoc(rankRef, lbData, { merge: true })
+      ]);
 
       showToast("Profile sync successful! 🛡️", "success");
       vibrate(VIBRATION_PATTERNS.SUCCESS);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Profile update error:", err);
-      showToast("Profile update failed", "error");
+      const errorMsg = err?.message?.includes("network") 
+        ? "Network error. Profile saved locally and will sync soon." 
+        : "Profile update could not be saved to server. Saved locally.";
+      showToast(errorMsg, "error");
     }
   }, [user, settings, stats, onUpdateSettings, showToast]);
 
@@ -3090,6 +3097,12 @@ export default function App() {
         console.log("FCM: Service Worker ready:", registration.scope);
 
         try {
+          // If no VAPID key is configured in environment, skip getToken to prevent auth credential error
+          if (!vapidKey) {
+            console.log("FCM: No VAPID key configured, running in local in-app notification mode.");
+            return cachedToken || null;
+          }
+
           const token = await getToken(m, {
             vapidKey: vapidKey,
             serviceWorkerRegistration: registration,
@@ -3106,26 +3119,18 @@ export default function App() {
             }
             return token;
           } else {
-            console.warn("FCM: No token received from getToken.");
-            setFcmError("NO_TOKEN");
+            console.log("FCM: In-app notification mode active.");
             return cachedToken || null;
           }
         } catch (tokenErr: any) {
-          console.error("FCM getToken error:", tokenErr);
-          if (tokenErr?.code !== 'messaging/permission-blocked') {
-            setFcmError(tokenErr.message || "GET_TOKEN_ERROR");
-          }
+          console.warn("FCM registration notice (falling back to in-app notifications):", tokenErr?.message || tokenErr);
           return cachedToken || null;
         }
       } else {
-        setFcmError("NO_SW");
         return null;
       }
     } catch (error: any) {
-      console.error("Error setting up FCM:", error);
-      if (error?.code !== 'messaging/permission-blocked') {
-        setFcmError(error.message || "UNKNOWN_ERROR");
-      }
+      console.warn("FCM setup notice (operating in local notifications mode):", error?.message || error);
 
       // Fallback: If we had a cached token, use it anyway even if fresh fetch failed
       const cachedToken = localStorage.getItem("nexora_fcm_token");
@@ -3390,12 +3395,11 @@ export default function App() {
             if (!item || !item.uid) return false;
             if (item.uid.startsWith("bot-")) return true;
             if (item.deleted || item.isDeleted) return false;
-            const name = item.displayName;
-            if (!name || name === "Anonymous" || name === "Anonymous Champion" || name === "Anonymous User") {
-              return false;
-            }
             return true;
-          });
+          }).map((item) => ({
+            ...item,
+            displayName: item.displayName || (item.uid.startsWith("bot-") ? "AI_Rival" : `Champion_${item.uid.slice(0, 4)}`)
+          }));
           if (sanitized.length > 0) return sanitized;
         }
       }
@@ -3591,8 +3595,6 @@ export default function App() {
         unsubscribe();
         window.removeEventListener("online", handleOnline);
       };
-    } else {
-      setCustomPlans([]);
     }
   }, [user, syncPendingCustomPlans]);
 
@@ -3995,12 +3997,27 @@ export default function App() {
       .toISOString()
       .split("T")[0];
 
+    const rankKey = `week_${startOfWeekStr}_rank_${rank}`;
+
+    // Prevent duplicate claim unless user was pushed down and climbed back up
+    const alreadyClaimed = stats.claimedRankRewards?.[rankKey];
+    const wasPushedDown = (stats.lowestRankSinceClaim || 0) > (stats.lastClaimedRank || 0);
+    const isRetakingPlace = wasPushedDown && rank <= (stats.lastClaimedRank || 0);
+
+    if (alreadyClaimed && !isRetakingPlace) {
+      showToast("Reward already claimed for this rank! Climb higher or retake your position if challenged.", "info");
+      return;
+    }
+
+    const updatedClaimedMap = {
+      ...(stats.claimedRankRewards || {}),
+      [rankKey]: new Date().toISOString()
+    };
+
     setStats((prev) => {
       const nextCoins = (prev.coins || 0) + rewardCoins;
       let nextXP = prev.xp || 0;
-      let nextLevel = prev.level || 1;
       let nextTrophies = [...(prev.trophies || [])];
-      let msg = `Weekly Reward Claimed! +${rewardCoins} Coins! 🎁`;
 
       if (rank === 1) {
         nextXP += 150;
@@ -4010,7 +4027,6 @@ export default function App() {
           earnedDate: new Date().toISOString(),
           lastUpdated: new Date().toISOString()
         });
-        msg = `Championship Claimed! +400 Coins, Golden Trophy, & +150 XP Bonus! 🏆`;
       }
 
       const next = {
@@ -4018,7 +4034,10 @@ export default function App() {
         coins: nextCoins,
         xp: nextXP,
         trophies: nextTrophies,
-        lastRankRewardClaimWeek: startOfWeekStr
+        lastRankRewardClaimWeek: startOfWeekStr,
+        claimedRankRewards: updatedClaimedMap,
+        lastClaimedRank: rank,
+        lowestRankSinceClaim: rank, // reset to current rank after claiming
       };
       
       try {
@@ -4033,16 +4052,33 @@ export default function App() {
     showToast(isRankOne ? "Championship Claimed! +400 Coins, Golden Trophy, & +150 XP Bonus! 🏆" : `Weekly Reward Claimed! +${rewardCoins} Coins! 🎁`, "success");
     vibrate(VIBRATION_PATTERNS.SUCCESS);
 
-    // 2. Log Weekly Leaderboard Rewards to global "rewards" collection
+    // 1. Sync reward state directly to user's Firestore document
+    const userDocRef = doc(db, "users", user.uid);
+    setDoc(userDocRef, {
+      coins: (stats.coins || 0) + rewardCoins,
+      xp: (stats.xp || 0) + (isRankOne ? 150 : 0),
+      lastRankRewardClaimWeek: startOfWeekStr,
+      claimedRankRewards: updatedClaimedMap,
+      lastClaimedRank: rank,
+      lowestRankSinceClaim: rank,
+      updatedAt: serverTimestamp(),
+    }, { merge: true }).catch((err) => {
+      console.warn("Failed to sync claimed reward to user doc:", err);
+    });
+
+    // 2. Log Weekly Leaderboard Rewards to global "rewards" collection for cross-device consistency
     const rewardDocRef = doc(db, "rewards", user.uid);
     setDoc(rewardDocRef, {
       userId: user.uid,
       userName: settings.displayName || user.displayName || "Champion",
       userEmail: user.email || `${user.uid}@nexora.app`,
-      coins: stats.coins + rewardCoins,
+      coins: (stats.coins || 0) + rewardCoins,
       streak: stats.streak || 0,
-      xp: stats.xp + (isRankOne ? 150 : 0),
+      xp: (stats.xp || 0) + (isRankOne ? 150 : 0),
       points: (stats.totalPoints || 0) + (isRankOne ? 150 : 0),
+      claimedRankRewards: updatedClaimedMap,
+      lastClaimedRank: rank,
+      lowestRankSinceClaim: rank,
       lastRewardReceivedAt: serverTimestamp(),
       lastRewardSource: `weekly_leaderboard_reward_rank_${rank}`,
       updatedAt: serverTimestamp(),
@@ -4125,310 +4161,343 @@ export default function App() {
   const rankDocsRef = useRef<any[]>([]);
   const deletedDocsRef = useRef<any[]>([]);
 
-  useEffect(() => {
-    // Synchronize real users immediately from Firestore without waiting for background hydration flags
-    const processAndSetLeaderboard = () => {
-      const allDataMap = new Map<string, any>();
+  const userRef = useRef(user);
+  const statsRef = useRef(stats);
+  const settingsRef = useRef(settings);
 
-      // Set of all deleted user IDs to prevent ghost/demo entries from ever appearing
-      const deletedUserIds = new Set<string>();
-      deletedDocsRef.current.forEach((docSnap) => {
-        if (!docSnap) return;
-        const id = docSnap.id;
-        const data = typeof docSnap.data === "function" ? docSnap.data() : docSnap;
-        if (id) deletedUserIds.add(id);
-        if (data?.uid) deletedUserIds.add(data.uid);
-        if (data?.userId) deletedUserIds.add(data.userId);
-      });
+  userRef.current = user;
+  statsRef.current = stats;
+  settingsRef.current = settings;
 
-      const parseAndAdd = (d: any, defaultDocId: string) => {
-        if (!d) return;
-        const uid = d.uid || d.userId || d.id || defaultDocId;
-        if (!uid || uid.startsWith("bot-")) return;
+  // Synchronize real users immediately from Firestore and local state
+  const processAndSetLeaderboard = useCallback(() => {
+    const currentUser = userRef.current;
+    const currentStats = statsRef.current;
+    const currentSettings = settingsRef.current;
 
-        // CRITICAL PROTECTION: If this user ID was deleted, or document is marked deleted, skip immediately!
-        if (
-          deletedUserIds.has(uid) ||
-          d.deleted === true ||
-          d.isDeleted === true ||
-          d.is_deleted === true ||
-          d.status === "deleted"
-        ) {
-          // Asynchronously clean up lingering stale doc in leaderboard/rank if it belongs to a deleted account
-          if (defaultDocId === uid) {
-            deleteDoc(doc(db, "leaderboard", uid)).catch(() => {});
-            deleteDoc(doc(db, "rank", uid)).catch(() => {});
-          }
-          return;
+    const allDataMap = new Map<string, any>();
+
+    // Set of all deleted user IDs to prevent ghost/demo entries from ever appearing
+    const deletedUserIds = new Set<string>();
+    deletedDocsRef.current.forEach((docSnap) => {
+      if (!docSnap) return;
+      const id = docSnap.id;
+      const data = typeof docSnap.data === "function" ? docSnap.data() : docSnap;
+      if (id) deletedUserIds.add(id);
+      if (data?.uid) deletedUserIds.add(data.uid);
+      if (data?.userId) deletedUserIds.add(data.userId);
+    });
+
+    const parseAndAdd = (d: any, defaultDocId: string) => {
+      if (!d) return;
+      const uid = d.uid || d.userId || d.id || defaultDocId;
+      if (!uid || uid.startsWith("bot-")) return;
+
+      // CRITICAL PROTECTION: If this user ID was deleted, or document is marked deleted, skip immediately!
+      if (
+        deletedUserIds.has(uid) ||
+        d.deleted === true ||
+        d.isDeleted === true ||
+        d.is_deleted === true ||
+        d.status === "deleted"
+      ) {
+        // Asynchronously clean up lingering stale doc in leaderboard/rank if it belongs to a deleted account
+        if (defaultDocId === uid) {
+          deleteDoc(doc(db, "leaderboard", uid)).catch(() => {});
+          deleteDoc(doc(db, "rank", uid)).catch(() => {});
         }
+        return;
+      }
 
-        let displayName = d.displayName || d.accountName || d.name || d.Name || d.account_name || d.username;
-        if ((!displayName || displayName === "Anonymous" || displayName === "Anonymous Champion" || displayName === "Anonymous User") && d.email && typeof d.email === "string") {
-          displayName = d.email.split('@')[0];
-        }
+      let displayName = d.displayName || d.accountName || d.name || d.Name || d.account_name || d.username || d.settings?.displayName || d.settings?.accountName;
+      if ((!displayName || displayName === "Anonymous" || displayName === "Anonymous Champion" || displayName === "Anonymous User") && d.email && typeof d.email === "string") {
+        displayName = d.email.split('@')[0];
+      }
 
-        // CRITICAL PROTECTION: Reject orphaned / blank user records (e.g. from deleted accounts with wiped profiles)
-        // Only permit if it is the currently authenticated user or has an actual real user profile name
-        const isCurrentAuthUser = user && user.uid === uid;
-        if (!displayName || displayName === "Anonymous" || displayName === "Anonymous Champion" || displayName === "Anonymous User") {
-          if (!isCurrentAuthUser) {
-            // Orphaned deleted account residue: skip to avoid creating demo user
-            return;
-          }
-          displayName = settings.displayName || user?.displayName || (user?.email ? user.email.split('@')[0] : "You");
-        }
-
-        const photoURL = d.photoURL || d.profilePic || d.photoFileName || d["Photo file name"] || d["Profile image"] || "";
-        
-        const maxPts = Math.max(
-          Number(d.weeklyPoints || 0),
-          Number(d.weeklyXP || 0),
-          Number(d.totalPoints || 0),
-          Number(d.points || 0),
-          Number(d.xp || 0),
-          Number(d.stats?.weeklyPoints || 0),
-          Number(d.stats?.weeklyXP || 0),
-          Number(d.stats?.totalPoints || 0),
-          Number(d.stats?.xp || 0)
-        );
-
-        const streak = Math.max(
-          Number(d.streak || 0),
-          Number(d.stats?.streak || 0)
-        );
-
-        const level = Math.max(
-          Number(d.level || 1),
-          Number(d.stats?.level || 1)
-        );
-
-        const league = d.league || d.stats?.league || "Bronze";
-
-        const existing = allDataMap.get(uid);
-        if (existing) {
-          const mergedPts = Math.max(existing.weeklyPoints || 0, maxPts);
-          const mergedStreak = Math.max(existing.streak || 0, streak);
-          const mergedLevel = Math.max(existing.level || 1, level);
-          const finalName = (displayName && displayName !== "Anonymous") ? displayName : (existing.displayName || displayName);
-          const finalPhoto = photoURL || existing.photoURL || "";
-
-          allDataMap.set(uid, {
-            uid,
-            displayName: finalName,
-            photoURL: finalPhoto,
-            weeklyPoints: mergedPts,
-            weeklyXP: mergedPts,
-            totalPoints: mergedPts,
-            xp: mergedPts,
-            streak: mergedStreak,
-            level: mergedLevel,
-            league: league || existing.league || "Bronze",
-          });
+      const isCurrentAuthUser = currentUser && currentUser.uid === uid;
+      if (!displayName || displayName === "Anonymous" || displayName === "Anonymous Champion" || displayName === "Anonymous User") {
+        if (isCurrentAuthUser) {
+          displayName = currentSettings.displayName || currentUser?.displayName || (currentUser?.email ? currentUser.email.split('@')[0] : "You");
         } else {
-          allDataMap.set(uid, {
-            uid,
-            displayName: displayName,
-            photoURL: photoURL || "",
-            weeklyPoints: maxPts,
-            weeklyXP: maxPts,
-            totalPoints: maxPts,
-            xp: maxPts,
-            streak,
-            level,
-            league,
-          });
-        }
-      };
-
-      leaderboardDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
-      usersDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
-      rankDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
-
-      // Explicitly purge any deleted user IDs from the map
-      deletedUserIds.forEach((delId) => {
-        allDataMap.delete(delId);
-      });
-
-      // CRITICAL: Always include the currently logged in user instantly from live local state if not deleted
-      if (user && user.uid && !deletedUserIds.has(user.uid)) {
-        const userPts = Math.max(
-          Number(stats.weeklyPoints || 0),
-          Number(stats.weeklyXP || 0),
-          Number(stats.totalPoints || 0),
-          Number(stats.xp || 0)
-        );
-        const userStreak = Number(stats.streak || 0);
-        const userLevel = Number(stats.level || 1);
-        const userName = settings.displayName || user.displayName || user.email?.split('@')[0] || "You";
-        const userPhoto = settings.profilePic || user.photoURL || "";
-
-        parseAndAdd({
-          uid: user.uid,
-          displayName: userName,
-          photoURL: userPhoto,
-          weeklyPoints: userPts,
-          weeklyXP: userPts,
-          totalPoints: userPts,
-          xp: userPts,
-          streak: userStreak,
-          level: userLevel,
-          league: settings.league || "Bronze"
-        }, user.uid);
-      }
-
-      // BOT SYSTEM: Always add competitive AI players alongside real users
-      const bots = [
-        {
-          uid: "bot-1",
-          displayName: "Apex_Habit",
-          weeklyXP: 1250,
-          weeklyPoints: 1250,
-          totalPoints: 1250,
-          xp: 1250,
-          level: 12,
-          streak: 45,
-          league: settings.league || "Bronze",
-          photoURL: "",
-        },
-        {
-          uid: "bot-2",
-          displayName: "Zen_Master",
-          weeklyXP: 950,
-          weeklyPoints: 950,
-          totalPoints: 950,
-          xp: 950,
-          level: 10,
-          streak: 32,
-          league: settings.league || "Bronze",
-          photoURL: "",
-        },
-        {
-          uid: "bot-3",
-          displayName: "HabitHero_99",
-          weeklyXP: 750,
-          weeklyPoints: 750,
-          totalPoints: 750,
-          xp: 750,
-          level: 8,
-          streak: 15,
-          league: settings.league || "Bronze",
-          photoURL: "",
-        },
-        {
-          uid: "bot-4",
-          displayName: "FlowState",
-          weeklyXP: 500,
-          weeklyPoints: 500,
-          totalPoints: 500,
-          xp: 500,
-          level: 6,
-          streak: 8,
-          league: settings.league || "Bronze",
-          photoURL: "",
-        },
-        {
-          uid: "bot-5",
-          displayName: "Iron_Will",
-          weeklyXP: 320,
-          weeklyPoints: 320,
-          totalPoints: 320,
-          xp: 320,
-          level: 4,
-          streak: 5,
-          league: settings.league || "Bronze",
-          photoURL: "",
-        },
-      ];
-
-      bots.forEach((b) => {
-        if (!allDataMap.has(b.uid)) {
-          allDataMap.set(b.uid, b);
-        }
-      });
-
-      // Handle logged-in current user: ensure local state and server state are synced
-      if (user && !deletedUserIds.has(user.uid)) {
-        const existingUser = allDataMap.get(user.uid);
-        const currentLocalMaxPts = Math.max(
-          stats.weeklyPoints || 0,
-          stats.weeklyXP || 0,
-          stats.totalPoints || 0,
-          stats.xp || 0
-        );
-        const firestoreUserMaxPts = existingUser?.weeklyPoints || 0;
-        const authoritativeMaxPts = Math.max(firestoreUserMaxPts, currentLocalMaxPts);
-        const authoritativeStreak = Math.max(existingUser?.streak || 0, stats.streak || 0);
-        const authoritativeLevel = Math.max(
-          existingUser?.level || 1,
-          stats.level || 1
-        );
-
-        const currentUserEntry = {
-          uid: user.uid,
-          displayName: settings.displayName || existingUser?.displayName || user.displayName || (user.email ? user.email.split('@')[0] : "Champion"),
-          photoURL: settings.profilePic || existingUser?.photoURL || user.photoURL || "",
-          weeklyXP: authoritativeMaxPts,
-          weeklyPoints: authoritativeMaxPts,
-          totalPoints: authoritativeMaxPts,
-          points: authoritativeMaxPts,
-          xp: authoritativeMaxPts,
-          streak: authoritativeStreak,
-          level: authoritativeLevel,
-          league: settings.league || existingUser?.league || "Bronze",
-        };
-
-        allDataMap.set(user.uid, currentUserEntry);
-
-        // Instantly write user to /leaderboard and /rank so other real users can see them immediately
-        setDoc(doc(db, "leaderboard", user.uid), currentUserEntry, { merge: true }).catch(() => {});
-        setDoc(doc(db, "rank", user.uid), currentUserEntry, { merge: true }).catch(() => {});
-
-        if (firestoreUserMaxPts > currentLocalMaxPts) {
-          setStats((prev) => ({
-            ...prev,
-            totalPoints: Math.max(prev.totalPoints || 0, firestoreUserMaxPts),
-            weeklyPoints: Math.max(prev.weeklyPoints || 0, firestoreUserMaxPts),
-            weeklyXP: Math.max(prev.weeklyXP || 0, firestoreUserMaxPts),
-            xp: Math.max(prev.xp || 0, firestoreUserMaxPts),
-            streak: Math.max(prev.streak || 0, authoritativeStreak),
-            level: Math.max(prev.level || 1, authoritativeLevel),
-          }));
+          displayName = `Champion_${uid.slice(0, 4)}`;
         }
       }
 
-      const rawList = Array.from(allDataMap.values()).filter((item) => {
-        if (!item || !item.uid) return false;
-        if (item.uid.startsWith("bot-")) return true;
-        if (deletedUserIds.has(item.uid)) return false;
-        if (item.deleted || item.isDeleted) return false;
-        const name = item.displayName;
-        if (!name || name === "Anonymous" || name === "Anonymous Champion" || name === "Anonymous User") {
-          return !!(user && user.uid === item.uid);
-        }
-        return true;
-      });
+      const photoURL = d.photoURL || d.profilePic || d.photoFileName || d["Photo file name"] || d["Profile image"] || "";
+      
+      const maxPts = Math.max(
+        Number(d.weeklyPoints || 0),
+        Number(d.weeklyXP || 0),
+        Number(d.totalPoints || 0),
+        Number(d.points || 0),
+        Number(d.xp || 0),
+        Number(d.stats?.weeklyPoints || 0),
+        Number(d.stats?.weeklyXP || 0),
+        Number(d.stats?.totalPoints || 0),
+        Number(d.stats?.xp || 0)
+      );
 
-      const sorted = rawList.sort((a, b) => {
-        const aPoints = a.weeklyPoints !== undefined ? a.weeklyPoints : (a.weeklyXP || a.totalPoints || a.xp || 0);
-        const bPoints = b.weeklyPoints !== undefined ? b.weeklyPoints : (b.weeklyXP || b.totalPoints || b.xp || 0);
-        
-        const pointsDiff = bPoints - aPoints;
-        if (pointsDiff !== 0) return pointsDiff;
-        
-        const levelDiff = (b.level || 0) - (a.level || 0);
-        if (levelDiff !== 0) return levelDiff;
-        
-        return (b.streak || 0) - (a.streak || 0);
-      });
+      const streak = Math.max(
+        Number(d.streak || 0),
+        Number(d.stats?.streak || 0)
+      );
 
-      setLeaderboard(sorted);
-      try {
-        localStorage.setItem("nexora_leaderboard_cache", JSON.stringify(sorted));
-      } catch (e) {
-        console.warn("Failed to write leaderboard cache:", e);
+      const level = Math.max(
+        Number(d.level || 1),
+        Number(d.stats?.level || 1)
+      );
+
+      const league = d.league || d.stats?.league || "Bronze";
+
+      const existing = allDataMap.get(uid);
+      if (existing) {
+        const mergedPts = Math.max(existing.weeklyPoints || 0, maxPts);
+        const mergedStreak = Math.max(existing.streak || 0, streak);
+        const mergedLevel = Math.max(existing.level || 1, level);
+        const finalName = (displayName && displayName !== "Anonymous") ? displayName : (existing.displayName || displayName);
+        const finalPhoto = photoURL || existing.photoURL || "";
+
+        allDataMap.set(uid, {
+          uid,
+          displayName: finalName,
+          photoURL: finalPhoto,
+          weeklyPoints: mergedPts,
+          weeklyXP: mergedPts,
+          totalPoints: mergedPts,
+          xp: mergedPts,
+          streak: mergedStreak,
+          level: mergedLevel,
+          league: league || existing.league || "Bronze",
+        });
+      } else {
+        allDataMap.set(uid, {
+          uid,
+          displayName: displayName,
+          photoURL: photoURL || "",
+          weeklyPoints: maxPts,
+          weeklyXP: maxPts,
+          totalPoints: maxPts,
+          xp: maxPts,
+          streak,
+          level,
+          league,
+        });
       }
     };
 
+    leaderboardDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
+    usersDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
+    rankDocsRef.current.forEach((docSnap) => parseAndAdd(docSnap.data(), docSnap.id));
+
+    // Explicitly purge any deleted user IDs from the map
+    deletedUserIds.forEach((delId) => {
+      allDataMap.delete(delId);
+    });
+
+    // CRITICAL: Always include the currently logged in user instantly from live local state if not deleted
+    if (currentUser && currentUser.uid && !deletedUserIds.has(currentUser.uid)) {
+      const userPts = Math.max(
+        Number(currentStats.weeklyPoints || 0),
+        Number(currentStats.weeklyXP || 0),
+        Number(currentStats.totalPoints || 0),
+        Number(currentStats.xp || 0)
+      );
+      const userStreak = Number(currentStats.streak || 0);
+      const userLevel = Number(currentStats.level || 1);
+      const userName = currentSettings.displayName || currentUser.displayName || currentUser.email?.split('@')[0] || "You";
+      const userPhoto = currentSettings.profilePic || currentUser.photoURL || "";
+
+      parseAndAdd({
+        uid: currentUser.uid,
+        displayName: userName,
+        photoURL: userPhoto,
+        weeklyPoints: userPts,
+        weeklyXP: userPts,
+        totalPoints: userPts,
+        xp: userPts,
+        streak: userStreak,
+        level: userLevel,
+        league: currentSettings.league || "Bronze"
+      }, currentUser.uid);
+    }
+
+    // BOT SYSTEM: Always add competitive AI players alongside real users
+    const bots = [
+      {
+        uid: "bot-1",
+        displayName: "Apex_Habit",
+        weeklyXP: 1250,
+        weeklyPoints: 1250,
+        totalPoints: 1250,
+        xp: 1250,
+        level: 12,
+        streak: 45,
+        league: currentSettings.league || "Bronze",
+        photoURL: "",
+      },
+      {
+        uid: "bot-2",
+        displayName: "Zen_Master",
+        weeklyXP: 950,
+        weeklyPoints: 950,
+        totalPoints: 950,
+        xp: 950,
+        level: 10,
+        streak: 32,
+        league: currentSettings.league || "Bronze",
+        photoURL: "",
+      },
+      {
+        uid: "bot-3",
+        displayName: "HabitHero_99",
+        weeklyXP: 750,
+        weeklyPoints: 750,
+        totalPoints: 750,
+        xp: 750,
+        level: 8,
+        streak: 15,
+        league: currentSettings.league || "Bronze",
+        photoURL: "",
+      },
+      {
+        uid: "bot-4",
+        displayName: "FlowState",
+        weeklyXP: 500,
+        weeklyPoints: 500,
+        totalPoints: 500,
+        xp: 500,
+        level: 6,
+        streak: 8,
+        league: currentSettings.league || "Bronze",
+        photoURL: "",
+      },
+      {
+        uid: "bot-5",
+        displayName: "Iron_Will",
+        weeklyXP: 320,
+        weeklyPoints: 320,
+        totalPoints: 320,
+        xp: 320,
+        level: 4,
+        streak: 5,
+        league: currentSettings.league || "Bronze",
+        photoURL: "",
+      },
+    ];
+
+    bots.forEach((b) => {
+      if (!allDataMap.has(b.uid)) {
+        allDataMap.set(b.uid, b);
+      }
+    });
+
+    // Handle logged-in current user: ensure local state and server state are synced
+    if (currentUser && !deletedUserIds.has(currentUser.uid)) {
+      const existingUser = allDataMap.get(currentUser.uid);
+      const currentLocalMaxPts = Math.max(
+        currentStats.weeklyPoints || 0,
+        currentStats.weeklyXP || 0,
+        currentStats.totalPoints || 0,
+        currentStats.xp || 0
+      );
+      const firestoreUserMaxPts = existingUser?.weeklyPoints || 0;
+      const authoritativeMaxPts = Math.max(firestoreUserMaxPts, currentLocalMaxPts);
+      const authoritativeStreak = Math.max(existingUser?.streak || 0, currentStats.streak || 0);
+      const authoritativeLevel = Math.max(
+        existingUser?.level || 1,
+        currentStats.level || 1
+      );
+
+      const currentUserEntry = {
+        uid: currentUser.uid,
+        displayName: currentSettings.displayName || existingUser?.displayName || currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : "Champion"),
+        photoURL: currentSettings.profilePic || existingUser?.photoURL || currentUser.photoURL || "",
+        weeklyXP: authoritativeMaxPts,
+        weeklyPoints: authoritativeMaxPts,
+        totalPoints: authoritativeMaxPts,
+        points: authoritativeMaxPts,
+        xp: authoritativeMaxPts,
+        streak: authoritativeStreak,
+        level: authoritativeLevel,
+        league: currentSettings.league || existingUser?.league || "Bronze",
+      };
+
+      allDataMap.set(currentUser.uid, currentUserEntry);
+
+      // Instantly write user to /leaderboard and /rank so other real users can see them immediately
+      setDoc(doc(db, "leaderboard", currentUser.uid), currentUserEntry, { merge: true }).catch(() => {});
+      setDoc(doc(db, "rank", currentUser.uid), currentUserEntry, { merge: true }).catch(() => {});
+    }
+
+    const rawList = Array.from(allDataMap.values()).filter((item) => {
+      if (!item || !item.uid) return false;
+      if (item.uid.startsWith("bot-")) return true;
+      if (deletedUserIds.has(item.uid)) return false;
+      if (item.deleted || item.isDeleted) return false;
+      return true;
+    });
+
+    const sorted = rawList.sort((a, b) => {
+      const aPoints = a.weeklyPoints !== undefined ? a.weeklyPoints : (a.weeklyXP || a.totalPoints || a.xp || 0);
+      const bPoints = b.weeklyPoints !== undefined ? b.weeklyPoints : (b.weeklyXP || b.totalPoints || b.xp || 0);
+      
+      const pointsDiff = bPoints - aPoints;
+      if (pointsDiff !== 0) return pointsDiff;
+      
+      const levelDiff = (b.level || 0) - (a.level || 0);
+      if (levelDiff !== 0) return levelDiff;
+      
+      return (b.streak || 0) - (a.streak || 0);
+    });
+
+    // Check if the current user dropped in rank since last claim
+    if (currentUser && currentUser.uid) {
+      const currentUserRank = sorted.findIndex((e) => e.uid === currentUser.uid) + 1;
+      if (currentUserRank > 0 && currentStats.lastClaimedRank && currentUserRank > currentStats.lastClaimedRank) {
+        if ((currentStats.lowestRankSinceClaim || 0) < currentUserRank) {
+          const updatedStats = {
+            ...currentStats,
+            lowestRankSinceClaim: currentUserRank
+          };
+          localStorage.setItem("nexora_stats", JSON.stringify(updatedStats));
+          setStats((prev) => ({
+            ...prev,
+            lowestRankSinceClaim: currentUserRank
+          }));
+          setDoc(doc(db, "users", currentUser.uid), {
+            lowestRankSinceClaim: currentUserRank
+          }, { merge: true }).catch(() => {});
+        }
+      }
+    }
+
+    setLeaderboard(sorted);
+    try {
+      localStorage.setItem("nexora_leaderboard_cache", JSON.stringify(sorted));
+    } catch (e) {
+      console.warn("Failed to write leaderboard cache:", e);
+    }
+  }, []);
+
+  // Update leaderboard immediately whenever local user stats or settings change
+  useEffect(() => {
+    processAndSetLeaderboard();
+  }, [
+    user,
+    settings.league,
+    settings.displayName,
+    settings.profilePic,
+    stats.weeklyPoints,
+    stats.weeklyXP,
+    stats.totalPoints,
+    stats.xp,
+    stats.streak,
+    stats.level,
+    processAndSetLeaderboard
+  ]);
+
+  // Persistent Firestore snapshot listeners (mounted once for high-performance zero-delay updates)
+  useEffect(() => {
     const qLb = query(collection(db, "leaderboard"), limit(150));
     const qUsers = query(collection(db, "users"), limit(150));
     const qRank = query(collection(db, "rank"), limit(150));
@@ -4552,18 +4621,7 @@ export default function App() {
       unsubUsers();
       unsubRank();
     };
-  }, [
-    user,
-    settings.league,
-    settings.displayName,
-    settings.profilePic,
-    stats.weeklyPoints,
-    stats.weeklyXP,
-    stats.totalPoints,
-    stats.xp,
-    stats.streak,
-    stats.level,
-  ]);
+  }, [processAndSetLeaderboard]);
 
   const userRank = leaderboard.findIndex((l) => l.uid === user?.uid) + 1;
 
@@ -5430,7 +5488,6 @@ export default function App() {
     setShowMascotCelebration(true);
     setActiveScreen("home");
     setChallengeStep("home" as any);
-    setShowCoinAnimation(true);
   };
 
   const handleLogout = async () => {
@@ -5739,11 +5796,6 @@ export default function App() {
     );
   }
 
-  // The gateway must ONLY appear during the initial authentication check before deciding which screen to render.
-  // It must NEVER be triggered by Firestore loading, profile fetches, coin sync, plant restoration, rank updates, rewards loading, or background sync.
-  // Once the app has mounted for an authenticated user, the gateway is never shown again during this session.
-  const isInitialAuthChecking = !hasAppMountedRef.current && authLoading && !user && Boolean(typeof window !== "undefined" && localStorage.getItem("nexora_cached_user"));
-
   if (!splashFinished) {
     if (loadError) {
       return (
@@ -5770,20 +5822,56 @@ export default function App() {
     );
   }
 
-  // Initial Auth Resolution Guard:
-  // Only shows while initial authentication decision is pending before rendering Home.
-  // Firestore sync continues silently in the background without unmounting Home.
-  if (isInitialAuthChecking) {
+  if (!user) {
+    return (
+      <div className="min-h-screen w-full flex flex-col relative overflow-x-hidden">
+        <ErrorBoundary>
+          {showAuth ? (
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">
+                  AUTHENTICATING...
+                </div>
+              }
+            >
+              <AuthScreen onBack={() => setShowAuth(false)} />
+            </Suspense>
+          ) : (
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">
+                  LOADING MANIFESTO...
+                </div>
+              }
+            >
+              <LandingPage onGetStarted={() => setShowAuth(true)} />
+            </Suspense>
+          )}
+        </ErrorBoundary>
+
+        {/* Global PWA overlays rendered dynamically in front of Authentication screens */}
+        <PWAInstallModal isLoggedIn={!!user} activeScreen={activeScreen} hat={settings?.activeHat} challengeStep={challengeStep} />
+      </div>
+    );
+  }
+
+  // The Gateway Page: Appears when a user logs in to verify onboarding status & load profile.
+  // When an existing user reloads or reopens the app with cached data, it completes instantly.
+  const isFreshLogin = typeof window !== "undefined" && sessionStorage.getItem("nexora_fresh_login") === "true";
+  const hasCachedUserData = typeof window !== "undefined" && Boolean(localStorage.getItem("nexora_cached_user") && localStorage.getItem("nexora_settings"));
+  const isGatewayVerifying = (isFreshLogin || (!hasCachedUserData && Boolean(user))) && !hasAppMountedRef.current && (authLoading || !isDataReady);
+
+  if (isGatewayVerifying) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#FAF7F2] text-[#4F3F34] font-sans p-6 relative overflow-hidden select-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#69C496]/15 rounded-full blur-3xl pointer-events-none" />
         <motion.div 
           initial={{ opacity: 0, scale: 0.92, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
           className="relative z-10 w-full max-w-sm bg-white border border-[#E9E4D4] rounded-[32px] p-8 shadow-xl flex flex-col items-center text-center space-y-6"
         >
-          {/* Animated Jumping Mascot SVG */}
+          {/* Animated Mascot */}
           <div className="relative flex items-center justify-center h-36 w-36">
             <motion.div
               animate={{
@@ -5827,10 +5915,10 @@ export default function App() {
             <div className="absolute -top-[8px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[9px] border-b-[#FFFDF9]" />
             
             <p className="text-xs font-black text-[#4F3F34] uppercase tracking-wider">
-              Restoring Nexora session...
+              Verifying Nexora Gateway...
             </p>
             <p className="text-[11px] font-bold text-[#7D6B58]/80 leading-snug">
-              Loading your profile, stats & personal space 🌱
+              Checking onboarding status & loading your profile 🌱
             </p>
           </div>
 
@@ -5842,7 +5930,7 @@ export default function App() {
                 x: ["-100%", "100%"],
               }}
               transition={{
-                duration: 1.5,
+                duration: 0.8,
                 repeat: Infinity,
                 ease: "easeInOut",
               }}
@@ -5853,41 +5941,8 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen w-full flex flex-col relative overflow-x-hidden">
-        <ErrorBoundary>
-          {showAuth ? (
-            <Suspense
-              fallback={
-                <div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">
-                  AUTHENTICATING...
-                </div>
-              }
-            >
-              <AuthScreen onBack={() => setShowAuth(false)} />
-            </Suspense>
-          ) : (
-            <Suspense
-              fallback={
-                <div className="min-h-screen bg-blue-50 flex items-center justify-center animate-pulse text-blue-900 font-black italic">
-                  LOADING MANIFESTO...
-                </div>
-              }
-            >
-              <LandingPage onGetStarted={() => setShowAuth(true)} />
-            </Suspense>
-          )}
-        </ErrorBoundary>
-
-        {/* Global PWA overlays rendered dynamically in front of Authentication screens */}
-        <PWAInstallModal isLoggedIn={!!user} activeScreen={activeScreen} hat={settings?.activeHat} challengeStep={challengeStep} />
-      </div>
-    );
-  }
-
   // Onboarding guard: Ensure new users and users who need onboarding NEVER see the Home screen
-  const isUserNeedsOnboarding = needsOnboarding || settings?.onboardingCompleted === false;
+  const isUserNeedsOnboarding = needsOnboarding && settings?.onboardingCompleted !== true && settings?.plantOnboardingCompleted !== true;
 
   if (isUserNeedsOnboarding) {
     return (
@@ -6342,6 +6397,7 @@ export default function App() {
                       setDailyProgress={onUpdateDailyProgress}
                       play={play}
                       showToast={showToast}
+                      isSyncing={isSyncingData}
                     />
                   </Suspense>
                 </motion.div>
@@ -7373,9 +7429,46 @@ export default function App() {
                     <PlantScreen
                       plantState={settings.plantState}
                       onboardingCompleted={!!settings.plantOnboardingCompleted}
-                      onCompleteOnboarding={() =>
-                        onUpdateSettings({ plantOnboardingCompleted: true })
-                      }
+                      onCompleteOnboarding={() => {
+                        onUpdateSettings({
+                          plantOnboardingCompleted: true,
+                          plantSectionOnboardingCompleted: true,
+                          onboardingCompleted: true
+                        });
+                        if (user?.uid) {
+                          try {
+                            localStorage.setItem(`nexora_plant_onboarding_completed_${user.uid}`, 'true');
+                            localStorage.setItem(`nexora_onboarding_completed_${user.uid}`, 'true');
+                            localStorage.setItem('nexora_plant_onboarding_completed', 'true');
+                            localStorage.setItem('nexora_onboarding_completed', 'true');
+                            
+                            const plantPayload = {
+                              uid: user.uid,
+                              plantOnboardingCompleted: true,
+                              plantSectionOnboardingCompleted: true,
+                              onboardingCompleted: true,
+                              updatedAt: serverTimestamp()
+                            };
+                            setDoc(doc(db, "users", user.uid), {
+                              plantOnboardingCompleted: true,
+                              plantSectionOnboardingCompleted: true,
+                              onboardingCompleted: true,
+                              settings: {
+                                plantOnboardingCompleted: true,
+                                plantSectionOnboardingCompleted: true,
+                                onboardingCompleted: true
+                              },
+                              updatedAt: serverTimestamp()
+                            }, { merge: true }).catch(() => {});
+                            setDoc(doc(db, "onboardingID", user.uid), plantPayload, { merge: true }).catch(() => {});
+                            setDoc(doc(db, "users", user.uid, "onboarding", "main"), plantPayload, { merge: true }).catch(() => {});
+                            setDoc(doc(db, "users", user.uid, "plant_section", "main"), plantPayload, { merge: true }).catch(() => {});
+                            setDoc(doc(db, "plants", user.uid), { uid: user.uid, plantOnboardingCompleted: true, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+                          } catch (e) {
+                            console.warn("Plant onboarding immediate persistence error:", e);
+                          }
+                        }
+                      }}
                       onExit={() => {
                         vibrate(5);
                         setActiveScreen("home");

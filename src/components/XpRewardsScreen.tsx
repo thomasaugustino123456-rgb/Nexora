@@ -36,131 +36,9 @@ export function XpRewardsScreen({
       opacity: 0.15 + Math.random() * 0.3
     }))
   );
-  const audioCtxRef = useRef<AudioContext | null>(null);
-
   // Status message controls
   const [statusText, setStatusText] = useState("Tap the Blue Chest 4 Times to Release Magic!");
   const [statusColor, setStatusColor] = useState("#00d4ff");
-
-  useEffect(() => {
-    return () => {
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
-      }
-    };
-  }, []);
-
-  // Web Audio Synthesis for Magical XP SFX
-  const playSoundEffect = (type: "tap" | "epic_launch", clickIdx = 0) => {
-    if (settings?.soundEnabled === false) return;
-
-    try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const ctx = audioCtxRef.current;
-      const now = ctx.currentTime;
-
-      if (type === "tap") {
-        // High quality resonant magical wood tap + bell resonance
-        const baseFreq = 100 + clickIdx * 45; // rising pitch for tension!
-
-        // Wood low thud
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(baseFreq, now);
-        osc.frequency.exponentialRampToValueAtTime(baseFreq / 2, now + 0.22);
-
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.2, now + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-
-        osc.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.25);
-
-        // High crystal tinkles
-        for (let i = 0; i < 4; i++) {
-          const tOsc = ctx.createOscillator();
-          const tGain = ctx.createGain();
-          tOsc.type = "sine";
-          tOsc.frequency.setValueAtTime(1000 + clickIdx * 300 + i * 200, now);
-          tGain.gain.setValueAtTime(0, now);
-          tGain.gain.linearRampToValueAtTime(0.02, now + 0.01);
-          tGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-
-          tOsc.connect(tGain);
-          tGain.connect(ctx.destination);
-          tOsc.start(now);
-          tOsc.stop(now + 0.12);
-        }
-      } else if (type === "epic_launch") {
-        // Sub bass blast
-        const subOsc = ctx.createOscillator();
-        const subGain = ctx.createGain();
-        subOsc.type = "triangle";
-        subOsc.frequency.setValueAtTime(180, now);
-        subOsc.frequency.exponentialRampToValueAtTime(45, now + 0.45);
-
-        subGain.gain.setValueAtTime(0, now);
-        subGain.gain.linearRampToValueAtTime(0.25, now + 0.02);
-        subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-
-        subOsc.connect(subGain);
-        subGain.connect(ctx.destination);
-        subOsc.start(now);
-        subOsc.stop(now + 0.5);
-
-        // Laser Sweep (swoosh aura)
-        const filter = ctx.createBiquadFilter();
-        filter.type = "bandpass";
-        filter.frequency.setValueAtTime(100, now);
-        filter.frequency.exponentialRampToValueAtTime(2200, now + 0.55);
-        filter.Q.setValueAtTime(4.0, now);
-
-        const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.6, ctx.sampleRate);
-        const noiseData = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < noiseBuffer.length; i++) {
-          noiseData[i] = Math.random() * 2 - 1;
-        }
-
-        const noiseSrc = ctx.createBufferSource();
-        noiseSrc.buffer = noiseBuffer;
-        const noiseGain = ctx.createGain();
-        noiseGain.gain.setValueAtTime(0, now);
-        noiseGain.gain.linearRampToValueAtTime(0.25, now + 0.1);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
-
-        noiseSrc.connect(filter);
-        filter.connect(noiseGain);
-        noiseGain.connect(ctx.destination);
-        noiseSrc.start(now);
-        noiseSrc.stop(now + 0.6);
-
-        // Sweet arpeggiated victory melody (C6 -> E6 -> G6 -> C7 chimes)
-        const notes = [1046.50, 1318.51, 1567.98, 2093.00]; // C6, E6, G6, C7
-        notes.forEach((freq, idx) => {
-          const chimeOsc = ctx.createOscillator();
-          const chimeGain = ctx.createGain();
-          chimeOsc.type = "sine";
-          chimeOsc.frequency.setValueAtTime(freq, now + idx * 0.08);
-
-          chimeGain.gain.setValueAtTime(0, now + idx * 0.08);
-          chimeGain.gain.linearRampToValueAtTime(0.18, now + idx * 0.08 + 0.005);
-          chimeGain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 0.5);
-
-          chimeOsc.connect(chimeGain);
-          chimeGain.connect(ctx.destination);
-          chimeOsc.start(now + idx * 0.08);
-          chimeOsc.stop(now + idx * 0.08 + 0.5);
-        });
-      }
-    } catch (e) {
-      console.warn("Audio synthesis error:", e);
-    }
-  };
 
   const handleChestClick = () => {
     if (systemLock) return;
@@ -231,12 +109,9 @@ export function XpRewardsScreen({
     setStatusText("XP Core Harvest Transferred!");
     setStatusColor("#00f0ff");
 
-    // 3. Exact frame of landing impact is 680ms
+    // 3. Exact frame of crystal launch is 680ms
     setTimeout(() => {
-      if (settings?.soundEnabled !== false) {
-        play("chest_land");
-      }
-      vibrate(220);
+      vibrate(120);
       setShowXpText(true);
 
       // Populate magical crystals

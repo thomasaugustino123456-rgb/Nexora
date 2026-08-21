@@ -170,6 +170,33 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
         updates.uid = user.uid;
         updates.email = user.email || `${user.uid}@nexora.app`;
         updates.role = 'user';
+        updates.onboardingCompleted = true;
+        updates.newUsersOnboardingCompleted = true;
+        updates.appIntroductionOnboardingCompleted = true;
+        updates.displayName = safeName || 'Champion';
+        updates.name = safeName || 'Champion';
+        updates.settings = {
+          onboardingCompleted: true,
+          newUsersOnboardingCompleted: true,
+          appIntroductionOnboardingCompleted: true,
+          displayName: safeName || 'Champion',
+          age: age ? parseInt(age, 10) : undefined,
+          waterGoal: water || 2,
+          pushupsGoal: pushups || 5,
+          priorityFocus: priorityFocus || undefined,
+          archivedOfficialChallenges: archivedChallenges,
+          workType: workType || undefined,
+          energyPeak: energyPeak || undefined,
+          commitmentLevel: commitmentLevel || undefined
+        };
+
+        // Cache user-scoped onboarding flag immediately
+        try {
+          localStorage.setItem(`nexora_onboarding_completed_${user.uid}`, 'true');
+          localStorage.setItem('nexora_onboarding_completed', 'true');
+        } catch (e) {
+          // non-blocking
+        }
 
         console.log(`[PERSISTENCE AUDIT] [WRITE START] Onboarding completed. Writing initial user doc to: users/${user.uid}`);
         try {
@@ -179,6 +206,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
           // Also save to onboardingID and subcollection onboarding/main to be extremely safe and permanent
           const onboardingPayload = {
             uid: user.uid,
+            onboardingCompleted: true,
             newUsersOnboardingCompleted: true,
             appIntroductionOnboardingCompleted: true,
             plantSectionOnboardingCompleted: false,

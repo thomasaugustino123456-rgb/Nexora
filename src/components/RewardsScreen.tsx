@@ -43,17 +43,6 @@ export function RewardsScreen({
       opacity: 0.15 + Math.random() * 0.3
     }))
   );
-  const audioCtxRef = useRef<AudioContext | null>(null);
-
-  // Clean up AudioContext on unmount
-  useEffect(() => {
-    return () => {
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
-      }
-    };
-  }, []);
-
   if (currentStage === "xp") {
     return (
       <XpRewardsScreen
@@ -64,177 +53,6 @@ export function RewardsScreen({
       />
     );
   }
-
-  // Web Audio Synthesis for AAA juicy SFX
-  const playSoundEffect = (type: "thud1" | "thud2" | "launch" | "coin", coinIndex = 0) => {
-    if (settings?.soundEnabled === false) return;
-
-    try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const ctx = audioCtxRef.current;
-      const now = ctx.currentTime;
-
-      if (type === "thud1") {
-        // Tap 1: Heavy wooden thud + chain rattle (Low pitch)
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(85, now);
-        osc.frequency.exponentialRampToValueAtTime(35, now + 0.25);
-
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.2, now + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-
-        // Chain metal clink rattle simulation
-        for (let i = 0; i < 3; i++) {
-          const rattleOsc = ctx.createOscillator();
-          const rattleGain = ctx.createGain();
-          rattleOsc.type = "sine";
-          rattleOsc.frequency.setValueAtTime(1800 + i * 500, now);
-          rattleGain.gain.setValueAtTime(0, now);
-          rattleGain.gain.linearRampToValueAtTime(0.02, now + 0.01 + i * 0.01);
-          rattleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08 + i * 0.02);
-          
-          rattleOsc.connect(rattleGain);
-          rattleGain.connect(ctx.destination);
-          rattleOsc.start(now);
-          rattleOsc.stop(now + 0.15);
-        }
-
-        osc.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.25);
-
-      } else if (type === "thud2") {
-        // Tap 2: Slightly higher pitch wooden thud for tension
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(110, now);
-        osc.frequency.exponentialRampToValueAtTime(45, now + 0.25);
-
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.2, now + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-
-        // Chain metal clink rattle simulation (higher pitch)
-        for (let i = 0; i < 3; i++) {
-          const rattleOsc = ctx.createOscillator();
-          const rattleGain = ctx.createGain();
-          rattleOsc.type = "sine";
-          rattleOsc.frequency.setValueAtTime(2200 + i * 600, now);
-          rattleGain.gain.setValueAtTime(0, now);
-          rattleGain.gain.linearRampToValueAtTime(0.02, now + 0.01 + i * 0.01);
-          rattleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08 + i * 0.02);
-          
-          rattleOsc.connect(rattleGain);
-          rattleGain.connect(ctx.destination);
-          rattleOsc.start(now);
-          rattleOsc.stop(now + 0.15);
-        }
-
-        osc.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.25);
-
-      } else if (type === "launch") {
-        // Tap 3 (Immediate): Cinematic swoosh + shatter/pop blast
-        const bufferSize = ctx.sampleRate * 0.5; // 0.5 seconds
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          data[i] = Math.random() * 2 - 1;
-        }
-
-        const noiseNode = ctx.createBufferSource();
-        noiseNode.buffer = buffer;
-
-        const filter = ctx.createBiquadFilter();
-        filter.type = "bandpass";
-        filter.frequency.setValueAtTime(120, now);
-        filter.frequency.exponentialRampToValueAtTime(1800, now + 0.4);
-        filter.Q.setValueAtTime(3.0, now);
-
-        const noiseGain = ctx.createGain();
-        noiseGain.gain.setValueAtTime(0, now);
-        noiseGain.gain.linearRampToValueAtTime(0.2, now + 0.1);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-
-        noiseNode.connect(filter);
-        filter.connect(noiseGain);
-        noiseGain.connect(ctx.destination);
-        noiseNode.start(now);
-        noiseNode.stop(now + 0.5);
-
-        // Power pop/shatter bass element
-        const subOsc = ctx.createOscillator();
-        const subGain = ctx.createGain();
-        subOsc.type = "triangle";
-        subOsc.frequency.setValueAtTime(150, now);
-        subOsc.frequency.exponentialRampToValueAtTime(50, now + 0.35);
-
-        subGain.gain.setValueAtTime(0, now);
-        subGain.gain.linearRampToValueAtTime(0.4, now + 0.02);
-        subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-
-        subOsc.connect(subGain);
-        subGain.connect(ctx.destination);
-        subOsc.start(now);
-        subOsc.stop(now + 0.35);
-
-        // High crystal shatter/shimmer
-        const shimmerOsc = ctx.createOscillator();
-        const shimmerGain = ctx.createGain();
-        shimmerOsc.type = "sine";
-        shimmerOsc.frequency.setValueAtTime(3000, now);
-        shimmerOsc.frequency.exponentialRampToValueAtTime(100, now + 0.4);
-
-        shimmerGain.gain.setValueAtTime(0, now);
-        shimmerGain.gain.linearRampToValueAtTime(0.12, now + 0.01);
-        shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-
-        shimmerOsc.connect(shimmerGain);
-        shimmerGain.connect(ctx.destination);
-        shimmerOsc.start(now);
-        shimmerOsc.stop(now + 0.4);
-
-      } else if (type === "coin") {
-        // High register crystal coin chime hitting a solid surface (ping!)
-        const baseFreqs = [987.77, 1109.73, 1318.51, 1479.98, 1661.22]; // B5, C#6, E6, F#6, G#6
-        const f = baseFreqs[coinIndex] || 1318.51;
-
-        const partials = [1.0, 2.2, 3.4, 4.8];
-        const partialGains = [0.18, 0.08, 0.04, 0.02];
-
-        partials.forEach((mult, index) => {
-          const osc = ctx.createOscillator();
-          const gainNode = ctx.createGain();
-
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(f * mult, now);
-
-          gainNode.gain.setValueAtTime(0, now);
-          gainNode.gain.linearRampToValueAtTime(partialGains[index], now + 0.005);
-          const decay = 0.4 / mult;
-          gainNode.gain.exponentialRampToValueAtTime(0.0001, now + decay);
-
-          osc.connect(gainNode);
-          gainNode.connect(ctx.destination);
-          osc.start(now);
-          osc.stop(now + decay);
-        });
-      }
-    } catch (e) {
-      console.warn("Audio synthesis failed:", e);
-    }
-  };
 
   const handleChestClick = () => {
     if (tapCount >= 3) return;
@@ -266,16 +84,11 @@ export function RewardsScreen({
         vibrate(110);
       }, 450);
     } else if (nextTap === 3) {
-      // Tap 3: Play reveal audio, click, & launch landing sound
+      // Tap 3: Play smooth reveal audio without unwanted punch collisions
       vibrate([180, 50, 180]);
       if (settings?.soundEnabled !== false) play("chest_reveal");
       setStatusText("Protocol Rewards Disbursed!");
       setStatusColor("#FFD000");
-
-      setTimeout(() => {
-        if (settings?.soundEnabled !== false) play("chest_land");
-        vibrate(180);
-      }, 500);
 
       // Dim out instruction text
       setTimeout(() => {
@@ -292,14 +105,14 @@ export function RewardsScreen({
     setTimeout(() => {
       // Vibration when the coins appear
       vibrate([45, 60, 45]);
+      if (settings?.soundEnabled !== false) {
+        play("coin");
+      }
 
       let currentCoins = 0;
       const interval = setInterval(() => {
         currentCoins++;
         setCoinsAdded(currentCoins);
-        if (settings?.soundEnabled !== false) {
-          play("coin");
-        }
 
         // Increased vibration when the counter increases!
         vibrate(35);

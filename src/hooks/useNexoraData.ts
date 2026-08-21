@@ -18,74 +18,109 @@ import { SHOP_ITEMS } from "../components/ShopScreen";
 import { MASCOTS_DATA, MascotId } from "../lib/mascotSystem";
 import { HOUSE_ITEMS } from "../constants/houseItems";
 
-export function extractRealDisplayName(docData: any, currentUser?: any): string {
-  const primaryCandidates = [
-    docData?.displayName,
-    docData?.settings?.displayName,
-    docData?.name,
-    docData?.["Name"],
-    docData?.["displayName"],
-    docData?.["display_name"],
-    docData?.["full_name"],
-    docData?.["username"],
-    docData?.accountName,
-    docData?.["Account name"],
-    docData?.settings?.accountName,
-    docData?.settings?.name,
-    currentUser?.displayName,
-  ];
-  for (const c of primaryCandidates) {
-    if (typeof c === 'string' && c.trim() !== "" && c.trim() !== "Nexora User" && c.trim() !== "Nexora Citizen") {
-      return c.trim();
+export function extractRealDisplayName(docDataOrList: any | any[], currentUser?: any): string {
+  const docList = Array.isArray(docDataOrList) ? docDataOrList : [docDataOrList];
+  for (const doc of docList) {
+    if (!doc) continue;
+    const primaryCandidates = [
+      doc.displayName,
+      doc.settings?.displayName,
+      doc.name,
+      doc["Name"],
+      doc["displayName"],
+      doc["display_name"],
+      doc["full_name"],
+      doc["username"],
+      doc.accountName,
+      doc["Account name"],
+      doc.settings?.accountName,
+      doc.settings?.name,
+    ];
+    for (const c of primaryCandidates) {
+      if (typeof c === 'string' && c.trim() !== "" && c.trim() !== "Nexora User" && c.trim() !== "Nexora Citizen" && c.trim() !== "Champion") {
+        return c.trim();
+      }
     }
+  }
+  if (currentUser?.displayName && typeof currentUser.displayName === 'string' && currentUser.displayName.trim() !== "" && currentUser.displayName.trim() !== "Nexora User" && currentUser.displayName.trim() !== "Nexora Citizen" && currentUser.displayName.trim() !== "Champion") {
+    return currentUser.displayName.trim();
   }
   if (currentUser?.email) {
     const emailPrefix = currentUser.email.split('@')[0];
     if (emailPrefix && emailPrefix.trim() !== "") return emailPrefix.trim();
   }
-  return docData?.displayName || docData?.settings?.displayName || docData?.name || currentUser?.displayName || "Champion";
+  for (const doc of docList) {
+    if (!doc) continue;
+    const fallbackName = doc.displayName || doc.settings?.displayName || doc.name || doc["Name"];
+    if (typeof fallbackName === 'string' && fallbackName.trim() !== "") return fallbackName.trim();
+  }
+  return currentUser?.displayName || "Champion";
 }
 
-export function extractRealProfilePic(docData: any, currentUser?: any, fallbackPic?: string): string {
-  const candidates = [
-    docData?.profilePic,
-    docData?.settings?.profilePic,
-    docData?.photoFileName,
-    docData?.["Photo file name"],
-    docData?.["Profile image"],
-    docData?.["profilePic"],
-    docData?.["photoURL"],
-    docData?.["avatar"],
-    docData?.photoURL,
-    docData?.settings?.photoFileName,
-    docData?.settings?.photoURL,
-    currentUser?.photoURL,
-    fallbackPic
-  ];
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.trim() !== "") {
-      return c.trim();
+export function extractRealProfilePic(docDataOrList: any | any[], currentUser?: any, fallbackPic?: string): string {
+  const docList = Array.isArray(docDataOrList) ? docDataOrList : [docDataOrList];
+  for (const doc of docList) {
+    if (!doc) continue;
+    const candidates = [
+      doc.profilePic,
+      doc.settings?.profilePic,
+      doc.photoFileName,
+      doc["Photo file name"],
+      doc["Profile image"],
+      doc["profilePic"],
+      doc["profile_pic"],
+      doc["profile_image"],
+      doc["photo_file_name"],
+      doc["photoURL"],
+      doc["avatar"],
+      doc.photoURL,
+      doc.avatar,
+      doc.settings?.photoFileName,
+      doc.settings?.photoURL,
+      doc.settings?.avatar,
+      doc.settings?.["Profile image"],
+      doc.settings?.["Photo file name"],
+      doc.settings?.["profile_pic"],
+      doc.settings?.["profile_image"],
+      doc.settings?.["photo_file_name"],
+    ];
+    for (const c of candidates) {
+      if (typeof c === 'string' && c.trim() !== "") {
+        return c.trim();
+      }
     }
+  }
+  if (currentUser?.photoURL && typeof currentUser.photoURL === 'string' && currentUser.photoURL.trim() !== "") {
+    return currentUser.photoURL.trim();
+  }
+  if (fallbackPic && typeof fallbackPic === 'string' && fallbackPic.trim() !== "") {
+    return fallbackPic.trim();
   }
   return "";
 }
 
-export function extractRealAccountName(docData: any, currentUser?: any): string {
-  const candidates = [
-    docData?.accountName,
-    docData?.["Account name"],
-    docData?.settings?.accountName,
-    docData?.username,
-    docData?.["Username"],
-    docData?.displayName,
-    docData?.name,
-    docData?.["Name"],
-    currentUser?.displayName,
-  ];
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.trim() !== "") {
-      return c.trim();
+export function extractRealAccountName(docDataOrList: any | any[], currentUser?: any): string {
+  const docList = Array.isArray(docDataOrList) ? docDataOrList : [docDataOrList];
+  for (const doc of docList) {
+    if (!doc) continue;
+    const candidates = [
+      doc.accountName,
+      doc["Account name"],
+      doc.settings?.accountName,
+      doc.username,
+      doc["Username"],
+      doc.displayName,
+      doc.name,
+      doc["Name"],
+    ];
+    for (const c of candidates) {
+      if (typeof c === 'string' && c.trim() !== "" && c.trim() !== "Champion") {
+        return c.trim();
+      }
     }
+  }
+  if (currentUser?.displayName && typeof currentUser.displayName === 'string' && currentUser.displayName.trim() !== "" && currentUser.displayName.trim() !== "Champion") {
+    return currentUser.displayName.trim();
   }
   if (currentUser?.email) {
     const emailPrefix = currentUser.email.split('@')[0];
@@ -94,36 +129,44 @@ export function extractRealAccountName(docData: any, currentUser?: any): string 
   return "Champion";
 }
 
-export function extractRealLocation(docData: any): string {
-  const candidates = [
-    docData?.location,
-    docData?.["Location"],
-    docData?.settings?.location,
-    docData?.settings?.["Location"],
-    docData?.city,
-    docData?.["City"]
-  ];
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.trim() !== "") {
-      return c.trim();
+export function extractRealLocation(docDataOrList: any | any[]): string {
+  const docList = Array.isArray(docDataOrList) ? docDataOrList : [docDataOrList];
+  for (const doc of docList) {
+    if (!doc) continue;
+    const candidates = [
+      doc.location,
+      doc["Location"],
+      doc.settings?.location,
+      doc.settings?.["Location"],
+      doc.city,
+      doc["City"]
+    ];
+    for (const c of candidates) {
+      if (typeof c === 'string' && c.trim() !== "") {
+        return c.trim();
+      }
     }
   }
   return "";
 }
 
-export function extractRealBio(docData: any): string {
-  const candidates = [
-    docData?.bio,
-    docData?.["Bio"],
-    docData?.about,
-    docData?.["About"],
-    docData?.settings?.bio,
-    docData?.settings?.["Bio"],
-    docData?.settings?.about
-  ];
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.trim() !== "") {
-      return c.trim();
+export function extractRealBio(docDataOrList: any | any[]): string {
+  const docList = Array.isArray(docDataOrList) ? docDataOrList : [docDataOrList];
+  for (const doc of docList) {
+    if (!doc) continue;
+    const candidates = [
+      doc.bio,
+      doc["Bio"],
+      doc.about,
+      doc["About"],
+      doc.settings?.bio,
+      doc.settings?.["Bio"],
+      doc.settings?.about
+    ];
+    for (const c of candidates) {
+      if (typeof c === 'string' && c.trim() !== "") {
+        return c.trim();
+      }
     }
   }
   return "";
@@ -374,26 +417,129 @@ export function isUserOnboardingCompleted(
   docData: any,
   onboardingData?: any,
   settingsObj?: any,
-  uid?: string
+  uid?: string,
+  plantSectionData?: any,
+  plantsTopData?: any
 ): boolean {
+  // 1. If any source explicitly confirms onboarding was completed, trust it immediately
+  if (
+    docData?.onboardingCompleted === true ||
+    docData?.settings?.onboardingCompleted === true ||
+    docData?.newUsersOnboardingCompleted === true ||
+    docData?.appIntroductionOnboardingCompleted === true ||
+    onboardingData?.onboardingCompleted === true ||
+    onboardingData?.newUsersOnboardingCompleted === true ||
+    onboardingData?.appIntroductionOnboardingCompleted === true ||
+    settingsObj?.onboardingCompleted === true ||
+    plantSectionData?.plantOnboardingCompleted === true ||
+    plantSectionData?.plantSectionOnboardingCompleted === true ||
+    plantsTopData?.plantOnboardingCompleted === true ||
+    plantsTopData?.plantSectionOnboardingCompleted === true
+  ) {
+    return true;
+  }
+
+  // 2. Check local storage cache for this user
   if (uid && typeof localStorage !== 'undefined') {
     if (localStorage.getItem(`nexora_onboarding_completed_${uid}`) === "true") return true;
+    if (localStorage.getItem(`nexora_plant_onboarding_completed_${uid}`) === "true") return true;
+    if (localStorage.getItem("nexora_onboarding_completed") === "true") return true;
+    if (localStorage.getItem("nexora_plant_onboarding_completed") === "true") return true;
   }
-  if (!docData) return false;
-  if (docData.onboardingCompleted === true) return true;
-  if (docData.settings?.onboardingCompleted === true) return true;
-  if (docData.newUsersOnboardingCompleted === true) return true;
-  if (onboardingData?.newUsersOnboardingCompleted === true) return true;
-  if (onboardingData?.onboardingCompleted === true) return true;
-  if (settingsObj?.onboardingCompleted === true) return true;
-  if (docData.hasEnteredGarden === true) return true;
-  if (docData.plantOnboardingCompleted === true) return true;
-  if (docData.plantSectionOnboardingCompleted === true) return true;
-  if (docData.settings?.plantOnboardingCompleted === true) return true;
-  if (docData.settings?.plantSectionOnboardingCompleted === true) return true;
-  if ((docData.stats?.totalPoints || 0) > 0) return true;
-  if ((docData.stats?.streak || 0) > 0) return true;
-  if ((docData.coins || 0) > 0) return true;
+
+  // 3. Check plant onboarding, plant section, or garden progress indicators
+  if (
+    docData?.hasEnteredGarden === true ||
+    docData?.plantOnboardingCompleted === true ||
+    docData?.plantSectionOnboardingCompleted === true ||
+    docData?.settings?.plantOnboardingCompleted === true ||
+    docData?.settings?.plantSectionOnboardingCompleted === true ||
+    docData?.settings?.hasEnteredGarden === true ||
+    onboardingData?.plantSectionOnboardingCompleted === true ||
+    onboardingData?.plantOnboardingCompleted === true ||
+    settingsObj?.plantOnboardingCompleted === true ||
+    settingsObj?.plantSectionOnboardingCompleted === true ||
+    settingsObj?.hasEnteredGarden === true ||
+    plantSectionData?.plantOnboardingCompleted === true ||
+    plantSectionData?.plantSectionOnboardingCompleted === true ||
+    plantsTopData?.plantOnboardingCompleted === true ||
+    plantsTopData?.plantSectionOnboardingCompleted === true
+  ) {
+    return true;
+  }
+
+  // 4. Check profile data indicators populated exclusively during onboarding
+  if (
+    docData?.priorityFocus ||
+    docData?.settings?.priorityFocus ||
+    docData?.workType ||
+    docData?.settings?.workType ||
+    docData?.energyPeak ||
+    docData?.settings?.energyPeak ||
+    docData?.commitmentLevel ||
+    docData?.settings?.commitmentLevel ||
+    (docData?.archivedOfficialChallenges && docData.archivedOfficialChallenges.length > 0) ||
+    (docData?.settings?.archivedOfficialChallenges && docData.settings.archivedOfficialChallenges.length > 0) ||
+    (docData?.age !== undefined && docData?.age !== null && docData?.age !== '') ||
+    (docData?.settings?.age !== undefined && docData?.settings?.age !== null && docData?.settings?.age !== '') ||
+    (docData?.gender && docData.gender.trim() !== '') ||
+    (docData?.settings?.gender && docData.settings.gender.trim() !== '') ||
+    docData?.spaceOnboardingCompleted === true ||
+    docData?.settings?.spaceOnboardingCompleted === true
+  ) {
+    return true;
+  }
+
+  // 5. Check user identity customizations that indicate an existing user who completed setup
+  const docName = docData?.displayName || docData?.name || docData?.settings?.displayName || docData?.settings?.name || "";
+  if (typeof docName === "string" && docName.trim() !== "" && docName.trim() !== "Champion" && docName.trim() !== "Nexora User" && docName.trim() !== "Nexora Citizen") {
+    return true;
+  }
+  const docPhoto = docData?.profilePic || docData?.photoFileName || docData?.["Profile image"] || docData?.["Photo file name"] || docData?.avatar || docData?.settings?.profilePic || docData?.settings?.photoFileName;
+  if (typeof docPhoto === "string" && docPhoto.trim() !== "") {
+    return true;
+  }
+  const docLocation = docData?.location || docData?.settings?.location || docData?.city;
+  if (typeof docLocation === "string" && docLocation.trim() !== "") {
+    return true;
+  }
+
+  // 6. Check existing user activity/progress indicators
+  if ((docData?.stats?.totalPoints || 0) > 0) return true;
+  if ((docData?.stats?.streak || 0) > 0) return true;
+  if ((docData?.stats?.bestStreak || 0) > 0) return true;
+  if ((docData?.stats?.xp || 0) > 0) return true;
+  if ((docData?.stats?.coins || 0) > 0) return true;
+  if ((docData?.stats?.level || 1) > 1) return true;
+  if ((docData?.totalPoints || 0) > 0) return true;
+  if ((docData?.streak || 0) > 0) return true;
+  if ((docData?.bestStreak || 0) > 0) return true;
+  if ((docData?.xp || 0) > 0) return true;
+  if ((docData?.coins || 0) > 0) return true;
+  if ((docData?.level || 1) > 1) return true;
+  if ((docData?.inventory && docData.inventory.length > 0) || (docData?.settings?.inventory && docData.settings.inventory.length > 0)) return true;
+  if ((docData?.purchasedItems && docData.purchasedItems.length > 0) || (docData?.settings?.purchasedItems && docData.settings.purchasedItems.length > 0)) return true;
+  if ((docData?.trophies && docData.trophies.length > 0) || (docData?.stats?.trophies && docData.stats.trophies.length > 0)) return true;
+  if ((docData?.gratitudeEntries && docData.gratitudeEntries.length > 0) || (docData?.stats?.gratitudeEntries && docData.stats.gratitudeEntries.length > 0)) return true;
+  if ((docData?.drawings && docData.drawings.length > 0) || (docData?.stats?.drawings && docData.stats.drawings.length > 0)) return true;
+  if (docData?.plantState && ((docData.plantState.stage || 0) > 0 || (docData.plantState.growthPoints || 0) > 0 || (docData.plantState.type && docData.plantState.type !== 'sprout'))) return true;
+  if (docData?.settings?.plantState && ((docData.settings.plantState.stage || 0) > 0 || (docData.settings.plantState.growthPoints || 0) > 0 || (docData.settings.plantState.type && docData.settings.plantState.type !== 'sprout'))) return true;
+
+  // 7. If docData is missing completely, check global fallback
+  if (!docData) {
+    return false;
+  }
+
+  // 8. If explicitly flagged as not completed across docData and no completion indicators found, return false
+  if (
+    (docData?.onboardingCompleted === false || docData?.settings?.onboardingCompleted === false) &&
+    !docData?.plantOnboardingCompleted &&
+    !docData?.plantSectionOnboardingCompleted &&
+    !docData?.settings?.plantOnboardingCompleted &&
+    !docData?.settings?.plantSectionOnboardingCompleted
+  ) {
+    return false;
+  }
 
   return false;
 }
@@ -469,6 +615,16 @@ function mergeStats(dbStats: UserStats, localStats: UserStats, defaultStats: Use
   localGratitude.forEach(g => gratitudeMap.set(g.id, g)); // local wins or just keeps
   merged.gratitudeEntries = Array.from(gratitudeMap.values());
 
+  // Merge claimed rank rewards map and rank tracking fields
+  merged.claimedRankRewards = {
+    ...(defaultStats.claimedRankRewards || {}),
+    ...(localStats.claimedRankRewards || {}),
+    ...(dbStats.claimedRankRewards || {}),
+  };
+  merged.lastRankRewardClaimWeek = dbStats.lastRankRewardClaimWeek || localStats.lastRankRewardClaimWeek || defaultStats.lastRankRewardClaimWeek;
+  merged.lastClaimedRank = dbStats.lastClaimedRank ?? localStats.lastClaimedRank ?? defaultStats.lastClaimedRank;
+  merged.lowestRankSinceClaim = Math.max(dbStats.lowestRankSinceClaim || 0, localStats.lowestRankSinceClaim || 0);
+
   return merged;
 }
 
@@ -497,11 +653,7 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
     return { ...defaultSettings, ...dbSettings, displayName: finalName, profilePic: finalPic, location: finalLoc, accountName: finalAccount, isPro };
   }
 
-  const finalOnboardingDone = typeof dbSettings.onboardingCompleted === "boolean"
-    ? dbSettings.onboardingCompleted
-    : typeof localSettings.onboardingCompleted === "boolean"
-      ? localSettings.onboardingCompleted
-      : false;
+  const finalOnboardingDone = (dbSettings.onboardingCompleted === true) || (localSettings.onboardingCompleted === true);
 
   const merged: UserSettings = {
     ...defaultSettings,
@@ -513,8 +665,8 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
     location: finalLoc,
     accountName: finalAccount,
     onboardingCompleted: finalOnboardingDone,
-    plantOnboardingCompleted: dbSettings.plantOnboardingCompleted || localSettings.plantOnboardingCompleted || false,
-    spaceOnboardingCompleted: dbSettings.spaceOnboardingCompleted || localSettings.spaceOnboardingCompleted || false,
+    plantOnboardingCompleted: (dbSettings.plantOnboardingCompleted === true) || (localSettings.plantOnboardingCompleted === true),
+    spaceOnboardingCompleted: (dbSettings.spaceOnboardingCompleted === true) || (localSettings.spaceOnboardingCompleted === true),
     spaceHouseUnlocked: dbSettings.spaceHouseUnlocked || localSettings.spaceHouseUnlocked || false,
     hasEnteredGarden: dbSettings.hasEnteredGarden || localSettings.hasEnteredGarden || false,
     isPro: isPro,
@@ -864,24 +1016,28 @@ export function useNexoraData(
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // Emergency Auth Initialization Safety Timeout:
-  // Ensures authLoading resolves to false within 4 seconds even if onAuthStateChanged or network is delayed.
+  // Ensures authLoading resolves cleanly if Firebase Auth is offline or network is delayed,
+  // while giving cached user sessions sufficient time to complete token restoration.
   useEffect(() => {
+    const hasCachedUser = typeof window !== "undefined" && Boolean(localStorage.getItem("nexora_cached_user"));
+    const timeoutDuration = hasCachedUser ? 7500 : 3500;
     const authTimer = setTimeout(() => {
       setAuthLoading((prev) => {
-        if (prev) {
-          console.warn("[STARTUP SAFETY] Auth initialization emergency timeout (4s) reached. Resolving auth state.");
+        if (prev && !isInitialAuthResolutionDone.current) {
+          console.warn(`[STARTUP SAFETY] Auth initialization timeout (${timeoutDuration}ms) reached. Resolving auth state.`);
           setIsDataReady(true);
           setLoading(false);
           return false;
         }
         return prev;
       });
-    }, 4000);
+    }, timeoutDuration);
     return () => clearTimeout(authTimer);
   }, []);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isSyncingData, setIsSyncingData] = useState(false);
   const dataLoadedFromFirestore = useRef(false);
+  const hasExistingUserProgressRef = useRef(false);
 
   const lastLoadedUserIdRef = useRef<string | null>(null);
   const quotaExceededRef = useRef(false);
@@ -916,12 +1072,13 @@ export function useNexoraData(
         if (isUserSwitch) {
           console.log(`[ACCOUNT ISOLATION] Account switch or fresh login detected: '${previousCachedUserId || "none"}' -> '${currentUser.uid}'. Wiping previous session cache and resetting states.`);
           
-          // Clear all user-specific cached local storage
+          // Clear all user-specific cached local storage (preserve shared public leaderboard cache)
           Object.keys(localStorage).forEach((key) => {
             if (
-              key.startsWith("nexora_") ||
+              (key.startsWith("nexora_") ||
               key.startsWith("hydration_") ||
-              key === "admin_read_feedback_ids"
+              key === "admin_read_feedback_ids") &&
+              key !== "nexora_leaderboard_cache"
             ) {
               localStorage.removeItem(key);
             }
@@ -931,7 +1088,7 @@ export function useNexoraData(
           rawSetSettings(DEFAULT_SETTINGS);
           rawSetStats(DEFAULT_STATS);
           rawSetGardenState(createInitialGardenState());
-          rawSetNeedsOnboarding(true);
+          rawSetNeedsOnboarding(false);
           rawSetDailyProgress({
             date: today,
             completed: false,
@@ -966,7 +1123,12 @@ export function useNexoraData(
         setLoading(true);
         setIsDataReady(false);
         setIsStateHydrated(false);
-        setIsSyncingData(isUserSwitch);
+        hasExistingUserProgressRef.current = false;
+        
+        const isFreshLogin = typeof window !== "undefined" && (sessionStorage.getItem("nexora_fresh_login") === "true" || isUserSwitch);
+        const hasCachedUserData = typeof window !== "undefined" && Boolean(localStorage.getItem("nexora_cached_user") && localStorage.getItem("nexora_settings"));
+        const shouldShowSyncSpinners = isFreshLogin || !hasCachedUserData;
+        setIsSyncingData(shouldShowSyncSpinners);
         dataLoadedFromFirestore.current = false;
         hasMatchedHydratedStateRef.current = false;
         setIsStateLoaded(false, "User logging in, resetting states to load from Firestore.");
@@ -1009,9 +1171,37 @@ export function useNexoraData(
             console.warn("[FIRESTORE] Non-critical check on deleted_users collection:", err);
           });
 
-          // ZERO-LATENCY INSTANT LOCAL CACHE PRE-PASS (<10ms) - ONLY for matching same user
+          // ZERO-LATENCY INSTANT LOCAL CACHE PRE-PASS (0ms) - ONLY for matching same user
           if (isSameUser && !isUserSwitch) {
             try {
+              const localCacheSettings = getCachedJson("nexora_settings", null);
+              const localCacheStats = getCachedJson("nexora_stats", null);
+              const localCacheGarden = getCachedJson("nexora_garden", null);
+              const localCacheProgress = getCachedJson("nexora_progress", null);
+
+              if (localCacheSettings) {
+                rawSetSettings((prev) => mergeSettings(localCacheSettings, prev, DEFAULT_SETTINGS, currentUser.uid));
+                const isOnboardingDone = Boolean(localCacheSettings.onboardingCompleted || localStorage.getItem("nexora_onboarding_completed") === "true");
+                rawSetNeedsOnboarding(!isOnboardingDone);
+              }
+              if (localCacheStats) {
+                rawSetStats((prev) => mergeStats(localCacheStats, prev, DEFAULT_STATS));
+              }
+              if (localCacheGarden) {
+                rawSetGardenState(localCacheGarden);
+              }
+              if (localCacheProgress && localCacheProgress.date === today) {
+                rawSetDailyProgress(localCacheProgress);
+              }
+
+              // Only release UI load state if not a fresh login from AuthScreen, so Gateway verification runs for logging-in users
+              const isFreshSessionLogin = typeof window !== "undefined" && sessionStorage.getItem("nexora_fresh_login") === "true";
+              if ((localCacheSettings || localCacheStats) && !isFreshSessionLogin) {
+                setAuthLoading(false);
+                setIsDataReady(true);
+                setLoading(false);
+              }
+
               const [cacheUserSnap, cacheRewardsSnap, cacheStatsSnap] = await Promise.all([
                 getDocFromCache(userDocRef).catch(() => null),
                 getDocFromCache(doc(db, "users", currentUser.uid, "rewards", "main")).catch(() => null),
@@ -1022,7 +1212,7 @@ export function useNexoraData(
                 const cData = cacheUserSnap.data();
                 const rData = cacheRewardsSnap?.exists() ? cacheRewardsSnap.data() : null;
                 const sData = cacheStatsSnap?.exists() ? cacheStatsSnap.data() : null;
-                const localCacheStats = getCachedJson("nexora_stats", DEFAULT_STATS);
+                const currentLocalStats = getCachedJson("nexora_stats", DEFAULT_STATS);
 
                 const instantDisplayName = extractRealDisplayName(cData, currentUser);
                 const instantProfilePic = extractRealProfilePic(cData, currentUser);
@@ -1046,7 +1236,7 @@ export function useNexoraData(
                   rData?.stats?.coins || 0,
                   sData?.coins || 0,
                   sData?.stats?.coins || 0,
-                  localCacheStats?.coins || 0,
+                  currentLocalStats?.coins || 0,
                   DEFAULT_STATS.coins
                 );
 
@@ -1232,11 +1422,13 @@ export function useNexoraData(
                 Boolean((docData.purchasedEcosystemItemIds?.length || 0) > 0 || (docData.activeEcosystemItemIds?.length || 0) > 0 || (localCacheSettings?.purchasedEcosystemItemIds?.length || 0) > 0) ||
                 Boolean(localCacheGarden?.tiles?.some((t: any) => t.plantType || t.itemId || t.occupied));
 
-              const fastOnboardingCompleted = isUserOnboardingCompleted(docData, null, localCacheSettings, currentUser.uid);
+              const fastOnboardingCompleted = isUserOnboardingCompleted(docData, null, localCacheSettings, currentUser.uid) || fastPlantOnboardingCompleted;
               if (fastOnboardingCompleted) {
                 localStorage.setItem(`nexora_onboarding_completed_${currentUser.uid}`, "true");
+                localStorage.setItem("nexora_onboarding_completed", "true");
               } else {
                 localStorage.removeItem(`nexora_onboarding_completed_${currentUser.uid}`);
+                localStorage.removeItem("nexora_onboarding_completed");
               }
 
               const fastPlantState = docData.plantState || docData.settings?.plantState || localCacheSettings?.plantState || DEFAULT_SETTINGS.plantState;
@@ -1376,13 +1568,14 @@ export function useNexoraData(
               rawSetGardenState(fastGardenState);
               localStorage.setItem("nexora_garden", JSON.stringify(fastGardenState));
 
-              // INSTANT UI UNLOCK (<50ms): Core user profile & rewards are now fully calculated and in React state!
-              // Release loading and auth locks immediately so the user sees their Name, Profile Pic, Coins, and Stats with zero latency.
-              setAuthLoading(false);
-              setIsDataReady(true);
-              setLoading(false);
-              setIsHydrated(true);
-              setIsStateHydrated(true);
+              // Fast Pass unlock for already verified returning users in same session
+              if (fastOnboardingCompleted && !isFreshLogin && !isUserSwitch) {
+                setAuthLoading(false);
+                setIsDataReady(true);
+                setLoading(false);
+                setIsHydrated(true);
+                setIsStateHydrated(true);
+              }
             } catch (err) {
               console.warn("[FAST PASS HYDRATION] Early settings/stats calculation skipped:", err);
             }
@@ -1511,13 +1704,6 @@ export function useNexoraData(
               console.warn("[FIRESTORE] Warning reading subcollection/auxiliary documents:", pErr);
             }
 
-            const finalOnboardingCompleted = isUserOnboardingCompleted(docData, onboardingData, docData.settings, currentUser.uid);
-              
-            const finalSpaceOnboardingCompleted = 
-              (docData.spaceOnboardingCompleted === true) ||
-              (docData.settings?.spaceOnboardingCompleted === true) ||
-              false;
-
             // Extract plantState and plantsProgress from plant_section document, plants collection, user doc, or settings
             const finalPlantState = getBestPlantState(
               plantsTopData?.plantState,
@@ -1536,10 +1722,27 @@ export function useNexoraData(
             const finalPlantOnboardingCompleted = 
               (onboardingData?.plantSectionOnboardingCompleted === true) || 
               (plantSectionData?.plantOnboardingCompleted === true) ||
+              (plantSectionData?.plantSectionOnboardingCompleted === true) ||
               (docData.plantOnboardingCompleted === true) || 
+              (docData.plantSectionOnboardingCompleted === true) || 
               (docData.settings?.plantOnboardingCompleted === true) || 
+              (docData.settings?.plantSectionOnboardingCompleted === true) || 
               (plantsTopData?.plantOnboardingCompleted === true) ||
               Boolean(finalPlantState && ((finalPlantState.stage || 0) > 0 || (finalPlantState.growthPoints || 0) > 0)) ||
+              false;
+
+            const finalOnboardingCompleted = isUserOnboardingCompleted(
+              docData,
+              onboardingData,
+              docData.settings,
+              currentUser.uid,
+              plantSectionData,
+              plantsTopData
+            ) || finalPlantOnboardingCompleted;
+              
+            const finalSpaceOnboardingCompleted = 
+              (docData.spaceOnboardingCompleted === true) ||
+              (docData.settings?.spaceOnboardingCompleted === true) ||
               false;
 
             const finalPurchasedEcosystemItemIds = Array.from(new Set([
@@ -1612,6 +1815,17 @@ export function useNexoraData(
               ...(shopPurchasesTopData?.purchasedHouseItemIds || [])
             ].map((it: any) => typeof it === "string" ? it : (it?.itemId || it?.id || it?.name)).filter(Boolean)));
 
+            const allProfileDocs = [
+              docData,
+              docData?.settings,
+              leaderboardTopData,
+              rankTopData,
+              rewardsData,
+              rewardsTopData,
+              statsMainData,
+              statsTopData
+            ].filter(Boolean);
+
             const mappedSettings = {
               ...DEFAULT_SETTINGS,
               ...(docData.settings || {}),
@@ -1622,10 +1836,10 @@ export function useNexoraData(
               reminderTime2: docData.reminderTime2 ?? docData.settings?.reminderTime2 ?? DEFAULT_SETTINGS.reminderTime2,
               motivationTime: docData.motivationTime ?? docData.settings?.motivationTime ?? DEFAULT_SETTINGS.motivationTime,
               maxNotificationsPerDay: docData.maxNotificationsPerDay ?? docData.settings?.maxNotificationsPerDay ?? DEFAULT_SETTINGS.maxNotificationsPerDay ?? 5,
-              displayName: extractRealDisplayName(docData, currentUser),
+              displayName: extractRealDisplayName(allProfileDocs, currentUser),
               age: docData.age ?? docData.settings?.age ?? DEFAULT_SETTINGS.age,
               gender: docData.gender ?? docData.settings?.gender,
-              profilePic: extractRealProfilePic(docData, currentUser, currentUser?.photoURL),
+              profilePic: extractRealProfilePic(allProfileDocs, currentUser, currentUser?.photoURL),
               themeColor: docData.themeColor ?? docData.settings?.themeColor ?? DEFAULT_SETTINGS.themeColor,
               soundEnabled: docData.soundEnabled ?? docData.settings?.soundEnabled ?? DEFAULT_SETTINGS.soundEnabled,
               notificationsEnabled: docData.notificationsEnabled ?? docData.settings?.notificationsEnabled ?? DEFAULT_SETTINGS.notificationsEnabled,
@@ -1651,7 +1865,7 @@ export function useNexoraData(
               inventory: mergedInventory,
               isDogSoundPackActive: docData.isDogSoundPackActive ?? docData.settings?.isDogSoundPackActive ?? DEFAULT_SETTINGS.isDogSoundPackActive,
               league: docData.league ?? docData.settings?.league ?? DEFAULT_SETTINGS.league,
-              location: extractRealLocation(docData) || docData.location || docData.settings?.location || DEFAULT_SETTINGS.location,
+              location: extractRealLocation(allProfileDocs) || docData.location || docData.settings?.location || DEFAULT_SETTINGS.location,
               timezone: docData.timezone ?? docData.settings?.timezone ?? DEFAULT_SETTINGS.timezone,
               fcmToken: docData.fcmToken ?? docData.settings?.fcmToken,
               badgeSettings: docData.badgeSettings ?? docData.settings?.badgeSettings ?? DEFAULT_SETTINGS.badgeSettings,
@@ -1676,7 +1890,7 @@ export function useNexoraData(
               proTestExpiresAt: docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt ?? null,
               proTestLastUsedAt: docData.proTestLastUsedAt ?? docData.settings?.proTestLastUsedAt ?? null,
               
-              accountName: extractRealAccountName(docData, currentUser),
+              accountName: extractRealAccountName(allProfileDocs, currentUser),
               email: docData.email || (docData.settings?.email) || currentUser.email || "",
               time: docData.time || docData["Time"] || (docData.settings?.time) || new Date().toISOString()
             };
@@ -1986,6 +2200,32 @@ export function useNexoraData(
               rawSetDailyProgress(latestLocalProgress);
             }
             
+            const hasExistingProgress = Boolean(
+              docData && (
+                (docData.onboardingCompleted === true) ||
+                (docData.settings?.onboardingCompleted === true) ||
+                (finalTotalPoints > 0) ||
+                (finalXP > 0) ||
+                (finalStreak > 0) ||
+                (finalCoins > 0) ||
+                (finalLevel > 1) ||
+                (finalPlantState?.stage && finalPlantState.stage > 0) ||
+                (finalPurchasedEcosystemItemIds && finalPurchasedEcosystemItemIds.length > 0) ||
+                (mergedPurchasedItems && mergedPurchasedItems.length > 0) ||
+                (finalTrophies && finalTrophies.length > 0) ||
+                (finalGratitudeEntries && finalGratitudeEntries.length > 0) ||
+                (finalDrawings && finalDrawings.length > 0) ||
+                (docData.totalPoints || 0) > 0 ||
+                (docData.xp || 0) > 0 ||
+                (docData.streak || 0) > 0 ||
+                (docData.coins || 0) > 0
+              )
+            );
+            hasExistingUserProgressRef.current = hasExistingProgress;
+            if (isUserSwitch && hasExistingProgress) {
+              setIsSyncingData(true);
+            }
+
             setNeedsOnboarding(!finalOnboardingCompleted);
             if (finalOnboardingCompleted) {
               localStorage.setItem("nexora_onboarding_completed", "true");
@@ -2038,12 +2278,21 @@ export function useNexoraData(
           setIsStateHydrated(true);
           setNeedsOnboarding(false);
         } finally {
-          setIsSyncingData(false);
           if (loadTimeout) clearTimeout(loadTimeout);
           if (!isTimeoutActive) {
             setAuthLoading(false);
             setIsDataReady(true);
             setLoading(false);
+          }
+          if (isFreshLogin && hasExistingUserProgressRef.current) {
+            // Keep syncing spinners active for 1200ms on fresh login so the user sees clear feedback
+            setTimeout(() => {
+              setIsSyncingData(false);
+              if (typeof window !== "undefined") sessionStorage.removeItem("nexora_fresh_login");
+            }, 1200);
+          } else {
+            setIsSyncingData(false);
+            if (typeof window !== "undefined") sessionStorage.removeItem("nexora_fresh_login");
           }
         }
       } else {
@@ -2060,7 +2309,7 @@ export function useNexoraData(
           console.log(`[STARTUP] Cached user session detected ('${cachedUserKey}'). Polling for Firebase Auth token restoration...`);
           let restoredUser = auth.currentUser;
           const startTime = Date.now();
-          while (!restoredUser && Date.now() - startTime < 2500) {
+          while (!restoredUser && Date.now() - startTime < 3000) {
             await new Promise((resolve) => setTimeout(resolve, 100));
             restoredUser = auth.currentUser;
           }
@@ -2077,17 +2326,7 @@ export function useNexoraData(
         console.log(`[STARTUP] AUTH STATE RESOLVED - No active user session.`);
         lastLoadedUserIdRef.current = null;
         setUser(null);
-        
-        // Wipe all user-specific local storage keys to ensure strict account isolation
-        Object.keys(localStorage).forEach((key) => {
-          if (
-            key.startsWith("nexora_") ||
-            key.startsWith("hydration_") ||
-            key === "admin_read_feedback_ids"
-          ) {
-            localStorage.removeItem(key);
-          }
-        });
+        setIsSyncingData(false);
 
         rawSetSettings(DEFAULT_SETTINGS);
         rawSetStats(DEFAULT_STATS);
@@ -2265,6 +2504,9 @@ export function useNexoraData(
                     gems: dbData.gems ?? dbData.stats?.gems ?? DEFAULT_STATS.gems ?? 0,
                     lastWeeklyReset: dbData.lastWeeklyReset ?? dbData.stats?.lastWeeklyReset ?? DEFAULT_STATS.lastWeeklyReset ?? null,
                     lastRankRewardClaimWeek: dbData.lastRankRewardClaimWeek ?? dbData.stats?.lastRankRewardClaimWeek ?? DEFAULT_STATS.lastRankRewardClaimWeek ?? null,
+                    claimedRankRewards: dbData.claimedRankRewards ?? dbData.stats?.claimedRankRewards ?? DEFAULT_STATS.claimedRankRewards ?? {},
+                    lastClaimedRank: dbData.lastClaimedRank ?? dbData.stats?.lastClaimedRank ?? DEFAULT_STATS.lastClaimedRank ?? undefined,
+                    lowestRankSinceClaim: dbData.lowestRankSinceClaim ?? dbData.stats?.lowestRankSinceClaim ?? DEFAULT_STATS.lowestRankSinceClaim ?? undefined,
                     lastActiveDate: dbData.lastActiveDate ?? dbData.stats?.lastActiveDate ?? DEFAULT_STATS.lastActiveDate ?? null,
                     pointsByCategory: dbData.pointsByCategory ?? dbData.stats?.pointsByCategory ?? DEFAULT_STATS.pointsByCategory,
                     waterDrank: dbData.waterDrank ?? dbData.stats?.waterDrank ?? DEFAULT_STATS.waterDrank,
@@ -2414,6 +2656,7 @@ export function useNexoraData(
             const plantSectionPayload = cleanPayload({
               uid: user.uid,
               plantOnboardingCompleted: settings.plantOnboardingCompleted || false,
+              plantSectionOnboardingCompleted: settings.plantOnboardingCompleted || false,
               plantState: settings.plantState || null,
               plantsProgress: settings.plantsProgress || {},
               gardenState: gardenState || null,
@@ -2424,8 +2667,11 @@ export function useNexoraData(
 
             const onboardingPayload = cleanPayload({
               uid: user.uid,
+              onboardingCompleted: settings.onboardingCompleted || false,
               newUsersOnboardingCompleted: settings.onboardingCompleted || false,
+              appIntroductionOnboardingCompleted: settings.onboardingCompleted || false,
               plantSectionOnboardingCompleted: settings.plantOnboardingCompleted || false,
+              plantOnboardingCompleted: settings.plantOnboardingCompleted || false,
               updatedAt: serverTimestamp(),
             });
 
@@ -2844,6 +3090,15 @@ export function useNexoraData(
         localStorage.setItem("nexora_settings", JSON.stringify(next));
         if (next.onboardingCompleted) {
           localStorage.setItem("nexora_onboarding_completed", "true");
+          if (user?.uid) {
+            localStorage.setItem(`nexora_onboarding_completed_${user.uid}`, "true");
+          }
+        }
+        if (next.plantOnboardingCompleted) {
+          localStorage.setItem("nexora_plant_onboarding_completed", "true");
+          if (user?.uid) {
+            localStorage.setItem(`nexora_plant_onboarding_completed_${user.uid}`, "true");
+          }
         }
       } catch (e) {
         console.warn("Failed to cache settings:", e);
@@ -3158,6 +3413,7 @@ export function useNexoraData(
         const plantSectionPayload = {
           uid: user.uid,
           plantOnboardingCompleted: settings.plantOnboardingCompleted || false,
+          plantSectionOnboardingCompleted: settings.plantOnboardingCompleted || false,
           plantState: settings.plantState || null,
           plantsProgress: settings.plantsProgress || {},
           gardenState: gardenState || null,
@@ -3168,8 +3424,11 @@ export function useNexoraData(
 
         const onboardingPayload = {
           uid: user.uid,
+          onboardingCompleted: settings.onboardingCompleted || false,
           newUsersOnboardingCompleted: settings.onboardingCompleted || false,
+          appIntroductionOnboardingCompleted: settings.onboardingCompleted || false,
           plantSectionOnboardingCompleted: settings.plantOnboardingCompleted || false,
+          plantOnboardingCompleted: settings.plantOnboardingCompleted || false,
           updatedAt: serverTimestamp(),
         };
 

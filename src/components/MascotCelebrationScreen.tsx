@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronRight, Sparkles, Zap, Flame, Coins, Trophy } from "lucide-react";
+import { useSound } from "../hooks/useSound";
 
 interface MascotCelebrationScreenProps {
   settings?: any;
@@ -94,7 +95,7 @@ export function MascotCelebrationScreen({
   const [pointer, setPointer] = useState({ x: typeof window !== "undefined" ? window.innerWidth / 2 : 200, y: typeof window !== "undefined" ? window.innerHeight / 2 : 300 });
   const [backgroundShapes, setBackgroundShapes] = useState<FloatingShape[]>([]);
 
-  const audioCtxRef = useRef<AudioContext | null>(null);
+  const { play } = useSound();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const requestRef = useRef<number | null>(null);
   const backgroundRequestRef = useRef<number | null>(null);
@@ -110,170 +111,25 @@ export function MascotCelebrationScreen({
     }
   };
 
-  // Web Audio Synthesizer: Cartoon & Game sounds
-  const playSound = (type: "lightning" | "squash" | "coin" | "streak" | "xp" | "cheer") => {
+  // Pure Cloudinary Audio Mapping
+  const playCelebrationAudio = (type: "lightning" | "squash" | "coin" | "streak" | "xp" | "cheer") => {
+    if (settings?.soundEnabled === false) return;
     try {
-      if (settings?.soundEnabled === false) return;
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const ctx = audioCtxRef.current;
-      const now = ctx.currentTime;
-
       if (type === "lightning") {
-        // Dramatic electric shock crackle + low thunder boom
-        const osc1 = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
-        const noise = ctx.createOscillator();
-        const filter = ctx.createBiquadFilter();
-        const gain = ctx.createGain();
-
-        osc1.type = "sawtooth";
-        osc1.frequency.setValueAtTime(80, now);
-        osc1.frequency.exponentialRampToValueAtTime(25, now + 1.1);
-
-        osc2.type = "sawtooth";
-        osc2.frequency.setValueAtTime(140, now);
-        osc2.frequency.linearRampToValueAtTime(40, now + 0.8);
-
-        noise.type = "square";
-        noise.frequency.setValueAtTime(4000, now);
-        // Randomly modulate pitch of noise for crackle
-        for (let t = 0; t < 0.8; t += 0.05) {
-          noise.frequency.setValueAtTime(Math.random() * 8000 + 1000, now + t);
-        }
-
-        filter.type = "bandpass";
-        filter.frequency.setValueAtTime(1000, now);
-        filter.frequency.exponentialRampToValueAtTime(120, now + 0.9);
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.25, now + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-
-        osc1.connect(filter);
-        osc2.connect(filter);
-        noise.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc1.start(now);
-        osc2.start(now);
-        noise.start(now);
-
-        osc1.stop(now + 1.2);
-        osc2.stop(now + 1.2);
-        noise.stop(now + 1.2);
-      } else if (type === "squash") {
-        // High elastic cartoon spring squeak!
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(140, now);
-        osc.frequency.exponentialRampToValueAtTime(650, now + 0.22);
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.18, now + 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.22);
-      } else if (type === "coin") {
-        // Classic high-quality arcade gold double-chime
-        const osc1 = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-        const gain2 = ctx.createGain();
-
-        osc1.type = "sine";
-        osc2.type = "sine";
-        osc1.frequency.setValueAtTime(987.77, now); // B5
-        osc2.frequency.setValueAtTime(1318.51, now + 0.08); // E6
-
-        gain1.gain.setValueAtTime(0, now);
-        gain1.gain.linearRampToValueAtTime(0.12, now + 0.02);
-        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-
-        gain2.gain.setValueAtTime(0, now + 0.08);
-        gain2.gain.linearRampToValueAtTime(0.12, now + 0.1);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-
-        osc1.connect(gain1);
-        osc2.connect(gain2);
-        gain1.connect(ctx.destination);
-        gain2.connect(ctx.destination);
-
-        osc1.start(now);
-        osc2.start(now + 0.08);
-        osc1.stop(now + 0.3);
-        osc2.stop(now + 0.35);
-      } else if (type === "streak") {
-        // Power-up sliding sawtooth warm flame sound
-        const osc = ctx.createOscillator();
-        const filter = ctx.createBiquadFilter();
-        const gain = ctx.createGain();
-
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(220, now);
-        osc.frequency.exponentialRampToValueAtTime(700, now + 0.45);
-
-        filter.type = "lowpass";
-        filter.frequency.setValueAtTime(1400, now);
-        filter.frequency.linearRampToValueAtTime(300, now + 0.45);
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.14, now + 0.08);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.start(now);
-        osc.stop(now + 0.48);
-      } else if (type === "xp") {
-        // Sparkle magical descending & ascending star-fall chord arpeggio
-        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-        notes.forEach((freq, idx) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(freq, now + idx * 0.07);
-
-          gain.gain.setValueAtTime(0, now + idx * 0.07);
-          gain.gain.linearRampToValueAtTime(0.1, now + idx * 0.07 + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.32);
-
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-
-          osc.start(now + idx * 0.07);
-          osc.stop(now + idx * 0.07 + 0.32);
-        });
+        play("challenge_unlock");
       } else if (type === "cheer") {
-        // Triumphant orchestral C major climax sweep
-        const freqs = [130.81, 164.81, 196.00, 261.63, 329.63, 392.00, 523.25]; // full major chord spectrum
-        freqs.forEach((f, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = "triangle";
-          osc.frequency.setValueAtTime(f, now);
-          
-          gain.gain.setValueAtTime(0, now);
-          gain.gain.linearRampToValueAtTime(0.04, now + 0.1);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
-
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          
-          osc.start(now);
-          osc.stop(now + 0.7);
-        });
+        play("stadium");
+      } else if (type === "squash") {
+        play("nav_switch");
+      } else if (type === "coin") {
+        play("coin");
+      } else if (type === "streak") {
+        play("fire_streak");
+      } else if (type === "xp") {
+        play("challenge_unlock");
       }
-    } catch (err) {
-      console.warn("Sound synthesis failed safely:", err);
+    } catch (e) {
+      console.warn("Celebration audio error:", e);
     }
   };
 
@@ -363,14 +219,14 @@ export function MascotCelebrationScreen({
   useEffect(() => {
     setRandomMessage(CELEBRATION_MESSAGES[Math.floor(Math.random() * CELEBRATION_MESSAGES.length)]);
 
-    // 1. Play cartoonist lightning crackle & shake
-    playSound("lightning");
+    // 1. Play Cloudinary unlocked sound & shake
+    playCelebrationAudio("lightning");
     triggerVibration([80, 40, 120, 60, 200, 50, 250]);
 
     // 2. Transits from lightning to "Mascot Big" at 1.3 seconds
     const toBigTimer = setTimeout(() => {
       setAnimationStage("mascot_big");
-      playSound("cheer");
+      playCelebrationAudio("cheer");
       triggerConfettiExplosion();
       triggerVibration([80, 100, 80]);
     }, 1300);
@@ -378,14 +234,14 @@ export function MascotCelebrationScreen({
     // 3. Transits to "Mascot Normal" size at 3.0 seconds, showing speech bubble immediately
     const toNormalTimer = setTimeout(() => {
       setAnimationStage("mascot_normal");
-      playSound("squash");
+      playCelebrationAudio("squash");
       triggerVibration(40);
     }, 3000);
 
     // 4. Sequential Cards pop sequence starts after mascot reduces (at 3.6 seconds)
     const card1Timer = setTimeout(() => {
       setActiveCardIndex(1); // Coins reveal
-      playSound("squash");
+      playCelebrationAudio("squash");
       triggerVibration(25);
     }, 3600);
 
@@ -401,7 +257,7 @@ export function MascotCelebrationScreen({
   useEffect(() => {
     if (activeCardIndex === 1) {
       // Coins count-up
-      playSound("coin");
+      playCelebrationAudio("coin");
       triggerVibration([30, 25]);
       let current = 0;
       const target = sessionCoins || 25;
@@ -422,7 +278,7 @@ export function MascotCelebrationScreen({
       return () => clearInterval(interval);
     } else if (activeCardIndex === 2) {
       // Streak count-up (counts from sessionStreak - 1 to sessionStreak)
-      playSound("streak");
+      playCelebrationAudio("streak");
       triggerVibration([35, 30]);
       const prevStreak = Math.max(0, sessionStreak - 1);
       setStreakDisplay(prevStreak);
@@ -436,7 +292,7 @@ export function MascotCelebrationScreen({
       return () => clearTimeout(timer);
     } else if (activeCardIndex === 3) {
       // XP count-up
-      playSound("xp");
+      playCelebrationAudio("xp");
       triggerVibration([40, 35]);
       let current = 0;
       const target = sessionXP || 20;
@@ -552,7 +408,7 @@ export function MascotCelebrationScreen({
 
     triggerVibration([40, 45]);
     triggerConfettiExplosion();
-    playSound("cheer");
+    playCelebrationAudio("cheer");
     setMascotStyle(prev => {
       const next = prev === "slime" ? "star_jump" : prev === "star_jump" ? "happy_shuffle" : "slime";
       const key = isCustomPlan ? "nexora_last_custom_style" : "nexora_last_official_style";
@@ -586,18 +442,18 @@ export function MascotCelebrationScreen({
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.35 }}
-            className="absolute inset-0 z-[1010] bg-[#05090f] flex items-center justify-center pointer-events-none"
+            className="absolute inset-0 z-[1010] bg-[#05090f] flex items-center justify-center pointer-events-none overflow-hidden"
           >
-            {/* Screen flashing backdrop */}
+            {/* Screen flashing backdrop with dynamic electrical radiance */}
             <motion.div
               animate={{
                 backgroundColor: [
                   "rgba(12,20,29,1)",
-                  "rgba(255,255,255,0.95)",
-                  "rgba(28,176,246,0.3)",
+                  "rgba(255,255,255,0.98)",
+                  "rgba(0,240,255,0.4)",
                   "rgba(255,229,0,0.95)",
                   "rgba(5,9,15,1)",
-                  "rgba(255,255,255,0.8)",
+                  "rgba(255,255,255,0.85)",
                   "rgba(12,20,29,1)"
                 ]
               }}
@@ -605,65 +461,185 @@ export function MascotCelebrationScreen({
               className="absolute inset-0 z-0"
             />
 
-            {/* Hand-drawn styled cartoonist lightning bolts */}
-            <svg viewBox="0 0 400 600" className="w-full h-full max-w-lg relative z-10 filter drop-shadow-[0_0_25px_rgba(255,229,0,0.95)]">
+            {/* Radial electric plasma aura burst */}
+            <motion.div
+              initial={{ scale: 0.1, opacity: 0 }}
+              animate={{ scale: [0.1, 1.8, 1.4, 2.2], opacity: [0, 0.9, 0.6, 0] }}
+              transition={{ duration: 1.1, ease: "easeOut" }}
+              className="absolute w-[450px] h-[450px] rounded-full bg-radial from-[#FFE500]/60 via-[#00F0FF]/30 to-transparent blur-2xl z-[1]"
+            />
+
+            {/* Expanding electrical shockwave rings */}
+            <motion.div
+              initial={{ scale: 0.2, opacity: 1 }}
+              animate={{ scale: [0.2, 2.6], opacity: [1, 0] }}
+              transition={{ duration: 0.9, ease: "easeOut" }}
+              className="absolute w-64 h-64 rounded-full border-4 border-[#00F0FF] filter drop-shadow-[0_0_15px_#00F0FF] z-[2]"
+            />
+            <motion.div
+              initial={{ scale: 0.1, opacity: 1 }}
+              animate={{ scale: [0.1, 2.2], opacity: [1, 0] }}
+              transition={{ duration: 0.85, delay: 0.15, ease: "easeOut" }}
+              className="absolute w-64 h-64 rounded-full border-4 border-[#FFE500] filter drop-shadow-[0_0_20px_#FFE500] z-[2]"
+            />
+
+            {/* Dynamic Electric plasma sparks & embers */}
+            <div className="absolute inset-0 flex items-center justify-center z-[3]">
+              {[
+                { x: -140, y: -180, delay: 0.05, size: 8, color: "#FFE500" },
+                { x: 160, y: -140, delay: 0.1, size: 10, color: "#00F0FF" },
+                { x: -180, y: 80, delay: 0.15, size: 9, color: "#FFE500" },
+                { x: 190, y: 120, delay: 0.08, size: 12, color: "#00F0FF" },
+                { x: -90, y: -220, delay: 0.2, size: 7, color: "#FFFFFF" },
+                { x: 110, y: 230, delay: 0.12, size: 9, color: "#FFE500" },
+                { x: -220, y: -40, delay: 0.18, size: 11, color: "#00F0FF" },
+                { x: 210, y: -60, delay: 0.14, size: 8, color: "#FFE500" },
+              ].map((spark, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
+                  animate={{
+                    x: spark.x,
+                    y: spark.y,
+                    scale: [0, 1.5, 0.4, 0],
+                    opacity: [1, 1, 0.8, 0],
+                  }}
+                  transition={{ duration: 0.95, delay: spark.delay, ease: "easeOut" }}
+                  className="absolute rounded-full filter drop-shadow-[0_0_8px_currentColor]"
+                  style={{
+                    width: spark.size,
+                    height: spark.size,
+                    backgroundColor: spark.color,
+                    color: spark.color,
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Multi-layered dynamic electric lightning bolt SVG */}
+            <svg viewBox="0 0 400 600" className="w-full h-full max-w-lg relative z-10 filter drop-shadow-[0_0_28px_rgba(255,229,0,0.95)]">
+              {/* Outer Cyan Electric Aura Glow Stroke */}
+              <motion.path
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ 
+                  pathLength: [0, 1, 1, 0],
+                  opacity: [0, 0.9, 1, 0],
+                  scale: [1, 1.06, 0.96, 1],
+                  x: [0, -6, 6, 0]
+                }}
+                transition={{ duration: 1.1, ease: "easeInOut" }}
+                d="M 220,-20 L 170,180 L 260,150 L 140,340 L 280,310 L 180,470 L 220,450 L 160,620"
+                fill="none"
+                stroke="#00F0FF"
+                strokeWidth="24"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ filter: "blur(4px)" }}
+              />
+
+              {/* Main Golden Neon Bolt Body */}
               <motion.path
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ 
                   pathLength: [0, 1, 1, 0],
                   opacity: [0, 1, 1, 0],
-                  scale: [1, 1.05, 0.95, 1],
+                  scale: [1, 1.04, 0.97, 1],
                   x: [0, -8, 8, 0]
                 }}
                 transition={{ duration: 1.1, ease: "easeInOut" }}
                 d="M 220,-20 L 170,180 L 260,150 L 140,340 L 280,310 L 180,470 L 220,450 L 160,620"
                 fill="none"
                 stroke="#FFE500"
-                strokeWidth="15"
+                strokeWidth="14"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
+
+              {/* Inner Pure White Supercharged Energy Core */}
               <motion.path
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ 
                   pathLength: [0, 1, 1, 0],
-                  opacity: [0, 1, 0.8, 0],
-                  x: [0, 5, -5, 0]
+                  opacity: [0, 1, 1, 0],
+                  x: [0, -8, 8, 0]
                 }}
-                transition={{ duration: 0.9, delay: 0.15, ease: "easeInOut" }}
-                d="M 120,50 L 100,160 L 140,140 L 90,260 L 150,240 L 110,380"
+                transition={{ duration: 1.0, ease: "easeInOut" }}
+                d="M 220,-20 L 170,180 L 260,150 L 140,340 L 280,310 L 180,470 L 220,450 L 160,620"
                 fill="none"
-                stroke="#1CB0F6"
-                strokeWidth="8"
+                stroke="#FFFFFF"
+                strokeWidth="5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
+
+              {/* Branching Fork 1 (Left Cyan) */}
               <motion.path
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ 
                   pathLength: [0, 1, 1, 0],
-                  opacity: [0, 1, 0.8, 0],
+                  opacity: [0, 1, 0.9, 0],
+                  x: [0, 6, -6, 0]
+                }}
+                transition={{ duration: 0.9, delay: 0.12, ease: "easeInOut" }}
+                d="M 170,180 L 100,230 L 140,250 L 80,340 L 120,350 L 70,440"
+                fill="none"
+                stroke="#00F0FF"
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* Branching Fork 2 (Right Yellow/Cyan) */}
+              <motion.path
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ 
+                  pathLength: [0, 1, 1, 0],
+                  opacity: [0, 1, 0.9, 0],
                   x: [0, -6, 6, 0]
                 }}
-                transition={{ duration: 0.8, delay: 0.2, ease: "easeInOut" }}
-                d="M 290,120 L 270,220 L 310,200 L 260,320 L 300,300 L 250,440"
+                transition={{ duration: 0.85, delay: 0.18, ease: "easeInOut" }}
+                d="M 280,310 L 340,330 L 310,380 L 370,420 L 330,470"
                 fill="none"
-                stroke="#1CB0F6"
-                strokeWidth="8"
+                stroke="#FFE500"
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* Branching Fork 3 (Upper Left) */}
+              <motion.path
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ 
+                  pathLength: [0, 1, 1, 0],
+                  opacity: [0, 1, 0.8, 0],
+                  x: [0, 4, -4, 0]
+                }}
+                transition={{ duration: 0.75, delay: 0.22, ease: "easeInOut" }}
+                d="M 120,50 L 90,130 L 130,140 L 70,220"
+                fill="none"
+                stroke="#00F0FF"
+                strokeWidth="6"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
             </svg>
 
-            {/* Comic Cartoon action explosive text */}
+            {/* Comic Cartoon action explosive text badge */}
             <motion.div
-              initial={{ scale: 0.2, opacity: 0, rotate: -20 }}
-              animate={{ scale: [0.2, 1.3, 1, 1, 0.5], opacity: [0, 1, 1, 1, 0], rotate: [-20, 10, -5, -5, 15] }}
-              transition={{ duration: 1.2 }}
-              className="absolute z-20 font-black text-6xl md:text-7xl text-[#FFE500] italic tracking-wider stroke-black filter drop-shadow-[0_5px_0_#000]"
-              style={{ WebkitTextStroke: "3px #000" }}
+              initial={{ scale: 0.1, opacity: 0, rotate: -25 }}
+              animate={{ 
+                scale: [0.1, 1.35, 1, 1.05, 0.3], 
+                opacity: [0, 1, 1, 1, 0], 
+                rotate: [-25, 8, -4, -2, 18] 
+              }}
+              transition={{ duration: 1.15, ease: "easeOut" }}
+              className="absolute z-20 flex items-center justify-center font-black text-6xl md:text-8xl text-[#FFE500] italic tracking-wider filter drop-shadow-[0_8px_0_#000] drop-shadow-[0_0_30px_rgba(255,229,0,0.8)]"
+              style={{ 
+                WebkitTextStroke: "3.5px #000",
+                textShadow: "0 0 25px rgba(0,240,255,0.8)"
+              }}
             >
-              KABOOM!
+              KABOOM! ⚡
             </motion.div>
           </motion.div>
         )}

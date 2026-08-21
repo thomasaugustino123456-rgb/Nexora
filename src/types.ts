@@ -104,6 +104,9 @@ export interface UserSettings {
   placedHouseItems?: PlacedHouseItem[];
   spaceOnboardingCompleted?: boolean;
   plantOnboardingCompleted?: boolean;
+  plantSectionOnboardingCompleted?: boolean;
+  newUsersOnboardingCompleted?: boolean;
+  appIntroductionOnboardingCompleted?: boolean;
   hasCompletedFirstChallenge?: boolean;
   spaceHouseUnlocked?: boolean;
   activeSpaceRoom?: number;
@@ -246,6 +249,9 @@ export interface UserStats {
   weeklyXP: number;
   lastWeeklyReset?: string; // ISO date
   lastRankRewardClaimWeek?: string; // ISO date of startOfWeek when they claimed
+  claimedRankRewards?: Record<string, string>; // Map of "week_YYYY-MM-DD_rank_X" -> claimed ISO date
+  lastClaimedRank?: number; // Last rank (1-6) the user claimed a reward for
+  lowestRankSinceClaim?: number; // Lowest rank user dropped to after claiming, to track reclaiming
   lastActiveDate?: string; // YYYY-MM-DD
   trophies: Trophy[];
   pointsByCategory: {

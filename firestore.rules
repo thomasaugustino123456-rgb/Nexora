@@ -376,6 +376,14 @@ service cloud.firestore {
       }
     }
 
+    match /user_settings/{userId} {
+      allow read, write: if true;
+      
+      match /{allPaths=**} {
+        allow read, write: if true;
+      }
+    }
+
     match /customPlans/{planId} {
       allow read, write: if true;
     }

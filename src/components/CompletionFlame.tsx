@@ -26,41 +26,6 @@ export function CompletionFlame({
   const [isAnimating, setIsAnimating] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(isNewStreak ? streak - 1 : streak);
   const [showContinue, setShowContinue] = useState(false);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-
-  const playRisingSound = () => {
-    try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const ctx = audioCtxRef.current;
-      const osc = ctx.createOscillator();
-      const filter = ctx.createBiquadFilter();
-      const gainNode = ctx.createGain();
-
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(110, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + 1.3);
-
-      filter.type = "lowpass";
-      filter.Q.setValueAtTime(3, ctx.currentTime);
-      filter.frequency.setValueAtTime(140, ctx.currentTime);
-      filter.frequency.exponentialRampToValueAtTime(1500, ctx.currentTime + 1.3);
-
-      gainNode.gain.setValueAtTime(0, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 0.3); // Gentle soft volume
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.3);
-
-      osc.connect(filter);
-      filter.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 1.3);
-    } catch (e) {
-      console.warn("Audio synthesis failed:", e);
-    }
-  };
 
   const triggerHaptic = (duration: number | number[]) => {
     if ("vibrate" in navigator) {
@@ -76,9 +41,8 @@ export function CompletionFlame({
       triggerHaptic(12);
     }, 350);
 
-    // 2. 1300ms: Soft rising sound + Heavy impact pulse (Perfect sync with flame climax)
+    // 2. 1300ms: Cloudinary flame completion audio + haptic pulse
     setTimeout(() => {
-      playRisingSound();
       if (settings?.soundEnabled !== false) {
         play("flame_complete");
       }

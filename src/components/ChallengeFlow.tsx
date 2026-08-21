@@ -1300,7 +1300,6 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
   const [bubbles, setBubbles] = useState<{ id: number; x: number; y: number; size: number; color: string }[]>([]);
   const [poppedCount, setPoppedCount] = useState(0);
   const [hasPlayedFinishSound, setHasPlayedFinishSound] = useState(false);
-  const audioContext = useRef<AudioContext | null>(null);
   const bubbleTarget = settings.commitmentLevel === 'casual' ? 10 : settings.commitmentLevel === 'intense' ? 35 : 20;
 
   useEffect(() => {
@@ -1309,65 +1308,6 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
       setHasPlayedFinishSound(true);
     }
   }, [poppedCount, hasPlayedFinishSound, settings.soundEnabled, play, bubbleTarget]);
-
-  const initAudio = () => {
-    if (!audioContext.current) {
-      audioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    if (audioContext.current.state === 'suspended') {
-      audioContext.current.resume();
-    }
-  };
-
-  const playPopSound = () => {
-    try {
-      initAudio();
-      const ctx = audioContext.current!;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(500 + Math.random() * 250, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.12);
-
-      // Increased volume as requested
-      gain.gain.setValueAtTime(0.5, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 0.12);
-    } catch (e) {
-      console.error('Audio error:', e);
-    }
-  };
-
-  const playAppearSound = () => {
-    try {
-      initAudio();
-      const ctx = audioContext.current!;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(150 + Math.random() * 100, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(350, ctx.currentTime + 0.15);
-
-      // Increased spawn audio volume as requested
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 0.15);
-    } catch (e) {
-      console.error('Audio error:', e);
-    }
-  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1379,10 +1319,6 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
         // vibrant colors
         const color = `hsla(${Math.random() * 360}, 90%, 75%, 0.55)`;
         setBubbles(prev => [...prev, { id, x, y, size, color }]);
-        
-        if (settings.soundEnabled) {
-          playAppearSound();
-        }
       }
     }, 600);
     return () => clearInterval(interval);
@@ -1398,7 +1334,9 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
 
   const popBubble = (id: number) => {
     vibrate(VIBRATION_PATTERNS.CLICK);
-    playPopSound();
+    if (settings.soundEnabled) {
+      play('water');
+    }
     setBubbles(prev => prev.filter(b => b.id !== id));
     setPoppedCount(prev => prev + 1);
   };
@@ -1406,7 +1344,9 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
   useEffect(() => {
     if (poppedCount >= bubbleTarget) {
       vibrate(VIBRATION_PATTERNS.SUCCESS);
-      playPopSound();
+      if (settings.soundEnabled) {
+        play('challenge_unlock');
+      }
     }
   }, [poppedCount, bubbleTarget]);
 
