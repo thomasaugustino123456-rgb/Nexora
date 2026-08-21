@@ -14,9 +14,7 @@ const ASSETS_TO_CACHE = [
   '/mascots/water-slim-notification.png',
   '/mascots/shield-slim-notification.png',
   '/mascots/lightning-slim-notification.png',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap',
-  'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js'
+  '/nexora_mascot_new.png'
 ];
 
 // Import Firebase compat scripts
@@ -121,9 +119,15 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(CACHE_NAME).then(async (cache) => {
       console.log('Service Worker: Caching assets');
-      return cache.addAll(ASSETS_TO_CACHE);
+      await Promise.all(
+        ASSETS_TO_CACHE.map((asset) =>
+          cache.add(asset).catch((err) => {
+            console.warn('Service Worker: Non-critical asset cache skip:', asset, err);
+          })
+        )
+      );
     })
   );
 });

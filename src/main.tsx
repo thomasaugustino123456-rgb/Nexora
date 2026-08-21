@@ -176,9 +176,14 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 // Handle dynamic import failures (vite chunk loading errors on new deployments)
 window.addEventListener('vite:preloadError', (event) => {
-  console.log('Vite preload error detected, reloading page to fetch new chunks...');
-  event.preventDefault();
-  window.location.reload();
+  if (navigator.onLine) {
+    console.log('Vite preload error detected while online, reloading page to fetch new chunks...');
+    event.preventDefault();
+    window.location.reload();
+  } else {
+    console.warn('Vite preload error detected while offline. Suppressed reload to preserve cached app execution.');
+    event.preventDefault();
+  }
 });
 
 // Fallback for uncaught chunk errors and internal SDK assertions
@@ -198,9 +203,14 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 
   if (msg.includes('Failed to fetch dynamically imported module') || msg.includes('loading chunk') || msg.includes('dynamically imported module')) {
-    console.log('Unhandled chunk error detected, reloading page...');
-    event.preventDefault();
-    window.location.reload();
+    if (navigator.onLine) {
+      console.log('Unhandled chunk error detected while online, reloading page...');
+      event.preventDefault();
+      window.location.reload();
+    } else {
+      console.warn('Unhandled chunk error detected while offline. Reload suppressed to preserve offline experience.');
+      event.preventDefault();
+    }
   }
 });
 
