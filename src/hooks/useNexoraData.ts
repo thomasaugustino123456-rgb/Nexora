@@ -17,12 +17,6 @@ import { GardenState, createInitialGardenState } from "../types/garden";
 import { SHOP_ITEMS } from "../components/ShopScreen";
 import { MASCOTS_DATA, MascotId } from "../lib/mascotSystem";
 import { HOUSE_ITEMS } from "../constants/houseItems";
-import {
-  getOfflineQueue,
-  enqueueOfflineAction,
-  removeOfflineAction,
-  getPendingActionsCount,
-} from "../lib/offlineQueue";
 
 export function extractRealDisplayName(docDataOrList: any | any[], currentUser?: any): string {
   const docList = Array.isArray(docDataOrList) ? docDataOrList : [docDataOrList];
@@ -3106,10 +3100,6 @@ export function useNexoraData(
             localStorage.setItem(`nexora_plant_onboarding_completed_${user.uid}`, "true");
           }
         }
-        // OFFLINE QUEUE: Persist offline action when disconnected
-        if (typeof navigator !== "undefined" && !navigator.onLine && user?.uid) {
-          enqueueOfflineAction(user.uid, "UPDATE_SETTINGS", { settings: next, timestamp: Date.now() });
-        }
       } catch (e) {
         console.warn("Failed to cache settings:", e);
       }
@@ -3125,10 +3115,6 @@ export function useNexoraData(
         typeof update === "function" ? update(prev) : { ...prev, ...update };
       try {
         localStorage.setItem("nexora_stats", JSON.stringify(next));
-        // OFFLINE QUEUE: Persist offline action when disconnected
-        if (typeof navigator !== "undefined" && !navigator.onLine && user?.uid) {
-          enqueueOfflineAction(user.uid, "COMPLETE_CHALLENGE", { stats: next, timestamp: Date.now() });
-        }
       } catch (e) {
         console.warn("Failed to cache stats:", e);
       }
@@ -3147,10 +3133,6 @@ export function useNexoraData(
           "nexora_progress",
           JSON.stringify({ ...next, date: today }),
         );
-        // OFFLINE QUEUE: Persist offline action when disconnected
-        if (typeof navigator !== "undefined" && !navigator.onLine && user?.uid) {
-          enqueueOfflineAction(user.uid, "COMPLETE_CHALLENGE", { progress: next, timestamp: Date.now() });
-        }
       } catch (e) {
         console.warn("Failed to cache progress:", e);
       }
@@ -3166,10 +3148,6 @@ export function useNexoraData(
         typeof update === "function" ? update(prev) : { ...prev, ...update };
       try {
         localStorage.setItem("nexora_garden", JSON.stringify(next));
-        // OFFLINE QUEUE: Persist offline action when disconnected
-        if (typeof navigator !== "undefined" && !navigator.onLine && user?.uid) {
-          enqueueOfflineAction(user.uid, "GARDEN_ACTION", { garden: next, timestamp: Date.now() });
-        }
       } catch (e) {
         console.warn("Failed to cache garden:", e);
       }
@@ -3670,14 +3648,6 @@ export function useNexoraData(
       }
 
       console.log("Hooks: Manual/Force Sync complete ✅");
-      // Flush successfully synchronized offline queue actions for this user
-      if (user?.uid) {
-        const pending = getOfflineQueue(user.uid);
-        if (pending.length > 0) {
-          console.log(`[OFFLINE QUEUE] Flushing ${pending.length} synchronized actions for user: ${user.uid}`);
-          pending.forEach((act) => removeOfflineAction(user.uid, act.id));
-        }
-      }
     } catch (e: any) {
       handleFirestoreError(e, OperationType.WRITE, user?.uid ? `users/${user.uid}` : 'users');
       console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Force sync failed for user UID: ${user?.uid}. Error:`, e);
@@ -3686,34 +3656,6 @@ export function useNexoraData(
       setIsSyncingData(false);
     }
   }, [user, isDataReady, settings, stats, dailyProgress, gardenState]);
-
-  // Offline Sync Queue Processor: auto-synchronize pending offline actions when connection is restored
-  useEffect(() => {
-    const handleOnline = async () => {
-      console.log("[OFFLINE SYNC] Device came back ONLINE. Initiating offline queue sync...");
-      if (!user || !user.uid) return;
-      const pendingQueue = getOfflineQueue(user.uid);
-      if (pendingQueue.length > 0) {
-        console.log(`[OFFLINE SYNC] Found ${pendingQueue.length} pending offline actions to sync for user: ${user.uid}`);
-        try {
-          await forceSyncData();
-          pendingQueue.forEach((action) => {
-            removeOfflineAction(user.uid, action.id);
-          });
-          console.log("[OFFLINE SYNC] All offline actions synchronized successfully! ☁️✅");
-        } catch (err) {
-          console.warn("[OFFLINE SYNC] Error flushing offline queue on reconnect:", err);
-        }
-      } else {
-        forceSyncData().catch(() => {});
-      }
-    };
-
-    window.addEventListener("online", handleOnline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-    };
-  }, [user, forceSyncData]);
 
   // Synchronize immediately when the tab is backgrounded, minimized, or when the phone screen is locked.
   // This is critical for mobile devices where immediate teardown or backgrounding is the primary exit vector.

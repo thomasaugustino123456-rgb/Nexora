@@ -4,6 +4,30 @@ import App from './App.tsx';
 import './index.css';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 
+// Early global error interception for cross-origin script errors and sandboxed environments
+if (typeof window !== 'undefined') {
+  window.onerror = function(msg, url, lineNo, columnNo, error) {
+    const message = typeof msg === 'string' ? msg : error?.message || '';
+    const file = url || '';
+    if (
+      !message ||
+      message === 'Script error.' ||
+      message === 'Script error' ||
+      message.toLowerCase().includes('script error') ||
+      !file ||
+      file.includes('extension') ||
+      file.includes('chrome-extension') ||
+      message.includes('ResizeObserver') ||
+      message.includes('Quota') ||
+      message.includes('quota')
+    ) {
+      // Return true to prevent the firing of the default browser error handler
+      return true;
+    }
+    return false;
+  };
+}
+
 // Bulletproof Storage Safety Polyfill / Fallback for QuotaExceededError and restricted sandboxes
 (function() {
   // Mock Storage interface implementation
@@ -145,16 +169,39 @@ import { ErrorBoundary } from './components/ErrorBoundary.tsx';
   }
 })();
 
-// Register Service Worker
+// Clean up any legacy caches from previous broken offline implementations
+if (typeof window !== 'undefined' && 'caches' in window) {
+  caches.keys().then((keys) => {
+    keys.forEach((key) => {
+      if (!key.startsWith('nexora-offline-v2')) {
+        console.log('[Offline Mode V2] Purged legacy cache key:', key);
+        caches.delete(key);
+      }
+    });
+  }).catch(() => {});
+}
+
+// Register Offline Mode V2 Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js')
       .then((registration) => {
-        console.log('Service Worker: Registered successfully with scope:', registration.scope);
+        console.log('[Offline Mode V2] Service Worker registered with scope:', registration.scope);
+        // Check for updates when online
+        if (navigator.onLine) {
+          registration.update().catch(() => {});
+        }
       })
       .catch((error) => {
-        console.log('Service Worker: Registration failed with error:', error);
+        console.warn('[Offline Mode V2] Service Worker registration failed:', error);
       });
+  });
+
+  // Listen for active messages from the new Service Worker
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'OFFLINE_V2_ACTIVATED') {
+      console.log('[Offline Mode V2] New cache version is active:', event.data.version);
+    }
   });
 }
 
