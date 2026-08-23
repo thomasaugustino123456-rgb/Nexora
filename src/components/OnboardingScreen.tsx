@@ -112,6 +112,16 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
   const [buttonPulse, setButtonPulse] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
 
+  useEffect(() => {
+    try {
+      const user = auth.currentUser;
+      if (user?.uid) {
+        localStorage.setItem(`nexora_onboarding_completed_${user.uid}`, "false");
+        localStorage.setItem("nexora_onboarding_completed", "false");
+      }
+    } catch {}
+  }, []);
+
   // The Display step indicators mapping (total of 14 key stages in progress bar)
   const displayTotalSteps = 14;
   const getDisplayStep = () => {
@@ -175,20 +185,40 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
         updates.appIntroductionOnboardingCompleted = true;
         updates.displayName = safeName || 'Champion';
         updates.name = safeName || 'Champion';
-        updates.settings = {
+        const settingsPayload: any = {
           onboardingCompleted: true,
           newUsersOnboardingCompleted: true,
           appIntroductionOnboardingCompleted: true,
           displayName: safeName || 'Champion',
-          age: age ? parseInt(age, 10) : undefined,
           waterGoal: water || 2,
           pushupsGoal: pushups || 5,
-          priorityFocus: priorityFocus || undefined,
           archivedOfficialChallenges: archivedChallenges,
-          workType: workType || undefined,
-          energyPeak: energyPeak || undefined,
-          commitmentLevel: commitmentLevel || undefined
         };
+        if (age) settingsPayload.age = parseInt(age, 10);
+        if (priorityFocus) settingsPayload.priorityFocus = priorityFocus;
+        if (workType) settingsPayload.workType = workType;
+        if (energyPeak) settingsPayload.energyPeak = energyPeak;
+        if (commitmentLevel) settingsPayload.commitmentLevel = commitmentLevel;
+        if (gender) settingsPayload.gender = gender;
+        if (source) settingsPayload.source = source;
+
+        updates.settings = settingsPayload;
+
+        // Clean any potential undefined keys recursively before Firestore write
+        const cleanPayload = (obj: any): any => {
+          if (obj === null || typeof obj !== 'object') return obj;
+          if (obj instanceof Date) return obj;
+          if (Array.isArray(obj)) return obj.map(cleanPayload);
+          const cleaned: any = {};
+          for (const [key, value] of Object.entries(obj)) {
+            if (value !== undefined) {
+              cleaned[key] = typeof value === 'object' && value !== null && !(value instanceof Date) ? cleanPayload(value) : value;
+            }
+          }
+          return cleaned;
+        };
+
+        const safeUpdates = cleanPayload(updates);
 
         // Cache user-scoped onboarding flag immediately
         try {
@@ -200,7 +230,7 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
 
         console.log(`[PERSISTENCE AUDIT] [WRITE START] Onboarding completed. Writing initial user doc to: users/${user.uid}`);
         try {
-          await setDoc(doc(db, 'users', user.uid), updates, { merge: true });
+          await setDoc(doc(db, 'users', user.uid), safeUpdates, { merge: true });
           console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote initial user doc on onboarding completion to: users/${user.uid}`);
           
           // Also save to onboardingID and subcollection onboarding/main to be extremely safe and permanent
@@ -234,6 +264,12 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
         energyPeak: energyPeak || prev.energyPeak,
         commitmentLevel: commitmentLevel || prev.commitmentLevel
       }));
+
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("nexora_signup_flow");
+        sessionStorage.removeItem("nexora_login_flow");
+        sessionStorage.setItem("nexora_fresh_login", "true");
+      }
 
     } catch (error) {
       console.error("Critical error in handleComplete:", error);
@@ -277,7 +313,12 @@ export function OnboardingScreen({ onComplete, settings, setSettings, setupFCM }
       } else {
         try {
           localStorage.setItem("nexora_onboarding_completed", "false");
+          if (auth.currentUser?.uid) {
+            localStorage.setItem(`nexora_onboarding_completed_${auth.currentUser.uid}`, "false");
+          }
           localStorage.removeItem("nexora_cached_user");
+          sessionStorage.removeItem("nexora_signup_flow");
+          sessionStorage.removeItem("nexora_login_flow");
           await signOut(auth);
         } catch (error) {
           console.error("Error signing out from onboarding back button:", error);

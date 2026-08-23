@@ -9,7 +9,7 @@ import {
   signOut,
   deleteUser
 } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 
 import { motion, useAnimationControls, AnimatePresence } from "motion/react";
 import { Mail, Lock, AlertCircle, Eye, EyeOff, X } from "lucide-react";
@@ -355,7 +355,19 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
           updatedAt: serverTimestamp(),
         };
         localStorage.setItem("nexora_onboarding_completed", "false");
+        localStorage.setItem(`nexora_onboarding_completed_${userCredential.user.uid}`, "false");
         localStorage.setItem("nexora_cached_user", userCredential.user.uid);
+        try {
+          sessionStorage.removeItem("nexora_login_flow");
+          sessionStorage.setItem("nexora_signup_flow", "true");
+        } catch {}
+        // If an account was previously deleted, clean up tombstones so new account is completely fresh
+        try {
+          await deleteDoc(doc(db, "deleted_users", userCredential.user.uid));
+        } catch {}
+        try {
+          await deleteDoc(doc(db, "onboardingID", userCredential.user.uid));
+        } catch {}
         await setDoc(doc(db, "users", userCredential.user.uid), signUpData);
         await setDoc(doc(db, "user", userCredential.user.uid), signUpData);
         const initialLbData = {
@@ -381,6 +393,10 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
         const uid = userCredential.user.uid;
+        try {
+          sessionStorage.setItem("nexora_login_flow", "true");
+          sessionStorage.removeItem("nexora_signup_flow");
+        } catch {}
         
         // Check if user was marked deleted or wiped from Firestore
         const [deletedSnap, userSnap] = await Promise.all([
@@ -473,52 +489,100 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
 
     try {
       const result = await signInWithPopup(auth, provider);
-      const googleUserData = {
-        name: result.user.displayName || 'Champion',
-        displayName: result.user.displayName || 'Champion',
-        "Name": result.user.displayName || 'Champion',
-        email: result.user.email || `${result.user.uid}@nexora.app`,
-        "Email": result.user.email || `${result.user.uid}@nexora.app`,
-        photoFileName: result.user.photoURL || '',
-        "Photo file name": result.user.photoURL || '',
-        profilePic: result.user.photoURL || '',
-        "Profile image": result.user.photoURL || '',
-        location: '',
-        "Location": '',
-        time: new Date().toISOString(),
-        "Time": new Date().toISOString(),
-        date: new Date().toISOString(),
-        "Date": new Date().toISOString(),
-        "Email address": result.user.email || `${result.user.uid}@nexora.app`,
-        uid: result.user.uid,
-        role: 'user',
-        accountName: result.user.displayName || 'Champion',
-        "Account name": result.user.displayName || 'Champion',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-      await setDoc(doc(db, "users", result.user.uid), googleUserData, { merge: true });
-      await setDoc(doc(db, "user", result.user.uid), googleUserData, { merge: true });
-      const initialGoogleLbData = {
-        uid: result.user.uid,
-        userId: result.user.uid,
-        displayName: result.user.displayName || 'Champion',
-        name: result.user.displayName || 'Champion',
-        photoURL: result.user.photoURL || '',
-        profilePic: result.user.photoURL || '',
-        streak: 0,
-        totalPoints: 0,
-        points: 0,
-        weeklyPoints: 0,
-        weeklyXP: 0,
-        xp: 0,
-        level: 1,
-        league: 'Bronze',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-      await setDoc(doc(db, "leaderboard", result.user.uid), initialGoogleLbData, { merge: true });
-      await setDoc(doc(db, "rank", result.user.uid), initialGoogleLbData, { merge: true });
+      const uid = result.user.uid;
+
+      // Check if user was marked deleted
+      const [deletedSnap, existingUserSnap] = await Promise.all([
+        getDoc(doc(db, "deleted_users", uid)).catch(() => null),
+        getDoc(doc(db, "users", uid)).catch(() => null),
+      ]);
+
+      if (deletedSnap?.exists() && deletedSnap.data()?.deleted !== false) {
+        console.warn("[AUTH] Google Login rejected: Account is deleted.");
+        try {
+          await deleteUser(result.user);
+        } catch (e) {
+          await signOut(auth);
+        }
+        throw new Error("ACCOUNT_DELETED_OR_NOT_FOUND");
+      }
+
+      if (!existingUserSnap || !existingUserSnap.exists()) {
+        // Brand new Google user
+        const googleUserData = {
+          name: result.user.displayName || 'Champion',
+          displayName: result.user.displayName || 'Champion',
+          "Name": result.user.displayName || 'Champion',
+          email: result.user.email || `${result.user.uid}@nexora.app`,
+          "Email": result.user.email || `${result.user.uid}@nexora.app`,
+          photoFileName: result.user.photoURL || '',
+          "Photo file name": result.user.photoURL || '',
+          profilePic: result.user.photoURL || '',
+          "Profile image": result.user.photoURL || '',
+          location: '',
+          "Location": '',
+          time: new Date().toISOString(),
+          "Time": new Date().toISOString(),
+          date: new Date().toISOString(),
+          "Date": new Date().toISOString(),
+          "Email address": result.user.email || `${result.user.uid}@nexora.app`,
+          uid: result.user.uid,
+          role: 'user',
+          accountName: result.user.displayName || 'Champion',
+          "Account name": result.user.displayName || 'Champion',
+          onboardingCompleted: false,
+          settings: {
+            onboardingCompleted: false,
+          },
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        localStorage.setItem(`nexora_onboarding_completed_${uid}`, "false");
+        localStorage.setItem("nexora_onboarding_completed", "false");
+        localStorage.setItem("nexora_cached_user", uid);
+        try {
+          sessionStorage.removeItem("nexora_login_flow");
+          sessionStorage.setItem("nexora_signup_flow", "true");
+        } catch {}
+        // If an account was previously deleted, clean up tombstones so new Google account is completely fresh
+        try {
+          await deleteDoc(doc(db, "deleted_users", result.user.uid));
+        } catch {}
+        try {
+          await deleteDoc(doc(db, "onboardingID", result.user.uid));
+        } catch {}
+        await setDoc(doc(db, "users", result.user.uid), googleUserData);
+        await setDoc(doc(db, "user", result.user.uid), googleUserData);
+        const initialGoogleLbData = {
+          uid: result.user.uid,
+          userId: result.user.uid,
+          displayName: result.user.displayName || 'Champion',
+          name: result.user.displayName || 'Champion',
+          photoURL: result.user.photoURL || '',
+          profilePic: result.user.photoURL || '',
+          streak: 0,
+          totalPoints: 0,
+          points: 0,
+          weeklyPoints: 0,
+          weeklyXP: 0,
+          xp: 0,
+          level: 1,
+          league: 'Bronze',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        await setDoc(doc(db, "leaderboard", result.user.uid), initialGoogleLbData, { merge: true });
+        await setDoc(doc(db, "rank", result.user.uid), initialGoogleLbData, { merge: true });
+      } else {
+        // Existing Google user - only update updatedAt timestamp, never reset onboardingCompleted
+        localStorage.setItem("nexora_cached_user", uid);
+        try {
+          sessionStorage.setItem("nexora_login_flow", "true");
+          sessionStorage.removeItem("nexora_signup_flow");
+        } catch {}
+        await setDoc(doc(db, "users", result.user.uid), { updatedAt: serverTimestamp() }, { merge: true });
+      }
+
       try {
         sessionStorage.setItem("nexora_fresh_login", "true");
       } catch {}

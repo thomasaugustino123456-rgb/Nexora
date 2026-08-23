@@ -158,6 +158,7 @@ import {
   addDoc as firestoreAddDoc,
   increment,
   arrayUnion,
+  writeBatch,
 } from "firebase/firestore";
 
 function cleanPayload<T>(obj: T): T {
@@ -5538,7 +5539,7 @@ export default function App() {
     }
 
     const userId = activeUser.uid;
-    showToast("Deleting account and wiping data...", "info");
+    showToast("Deleting account...", "info");
 
     try {
       if (signal?.aborted) return;
@@ -5554,10 +5555,10 @@ export default function App() {
         }
       }
 
-      console.log("[DELETE ACCOUNT] Wiping Firestore documents for:", userId);
+      console.log("[DELETE ACCOUNT] Fast-wiping user data for:", userId);
 
-      // 1. Top-level docs and subdocs
-      const topLevelDocsToDelete = [
+      // 1. Primary document references to delete
+      const docsToDelete = [
         doc(db, "users", userId),
         doc(db, "user", userId),
         doc(db, "user_profiles", userId),
@@ -5576,10 +5577,7 @@ export default function App() {
         doc(db, "subscriptions", userId),
         doc(db, "gardens", userId),
         doc(db, "garden", userId),
-        doc(db, "custom_plans", userId)
-      ];
-
-      const subdocsToDelete = [
+        doc(db, "custom_plans", userId),
         doc(db, "users", userId, "stats", "main"),
         doc(db, "users", userId, "settings", "main"),
         doc(db, "users", userId, "onboarding", "main"),
@@ -5590,7 +5588,7 @@ export default function App() {
         doc(db, "users", userId, "notebook", "main")
       ];
 
-      const collectionsToDelete = [
+      const collectionsToClean = [
         "progress",
         "custom_progress",
         "eco_shop",
@@ -5601,90 +5599,126 @@ export default function App() {
         "history"
       ];
 
-      // 2. Fire ALL initial fetch, delete, and tombstone operations in parallel
-      const initialDeletionsPromise = Promise.allSettled([
-        ...topLevelDocsToDelete.map(ref => deleteDoc(ref)),
-        ...subdocsToDelete.map(ref => deleteDoc(ref))
-      ]);
-
-      const subcolFetchesPromise = Promise.allSettled(
-        collectionsToDelete.map(colName =>
-          getDocs(collection(db, "users", userId, colName)).catch(() => null)
-        )
-      );
-
-      const postsFetchPromise = getDocs(
-        query(collection(db, "posts"), where("userId", "==", userId))
-      ).catch(() => null);
-
-      const tombstonePromise = firestoreSetDoc(doc(db, "deleted_users", userId), {
-        deleted: true,
-        email: activeUser.email || "",
-        deletedAt: serverTimestamp()
-      }).catch(e => console.warn("Failed to write tombstone:", e));
-
-      // Await primary parallel batch
-      const [_, colSnapsResult, postsSnap] = await Promise.all([
-        initialDeletionsPromise,
-        subcolFetchesPromise,
-        postsFetchPromise,
-        tombstonePromise
-      ]);
-
-      if (signal?.aborted) {
-        console.log("[DELETE ACCOUNT] Cancellation requested after initial batch.");
-        return;
-      }
-
-      // 3. Delete secondary collection docs in parallel
-      const secondaryDeletes: Promise<any>[] = [];
-      if (Array.isArray(colSnapsResult)) {
-        colSnapsResult.forEach((res: any) => {
-          if (res && res.status === "fulfilled" && res.value && !res.value.empty) {
-            res.value.docs.forEach((d: any) => secondaryDeletes.push(deleteDoc(d.ref)));
-          }
+      // 2. Execute fast atomic document deletion + tombstone + subcollection cleanup concurrently
+      const fastDeleteDocs = async () => {
+        const batch = writeBatch(db);
+        docsToDelete.forEach((ref) => batch.delete(ref));
+        const tombstoneRef = doc(db, "deleted_users", userId);
+        batch.set(tombstoneRef, {
+          deleted: true,
+          email: activeUser.email || "",
+          deletedAt: serverTimestamp()
         });
-      }
+        await batch.commit().catch((e) => {
+          console.warn("Batch delete fallback to individual deletes:", e);
+          return Promise.allSettled(docsToDelete.map((ref) => deleteDoc(ref)));
+        });
+      };
 
-      if (postsSnap && !postsSnap.empty) {
-        postsSnap.docs.forEach((docSnap: any) => secondaryDeletes.push(deleteDoc(docSnap.ref)));
-      }
+      const fastCleanSubcollections = async () => {
+        try {
+          const fetchPromises = collectionsToClean.map((colName) =>
+            getDocs(collection(db, "users", userId, colName)).catch(() => null)
+          );
+          const postsFetch = getDocs(
+            query(collection(db, "posts"), where("userId", "==", userId))
+          ).catch(() => null);
 
-      if (secondaryDeletes.length > 0) {
-        await Promise.allSettled(secondaryDeletes);
-      }
+          const [subResults, postsSnap] = await Promise.all([
+            Promise.allSettled(fetchPromises),
+            postsFetch
+          ]);
 
-      if (signal?.aborted) {
-        console.log("[DELETE ACCOUNT] Cancellation requested before final auth deletion.");
-        return;
-      }
+          const refsToDelete: any[] = [];
+          if (Array.isArray(subResults)) {
+            subResults.forEach((res: any) => {
+              if (res && res.status === "fulfilled" && res.value && !res.value.empty) {
+                res.value.docs.forEach((d: any) => refsToDelete.push(d.ref));
+              }
+            });
+          }
+          if (postsSnap && !postsSnap.empty) {
+            postsSnap.docs.forEach((docSnap: any) => refsToDelete.push(docSnap.ref));
+          }
 
-      // 4. Clear storage & reset memory
-      try {
-        sessionStorage.clear();
-      } catch (e) {}
+          if (refsToDelete.length > 0) {
+            const subBatch = writeBatch(db);
+            refsToDelete.slice(0, 450).forEach((ref) => subBatch.delete(ref));
+            await subBatch.commit().catch(() =>
+              Promise.allSettled(refsToDelete.map((ref) => deleteDoc(ref)))
+            );
+          }
+        } catch (subErr) {
+          console.warn("Subcollection cleanup completed with non-blocking notice:", subErr);
+        }
+      };
 
-      try {
-        localStorage.clear();
-      } catch (e) {}
+      // Run Firestore wipes with an aggressive 3.5s timeout so cloud latency never blocks user feedback
+      const wipePromise = Promise.all([fastDeleteDocs(), fastCleanSubcollections()]);
+      const wipeTimeoutPromise = new Promise((resolve) => setTimeout(resolve, 3500));
+      await Promise.race([wipePromise, wipeTimeoutPromise]);
 
-      setSettings(DEFAULT_SETTINGS);
-      setStats(DEFAULT_STATS);
+      if (signal?.aborted) return;
 
-      // 5. Delete Firebase Auth user
+      // 3. Delete Firebase Auth user or sign out
       try {
         await deleteUser(activeUser);
-        await signOut(auth);
-        showToast("Account deleted successfully.", "success");
       } catch (authError: any) {
         const code = authError?.code || authError?.message || "";
         if (code.includes("requires-recent-login")) {
           throw new Error("REQUIRES_REAUTH");
         }
-        console.warn("Auth deletion failed, signing out user.", authError);
-        await signOut(auth);
-        showToast("Account deleted successfully.", "success");
+        console.warn("Auth deletion note, proceeding with clean signOut:", authError);
       }
+
+      try {
+        await signOut(auth);
+      } catch (signOutErr) {
+        console.warn("signOut handled:", signOutErr);
+      }
+
+      // 4. Purge local client storage and reset in-memory state
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("nexora_cached_user");
+        localStorage.removeItem(`nexora_cached_user_${userId}`);
+        localStorage.removeItem("nexora_onboarding_completed");
+        localStorage.removeItem(`nexora_onboarding_completed_${userId}`);
+        sessionStorage.removeItem("nexora_fresh_login");
+
+        Object.keys(localStorage).forEach((key) => {
+          if (
+            key.startsWith("nexora_") ||
+            key.startsWith("hydration_") ||
+            key === "admin_read_feedback_ids"
+          ) {
+            localStorage.removeItem(key);
+          }
+        });
+        sessionStorage.clear();
+      }
+
+      setSettings(DEFAULT_SETTINGS);
+      setStats(DEFAULT_STATS);
+      setGardenState(createInitialGardenState());
+      setDailyProgress({
+        date: today,
+        completed: false,
+        pushupsDone: false,
+        waterDrank: 0,
+        breathingDone: false,
+        drawingDone: false,
+        footballDone: false,
+        bubblesDone: false,
+        completionsCount: 0,
+        customPlanCompleted: false,
+        nextRestorationTime: null,
+      });
+
+      setActiveScreen("home");
+      setShowAuth(true);
+      setSplashFinished(true);
+
+      showToast("Account deleted successfully.", "success");
     } catch (error: any) {
       if (signal?.aborted) return;
       if (error?.message === "REQUIRES_REAUTH") {
@@ -5784,6 +5818,15 @@ export default function App() {
     setShowUpdatePopup(true);
   };
 
+  useEffect(() => {
+    if (user && !authLoading && isDataReady) {
+      try {
+        sessionStorage.removeItem("nexora_login_flow");
+        // Do not remove nexora_signup_flow here; it will be cleared only when onboarding is explicitly completed
+      } catch {}
+    }
+  }, [user, authLoading, isDataReady]);
+
   if (publicUserViewId) {
     return (
       <PublicRankView
@@ -5855,11 +5898,13 @@ export default function App() {
     );
   }
 
-  // The Gateway Page: Appears when a user logs in to verify onboarding status & load profile.
-  // When an existing user reloads or reopens the app with cached data, it completes instantly.
-  const isFreshLogin = typeof window !== "undefined" && sessionStorage.getItem("nexora_fresh_login") === "true";
-  const hasCachedUserData = typeof window !== "undefined" && Boolean(localStorage.getItem("nexora_cached_user") && localStorage.getItem("nexora_settings"));
-  const isGatewayVerifying = (isFreshLogin || (!hasCachedUserData && Boolean(user))) && !hasAppMountedRef.current && (authLoading || !isDataReady);
+  // The Gateway Page: Appears strictly as an authentication decision screen during an explicit login flow for an existing account.
+  // Releases in milliseconds once user document is checked and onboarding decision is made.
+  // It does NOT appear during signup (new accounts go straight to Onboarding).
+  // It does NOT appear on app reload/session restoration (existing accounts go straight to Main App).
+  // It is NOT triggered by background sync, coin/plant/rank/reward hydration, or profile updates.
+  const isExplicitLogin = typeof window !== "undefined" && sessionStorage.getItem("nexora_login_flow") === "true";
+  const isGatewayVerifying = Boolean(user) && isExplicitLogin && (authLoading || !isDataReady);
 
   if (isGatewayVerifying) {
     return (
@@ -5942,7 +5987,12 @@ export default function App() {
   }
 
   // Onboarding guard: Ensure new users and users who need onboarding NEVER see the Home screen
-  const isUserNeedsOnboarding = needsOnboarding && settings?.onboardingCompleted !== true && settings?.plantOnboardingCompleted !== true;
+  const isUserNeedsOnboarding = Boolean(user) && (
+    (typeof window !== "undefined" && sessionStorage.getItem("nexora_signup_flow") === "true") ||
+    (needsOnboarding && settings?.onboardingCompleted !== true) ||
+    settings?.onboardingCompleted === false ||
+    (typeof window !== "undefined" && user?.uid && localStorage.getItem(`nexora_onboarding_completed_${user.uid}`) === "false")
+  );
 
   if (isUserNeedsOnboarding) {
     return (
@@ -5956,6 +6006,14 @@ export default function App() {
         >
           <OnboardingScreen
             onComplete={() => {
+              if (typeof window !== "undefined") {
+                sessionStorage.removeItem("nexora_signup_flow");
+                sessionStorage.removeItem("nexora_login_flow");
+                if (user?.uid) {
+                  localStorage.setItem(`nexora_onboarding_completed_${user.uid}`, "true");
+                }
+                localStorage.setItem("nexora_onboarding_completed", "true");
+              }
               onUpdateSettings({ onboardingCompleted: true });
               setNeedsOnboarding(false);
             }}
@@ -5966,6 +6024,11 @@ export default function App() {
         </Suspense>
       </div>
     );
+  }
+
+  // Clear login flow flag once verification has completed and user has successfully entered the main application
+  if (typeof window !== "undefined" && sessionStorage.getItem("nexora_login_flow") === "true") {
+    sessionStorage.removeItem("nexora_login_flow");
   }
 
   return (

@@ -421,7 +421,19 @@ export function isUserOnboardingCompleted(
   plantSectionData?: any,
   plantsTopData?: any
 ): boolean {
-  // 1. If any source explicitly confirms onboarding was completed, trust it immediately
+  // 1. If explicitly flagged as false in Firestore, user settings, or user-specific cache, return false immediately for new users
+  if (
+    docData?.onboardingCompleted === false ||
+    docData?.settings?.onboardingCompleted === false ||
+    onboardingData?.onboardingCompleted === false ||
+    settingsObj?.onboardingCompleted === false ||
+    (uid && typeof localStorage !== 'undefined' && localStorage.getItem(`nexora_onboarding_completed_${uid}`) === "false") ||
+    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem("nexora_signup_flow") === "true")
+  ) {
+    return false;
+  }
+
+  // 2. If any primary source explicitly confirms onboarding was completed, trust it immediately
   if (
     docData?.onboardingCompleted === true ||
     docData?.settings?.onboardingCompleted === true ||
@@ -430,42 +442,15 @@ export function isUserOnboardingCompleted(
     onboardingData?.onboardingCompleted === true ||
     onboardingData?.newUsersOnboardingCompleted === true ||
     onboardingData?.appIntroductionOnboardingCompleted === true ||
-    settingsObj?.onboardingCompleted === true ||
-    plantSectionData?.plantOnboardingCompleted === true ||
-    plantSectionData?.plantSectionOnboardingCompleted === true ||
-    plantsTopData?.plantOnboardingCompleted === true ||
-    plantsTopData?.plantSectionOnboardingCompleted === true
+    settingsObj?.onboardingCompleted === true
   ) {
     return true;
   }
 
-  // 2. Check local storage cache for this user
+  // 3. Check user-specific local storage cache
   if (uid && typeof localStorage !== 'undefined') {
     if (localStorage.getItem(`nexora_onboarding_completed_${uid}`) === "true") return true;
-    if (localStorage.getItem(`nexora_plant_onboarding_completed_${uid}`) === "true") return true;
-    if (localStorage.getItem("nexora_onboarding_completed") === "true") return true;
-    if (localStorage.getItem("nexora_plant_onboarding_completed") === "true") return true;
-  }
-
-  // 3. Check plant onboarding, plant section, or garden progress indicators
-  if (
-    docData?.hasEnteredGarden === true ||
-    docData?.plantOnboardingCompleted === true ||
-    docData?.plantSectionOnboardingCompleted === true ||
-    docData?.settings?.plantOnboardingCompleted === true ||
-    docData?.settings?.plantSectionOnboardingCompleted === true ||
-    docData?.settings?.hasEnteredGarden === true ||
-    onboardingData?.plantSectionOnboardingCompleted === true ||
-    onboardingData?.plantOnboardingCompleted === true ||
-    settingsObj?.plantOnboardingCompleted === true ||
-    settingsObj?.plantSectionOnboardingCompleted === true ||
-    settingsObj?.hasEnteredGarden === true ||
-    plantSectionData?.plantOnboardingCompleted === true ||
-    plantSectionData?.plantSectionOnboardingCompleted === true ||
-    plantsTopData?.plantOnboardingCompleted === true ||
-    plantsTopData?.plantSectionOnboardingCompleted === true
-  ) {
-    return true;
+    if (localStorage.getItem(`nexora_onboarding_completed_${uid}`) === "false") return false;
   }
 
   // 4. Check profile data indicators populated exclusively during onboarding
@@ -483,28 +468,12 @@ export function isUserOnboardingCompleted(
     (docData?.age !== undefined && docData?.age !== null && docData?.age !== '') ||
     (docData?.settings?.age !== undefined && docData?.settings?.age !== null && docData?.settings?.age !== '') ||
     (docData?.gender && docData.gender.trim() !== '') ||
-    (docData?.settings?.gender && docData.settings.gender.trim() !== '') ||
-    docData?.spaceOnboardingCompleted === true ||
-    docData?.settings?.spaceOnboardingCompleted === true
+    (docData?.settings?.gender && docData.settings.gender.trim() !== '')
   ) {
     return true;
   }
 
-  // 5. Check user identity customizations that indicate an existing user who completed setup
-  const docName = docData?.displayName || docData?.name || docData?.settings?.displayName || docData?.settings?.name || "";
-  if (typeof docName === "string" && docName.trim() !== "" && docName.trim() !== "Champion" && docName.trim() !== "Nexora User" && docName.trim() !== "Nexora Citizen") {
-    return true;
-  }
-  const docPhoto = docData?.profilePic || docData?.photoFileName || docData?.["Profile image"] || docData?.["Photo file name"] || docData?.avatar || docData?.settings?.profilePic || docData?.settings?.photoFileName;
-  if (typeof docPhoto === "string" && docPhoto.trim() !== "") {
-    return true;
-  }
-  const docLocation = docData?.location || docData?.settings?.location || docData?.city;
-  if (typeof docLocation === "string" && docLocation.trim() !== "") {
-    return true;
-  }
-
-  // 6. Check existing user activity/progress indicators
+  // 5. Check existing user activity/progress indicators
   if ((docData?.stats?.totalPoints || 0) > 0) return true;
   if ((docData?.stats?.streak || 0) > 0) return true;
   if ((docData?.stats?.bestStreak || 0) > 0) return true;
@@ -522,25 +491,8 @@ export function isUserOnboardingCompleted(
   if ((docData?.trophies && docData.trophies.length > 0) || (docData?.stats?.trophies && docData.stats.trophies.length > 0)) return true;
   if ((docData?.gratitudeEntries && docData.gratitudeEntries.length > 0) || (docData?.stats?.gratitudeEntries && docData.stats.gratitudeEntries.length > 0)) return true;
   if ((docData?.drawings && docData.drawings.length > 0) || (docData?.stats?.drawings && docData.stats.drawings.length > 0)) return true;
-  if (docData?.plantState && ((docData.plantState.stage || 0) > 0 || (docData.plantState.growthPoints || 0) > 0 || (docData.plantState.type && docData.plantState.type !== 'sprout'))) return true;
-  if (docData?.settings?.plantState && ((docData.settings.plantState.stage || 0) > 0 || (docData.settings.plantState.growthPoints || 0) > 0 || (docData.settings.plantState.type && docData.settings.plantState.type !== 'sprout'))) return true;
 
-  // 7. If docData is missing completely, check global fallback
-  if (!docData) {
-    return false;
-  }
-
-  // 8. If explicitly flagged as not completed across docData and no completion indicators found, return false
-  if (
-    (docData?.onboardingCompleted === false || docData?.settings?.onboardingCompleted === false) &&
-    !docData?.plantOnboardingCompleted &&
-    !docData?.plantSectionOnboardingCompleted &&
-    !docData?.settings?.plantOnboardingCompleted &&
-    !docData?.settings?.plantSectionOnboardingCompleted
-  ) {
-    return false;
-  }
-
+  // 6. If docData is missing completely or user has no progress, return false
   return false;
 }
 
@@ -1157,19 +1109,33 @@ export function useNexoraData(
           const userSingularDocRef = doc(db, "user", currentUser.uid);
           const deletedUserRef = doc(db, "deleted_users", currentUser.uid);
 
-          // Safe non-blocking check for deleted user account to ensure deleted_users permissions never block user profile load
-          getDoc(deletedUserRef).then(async (deletedSnap) => {
-            if (deletedSnap.exists()) {
-              console.warn(`[FIRESTORE] Account ${currentUser.uid} was deleted. Signing out automatically.`);
-              await signOut(auth);
+          // Safe fast check for deleted user account to ensure deleted users never load profile
+          try {
+            const deletedSnap = await getDoc(deletedUserRef);
+            if (deletedSnap.exists() && deletedSnap.data()?.deleted !== false) {
+              console.warn(`[FIRESTORE] Account ${currentUser.uid} was deleted. Signing out automatically and clearing session.`);
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("nexora_cached_user");
+                localStorage.removeItem(`nexora_cached_user_${currentUser.uid}`);
+                localStorage.removeItem("nexora_onboarding_completed");
+                localStorage.removeItem(`nexora_onboarding_completed_${currentUser.uid}`);
+                sessionStorage.clear();
+                Object.keys(localStorage).forEach((key) => {
+                  if (key.startsWith("nexora_") || key.startsWith("hydration_") || key === "admin_read_feedback_ids") {
+                    localStorage.removeItem(key);
+                  }
+                });
+              }
+              await signOut(auth).catch(() => {});
               setUser(null);
               setAuthLoading(false);
               setLoading(false);
               setIsDataReady(true);
+              return;
             }
-          }).catch((err) => {
+          } catch (err) {
             console.warn("[FIRESTORE] Non-critical check on deleted_users collection:", err);
-          });
+          }
 
           // ZERO-LATENCY INSTANT LOCAL CACHE PRE-PASS (0ms) - ONLY for matching same user
           if (isSameUser && !isUserSwitch) {
@@ -1422,13 +1388,13 @@ export function useNexoraData(
                 Boolean((docData.purchasedEcosystemItemIds?.length || 0) > 0 || (docData.activeEcosystemItemIds?.length || 0) > 0 || (localCacheSettings?.purchasedEcosystemItemIds?.length || 0) > 0) ||
                 Boolean(localCacheGarden?.tiles?.some((t: any) => t.plantType || t.itemId || t.occupied));
 
-              const fastOnboardingCompleted = isUserOnboardingCompleted(docData, null, localCacheSettings, currentUser.uid) || fastPlantOnboardingCompleted;
+              const fastOnboardingCompleted = isUserOnboardingCompleted(docData, null, localCacheSettings, currentUser.uid);
               if (fastOnboardingCompleted) {
                 localStorage.setItem(`nexora_onboarding_completed_${currentUser.uid}`, "true");
                 localStorage.setItem("nexora_onboarding_completed", "true");
               } else {
-                localStorage.removeItem(`nexora_onboarding_completed_${currentUser.uid}`);
-                localStorage.removeItem("nexora_onboarding_completed");
+                localStorage.setItem(`nexora_onboarding_completed_${currentUser.uid}`, "false");
+                localStorage.setItem("nexora_onboarding_completed", "false");
               }
 
               const fastPlantState = docData.plantState || docData.settings?.plantState || localCacheSettings?.plantState || DEFAULT_SETTINGS.plantState;
@@ -1568,14 +1534,12 @@ export function useNexoraData(
               rawSetGardenState(fastGardenState);
               localStorage.setItem("nexora_garden", JSON.stringify(fastGardenState));
 
-              // Fast Pass unlock for already verified returning users in same session
-              if (fastOnboardingCompleted && !isFreshLogin && !isUserSwitch) {
-                setAuthLoading(false);
-                setIsDataReady(true);
-                setLoading(false);
-                setIsHydrated(true);
-                setIsStateHydrated(true);
-              }
+              // Fast Gateway unlock: Release decision immediately for returning and new users (~50ms)
+              setAuthLoading(false);
+              setIsDataReady(true);
+              setLoading(false);
+              setIsHydrated(true);
+              setIsStateHydrated(true);
             } catch (err) {
               console.warn("[FAST PASS HYDRATION] Early settings/stats calculation skipped:", err);
             }
@@ -1738,7 +1702,7 @@ export function useNexoraData(
               currentUser.uid,
               plantSectionData,
               plantsTopData
-            ) || finalPlantOnboardingCompleted;
+            );
               
             const finalSpaceOnboardingCompleted = 
               (docData.spaceOnboardingCompleted === true) ||
@@ -2231,8 +2195,8 @@ export function useNexoraData(
               localStorage.setItem("nexora_onboarding_completed", "true");
               localStorage.setItem(`nexora_onboarding_completed_${currentUser.uid}`, "true");
             } else {
-              localStorage.removeItem("nexora_onboarding_completed");
-              localStorage.removeItem(`nexora_onboarding_completed_${currentUser.uid}`);
+              localStorage.setItem("nexora_onboarding_completed", "false");
+              localStorage.setItem(`nexora_onboarding_completed_${currentUser.uid}`, "false");
             }
           }
           
