@@ -134,6 +134,9 @@ export interface UserSettings {
   proTestStartedAt?: string | null;
   proTestExpiresAt?: string | null;
   proTestLastUsedAt?: string | null;
+  proTestCooldownUntil?: string | null;
+  proTestLastCompletedAt?: string | null;
+  proTestDay2Notified?: boolean;
   originalStatsBeforeProTest?: UserStats | null;
   lastViewedRank?: number;
   layoutConfig?: {

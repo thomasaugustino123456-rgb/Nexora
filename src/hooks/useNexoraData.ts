@@ -1853,6 +1853,9 @@ export function useNexoraData(
               proTestStartedAt: docData.proTestStartedAt ?? docData.settings?.proTestStartedAt ?? null,
               proTestExpiresAt: docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt ?? null,
               proTestLastUsedAt: docData.proTestLastUsedAt ?? docData.settings?.proTestLastUsedAt ?? null,
+              proTestCooldownUntil: docData.proTestCooldownUntil ?? docData.settings?.proTestCooldownUntil ?? null,
+              proTestLastCompletedAt: docData.proTestLastCompletedAt ?? docData.settings?.proTestLastCompletedAt ?? null,
+              proTestDay2Notified: docData.proTestDay2Notified ?? docData.settings?.proTestDay2Notified ?? false,
               
               accountName: extractRealAccountName(allProfileDocs, currentUser),
               email: docData.email || (docData.settings?.email) || currentUser.email || "",
@@ -2529,6 +2532,9 @@ export function useNexoraData(
                       proTestStartedAt: dbData.proTestStartedAt ?? dbSettings.proTestStartedAt ?? null,
                       proTestExpiresAt: dbData.proTestExpiresAt ?? dbSettings.proTestExpiresAt ?? null,
                       proTestLastUsedAt: dbData.proTestLastUsedAt ?? dbSettings.proTestLastUsedAt ?? null,
+                      proTestCooldownUntil: dbData.proTestCooldownUntil ?? dbSettings.proTestCooldownUntil ?? null,
+                      proTestLastCompletedAt: dbData.proTestLastCompletedAt ?? dbSettings.proTestLastCompletedAt ?? null,
+                      proTestDay2Notified: dbData.proTestDay2Notified ?? dbSettings.proTestDay2Notified ?? false,
                       lastViewedRank: dbData.lastViewedRank ?? dbSettings.lastViewedRank ?? undefined,
                     };
                   });
@@ -3294,6 +3300,9 @@ export function useNexoraData(
                   proTestStartedAt: dbData.proTestStartedAt ?? dbSettings.proTestStartedAt ?? null,
                   proTestExpiresAt: dbData.proTestExpiresAt ?? dbSettings.proTestExpiresAt ?? null,
                   proTestLastUsedAt: dbData.proTestLastUsedAt ?? dbSettings.proTestLastUsedAt ?? null,
+                  proTestCooldownUntil: dbData.proTestCooldownUntil ?? dbSettings.proTestCooldownUntil ?? null,
+                  proTestLastCompletedAt: dbData.proTestLastCompletedAt ?? dbSettings.proTestLastCompletedAt ?? null,
+                  proTestDay2Notified: dbData.proTestDay2Notified ?? dbSettings.proTestDay2Notified ?? false,
                   lastViewedRank: dbData.lastViewedRank ?? dbSettings.lastViewedRank ?? undefined,
                 };
               });

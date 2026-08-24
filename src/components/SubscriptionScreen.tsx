@@ -31,7 +31,9 @@ import {
   BrainCircuit,
   Target,
   BarChart3,
-  Users
+  Users,
+  MessageCircle,
+  ArrowRight
 } from 'lucide-react';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
 import { playSound } from '../hooks/useSound';
@@ -314,8 +316,18 @@ export function SubscriptionScreen({
     }
   }, [userId, isOnline]);
 
-  // Robust 7-Day Free Trial Activation Flow
-  const handleActivate7DayTrial = async () => {
+  // Robust 4-Day Free Pro Test Activation Flow
+  const handleActivate4DayTrial = async () => {
+    if (!isOnline) return;
+
+    // Check if test is currently in 3-week cooldown
+    if (settings?.proTestCooldownUntil && new Date(settings.proTestCooldownUntil).getTime() > Date.now()) {
+      const remainingMs = new Date(settings.proTestCooldownUntil).getTime() - Date.now();
+      const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+      alert(`Your 4-Day Free Pro Test is currently on cooldown. You can test again in ${remainingDays} day(s), or upgrade instantly via WhatsApp!`);
+      return;
+    }
+
     vibrate(VIBRATION_PATTERNS.SUCCESS);
     setIsActivatingTrial(true);
 
@@ -324,14 +336,15 @@ export function SubscriptionScreen({
         await onStartProTest();
       } else if (onUpdateSettings) {
         const now = new Date();
-        const expiry = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const expiry = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000);
         const settingsUpdate = {
           proTestStartedAt: now.toISOString(),
           proTestExpiresAt: expiry.toISOString(),
           proTestLastUsedAt: now.toISOString(),
           proTestActive: true,
+          proTestDay2Notified: false,
           isPro: true,
-          proPlan: '7-Day Free Trial',
+          proPlan: '4-Day Free Pro Test',
         };
         onUpdateSettings(settingsUpdate);
 
@@ -364,7 +377,7 @@ export function SubscriptionScreen({
   // Primary CTA click action
   const handlePrimaryAction = () => {
     if (isFreeTrialEnabled) {
-      handleActivate7DayTrial();
+      handleActivate4DayTrial();
     } else {
       handleOpenWhatsApp(selectedPlanId);
     }
@@ -872,10 +885,9 @@ export function SubscriptionScreen({
                   }
                 }}
                 onClick={() => {
-                  if (!isCenter) {
-                    vibrate(VIBRATION_PATTERNS.CLICK);
-                    setSelectedPlanId(plan.id);
-                  }
+                  vibrate(VIBRATION_PATTERNS.CLICK);
+                  setSelectedPlanId(plan.id);
+                  handleOpenWhatsApp(plan.id);
                 }}
                 className={`absolute w-full max-w-md sm:max-w-lg rounded-[36px] p-6 sm:p-7 shadow-2xl transition-shadow cursor-pointer overflow-hidden ${
                   plan.theme === 'dark' 
@@ -961,8 +973,9 @@ export function SubscriptionScreen({
                       e.stopPropagation();
                       vibrate(VIBRATION_PATTERNS.CLICK);
                       setSelectedPlanId(plan.id);
+                      handleOpenWhatsApp(plan.id);
                     }}
-                    className={`w-full py-3 sm:py-3.5 rounded-full font-black text-xs sm:text-sm transition-all shadow-sm cursor-pointer ${
+                    className={`w-full py-3 sm:py-3.5 rounded-full font-black text-xs sm:text-sm transition-all shadow-sm cursor-pointer flex items-center justify-center gap-2 ${
                       isCenter
                         ? plan.theme === 'dark'
                           ? 'bg-[#98E724] hover:bg-[#86D41A] text-slate-950 shadow-md'
@@ -972,7 +985,8 @@ export function SubscriptionScreen({
                         : 'bg-black/10 hover:bg-black/20 text-slate-900'
                     }`}
                   >
-                    {isCenter ? 'Selected Plan' : 'Select'}
+                    <span>Get {plan.name} ({plan.price})</span>
+                    <MessageCircle size={15} />
                   </button>
                 </div>
               </motion.div>
@@ -1000,12 +1014,12 @@ export function SubscriptionScreen({
         </div>
 
         {/* ======================================================== */}
-        {/* 7-DAY FREE TRIAL TIMELINE (CONVERSION TRUST MODULE) */}
+        {/* 4-DAY FREE PRO TEST TIMELINE (CONVERSION TRUST MODULE) */}
         {/* ======================================================== */}
         <div className="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 md:p-7 border border-black/5 shadow-lg mb-6">
           <div className="flex items-center justify-between mb-4 pb-2 border-b border-black/5">
             <span className="text-xs sm:text-sm font-black text-slate-950 flex items-center gap-2 uppercase tracking-wide">
-              <CalendarCheck size={18} className="text-[#64A312]" /> 7-Day Free Trial Timeline
+              <CalendarCheck size={18} className="text-[#64A312]" /> 4-Day Free Pro Test Timeline
             </span>
             <span className="text-[10px] sm:text-xs font-black bg-[#98E724]/40 text-slate-950 px-3 py-1 rounded-full shadow-xs">
               $0.00 Due Today
@@ -1017,25 +1031,25 @@ export function SubscriptionScreen({
             <div className="relative flex items-start gap-3">
               <div className="w-4 h-4 rounded-full bg-[#98E724] border-2 border-white ring-2 ring-[#98E724]/50 absolute -left-[23px] top-0.5 shrink-0 shadow-xs" />
               <div>
-                <span className="font-extrabold text-slate-950 text-xs sm:text-sm">Today</span>
-                <p className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5">Unlock all Pro features immediately for 7 days at $0.</p>
+                <span className="font-extrabold text-slate-950 text-xs sm:text-sm">Today (Day 1)</span>
+                <p className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5">Unlock all Pro features immediately for 4 days at $0.00.</p>
               </div>
             </div>
 
             <div className="relative flex items-start gap-3">
               <div className="w-4 h-4 rounded-full bg-amber-400 border-2 border-white ring-2 ring-amber-400/50 absolute -left-[23px] top-0.5 shrink-0 shadow-xs" />
               <div>
-                <span className="font-extrabold text-slate-950 text-xs sm:text-sm">Day 5</span>
-                <p className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5">We send a reminder notification before your trial ends.</p>
+                <span className="font-extrabold text-slate-950 text-xs sm:text-sm">Day 2</span>
+                <p className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5">We send you a reminder notification about your Pro trial features.</p>
               </div>
             </div>
 
             <div className="relative flex items-start gap-3">
               <div className="w-4 h-4 rounded-full bg-slate-950 border-2 border-white ring-2 ring-slate-950/25 absolute -left-[23px] top-0.5 shrink-0 shadow-xs" />
               <div>
-                <span className="font-extrabold text-slate-950 text-xs sm:text-sm">Day 7</span>
+                <span className="font-extrabold text-slate-950 text-xs sm:text-sm">Day 4</span>
                 <p className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5">
-                  Plan starts at {PLANS.find(p => p.id === selectedPlanId)?.price}. Cancel anytime with 1 tap.
+                  Test finishes. Upgrade to lifetime VIP via WhatsApp or wait 3 weeks to test again.
                 </p>
               </div>
             </div>
@@ -1049,7 +1063,7 @@ export function SubscriptionScreen({
         >
           <div>
             <span className="text-sm sm:text-base font-black text-slate-950 block">
-              Start 7-day free trial
+              Start 4-day free trial
             </span>
             <span className="text-xs sm:text-sm text-slate-500 font-medium">
               Try full Pro access risk-free before any payment
@@ -1094,13 +1108,13 @@ export function SubscriptionScreen({
           {isActivatingTrial ? (
             <div className="flex items-center gap-2">
               <RefreshCw size={18} className="animate-spin text-[#98E724]" />
-              <span>Activating 7-Day Free Trial...</span>
+              <span>Activating 4-Day Free Pro Test...</span>
             </div>
           ) : isOnline ? (
             <div className="flex items-center gap-2">
               <span>
                 {isFreeTrialEnabled 
-                  ? 'Start 7-Day Free Trial ($0.00)' 
+                  ? 'Start 4-Day Free Pro Test ($0.00)' 
                   : selectedPlanId === 'yearly' 
                     ? 'Continue with Yearly ($49.99)' 
                     : selectedPlanId === 'monthly' 
@@ -1114,27 +1128,27 @@ export function SubscriptionScreen({
           )}
         </motion.button>
 
-        {/* Direct 7-Day Pro Pass Instant Button */}
+        {/* Direct 4-Day Pro Pass Instant Button */}
         {onStartProTest && !isPro && (
           <motion.div 
             whileHover={{ scale: 1.01 }}
             className="mt-4 p-4 sm:p-5 rounded-3xl bg-white/85 backdrop-blur-sm border border-black/10 flex items-center justify-between gap-3 shadow-md"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
                 <Clock size={20} />
               </div>
               <div className="text-left">
-                <h4 className="text-xs sm:text-sm font-black text-slate-950">Direct 7-Day Pro Pass</h4>
-                <p className="text-[11px] sm:text-xs text-slate-600 font-medium">Activate full VIP features for 7 days with zero delay.</p>
+                <h4 className="text-xs sm:text-sm font-black text-slate-950">Direct 4-Day Pro Test</h4>
+                <p className="text-[11px] sm:text-xs text-slate-600 font-medium">Activate full VIP features for 4 days with zero delay.</p>
               </div>
             </div>
 
             <button
-              onClick={handleActivate7DayTrial}
-              id="start-7day-test-btn"
+              onClick={handleActivate4DayTrial}
+              id="start-4day-test-btn"
               disabled={isActivatingTrial}
-              className="px-4 py-2 sm:px-5 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs sm:text-sm shrink-0 transition-all shadow-md cursor-pointer"
+              className="px-4 py-2 sm:px-5 sm:py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs sm:text-sm shrink-0 transition-all shadow-md cursor-pointer"
             >
               {isActivatingTrial ? 'Activating...' : 'Activate Now'}
             </button>
@@ -1357,6 +1371,42 @@ export function SubscriptionScreen({
           </AnimatePresence>
         </div>
 
+        {/* Direct WhatsApp Contact Button */}
+        <div className="mt-8">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              vibrate(VIBRATION_PATTERNS.SUCCESS);
+              const selectedPlanObj = PLANS.find(p => p.id === selectedPlanId) || PLANS[2];
+              const customMsg = `Hello! I would like to upgrade to Nexora Pro or ask a question.\n\n👤 UID: ${userId || 'User'}\n💎 Plan: ${selectedPlanObj.name} (${selectedPlanObj.price}${selectedPlanObj.period})\n\nPlease get in touch with me. Thank you!`;
+              window.open(`https://api.whatsapp.com/send?phone=211929635502&text=${encodeURIComponent(customMsg)}`, '_blank');
+            }}
+            id="whatsapp-direct-contact-btn"
+            className="w-full p-4 sm:p-5 rounded-3xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/25 flex items-center justify-between gap-3 border border-emerald-400/30 transition-all cursor-pointer"
+          >
+            <div className="flex items-center gap-3.5 text-left">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white text-emerald-600 flex items-center justify-center font-black shadow-md shrink-0">
+                <MessageCircle size={24} className="fill-emerald-600 text-white stroke-[1.5]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-sm sm:text-base text-white">Chat on WhatsApp Directly</span>
+                  <span className="bg-emerald-400/30 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border border-white/20">
+                    Online
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-100 font-medium mt-0.5">
+                  Direct support, upgrades & VIP activation · +211 929 635 502
+                </p>
+              </div>
+            </div>
+            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <ArrowRight size={18} className="text-white" />
+            </div>
+          </motion.button>
+        </div>
+
         {/* Footer Disclaimer & Terms */}
         <div className="text-center mt-6 text-[11px] sm:text-xs text-slate-600 font-medium">
           <p>Nexora Health & Discipline Systems · Auto-renewable · Cancel anytime</p>
@@ -1387,7 +1437,7 @@ export function SubscriptionScreen({
                   </span>
                 </div>
                 <span className="text-[10px] sm:text-[11px] text-slate-300 block font-medium">
-                  {isFreeTrialEnabled ? '7-Day Free Trial ($0 today)' : 'Instant VIP Access'}
+                  {isFreeTrialEnabled ? '4-Day Free Pro Test ($0.00 today)' : 'Instant VIP Access'}
                 </span>
               </div>
 
@@ -1402,7 +1452,7 @@ export function SubscriptionScreen({
                   <RefreshCw size={14} className="animate-spin" />
                 ) : (
                   <>
-                    <span>{isFreeTrialEnabled ? 'Claim 7 Days Free' : 'Continue'}</span>
+                    <span>{isFreeTrialEnabled ? 'Claim 4 Days Free' : 'Continue'}</span>
                     <Sparkles size={14} className="fill-slate-950" />
                   </>
                 )}

@@ -360,6 +360,9 @@ const DEFAULT_SETTINGS: UserSettings = {
   proTestStartedAt: null,
   proTestExpiresAt: null,
   proTestLastUsedAt: null,
+  proTestCooldownUntil: null,
+  proTestLastCompletedAt: null,
+  proTestDay2Notified: false,
   originalStatsBeforeProTest: null,
 };
 
@@ -780,30 +783,37 @@ export default function App() {
     useLocalStorage<UserStats | null>("nexora_original_stats", null);
   const [isCurrentlyBoosting, setIsCurrentlyBoosting] = useState(false);
 
-  // Pro Test Expiration & Restoration Manager
+  // Pro Test Expiration & Restoration Manager (4-Day Test, 3-Week Cooldown)
   const restoreTrueProgressAfterProTest = useCallback(
     async () => {
-      onUpdateSettings({
+      const now = new Date();
+      const threeWeeksCooldown = new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000).toISOString();
+      const updateData = {
         proTestActive: false,
         proTestExpiresAt: null,
-      });
+        isPro: isUserProUnlocked(user?.uid) || false,
+        proTestLastCompletedAt: now.toISOString(),
+        proTestCooldownUntil: threeWeeksCooldown,
+      };
+
+      onUpdateSettings(updateData);
 
       if (user) {
         try {
           const userRef = doc(db, "users", user.uid);
           await firestoreSetDoc(
             userRef,
-            { proTestActive: false, proTestExpiresAt: null },
+            updateData,
             { merge: true },
           );
         } catch (err) {
-          console.error("Failed to update proTestActive in Firestore:", err);
+          console.error("Failed to update proTest expiration in Firestore:", err);
         }
       }
 
-      showToast("PRO TRIAL ENDED: Upgrade to Pro to continue enjoying all features.", "info");
+      showToast("4-DAY PRO TEST COMPLETED: Upgrade to Pro via WhatsApp or test again in 3 weeks.", "info");
       setProTestMessage(
-        "Your pro features test time is out. If u want it u can pay, bro! 👑",
+        "Your 4-Day Pro test time is complete! You can upgrade to full Pro by contacting the creator on WhatsApp, or test again after the 3-week cooldown. 👑",
       );
       vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
     },
@@ -823,7 +833,20 @@ export default function App() {
     if (isTestActive) {
       if (!isCurrentlyBoosting) {
         setIsCurrentlyBoosting(true);
-        showToast("7-DAY PRO PASS ACTIVE! Enjoy all Pro features.", "success");
+        showToast("4-DAY PRO PASS ACTIVE! Enjoy all Pro features.", "success");
+      }
+
+      // Day 2 Notification Reminder
+      if (settings.proTestStartedAt && !settings.proTestDay2Notified) {
+        const elapsedMs = now.getTime() - new Date(settings.proTestStartedAt).getTime();
+        const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+        if (elapsedMs >= twoDaysMs) {
+          showToast("🔔 Day 2 of your 4-Day Pro Test! 2 days remaining to enjoy all VIP features.", "info");
+          onUpdateSettings({ proTestDay2Notified: true });
+          if (user) {
+            firestoreSetDoc(doc(db, "users", user.uid), { proTestDay2Notified: true }, { merge: true }).catch(() => {});
+          }
+        }
       }
     } else if (
       isCurrentlyBoosting ||
@@ -837,15 +860,19 @@ export default function App() {
   }, [
     settings.proTestExpiresAt,
     settings.proTestActive,
+    settings.proTestStartedAt,
+    settings.proTestDay2Notified,
     isDataReady,
     isCurrentlyBoosting,
     restoreTrueProgressAfterProTest,
     showToast,
+    onUpdateSettings,
+    user
   ]);
 
   // Expiry Check Interval
   useEffect(() => {
-    if (!settings.proTestExpiresAt || settings.isPro) return;
+    if (!settings.proTestExpiresAt || (settings.isPro && !settings.proTestActive)) return;
 
     const interval = setInterval(() => {
       const now = new Date();
@@ -859,7 +886,7 @@ export default function App() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [settings.proTestExpiresAt, settings.isPro, restoreTrueProgressAfterProTest]);
+  }, [settings.proTestExpiresAt, settings.isPro, settings.proTestActive, restoreTrueProgressAfterProTest]);
   const [sessionXP, setSessionXP] = useState(0);
   const [sessionCoins, setSessionCoins] = useState(0);
   const [sessionStreak, setSessionStreak] = useState(0);
@@ -6929,14 +6956,27 @@ export default function App() {
                       onStartProTest={async () => {
                         try {
                           const now = new Date();
-                          const expiry = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                          
+                          // Check 3-week cooldown
+                          if (settings.proTestCooldownUntil && new Date(settings.proTestCooldownUntil).getTime() > now.getTime()) {
+                            const remainingMs = new Date(settings.proTestCooldownUntil).getTime() - now.getTime();
+                            const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+                            showToast(
+                              `Pro Free Test is on cooldown. You can test again in ${remainingDays} days, or upgrade via WhatsApp!`,
+                              "info",
+                            );
+                            return;
+                          }
+
+                          const expiry = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000);
                           const settingsUpdate = {
                             proTestStartedAt: now.toISOString(),
                             proTestExpiresAt: expiry.toISOString(),
                             proTestLastUsedAt: now.toISOString(),
                             proTestActive: true,
+                            proTestDay2Notified: false,
                             isPro: true,
-                            proPlan: "7-Day Free Trial",
+                            proPlan: "4-Day Free Pro Test",
                           };
                           
                           onUpdateSettings(settingsUpdate);
@@ -6952,7 +6992,7 @@ export default function App() {
                           }
 
                           showToast(
-                            "7-DAY PRO TRIAL ACTIVATED! Full VIP access unlocked! ✨",
+                            "4-DAY PRO TEST ACTIVATED! Full VIP access unlocked for 4 days! ✨",
                             "success",
                           );
                           vibrate(VIBRATION_PATTERNS.SUCCESS);
@@ -6960,7 +7000,7 @@ export default function App() {
                         } catch (err) {
                           console.error("Trial activation error:", err);
                           showToast(
-                            "7-Day Pro Trial activated on your device! ✨",
+                            "4-Day Pro Test activated on your device! ✨",
                             "success",
                           );
                           setActiveScreen("home");

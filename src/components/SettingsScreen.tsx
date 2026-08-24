@@ -118,9 +118,6 @@ export function SettingsScreen({
   // Community feedback inline state
   const [feedback, setFeedback] = React.useState({ rating: 5, message: '', category: 'General' });
 
-  // Premium Code Entry state
-  const [proCode, setProCode] = React.useState('');
-
   // Selected language state (bound to real settings.language)
   const selectedLanguage = settings.language || 'en';
 
@@ -136,22 +133,6 @@ export function SettingsScreen({
   const handleSendResetEmail = async () => {
     // vibrate(15);
     // showToast('Firebase Auth is disabled. Transitioning to Supabase.', 'info');
-  };
-
-  const handleActivateProCode = () => {
-    vibrate(VIBRATION_PATTERNS.NOTIFY);
-    const code = proCode.trim().toUpperCase();
-    if (code === 'PRO100' || code === 'NEXORA' || code === 'DEVELOPER') {
-      setSettings({ isPro: true });
-      showToast('Nexus Pro Unlocked! Welcome to the Elite Tier, Operative! 🚀', 'success');
-      setProCode('');
-    } else if (code === 'RESET') {
-      setSettings({ isPro: false });
-      showToast('Nexus Pro reset to Free Tier.', 'info');
-      setProCode('');
-    } else {
-      showToast('Invalid activation code, bro. Try "NEXORA" or "DEVELOPER" to test!', 'error');
-    }
   };
 
   const handleInlineFeedbackSubmit = () => {
@@ -1348,28 +1329,144 @@ export function SettingsScreen({
                       </div>
                     </div>
 
-                    {/* Activation entry codes */}
-                    <div className="p-4 bg-[#FAF7F2] border border-[#E9E4D4]/50 rounded-2xl space-y-3">
-                      <h4 className="text-[10px] font-black text-[#4F3F34]/50 uppercase tracking-widest">Activate Dev Promo Codes</h4>
-                      
-                      <div className="flex gap-2">
-                        <input 
-                          type="text" 
-                          value={proCode}
-                          onChange={(e) => setProCode(e.target.value)}
-                          placeholder="Type promo key e.g. NEXORA"
-                          className="flex-1 bg-white border border-[#E9E4D4] rounded-xl px-4 py-2.5 text-xs font-bold text-[#4F3F34] uppercase focus:outline-none focus:ring-2 focus:ring-[#69C496] placeholder-[#4F3F34]/20"
-                        />
+                    {/* Real-time Pro Test Status & Token Allowance Tracker */}
+                    <div className="p-5 bg-white border border-[#E9E4D4] rounded-2xl space-y-4 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <BrainCircuit size={16} className="text-[#69C496]" />
+                          <h4 className="text-xs font-black text-[#4F3F34] uppercase tracking-wider">
+                            {settings.proTestActive
+                              ? '4-Day Pro Test Progress'
+                              : isPro
+                              ? 'Lifetime VIP Neural Status'
+                              : settings.proTestCooldownUntil && new Date(settings.proTestCooldownUntil).getTime() > Date.now()
+                              ? 'Pro Test Cooldown Status'
+                              : 'Free Tier Neural Status'}
+                          </h4>
+                        </div>
+                        <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full border ${
+                          settings.proTestActive 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                            : isPro 
+                            ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                            : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}>
+                          {settings.proTestActive 
+                            ? 'Test Mode Active' 
+                            : isPro 
+                            ? 'VIP Active' 
+                            : 'Free Tier'}
+                        </span>
+                      </div>
+
+                      {/* Dynamic Progressive Meter */}
+                      {settings.proTestActive ? (
+                        <div className="space-y-3 p-3.5 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                          {(() => {
+                            const startedAt = settings.proTestStartedAt ? new Date(settings.proTestStartedAt).getTime() : Date.now();
+                            const now = Date.now();
+                            const totalDuration = 4 * 24 * 60 * 60 * 1000;
+                            const elapsed = Math.max(0, Math.min(totalDuration, now - startedAt));
+                            const dayNumber = Math.min(4, Math.max(1, Math.floor(elapsed / (24 * 60 * 60 * 1000)) + 1));
+                            const percent = Math.min(100, Math.round((elapsed / totalDuration) * 100));
+
+                            return (
+                              <>
+                                <div className="flex items-center justify-between text-[11px] font-black text-[#4F3F34]">
+                                  <span>4-Day Pro Test Timeline</span>
+                                  <span className="text-emerald-700 font-extrabold">Day {dayNumber} of 4 ({4 - dayNumber} days left)</span>
+                                </div>
+                                <div className="w-full h-2.5 bg-emerald-100/80 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-emerald-500 to-lime-500 rounded-full transition-all duration-500"
+                                    style={{ width: `${percent}%` }}
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-[#4F3F34]/70 font-semibold pt-1 border-t border-emerald-200/40">
+                                  <span>AI Neural Tokens:</span>
+                                  <span className="font-bold text-emerald-800">10,000 / 10,000 daily limit (100% Unlocked)</span>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      ) : isPro ? (
+                        <div className="space-y-2.5 p-3.5 bg-amber-50/60 rounded-xl border border-amber-100">
+                          <div className="flex items-center justify-between text-[11px] font-black text-amber-900">
+                            <span>VIP Neural Bandwidth</span>
+                            <span className="text-amber-700">Infinite Unlimited</span>
+                          </div>
+                          <div className="w-full h-2.5 bg-amber-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full w-full" />
+                          </div>
+                          <p className="text-[10px] text-amber-800/80 font-medium">
+                            Full VIP status verified. Unlimited habits, bio-metrics, neural scanning & priority sync.
+                          </p>
+                        </div>
+                      ) : settings.proTestCooldownUntil && new Date(settings.proTestCooldownUntil).getTime() > Date.now() ? (
+                        <div className="space-y-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200/60">
+                          {(() => {
+                            const cooldownEnd = new Date(settings.proTestCooldownUntil).getTime();
+                            const remainingDays = Math.ceil((cooldownEnd - Date.now()) / (24 * 60 * 60 * 1000));
+                            const totalCooldown = 21 * 24 * 60 * 60 * 1000;
+                            const elapsed = Math.max(0, totalCooldown - (cooldownEnd - Date.now()));
+                            const percent = Math.min(100, Math.round((elapsed / totalCooldown) * 100));
+
+                            return (
+                              <>
+                                <div className="flex items-center justify-between text-[11px] font-black text-[#4F3F34]">
+                                  <span>3-Week Re-Test Cooldown</span>
+                                  <span className="text-amber-700 font-bold">{remainingDays} Day(s) Remaining</span>
+                                </div>
+                                <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                                    style={{ width: `${percent}%` }}
+                                  />
+                                </div>
+                                <p className="text-[10px] text-[#4F3F34]/60 font-medium">
+                                  Your previous 4-Day Pro test finished. You can test again in {remainingDays} days, or upgrade immediately via WhatsApp.
+                                </p>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      ) : (
+                        <div className="space-y-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200/60">
+                          <div className="flex items-center justify-between text-[11px] font-black text-[#4F3F34]">
+                            <span>Free Tier Token Allowance</span>
+                            <span className="text-slate-500">500 / 500 Tokens/day</span>
+                          </div>
+                          <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-slate-400 rounded-full w-1/4" />
+                          </div>
+                          <p className="text-[10px] text-[#4F3F34]/60 font-medium">
+                            Ready to try 4-Day Free Pro Test with 10,000 daily tokens and full VIP perks!
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Official Upgrade & Support Card */}
+                      <div className="p-4 bg-[#FAF7F2] border border-[#E9E4D4] rounded-xl space-y-2.5">
+                        <div className="flex items-center gap-2 text-xs font-black text-[#4F3F34] uppercase tracking-wide">
+                          <Sparkles size={14} className="text-amber-500" />
+                          <span>Official Nexora Pro Upgrade</span>
+                        </div>
+                        <p className="text-[11px] text-[#4F3F34]/70 font-medium leading-relaxed">
+                          Permanent Pro access is verified and activated exclusively through direct contact with the Nexora creator.
+                        </p>
+
                         <button
-                          onClick={handleActivateProCode}
-                          className="bg-amber-500 hover:bg-amber-600 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-md shrink-0"
+                          onClick={() => {
+                            vibrate(VIBRATION_PATTERNS.CLICK);
+                            const msg = `Hello! I would like to upgrade to Nexora Pro.\n\n👤 UID: ${user?.uid || 'Unknown'}\n📧 Email: ${user?.email || settings.email || 'N/A'}\n\nPlease help me activate permanent Pro access.`;
+                            window.open(`https://api.whatsapp.com/send?phone=211929635502&text=${encodeURIComponent(msg)}`, '_blank');
+                          }}
+                          className="w-full py-2.5 px-4 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer"
                         >
-                          Activate
+                          <MessageSquare size={14} /> Contact Creator on WhatsApp
                         </button>
                       </div>
-                      <p className="text-[9px] text-[#4F3F34]/40 font-bold leading-normal">
-                        Type 'NEXORA' or 'DEVELOPER' to unlock Pro instantly, or type 'RESET' to return to free tier for sandboxing tests.
-                      </p>
                     </div>
                   </div>
                 </div>
