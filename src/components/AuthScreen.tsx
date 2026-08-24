@@ -798,16 +798,15 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
             transition={{ duration: 0.3, ease: "easeOut" }}
             className="w-full max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto bg-white/90 backdrop-blur-xl border border-white/80 rounded-3xl p-5 sm:p-7 flex flex-col items-center gap-3.5 sm:gap-4 text-center my-auto relative shadow-2xl z-10 scrollbar-none"
           >
-            {/* Interactive Mascot Top */}
+            {/* App Mascot Logo Top */}
             <motion.div 
               animate={mascotControls} 
+              onClick={handleMascotTap}
               className="w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-transform pt-1"
             >
-              <Mascot
-                mood={mascotMood}
-                onClick={handleMascotTap}
-                onPointerMove={handleMascotPointerMove}
-                onPointerLeave={handleMascotPointerLeave}
+              <MascotImage
+                alt="Nexora Mascot"
+                className="w-full h-full object-contain rounded-2xl drop-shadow-md"
               />
             </motion.div>
 

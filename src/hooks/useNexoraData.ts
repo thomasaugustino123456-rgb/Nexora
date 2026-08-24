@@ -2999,9 +2999,11 @@ export function useNexoraData(
             };
             console.log(`[PERSISTENCE AUDIT] Write payload for leaderboard document:`, JSON.stringify(writePayload));
             
-            await setDoc(leaderboardRef, writePayload, { merge: true });
-            await setDoc(rankDocRef, writePayload, { merge: true });
-            console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote leaderboard document to: ${leaderboardRef.path}`);
+            if (maxPts > 0) {
+              await setDoc(leaderboardRef, writePayload, { merge: true });
+              await setDoc(rankDocRef, writePayload, { merge: true });
+              console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote leaderboard document to: ${leaderboardRef.path}`);
+            }
           } catch (err: any) {
             handleFirestoreError(err, OperationType.WRITE, leaderboardRef.path);
             console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Failed to write leaderboard document to: ${leaderboardRef.path}. Error:`, err);

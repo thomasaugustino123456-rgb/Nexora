@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 
-// Exact Cloudinary Sound Assets
-const SOUNDS = {
+// Exact Cloudinary Sound Assets (User Uploaded)
+export const SOUNDS = {
   // Top sections / headers
   header_switch:
     "https://res.cloudinary.com/ddtfq9acc/video/upload/v1777215960/mixkit-explainer-video-game-alert-sweep-236_xmqkot.wav",
@@ -101,9 +101,10 @@ const SOUNDS = {
 
 export type SoundKey = keyof typeof SOUNDS | (string & {});
 
-// Global Audio State
+// Global Audio Context & Buffers
 let audioContext: AudioContext | null = null;
 const audioBufferCache: Map<string, AudioBuffer> = new Map();
+const pendingFetchMap: Map<string, Promise<AudioBuffer | null>> = new Map();
 const audioPool: Map<string, HTMLAudioElement[]> = new Map();
 const poolIndex: Map<string, number> = new Map();
 const lastPlayTimestamps: Map<string, number> = new Map();
@@ -112,7 +113,7 @@ const lastPlayTimestamps: Map<string, number> = new Map();
 const musicNodes: { [key: string]: HTMLAudioElement } = {};
 let activeMusicKey: string | null = null;
 
-function getOrCreateAudioContext(): AudioContext | null {
+export function getOrCreateAudioContext(): AudioContext | null {
   if (typeof window === "undefined") return null;
   try {
     if (!audioContext) {
@@ -133,23 +134,33 @@ function getOrCreateAudioContext(): AudioContext | null {
 
 // Global user gesture unlocker for Chrome, Safari iOS, and PWAs
 let isUnlocked = false;
-function unlockAudio() {
-  if (isUnlocked) return;
-  isUnlocked = true;
-
+export function unlockAudio() {
   const ctx = getOrCreateAudioContext();
-  if (ctx && ctx.state === "suspended") {
-    ctx.resume().catch(() => {});
+  if (ctx) {
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+    // Play a 1-sample silent buffer to unlock the audio subsystem
+    try {
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch {}
   }
 
-  // Pre-warm audio pools on first touch
-  audioPool.forEach((elements) => {
-    elements.forEach((el) => {
-      try {
-        el.load();
-      } catch {}
+  if (!isUnlocked) {
+    isUnlocked = true;
+    // Pre-warm HTML5 audio elements on first touch
+    audioPool.forEach((elements) => {
+      elements.forEach((el) => {
+        try {
+          el.load();
+        } catch {}
+      });
     });
-  });
+  }
 }
 
 if (typeof window !== "undefined") {
@@ -163,29 +174,61 @@ if (typeof window !== "undefined") {
   ];
   const onUserGesture = () => {
     unlockAudio();
-    unlockEvents.forEach((evt) =>
-      window.removeEventListener(evt, onUserGesture, { capture: true })
-    );
   };
   unlockEvents.forEach((evt) => {
     window.addEventListener(evt, onUserGesture, {
       passive: true,
       capture: true,
     });
+    document.addEventListener(evt, onUserGesture, {
+      passive: true,
+      capture: true,
+    });
   });
 }
 
-// Initialize audio pools and fetch audio buffers for instant zero-latency playback
+// Helper to load and decode a single sound into Web Audio buffer
+export async function loadSoundBuffer(key: string, url: string): Promise<AudioBuffer | null> {
+  if (audioBufferCache.has(key)) {
+    return audioBufferCache.get(key)!;
+  }
+  if (pendingFetchMap.has(key)) {
+    return pendingFetchMap.get(key)!;
+  }
+
+  const fetchPromise = (async () => {
+    try {
+      const res = await fetch(url, { mode: "cors" });
+      if (!res.ok) return null;
+      const arrayBuffer = await res.arrayBuffer();
+      const ctx = getOrCreateAudioContext();
+      if (!ctx) return null;
+      const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
+      audioBufferCache.set(key, decodedBuffer);
+      return decodedBuffer;
+    } catch (err) {
+      return null;
+    } finally {
+      pendingFetchMap.delete(key);
+    }
+  })();
+
+  pendingFetchMap.set(key, fetchPromise);
+  return fetchPromise;
+}
+
+// Pre-load all Cloudinary sound buffers immediately upon page boot
 if (typeof window !== "undefined") {
   Object.entries(SOUNDS).forEach(([key, url]) => {
     if (!url) return;
 
-    // Create a pool of 2 HTMLAudioElement instances per sound effect for overlapping rapid taps
     if (!key.startsWith("music")) {
+      // HTML5 pool fallback
       const pool: HTMLAudioElement[] = [];
       for (let i = 0; i < 2; i++) {
         try {
           const audio = new Audio();
+          audio.crossOrigin = "anonymous";
           audio.preload = "auto";
           audio.src = url;
           pool.push(audio);
@@ -194,25 +237,8 @@ if (typeof window !== "undefined") {
       audioPool.set(key, pool);
       poolIndex.set(key, 0);
 
-      // Also pre-fetch and decode AudioBuffer for Web Audio instant playback
-      fetch(url)
-        .then((res) => {
-          if (!res.ok) return null;
-          return res.arrayBuffer();
-        })
-        .then((arrayBuffer) => {
-          if (!arrayBuffer) return;
-          const ctx = getOrCreateAudioContext();
-          if (ctx) {
-            ctx
-              .decodeAudioData(arrayBuffer)
-              .then((decodedBuffer) => {
-                audioBufferCache.set(key, decodedBuffer);
-              })
-              .catch(() => {});
-          }
-        })
-        .catch(() => {});
+      // Web Audio Buffer prefetch
+      loadSoundBuffer(key, url).catch(() => {});
     }
   });
 }
@@ -224,6 +250,7 @@ const getMusicElement = (key: string): HTMLAudioElement | null => {
 
   try {
     const audio = new Audio();
+    audio.crossOrigin = "anonymous";
     audio.preload = "auto";
     audio.src = url;
     audio.loop = true;
@@ -235,36 +262,36 @@ const getMusicElement = (key: string): HTMLAudioElement | null => {
   }
 };
 
-export function useSound() {
-  const [currentMusic, setCurrentMusic] = useState<string | null>(
-    activeMusicKey
-  );
+/**
+ * Direct zero-latency sound play function.
+ * Can be called from any component, hook, or event handler.
+ */
+export function playSound(soundKey: SoundKey, volume = 0.65) {
+  if (!soundKey) return;
+  const keyStr = String(soundKey);
+  const effectiveKey = (SOUNDS as any)[keyStr] ? keyStr : "nav_switch";
+  const url = (SOUNDS as any)[effectiveKey];
+  if (!url) return;
 
-  const play = useCallback((soundKey: SoundKey) => {
-    if (!soundKey) return;
-    const keyStr = String(soundKey);
-    const effectiveKey = (SOUNDS as any)[keyStr] ? keyStr : "nav_switch";
-    const url = (SOUNDS as any)[effectiveKey];
-    if (!url) return;
+  // Ultra-fast debounce (20ms) to prevent accidental double-triggers from simultaneous touch/click
+  const now = Date.now();
+  const lastTime = lastPlayTimestamps.get(effectiveKey) || 0;
+  if (now - lastTime < 20) return;
+  lastPlayTimestamps.set(effectiveKey, now);
 
-    // Fast debounce (25ms) to prevent accidental duplicate triggers from touch + click events
-    const now = Date.now();
-    const lastTime = lastPlayTimestamps.get(effectiveKey) || 0;
-    if (now - lastTime < 25) return;
-    lastPlayTimestamps.set(effectiveKey, now);
-
-    try {
-      const ctx = getOrCreateAudioContext();
-      if (ctx && ctx.state === "suspended") {
+  try {
+    const ctx = getOrCreateAudioContext();
+    if (ctx) {
+      if (ctx.state === "suspended") {
         ctx.resume().catch(() => {});
       }
 
-      // Method 1: Web Audio Buffer (0ms hardware-accelerated latency)
+      // Method 1: Web Audio Buffer (True 0.00ms hardware latency)
       const buffer = audioBufferCache.get(effectiveKey);
-      if (ctx && ctx.state === "running" && buffer) {
+      if (buffer) {
         const source = ctx.createBufferSource();
         const gainNode = ctx.createGain();
-        gainNode.gain.setValueAtTime(0.55, ctx.currentTime);
+        gainNode.gain.setValueAtTime(volume, ctx.currentTime);
         source.buffer = buffer;
         source.connect(gainNode);
         gainNode.connect(ctx.destination);
@@ -272,43 +299,52 @@ export function useSound() {
         return;
       }
 
-      // Method 2: High-speed HTML5 Audio Pool (Direct Cloudinary Audio)
-      const pool = audioPool.get(effectiveKey);
-      if (pool && pool.length > 0) {
-        const currentIndex = poolIndex.get(effectiveKey) || 0;
-        const nextIndex = (currentIndex + 1) % pool.length;
-        poolIndex.set(effectiveKey, nextIndex);
+      // If buffer is loading, initiate fetch and proceed to fallback
+      loadSoundBuffer(effectiveKey, url).catch(() => {});
+    }
 
-        const audioElement = pool[currentIndex];
-        if (audioElement) {
+    // Method 2: HTML5 Audio Pool (Direct Cloudinary Audio)
+    const pool = audioPool.get(effectiveKey);
+    if (pool && pool.length > 0) {
+      const currentIndex = poolIndex.get(effectiveKey) || 0;
+      const nextIndex = (currentIndex + 1) % pool.length;
+      poolIndex.set(effectiveKey, nextIndex);
+
+      const audioElement = pool[currentIndex];
+      if (audioElement) {
+        try {
           audioElement.currentTime = 0;
-          audioElement.volume = 0.55;
+          audioElement.volume = volume;
           const playPromise = audioElement.play();
           if (playPromise !== undefined) {
-            playPromise.catch((err) => {
-              if (
-                err?.name !== "AbortError" &&
-                !String(err?.message || "").includes("interrupted")
-              ) {
-                // Ignore benign browser autoplay restrictions before user gesture
-              }
-            });
+            playPromise.catch(() => {});
           }
           return;
-        }
+        } catch {}
       }
-
-      // Method 3: Direct fallback on Cloudinary URL
-      const fallbackAudio = new Audio(url);
-      fallbackAudio.volume = 0.55;
-      fallbackAudio.play().catch(() => {});
-    } catch (err) {
-      // Audio execution guard
     }
+
+    // Method 3: Direct fallback on Cloudinary URL
+    const fallbackAudio = new Audio(url);
+    fallbackAudio.crossOrigin = "anonymous";
+    fallbackAudio.volume = volume;
+    fallbackAudio.play().catch(() => {});
+  } catch (err) {
+    // Audio execution guard
+  }
+}
+
+export function useSound() {
+  const [currentMusic, setCurrentMusic] = useState<string | null>(
+    activeMusicKey
+  );
+
+  const play = useCallback((soundKey: SoundKey, volume = 0.65) => {
+    playSound(soundKey, volume);
   }, []);
 
   const playButtonClick = useCallback(() => play("nav_switch"), [play]);
-  const playSectionSwitch = useCallback(() => play("nav_switch"), [play]);
+  const playSectionSwitch = useCallback(() => play("header_switch"), [play]);
   const playShopPurchase = useCallback(() => play("coin"), [play]);
   const playChestClick = useCallback(() => play("chest_click"), [play]);
   const playChestLand = useCallback(() => play("chest_land"), [play]);
@@ -383,3 +419,4 @@ export function useSound() {
     currentMusic,
   };
 }
+

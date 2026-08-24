@@ -211,13 +211,35 @@ export function LeaderboardScreen({
   onClaimRankReward: (rank: number, coins: number) => void;
 }) {
   const currentRank = useMemo(() => {
-    return leaderboard.findIndex(l => l.uid === user?.uid) + 1;
-  }, [leaderboard, user]);
+    const userPts = Math.max(
+      Number(stats.weeklyPoints || 0),
+      Number(stats.weeklyXP || 0),
+      Number(stats.totalPoints || 0),
+      Number(stats.xp || 0)
+    );
+    if (userPts <= 0) return 0;
+    const idx = leaderboard.findIndex(l => l.uid === user?.uid);
+    return idx !== -1 ? idx + 1 : 0;
+  }, [leaderboard, user, stats]);
 
   const userRank = currentRank;
   const { play } = useSound();
 
-  const [displayList, setDisplayList] = useState<LeaderboardEntry[]>(() => leaderboard);
+  const [displayList, setDisplayList] = useState<LeaderboardEntry[]>(() => {
+    return (leaderboard || []).filter((item) => {
+      if (!item || !item.uid) return false;
+      if (item.uid.startsWith("bot-")) return true;
+      if ((item as any).deleted || (item as any).isDeleted || (item as any).is_deleted || (item as any).status === "deleted") return false;
+      const pts = Math.max(
+        Number(item.weeklyPoints || 0),
+        Number((item as any).weeklyXP || 0),
+        Number(item.totalPoints || 0),
+        Number((item as any).points || 0),
+        Number((item as any).xp || 0)
+      );
+      return pts > 0;
+    });
+  });
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [isAnimatingRank, setIsAnimatingRank] = useState<boolean>(false);
   const [showCelebrationSpot, setShowCelebrationSpot] = useState<boolean>(false);
@@ -310,8 +332,15 @@ export function LeaderboardScreen({
     const sanitizedLeaderboard = (leaderboard || []).filter((item) => {
       if (!item || !item.uid) return false;
       if (item.uid.startsWith("bot-")) return true;
-      if ((item as any).deleted || (item as any).isDeleted) return false;
-      return true;
+      if ((item as any).deleted || (item as any).isDeleted || (item as any).is_deleted || (item as any).status === "deleted") return false;
+      const pts = Math.max(
+        Number(item.weeklyPoints || 0),
+        Number((item as any).weeklyXP || 0),
+        Number(item.totalPoints || 0),
+        Number((item as any).points || 0),
+        Number((item as any).xp || 0)
+      );
+      return pts > 0;
     }).map((item) => ({
       ...item,
       displayName: item.displayName || (item.uid.startsWith("bot-") ? "AI_Rival" : (item.uid === user?.uid ? (settings.displayName || user?.displayName || "You") : `Champion_${item.uid.slice(0, 4)}`))
@@ -353,10 +382,10 @@ export function LeaderboardScreen({
             // Step 2: Wait 600ms of squash preparation, then shoot up!
             const shootTimer = setTimeout(() => {
               setClimbPhase('shooting');
-              setDisplayList(leaderboard); // Update list order to trigger layout transition!
+              setDisplayList(sanitizedLeaderboard); // Update list order to trigger layout transition!
               vibrate([20, 30, 20, 30, 20]); // Speed-dash rapid haptic vibrations
               
-              if (settings.soundEnabled) {
+              if (settings?.soundEnabled !== false) {
                 play('header_switch'); // Whoosh sound!
               }
               
@@ -371,7 +400,7 @@ export function LeaderboardScreen({
                 setShowCelebrationSpot(true);
                 vibrate(VIBRATION_PATTERNS.HEAVY || 40); // Thump/impact vibration!
                 
-                if (settings.soundEnabled) {
+                if (settings?.soundEnabled !== false) {
                   play('chest_land'); // Slam/impact sound!
                 }
                 
@@ -383,7 +412,7 @@ export function LeaderboardScreen({
                   localStorage.removeItem("nexora_scrolling_to_user_rank"); // Clean up both
                   vibrate(VIBRATION_PATTERNS.TROPHY || [40, 60, 40, 60, 40]);
                   
-                  if (settings.soundEnabled) {
+                  if (settings?.soundEnabled !== false) {
                     play('trophy1'); // Beautiful reward chime!
                   }
                   
@@ -413,7 +442,7 @@ export function LeaderboardScreen({
     } else if (wasGlowActive) {
       // User clicked the glowing tab. Smoothly scroll to user position, wait, then trigger a gorgeous highlight bounce!
       localStorage.removeItem("nexora_scrolling_to_user_rank");
-      setDisplayList(leaderboard);
+      setDisplayList(sanitizedLeaderboard);
       
       // First, scroll to user smoothly
       scrollToUser(false);
@@ -427,7 +456,7 @@ export function LeaderboardScreen({
         const bounceShootTimer = setTimeout(() => {
           setClimbPhase('shooting');
           vibrate([25, 45, 25]); // Playful bounce vibrations
-          if (settings.soundEnabled) {
+          if (settings?.soundEnabled !== false) {
             play('header_switch'); // Whoosh sound
           }
           
@@ -436,7 +465,7 @@ export function LeaderboardScreen({
             setClimbPhase('impact');
             setShowCelebrationSpot(true);
             vibrate(VIBRATION_PATTERNS.HEAVY || 40); // Impact vibration
-            if (settings.soundEnabled) {
+            if (settings?.soundEnabled !== false) {
               play('chest_land'); // Slam sound
             }
             
@@ -444,7 +473,7 @@ export function LeaderboardScreen({
             const bounceCelebrateTimer = setTimeout(() => {
               setClimbPhase('celebrate');
               vibrate(VIBRATION_PATTERNS.SUCCESS || [20, 50, 20]); // Happy victory vibration
-              if (settings.soundEnabled) {
+              if (settings?.soundEnabled !== false) {
                 play('continue'); // Light success chime
               }
               
@@ -471,7 +500,7 @@ export function LeaderboardScreen({
       };
     }
 
-    setDisplayList(leaderboard);
+    setDisplayList(sanitizedLeaderboard);
   }, [leaderboard, user, currentRank, settings.soundEnabled, play]);
 
   const currentLeague = settings.league || 'Bronze';

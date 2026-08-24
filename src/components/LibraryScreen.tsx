@@ -13,6 +13,7 @@ import { AnimatedVikingHat } from './AnimatedVikingHat';
 import { AnimatedDetectiveKit } from './AnimatedDetectiveKit';
 import { AnimatedWizardHat } from './AnimatedWizardHat';
 import { AnimatedRoyalCrown } from './AnimatedRoyalCrown';
+import { LivingMascot } from './LivingMascot';
 
 interface LibraryScreenProps {
   items: LibraryItem[];
@@ -150,7 +151,13 @@ export function LibraryScreen({
                       const isMusic = item.type === 'music';
                       const isSkin = item.type === 'skin';
                       const isSoundPack = item.type === 'sound-pack';
-                      const active = item.activated;
+                      const targetSkinId = item.itemId || item.id;
+                      const isLivingMascot = ['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(targetSkinId);
+                      const active = isLivingMascot
+                        ? ((settings.activeSkin || 'blue-slim') === targetSkinId)
+                        : (isSkin 
+                            ? (settings.activeHat === targetSkinId.replace('skin-', '').replace('pro-skin-', '') || item.activated)
+                            : item.activated);
 
                       return (
                         <div 
@@ -175,7 +182,16 @@ export function LibraryScreen({
                                   ? 'bg-[#FAF7F2] border-[#69C496]/40 text-[#4F3F34]' 
                                   : 'bg-white border-[#E9E4D4]/50'
                               }`}>
-                                {item.itemId === 'skin-cool' ? (
+                                {isLivingMascot ? (
+                                  <div className="w-8 h-8 relative flex items-center justify-center pointer-events-none">
+                                    <LivingMascot 
+                                      mascotId={targetSkinId as any} 
+                                      interactive={false} 
+                                      showSpeech={false} 
+                                      className="w-full h-full" 
+                                    />
+                                  </div>
+                                ) : item.itemId === 'skin-cool' ? (
                                   <AnimatedSunglasses className="w-8 h-5" animate={false} />
                                 ) : item.itemId === 'skin-ninja' ? (
                                   <AnimatedNinjaMask className="w-7 h-7" animate={false} />
@@ -201,7 +217,7 @@ export function LibraryScreen({
                               <h4 className="font-extrabold text-[#4F3F34] text-xs sm:text-sm uppercase tracking-wide truncate">{item.name}</h4>
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                 <span className="text-[7.5px] font-black text-[#4F3F34]/50 bg-[#FAF7F2] border border-[#E9E4D4]/45 px-1.5 py-0.5 rounded uppercase">
-                                  {item.type}
+                                  {isLivingMascot ? 'Mascot' : item.type}
                                 </span>
                                 {isMusic && (
                                   <span className={`text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded flex items-center gap-1 ${
@@ -215,7 +231,7 @@ export function LibraryScreen({
                                 )}
                                 {isSkin && active && (
                                   <span className="text-[7.5px] font-black text-amber-600 bg-amber-50 px-1 py-0.5 rounded uppercase">
-                                    Equipped 👑
+                                    {isLivingMascot ? 'Mascot Active 👑' : 'Equipped 👑'}
                                   </span>
                                 )}
                                 {isSoundPack && active && (

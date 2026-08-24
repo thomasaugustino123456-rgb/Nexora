@@ -8,7 +8,8 @@ import { SocialCircle, Screen } from '../types';
 import { NexusLinkRenderer } from './NexusLinkRenderer';
 import { MascotV2 } from './MascotV2';
 import { db, auth } from '../firebase';
-import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { safeSetDoc, cleanPayload } from '../lib/firestoreUtils';
 
 const Typewriter = ({ text }: { text: string }) => {
   const [displayedText, setDisplayedText] = useState("");
@@ -85,11 +86,11 @@ export function NotebookScreen({
         gratitudeEntries: newEntries,
         updatedAt: serverTimestamp(),
       };
-      setDoc(noteDocRef, payload, { merge: true }).catch((err) => {
+      safeSetDoc(noteDocRef, payload, { merge: true }).catch((err) => {
         console.error("Failed to write to notebooks collection", err);
       });
-      setDoc(userRef, { gratitudeEntries: newEntries, stats: { ...stats, gratitudeEntries: newEntries } }, { merge: true }).catch(() => {});
-      setDoc(statsSubdocRef, { gratitudeEntries: newEntries }, { merge: true }).catch(() => {});
+      safeSetDoc(userRef, { gratitudeEntries: newEntries, stats: { ...stats, gratitudeEntries: newEntries } }, { merge: true }).catch(() => {});
+      safeSetDoc(statsSubdocRef, { gratitudeEntries: newEntries }, { merge: true }).catch(() => {});
     }
 
     setActiveNote(newEntry);
@@ -270,15 +271,20 @@ export function NotebookScreen({
                       const user = auth.currentUser;
                       if (user) {
                         const noteDocRef = doc(db, "notebooks", user.uid);
-                        setDoc(noteDocRef, {
+                        const userRef = doc(db, "users", user.uid);
+                        const statsSubdocRef = doc(db, "users", user.uid, "stats", "main");
+                        safeSetDoc(noteDocRef, {
                           userId: user.uid,
                           userName: user.displayName || "Champion",
                           userEmail: user.email || `${user.uid}@nexora.app`,
                           notes: newEntries,
+                          gratitudeEntries: newEntries,
                           updatedAt: serverTimestamp(),
                         }, { merge: true }).catch((err) => {
                           console.error("Failed to update notes in notebooks collection after deletion", err);
                         });
+                        safeSetDoc(userRef, { gratitudeEntries: newEntries }, { merge: true }).catch(() => {});
+                        safeSetDoc(statsSubdocRef, { gratitudeEntries: newEntries }, { merge: true }).catch(() => {});
                       }
 
                       setIsCreating(false);

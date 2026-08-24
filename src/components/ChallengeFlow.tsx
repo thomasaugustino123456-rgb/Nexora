@@ -347,7 +347,7 @@ export const PushupsStep = React.memo(({ goal, onDone, onSkip, activeSkin = 'non
             <button 
               onClick={() => {
                 vibrate(VIBRATION_PATTERNS.SUCCESS);
-                if (settings.soundEnabled) play('challenge_unlock');
+                if (settings?.soundEnabled !== false) play('challenge_unlock');
                 onDone();
               }} 
               className="btn-primary w-full flex items-center justify-center gap-2 font-black py-4 text-base shadow-xl"
@@ -358,7 +358,7 @@ export const PushupsStep = React.memo(({ goal, onDone, onSkip, activeSkin = 'non
           <button 
             onClick={() => { 
               vibrate(VIBRATION_PATTERNS.CLICK); 
-              if (settings.soundEnabled) play('losing'); 
+              if (settings?.soundEnabled !== false) play('losing'); 
               onSkip();
             }} 
             className="btn-secondary w-full py-4 text-base pointer-events-auto border-2 border-red-200 text-red-500 hover:bg-red-50/50"
@@ -400,7 +400,7 @@ export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUp
           {!isFinished ? (
             <button 
               onClick={() => {
-                if (settings.soundEnabled) play('water');
+                if (settings?.soundEnabled !== false) play('water');
                 
                 vibrate(VIBRATION_PATTERNS.CLICK);
                 const newProgress = localProgress + 1;
@@ -408,7 +408,7 @@ export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUp
                 onUpdate(newProgress);
                 
                 if (newProgress >= goal) {
-                   if (settings.soundEnabled) play('challenge_unlock');
+                   if (settings?.soundEnabled !== false) play('challenge_unlock');
                    vibrate(VIBRATION_PATTERNS.SUCCESS);
                    if (onCompleteWaterChallenge) {
                      onCompleteWaterChallenge();
@@ -423,7 +423,7 @@ export const WaterStep = React.memo(({ goal, progress: initialProgress = 0, onUp
           ) : (
             <button 
               onClick={() => {
-                if (settings.soundEnabled) play('continue');
+                if (settings?.soundEnabled !== false) play('continue');
                 onContinue();
               }}
               className="btn-primary w-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center gap-2 py-4 text-lg"
@@ -457,7 +457,7 @@ export const BreathingStep = React.memo(({ onDone, activeSkin = 'none', settings
               setCycles((prevCycles) => {
                 const nextCycles = prevCycles + 1;
                 if (nextCycles >= targetCycles) {
-                  if (settings.soundEnabled) {
+                  if (settings?.soundEnabled !== false) {
                     play('challenge_unlock');
                   }
                   vibrate(VIBRATION_PATTERNS.SUCCESS);
@@ -863,7 +863,7 @@ export const DrawingStep = React.memo(({ onFinish, onSave, settings, activeSkin 
             <button 
               onClick={() => { 
                 vibrate(VIBRATION_PATTERNS.SUCCESS); 
-                if (settings.soundEnabled) play('challenge_unlock');
+                if (settings?.soundEnabled !== false) play('challenge_unlock');
                 onFinish(saveDrawing());
               }} 
               disabled={!hasDrawn} 
@@ -883,7 +883,7 @@ export const CompletionStep = React.memo(({ onFinish, streak, points, xp, coins,
   useEffect(() => {
     if (showTrophy) {
       vibrate(VIBRATION_PATTERNS.TROPHY);
-      if (settings.soundEnabled) {
+      if (settings?.soundEnabled !== false) {
         playTrophySound('golden');
       }
     }
@@ -972,7 +972,7 @@ export const CompletionStep = React.memo(({ onFinish, streak, points, xp, coins,
       <button 
         onClick={() => {
           vibrate(VIBRATION_PATTERNS.CLICK);
-          if (settings.soundEnabled) play('challenge_unlock');
+          if (settings?.soundEnabled !== false) play('challenge_unlock');
           onFinish();
         }} 
         className="btn-primary w-full py-5 text-lg shadow-2xl shadow-blue-500/20 z-10"
@@ -1003,11 +1003,11 @@ export const FootballStep = React.memo(({ onFinish, activeSkin = 'none', setting
   const [hasPlayedFinishSound, setHasPlayedFinishSound] = useState(false);
 
   useEffect(() => {
-    if (score >= targetScore && !hasPlayedFinishSound && settings.soundEnabled) {
+    if (score >= targetScore && !hasPlayedFinishSound && settings?.soundEnabled !== false) {
       play('challenge_unlock');
       setHasPlayedFinishSound(true);
     }
-  }, [score, hasPlayedFinishSound, settings.soundEnabled, play, targetScore]);
+  }, [score, hasPlayedFinishSound, settings?.soundEnabled, play, targetScore]);
 
   const getCoord = (e: any) => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -1098,7 +1098,7 @@ export const FootballStep = React.memo(({ onFinish, activeSkin = 'none', setting
             setScoredBalls(prev => [...prev, { x: targetX, y: targetY }]);
           } else {
             vibrate(15);
-            if ((ballsLeft > 1 || score >= targetScore - 1) && settings.soundEnabled) {
+            if ((ballsLeft > 1 || score >= targetScore - 1) && settings?.soundEnabled !== false) {
                play('losing');
             }
           }
@@ -1111,10 +1111,10 @@ export const FootballStep = React.memo(({ onFinish, activeSkin = 'none', setting
     };
 
   useEffect(() => {
-    if (ballsLeft === 0 && !isFlying && score < targetScore && settings.soundEnabled) {
+    if (ballsLeft === 0 && !isFlying && score < targetScore && settings?.soundEnabled !== false) {
       play('losing');
     }
-  }, [ballsLeft, isFlying, score, play, settings.soundEnabled, targetScore]);
+  }, [ballsLeft, isFlying, score, play, settings?.soundEnabled, targetScore]);
 
   const reset = () => {
     setBallPos({ x: 400, y: 520 });
@@ -1303,11 +1303,11 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
   const bubbleTarget = settings.commitmentLevel === 'casual' ? 10 : settings.commitmentLevel === 'intense' ? 35 : 20;
 
   useEffect(() => {
-    if (poppedCount >= bubbleTarget && !hasPlayedFinishSound && settings.soundEnabled) {
+    if (poppedCount >= bubbleTarget && !hasPlayedFinishSound && settings?.soundEnabled !== false) {
       play('challenge_unlock');
       setHasPlayedFinishSound(true);
     }
-  }, [poppedCount, hasPlayedFinishSound, settings.soundEnabled, play, bubbleTarget]);
+  }, [poppedCount, hasPlayedFinishSound, settings?.soundEnabled, play, bubbleTarget]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1334,7 +1334,7 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
 
   const popBubble = (id: number) => {
     vibrate(VIBRATION_PATTERNS.CLICK);
-    if (settings.soundEnabled) {
+    if (settings?.soundEnabled !== false) {
       play('water');
     }
     setBubbles(prev => prev.filter(b => b.id !== id));
@@ -1344,7 +1344,7 @@ export const BubbleStep = React.memo(({ onFinish, activeSkin = 'none', settings,
   useEffect(() => {
     if (poppedCount >= bubbleTarget) {
       vibrate(VIBRATION_PATTERNS.SUCCESS);
-      if (settings.soundEnabled) {
+      if (settings?.soundEnabled !== false) {
         play('challenge_unlock');
       }
     }
@@ -1442,11 +1442,11 @@ export const MemoryStep = React.memo(({ onComplete, activeSkin = 'none', setting
   }, [settings.commitmentLevel]);
 
   useEffect(() => {
-    if (cards.length > 0 && cards.every(c => c.matched) && !hasPlayedFinishSound && settings.soundEnabled) {
+    if (cards.length > 0 && cards.every(c => c.matched) && !hasPlayedFinishSound && settings?.soundEnabled !== false) {
       play('challenge_unlock');
       setHasPlayedFinishSound(true);
     }
-  }, [cards, hasPlayedFinishSound, settings.soundEnabled, play]);
+  }, [cards, hasPlayedFinishSound, settings?.soundEnabled, play]);
 
   useEffect(() => {
     const initialCards = [...emojis, ...emojis]
@@ -1520,7 +1520,7 @@ export const GratitudeStep = React.memo(({ onComplete, onSave, showToast, settin
   const handleSubmit = () => {
     if (text.trim().length < 3) return;
     vibrate(VIBRATION_PATTERNS.SUCCESS);
-    if (settings.soundEnabled) play('challenge_unlock');
+    if (settings?.soundEnabled !== false) play('challenge_unlock');
     setSubmitted(true);
   };
 
@@ -1632,7 +1632,7 @@ export const ReactionStep = React.memo(({ onComplete, activeSkin = 'none', setti
       setState('clicked');
       vibrate(VIBRATION_PATTERNS.SUCCESS);
       setTimeout(() => {
-        if (settings.soundEnabled) play('challenge_unlock');
+        if (settings?.soundEnabled !== false) play('challenge_unlock');
         setState('finished');
       }, 50);
     }
@@ -1727,11 +1727,11 @@ export const MeditationStep = React.memo(({ onDone, activeSkin = 'none', setting
   }, [duration]);
 
   useEffect(() => {
-    if (isFinished && !hasPlayedMascotSound && settings.soundEnabled) {
+    if (isFinished && !hasPlayedMascotSound && settings?.soundEnabled !== false) {
       play('challenge_unlock');
       setHasPlayedMascotSound(true);
     }
-  }, [isFinished, hasPlayedMascotSound, settings.soundEnabled, play]);
+  }, [isFinished, hasPlayedMascotSound, settings?.soundEnabled, play]);
 
   useEffect(() => {
     let interval: any;
@@ -1852,7 +1852,7 @@ export const WritingStep = React.memo(({ onDone, activeSkin = 'none', settings, 
           <button 
             onClick={() => {
               vibrate(VIBRATION_PATTERNS.SUCCESS);
-              if (settings.soundEnabled) play('challenge_unlock');
+              if (settings?.soundEnabled !== false) play('challenge_unlock');
               onDone();
             }} 
             disabled={text.trim().length < minLength}

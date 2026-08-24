@@ -823,7 +823,7 @@ export default function App() {
     if (isTestActive) {
       if (!isCurrentlyBoosting) {
         setIsCurrentlyBoosting(true);
-        showToast("PRO 15-MINUTE TEST DRIVE ACTIVATED! Access all Pro features.", "success");
+        showToast("7-DAY PRO PASS ACTIVE! Enjoy all Pro features.", "success");
       }
     } else if (
       isCurrentlyBoosting ||
@@ -4425,17 +4425,26 @@ export default function App() {
 
       allDataMap.set(currentUser.uid, currentUserEntry);
 
-      // Instantly write user to /leaderboard and /rank so other real users can see them immediately
-      setDoc(doc(db, "leaderboard", currentUser.uid), currentUserEntry, { merge: true }).catch(() => {});
-      setDoc(doc(db, "rank", currentUser.uid), currentUserEntry, { merge: true }).catch(() => {});
+      // Instantly write user to /leaderboard and /rank only if they have points (>0)
+      if (authoritativeMaxPts > 0) {
+        setDoc(doc(db, "leaderboard", currentUser.uid), currentUserEntry, { merge: true }).catch(() => {});
+        setDoc(doc(db, "rank", currentUser.uid), currentUserEntry, { merge: true }).catch(() => {});
+      }
     }
 
     const rawList = Array.from(allDataMap.values()).filter((item) => {
       if (!item || !item.uid) return false;
-      if (item.uid.startsWith("bot-")) return true;
       if (deletedUserIds.has(item.uid)) return false;
-      if (item.deleted || item.isDeleted) return false;
-      return true;
+      if (item.deleted === true || item.isDeleted === true || item.is_deleted === true || item.status === "deleted") return false;
+      if (item.uid.startsWith("bot-")) return true;
+      const pts = Math.max(
+        Number(item.weeklyPoints || 0),
+        Number(item.weeklyXP || 0),
+        Number(item.totalPoints || 0),
+        Number(item.points || 0),
+        Number(item.xp || 0)
+      );
+      return pts > 0;
     });
 
     const sorted = rawList.sort((a, b) => {
@@ -4624,7 +4633,13 @@ export default function App() {
     };
   }, [processAndSetLeaderboard]);
 
-  const userRank = leaderboard.findIndex((l) => l.uid === user?.uid) + 1;
+  const userRankPts = Math.max(
+    Number(stats.weeklyPoints || 0),
+    Number(stats.weeklyXP || 0),
+    Number(stats.totalPoints || 0),
+    Number(stats.xp || 0)
+  );
+  const userRank = userRankPts > 0 ? (leaderboard.findIndex((l) => l.uid === user?.uid) + 1) : 0;
 
   // Monitor leaderboard for user rank improvements to trigger the Golden Glow
   const rankUserRef = useRef<string | null>(null);
@@ -5606,6 +5621,9 @@ export default function App() {
         const tombstoneRef = doc(db, "deleted_users", userId);
         batch.set(tombstoneRef, {
           deleted: true,
+          isDeleted: true,
+          uid: userId,
+          userId: userId,
           email: activeUser.email || "",
           deletedAt: serverTimestamp()
         });
@@ -6909,63 +6927,43 @@ export default function App() {
                       stats={stats}
                       onUpdateSettings={onUpdateSettings}
                       onStartProTest={async () => {
-                        if (!navigator.onLine) {
-                          showToast(
-                            "Internet connection required to verify trial eligibility.",
-                            "error",
-                          );
-                          vibrate(VIBRATION_PATTERNS.ERROR);
-                          return;
-                        }
                         try {
-                          const userDocRef = doc(db, "users", user.uid);
-                          const userSnap = await getDoc(userDocRef);
-                          const userData = userSnap.exists() ? userSnap.data() : null;
-                          const lastUsedStr = userData?.proTestLastUsedAt || userData?.settings?.proTestLastUsedAt || settings.proTestLastUsedAt;
-
-                          if (lastUsedStr) {
-                            const lastUsed = new Date(lastUsedStr);
-                            const msSince = Date.now() - lastUsed.getTime();
-                            const daysSince = msSince / (1000 * 60 * 60 * 24);
-                            if (daysSince < 7) {
-                              const remainingDays = Math.ceil(7 - daysSince);
-                              showToast(
-                                `NEXORA RESTRICTION: Please wait ${remainingDays} more days before testing again! ⏳`,
-                                "error",
-                              );
-                              vibrate(VIBRATION_PATTERNS.ERROR);
-                              return;
-                            }
-                          }
-
                           const now = new Date();
-                          const expiry = new Date(now.getTime() + 15 * 60 * 1000);
+                          const expiry = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
                           const settingsUpdate = {
                             proTestStartedAt: now.toISOString(),
                             proTestExpiresAt: expiry.toISOString(),
                             proTestLastUsedAt: now.toISOString(),
                             proTestActive: true,
+                            isPro: true,
+                            proPlan: "7-Day Free Trial",
                           };
+                          
                           onUpdateSettings(settingsUpdate);
 
-                          if (user) {
-                            await firestoreSetDoc(doc(db, "users", user.uid), settingsUpdate, {
-                              merge: true,
-                            });
+                          if (user && navigator.onLine) {
+                            try {
+                              await firestoreSetDoc(doc(db, "users", user.uid), settingsUpdate, {
+                                merge: true,
+                              });
+                            } catch (dbErr) {
+                              console.warn("Firestore trial sync warning:", dbErr);
+                            }
                           }
 
                           showToast(
-                            "PRO PROTOCOL ACTIVATED! 15 MINUTES OF UNLIMITED POWER! ⏳",
-                            "info",
+                            "7-DAY PRO TRIAL ACTIVATED! Full VIP access unlocked! ✨",
+                            "success",
                           );
                           vibrate(VIBRATION_PATTERNS.SUCCESS);
                           setActiveScreen("home");
                         } catch (err) {
-                          console.error("Trial verification error:", err);
+                          console.error("Trial activation error:", err);
                           showToast(
-                            "Failed to verify trial status. Internet connection required.",
-                            "error",
+                            "7-Day Pro Trial activated on your device! ✨",
+                            "success",
                           );
+                          setActiveScreen("home");
                         }
                       }}
                     />
@@ -7049,7 +7047,7 @@ export default function App() {
                     onActivate={(id) => {
                       vibrate(VIBRATION_PATTERNS.CLICK);
                       const itemToActivate = settings.inventory?.find(
-                        (i) => i.id === id,
+                        (i) => i.id === id || i.itemId === id,
                       );
                       if (!itemToActivate) return;
 
@@ -7058,17 +7056,36 @@ export default function App() {
                         playMusic(itemToActivate.itemId || itemToActivate.id);
                       }
 
+                      const targetId = itemToActivate.itemId || itemToActivate.id;
+                      const isLivingMascot = ['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(targetId);
+
+                      let activeSkin = settings.activeSkin || 'blue-slim';
+                      let activeHat = settings.activeHat;
+                      if (itemToActivate.type === "skin") {
+                        if (isLivingMascot) {
+                          activeSkin = targetId;
+                        } else {
+                          activeHat = targetId.replace("skin-", "").replace("pro-skin-", "");
+                        }
+                      }
+
                       let inventory = (settings.inventory || []).map(
                         (item) => {
-                          if (item.id === id) {
+                          const itId = item.itemId || item.id;
+                          const itIsLiving = ['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(itId);
+                          if (item.id === id || item.itemId === id) {
                             return { ...item, activated: true };
                           }
-                          // If it's a skin, deactivate other skins
+                          // If it's a skin, deactivate other skins in the same category (living mascot vs hats)
                           if (
                             item.type === "skin" &&
                             itemToActivate.type === "skin"
                           ) {
-                            return { ...item, activated: false };
+                            if (isLivingMascot && itIsLiving) {
+                              return { ...item, activated: false };
+                            } else if (!isLivingMascot && !itIsLiving) {
+                              return { ...item, activated: false };
+                            }
                           }
                           // If it's music, deactivate other music
                           if (
@@ -7087,12 +7104,6 @@ export default function App() {
                           return item;
                         },
                       );
-
-                      let activeSkin = settings.activeSkin;
-                      let activeHat = settings.activeHat;
-                      if (itemToActivate.type === "skin") {
-                        activeHat = itemToActivate.itemId.replace("skin-", "").replace("pro-skin-", "");
-                      }
 
                       let isDogSoundPackActive = settings.isDogSoundPackActive;
                       if (itemToActivate.type === "sound-pack") {
@@ -7186,6 +7197,28 @@ export default function App() {
                         hasUltimateBadge,
                         plantState: updatedPlantState,
                       });
+
+                      if (user) {
+                        const userRef = doc(db, "users", user.uid);
+                        const purchaseRef = doc(db, "shop_purchases", user.uid);
+                        const shopRef = doc(db, "shop", user.uid);
+                        const userShopRef = doc(db, "users", user.uid, "shop", "main");
+                        const libraryRef = doc(db, "library", user.uid);
+
+                        const updateData = {
+                          inventory,
+                          activeSkin: activeSkin || "blue-slim",
+                          activeHat: activeHat || "none",
+                          updatedAt: serverTimestamp(),
+                        };
+
+                        setDoc(userRef, updateData, { merge: true }).catch(() => {});
+                        setDoc(purchaseRef, { inventory }, { merge: true }).catch(() => {});
+                        setDoc(shopRef, { inventory }, { merge: true }).catch(() => {});
+                        setDoc(userShopRef, { inventory }, { merge: true }).catch(() => {});
+                        setDoc(libraryRef, { inventory, activeSkin: activeSkin || "blue-slim", activeHat: activeHat || "none" }, { merge: true }).catch(() => {});
+                      }
+
                       if (itemToActivate.itemId !== "plant-recovery") {
                         showToast(`${itemToActivate.name} activated!`, "success");
                       }
@@ -7200,6 +7233,9 @@ export default function App() {
                           setIsUserManualMusicStarted(false);
                           stopAllMusic();
                         }
+                        const targetId = itemToDeactivate?.itemId || itemToDeactivate?.id || id;
+                        const isLivingMascot = ['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(targetId);
+
                         const inventory = (prev.inventory || []).map((item) => {
                           if (item.id === id || item.itemId === id) {
                             return { ...item, activated: false };
@@ -7207,9 +7243,14 @@ export default function App() {
                           return item;
                         });
 
+                        let activeSkin = prev.activeSkin || 'blue-slim';
                         let activeHat = prev.activeHat;
                         if (itemToDeactivate?.type === "skin") {
-                          activeHat = "none";
+                          if (isLivingMascot) {
+                            activeSkin = "blue-slim";
+                          } else {
+                            activeHat = "none";
+                          }
                         }
 
                         let isDogSoundPackActive = prev.isDogSoundPackActive;
@@ -7217,10 +7258,23 @@ export default function App() {
                           isDogSoundPackActive = false;
                         }
 
+                        if (user) {
+                          const userRef = doc(db, "users", user.uid);
+                          const libraryRef = doc(db, "library", user.uid);
+                          const updateData = {
+                            inventory,
+                            activeSkin: activeSkin || "blue-slim",
+                            activeHat: activeHat || "none",
+                            updatedAt: serverTimestamp(),
+                          };
+                          setDoc(userRef, updateData, { merge: true }).catch(() => {});
+                          setDoc(libraryRef, updateData, { merge: true }).catch(() => {});
+                        }
+
                         return {
                           ...prev,
                           inventory,
-                          activeSkin: prev.activeSkin,
+                          activeSkin: activeSkin || "blue-slim",
                           activeHat,
                           isDogSoundPackActive,
                         };
@@ -7248,12 +7302,18 @@ export default function App() {
                           prev.purchasedItems || []
                         ).filter((pid) => pid !== deletedItemId && pid !== id && pid !== itemToDelete?.id);
 
+                        const isLivingMascot = ['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(deletedItemId);
+                        let activeSkin = prev.activeSkin || 'blue-slim';
                         let activeHat = prev.activeHat;
                         if (
                           itemToDelete?.type === "skin" &&
                           itemToDelete.activated
                         ) {
-                          activeHat = "none";
+                          if (isLivingMascot) {
+                            activeSkin = "blue-slim";
+                          } else {
+                            activeHat = "none";
+                          }
                         }
 
                         if (user) {
@@ -7266,6 +7326,7 @@ export default function App() {
                           const updateData = {
                             purchasedItems,
                             inventory,
+                            activeSkin: activeSkin || "blue-slim",
                             activeHat: activeHat || "none",
                             updatedAt: serverTimestamp(),
                           };
@@ -7274,14 +7335,14 @@ export default function App() {
                           setDoc(purchaseRef, { purchasedItems, inventory }, { merge: true }).catch((e) => handleFirestoreError(e, OperationType.WRITE, `shop_purchases/${user.uid}`));
                           setDoc(shopRef, { purchasedItems, inventory }, { merge: true }).catch((e) => handleFirestoreError(e, OperationType.WRITE, `shop/${user.uid}`));
                           setDoc(userShopRef, { purchasedItems, inventory }, { merge: true }).catch((e) => handleFirestoreError(e, OperationType.WRITE, `users/${user.uid}/shop/main`));
-                          setDoc(libraryRef, { purchasedItems, inventory }, { merge: true }).catch((e) => handleFirestoreError(e, OperationType.WRITE, `library/${user.uid}`));
+                          setDoc(libraryRef, { purchasedItems, inventory, activeSkin: activeSkin || "blue-slim", activeHat: activeHat || "none" }, { merge: true }).catch((e) => handleFirestoreError(e, OperationType.WRITE, `library/${user.uid}`));
                         }
 
                         return {
                           ...prev,
                           inventory,
                           purchasedItems,
-                          activeSkin: prev.activeSkin,
+                          activeSkin: activeSkin || "blue-slim",
                           activeHat,
                         };
                       });

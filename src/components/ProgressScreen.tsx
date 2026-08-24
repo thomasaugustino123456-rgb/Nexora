@@ -202,7 +202,7 @@ export function ProgressScreen({
             {[
               { label: 'Hyper Streak', value: isSyncing ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-amber-500" /> : (stats.streak || 0), sub: 'Daily Frequency', icon: <Flame className="text-amber-600 animate-pulse" />, bg: 'bg-amber-100/40' },
               { label: 'Neural Score', value: isSyncing ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-[#69C496]" /> : (stats.totalPoints || 0), sub: 'Lifetime Volts', icon: <Zap className="text-[#69C496]" />, bg: 'bg-emerald-100/40' },
-              { label: 'Nexus Rank', value: isSyncing ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-purple-600" /> : `#${userRank || '--'}`, sub: 'Global Standing', icon: <Star className="text-purple-600 animate-spin" style={{ animationDuration: '3s' }} />, bg: 'bg-purple-100/40' },
+              { label: 'Nexus Rank', value: isSyncing ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-purple-600" /> : (userRank && userRank > 0 ? `#${userRank}` : 'Unranked'), sub: 'Global Standing', icon: <Star className="text-purple-600 animate-spin" style={{ animationDuration: '3s' }} />, bg: 'bg-purple-100/40' },
               { label: 'Wallet', value: isSyncing ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-amber-500" /> : `${stats.coins || 0}N`, sub: 'Nexora Currency', icon: <Coins className="text-amber-500" />, bg: 'bg-amber-50' }
             ].map((stat, i) => (
               <div key={i} className="bg-white border border-[#E9E4D4] rounded-3xl p-6 flex flex-col items-center text-center group transition-all duration-300 hover:scale-[1.02] shadow-sm">
