@@ -33,8 +33,10 @@ import {
   Trash2,
   UserX,
   CheckCircle2,
-  Filter
+  Filter,
+  Mail
 } from "lucide-react";
+import { AdminGmailSupport } from "./AdminGmailSupport";
 import {
   collection,
   getDocs,
@@ -131,7 +133,8 @@ export interface CommunityReport {
 // 'tab_signals': signals & feedback messaging logs with read/unread tracking
 // 'tab_reports': community incident reports (post & comment reporting + bans)
 // 'tab_broadcast': broadcaster workspace
-type AdminSectionTab = "overview" | "tab_population" | "tab_cultivated" | "tab_arsenal" | "tab_signals" | "tab_reports" | "tab_broadcast";
+// 'tab_gmail': official support Gmail inbox viewer
+type AdminSectionTab = "overview" | "tab_population" | "tab_cultivated" | "tab_arsenal" | "tab_signals" | "tab_reports" | "tab_broadcast" | "tab_gmail";
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
   currentUserId,
@@ -892,6 +895,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           >
             📢 Broadcaster
           </button>
+          <button
+            onClick={() => setActiveTab("tab_gmail")}
+            className={`px-5 py-3 text-xs font-black uppercase tracking-wider rounded-2xl transition-all whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "tab_gmail"
+                ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                : "text-slate-600 hover:text-emerald-900 hover:bg-white/80"
+            }`}
+          >
+            <Mail size={14} className="text-red-500" />
+            <span>Support Gmail</span>
+          </button>
         </section>
 
         {/* Tab content views rendering */}
@@ -1645,6 +1659,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     )}
                   </button>
                 </div>
+              )}
+
+              {/* TAB 8: OFFICIAL SUPPORT GMAIL INBOX */}
+              {activeTab === "tab_gmail" && (
+                <AdminGmailSupport showToast={showToast} />
               )}
             </motion.div>
           )}

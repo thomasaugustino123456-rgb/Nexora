@@ -1287,6 +1287,16 @@ export function SettingsScreen({
                       >
                         TRANSMIT PAYLOAD TO HQ
                       </button>
+
+                      <div className="pt-2 text-center">
+                        <a 
+                          href="mailto:nexoraterm1234@gmail.com" 
+                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#4F3F34]/70 hover:text-[#4F3F34] transition-colors"
+                        >
+                          <Mail size={13} className="text-[#69C496]" />
+                          <span>Or email team directly: <span className="underline font-black text-[#4F3F34]">nexoraterm1234@gmail.com</span></span>
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>

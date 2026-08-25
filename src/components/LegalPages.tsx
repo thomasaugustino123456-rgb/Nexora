@@ -43,7 +43,7 @@ export function LegalPagesContainer({ onBack, initialTab = 'terms' }: LegalPageP
     },
     {
       q: "How can I delete my account or export my habit data?",
-      a: "You have complete ownership over your data. In the Settings tab, you can request an instant export of your habit logs or initiate a permanent account deletion request. You can also contact our support team at support@nexora.app.",
+      a: "You have complete ownership over your data. In the Settings tab, you can request an instant export of your habit logs or initiate a permanent account deletion request. You can also contact our support team at nexoraterm1234@gmail.com.",
       category: "Privacy"
     }
   ];
@@ -235,7 +235,7 @@ export function LegalPagesContainer({ onBack, initialTab = 'terms' }: LegalPageP
                 <section className="space-y-2">
                   <h2 className="text-xl font-bold text-slate-900">5. Contact Our Data Protection Officer</h2>
                   <p>
-                    If you have questions regarding our privacy architecture or wish to exercise your data rights, please email us directly at <a href="mailto:privacy@nexora.app" className="text-blue-600 font-bold hover:underline">privacy@nexora.app</a>.
+                    If you have questions regarding our privacy architecture or wish to exercise your data rights, please email us directly at <a href="mailto:nexoraterm1234@gmail.com" className="text-blue-600 font-bold hover:underline">nexoraterm1234@gmail.com</a>.
                   </p>
                 </section>
               </div>
@@ -390,10 +390,10 @@ export function LegalPagesContainer({ onBack, initialTab = 'terms' }: LegalPageP
 
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
                         <a 
-                          href="mailto:support@nexora.app" 
+                          href="mailto:nexoraterm1234@gmail.com" 
                           className="text-xs font-bold text-blue-600 hover:underline"
                         >
-                          Or email directly: support@nexora.app
+                          Or email directly: nexoraterm1234@gmail.com
                         </a>
                         <button
                           type="submit"
