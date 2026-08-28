@@ -24,15 +24,13 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
     (challengeStep !== null && challengeStep !== undefined) ||
     Boolean(typeof window !== 'undefined' && (window as any).__nexora_is_challenge_active);
 
-  // Check if running in native standalone PWA mode or marked as installed
+  // Check if running in native standalone PWA mode
   const [isStandalone, setIsStandalone] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return (
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true ||
-      document.referrer.includes('android-app://') ||
-      localStorage.getItem('nexora_pwa_installed') === 'true' ||
-      sessionStorage.getItem('nexora_pwa_installed') === 'true'
+      document.referrer.includes('android-app://')
     );
   });
 
@@ -99,6 +97,10 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
       (window as any).deferredPrompt = e;
       setDeferredPrompt(e);
       setIsStandalone(false);
+      try {
+        localStorage.setItem('nexora_pwa_installed', 'false');
+        sessionStorage.setItem('nexora_pwa_installed', 'false');
+      } catch (_) {}
     };
 
     const handleCustomPromptEvent = (e: Event) => {
@@ -107,6 +109,10 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
         (window as any).deferredPrompt = customEvent.detail;
         setDeferredPrompt(customEvent.detail);
         setIsStandalone(false);
+        try {
+          localStorage.setItem('nexora_pwa_installed', 'false');
+          sessionStorage.setItem('nexora_pwa_installed', 'false');
+        } catch (_) {}
       }
     };
 
@@ -115,7 +121,10 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
       setIsOpen(false);
       setDeferredPrompt(null);
       (window as any).deferredPrompt = null;
-      localStorage.setItem('nexora_pwa_installed', 'true');
+      try {
+        localStorage.setItem('nexora_pwa_installed', 'true');
+        sessionStorage.setItem('nexora_pwa_installed', 'true');
+      } catch (_) {}
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -206,10 +215,6 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
       try { navigator.vibrate([15, 30, 15]); } catch (_) {}
     }
 
-    // Always record that the user interacted with install to avoid aggressive re-prompts
-    localStorage.setItem('nexora_pwa_installed', 'true');
-    sessionStorage.setItem('nexora_pwa_installed', 'true');
-
     const currentPrompt = deferredPrompt || (window as any).deferredPrompt;
 
     if (currentPrompt) {
@@ -219,6 +224,10 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
         if (choiceResult && choiceResult.outcome === 'accepted') {
           setIsStandalone(true);
           setIsOpen(false);
+          try {
+            localStorage.setItem('nexora_pwa_installed', 'true');
+            sessionStorage.setItem('nexora_pwa_installed', 'true');
+          } catch (_) {}
         } else {
           handleDismiss();
         }
@@ -226,19 +235,12 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
         (window as any).deferredPrompt = null;
       } catch (err) {
         console.error('Error triggering PWA installation:', err);
-        handleDismiss();
+        // Show manual fallback guide if native prompt fails
+        setShowManualGuide(true);
       }
     } else {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      const isNativePromptSupported = 'BeforeInstallPromptEvent' in window || 'onbeforeinstallprompt' in window;
-
-      // Only display manual instructions if the browser truly does NOT support native PWA installation (e.g. iOS)
-      if (isIOS || !isNativePromptSupported) {
-        setShowManualGuide((prev) => !prev);
-      } else {
-        setIsStandalone(true);
-        setIsOpen(false);
-      }
+      // If native deferred prompt is not currently available or browser uses manual menu install
+      setShowManualGuide((prev) => !prev);
     }
   };
 

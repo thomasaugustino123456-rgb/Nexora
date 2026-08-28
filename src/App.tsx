@@ -3269,71 +3269,47 @@ export default function App() {
   }, [fcmToken, settings.soundEnabled]);
 
   useEffect(() => {
-    // If the prompt was captured early by main.tsx, use it immediately
+    // If the prompt was captured early, ensure it is available
     if ((window as any).deferredPrompt) {
-      
-      
-      console.log("PWA: Early captured ((window as any).deferredPrompt) loaded into state");
+      console.log("PWA: Early captured ((window as any).deferredPrompt) available in App");
     }
 
     const handleBeforeInstallPrompt = (e: any) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
       // Stash the event so it can be triggered later.
-      
       (window as any).deferredPrompt = e;
       
-      // Automatic uninstallation detection: if promptable, app is not installed unless marked installed
-      if (localStorage.getItem("nexora_pwa_installed") !== "true") {
+      // Reset installation flags so install prompt can be presented
+      try {
         localStorage.setItem("nexora_pwa_installed", "false");
-      }
-      
-
-      // Update UI notify the user they can install the PWA
+        sessionStorage.setItem("nexora_pwa_installed", "false");
+      } catch (_) {}
       
       console.log("PWA: beforeinstallprompt event fired, reset installation state");
-
-      // Check auto trigger
-      const visitsStr = localStorage.getItem("nexora_visit_count") || "0";
-      const visits = parseInt(visitsStr, 10);
-      const lastDismissedAt = localStorage.getItem("nexora_install_modal_dismissed_at");
-      const isDismissed24h = lastDismissedAt && (Date.now() - parseInt(lastDismissedAt, 10)) < (24 * 60 * 60 * 1000);
-      const isDismissed = sessionStorage.getItem("nexora_install_prompt_dismissed") === "true";
-
-      if (visits >= 2 && !isDismissed && !isDismissed24h) {
-        
-      }
     };
 
-    // Custom event dispatched from main.tsx if it fired before this useEffect but after rendering started
+    // Custom event dispatched from early capture if it fired before React rendered
     const handleCustomPromptEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail) {
-        if (localStorage.getItem("nexora_pwa_installed") !== "true") {
+        (window as any).deferredPrompt = customEvent.detail;
+        try {
           localStorage.setItem("nexora_pwa_installed", "false");
-        }
-        
+          sessionStorage.setItem("nexora_pwa_installed", "false");
+        } catch (_) {}
         
         console.log("PWA: Custom pre-load prompt event handled, reset installation state");
-
-        // Check auto trigger
-        const visitsStr = localStorage.getItem("nexora_visit_count") || "0";
-        const visits = parseInt(visitsStr, 10);
-        const lastDismissedAt = localStorage.getItem("nexora_install_modal_dismissed_at");
-        const isDismissed24h = lastDismissedAt && (Date.now() - parseInt(lastDismissedAt, 10)) < (24 * 60 * 60 * 1000);
-        const isDismissed = sessionStorage.getItem("nexora_install_prompt_dismissed") === "true";
-
-        if (visits >= 2 && !isDismissed && !isDismissed24h) {
-          
-        }
       }
     };
 
     const handleAppInstalled = () => {
       console.log("PWA: appinstalled event fired");
-      localStorage.setItem("nexora_pwa_installed", "true");
-      
-      
+      (window as any).deferredPrompt = null;
+      try {
+        localStorage.setItem("nexora_pwa_installed", "true");
+        sessionStorage.setItem("nexora_pwa_installed", "true");
+      } catch (_) {}
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
