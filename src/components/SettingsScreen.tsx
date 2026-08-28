@@ -5,7 +5,7 @@ import {
   Trash2, ChevronLeft, RefreshCw, Smartphone, Zap, Flame, 
   Droplets, Target, Clock, Volume2, Palette, Sparkles, 
   ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle, Video,
-  Layout, BoxSelect, Lock, Key, EyeOff, MessageSquareOff, Loader2
+  Layout, BoxSelect, Lock, Key, EyeOff, MessageSquareOff, Loader2, X
 } from 'lucide-react';
 // import { auth, FirebaseUser, EmailAuthProvider, linkWithCredential, updatePassword, sendPasswordResetEmail, GoogleAuthProvider, reauthenticateWithPopup } from '../firebase';
 // FirebaseUser is now defined locally or imported elsewhere, check imports
@@ -42,8 +42,6 @@ interface SettingsScreenProps {
   onRollbackRestore: () => void;
   onSimulateUpdate: () => void;
   currentAppVersion: string;
-  isStandalone?: boolean;
-  onTriggerPwaInstall?: () => void;
 }
 
 export function SettingsScreen({ 
@@ -56,9 +54,7 @@ export function SettingsScreen({
   rollbackBackupData,
   onRollbackRestore,
   onSimulateUpdate,
-  currentAppVersion,
-  isStandalone = false,
-  onTriggerPwaInstall
+  currentAppVersion
 }: SettingsScreenProps) {
   const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
   const [showPrivacyModal, setShowPrivacyModal] = React.useState(false);

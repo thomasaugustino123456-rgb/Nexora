@@ -1,85 +1,96 @@
 {
-  "name": "Nexora",
+  "id": "/",
+  "name": "Nexora - Flow & Habit Companion",
   "short_name": "Nexora",
+  "description": "Nexora is your gamified habit building, flow state, and productivity companion.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "theme_color": "#0D1B4C",
   "background_color": "#0D1B4C",
+  "categories": ["productivity", "lifestyle", "health"],
+  "prefer_related_applications": false,
   "shortcuts": [
     {
-      "name": "Start Challenge",
+      "name": "Daily Challenge",
       "short_name": "Challenge",
       "url": "/?screen=challenge",
-      "icons": [{ "src": "/mascot.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Nexus Vision",
       "short_name": "Vision",
       "url": "/?screen=nexus-vision",
-      "icons": [{ "src": "/mascot.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "icons": [
     {
-      "src": "/mascot.png",
+      "src": "/icon-72.png",
       "sizes": "72x72",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/mascot.png",
+      "src": "/icon-96.png",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/mascot.png",
+      "src": "/icon-128.png",
       "sizes": "128x128",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/mascot.png",
+      "src": "/icon-144.png",
       "sizes": "144x144",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/mascot.png",
+      "src": "/icon-152.png",
       "sizes": "152x152",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/mascot.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/mascot.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/mascot.png",
+      "src": "/icon-384.png",
       "sizes": "384x384",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/mascot.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/mascot.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/nexora_mascot_new.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

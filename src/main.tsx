@@ -205,23 +205,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Early capture of beforeinstallprompt to prevent missing it before React loads
-if (typeof (window as any).deferredPrompt === 'undefined') {
-  (window as any).deferredPrompt = null;
-}
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  (window as any).deferredPrompt = e;
-  try {
-    localStorage.setItem("nexora_pwa_installed", "false");
-    sessionStorage.setItem("nexora_pwa_installed", "false");
-  } catch (err) {
-    console.error("Failed to reset installation local storage:", err);
-  }
-  // Dispatch custom event for React to listen to if it's already rendered
-  window.dispatchEvent(new CustomEvent('pwa-deferred-prompt', { detail: e }));
-});
-
 // Handle dynamic import failures (vite chunk loading errors on new deployments)
 window.addEventListener('vite:preloadError', (event) => {
   if (navigator.onLine) {

@@ -7,6 +7,8 @@
     <title>Nexora - Your Personal Flow Companion</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0D1B4C">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Nexora">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Nexora">
@@ -15,13 +17,18 @@
     <!-- Preload critical core assets so they render instantly with zero delay -->
     <link rel="preload" as="image" href="/nexora_mascot_new.png" fetchpriority="high">
     <link rel="preload" as="image" href="/login-bg.jpg" fetchpriority="high">
-    <!-- Early synchronous capture of beforeinstallprompt to ensure it is never missed before scripts load -->
+
+    <!-- Synchronous early capture of beforeinstallprompt to ensure it is never missed before scripts load -->
     <script>
       (function() {
         window.addEventListener('beforeinstallprompt', function(e) {
           e.preventDefault();
-          window.deferredPrompt = e;
-          window.dispatchEvent(new CustomEvent('pwa-deferred-prompt', { detail: e }));
+          window.__nexora_deferred_prompt = e;
+          window.dispatchEvent(new CustomEvent('nexora:pwa-prompt-ready', { detail: e }));
+        });
+        window.addEventListener('appinstalled', function() {
+          window.__nexora_deferred_prompt = null;
+          window.dispatchEvent(new CustomEvent('nexora:pwa-installed'));
         });
       })();
     </script>

@@ -110,7 +110,7 @@ import { createInitialGardenState } from "./types/garden";
 import { HOUSE_ITEMS } from "./constants/houseItems";
 import { NexoraStudio } from "./components/NexoraStudio";
 import { BottomNav } from "./components/BottomNav";
-import { PWAInstallModal } from "./components/PWAInstallModal";
+import { PWAInstallerCard } from "./components/PWAInstallerCard";
 import {
   format,
   subDays,
@@ -2432,78 +2432,6 @@ export default function App() {
   
   const [appMascotError, setAppMascotError] = useState(false);
 
-  // Advanced PWA Master Installation Prompter States - Completely Disabled as requested
-  
-  
-  
-  
-  
-  
-  const [downloadProgress, setDownloadProgress] = useState(0);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadStatus, setDownloadStatus] = useState("");
-
-  useEffect(() => {
-    // Keep track of visits and show popup if they visit multiple times
-    const visitsStr = localStorage.getItem("nexora_visit_count") || "0";
-    const visits = parseInt(visitsStr, 10) + 1;
-    localStorage.setItem("nexora_visit_count", visits.toString());
-
-    const checkStandalone = () => {
-      const standalone =
-        window.matchMedia("(display-mode: standalone)").matches ||
-        (window.navigator as any).standalone === true ||
-        // Safari fallback detection
-        (window.navigator.userAgent.includes("Safari") && !window.navigator.userAgent.includes("Chrome") && (window.navigator as any).standalone) ||
-        document.referrer.includes("android-app://");
-      
-
-      // Show beautiful install popup after visiting multiple times if not standalone and not dismissed
-      const isInstalled = standalone || localStorage.getItem("nexora_pwa_installed") === "true";
-      const isDismissed = sessionStorage.getItem("nexora_install_prompt_dismissed") === "true";
-      
-      const lastDismissedAt = localStorage.getItem("nexora_install_modal_dismissed_at");
-      const isDismissed24h = lastDismissedAt && (Date.now() - parseInt(lastDismissedAt, 10)) < (24 * 60 * 60 * 1000);
-
-      // Check if browser supports installation
-      const supportsInstall = !!(((window as any).deferredPrompt) || (window as any).deferredPrompt || ('BeforeInstallPromptEvent' in window));
-
-      if (!isInstalled && !isDismissed && !isDismissed24h && visits >= 2 && supportsInstall) {
-        setTimeout(() => {
-          
-        }, 2000);
-      }
-    };
-    checkStandalone();
-    const mediaQuery = window.matchMedia("(display-mode: standalone)");
-    if (mediaQuery && typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", checkStandalone);
-      return () => mediaQuery.removeEventListener("change", checkStandalone);
-    }
-  }, []);
-
-  useEffect(() => {
-    // If running in standalone (PWA already installed and active), do not show.
-        
-    // Check if user has already marked app as installed in localStorage
-    const isInstalled = localStorage.getItem("nexora_pwa_installed") === "true";
-    if (isInstalled) {
-      
-      return;
-    }
-
-    // Determine if dismissed on current screen / context
-    
-  }, [user, showAuth, needsOnboarding, activeScreen, challengeStep]);
-
-  // "when I click the Cancel button supposed it have to appear again when the user go to another section of the app"
-  // Reset dismiss states on screen transition so the banner can appear again in other sections
-  useEffect(() => {
-    if (localStorage.getItem("nexora_pwa_installed") === "true") return;
-    console.log(`[PWA] Navigation transition detected to screen: ${activeScreen}. Resetting install prompt dismiss state to allow it to reappear.`);
-    sessionStorage.removeItem("nexora_install_prompt_dismissed");
-    localStorage.removeItem("nexora_install_modal_dismissed_at");
-  }, [activeScreen, showAuth]);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
@@ -3269,64 +3197,6 @@ export default function App() {
   }, [fcmToken, settings.soundEnabled]);
 
   useEffect(() => {
-    // If the prompt was captured early, ensure it is available
-    if ((window as any).deferredPrompt) {
-      console.log("PWA: Early captured ((window as any).deferredPrompt) available in App");
-    }
-
-    const handleBeforeInstallPrompt = (e: any) => {
-      // Prevent the mini-infobar from appearing on mobile
-      e.preventDefault();
-      // Stash the event so it can be triggered later.
-      (window as any).deferredPrompt = e;
-      
-      // Reset installation flags so install prompt can be presented
-      try {
-        localStorage.setItem("nexora_pwa_installed", "false");
-        sessionStorage.setItem("nexora_pwa_installed", "false");
-      } catch (_) {}
-      
-      console.log("PWA: beforeinstallprompt event fired, reset installation state");
-    };
-
-    // Custom event dispatched from early capture if it fired before React rendered
-    const handleCustomPromptEvent = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail) {
-        (window as any).deferredPrompt = customEvent.detail;
-        try {
-          localStorage.setItem("nexora_pwa_installed", "false");
-          sessionStorage.setItem("nexora_pwa_installed", "false");
-        } catch (_) {}
-        
-        console.log("PWA: Custom pre-load prompt event handled, reset installation state");
-      }
-    };
-
-    const handleAppInstalled = () => {
-      console.log("PWA: appinstalled event fired");
-      (window as any).deferredPrompt = null;
-      try {
-        localStorage.setItem("nexora_pwa_installed", "true");
-        sessionStorage.setItem("nexora_pwa_installed", "true");
-      } catch (_) {}
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    window.addEventListener("pwa-deferred-prompt", handleCustomPromptEvent);
-    window.addEventListener("appinstalled", handleAppInstalled);
-
-    // Check if already installed
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true;
-    const isIOS =
-      /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-
-    if (!isStandalone && isIOS) {
-      // Custom iOS guides completely disabled as requested
-    }
-
     // Request notification permission on mount if supported
     if (typeof window !== "undefined" && "Notification" in window && window.Notification) {
       if (window.Notification.permission === "default") {
@@ -3352,15 +3222,6 @@ export default function App() {
       }
     }
     localStorage.setItem("nexora_last_active", now.toString());
-
-    return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        handleBeforeInstallPrompt,
-      );
-      window.removeEventListener("pwa-deferred-prompt", handleCustomPromptEvent);
-      window.removeEventListener("appinstalled", handleAppInstalled);
-    };
   }, []);
 
   useEffect(() => {
@@ -5908,13 +5769,12 @@ export default function App() {
                 </div>
               }
             >
-              <LandingPage onGetStarted={() => setShowAuth(true)} />
+              <div className="w-full flex flex-col items-center">
+                <LandingPage onGetStarted={() => setShowAuth(true)} />
+              </div>
             </Suspense>
           )}
         </ErrorBoundary>
-
-        {/* Global PWA overlays rendered dynamically in front of Authentication screens */}
-        <PWAInstallModal isLoggedIn={!!user} activeScreen={activeScreen} hat={settings?.activeHat} challengeStep={challengeStep} />
       </div>
     );
   }
@@ -6093,6 +5953,9 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Native PWA Top Installer Card */}
+        <PWAInstallerCard currentScreen={activeScreen} className="sticky top-0 z-[990]" />
         
         {/* OPTION 1: Warm Organic Ambient Glow (Gently breathing and drifting blobs representing Warm Orange, Nature Green, and Calm Blue) */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
@@ -8479,7 +8342,6 @@ export default function App() {
           </AnimatePresence>
 
           <MascotParticleRain />
-          <PWAInstallModal isLoggedIn={!!user} activeScreen={activeScreen} hat={settings?.activeHat} challengeStep={challengeStep} />
         </div>
       </div>
     </ErrorBoundary>
