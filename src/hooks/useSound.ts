@@ -11,6 +11,8 @@ export const SOUNDS = {
     "https://res.cloudinary.com/ddtfq9acc/video/upload/v1777215538/mixkit-retro-arcade-casino-notification-211_chrmoj.wav",
   click:
     "https://res.cloudinary.com/ddtfq9acc/video/upload/v1777215538/mixkit-retro-arcade-casino-notification-211_chrmoj.wav",
+  select_task:
+    "https://res.cloudinary.com/ddtfq9acc/video/upload/v1777215538/mixkit-retro-arcade-casino-notification-211_chrmoj.wav",
 
   // Streak flame & celebrations
   fire_streak:
@@ -105,9 +107,11 @@ export type SoundKey = keyof typeof SOUNDS | (string & {});
 let audioContext: AudioContext | null = null;
 const audioBufferCache: Map<string, AudioBuffer> = new Map();
 const pendingFetchMap: Map<string, Promise<AudioBuffer | null>> = new Map();
-const audioPool: Map<string, HTMLAudioElement[]> = new Map();
-const poolIndex: Map<string, number> = new Map();
 const lastPlayTimestamps: Map<string, number> = new Map();
+
+// Active playback set to prevent garbage-collection cutoffs during long celebrations
+const activeAudioElements: Set<HTMLAudioElement> = new Set();
+const activeAudioSources: Set<AudioBufferSourceNode> = new Set();
 
 // Music Controller
 const musicNodes: { [key: string]: HTMLAudioElement } = {};
@@ -152,13 +156,11 @@ export function unlockAudio() {
 
   if (!isUnlocked) {
     isUnlocked = true;
-    // Pre-warm HTML5 audio elements on first touch
-    audioPool.forEach((elements) => {
-      elements.forEach((el) => {
-        try {
-          el.load();
-        } catch {}
-      });
+    // Trigger pre-fetching for all key sounds
+    Object.entries(SOUNDS).forEach(([key, url]) => {
+      if (url && !key.startsWith("music")) {
+        loadSoundBuffer(key, url).catch(() => {});
+      }
     });
   }
 }
@@ -221,23 +223,7 @@ export async function loadSoundBuffer(key: string, url: string): Promise<AudioBu
 if (typeof window !== "undefined") {
   Object.entries(SOUNDS).forEach(([key, url]) => {
     if (!url) return;
-
     if (!key.startsWith("music")) {
-      // HTML5 pool fallback
-      const pool: HTMLAudioElement[] = [];
-      for (let i = 0; i < 2; i++) {
-        try {
-          const audio = new Audio();
-          audio.crossOrigin = "anonymous";
-          audio.preload = "auto";
-          audio.src = url;
-          pool.push(audio);
-        } catch {}
-      }
-      audioPool.set(key, pool);
-      poolIndex.set(key, 0);
-
-      // Web Audio Buffer prefetch
       loadSoundBuffer(key, url).catch(() => {});
     }
   });
@@ -264,7 +250,7 @@ const getMusicElement = (key: string): HTMLAudioElement | null => {
 
 /**
  * Direct zero-latency sound play function.
- * Can be called from any component, hook, or event handler.
+ * Plays the sound cleanly to completion without cutting off mid-stream.
  */
 export function playSound(soundKey: SoundKey, volume = 0.65) {
   if (!soundKey) return;
@@ -273,10 +259,10 @@ export function playSound(soundKey: SoundKey, volume = 0.65) {
   const url = (SOUNDS as any)[effectiveKey];
   if (!url) return;
 
-  // Ultra-fast debounce (20ms) to prevent accidental double-triggers from simultaneous touch/click
+  // Debounce (15ms) to prevent accidental double-triggers from simultaneous touch/click
   const now = Date.now();
   const lastTime = lastPlayTimestamps.get(effectiveKey) || 0;
-  if (now - lastTime < 20) return;
+  if (now - lastTime < 15) return;
   lastPlayTimestamps.set(effectiveKey, now);
 
   try {
@@ -286,7 +272,7 @@ export function playSound(soundKey: SoundKey, volume = 0.65) {
         ctx.resume().catch(() => {});
       }
 
-      // Method 1: Web Audio Buffer (True 0.00ms hardware latency)
+      // Method 1: Web Audio Buffer (True 0.00ms hardware latency, plays cleanly to end)
       const buffer = audioBufferCache.get(effectiveKey);
       if (buffer) {
         const source = ctx.createBufferSource();
@@ -295,40 +281,44 @@ export function playSound(soundKey: SoundKey, volume = 0.65) {
         source.buffer = buffer;
         source.connect(gainNode);
         gainNode.connect(ctx.destination);
+
+        activeAudioSources.add(source);
+        source.onended = () => {
+          activeAudioSources.delete(source);
+          try {
+            source.disconnect();
+            gainNode.disconnect();
+          } catch {}
+        };
+
         source.start(0);
         return;
       }
 
-      // If buffer is loading, initiate fetch and proceed to fallback
+      // If buffer is loading, initiate fetch for next time
       loadSoundBuffer(effectiveKey, url).catch(() => {});
     }
 
-    // Method 2: HTML5 Audio Pool (Direct Cloudinary Audio)
-    const pool = audioPool.get(effectiveKey);
-    if (pool && pool.length > 0) {
-      const currentIndex = poolIndex.get(effectiveKey) || 0;
-      const nextIndex = (currentIndex + 1) % pool.length;
-      poolIndex.set(effectiveKey, nextIndex);
+    // Method 2: HTML5 Audio with active retention (Guarantees no garbage-collection cutoff)
+    const audio = new Audio(url);
+    audio.crossOrigin = "anonymous";
+    audio.volume = volume;
 
-      const audioElement = pool[currentIndex];
-      if (audioElement) {
-        try {
-          audioElement.currentTime = 0;
-          audioElement.volume = volume;
-          const playPromise = audioElement.play();
-          if (playPromise !== undefined) {
-            playPromise.catch(() => {});
-          }
-          return;
-        } catch {}
-      }
+    activeAudioElements.add(audio);
+    const cleanup = () => {
+      activeAudioElements.delete(audio);
+      audio.removeEventListener("ended", cleanup);
+      audio.removeEventListener("error", cleanup);
+    };
+    audio.addEventListener("ended", cleanup);
+    audio.addEventListener("error", cleanup);
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        cleanup();
+      });
     }
-
-    // Method 3: Direct fallback on Cloudinary URL
-    const fallbackAudio = new Audio(url);
-    fallbackAudio.crossOrigin = "anonymous";
-    fallbackAudio.volume = volume;
-    fallbackAudio.play().catch(() => {});
   } catch (err) {
     // Audio execution guard
   }
@@ -363,7 +353,28 @@ export function useSound() {
   }, []);
 
   const playMusic = useCallback(async (musicKey: string | null) => {
-    if (activeMusicKey === musicKey) return;
+    if (!musicKey) {
+      if (activeMusicKey) {
+        const prevAudio = getMusicElement(activeMusicKey);
+        if (prevAudio) {
+          try {
+            prevAudio.pause();
+            prevAudio.currentTime = 0;
+          } catch {}
+        }
+      }
+      activeMusicKey = null;
+      setCurrentMusic(null);
+      return;
+    }
+
+    if (activeMusicKey === musicKey) {
+      const audio = getMusicElement(musicKey);
+      if (audio && audio.paused) {
+        audio.play().catch(() => {});
+      }
+      return;
+    }
 
     if (activeMusicKey) {
       const prevAudio = getMusicElement(activeMusicKey);
@@ -375,20 +386,15 @@ export function useSound() {
       }
     }
 
-    if (musicKey) {
-      const nextAudio = getMusicElement(musicKey);
-      if (nextAudio) {
-        nextAudio.loop = true;
-        const promise = nextAudio.play();
-        if (promise !== undefined) {
-          promise.catch(() => {});
-        }
-        activeMusicKey = musicKey;
-        setCurrentMusic(musicKey);
+    const nextAudio = getMusicElement(musicKey);
+    if (nextAudio) {
+      nextAudio.loop = true;
+      const promise = nextAudio.play();
+      if (promise !== undefined) {
+        promise.catch(() => {});
       }
-    } else {
-      activeMusicKey = null;
-      setCurrentMusic(null);
+      activeMusicKey = musicKey;
+      setCurrentMusic(musicKey);
     }
   }, []);
 

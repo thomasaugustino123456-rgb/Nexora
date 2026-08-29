@@ -1,265 +1,327 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-export interface PWAInstallState {
-  isInstallable: boolean;
-  isInstalled: boolean;
-  isPrompting: boolean;
-  triggerInstall: () => Promise<'accepted' | 'dismissed' | 'unavailable'>;
-}
-
 declare global {
   interface Window {
     __nexora_deferred_prompt?: any;
+    __nexora_is_challenge_active?: boolean;
+    __nexora_is_rewards_active?: boolean;
   }
 }
 
-// Global helper to read early-captured prompt
-const getGlobalPrompt = (): any => {
-  if (typeof window === 'undefined') return null;
-  return window.__nexora_deferred_prompt || null;
-};
+const SESSION_SHOW_COUNT_KEY = 'nexora_pwa_show_count';
+const SESSION_SWITCH_COUNT_KEY = 'nexora_pwa_switch_count';
+const SESSION_DISMISSED_KEY = 'nexora_pwa_dismissed';
+const LOCAL_INSTALLED_KEY = 'nexora_pwa_installed';
 
-const promptListeners = new Set<(prompt: any) => void>();
+function getSessionNumber(key: string, defaultVal: number): number {
+  if (typeof window === 'undefined') return defaultVal;
+  try {
+    const val = sessionStorage.getItem(key);
+    return val !== null ? parseInt(val, 10) || 0 : defaultVal;
+  } catch {
+    return defaultVal;
+  }
+}
 
-if (typeof window !== 'undefined') {
-  // Listen for the custom event dispatched by early capture in index.html
-  window.addEventListener('nexora:pwa-prompt-ready', (e: any) => {
-    const prompt = e?.detail || window.__nexora_deferred_prompt;
-    promptListeners.forEach((listener) => listener(prompt));
-  });
+function setSessionNumber(key: string, val: number) {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(key, String(val));
+  } catch {}
+}
 
-  window.addEventListener('nexora:pwa-installed', () => {
-    window.__nexora_deferred_prompt = null;
-    promptListeners.forEach((listener) => listener(null));
-  });
+function getSessionBool(key: string, defaultVal: boolean): boolean {
+  if (typeof window === 'undefined') return defaultVal;
+  try {
+    const val = sessionStorage.getItem(key);
+    return val !== null ? val === 'true' : defaultVal;
+  } catch {
+    return defaultVal;
+  }
+}
 
-  // Direct listeners in case the event fired after bundle load
-  window.addEventListener('beforeinstallprompt', (e: Event) => {
-    e.preventDefault();
-    window.__nexora_deferred_prompt = e;
-    promptListeners.forEach((listener) => listener(e));
-  });
-
-  window.addEventListener('appinstalled', () => {
-    window.__nexora_deferred_prompt = null;
-    promptListeners.forEach((listener) => listener(null));
-  });
+function setSessionBool(key: string, val: boolean) {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(key, String(val));
+  } catch {}
 }
 
 /**
- * Installation Engine: Handles genuine browser PWA installation events and execution.
- * Completely independent from user data, authentication, and database logic.
+ * Check if runtime is currently in standalone / installed PWA mode
  */
-export function usePWAInstallEngine(): PWAInstallState {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(() => getGlobalPrompt());
-  const [isInstalled, setIsInstalled] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
-    const isIOSStandalone = (window.navigator as any).standalone === true;
-    return isStandaloneMode || isIOSStandalone;
-  });
-  const [isPrompting, setIsPrompting] = useState<boolean>(false);
+export function checkIsStandalone(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (localStorage.getItem(LOCAL_INSTALLED_KEY) === 'true') {
+      return true;
+    }
+  } catch {}
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true
+  );
+}
 
-  // Monitor standalone display-mode changes & appinstalled event
+// Valid app sections that count towards section switches when transitioning
+const MAIN_APP_SECTIONS = new Set([
+  'home',
+  'progress',
+  'profile',
+  'social',
+  'settings',
+  'shop',
+  'library',
+  'archives',
+  'leaderboard',
+  'house',
+  'plant',
+  'garden',
+  'notebook',
+  'nexus-vision',
+  'device-showcase',
+  'plan-builder',
+  'hydration-detail',
+]);
+
+/**
+ * PWA installation hook for Nexora.
+ * - Displays on Landing page and Home section.
+ * - Suppressed on Auth/Login/Signup, Onboarding, and during active Tasks/Challenges.
+ * - Appears on app open; if dismissed or hidden, reappears every 3 section switches up to 4 times max.
+ * - Executes direct native prompt or web app package download on Install click without instructional popups.
+ */
+export function usePWAInstall(currentScreen: string, isTaskActiveOverride?: boolean) {
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      return window.__nexora_deferred_prompt || null;
+    }
+    return null;
+  });
+
+  const [isInstalled, setIsInstalled] = useState<boolean>(() => checkIsStandalone());
+  const [isPrompting, setIsPrompting] = useState<boolean>(false);
+  const [showCount, setShowCount] = useState<number>(() =>
+    getSessionNumber(SESSION_SHOW_COUNT_KEY, 0)
+  );
+  const [switchCount, setSwitchCount] = useState<number>(() =>
+    getSessionNumber(SESSION_SWITCH_COUNT_KEY, 0)
+  );
+  const [isDismissed, setIsDismissed] = useState<boolean>(() =>
+    getSessionBool(SESSION_DISMISSED_KEY, false)
+  );
+
+  const prevSectionRef = useRef<string>(currentScreen);
+  const countedCurrentScreenRef = useRef<string | null>(null);
+
+  // Central event capture for beforeinstallprompt and appinstalled
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const mediaQuery = window.matchMedia('(display-mode: standalone)');
-    const handleDisplayModeChange = (e: MediaQueryListEvent) => {
-      setIsInstalled(e.matches || (window.navigator as any).standalone === true);
-    };
-
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleDisplayModeChange);
-    } else {
-      mediaQuery.addListener(handleDisplayModeChange);
-    }
-
-    const handlePromptUpdate = (prompt: any) => {
-      setDeferredPrompt(prompt);
-    };
-    promptListeners.add(handlePromptUpdate);
-
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      setDeferredPrompt(null);
-      if (typeof window !== 'undefined') {
-        window.__nexora_deferred_prompt = null;
+    const mql = window.matchMedia('(display-mode: standalone)');
+    const handleDisplayChange = (e: MediaQueryListEvent) => {
+      if (e.matches || checkIsStandalone()) {
+        setIsInstalled(true);
+        try {
+          localStorage.setItem(LOCAL_INSTALLED_KEY, 'true');
+        } catch {}
       }
     };
-    window.addEventListener('appinstalled', handleAppInstalled);
 
-    // If global prompt was already set before effect mounted
-    const currentGlobal = getGlobalPrompt();
-    if (currentGlobal && !deferredPrompt) {
-      setDeferredPrompt(currentGlobal);
+    if (mql.addEventListener) {
+      mql.addEventListener('change', handleDisplayChange);
+    } else {
+      mql.addListener(handleDisplayChange);
+    }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      window.__nexora_deferred_prompt = e;
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      window.__nexora_deferred_prompt = null;
+      setDeferredPrompt(null);
+      setIsInstalled(true);
+      try {
+        localStorage.setItem(LOCAL_INSTALLED_KEY, 'true');
+      } catch {}
+    };
+
+    const handleCustomPromptReady = (e: any) => {
+      const prompt = e?.detail || window.__nexora_deferred_prompt;
+      if (prompt) {
+        setDeferredPrompt(prompt);
+      }
+    };
+
+    const handleCustomInstalled = () => {
+      window.__nexora_deferred_prompt = null;
+      setDeferredPrompt(null);
+      setIsInstalled(true);
+      try {
+        localStorage.setItem(LOCAL_INSTALLED_KEY, 'true');
+      } catch {}
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+    window.addEventListener('nexora:pwa-prompt-ready', handleCustomPromptReady);
+    window.addEventListener('nexora:pwa-installed', handleCustomInstalled);
+
+    if (window.__nexora_deferred_prompt) {
+      setDeferredPrompt(window.__nexora_deferred_prompt);
     }
 
     return () => {
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', handleDisplayModeChange);
+      if (mql.removeEventListener) {
+        mql.removeEventListener('change', handleDisplayChange);
       } else {
-        mediaQuery.removeListener(handleDisplayModeChange);
+        mql.removeListener(handleDisplayChange);
       }
-      promptListeners.delete(handlePromptUpdate);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener('nexora:pwa-prompt-ready', handleCustomPromptReady);
+      window.removeEventListener('nexora:pwa-installed', handleCustomInstalled);
     };
   }, []);
 
-  const triggerInstall = useCallback(async (): Promise<'accepted' | 'dismissed' | 'unavailable'> => {
-    const promptToUse = deferredPrompt || getGlobalPrompt();
+  // Determine if user is currently taking a task/challenge/protocol
+  const isTakingTask =
+    isTaskActiveOverride ||
+    currentScreen === 'challenge' ||
+    (typeof window !== 'undefined' &&
+      (Boolean(window.__nexora_is_challenge_active) ||
+        Boolean(window.__nexora_is_rewards_active)));
 
-    if (!promptToUse || typeof promptToUse.prompt !== 'function') {
-      return 'unavailable';
+  // Track section switches across main app tabs (tasks/challenges are excluded)
+  useEffect(() => {
+    if (isInstalled || isTakingTask) return;
+
+    const prev = prevSectionRef.current;
+    if (prev !== currentScreen) {
+      prevSectionRef.current = currentScreen;
+
+      // Only count transitions between distinct recognized main app sections
+      if (MAIN_APP_SECTIONS.has(prev) && MAIN_APP_SECTIONS.has(currentScreen)) {
+        setSwitchCount((curr) => {
+          const nextCount = curr + 1;
+          if (nextCount >= 3) {
+            // After 3 section switches, allow the card to reappear if under 4 limit
+            setSessionNumber(SESSION_SWITCH_COUNT_KEY, 0);
+            if (showCount < 4) {
+              setIsDismissed(false);
+              setSessionBool(SESSION_DISMISSED_KEY, false);
+            }
+            return 0;
+          } else {
+            setSessionNumber(SESSION_SWITCH_COUNT_KEY, nextCount);
+            return nextCount;
+          }
+        });
+      }
+    }
+  }, [currentScreen, isInstalled, isTakingTask, showCount]);
+
+  // Qualifying screens: strictly Landing page or main app Home section
+  const isQualifyingScreen =
+    (currentScreen === 'landing' || currentScreen === 'home') && !isTakingTask;
+
+  // Visibility calculation:
+  // 1. Must be on qualifying screen (landing or home)
+  // 2. Not already installed
+  // 3. Not currently dismissed or suppressed
+  // 4. Must not have exceeded the 4-times appearance limit
+  // 5. Must not be taking a task
+  const isVisible =
+    isQualifyingScreen &&
+    !isInstalled &&
+    !isDismissed &&
+    showCount < 4;
+
+  // Increment show count when displayed
+  useEffect(() => {
+    if (isVisible) {
+      if (countedCurrentScreenRef.current !== currentScreen) {
+        countedCurrentScreenRef.current = currentScreen;
+        setShowCount((prev) => {
+          const next = prev + 1;
+          setSessionNumber(SESSION_SHOW_COUNT_KEY, next);
+          if (next >= 4) {
+            setIsDismissed(true);
+            setSessionBool(SESSION_DISMISSED_KEY, true);
+          }
+          return next;
+        });
+      }
+    } else {
+      countedCurrentScreenRef.current = null;
+    }
+  }, [isVisible, currentScreen]);
+
+  // Installation trigger handler - connects directly to native browser beforeinstallprompt
+  const triggerInstall = useCallback(async (): Promise<boolean> => {
+    const promptEvent =
+      (typeof window !== 'undefined' && window.__nexora_deferred_prompt) ||
+      deferredPrompt;
+
+    if (!promptEvent || typeof promptEvent.prompt !== 'function') {
+      return false;
     }
 
+    setIsPrompting(true);
+
     try {
-      setIsPrompting(true);
-      await promptToUse.prompt();
-      const choiceResult = await promptToUse.userChoice;
+      // 1. Invoke native browser installation prompt directly
+      await promptEvent.prompt();
+
+      // 2. Await genuine user choice from browser dialog
+      const choiceResult = await promptEvent.userChoice;
+
+      // 3. Clear consumed prompt reference
+      if (typeof window !== 'undefined') {
+        window.__nexora_deferred_prompt = null;
+      }
+      setDeferredPrompt(null);
 
       if (choiceResult && choiceResult.outcome === 'accepted') {
-        setDeferredPrompt(null);
-        if (typeof window !== 'undefined') {
-          window.__nexora_deferred_prompt = null;
-        }
         setIsInstalled(true);
-        return 'accepted';
-      } else {
-        return 'dismissed';
+        try {
+          localStorage.setItem(LOCAL_INSTALLED_KEY, 'true');
+        } catch {}
+        return true;
       }
+      return false;
     } catch (err) {
-      console.warn('[Nexora PWA Engine] Error invoking native prompt:', err);
-      return 'unavailable';
+      console.warn('[Nexora PWA] Install prompt error:', err);
+      return false;
     } finally {
       setIsPrompting(false);
     }
   }, [deferredPrompt]);
 
+  // Dismiss action: hide immediately, reset switch counter, start counting 3 switches
+  const dismiss = useCallback(() => {
+    setIsDismissed(true);
+    setSessionBool(SESSION_DISMISSED_KEY, true);
+    setSwitchCount(0);
+    setSessionNumber(SESSION_SWITCH_COUNT_KEY, 0);
+  }, []);
+
+  const isInstallable = Boolean(
+    deferredPrompt ||
+      (typeof window !== 'undefined' && Boolean(window.__nexora_deferred_prompt))
+  );
+
   return {
-    isInstallable: Boolean((deferredPrompt || getGlobalPrompt()) && !isInstalled),
+    isVisible,
     isInstalled,
     isPrompting,
+    isInstallable,
+    showCount,
+    switchCount,
     triggerInstall,
-  };
-}
-
-const MAX_AUTO_APPEARANCES = 5;
-const SWITCHES_THRESHOLD = 3;
-const AUTO_APPEARANCE_STORAGE_KEY = 'nexora_pwa_auto_impressions_count';
-
-export interface PWAAppearanceOptions {
-  currentScreen: string; // e.g. 'landing', 'auth', 'home', 'garden', 'profile', etc.
-  isAuthScreen?: boolean;
-  isGatewayScreen?: boolean;
-  isOnboardingScreen?: boolean;
-}
-
-/**
- * Appearance Manager: Governs strictly when the top installer card is eligible to render.
- */
-export function usePWAAppearanceManager(
-  engine: PWAInstallState,
-  options: PWAAppearanceOptions
-) {
-  const [sessionDismissed, setSessionDismissed] = useState<boolean>(false);
-  const [isVisible, setIsVisible] = useState<boolean>(false);
-  const switchCountRef = useRef<number>(0);
-  const lastScreenRef = useRef<string>(options.currentScreen);
-
-  // Read stored auto impressions count from localStorage
-  const getAutoImpressionsCount = (): number => {
-    if (typeof window === 'undefined') return 0;
-    try {
-      const raw = localStorage.getItem(AUTO_APPEARANCE_STORAGE_KEY);
-      const parsed = parseInt(raw || '0', 10);
-      return isNaN(parsed) ? 0 : parsed;
-    } catch {
-      return 0;
-    }
-  };
-
-  const incrementAutoImpressionsCount = (): number => {
-    if (typeof window === 'undefined') return 0;
-    try {
-      const current = getAutoImpressionsCount();
-      const updated = current + 1;
-      localStorage.setItem(AUTO_APPEARANCE_STORAGE_KEY, updated.toString());
-      return updated;
-    } catch {
-      return 0;
-    }
-  };
-
-// Evaluate forbidden screens
-  const isForbiddenScreen =
-    options.isAuthScreen ||
-    options.isGatewayScreen ||
-    options.isOnboardingScreen ||
-    options.currentScreen === 'landing' ||
-    options.currentScreen === 'auth' ||
-    options.currentScreen === 'login' ||
-    options.currentScreen === 'signup' ||
-    options.currentScreen === 'gateway' ||
-    options.currentScreen === 'onboarding';
-
-  // Track section switches in logged-in state inside main app
-  useEffect(() => {
-    if (isForbiddenScreen || engine.isInstalled || !engine.isInstallable) {
-      setIsVisible(false);
-      return;
-    }
-
-    // Inside main app screens: Track section changes
-    if (lastScreenRef.current !== options.currentScreen) {
-      lastScreenRef.current = options.currentScreen;
-      switchCountRef.current += 1;
-
-      // When threshold of 3 switches is reached inside the main app
-      if (switchCountRef.current >= SWITCHES_THRESHOLD) {
-        if (!sessionDismissed && getAutoImpressionsCount() < MAX_AUTO_APPEARANCES) {
-          setIsVisible(true);
-        }
-      }
-    }
-  }, [
-    options.currentScreen,
-    options.isAuthScreen,
-    options.isGatewayScreen,
-    options.isOnboardingScreen,
-    isForbiddenScreen,
-    engine.isInstallable,
-    engine.isInstalled,
-    sessionDismissed,
-  ]);
-
-  // When card becomes visible automatically, increment count
-  const recordedVisibilityRef = useRef<boolean>(false);
-  useEffect(() => {
-    if (isVisible && !recordedVisibilityRef.current) {
-      recordedVisibilityRef.current = true;
-      incrementAutoImpressionsCount();
-    } else if (!isVisible) {
-      recordedVisibilityRef.current = false;
-    }
-  }, [isVisible]);
-
-  // Handle explicit dismissal by user
-  const handleDismiss = useCallback(() => {
-    setIsVisible(false);
-    setSessionDismissed(true);
-    switchCountRef.current = 0; // Reset switch counter for future cycles
-  }, []);
-
-  // Handle successful install
-  const handleInstallSuccess = useCallback(() => {
-    setIsVisible(false);
-    setSessionDismissed(true);
-  }, []);
-
-  return {
-    isVisible: isVisible && engine.isInstallable && !engine.isInstalled && !isForbiddenScreen,
-    handleDismiss,
-    handleInstallSuccess,
+    dismiss,
   };
 }

@@ -799,7 +799,7 @@ export function ProfileScreen({
           {stats.trophies && stats.trophies.length > 0
             ? stats.trophies.map((t, i) => (
                 <div
-                  key={t.id || i}
+                  key={t.id ? `${t.id}-${t.earnedDate || ''}-${i}` : `trophy-${i}`}
                   className="min-w-[120px] aspect-[4/5] bg-blue-50 rounded-[2rem] border-2 border-white flex flex-col items-center justify-center p-4 text-center hover:scale-105 transition-all"
                 >
                   <div

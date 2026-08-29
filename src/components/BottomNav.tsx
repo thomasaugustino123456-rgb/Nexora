@@ -89,7 +89,7 @@ export const BottomNav = ({
       className="fixed bottom-0 left-0 right-0 p-3 sm:p-5 flex justify-center pointer-events-none z-[80] transition-all duration-300 ease-out will-change-transform"
     >
       <nav className="bg-white/95 backdrop-blur-lg border border-slate-200/85 shadow-2xl px-2 py-1 rounded-[2rem] flex items-center justify-around gap-0.5 pointer-events-auto w-[96%] max-w-[370px] sm:max-w-[440px] h-[60px] sm:h-[66px] overflow-hidden select-none">
-        {(settings.navOrder || Object.keys(navItems)).map(
+        {Array.from(new Set(settings.navOrder || Object.keys(navItems))).map(
           (id: string) => {
             const item = navItems[id];
             if (!item) return null;

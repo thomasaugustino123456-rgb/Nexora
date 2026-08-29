@@ -421,15 +421,8 @@ export function isUserOnboardingCompleted(
   plantSectionData?: any,
   plantsTopData?: any
 ): boolean {
-  // 1. If explicitly flagged as false in Firestore, user settings, or user-specific cache, return false immediately for new users
-  if (
-    docData?.onboardingCompleted === false ||
-    docData?.settings?.onboardingCompleted === false ||
-    onboardingData?.onboardingCompleted === false ||
-    settingsObj?.onboardingCompleted === false ||
-    (uid && typeof localStorage !== 'undefined' && localStorage.getItem(`nexora_onboarding_completed_${uid}`) === "false") ||
-    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem("nexora_signup_flow") === "true")
-  ) {
+  // 1. If actively in a new signup flow in this session, return false
+  if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem("nexora_signup_flow") === "true") {
     return false;
   }
 
@@ -447,13 +440,7 @@ export function isUserOnboardingCompleted(
     return true;
   }
 
-  // 3. Check user-specific local storage cache
-  if (uid && typeof localStorage !== 'undefined') {
-    if (localStorage.getItem(`nexora_onboarding_completed_${uid}`) === "true") return true;
-    if (localStorage.getItem(`nexora_onboarding_completed_${uid}`) === "false") return false;
-  }
-
-  // 4. Check profile data indicators populated exclusively during onboarding
+  // 3. Check profile data indicators populated exclusively during onboarding
   if (
     docData?.priorityFocus ||
     docData?.settings?.priorityFocus ||
@@ -473,7 +460,7 @@ export function isUserOnboardingCompleted(
     return true;
   }
 
-  // 5. Check existing user activity/progress indicators
+  // 4. Check existing user activity/progress indicators
   if ((docData?.stats?.totalPoints || 0) > 0) return true;
   if ((docData?.stats?.streak || 0) > 0) return true;
   if ((docData?.stats?.bestStreak || 0) > 0) return true;
@@ -492,7 +479,21 @@ export function isUserOnboardingCompleted(
   if ((docData?.gratitudeEntries && docData.gratitudeEntries.length > 0) || (docData?.stats?.gratitudeEntries && docData.stats.gratitudeEntries.length > 0)) return true;
   if ((docData?.drawings && docData.drawings.length > 0) || (docData?.stats?.drawings && docData.stats.drawings.length > 0)) return true;
 
-  // 6. If docData is missing completely or user has no progress, return false
+  // 5. Check user-specific local storage cache
+  if (uid && typeof localStorage !== 'undefined') {
+    if (localStorage.getItem(`nexora_onboarding_completed_${uid}`) === "true") return true;
+    if (localStorage.getItem(`nexora_onboarding_completed_${uid}`) === "false") return false;
+  }
+
+  // 6. If explicitly flagged as false without any activity/profile data, return false
+  if (
+    docData?.onboardingCompleted === false ||
+    docData?.settings?.onboardingCompleted === false ||
+    onboardingData?.onboardingCompleted === false
+  ) {
+    return false;
+  }
+
   return false;
 }
 

@@ -118,7 +118,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
   const layoutConfig = settings.layoutConfig || {};
-  const sectionOrder = layoutConfig.sectionOrder || ['mascot', 'stats', 'protocol', 'quests', 'plans'];
+  const sectionOrder = Array.from(new Set(layoutConfig.sectionOrder || ['mascot', 'stats', 'protocol', 'quests', 'plans']));
   const lang = settings.language || 'en';
 
   const quotes = [
@@ -440,7 +440,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
       case 'stats':
         if (layoutConfig.hideStats) return null;
         return (
-          <div key="stats" className="w-full flex flex-col gap-4 transition-all">
+          <div className="w-full flex flex-col gap-4 transition-all">
             {/* Bento Stats Grid */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
               <div className="grid grid-cols-3 gap-2.5 sm:gap-4 flex-1 w-full">
@@ -553,7 +553,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
         const progressPercent = Math.min(100, Math.floor(((dailyProgress.completionsCount || 0) / 3) * 100));
         
         return (
-          <div key="protocol" id="card-start-protocol" className="glass-card p-6 border-2 border-[#E9E4D4]/50 bg-gradient-to-br from-white to-[#FAF7F2]/40 shadow-[0_12px_40px_rgba(79,63,52,0.03)] relative overflow-hidden transition-all rounded-[24px]">
+          <div id="card-start-protocol" className="glass-card p-6 border-2 border-[#E9E4D4]/50 bg-gradient-to-br from-white to-[#FAF7F2]/40 shadow-[0_12px_40px_rgba(79,63,52,0.03)] relative overflow-hidden transition-all rounded-[24px]">
             <div className="absolute top-0 right-0 p-4 opacity-[0.03] select-none pointer-events-none">
               <Target size={140} className="text-[#4F3F34]" />
             </div>
@@ -647,7 +647,6 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
         if (layoutConfig.hideQuests || !dailyQuest) return null;
         return (
           <motion.div 
-            key="quests"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className={`p-4 rounded-3xl border-2 flex items-center justify-between gap-4 transition-colors ${
@@ -683,7 +682,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
       case 'plans':
         if (layoutConfig.hideCustomPlans) return null;
         return (
-          <div key="plans" className="space-y-4 pt-4 transition-colors">
+          <div className="space-y-4 pt-4 transition-colors">
             
             <div className="flex items-center justify-between mt-8">
               <h3 className="text-[10px] font-black text-blue-900/40 uppercase tracking-[0.2em]">{translate("Custom Protocol Library", lang)}</h3>
@@ -703,9 +702,9 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">{translate("No Custom Protocols", lang)}</p>
                 </div>
               ) : (
-                customPlans.map((plan) => (
+                customPlans.map((plan, planIdx) => (
                   <motion.div
-                    key={plan.id}
+                    key={plan.id || `custom-plan-${planIdx}`}
                     className="glass-card p-4 flex items-center gap-4 group hover:border-blue-500/30 transition-all border-white/80"
                   >
                     <div className={`w-12 h-12 rounded-2xl ${plan.color} text-white flex items-center justify-center shadow-lg`}>
@@ -737,7 +736,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
         if (layoutConfig.hideMascot) return null;
 
         return (
-          <div key="mascot" className="relative w-full flex flex-row items-center justify-between gap-3 sm:gap-4 md:gap-6 pt-1 pb-2 mb-1 select-none overflow-visible">
+          <div className="relative w-full flex flex-row items-center justify-between gap-3 sm:gap-4 md:gap-6 pt-1 pb-2 mb-1 select-none overflow-visible">
             {/* Mascot Character on Left (Horizontal arrangement, SVG up to 610px x 610px) */}
             <div className="relative z-20 flex-shrink-0 w-[140px] h-[140px] xs:w-[190px] xs:h-[190px] sm:w-[320px] sm:h-[320px] md:w-[460px] md:h-[460px] lg:w-[610px] lg:h-[610px] max-w-full aspect-square flex items-center justify-center overflow-visible">
               <motion.div 

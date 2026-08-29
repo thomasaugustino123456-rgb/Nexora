@@ -80,12 +80,6 @@ const Tree: React.FC<TreeProps> = ({ x, y, scale, color, delay }) => {
 };
 
 export const ForestBackdrop: React.FC = () => {
-  const { stopAllMusic } = useSound();
-
-  useEffect(() => {
-    return () => stopAllMusic();
-  }, []);
-
   const trees = useMemo(() => [
     { x: 10, y: 80, scale: 0.8, color: '#064e3b', delay: 0.1 },
     { x: 25, y: 85, scale: 1.2, color: '#065f46', delay: 0.3 },

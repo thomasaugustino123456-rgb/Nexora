@@ -453,14 +453,14 @@ export const PlantScreen: React.FC<PlantScreenProps> = ({
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
-                    {(settings.purchasedEcosystemItemIds || []).map((itemId: string) => {
+                    {Array.from(new Set(settings.purchasedEcosystemItemIds || [])).map((itemId: string, itemIdx: number) => {
                       const item = SHOP_ITEMS.find(i => i.id === itemId);
                       if (!item) return null;
                       const isActive = (settings.activeEcosystemItemIds || []).includes(itemId);
                       
                       return (
                         <div 
-                          key={itemId}
+                          key={`${itemId}-${itemIdx}`}
                           className={`p-5 rounded-[2rem] border-4 transition-all flex items-center justify-between ${isActive ? 'bg-blue-50 border-blue-400 shadow-xl shadow-blue-500/10' : 'bg-gray-50 border-gray-100 hover:border-blue-200'}`}
                         >
                           <div className="flex items-center gap-5">

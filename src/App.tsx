@@ -5770,6 +5770,7 @@ export default function App() {
               }
             >
               <div className="w-full flex flex-col items-center">
+                <PWAInstallerCard currentScreen="landing" className="sticky top-0 z-50 w-full" />
                 <LandingPage onGetStarted={() => setShowAuth(true)} />
               </div>
             </Suspense>
@@ -5870,9 +5871,7 @@ export default function App() {
   // Onboarding guard: Ensure new users and users who need onboarding NEVER see the Home screen
   const isUserNeedsOnboarding = Boolean(user) && (
     (typeof window !== "undefined" && sessionStorage.getItem("nexora_signup_flow") === "true") ||
-    (needsOnboarding && settings?.onboardingCompleted !== true) ||
-    settings?.onboardingCompleted === false ||
-    (typeof window !== "undefined" && user?.uid && localStorage.getItem(`nexora_onboarding_completed_${user.uid}`) === "false")
+    (needsOnboarding && settings?.onboardingCompleted !== true)
   );
 
   if (isUserNeedsOnboarding) {
@@ -5955,7 +5954,11 @@ export default function App() {
         </AnimatePresence>
 
         {/* Native PWA Top Installer Card */}
-        <PWAInstallerCard currentScreen={activeScreen} className="sticky top-0 z-[990]" />
+        <PWAInstallerCard 
+          currentScreen={activeScreen} 
+          isTaskActive={activeScreen === "challenge" || showMascotCelebration || showCompletionFlame || showRewardsScreen || activeScreen === "trophy-rewards"} 
+          className="sticky top-0 z-[990]" 
+        />
         
         {/* OPTION 1: Warm Organic Ambient Glow (Gently breathing and drifting blobs representing Warm Orange, Nature Green, and Calm Blue) */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">

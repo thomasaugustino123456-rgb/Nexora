@@ -62,10 +62,10 @@ const PREMIUM_THEMES = [
 ];
 
 export function ArchitectLab({ settings, onUpdateSettings, onClose }: ArchitectLabProps) {
-  const currentOrder = settings.navOrder || NAV_ITEMS.map(i => i.id);
+  const currentOrder = Array.from(new Set(settings.navOrder || NAV_ITEMS.map(i => i.id)));
   const hiddenItems = settings.hiddenNavItems || [];
   
-  const sectionOrder = settings.layoutConfig?.sectionOrder || HOME_SECTIONS.map(s => s.id);
+  const sectionOrder = Array.from(new Set(settings.layoutConfig?.sectionOrder || HOME_SECTIONS.map(s => s.id)));
   const layoutConfig = settings.layoutConfig || {};
 
   const activeTheme = settings.activeSkin || 'standard';

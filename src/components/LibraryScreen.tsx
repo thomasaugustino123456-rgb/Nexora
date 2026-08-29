@@ -314,8 +314,8 @@ export function LibraryScreen({
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    {savedVideos.map(video => (
-                      <div key={video.id} className="border border-[#E9E4D4]/40 rounded-2xl overflow-hidden shadow-sm group relative flex flex-col bg-white">
+                    {savedVideos.map((video, vIdx) => (
+                      <div key={video.id ? `${video.id}-${vIdx}` : `video-${vIdx}`} className="border border-[#E9E4D4]/40 rounded-2xl overflow-hidden shadow-sm group relative flex flex-col bg-white">
                         <div className="aspect-[9/16] bg-stone-900 relative">
                           {video.videoUrl && (
                             <video 
@@ -425,8 +425,8 @@ export function LibraryScreen({
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      {settings.savedChallengeIds.map(cid => (
-                        <div key={cid} className="flex items-center justify-between py-3.5 border-b border-[#E9E4D4]/30 hover:bg-[#FAF7F2]/30 px-2 rounded-xl transition-all">
+                      {Array.from(new Set(settings.savedChallengeIds || [])).map((cid, cIdx) => (
+                        <div key={`${cid}-${cIdx}`} className="flex items-center justify-between py-3.5 border-b border-[#E9E4D4]/30 hover:bg-[#FAF7F2]/30 px-2 rounded-xl transition-all">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-[#E8F5EE] text-[#69C496] rounded-lg border border-[#D0EFE0]/60">
                               <Zap size={12} className="fill-[#69C496]/40" />
@@ -468,8 +468,8 @@ export function LibraryScreen({
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      {stats.gratitudeEntries.map(entry => (
-                        <div key={entry.id} className="flex items-center justify-between gap-4 py-3.5 border-b border-[#E9E4D4]/30 hover:bg-[#FAF7F2]/30 px-2 rounded-xl transition-all">
+                      {(stats.gratitudeEntries || []).map((entry, gIdx) => (
+                        <div key={entry.id ? `${entry.id}-${gIdx}` : `gratitude-${gIdx}`} className="flex items-center justify-between gap-4 py-3.5 border-b border-[#E9E4D4]/30 hover:bg-[#FAF7F2]/30 px-2 rounded-xl transition-all">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-bold text-[#4F3F34] leading-relaxed italic">"{entry.text}"</p>
                             <span className="text-[7.5px] font-black text-[#4F3F34]/40 uppercase tracking-widest block mt-1">{new Date(entry.date).toLocaleDateString()}</span>
