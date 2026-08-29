@@ -228,14 +228,21 @@ export function usePWAInstall(currentScreen: string, isTaskActiveOverride?: bool
   const isQualifyingScreen =
     (currentScreen === 'landing' || currentScreen === 'home') && !isTakingTask;
 
+  const isInstallable = Boolean(
+    deferredPrompt ||
+      (typeof window !== 'undefined' && Boolean(window.__nexora_deferred_prompt))
+  );
+
   // Visibility calculation:
-  // 1. Must be on qualifying screen (landing or home)
-  // 2. Not already installed
-  // 3. Not currently dismissed or suppressed
-  // 4. Must not have exceeded the 4-times appearance limit
-  // 5. Must not be taking a task
+  // 1. Must have genuine browser installation prompt available (isInstallable)
+  // 2. Must be on qualifying screen (landing or home)
+  // 3. Not already installed
+  // 4. Not currently dismissed or suppressed
+  // 5. Must not have exceeded the 4-times appearance limit
+  // 6. Must not be taking a task
   const isVisible =
     isQualifyingScreen &&
+    isInstallable &&
     !isInstalled &&
     !isDismissed &&
     showCount < 4;
@@ -308,11 +315,6 @@ export function usePWAInstall(currentScreen: string, isTaskActiveOverride?: bool
     setSwitchCount(0);
     setSessionNumber(SESSION_SWITCH_COUNT_KEY, 0);
   }, []);
-
-  const isInstallable = Boolean(
-    deferredPrompt ||
-      (typeof window !== 'undefined' && Boolean(window.__nexora_deferred_prompt))
-  );
 
   return {
     isVisible,
