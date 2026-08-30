@@ -16,6 +16,7 @@ import { ArtistMascot } from './ArtistMascot';
 import { MascotV2 } from './MascotV2';
 import { HappyMascot } from './FeedbackUI';
 import { LivingMascot } from './LivingMascot';
+import { isUserProUnlocked } from '../types';
 
 export function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest, isCustomPlan, gardenState, setGardenState, onLootFound, onCompleteWaterChallenge }: { 
   step: ChallengeStep, 
@@ -41,9 +42,11 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
 }) {
   const baseSteps: ChallengeStep[] = ['pushups', 'water', 'breathing', 'drawing', 'football', 'bubbles', 'memory', 'gratitude', 'reaction'];
   const archived = settings.archivedOfficialChallenges || [];
+  const isProTestActive = Boolean(settings?.proTestActive) && Boolean(settings?.proTestExpiresAt) && new Date(settings.proTestExpiresAt!).getTime() > Date.now();
+  const effectiveIsPro = isUserProUnlocked(undefined) || Boolean(settings?.isPro) || isProTestActive;
   const defaultSteps: ChallengeStep[] = [
     ...baseSteps.filter(s => !archived.includes(s)), 
-    ...(settings.isPro && !archived.includes('writing') ? ['writing' as ChallengeStep] : []), 
+    ...(effectiveIsPro && !archived.includes('writing') ? ['writing' as ChallengeStep] : []), 
     ...(!archived.includes('meditation') ? ['meditation' as ChallengeStep] : [])
   ];
   const steps = customSteps || defaultSteps;

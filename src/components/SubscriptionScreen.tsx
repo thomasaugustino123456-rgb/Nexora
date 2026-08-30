@@ -49,6 +49,7 @@ interface SubscriptionScreenProps {
   onActivatePro?: () => void;
   onUpdateSettings?: (settings: any) => void;
   onStartProTest?: () => void;
+  onStopProTest?: () => void;
   settings?: any;
   stats?: any;
 }
@@ -163,6 +164,7 @@ export function SubscriptionScreen({
   onActivatePro,
   onUpdateSettings,
   onStartProTest,
+  onStopProTest,
   settings,
   stats = { streak: 0, xp: 0, coins: 0, level: 1 }
 }: SubscriptionScreenProps) {
@@ -225,10 +227,19 @@ export function SubscriptionScreen({
 
   // Determine if Pro (or Pro Test mode) is currently active
   const isProTestActive = Boolean(settings?.proTestActive) && Boolean(settings?.proTestExpiresAt) && new Date(settings.proTestExpiresAt!).getTime() > Date.now();
-  const isPro = isUserProUnlocked(userId) || Boolean(settings?.isPro) || isProTestActive;
-  const testRemainingDays = isProTestActive && settings?.proTestExpiresAt
-    ? Math.max(1, Math.ceil((new Date(settings.proTestExpiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
-    : 0;
+  // isPermanentPro means user bought a real subscription (or has unlocked UID), NOT just trial
+  const isPermanentPro = isUserProUnlocked(userId) || (Boolean(settings?.isPro) && !settings?.proTestActive && settings?.proPlan !== '4-Day Free Pro Test');
+  const isPro = isPermanentPro || isProTestActive;
+  
+  // Calculate remaining time precisely (days and hours)
+  const remainingMs = isProTestActive && settings?.proTestExpiresAt
+    ? Math.max(0, new Date(settings.proTestExpiresAt).getTime() - Date.now())
+    : (settings?.proTestRemainingMs ?? (settings?.proTestStartedAt ? 0 : 4 * 24 * 60 * 60 * 1000));
+  
+  const testRemainingDays = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
+  const testRemainingHours = Math.floor((remainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const hasRemainingProTestTime = !isPermanentPro && !isProTestActive && remainingMs > 1000 && (!settings?.proTestCooldownUntil || new Date(settings.proTestCooldownUntil).getTime() <= Date.now());
+  const isProTestPaused = !isProTestActive && Boolean(settings?.proTestStartedAt) && remainingMs > 1000;
 
   // Track online status
   useEffect(() => {
@@ -305,16 +316,17 @@ export function SubscriptionScreen({
           checkedAt: new Date().toLocaleTimeString()
         });
       } else {
-        if (onUpdateSettings && !isProTestActive) {
+        const isCurrentTestActive = Boolean(settings?.proTestActive) && Boolean(settings?.proTestExpiresAt) && new Date(settings.proTestExpiresAt!).getTime() > Date.now();
+        if (onUpdateSettings && !isProTestActive && !isCurrentTestActive) {
           onUpdateSettings({ isPro: false });
         }
 
         setVerificationResult({
-          isPro: false,
-          plan: "Free Tier",
+          isPro: isProTestActive || isCurrentTestActive,
+          plan: (isProTestActive || isCurrentTestActive) ? "4-Day Free Pro Test" : "Free Tier",
           activatedAt: "-",
           expiresAt: "-",
-          message: "You are currently using the Free plan.",
+          message: (isProTestActive || isCurrentTestActive) ? "Your 4-Day Pro Test is currently active." : "You are currently using the Free plan.",
           checkedAt: new Date().toLocaleTimeString()
         });
       }
@@ -332,15 +344,15 @@ export function SubscriptionScreen({
     }
   }, [userId, isOnline]);
 
-  // Robust 4-Day Free Pro Test Activation Flow
+  // Robust 4-Day Free Pro Test Activation / Resume Flow
   const handleActivate4DayTrial = async () => {
     if (!isOnline) return;
 
     // Check if test is currently in 3-week cooldown
     if (settings?.proTestCooldownUntil && new Date(settings.proTestCooldownUntil).getTime() > Date.now()) {
-      const remainingMs = new Date(settings.proTestCooldownUntil).getTime() - Date.now();
-      const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
-      alert(`Your 4-Day Free Pro Test is currently on cooldown. You can test again in ${remainingDays} day(s), or upgrade instantly via WhatsApp!`);
+      const cooldownRemainingMs = new Date(settings.proTestCooldownUntil).getTime() - Date.now();
+      const cooldownRemainingDays = Math.ceil(cooldownRemainingMs / (24 * 60 * 60 * 1000));
+      alert(`Your 4-Day Free Pro Test is currently on cooldown. You can test again in ${cooldownRemainingDays} day(s), or upgrade instantly via WhatsApp!`);
       return;
     }
 
@@ -352,13 +364,18 @@ export function SubscriptionScreen({
         await onStartProTest();
       } else if (onUpdateSettings) {
         const now = new Date();
-        const expiry = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000);
+        const durationToUse = (settings?.proTestRemainingMs !== undefined && settings?.proTestRemainingMs !== null && settings.proTestRemainingMs > 0)
+          ? settings.proTestRemainingMs
+          : 4 * 24 * 60 * 60 * 1000;
+        
+        const expiry = new Date(now.getTime() + durationToUse);
         const settingsUpdate = {
           proTestStartedAt: now.toISOString(),
           proTestExpiresAt: expiry.toISOString(),
+          proTestRemainingMs: durationToUse,
           proTestLastUsedAt: now.toISOString(),
           proTestActive: true,
-          proTestDay2Notified: false,
+          proTestDay2Notified: settings?.proTestDay2Notified || false,
           isPro: true,
           proPlan: '4-Day Free Pro Test',
         };
@@ -376,6 +393,50 @@ export function SubscriptionScreen({
       console.error('Error starting free trial:', error);
     } finally {
       setIsActivatingTrial(false);
+    }
+  };
+
+  // Stop / Pause 4-Day Free Pro Test (bank remaining time so user loses nothing)
+  const [isStoppingTrial, setIsStoppingTrial] = useState<boolean>(false);
+  const handleStopTrial = async () => {
+    if (!isOnline) return;
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    setIsStoppingTrial(true);
+
+    try {
+      if (onStopProTest) {
+        await onStopProTest();
+      } else if (onUpdateSettings) {
+        const now = Date.now();
+        let updatedRemainingMs = settings?.proTestRemainingMs ?? (4 * 24 * 60 * 60 * 1000);
+
+        if (settings?.proTestExpiresAt) {
+          const currentExpiryTime = new Date(settings.proTestExpiresAt).getTime();
+          updatedRemainingMs = Math.max(0, currentExpiryTime - now);
+        }
+
+        const settingsUpdate = {
+          proTestActive: false,
+          proTestExpiresAt: null,
+          proTestRemainingMs: updatedRemainingMs,
+          isPro: isUserProUnlocked(userId) || false,
+          proPlan: 'Free Tier',
+        };
+
+        onUpdateSettings(settingsUpdate);
+
+        if (userId && navigator.onLine) {
+          try {
+            await safeSetDoc(doc(db, 'users', userId), settingsUpdate, { merge: true });
+          } catch (e) {
+            console.warn('Firestore pause sync warning:', e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error pausing free trial:', error);
+    } finally {
+      setIsStoppingTrial(false);
     }
   };
 
@@ -1116,15 +1177,15 @@ export function SubscriptionScreen({
 
         {/* Primary Action Button */}
         <motion.button
-          whileHover={(!isProTestActive && !isPro && isOnline) ? { scale: 1.02 } : {}}
-          whileTap={(!isProTestActive && !isPro && isOnline) ? { scale: 0.98 } : {}}
+          whileHover={(!isProTestActive && !isPermanentPro && isOnline) ? { scale: 1.02 } : {}}
+          whileTap={(!isProTestActive && !isPermanentPro && isOnline) ? { scale: 0.98 } : {}}
           id="main-continue-btn"
-          disabled={!isOnline || isActivatingTrial || isProTestActive || isPro}
+          disabled={!isOnline || isActivatingTrial || isProTestActive || isPermanentPro}
           onClick={handlePrimaryAction}
           className={`w-full py-4 sm:py-5 px-6 rounded-3xl font-black text-sm sm:text-base md:text-lg transition-all flex items-center justify-center gap-2.5 shadow-2xl ${
             isProTestActive
               ? 'bg-emerald-600 text-white cursor-default shadow-emerald-900/20'
-              : isPro
+              : isPermanentPro
                 ? 'bg-[#191C18] text-amber-300 cursor-default'
                 : !isOnline
                   ? 'bg-slate-600 text-slate-300 cursor-not-allowed'
@@ -1139,9 +1200,9 @@ export function SubscriptionScreen({
           ) : isProTestActive ? (
             <div className="flex items-center gap-2 text-white">
               <Check size={20} className="text-emerald-200 stroke-[3]" />
-              <span>4-Day Free Pro Test Active ({testRemainingDays} Day{testRemainingDays > 1 ? 's' : ''} Left)</span>
+              <span>4-Day Free Pro Test Active ({testRemainingDays}d {testRemainingHours}h Left)</span>
             </div>
-          ) : isPro ? (
+          ) : isPermanentPro ? (
             <div className="flex items-center gap-2">
               <Crown size={20} className="text-amber-400" />
               <span>Nexora Pro Member Active 👑</span>
@@ -1150,7 +1211,9 @@ export function SubscriptionScreen({
             <div className="flex items-center gap-2">
               <span>
                 {isFreeTrialEnabled 
-                  ? 'Start 4-Day Free Pro Test ($0.00)' 
+                  ? (isProTestPaused 
+                      ? `Resume 4-Day Pro Test (${testRemainingDays}d ${testRemainingHours}h Left)` 
+                      : 'Start 4-Day Free Pro Test ($0.00)') 
                   : selectedPlanId === 'yearly' 
                     ? 'Continue with Yearly ($49.99)' 
                     : selectedPlanId === 'monthly' 
@@ -1164,54 +1227,114 @@ export function SubscriptionScreen({
           )}
         </motion.button>
 
+        {/* STOP / PAUSE PRO TEST BUTTON (Appears directly under when test is active) */}
+        {isProTestActive && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="mt-3 flex flex-col items-center gap-1.5"
+          >
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              id="stop-pro-test-btn"
+              disabled={isStoppingTrial || !isOnline}
+              onClick={handleStopTrial}
+              className="w-full py-3 sm:py-3.5 px-5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 active:bg-rose-500/30 text-rose-900 border border-rose-400/30 backdrop-blur-md font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+            >
+              {isStoppingTrial ? (
+                <>
+                  <RefreshCw size={15} className="animate-spin text-rose-600" />
+                  <span>Pausing & Saving Your Days...</span>
+                </>
+              ) : (
+                <>
+                  <Pause size={15} className="text-rose-600 stroke-[2.5]" />
+                  <span>Stop / Pause Free Pro Test (Save Remaining {testRemainingDays}d {testRemainingHours}h)</span>
+                </>
+              )}
+            </motion.button>
+            <p className="text-[11px] text-slate-600 font-medium text-center">
+              Stopping returns you to Free mode. You can resume anytime from where you stopped without losing time!
+            </p>
+          </motion.div>
+        )}
+
         {/* Direct 4-Day Pro Pass Instant Button */}
         {onStartProTest && (
           <motion.div 
-            whileHover={!isProTestActive && !isPro ? { scale: 1.01 } : {}}
+            whileHover={!isProTestActive && !isPermanentPro ? { scale: 1.01 } : {}}
             className={`mt-4 p-4 sm:p-5 rounded-3xl backdrop-blur-sm border flex items-center justify-between gap-3 shadow-md ${
               isProTestActive 
                 ? 'bg-emerald-50/90 border-emerald-300'
-                : 'bg-white/85 border-black/10'
+                : isProTestPaused
+                  ? 'bg-amber-50/90 border-amber-300'
+                  : 'bg-white/85 border-black/10'
             }`}
           >
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
-                isProTestActive ? 'bg-emerald-700 text-white' : 'bg-emerald-600 text-white'
+                isProTestActive 
+                  ? 'bg-emerald-700 text-white' 
+                  : isProTestPaused
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-emerald-600 text-white'
               }`}>
-                {isProTestActive ? <Check size={20} className="stroke-[3]" /> : <Clock size={20} />}
+                {isProTestActive ? <Check size={20} className="stroke-[3]" /> : isProTestPaused ? <Play size={20} className="ml-0.5" /> : <Clock size={20} />}
               </div>
               <div className="text-left">
                 <h4 className="text-xs sm:text-sm font-black text-slate-950">
-                  {isProTestActive ? '4-Day Pro Test Active' : 'Direct 4-Day Pro Test'}
+                  {isProTestActive 
+                    ? '4-Day Pro Test Active' 
+                    : isProTestPaused
+                      ? `4-Day Pro Test Paused (${testRemainingDays}d ${testRemainingHours}h Left)`
+                      : 'Direct 4-Day Pro Test'}
                 </h4>
                 <p className="text-[11px] sm:text-xs text-slate-600 font-medium">
                   {isProTestActive 
-                    ? `Enjoying VIP features. ${testRemainingDays} day${testRemainingDays > 1 ? 's' : ''} remaining.`
-                    : 'Activate full VIP features for 4 days with zero delay.'}
+                    ? `Enjoying VIP features. ${testRemainingDays}d ${testRemainingHours}h remaining.`
+                    : isProTestPaused
+                      ? `Your time is safely saved. Click to resume and enjoy Pro.`
+                      : 'Activate full VIP features for 4 days with zero delay.'}
                 </p>
               </div>
             </div>
 
-            <button
-              onClick={isProTestActive ? undefined : handleActivate4DayTrial}
-              id="start-4day-test-btn"
-              disabled={isActivatingTrial || isProTestActive || isPro}
-              className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl font-black text-xs sm:text-sm shrink-0 transition-all shadow-md ${
-                isProTestActive
-                  ? 'bg-emerald-200 text-emerald-900 cursor-default'
-                  : isPro
-                    ? 'bg-slate-200 text-slate-600 cursor-default'
-                    : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
-              }`}
-            >
-              {isActivatingTrial 
-                ? 'Activating...' 
-                : isProTestActive 
-                  ? 'Active ✓' 
-                  : isPro 
-                    ? 'Pro VIP ✓' 
-                    : 'Activate Now'}
-            </button>
+            <div className="flex items-center gap-2">
+              {isProTestActive ? (
+                <button
+                  onClick={handleStopTrial}
+                  id="direct-stop-pro-test-btn"
+                  disabled={isStoppingTrial}
+                  className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl font-black text-xs shrink-0 transition-all shadow-sm bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Pause size={13} className="text-rose-700" />
+                  <span>{isStoppingTrial ? 'Pausing...' : 'Stop Test'}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleActivate4DayTrial}
+                  id="start-4day-test-btn"
+                  disabled={isActivatingTrial || isPermanentPro}
+                  className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl font-black text-xs sm:text-sm shrink-0 transition-all shadow-md ${
+                    isPermanentPro
+                      ? 'bg-slate-200 text-slate-600 cursor-default'
+                      : isProTestPaused
+                        ? 'bg-amber-500 hover:bg-amber-600 text-white cursor-pointer'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                  }`}
+                >
+                  {isActivatingTrial 
+                    ? 'Activating...' 
+                    : isPermanentPro 
+                      ? 'Pro VIP ✓' 
+                      : isProTestPaused
+                        ? 'Resume Test'
+                        : 'Activate Now'}
+                </button>
+              )}
+            </div>
           </motion.div>
         )}
 
@@ -1498,45 +1621,62 @@ export function SubscriptionScreen({
                 </div>
                 <span className="text-[10px] sm:text-[11px] text-slate-300 block font-medium">
                   {isProTestActive 
-                    ? `4-Day Free Pro Test Active (${testRemainingDays}d left)` 
-                    : isPro 
+                    ? `4-Day Free Pro Test Active (${testRemainingDays}d ${testRemainingHours}h left)` 
+                    : isPermanentPro 
                       ? 'Nexora Pro Active 👑' 
-                      : (isFreeTrialEnabled ? '4-Day Free Pro Test ($0.00 today)' : 'Instant VIP Access')}
+                      : (isFreeTrialEnabled ? (isProTestPaused ? `Resume 4-Day Pro (${testRemainingDays}d left)` : '4-Day Free Pro Test ($0.00 today)') : 'Instant VIP Access')}
                 </span>
               </div>
 
-              <motion.button
-                whileHover={!isProTestActive && !isPro ? { scale: 1.04 } : {}}
-                whileTap={!isProTestActive && !isPro ? { scale: 0.96 } : {}}
-                onClick={handlePrimaryAction}
-                disabled={!isOnline || isActivatingTrial || isProTestActive || isPro}
-                className={`py-2.5 px-5 sm:px-6 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-lg ${
-                  isProTestActive 
-                    ? 'bg-emerald-500 text-white cursor-default' 
-                    : isPro 
-                      ? 'bg-amber-400 text-slate-950 cursor-default' 
-                      : 'bg-[#98E724] hover:bg-[#86D41A] text-slate-950 cursor-pointer'
-                }`}
-              >
-                {isActivatingTrial ? (
-                  <RefreshCw size={14} className="animate-spin" />
-                ) : isProTestActive ? (
-                  <>
-                    <span>Active ✓</span>
-                    <Check size={14} className="stroke-[3]" />
-                  </>
-                ) : isPro ? (
-                  <>
-                    <span>Pro VIP ✓</span>
-                    <Crown size={14} />
-                  </>
-                ) : (
-                  <>
-                    <span>{isFreeTrialEnabled ? 'Claim 4 Days Free' : 'Continue'}</span>
-                    <Sparkles size={14} className="fill-slate-950" />
-                  </>
+              <div className="flex items-center gap-2">
+                {isProTestActive && (
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={handleStopTrial}
+                    disabled={!isOnline || isStoppingTrial}
+                    className="py-2.5 px-3.5 rounded-2xl font-black text-xs bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Pause size={13} className="text-rose-400" />
+                    <span>{isStoppingTrial ? 'Pausing...' : 'Stop'}</span>
+                  </motion.button>
                 )}
-              </motion.button>
+
+                <motion.button
+                  whileHover={!isProTestActive && !isPermanentPro ? { scale: 1.04 } : {}}
+                  whileTap={!isProTestActive && !isPermanentPro ? { scale: 0.96 } : {}}
+                  onClick={handlePrimaryAction}
+                  disabled={!isOnline || isActivatingTrial || isProTestActive || isPermanentPro}
+                  className={`py-2.5 px-5 sm:px-6 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-lg ${
+                    isProTestActive 
+                      ? 'bg-emerald-500 text-white cursor-default' 
+                      : isPermanentPro 
+                        ? 'bg-amber-400 text-slate-950 cursor-default' 
+                        : isProTestPaused
+                          ? 'bg-amber-400 hover:bg-amber-500 text-slate-950 cursor-pointer'
+                          : 'bg-[#98E724] hover:bg-[#86D41A] text-slate-950 cursor-pointer'
+                  }`}
+                >
+                  {isActivatingTrial ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : isProTestActive ? (
+                    <>
+                      <span>Active ✓</span>
+                      <Check size={14} className="stroke-[3]" />
+                    </>
+                  ) : isPermanentPro ? (
+                    <>
+                      <span>Pro VIP ✓</span>
+                      <Crown size={14} />
+                    </>
+                  ) : (
+                    <>
+                      <span>{isFreeTrialEnabled ? (isProTestPaused ? 'Resume Pro Test' : 'Claim 4 Days Free') : 'Continue'}</span>
+                      <Sparkles size={14} className="fill-slate-950" />
+                    </>
+                  )}
+                </motion.button>
+              </div>
             </div>
           </motion.div>
         )}

@@ -361,6 +361,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   proTestActive: false,
   proTestStartedAt: null,
   proTestExpiresAt: null,
+  proTestRemainingMs: null,
   proTestLastUsedAt: null,
   proTestCooldownUntil: null,
   proTestLastCompletedAt: null,
@@ -852,11 +853,11 @@ export default function App() {
         }
       }
     } else if (
-      isCurrentlyBoosting ||
-      settings.proTestActive ||
-      (testExpiresAt && new Date(testExpiresAt).getTime() <= now.getTime())
+      (isCurrentlyBoosting || settings.proTestActive) &&
+      testExpiresAt &&
+      new Date(testExpiresAt).getTime() <= now.getTime()
     ) {
-      // Transition from active to expired or detected as expired
+      // Transition from active to expired (ran out of time)
       setIsCurrentlyBoosting(false);
       restoreTrueProgressAfterProTest();
     }
@@ -6799,8 +6800,8 @@ export default function App() {
                           
                           // Check 3-week cooldown
                           if (settings.proTestCooldownUntil && new Date(settings.proTestCooldownUntil).getTime() > now.getTime()) {
-                            const remainingMs = new Date(settings.proTestCooldownUntil).getTime() - now.getTime();
-                            const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+                            const cooldownRemainingMs = new Date(settings.proTestCooldownUntil).getTime() - now.getTime();
+                            const remainingDays = Math.ceil(cooldownRemainingMs / (24 * 60 * 60 * 1000));
                             showToast(
                               `Pro Free Test is on cooldown. You can test again in ${remainingDays} days, or upgrade via WhatsApp!`,
                               "info",
@@ -6808,13 +6809,21 @@ export default function App() {
                             return;
                           }
 
-                          const expiry = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000);
+                          // Determine duration from remainingMs if resuming, or fresh 4 days
+                          const durationMs = (settings.proTestRemainingMs !== undefined && settings.proTestRemainingMs !== null && settings.proTestRemainingMs > 0)
+                            ? settings.proTestRemainingMs
+                            : 4 * 24 * 60 * 60 * 1000;
+
+                          const expiry = new Date(now.getTime() + durationMs);
+                          const isResuming = (settings.proTestRemainingMs !== undefined && settings.proTestRemainingMs !== null && settings.proTestRemainingMs > 0) && Boolean(settings.proTestStartedAt);
+
                           const settingsUpdate = {
-                            proTestStartedAt: now.toISOString(),
+                            proTestStartedAt: settings.proTestStartedAt || now.toISOString(),
                             proTestExpiresAt: expiry.toISOString(),
+                            proTestRemainingMs: durationMs,
                             proTestLastUsedAt: now.toISOString(),
                             proTestActive: true,
-                            proTestDay2Notified: false,
+                            proTestDay2Notified: settings.proTestDay2Notified || false,
                             isPro: true,
                             proPlan: "4-Day Free Pro Test",
                           };
@@ -6832,7 +6841,9 @@ export default function App() {
                           }
 
                           showToast(
-                            "4-DAY PRO TEST ACTIVATED! Full VIP access unlocked for 4 days! ✨",
+                            isResuming 
+                              ? "PRO TEST RESUMED! Continuing with your saved days! ✨"
+                              : "4-DAY PRO TEST ACTIVATED! Full VIP access unlocked for 4 days! ✨",
                             "success",
                           );
                           vibrate(VIBRATION_PATTERNS.SUCCESS);
@@ -6842,6 +6853,54 @@ export default function App() {
                           showToast(
                             "4-Day Pro Test activated on your device! ✨",
                             "success",
+                          );
+                          setActiveScreen("home");
+                        }
+                      }}
+                      onStopProTest={async () => {
+                        try {
+                          const now = Date.now();
+                          let updatedRemainingMs = settings.proTestRemainingMs ?? (4 * 24 * 60 * 60 * 1000);
+
+                          if (settings.proTestExpiresAt) {
+                            const currentExpiryTime = new Date(settings.proTestExpiresAt).getTime();
+                            updatedRemainingMs = Math.max(0, currentExpiryTime - now);
+                          }
+
+                          const settingsUpdate = {
+                            proTestActive: false,
+                            proTestExpiresAt: null,
+                            proTestRemainingMs: updatedRemainingMs,
+                            isPro: isUserProUnlocked(user?.uid) || false,
+                            proPlan: "Free Tier",
+                          };
+
+                          onUpdateSettings(settingsUpdate);
+
+                          if (user && navigator.onLine) {
+                            try {
+                              await firestoreSetDoc(doc(db, "users", user.uid), settingsUpdate, {
+                                merge: true,
+                              });
+                            } catch (dbErr) {
+                              console.warn("Firestore trial pause sync warning:", dbErr);
+                            }
+                          }
+
+                          const remDays = Math.floor(updatedRemainingMs / (24 * 60 * 60 * 1000));
+                          const remHours = Math.floor((updatedRemainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+
+                          showToast(
+                            `PRO TEST PAUSED. ${remDays}d ${remHours}h saved! You can resume anytime. ✨`,
+                            "info",
+                          );
+                          vibrate(VIBRATION_PATTERNS.LIGHT);
+                          setActiveScreen("home");
+                        } catch (err) {
+                          console.error("Trial pause error:", err);
+                          showToast(
+                            "Pro test stopped. Returning to Free tier.",
+                            "info",
                           );
                           setActiveScreen("home");
                         }

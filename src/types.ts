@@ -133,6 +133,7 @@ export interface UserSettings {
   proTestActive?: boolean;
   proTestStartedAt?: string | null;
   proTestExpiresAt?: string | null;
+  proTestRemainingMs?: number | null;
   proTestLastUsedAt?: string | null;
   proTestCooldownUntil?: string | null;
   proTestLastCompletedAt?: string | null;

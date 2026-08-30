@@ -605,6 +605,7 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
   const finalProTestActive = dbTestActive || localTestActive;
   const finalProTestExpiresAt = dbTestActive ? dbSettings.proTestExpiresAt : (localTestActive ? localSettings.proTestExpiresAt : (dbSettings.proTestExpiresAt || localSettings.proTestExpiresAt || null));
   const finalProTestStartedAt = dbSettings.proTestStartedAt || localSettings.proTestStartedAt || null;
+  const finalProTestRemainingMs = dbSettings.proTestRemainingMs !== undefined ? dbSettings.proTestRemainingMs : (localSettings.proTestRemainingMs !== undefined ? localSettings.proTestRemainingMs : null);
   const finalProTestCooldownUntil = dbSettings.proTestCooldownUntil || localSettings.proTestCooldownUntil || null;
 
   const isPro = isUserProUnlocked(userId) || Boolean(dbSettings.isPro) || Boolean(localSettings.isPro) || finalProTestActive;
@@ -621,6 +622,7 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
       proTestActive: finalProTestActive,
       proTestExpiresAt: finalProTestExpiresAt,
       proTestStartedAt: finalProTestStartedAt,
+      proTestRemainingMs: finalProTestRemainingMs,
       proTestCooldownUntil: finalProTestCooldownUntil,
     };
   }
@@ -645,6 +647,7 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
     proTestActive: finalProTestActive,
     proTestExpiresAt: finalProTestExpiresAt,
     proTestStartedAt: finalProTestStartedAt,
+    proTestRemainingMs: finalProTestRemainingMs,
     proTestCooldownUntil: finalProTestCooldownUntil,
     feedbackSubmitted: dbSettings.feedbackSubmitted || localSettings.feedbackSubmitted || false,
   };
@@ -1876,6 +1879,7 @@ export function useNexoraData(
               proTestActive: docData.proTestActive ?? docData.settings?.proTestActive ?? false,
               proTestStartedAt: docData.proTestStartedAt ?? docData.settings?.proTestStartedAt ?? null,
               proTestExpiresAt: docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt ?? null,
+              proTestRemainingMs: docData.proTestRemainingMs ?? docData.settings?.proTestRemainingMs ?? null,
               proTestLastUsedAt: docData.proTestLastUsedAt ?? docData.settings?.proTestLastUsedAt ?? null,
               proTestCooldownUntil: docData.proTestCooldownUntil ?? docData.settings?.proTestCooldownUntil ?? null,
               proTestLastCompletedAt: docData.proTestLastCompletedAt ?? docData.settings?.proTestLastCompletedAt ?? null,
@@ -2555,6 +2559,7 @@ export function useNexoraData(
                       proTestActive: dbData.proTestActive ?? dbSettings.proTestActive ?? false,
                       proTestStartedAt: dbData.proTestStartedAt ?? dbSettings.proTestStartedAt ?? null,
                       proTestExpiresAt: dbData.proTestExpiresAt ?? dbSettings.proTestExpiresAt ?? null,
+                      proTestRemainingMs: dbData.proTestRemainingMs ?? dbSettings.proTestRemainingMs ?? null,
                       proTestLastUsedAt: dbData.proTestLastUsedAt ?? dbSettings.proTestLastUsedAt ?? null,
                       proTestCooldownUntil: dbData.proTestCooldownUntil ?? dbSettings.proTestCooldownUntil ?? null,
                       proTestLastCompletedAt: dbData.proTestLastCompletedAt ?? dbSettings.proTestLastCompletedAt ?? null,
@@ -3323,6 +3328,7 @@ export function useNexoraData(
                   proTestActive: dbData.proTestActive ?? dbSettings.proTestActive ?? false,
                   proTestStartedAt: dbData.proTestStartedAt ?? dbSettings.proTestStartedAt ?? null,
                   proTestExpiresAt: dbData.proTestExpiresAt ?? dbSettings.proTestExpiresAt ?? null,
+                  proTestRemainingMs: dbData.proTestRemainingMs ?? dbSettings.proTestRemainingMs ?? null,
                   proTestLastUsedAt: dbData.proTestLastUsedAt ?? dbSettings.proTestLastUsedAt ?? null,
                   proTestCooldownUntil: dbData.proTestCooldownUntil ?? dbSettings.proTestCooldownUntil ?? null,
                   proTestLastCompletedAt: dbData.proTestLastCompletedAt ?? dbSettings.proTestLastCompletedAt ?? null,
