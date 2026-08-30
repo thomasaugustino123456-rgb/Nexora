@@ -15,6 +15,7 @@ import { BreathingMascot } from './BreathingMascot';
 import { ArtistMascot } from './ArtistMascot';
 import { MascotV2 } from './MascotV2';
 import { HappyMascot } from './FeedbackUI';
+import { LivingMascot } from './LivingMascot';
 
 export function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest, isCustomPlan, gardenState, setGardenState, onLootFound, onCompleteWaterChallenge }: { 
   step: ChallengeStep, 
@@ -1840,8 +1841,12 @@ export const WritingStep = React.memo(({ onDone, activeSkin = 'none', settings, 
       exit={{ opacity: 0, scale: 1.1 }}
       className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md md:max-w-xl lg:max-w-2xl mx-auto w-full relative z-10"
     >
-      <div className="w-full max-w-[200px] flex items-center justify-center h-44 relative">
-        <MascotV2 className="h-full w-auto max-w-[170px]" isSmiling={text.trim().length >= minLength} />
+      <div className="w-full flex items-center justify-center relative my-2">
+        <LivingMascot 
+          mood={text.trim().length >= minLength ? "celebrating" : text.trim().length > 0 ? "happy" : "neutral"}
+          interactive={true}
+          className="scale-110 drop-shadow-md"
+        />
       </div>
       
       <div className="w-full space-y-4 text-center mt-[-10px]">
