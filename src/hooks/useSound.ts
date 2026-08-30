@@ -252,17 +252,17 @@ const getMusicElement = (key: string): HTMLAudioElement | null => {
  * Direct zero-latency sound play function.
  * Plays the sound cleanly to completion without cutting off mid-stream.
  */
-export function playSound(soundKey: SoundKey, volume = 0.65) {
+export function playSound(soundKey: SoundKey, volume = 0.52) {
   if (!soundKey) return;
   const keyStr = String(soundKey);
   const effectiveKey = (SOUNDS as any)[keyStr] ? keyStr : "nav_switch";
   const url = (SOUNDS as any)[effectiveKey];
   if (!url) return;
 
-  // Debounce (15ms) to prevent accidental double-triggers from simultaneous touch/click
+  // Debounce (100ms) to prevent accidental double-triggers from simultaneous touch/click or rapid screen transitions
   const now = Date.now();
   const lastTime = lastPlayTimestamps.get(effectiveKey) || 0;
-  if (now - lastTime < 15) return;
+  if (now - lastTime < 100) return;
   lastPlayTimestamps.set(effectiveKey, now);
 
   try {

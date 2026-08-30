@@ -224,7 +224,11 @@ export function SubscriptionScreen({
   } | null>(null);
 
   // Determine if Pro (or Pro Test mode) is currently active
-  const isPro = settings?.isPro || settings?.proTestActive;
+  const isProTestActive = Boolean(settings?.proTestActive) && Boolean(settings?.proTestExpiresAt) && new Date(settings.proTestExpiresAt!).getTime() > Date.now();
+  const isPro = isUserProUnlocked(userId) || Boolean(settings?.isPro) || isProTestActive;
+  const testRemainingDays = isProTestActive && settings?.proTestExpiresAt
+    ? Math.max(1, Math.ceil((new Date(settings.proTestExpiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+    : 0;
 
   // Track online status
   useEffect(() => {
@@ -260,6 +264,18 @@ export function SubscriptionScreen({
         plan = data.proPlan || data.settings?.proPlan || data.subscription?.plan || plan;
         activatedAt = data.proActivatedAt || data.settings?.proActivatedAt || data.subscription?.activatedAt || activatedAt;
         expiresAt = data.proExpiresAt || data.settings?.proExpiresAt || data.subscription?.expiresAt || expiresAt;
+
+        // Check if pro test is active in Firestore data
+        const fsTestExpires = data.proTestExpiresAt ?? data.settings?.proTestExpiresAt;
+        const fsTestActive = Boolean(data.proTestActive ?? data.settings?.proTestActive) &&
+          Boolean(fsTestExpires) &&
+          new Date(fsTestExpires).getTime() > Date.now();
+
+        if (fsTestActive) {
+          firestoreIsPro = true;
+          plan = '4-Day Free Pro Test';
+          expiresAt = fsTestExpires;
+        }
       } else {
         firestoreIsPro = isUserProUnlocked(userId);
       }
@@ -289,7 +305,7 @@ export function SubscriptionScreen({
           checkedAt: new Date().toLocaleTimeString()
         });
       } else {
-        if (onUpdateSettings && !settings?.proTestActive) {
+        if (onUpdateSettings && !isProTestActive) {
           onUpdateSettings({ isPro: false });
         }
 
@@ -1063,10 +1079,14 @@ export function SubscriptionScreen({
         >
           <div>
             <span className="text-sm sm:text-base font-black text-slate-950 block">
-              Start 4-day free trial
+              {isProTestActive ? '4-Day Free Pro Test Active' : 'Start 4-day free trial'}
             </span>
             <span className="text-xs sm:text-sm text-slate-500 font-medium">
-              Try full Pro access risk-free before any payment
+              {isProTestActive 
+                ? `You are currently enjoying 4-Day Pro Test (${testRemainingDays} day${testRemainingDays > 1 ? 's' : ''} left)`
+                : isPro 
+                  ? 'Official Nexora Pro VIP Active 👑'
+                  : 'Try full Pro access risk-free before any payment'}
             </span>
           </div>
 
@@ -1074,19 +1094,21 @@ export function SubscriptionScreen({
             type="button"
             id="toggle-free-trial-btn"
             aria-label="Toggle Free Trial"
+            disabled={isProTestActive || isPro}
             onClick={() => {
+              if (isProTestActive || isPro) return;
               vibrate(VIBRATION_PATTERNS.CLICK);
               setIsFreeTrialEnabled(!isFreeTrialEnabled);
             }}
-            className={`w-14 h-8 sm:w-16 sm:h-9 rounded-full transition-colors relative p-1 flex items-center shrink-0 cursor-pointer ${
-              isFreeTrialEnabled ? 'bg-[#98E724]' : 'bg-slate-300'
+            className={`w-14 h-8 sm:w-16 sm:h-9 rounded-full transition-colors relative p-1 flex items-center shrink-0 ${
+              isProTestActive || isPro ? 'bg-emerald-500 opacity-90 cursor-default' : (isFreeTrialEnabled ? 'bg-[#98E724] cursor-pointer' : 'bg-slate-300 cursor-pointer')
             }`}
           >
             <motion.div 
               layout
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
               className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white shadow-md ${
-                isFreeTrialEnabled ? 'ml-auto' : 'mr-auto'
+                isFreeTrialEnabled || isProTestActive || isPro ? 'ml-auto' : 'mr-auto'
               }`}
             />
           </button>
@@ -1094,21 +1116,35 @@ export function SubscriptionScreen({
 
         {/* Primary Action Button */}
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={(!isProTestActive && !isPro && isOnline) ? { scale: 1.02 } : {}}
+          whileTap={(!isProTestActive && !isPro && isOnline) ? { scale: 0.98 } : {}}
           id="main-continue-btn"
-          disabled={!isOnline || isActivatingTrial}
+          disabled={!isOnline || isActivatingTrial || isProTestActive || isPro}
           onClick={handlePrimaryAction}
-          className={`w-full py-4 sm:py-5 px-6 rounded-3xl font-black text-sm sm:text-base md:text-lg transition-all flex items-center justify-center gap-2.5 shadow-2xl cursor-pointer ${
-            !isOnline
-              ? 'bg-slate-600 text-slate-300 cursor-not-allowed'
-              : 'bg-[#191C18] hover:bg-black text-white shadow-black/35'
+          className={`w-full py-4 sm:py-5 px-6 rounded-3xl font-black text-sm sm:text-base md:text-lg transition-all flex items-center justify-center gap-2.5 shadow-2xl ${
+            isProTestActive
+              ? 'bg-emerald-600 text-white cursor-default shadow-emerald-900/20'
+              : isPro
+                ? 'bg-[#191C18] text-amber-300 cursor-default'
+                : !isOnline
+                  ? 'bg-slate-600 text-slate-300 cursor-not-allowed'
+                  : 'bg-[#191C18] hover:bg-black text-white shadow-black/35 cursor-pointer'
           }`}
         >
           {isActivatingTrial ? (
             <div className="flex items-center gap-2">
               <RefreshCw size={18} className="animate-spin text-[#98E724]" />
               <span>Activating 4-Day Free Pro Test...</span>
+            </div>
+          ) : isProTestActive ? (
+            <div className="flex items-center gap-2 text-white">
+              <Check size={20} className="text-emerald-200 stroke-[3]" />
+              <span>4-Day Free Pro Test Active ({testRemainingDays} Day{testRemainingDays > 1 ? 's' : ''} Left)</span>
+            </div>
+          ) : isPro ? (
+            <div className="flex items-center gap-2">
+              <Crown size={20} className="text-amber-400" />
+              <span>Nexora Pro Member Active 👑</span>
             </div>
           ) : isOnline ? (
             <div className="flex items-center gap-2">
@@ -1129,28 +1165,52 @@ export function SubscriptionScreen({
         </motion.button>
 
         {/* Direct 4-Day Pro Pass Instant Button */}
-        {onStartProTest && !isPro && (
+        {onStartProTest && (
           <motion.div 
-            whileHover={{ scale: 1.01 }}
-            className="mt-4 p-4 sm:p-5 rounded-3xl bg-white/85 backdrop-blur-sm border border-black/10 flex items-center justify-between gap-3 shadow-md"
+            whileHover={!isProTestActive && !isPro ? { scale: 1.01 } : {}}
+            className={`mt-4 p-4 sm:p-5 rounded-3xl backdrop-blur-sm border flex items-center justify-between gap-3 shadow-md ${
+              isProTestActive 
+                ? 'bg-emerald-50/90 border-emerald-300'
+                : 'bg-white/85 border-black/10'
+            }`}
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                <Clock size={20} />
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
+                isProTestActive ? 'bg-emerald-700 text-white' : 'bg-emerald-600 text-white'
+              }`}>
+                {isProTestActive ? <Check size={20} className="stroke-[3]" /> : <Clock size={20} />}
               </div>
               <div className="text-left">
-                <h4 className="text-xs sm:text-sm font-black text-slate-950">Direct 4-Day Pro Test</h4>
-                <p className="text-[11px] sm:text-xs text-slate-600 font-medium">Activate full VIP features for 4 days with zero delay.</p>
+                <h4 className="text-xs sm:text-sm font-black text-slate-950">
+                  {isProTestActive ? '4-Day Pro Test Active' : 'Direct 4-Day Pro Test'}
+                </h4>
+                <p className="text-[11px] sm:text-xs text-slate-600 font-medium">
+                  {isProTestActive 
+                    ? `Enjoying VIP features. ${testRemainingDays} day${testRemainingDays > 1 ? 's' : ''} remaining.`
+                    : 'Activate full VIP features for 4 days with zero delay.'}
+                </p>
               </div>
             </div>
 
             <button
-              onClick={handleActivate4DayTrial}
+              onClick={isProTestActive ? undefined : handleActivate4DayTrial}
               id="start-4day-test-btn"
-              disabled={isActivatingTrial}
-              className="px-4 py-2 sm:px-5 sm:py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs sm:text-sm shrink-0 transition-all shadow-md cursor-pointer"
+              disabled={isActivatingTrial || isProTestActive || isPro}
+              className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl font-black text-xs sm:text-sm shrink-0 transition-all shadow-md ${
+                isProTestActive
+                  ? 'bg-emerald-200 text-emerald-900 cursor-default'
+                  : isPro
+                    ? 'bg-slate-200 text-slate-600 cursor-default'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+              }`}
             >
-              {isActivatingTrial ? 'Activating...' : 'Activate Now'}
+              {isActivatingTrial 
+                ? 'Activating...' 
+                : isProTestActive 
+                  ? 'Active ✓' 
+                  : isPro 
+                    ? 'Pro VIP ✓' 
+                    : 'Activate Now'}
             </button>
           </motion.div>
         )}
@@ -1437,19 +1497,39 @@ export function SubscriptionScreen({
                   </span>
                 </div>
                 <span className="text-[10px] sm:text-[11px] text-slate-300 block font-medium">
-                  {isFreeTrialEnabled ? '4-Day Free Pro Test ($0.00 today)' : 'Instant VIP Access'}
+                  {isProTestActive 
+                    ? `4-Day Free Pro Test Active (${testRemainingDays}d left)` 
+                    : isPro 
+                      ? 'Nexora Pro Active 👑' 
+                      : (isFreeTrialEnabled ? '4-Day Free Pro Test ($0.00 today)' : 'Instant VIP Access')}
                 </span>
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
+                whileHover={!isProTestActive && !isPro ? { scale: 1.04 } : {}}
+                whileTap={!isProTestActive && !isPro ? { scale: 0.96 } : {}}
                 onClick={handlePrimaryAction}
-                disabled={!isOnline || isActivatingTrial}
-                className="py-2.5 px-5 sm:px-6 rounded-2xl bg-[#98E724] hover:bg-[#86D41A] text-slate-950 font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-lg cursor-pointer"
+                disabled={!isOnline || isActivatingTrial || isProTestActive || isPro}
+                className={`py-2.5 px-5 sm:px-6 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-lg ${
+                  isProTestActive 
+                    ? 'bg-emerald-500 text-white cursor-default' 
+                    : isPro 
+                      ? 'bg-amber-400 text-slate-950 cursor-default' 
+                      : 'bg-[#98E724] hover:bg-[#86D41A] text-slate-950 cursor-pointer'
+                }`}
               >
                 {isActivatingTrial ? (
                   <RefreshCw size={14} className="animate-spin" />
+                ) : isProTestActive ? (
+                  <>
+                    <span>Active ✓</span>
+                    <Check size={14} className="stroke-[3]" />
+                  </>
+                ) : isPro ? (
+                  <>
+                    <span>Pro VIP ✓</span>
+                    <Crown size={14} />
+                  </>
                 ) : (
                   <>
                     <span>{isFreeTrialEnabled ? 'Claim 4 Days Free' : 'Continue'}</span>

@@ -99,6 +99,7 @@ export function MascotCelebrationScreen({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const requestRef = useRef<number | null>(null);
   const backgroundRequestRef = useRef<number | null>(null);
+  const hasPlayedEntranceAudioRef = useRef(false);
 
   // Safe device vibration wrapper
   const triggerVibration = (pattern: number | number[]) => {
@@ -111,22 +112,22 @@ export function MascotCelebrationScreen({
     }
   };
 
-  // Pure Cloudinary Audio Mapping
+  // Pure Cloudinary Audio Mapping with gentle, balanced, pleasant volume
   const playCelebrationAudio = (type: "lightning" | "squash" | "coin" | "streak" | "xp" | "cheer") => {
     if (settings?.soundEnabled === false) return;
     try {
       if (type === "lightning") {
-        play("challenge_unlock");
+        play("challenge_unlock", 0.32);
       } else if (type === "cheer") {
-        play("stadium");
+        play("stadium", 0.34);
       } else if (type === "squash") {
-        play("nav_switch");
+        play("nav_switch", 0.28);
       } else if (type === "coin") {
-        play("coin");
+        play("coin", 0.36);
       } else if (type === "streak") {
-        play("fire_streak");
+        play("fire_streak", 0.36);
       } else if (type === "xp") {
-        play("challenge_unlock");
+        play("challenge_unlock", 0.35);
       }
     } catch (e) {
       console.warn("Celebration audio error:", e);
@@ -219,8 +220,11 @@ export function MascotCelebrationScreen({
   useEffect(() => {
     setRandomMessage(CELEBRATION_MESSAGES[Math.floor(Math.random() * CELEBRATION_MESSAGES.length)]);
 
-    // 1. Play Cloudinary unlocked sound & shake
-    playCelebrationAudio("lightning");
+    // 1. Play Cloudinary unlocked sound & shake (exactly once)
+    if (!hasPlayedEntranceAudioRef.current) {
+      hasPlayedEntranceAudioRef.current = true;
+      playCelebrationAudio("lightning");
+    }
     triggerVibration([80, 40, 120, 60, 200, 50, 250]);
 
     // 2. Transits from lightning to "Mascot Big" at 1.3 seconds

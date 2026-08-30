@@ -24,27 +24,33 @@ export function CompletionFlame({
   const { play } = useSound();
   const [showContent, setShowContent] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [currentStreak, setCurrentStreak] = useState(isNewStreak ? streak - 1 : streak);
+  const [currentStreak, setCurrentStreak] = useState(isNewStreak ? Math.max(1, streak - 1) : streak);
   const [showContinue, setShowContinue] = useState(false);
+  const hasPlayedAudioRef = useRef(false);
 
   const triggerHaptic = (duration: number | number[]) => {
     if ("vibrate" in navigator) {
-      navigator.vibrate(duration);
+      try {
+        navigator.vibrate(duration);
+      } catch {}
     }
   };
 
   const executeChallengeWin = (newStreak?: number) => {
     setIsAnimating(true);
     
-    // 1. 350ms: Ultra-light warning tick (compression tension)
+    // 1. 200ms: Ultra-light warning tick (compression tension)
     setTimeout(() => {
-      triggerHaptic(12);
-    }, 350);
+      triggerHaptic(15);
+    }, 200);
 
-    // 2. 1300ms: Cloudinary flame completion audio + haptic pulse
+    // 2. 500ms: Cloudinary flame completion audio + haptic pulse as flame ignites
     setTimeout(() => {
-      if (settings?.soundEnabled !== false) {
-        play("flame_complete");
+      if (!hasPlayedAudioRef.current) {
+        hasPlayedAudioRef.current = true;
+        if (settings?.soundEnabled !== false) {
+          play("flame_complete", 0.42);
+        }
       }
       triggerHaptic(50);
       if (newStreak !== undefined) {
@@ -52,12 +58,12 @@ export function CompletionFlame({
       } else {
         setCurrentStreak(streak);
       }
-    }, 1300);
+    }, 500);
 
-    // 3. 1900ms: Double success 'heartbeat' (settling glory)
+    // 3. 1200ms: Success settling pulse
     setTimeout(() => {
       triggerHaptic([35, 60, 35]);
-    }, 1900);
+    }, 1200);
   };
 
   useEffect(() => {
@@ -68,21 +74,17 @@ export function CompletionFlame({
 
     const timer = setTimeout(() => {
       setShowContent(true);
-      if (isNewStreak) {
-        executeChallengeWin();
-      } else {
-        setCurrentStreak(streak);
-      }
-    }, 100);
+      executeChallengeWin();
+    }, 50);
 
-    const btnTimer = setTimeout(() => setShowContinue(true), 4500);
+    const btnTimer = setTimeout(() => setShowContinue(true), 2400);
 
     return () => {
       clearTimeout(timer);
       clearTimeout(btnTimer);
       delete (window as any).executeChallengeWin;
     };
-  }, [isNewStreak, streak]);
+  }, [streak]);
 
   return (
     <div className="fixed inset-0 z-[1000] bg-radial from-[#2a1104] via-[#0d0602] to-[#030100] flex flex-col items-center justify-center p-6 text-center overflow-hidden">

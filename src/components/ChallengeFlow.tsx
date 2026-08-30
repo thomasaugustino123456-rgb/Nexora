@@ -13,7 +13,7 @@ import { WaterMascot } from './WaterMascot';
 import { ScreenWater } from './ScreenWater';
 import { BreathingMascot } from './BreathingMascot';
 import { ArtistMascot } from './ArtistMascot';
-import { WritingMascot } from './WritingMascot';
+import { MascotV2 } from './MascotV2';
 import { HappyMascot } from './FeedbackUI';
 
 export function ChallengeFlow({ step, setStep, customSteps, settings, setSettings, dailyProgress, setDailyProgress, stats, setStats, onFinish, onExit, earnedTrophyToday, showToast, play, dailyQuest, isCustomPlan, gardenState, setGardenState, onLootFound, onCompleteWaterChallenge }: { 
@@ -30,7 +30,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
   onExit: () => void,
   earnedTrophyToday: boolean,
   showToast: (msg: string, type?: 'success' | 'info' | 'error') => void,
-  play: (s: any) => void,
+  play: (s: any, volume?: number) => void,
   dailyQuest: ChallengeStep | null,
   isCustomPlan?: boolean,
   gardenState: GardenState,
@@ -81,6 +81,20 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
     showToast('Challenge saved to library!');
   }, [setSettings, step, showToast]);
 
+  const isFinishingRef = useRef(false);
+  const isLastStep = currentIdx >= steps.length - 1;
+
+  const stepPlay = useCallback((soundKey: string, volume?: number) => {
+    // If we are on the very last challenge, play a gentle, low button click sound ('nav_switch')
+    // instead of loud completion chimes ('challenge_unlock', 'continue') so it doesn't double-fire
+    // with MascotCelebrationScreen's entrance fanfare!
+    if (isLastStep && (soundKey === 'challenge_unlock' || soundKey === 'continue')) {
+      play('nav_switch', 0.24);
+      return;
+    }
+    play(soundKey, volume ?? 0.28);
+  }, [isLastStep, play]);
+
   const nextStep = useCallback((data?: any, skipped: boolean = false) => {
     if (!skipped) {
       showToast('Step Complete! Keep going, bro! 🔥', 'success');
@@ -112,6 +126,8 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
     if (currentIdx < steps.length - 1) {
       setStep(steps[currentIdx + 1]);
     } else {
+      if (isFinishingRef.current) return;
+      isFinishingRef.current = true;
       onFinish(finalProgress, isCustomPlan);
     }
   }, [step, settings.soundEnabled, play, showToast, dailyQuest, dailyProgress, isCustomPlan, setDailyProgress, currentIdx, steps, setStep, onFinish]);
@@ -155,7 +171,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 onSkip={() => nextStep(null, true)}
                 activeSkin={settings.activeSkin}
                 settings={settings}
-                play={play}
+                play={stepPlay}
               />
             )}
             {step === 'water' && (
@@ -175,7 +191,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 onContinue={nextStep} 
                 activeSkin={settings.activeSkin}
                 settings={settings}
-                play={play}
+                play={stepPlay}
                 onCompleteWaterChallenge={onCompleteWaterChallenge}
               />
             )}
@@ -185,7 +201,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 onDone={nextStep} 
                 activeSkin={settings.activeSkin}
                 settings={settings}
-                play={play}
+                play={stepPlay}
               />
             )}
             {step === 'drawing' && (
@@ -201,7 +217,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 }}
                 settings={settings}
                 activeSkin={settings.activeSkin}
-                play={play}
+                play={stepPlay}
               />
             )}
             {step === 'football' && (
@@ -209,12 +225,12 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 key="football-step"
                 onFinish={nextStep} 
                 activeSkin={settings.activeSkin}
-                play={play}
+                play={stepPlay}
                 settings={settings}
               />
             )}
-            {step === 'bubbles' && <BubbleStep key="bubbles-step" onFinish={nextStep} settings={settings} activeSkin={settings.activeSkin} play={play} />}
-            {step === 'memory' && <MemoryStep key="memory-step" onComplete={nextStep} settings={settings} activeSkin={settings.activeSkin} play={play} />}
+            {step === 'bubbles' && <BubbleStep key="bubbles-step" onFinish={nextStep} settings={settings} activeSkin={settings.activeSkin} play={stepPlay} />}
+            {step === 'memory' && <MemoryStep key="memory-step" onComplete={nextStep} settings={settings} activeSkin={settings.activeSkin} play={stepPlay} />}
             {step === 'gratitude' && (
               <GratitudeStep 
                 key="gratitude-step"
@@ -231,17 +247,17 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 showToast={showToast}
                 settings={settings}
                 activeSkin={settings.activeSkin}
-                play={play}
+                play={stepPlay}
               />
             )}
-            {step === 'reaction' && <ReactionStep key="reaction-step" onComplete={nextStep} settings={settings} activeSkin={settings.activeSkin} play={play} />}
+            {step === 'reaction' && <ReactionStep key="reaction-step" onComplete={nextStep} settings={settings} activeSkin={settings.activeSkin} play={stepPlay} />}
             {step === 'meditation' && (
               <MeditationStep 
                 key="meditation-step"
                 onDone={nextStep} 
                 activeSkin={settings.activeSkin}
                 settings={settings}
-                play={play}
+                play={stepPlay}
               />
             )}
             {step === 'writing' && (
@@ -250,7 +266,7 @@ export function ChallengeFlow({ step, setStep, customSteps, settings, setSetting
                 onDone={nextStep} 
                 activeSkin={settings.activeSkin}
                 settings={settings}
-                play={play}
+                play={stepPlay}
               />
             )}
             {step === 'completion' && (
@@ -1824,8 +1840,8 @@ export const WritingStep = React.memo(({ onDone, activeSkin = 'none', settings, 
       exit={{ opacity: 0, scale: 1.1 }}
       className="flex-1 flex flex-col items-center justify-center space-y-6 max-w-md md:max-w-xl lg:max-w-2xl mx-auto w-full relative z-10"
     >
-      <div className="w-full max-w-[200px]">
-        <WritingMascot className="drop-shadow-2xl" />
+      <div className="w-full max-w-[200px] flex items-center justify-center h-44 relative">
+        <MascotV2 className="h-full w-auto max-w-[170px]" isSmiling={text.trim().length >= minLength} />
       </div>
       
       <div className="w-full space-y-4 text-center mt-[-10px]">

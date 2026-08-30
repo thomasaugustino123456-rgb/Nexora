@@ -4840,14 +4840,6 @@ export default function App() {
     setSessionTrophy("golden");
 
     if (canAwardTrophy) {
-      if (settings.soundEnabled) {
-        setTimeout(() => {
-          if (nextCompletionsCount === 1) play("trophy1");
-          else if (nextCompletionsCount === 2) play("trophy2");
-          else if (nextCompletionsCount === 3) play("trophy3");
-          else play("trophy1");
-        }, 50);
-      }
       setEarnedTrophyToday(true);
     } else {
       setEarnedTrophyToday(false);

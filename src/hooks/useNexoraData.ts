@@ -600,10 +600,29 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
   const localAccount = (localSettings.accountName && localSettings.accountName.trim() !== "" && localSettings.accountName !== "Champion") ? localSettings.accountName : undefined;
   const finalAccount = dbAccount || localAccount || dbSettings.accountName || localSettings.accountName || defaultSettings.accountName || "Champion";
 
-  const isPro = isUserProUnlocked(userId) || Boolean(dbSettings.isPro) || Boolean(localSettings.isPro);
+  const dbTestActive = Boolean(dbSettings.proTestActive) && Boolean(dbSettings.proTestExpiresAt) && new Date(dbSettings.proTestExpiresAt!).getTime() > Date.now();
+  const localTestActive = Boolean(localSettings.proTestActive) && Boolean(localSettings.proTestExpiresAt) && new Date(localSettings.proTestExpiresAt!).getTime() > Date.now();
+  const finalProTestActive = dbTestActive || localTestActive;
+  const finalProTestExpiresAt = dbTestActive ? dbSettings.proTestExpiresAt : (localTestActive ? localSettings.proTestExpiresAt : (dbSettings.proTestExpiresAt || localSettings.proTestExpiresAt || null));
+  const finalProTestStartedAt = dbSettings.proTestStartedAt || localSettings.proTestStartedAt || null;
+  const finalProTestCooldownUntil = dbSettings.proTestCooldownUntil || localSettings.proTestCooldownUntil || null;
+
+  const isPro = isUserProUnlocked(userId) || Boolean(dbSettings.isPro) || Boolean(localSettings.isPro) || finalProTestActive;
 
   if (!localHasSettings) {
-    return { ...defaultSettings, ...dbSettings, displayName: finalName, profilePic: finalPic, location: finalLoc, accountName: finalAccount, isPro };
+    return { 
+      ...defaultSettings, 
+      ...dbSettings, 
+      displayName: finalName, 
+      profilePic: finalPic, 
+      location: finalLoc, 
+      accountName: finalAccount, 
+      isPro,
+      proTestActive: finalProTestActive,
+      proTestExpiresAt: finalProTestExpiresAt,
+      proTestStartedAt: finalProTestStartedAt,
+      proTestCooldownUntil: finalProTestCooldownUntil,
+    };
   }
 
   const finalOnboardingDone = (dbSettings.onboardingCompleted === true) || (localSettings.onboardingCompleted === true);
@@ -623,6 +642,10 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
     spaceHouseUnlocked: dbSettings.spaceHouseUnlocked || localSettings.spaceHouseUnlocked || false,
     hasEnteredGarden: dbSettings.hasEnteredGarden || localSettings.hasEnteredGarden || false,
     isPro: isPro,
+    proTestActive: finalProTestActive,
+    proTestExpiresAt: finalProTestExpiresAt,
+    proTestStartedAt: finalProTestStartedAt,
+    proTestCooldownUntil: finalProTestCooldownUntil,
     feedbackSubmitted: dbSettings.feedbackSubmitted || localSettings.feedbackSubmitted || false,
   };
 
