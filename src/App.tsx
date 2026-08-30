@@ -103,6 +103,7 @@ import {
   UserReport,
   SystemNotification,
   PlantState,
+  ShopItem,
   isUserProUnlocked,
 } from "./types";
 import { getMascotNotificationDetails } from "./lib/mascotSystem";
@@ -258,6 +259,7 @@ import { CompletionFlame } from "./components/CompletionFlame";
 import { MascotCelebrationScreen } from "./components/MascotCelebrationScreen";
 import { RewardsScreen } from "./components/RewardsScreen";
 import { TrophyRewardsScreen } from "./components/TrophyRewardsScreen";
+import { ShopChestUnboxingModal } from "./components/ShopChestUnboxingModal";
 import { AdminPanel } from "./components/AdminPanel";
 import { HydrationDetailPage } from "./components/HydrationDetailPage";
 
@@ -777,6 +779,7 @@ export default function App() {
   const [showMascotCelebration, setShowMascotCelebration] = useState(false);
   const [showRewardsScreen, setShowRewardsScreen] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [unboxingShopItem, setUnboxingShopItem] = useState<ShopItem | null>(null);
   const [showArchitectLab, setShowArchitectLab] = useState(false);
   const [proTestMessage, setProTestMessage] = useState<string | null>(null);
   const [originalStatsBeforeProTest, setOriginalStatsBeforeProTest] =
@@ -6529,6 +6532,9 @@ export default function App() {
                       onBuy={(item, currency) => {
                         vibrate(VIBRATION_PATTERNS.SUCCESS);
 
+                        // Trigger the Shop unboxing chest animation
+                        setUnboxingShopItem(item);
+
                         const isSkin = item.effect === "skin";
                         const isMusic = item.effect === "music";
                         const isSoundPack = item.effect === "sound-pack";
@@ -7691,6 +7697,14 @@ export default function App() {
               onComplete={() => setShowCoinAnimation(false)}
               play={play}
               settings={settings}
+            />
+          )}
+
+          {unboxingShopItem && (
+            <ShopChestUnboxingModal
+              item={unboxingShopItem}
+              settings={settings}
+              onClose={() => setUnboxingShopItem(null)}
             />
           )}
 
