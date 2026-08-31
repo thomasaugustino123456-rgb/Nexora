@@ -40,7 +40,7 @@ import { playSound } from '../hooks/useSound';
 import { Mascot } from './Mascot';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { safeSetDoc } from '../lib/firestoreUtils';
+import { safeSetDoc, parseTimestampMs, parseTimestampIso } from '../lib/firestoreUtils';
 import { isUserProUnlocked } from '../types';
 
 interface SubscriptionScreenProps {
@@ -226,20 +226,26 @@ export function SubscriptionScreen({
   } | null>(null);
 
   // Determine if Pro (or Pro Test mode) is currently active
-  const isProTestActive = Boolean(settings?.proTestActive) && Boolean(settings?.proTestExpiresAt) && new Date(settings.proTestExpiresAt!).getTime() > Date.now();
+  const testExpiresMs = parseTimestampMs(settings?.proTestExpiresAt);
+  const isProTestActive = Boolean(settings?.proTestActive) && Boolean(testExpiresMs) && testExpiresMs! > Date.now();
   // isPermanentPro means user bought a real subscription (or has unlocked UID), NOT just trial
-  const isPermanentPro = isUserProUnlocked(userId) || (Boolean(settings?.isPro) && !settings?.proTestActive && settings?.proPlan !== '4-Day Free Pro Test');
+  const isPermanentPro = isUserProUnlocked(userId) || (Boolean(settings?.isPro) && !settings?.proTestActive && settings?.proPlan !== '4-Day Free Pro Test' && settings?.proPlan !== 'Free Tier');
   const isPro = isPermanentPro || isProTestActive;
   
   // Calculate remaining time precisely (days and hours)
-  const remainingMs = isProTestActive && settings?.proTestExpiresAt
-    ? Math.max(0, new Date(settings.proTestExpiresAt).getTime() - Date.now())
-    : (settings?.proTestRemainingMs ?? (settings?.proTestStartedAt ? 0 : 4 * 24 * 60 * 60 * 1000));
+  const remainingMs = isProTestActive && testExpiresMs
+    ? Math.max(0, testExpiresMs - Date.now())
+    : (typeof settings?.proTestRemainingMs === 'number' ? settings.proTestRemainingMs : (settings?.proTestStartedAt ? 0 : 4 * 24 * 60 * 60 * 1000));
   
   const testRemainingDays = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
   const testRemainingHours = Math.floor((remainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-  const hasRemainingProTestTime = !isPermanentPro && !isProTestActive && remainingMs > 1000 && (!settings?.proTestCooldownUntil || new Date(settings.proTestCooldownUntil).getTime() <= Date.now());
-  const isProTestPaused = !isProTestActive && Boolean(settings?.proTestStartedAt) && remainingMs > 1000;
+  const cooldownMs = parseTimestampMs(settings?.proTestCooldownUntil);
+  const isCooldownActive = Boolean(cooldownMs) && cooldownMs! > Date.now();
+  const cooldownRemainingMs = isCooldownActive && cooldownMs ? Math.max(0, cooldownMs - Date.now()) : 0;
+  const cooldownRemainingDays = Math.floor(cooldownRemainingMs / (24 * 60 * 60 * 1000));
+  const cooldownRemainingHours = Math.ceil((cooldownRemainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const hasRemainingProTestTime = !isPermanentPro && !isProTestActive && remainingMs > 1000 && !isCooldownActive;
+  const isProTestPaused = !isProTestActive && Boolean(settings?.proTestStartedAt) && remainingMs > 1000 && !isCooldownActive;
 
   // Track online status
   useEffect(() => {
@@ -271,24 +277,24 @@ export function SubscriptionScreen({
 
       if (userSnap.exists()) {
         const data = userSnap.data();
-        firestoreIsPro = isUserProUnlocked(userId) || Boolean(data.isPro) || Boolean(data.settings?.isPro) || Boolean(data.subscription?.active);
+        firestoreIsPro = isUserProUnlocked(userId) || Boolean(data.isPro) || Boolean(data.settings?.isPro) || Boolean(data.subscription?.active) || (Boolean(data.proPlan) && data.proPlan !== 'Free Tier' && data.proPlan !== '4-Day Free Pro Test');
         plan = data.proPlan || data.settings?.proPlan || data.subscription?.plan || plan;
-        activatedAt = data.proActivatedAt || data.settings?.proActivatedAt || data.subscription?.activatedAt || activatedAt;
+        activatedAt = parseTimestampIso(data.proActivatedAt || data.settings?.proActivatedAt || data.subscription?.activatedAt) || activatedAt;
         expiresAt = data.proExpiresAt || data.settings?.proExpiresAt || data.subscription?.expiresAt || expiresAt;
 
         // Check if pro test is active in Firestore data
-        const fsTestExpires = data.proTestExpiresAt ?? data.settings?.proTestExpiresAt;
+        const fsTestExpiresMs = parseTimestampMs(data.proTestExpiresAt ?? data.settings?.proTestExpiresAt);
         const fsTestActive = Boolean(data.proTestActive ?? data.settings?.proTestActive) &&
-          Boolean(fsTestExpires) &&
-          new Date(fsTestExpires).getTime() > Date.now();
+          Boolean(fsTestExpiresMs) &&
+          fsTestExpiresMs! > Date.now();
 
         if (fsTestActive) {
           firestoreIsPro = true;
           plan = '4-Day Free Pro Test';
-          expiresAt = fsTestExpires;
+          expiresAt = parseTimestampIso(data.proTestExpiresAt ?? data.settings?.proTestExpiresAt) || '';
         }
       } else {
-        firestoreIsPro = isUserProUnlocked(userId);
+        firestoreIsPro = isUserProUnlocked(userId) || (Boolean(settings?.isPro) && settings?.proPlan !== 'Free Tier');
       }
 
       const todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -316,19 +322,30 @@ export function SubscriptionScreen({
           checkedAt: new Date().toLocaleTimeString()
         });
       } else {
-        const isCurrentTestActive = Boolean(settings?.proTestActive) && Boolean(settings?.proTestExpiresAt) && new Date(settings.proTestExpiresAt!).getTime() > Date.now();
-        if (onUpdateSettings && !isProTestActive && !isCurrentTestActive) {
-          onUpdateSettings({ isPro: false });
-        }
+        const localTestExpMs = parseTimestampMs(settings?.proTestExpiresAt);
+        const isCurrentTestActive = Boolean(settings?.proTestActive) && Boolean(localTestExpMs) && localTestExpMs! > Date.now();
+        const isCurrentPaidPro = isUserProUnlocked(userId) || (Boolean(settings?.isPro) && settings?.proPlan !== '4-Day Free Pro Test' && settings?.proPlan !== 'Free Tier');
 
-        setVerificationResult({
-          isPro: isProTestActive || isCurrentTestActive,
-          plan: (isProTestActive || isCurrentTestActive) ? "4-Day Free Pro Test" : "Free Tier",
-          activatedAt: "-",
-          expiresAt: "-",
-          message: (isProTestActive || isCurrentTestActive) ? "Your 4-Day Pro Test is currently active." : "You are currently using the Free plan.",
-          checkedAt: new Date().toLocaleTimeString()
-        });
+        // Do not force downgrade if current user was already marked Pro locally
+        if (isCurrentPaidPro || isCurrentTestActive) {
+          setVerificationResult({
+            isPro: true,
+            plan: isCurrentPaidPro ? (settings?.proPlan || "Yearly Master") : "4-Day Free Pro Test",
+            activatedAt: isCurrentPaidPro ? (settings?.proActivatedAt || todayStr) : todayStr,
+            expiresAt: isCurrentPaidPro ? (settings?.proExpiresAt || "Auto-Renewing") : (settings?.proTestExpiresAt || "-"),
+            message: isCurrentPaidPro ? "Pro membership is active." : "Your 4-Day Pro Test is active.",
+            checkedAt: new Date().toLocaleTimeString()
+          });
+        } else {
+          setVerificationResult({
+            isPro: false,
+            plan: "Free Tier",
+            activatedAt: "-",
+            expiresAt: "-",
+            message: isCooldownActive ? `4-Day Pro Test on cooldown (${cooldownRemainingDays}d ${cooldownRemainingHours}h left).` : "You are currently using the Free plan.",
+            checkedAt: new Date().toLocaleTimeString()
+          });
+        }
       }
     } catch (err) {
       console.error("Firebase subscription verification error:", err);
@@ -349,8 +366,9 @@ export function SubscriptionScreen({
     if (!isOnline) return;
 
     // Check if test is currently in 3-week cooldown
-    if (settings?.proTestCooldownUntil && new Date(settings.proTestCooldownUntil).getTime() > Date.now()) {
-      const cooldownRemainingMs = new Date(settings.proTestCooldownUntil).getTime() - Date.now();
+    const cooldownMs = parseTimestampMs(settings?.proTestCooldownUntil);
+    if (cooldownMs && cooldownMs > Date.now()) {
+      const cooldownRemainingMs = cooldownMs - Date.now();
       const cooldownRemainingDays = Math.ceil(cooldownRemainingMs / (24 * 60 * 60 * 1000));
       alert(`Your 4-Day Free Pro Test is currently on cooldown. You can test again in ${cooldownRemainingDays} day(s), or upgrade instantly via WhatsApp!`);
       return;
@@ -364,7 +382,7 @@ export function SubscriptionScreen({
         await onStartProTest();
       } else if (onUpdateSettings) {
         const now = new Date();
-        const durationToUse = (settings?.proTestRemainingMs !== undefined && settings?.proTestRemainingMs !== null && settings.proTestRemainingMs > 0)
+        const durationToUse = (typeof settings?.proTestRemainingMs === 'number' && settings.proTestRemainingMs > 0)
           ? settings.proTestRemainingMs
           : 4 * 24 * 60 * 60 * 1000;
         
@@ -408,19 +426,20 @@ export function SubscriptionScreen({
         await onStopProTest();
       } else if (onUpdateSettings) {
         const now = Date.now();
-        let updatedRemainingMs = settings?.proTestRemainingMs ?? (4 * 24 * 60 * 60 * 1000);
+        let updatedRemainingMs = typeof settings?.proTestRemainingMs === 'number' ? settings.proTestRemainingMs : (4 * 24 * 60 * 60 * 1000);
 
-        if (settings?.proTestExpiresAt) {
-          const currentExpiryTime = new Date(settings.proTestExpiresAt).getTime();
-          updatedRemainingMs = Math.max(0, currentExpiryTime - now);
+        const expMs = parseTimestampMs(settings?.proTestExpiresAt);
+        if (expMs) {
+          updatedRemainingMs = Math.max(0, expMs - now);
         }
 
+        const isUserPaid = isUserProUnlocked(userId) || (Boolean(settings?.isPro) && settings?.proPlan !== '4-Day Free Pro Test' && settings?.proPlan !== 'Free Tier');
         const settingsUpdate = {
           proTestActive: false,
           proTestExpiresAt: null,
           proTestRemainingMs: updatedRemainingMs,
-          isPro: isUserProUnlocked(userId) || false,
-          proPlan: 'Free Tier',
+          isPro: isUserPaid,
+          proPlan: isUserPaid ? (settings?.proPlan || 'Yearly Master') : 'Free Tier',
         };
 
         onUpdateSettings(settingsUpdate);
@@ -429,7 +448,7 @@ export function SubscriptionScreen({
           try {
             await safeSetDoc(doc(db, 'users', userId), settingsUpdate, { merge: true });
           } catch (e) {
-            console.warn('Firestore pause sync warning:', e);
+            console.warn('Firestore sync warning:', e);
           }
         }
       }
@@ -1136,18 +1155,26 @@ export function SubscriptionScreen({
         {/* Free Trial Toggle Switch Container */}
         <div 
           id="free-trial-container"
-          className="bg-white rounded-3xl p-5 sm:p-6 flex items-center justify-between shadow-lg border border-black/5 mb-6"
+          className={`bg-white rounded-3xl p-5 sm:p-6 flex items-center justify-between shadow-lg border transition-all mb-6 ${
+            isCooldownActive ? 'border-amber-300 bg-amber-50/50' : 'border-black/5'
+          }`}
         >
           <div>
             <span className="text-sm sm:text-base font-black text-slate-950 block">
-              {isProTestActive ? '4-Day Free Pro Test Active' : 'Start 4-day free trial'}
+              {isProTestActive 
+                ? '4-Day Free Pro Test Active' 
+                : isCooldownActive 
+                  ? '4-Day Pro Test on Cooldown' 
+                  : 'Start 4-day free trial'}
             </span>
             <span className="text-xs sm:text-sm text-slate-500 font-medium">
               {isProTestActive 
                 ? `You are currently enjoying 4-Day Pro Test (${testRemainingDays} day${testRemainingDays > 1 ? 's' : ''} left)`
-                : isPro 
-                  ? 'Official Nexora Pro VIP Active 👑'
-                  : 'Try full Pro access risk-free before any payment'}
+                : isCooldownActive
+                  ? `Available again in ${cooldownRemainingDays}d ${cooldownRemainingHours}h (or upgrade via WhatsApp)`
+                  : isPro 
+                    ? 'Official Nexora Pro VIP Active 👑'
+                    : 'Try full Pro access risk-free before any payment'}
             </span>
           </div>
 
@@ -1155,21 +1182,25 @@ export function SubscriptionScreen({
             type="button"
             id="toggle-free-trial-btn"
             aria-label="Toggle Free Trial"
-            disabled={isProTestActive || isPro}
+            disabled={isProTestActive || isPro || isCooldownActive}
             onClick={() => {
-              if (isProTestActive || isPro) return;
+              if (isProTestActive || isPro || isCooldownActive) return;
               vibrate(VIBRATION_PATTERNS.CLICK);
               setIsFreeTrialEnabled(!isFreeTrialEnabled);
             }}
             className={`w-14 h-8 sm:w-16 sm:h-9 rounded-full transition-colors relative p-1 flex items-center shrink-0 ${
-              isProTestActive || isPro ? 'bg-emerald-500 opacity-90 cursor-default' : (isFreeTrialEnabled ? 'bg-[#98E724] cursor-pointer' : 'bg-slate-300 cursor-pointer')
+              isProTestActive || isPro 
+                ? 'bg-emerald-500 opacity-90 cursor-default' 
+                : isCooldownActive
+                  ? 'bg-slate-300 opacity-60 cursor-not-allowed'
+                  : (isFreeTrialEnabled ? 'bg-[#98E724] cursor-pointer' : 'bg-slate-300 cursor-pointer')
             }`}
           >
             <motion.div 
               layout
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
               className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white shadow-md ${
-                isFreeTrialEnabled || isProTestActive || isPro ? 'ml-auto' : 'mr-auto'
+                (isFreeTrialEnabled && !isCooldownActive) || isProTestActive || isPro ? 'ml-auto' : 'mr-auto'
               }`}
             />
           </button>
@@ -1177,19 +1208,21 @@ export function SubscriptionScreen({
 
         {/* Primary Action Button */}
         <motion.button
-          whileHover={(!isProTestActive && !isPermanentPro && isOnline) ? { scale: 1.02 } : {}}
-          whileTap={(!isProTestActive && !isPermanentPro && isOnline) ? { scale: 0.98 } : {}}
+          whileHover={(!isProTestActive && !isPermanentPro && isOnline && (!isCooldownActive || !isFreeTrialEnabled)) ? { scale: 1.02 } : {}}
+          whileTap={(!isProTestActive && !isPermanentPro && isOnline && (!isCooldownActive || !isFreeTrialEnabled)) ? { scale: 0.98 } : {}}
           id="main-continue-btn"
-          disabled={!isOnline || isActivatingTrial || isProTestActive || isPermanentPro}
+          disabled={!isOnline || isActivatingTrial || isProTestActive || isPermanentPro || (isCooldownActive && isFreeTrialEnabled)}
           onClick={handlePrimaryAction}
           className={`w-full py-4 sm:py-5 px-6 rounded-3xl font-black text-sm sm:text-base md:text-lg transition-all flex items-center justify-center gap-2.5 shadow-2xl ${
             isProTestActive
               ? 'bg-emerald-600 text-white cursor-default shadow-emerald-900/20'
               : isPermanentPro
                 ? 'bg-[#191C18] text-amber-300 cursor-default'
-                : !isOnline
-                  ? 'bg-slate-600 text-slate-300 cursor-not-allowed'
-                  : 'bg-[#191C18] hover:bg-black text-white shadow-black/35 cursor-pointer'
+                : (isCooldownActive && isFreeTrialEnabled)
+                  ? 'bg-amber-100 text-amber-900 border border-amber-300 cursor-not-allowed'
+                  : !isOnline
+                    ? 'bg-slate-600 text-slate-300 cursor-not-allowed'
+                    : 'bg-[#191C18] hover:bg-black text-white shadow-black/35 cursor-pointer'
           }`}
         >
           {isActivatingTrial ? (
@@ -1206,6 +1239,11 @@ export function SubscriptionScreen({
             <div className="flex items-center gap-2">
               <Crown size={20} className="text-amber-400" />
               <span>Nexora Pro Member Active 👑</span>
+            </div>
+          ) : isCooldownActive && isFreeTrialEnabled ? (
+            <div className="flex items-center gap-2">
+              <Clock size={18} className="text-amber-700" />
+              <span>Test Cooldown ({cooldownRemainingDays}d {cooldownRemainingHours}h Left) - Upgrade via WhatsApp</span>
             </div>
           ) : isOnline ? (
             <div className="flex items-center gap-2">
@@ -1264,39 +1302,47 @@ export function SubscriptionScreen({
         {/* Direct 4-Day Pro Pass Instant Button */}
         {onStartProTest && (
           <motion.div 
-            whileHover={!isProTestActive && !isPermanentPro ? { scale: 1.01 } : {}}
+            whileHover={!isProTestActive && !isPermanentPro && !isCooldownActive ? { scale: 1.01 } : {}}
             className={`mt-4 p-4 sm:p-5 rounded-3xl backdrop-blur-sm border flex items-center justify-between gap-3 shadow-md ${
               isProTestActive 
                 ? 'bg-emerald-50/90 border-emerald-300'
-                : isProTestPaused
+                : isCooldownActive
                   ? 'bg-amber-50/90 border-amber-300'
-                  : 'bg-white/85 border-black/10'
+                  : isProTestPaused
+                    ? 'bg-amber-50/90 border-amber-300'
+                    : 'bg-white/85 border-black/10'
             }`}
           >
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
                 isProTestActive 
                   ? 'bg-emerald-700 text-white' 
-                  : isProTestPaused
+                  : isCooldownActive
                     ? 'bg-amber-600 text-white'
-                    : 'bg-emerald-600 text-white'
+                    : isProTestPaused
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-emerald-600 text-white'
               }`}>
-                {isProTestActive ? <Check size={20} className="stroke-[3]" /> : isProTestPaused ? <Play size={20} className="ml-0.5" /> : <Clock size={20} />}
+                {isProTestActive ? <Check size={20} className="stroke-[3]" /> : isCooldownActive ? <Clock size={20} /> : isProTestPaused ? <Play size={20} className="ml-0.5" /> : <Clock size={20} />}
               </div>
               <div className="text-left">
                 <h4 className="text-xs sm:text-sm font-black text-slate-950">
                   {isProTestActive 
                     ? '4-Day Pro Test Active' 
-                    : isProTestPaused
-                      ? `4-Day Pro Test Paused (${testRemainingDays}d ${testRemainingHours}h Left)`
-                      : 'Direct 4-Day Pro Test'}
+                    : isCooldownActive
+                      ? `4-Day Pro Test on Cooldown (${cooldownRemainingDays}d ${cooldownRemainingHours}h Left)`
+                      : isProTestPaused
+                        ? `4-Day Pro Test Paused (${testRemainingDays}d ${testRemainingHours}h Left)`
+                        : 'Direct 4-Day Pro Test'}
                 </h4>
                 <p className="text-[11px] sm:text-xs text-slate-600 font-medium">
                   {isProTestActive 
                     ? `Enjoying VIP features. ${testRemainingDays}d ${testRemainingHours}h remaining.`
-                    : isProTestPaused
-                      ? `Your time is safely saved. Click to resume and enjoy Pro.`
-                      : 'Activate full VIP features for 4 days with zero delay.'}
+                    : isCooldownActive
+                      ? `Cooldown active after test completion. Available again in ${cooldownRemainingDays} days.`
+                      : isProTestPaused
+                        ? `Your time is safely saved. Click to resume and enjoy Pro.`
+                        : 'Activate full VIP features for 4 days with zero delay.'}
                 </p>
               </div>
             </div>
@@ -1311,6 +1357,15 @@ export function SubscriptionScreen({
                 >
                   <Pause size={13} className="text-rose-700" />
                   <span>{isStoppingTrial ? 'Pausing...' : 'Stop Test'}</span>
+                </button>
+              ) : isCooldownActive ? (
+                <button
+                  onClick={() => handleOpenWhatsApp(selectedPlanId)}
+                  id="cooldown-whatsapp-upgrade-btn"
+                  className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl font-black text-xs sm:text-sm shrink-0 transition-all shadow-md bg-amber-500 hover:bg-amber-600 text-white cursor-pointer flex items-center gap-1"
+                >
+                  <Crown size={14} />
+                  <span>Upgrade Pro</span>
                 </button>
               ) : (
                 <button

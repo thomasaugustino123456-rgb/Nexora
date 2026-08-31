@@ -73,3 +73,40 @@ export async function safeAddDoc<T = any>(
 ) {
   return firestoreAddDoc(reference, cleanPayload(data));
 }
+
+/**
+ * Universal Timestamp normalizer handling ISO strings, numeric timestamps, and Firestore Timestamp objects ({ seconds, nanoseconds } or toMillis / toDate).
+ */
+export function parseTimestampMs(val: any): number | null {
+  if (val === null || val === undefined) return null;
+  if (typeof val === 'number') {
+    return isNaN(val) ? null : val;
+  }
+  if (typeof val?.toMillis === 'function') {
+    return val.toMillis();
+  }
+  if (typeof val?.toDate === 'function') {
+    const d = val.toDate();
+    return d instanceof Date && !isNaN(d.getTime()) ? d.getTime() : null;
+  }
+  if (typeof val?.seconds === 'number') {
+    const ms = val.seconds * 1000 + (typeof val.nanoseconds === 'number' ? Math.floor(val.nanoseconds / 1000000) : 0);
+    return isNaN(ms) ? null : ms;
+  }
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? null : val.getTime();
+  }
+  if (typeof val === 'string') {
+    const parsed = new Date(val).getTime();
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
+/**
+ * Parses any timestamp representation into a clean ISO string format.
+ */
+export function parseTimestampIso(val: any): string | null {
+  const ms = parseTimestampMs(val);
+  return ms !== null ? new Date(ms).toISOString() : null;
+}

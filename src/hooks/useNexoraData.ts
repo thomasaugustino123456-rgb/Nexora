@@ -17,6 +17,7 @@ import { GardenState, createInitialGardenState } from "../types/garden";
 import { SHOP_ITEMS } from "../components/ShopScreen";
 import { MASCOTS_DATA, MascotId } from "../lib/mascotSystem";
 import { HOUSE_ITEMS } from "../constants/houseItems";
+import { parseTimestampMs, parseTimestampIso } from "../lib/firestoreUtils";
 
 export function extractRealDisplayName(docDataOrList: any | any[], currentUser?: any): string {
   const docList = Array.isArray(docDataOrList) ? docDataOrList : [docDataOrList];
@@ -600,15 +601,27 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
   const localAccount = (localSettings.accountName && localSettings.accountName.trim() !== "" && localSettings.accountName !== "Champion") ? localSettings.accountName : undefined;
   const finalAccount = dbAccount || localAccount || dbSettings.accountName || localSettings.accountName || defaultSettings.accountName || "Champion";
 
-  const dbTestActive = Boolean(dbSettings.proTestActive) && Boolean(dbSettings.proTestExpiresAt) && new Date(dbSettings.proTestExpiresAt!).getTime() > Date.now();
-  const localTestActive = Boolean(localSettings.proTestActive) && Boolean(localSettings.proTestExpiresAt) && new Date(localSettings.proTestExpiresAt!).getTime() > Date.now();
+  const now = Date.now();
+  const dbTestExpiresMs = parseTimestampMs(dbSettings.proTestExpiresAt);
+  const localTestExpiresMs = parseTimestampMs(localSettings.proTestExpiresAt);
+  const dbTestActive = Boolean(dbSettings.proTestActive) && Boolean(dbTestExpiresMs) && dbTestExpiresMs! > now;
+  const localTestActive = Boolean(localSettings.proTestActive) && Boolean(localTestExpiresMs) && localTestExpiresMs! > now;
   const finalProTestActive = dbTestActive || localTestActive;
-  const finalProTestExpiresAt = dbTestActive ? dbSettings.proTestExpiresAt : (localTestActive ? localSettings.proTestExpiresAt : (dbSettings.proTestExpiresAt || localSettings.proTestExpiresAt || null));
-  const finalProTestStartedAt = dbSettings.proTestStartedAt || localSettings.proTestStartedAt || null;
-  const finalProTestRemainingMs = dbSettings.proTestRemainingMs !== undefined ? dbSettings.proTestRemainingMs : (localSettings.proTestRemainingMs !== undefined ? localSettings.proTestRemainingMs : null);
-  const finalProTestCooldownUntil = dbSettings.proTestCooldownUntil || localSettings.proTestCooldownUntil || null;
+  const finalProTestExpiresAt = dbTestActive ? parseTimestampIso(dbSettings.proTestExpiresAt) : (localTestActive ? parseTimestampIso(localSettings.proTestExpiresAt) : (parseTimestampIso(dbSettings.proTestExpiresAt) || parseTimestampIso(localSettings.proTestExpiresAt) || null));
+  const finalProTestStartedAt = parseTimestampIso(dbSettings.proTestStartedAt) || parseTimestampIso(localSettings.proTestStartedAt) || null;
+  const finalProTestRemainingMs = dbSettings.proTestRemainingMs !== undefined && dbSettings.proTestRemainingMs !== null ? dbSettings.proTestRemainingMs : (localSettings.proTestRemainingMs !== undefined && localSettings.proTestRemainingMs !== null ? localSettings.proTestRemainingMs : null);
+  const finalProTestCooldownUntil = parseTimestampIso(dbSettings.proTestCooldownUntil) || parseTimestampIso(localSettings.proTestCooldownUntil) || null;
+  const finalProTestLastCompletedAt = parseTimestampIso(dbSettings.proTestLastCompletedAt) || parseTimestampIso(localSettings.proTestLastCompletedAt) || null;
+  const finalProTestDay2Notified = Boolean(dbSettings.proTestDay2Notified || localSettings.proTestDay2Notified);
 
-  const isPro = isUserProUnlocked(userId) || Boolean(dbSettings.isPro) || Boolean(localSettings.isPro) || finalProTestActive;
+  const dbPlan = dbSettings.proPlan;
+  const localPlan = localSettings.proPlan;
+  const finalProPlan = (dbPlan && dbPlan !== 'Free Tier') ? dbPlan : (localPlan && localPlan !== 'Free Tier' ? localPlan : (dbPlan || localPlan || defaultSettings.proPlan || 'Free Tier'));
+  const finalProActivatedAt = parseTimestampIso(dbSettings.proActivatedAt) || parseTimestampIso(localSettings.proActivatedAt) || null;
+  const finalProExpiresAt = dbSettings.proExpiresAt || localSettings.proExpiresAt || null;
+
+  const isPermanentPro = isUserProUnlocked(userId) || (Boolean(dbSettings.isPro) && dbSettings.proPlan !== '4-Day Free Pro Test' && dbSettings.proPlan !== 'Free Tier') || (Boolean(localSettings.isPro) && localSettings.proPlan !== '4-Day Free Pro Test' && localSettings.proPlan !== 'Free Tier');
+  const isPro = isPermanentPro || Boolean(dbSettings.isPro) || Boolean(localSettings.isPro) || finalProTestActive;
 
   if (!localHasSettings) {
     return { 
@@ -619,11 +632,16 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
       location: finalLoc, 
       accountName: finalAccount, 
       isPro,
+      proPlan: finalProPlan,
+      proActivatedAt: finalProActivatedAt,
+      proExpiresAt: finalProExpiresAt,
       proTestActive: finalProTestActive,
       proTestExpiresAt: finalProTestExpiresAt,
       proTestStartedAt: finalProTestStartedAt,
       proTestRemainingMs: finalProTestRemainingMs,
       proTestCooldownUntil: finalProTestCooldownUntil,
+      proTestLastCompletedAt: finalProTestLastCompletedAt,
+      proTestDay2Notified: finalProTestDay2Notified,
     };
   }
 
@@ -644,11 +662,16 @@ function mergeSettings(dbSettings: UserSettings, localSettings: UserSettings, de
     spaceHouseUnlocked: dbSettings.spaceHouseUnlocked || localSettings.spaceHouseUnlocked || false,
     hasEnteredGarden: dbSettings.hasEnteredGarden || localSettings.hasEnteredGarden || false,
     isPro: isPro,
+    proPlan: finalProPlan,
+    proActivatedAt: finalProActivatedAt,
+    proExpiresAt: finalProExpiresAt,
     proTestActive: finalProTestActive,
     proTestExpiresAt: finalProTestExpiresAt,
     proTestStartedAt: finalProTestStartedAt,
     proTestRemainingMs: finalProTestRemainingMs,
     proTestCooldownUntil: finalProTestCooldownUntil,
+    proTestLastCompletedAt: finalProTestLastCompletedAt,
+    proTestDay2Notified: finalProTestDay2Notified,
     feedbackSubmitted: dbSettings.feedbackSubmitted || localSettings.feedbackSubmitted || false,
   };
 
@@ -1427,6 +1450,12 @@ export function useNexoraData(
               const fastPlantState = docData.plantState || docData.settings?.plantState || localCacheSettings?.plantState || DEFAULT_SETTINGS.plantState;
               const fastPlantsProgress = docData.plantsProgress || docData.settings?.plantsProgress || localCacheSettings?.plantsProgress || DEFAULT_SETTINGS.plantsProgress;
 
+              const rawIsPro = Boolean(docData.isPro ?? docData.settings?.isPro ?? docData.subscription?.active);
+              const rawPlan = docData.proPlan || docData.settings?.proPlan || docData.subscription?.plan || (rawIsPro ? "Yearly Master" : (localCacheSettings?.proPlan || DEFAULT_SETTINGS.proPlan));
+              const testExpiresMs = parseTimestampMs(docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt ?? localCacheSettings?.proTestExpiresAt);
+              const rawTestActive = Boolean(docData.proTestActive ?? docData.settings?.proTestActive ?? localCacheSettings?.proTestActive) && Boolean(testExpiresMs) && testExpiresMs! > Date.now();
+              const isEffectivePro = isUserProUnlocked(currentUser.uid) || rawIsPro || (Boolean(localCacheSettings?.isPro) && localCacheSettings?.proPlan !== 'Free Tier') || rawTestActive;
+
               const fastSettingsObj: UserSettings = {
                 ...DEFAULT_SETTINGS,
                 ...(localCacheSettings || {}),
@@ -1440,6 +1469,17 @@ export function useNexoraData(
                 onboardingCompleted: fastOnboardingCompleted,
                 plantState: fastPlantState,
                 plantsProgress: fastPlantsProgress,
+                isPro: isEffectivePro,
+                proPlan: rawPlan,
+                proActivatedAt: parseTimestampIso(docData.proActivatedAt ?? docData.settings?.proActivatedAt ?? docData.subscription?.activatedAt ?? localCacheSettings?.proActivatedAt),
+                proExpiresAt: docData.proExpiresAt ?? docData.settings?.proExpiresAt ?? docData.subscription?.expiresAt ?? localCacheSettings?.proExpiresAt ?? (isEffectivePro && !rawTestActive ? 'Auto-Renewing' : null),
+                proTestActive: rawTestActive,
+                proTestStartedAt: parseTimestampIso(docData.proTestStartedAt ?? docData.settings?.proTestStartedAt ?? localCacheSettings?.proTestStartedAt),
+                proTestExpiresAt: parseTimestampIso(docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt ?? localCacheSettings?.proTestExpiresAt),
+                proTestRemainingMs: typeof (docData.proTestRemainingMs ?? docData.settings?.proTestRemainingMs ?? localCacheSettings?.proTestRemainingMs) === 'number' ? (docData.proTestRemainingMs ?? docData.settings?.proTestRemainingMs ?? localCacheSettings?.proTestRemainingMs) : null,
+                proTestCooldownUntil: parseTimestampIso(docData.proTestCooldownUntil ?? docData.settings?.proTestCooldownUntil ?? localCacheSettings?.proTestCooldownUntil),
+                proTestLastCompletedAt: parseTimestampIso(docData.proTestLastCompletedAt ?? docData.settings?.proTestLastCompletedAt ?? localCacheSettings?.proTestLastCompletedAt),
+                proTestDay2Notified: Boolean(docData.proTestDay2Notified ?? docData.settings?.proTestDay2Notified ?? localCacheSettings?.proTestDay2Notified ?? false),
               };
 
               rawSetSettings((prev) => mergeSettings(fastSettingsObj, prev, DEFAULT_SETTINGS, currentUser.uid));
@@ -1447,7 +1487,9 @@ export function useNexoraData(
               localStorage.setItem("nexora_settings", JSON.stringify(mergeSettings(fastSettingsObj, localCacheSettings, DEFAULT_SETTINGS, currentUser.uid)));
 
               const savedOrigStats = docData.originalStatsBeforeProTest || docData.settings?.originalStatsBeforeProTest;
-              const isTestActive = Boolean(docData.proTestActive ?? docData.settings?.proTestActive) && Boolean(docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt) && new Date((docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt)!).getTime() > Date.now();
+              const isPermanentProUser = isUserProUnlocked(currentUser.uid) || (rawIsPro && rawPlan !== '4-Day Free Pro Test' && rawPlan !== 'Free Tier');
+              const isPausedTestWithRemainingTime = !rawTestActive && typeof fastSettingsObj.proTestRemainingMs === 'number' && fastSettingsObj.proTestRemainingMs > 1000;
+              const shouldRestoreStats = !rawTestActive && !isPermanentProUser && !isPausedTestWithRemainingTime && savedOrigStats && typeof savedOrigStats === "object";
 
               let fastCoins: number;
               let fastXP: number;
@@ -1456,7 +1498,7 @@ export function useNexoraData(
               let fastTotalPoints: number;
               let fastLevel: number;
 
-              if (!isTestActive && savedOrigStats && typeof savedOrigStats === "object") {
+              if (shouldRestoreStats) {
                 fastStreak = Math.max(0, Number(savedOrigStats.streak) || 0);
                 fastBestStreak = Math.max(fastStreak, Number(savedOrigStats.bestStreak) || 0);
                 fastTotalPoints = Math.max(0, Number(savedOrigStats.totalPoints ?? savedOrigStats.xp) || 0);
@@ -1845,7 +1887,10 @@ export function useNexoraData(
               activeHat: docData.activeHat ?? docData.settings?.activeHat ?? DEFAULT_SETTINGS.activeHat,
               activeSkin: docData.activeSkin ?? docData.settings?.activeSkin ?? DEFAULT_SETTINGS.activeSkin,
               zenModeEnabled: docData.zenModeEnabled ?? docData.settings?.zenModeEnabled ?? DEFAULT_SETTINGS.zenModeEnabled,
-              isPro: isUserProUnlocked(currentUser?.uid) || Boolean(docData.isPro ?? docData.settings?.isPro ?? DEFAULT_SETTINGS.isPro),
+              isPro: isUserProUnlocked(currentUser?.uid) || Boolean(docData.isPro ?? docData.settings?.isPro ?? docData.subscription?.active ?? DEFAULT_SETTINGS.isPro),
+              proPlan: docData.proPlan ?? docData.settings?.proPlan ?? docData.subscription?.plan ?? (docData.isPro || docData.settings?.isPro ? (docData.proTestActive ? '4-Day Free Pro Test' : 'Yearly Master') : (isUserProUnlocked(currentUser?.uid) ? 'Lifetime Master' : DEFAULT_SETTINGS.proPlan)),
+              proActivatedAt: parseTimestampIso(docData.proActivatedAt ?? docData.settings?.proActivatedAt ?? docData.subscription?.activatedAt),
+              proExpiresAt: docData.proExpiresAt ?? docData.settings?.proExpiresAt ?? docData.subscription?.expiresAt ?? (docData.isPro ? 'Auto-Renewing' : null),
               performanceMode: docData.performanceMode ?? docData.settings?.performanceMode ?? DEFAULT_SETTINGS.performanceMode,
               lowPowerMode: docData.lowPowerMode ?? docData.settings?.lowPowerMode ?? DEFAULT_SETTINGS.lowPowerMode,
               onboardingCompleted: finalOnboardingCompleted,
@@ -1876,14 +1921,14 @@ export function useNexoraData(
               joinedCircleIds: docData.joinedCircleIds ?? docData.settings?.joinedCircleIds ?? DEFAULT_SETTINGS.joinedCircleIds ?? [],
               
               // Trial test fields
-              proTestActive: docData.proTestActive ?? docData.settings?.proTestActive ?? false,
-              proTestStartedAt: docData.proTestStartedAt ?? docData.settings?.proTestStartedAt ?? null,
-              proTestExpiresAt: docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt ?? null,
-              proTestRemainingMs: docData.proTestRemainingMs ?? docData.settings?.proTestRemainingMs ?? null,
-              proTestLastUsedAt: docData.proTestLastUsedAt ?? docData.settings?.proTestLastUsedAt ?? null,
-              proTestCooldownUntil: docData.proTestCooldownUntil ?? docData.settings?.proTestCooldownUntil ?? null,
-              proTestLastCompletedAt: docData.proTestLastCompletedAt ?? docData.settings?.proTestLastCompletedAt ?? null,
-              proTestDay2Notified: docData.proTestDay2Notified ?? docData.settings?.proTestDay2Notified ?? false,
+              proTestActive: Boolean(docData.proTestActive ?? docData.settings?.proTestActive ?? false),
+              proTestStartedAt: parseTimestampIso(docData.proTestStartedAt ?? docData.settings?.proTestStartedAt),
+              proTestExpiresAt: parseTimestampIso(docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt),
+              proTestRemainingMs: typeof (docData.proTestRemainingMs ?? docData.settings?.proTestRemainingMs) === 'number' ? (docData.proTestRemainingMs ?? docData.settings?.proTestRemainingMs) : null,
+              proTestLastUsedAt: parseTimestampIso(docData.proTestLastUsedAt ?? docData.settings?.proTestLastUsedAt),
+              proTestCooldownUntil: parseTimestampIso(docData.proTestCooldownUntil ?? docData.settings?.proTestCooldownUntil),
+              proTestLastCompletedAt: parseTimestampIso(docData.proTestLastCompletedAt ?? docData.settings?.proTestLastCompletedAt),
+              proTestDay2Notified: Boolean(docData.proTestDay2Notified ?? docData.settings?.proTestDay2Notified ?? false),
               
               accountName: extractRealAccountName(allProfileDocs, currentUser),
               email: docData.email || (docData.settings?.email) || currentUser.email || "",
@@ -1891,7 +1936,11 @@ export function useNexoraData(
             };
             
             const savedOrigStats = docData.originalStatsBeforeProTest || docData.settings?.originalStatsBeforeProTest;
-            const isTestActive = Boolean(docData.proTestActive ?? docData.settings?.proTestActive) && Boolean(docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt) && new Date((docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt)!).getTime() > Date.now();
+            const testExpiresMs = parseTimestampMs(docData.proTestExpiresAt ?? docData.settings?.proTestExpiresAt);
+            const isTestActive = Boolean(docData.proTestActive ?? docData.settings?.proTestActive) && Boolean(testExpiresMs) && testExpiresMs! > Date.now();
+            const isPermanentUser = isUserProUnlocked(currentUser?.uid) || (Boolean(docData.isPro ?? docData.settings?.isPro) && docData.proPlan !== '4-Day Free Pro Test' && docData.settings?.proPlan !== '4-Day Free Pro Test' && docData.proPlan !== 'Free Tier' && docData.settings?.proPlan !== 'Free Tier');
+            const isPausedTest = !isTestActive && typeof (docData.proTestRemainingMs ?? docData.settings?.proTestRemainingMs) === 'number' && (docData.proTestRemainingMs ?? docData.settings?.proTestRemainingMs) > 1000;
+            const shouldRestoreStats = !isTestActive && !isPermanentUser && !isPausedTest && savedOrigStats && typeof savedOrigStats === "object";
             const localCacheStats = (isSameUser && !isUserSwitch) ? getCachedJson("nexora_stats", DEFAULT_STATS) : DEFAULT_STATS;
 
             let finalStreak: number;
@@ -1903,7 +1952,7 @@ export function useNexoraData(
             let finalWeeklyPoints: number;
             let finalWeeklyXP: number;
 
-            if (!isTestActive && savedOrigStats && typeof savedOrigStats === "object") {
+            if (shouldRestoreStats) {
               // Pro test expired or inactive: restore true free tier stats!
               finalStreak = Math.max(0, Number(savedOrigStats.streak) || 0);
               finalBestStreak = Math.max(finalStreak, Number(savedOrigStats.bestStreak) || 0);
@@ -2555,15 +2604,18 @@ export function useNexoraData(
                       placedHouseItems: dbData.placedHouseItems ?? dbSettings.placedHouseItems ?? DEFAULT_SETTINGS.placedHouseItems,
                       spaceHouseUnlocked: dbData.spaceHouseUnlocked ?? dbSettings.spaceHouseUnlocked ?? DEFAULT_SETTINGS.spaceHouseUnlocked,
                       activeSpaceRoom: dbData.activeSpaceRoom ?? dbSettings.activeSpaceRoom ?? DEFAULT_SETTINGS.activeSpaceRoom,
-                      isPro: isUserProUnlocked(user?.uid) || (dbData.isPro ?? dbSettings.isPro ?? DEFAULT_SETTINGS.isPro),
-                      proTestActive: dbData.proTestActive ?? dbSettings.proTestActive ?? false,
-                      proTestStartedAt: dbData.proTestStartedAt ?? dbSettings.proTestStartedAt ?? null,
-                      proTestExpiresAt: dbData.proTestExpiresAt ?? dbSettings.proTestExpiresAt ?? null,
-                      proTestRemainingMs: dbData.proTestRemainingMs ?? dbSettings.proTestRemainingMs ?? null,
-                      proTestLastUsedAt: dbData.proTestLastUsedAt ?? dbSettings.proTestLastUsedAt ?? null,
-                      proTestCooldownUntil: dbData.proTestCooldownUntil ?? dbSettings.proTestCooldownUntil ?? null,
-                      proTestLastCompletedAt: dbData.proTestLastCompletedAt ?? dbSettings.proTestLastCompletedAt ?? null,
-                      proTestDay2Notified: dbData.proTestDay2Notified ?? dbSettings.proTestDay2Notified ?? false,
+                      isPro: isUserProUnlocked(user?.uid) || Boolean(dbData.isPro ?? dbSettings.isPro ?? dbData.subscription?.active ?? prev.isPro),
+                      proPlan: dbData.proPlan ?? dbSettings.proPlan ?? dbData.subscription?.plan ?? (dbData.isPro || dbSettings.isPro ? 'Yearly Master' : prev.proPlan),
+                      proActivatedAt: parseTimestampIso(dbData.proActivatedAt ?? dbSettings.proActivatedAt ?? dbData.subscription?.activatedAt ?? prev.proActivatedAt),
+                      proExpiresAt: dbData.proExpiresAt ?? dbSettings.proExpiresAt ?? dbData.subscription?.expiresAt ?? prev.proExpiresAt,
+                      proTestActive: Boolean(dbData.proTestActive ?? dbSettings.proTestActive ?? prev.proTestActive),
+                      proTestStartedAt: parseTimestampIso(dbData.proTestStartedAt ?? dbSettings.proTestStartedAt ?? prev.proTestStartedAt),
+                      proTestExpiresAt: parseTimestampIso(dbData.proTestExpiresAt ?? dbSettings.proTestExpiresAt ?? prev.proTestExpiresAt),
+                      proTestRemainingMs: typeof (dbData.proTestRemainingMs ?? dbSettings.proTestRemainingMs ?? prev.proTestRemainingMs) === 'number' ? (dbData.proTestRemainingMs ?? dbSettings.proTestRemainingMs ?? prev.proTestRemainingMs) : null,
+                      proTestLastUsedAt: parseTimestampIso(dbData.proTestLastUsedAt ?? dbSettings.proTestLastUsedAt ?? prev.proTestLastUsedAt),
+                      proTestCooldownUntil: parseTimestampIso(dbData.proTestCooldownUntil ?? dbSettings.proTestCooldownUntil ?? prev.proTestCooldownUntil),
+                      proTestLastCompletedAt: parseTimestampIso(dbData.proTestLastCompletedAt ?? dbSettings.proTestLastCompletedAt ?? prev.proTestLastCompletedAt),
+                      proTestDay2Notified: Boolean(dbData.proTestDay2Notified ?? dbSettings.proTestDay2Notified ?? prev.proTestDay2Notified),
                       lastViewedRank: dbData.lastViewedRank ?? dbSettings.lastViewedRank ?? undefined,
                     };
                   });
@@ -2609,6 +2661,17 @@ export function useNexoraData(
               ["Location"]: resolvedLocation,
               time: new Date().toISOString(),
               ...settings,
+              isPro: settings.isPro || false,
+              proPlan: settings.proPlan || (settings.isPro ? 'Yearly Master' : 'Free Tier'),
+              proActivatedAt: parseTimestampIso(settings.proActivatedAt) || null,
+              proExpiresAt: settings.proExpiresAt || null,
+              proTestActive: settings.proTestActive || false,
+              proTestExpiresAt: parseTimestampIso(settings.proTestExpiresAt) || null,
+              proTestStartedAt: parseTimestampIso(settings.proTestStartedAt) || null,
+              proTestRemainingMs: settings.proTestRemainingMs !== undefined ? settings.proTestRemainingMs : null,
+              proTestCooldownUntil: parseTimestampIso(settings.proTestCooldownUntil) || null,
+              proTestLastCompletedAt: parseTimestampIso(settings.proTestLastCompletedAt) || null,
+              proTestDay2Notified: settings.proTestDay2Notified || false,
               settings: {
                 ...settings,
                 displayName: resolvedDisplayName,
@@ -2617,6 +2680,17 @@ export function useNexoraData(
                 photoFileName: resolvedProfilePic,
                 photoURL: resolvedProfilePic,
                 location: resolvedLocation,
+                isPro: settings.isPro || false,
+                proPlan: settings.proPlan || (settings.isPro ? 'Yearly Master' : 'Free Tier'),
+                proActivatedAt: parseTimestampIso(settings.proActivatedAt) || null,
+                proExpiresAt: settings.proExpiresAt || null,
+                proTestActive: settings.proTestActive || false,
+                proTestExpiresAt: parseTimestampIso(settings.proTestExpiresAt) || null,
+                proTestStartedAt: parseTimestampIso(settings.proTestStartedAt) || null,
+                proTestRemainingMs: settings.proTestRemainingMs !== undefined ? settings.proTestRemainingMs : null,
+                proTestCooldownUntil: parseTimestampIso(settings.proTestCooldownUntil) || null,
+                proTestLastCompletedAt: parseTimestampIso(settings.proTestLastCompletedAt) || null,
+                proTestDay2Notified: settings.proTestDay2Notified || false,
               },
               uid: user.uid,
               email: user.email || `${user.uid}@nexora.app`,
@@ -3089,6 +3163,9 @@ export function useNexoraData(
         typeof update === "function" ? update(prev) : { ...prev, ...update };
       try {
         localStorage.setItem("nexora_settings", JSON.stringify(next));
+        if (user?.uid) {
+          localStorage.setItem(`nexora_settings_${user.uid}`, JSON.stringify(next));
+        }
         if (next.onboardingCompleted) {
           localStorage.setItem("nexora_onboarding_completed", "true");
           if (user?.uid) {
@@ -3116,6 +3193,9 @@ export function useNexoraData(
         typeof update === "function" ? update(prev) : { ...prev, ...update };
       try {
         localStorage.setItem("nexora_stats", JSON.stringify(next));
+        if (user?.uid) {
+          localStorage.setItem(`nexora_stats_${user.uid}`, JSON.stringify(next));
+        }
       } catch (e) {
         console.warn("Failed to cache stats:", e);
       }
@@ -3130,10 +3210,11 @@ export function useNexoraData(
       const next =
         typeof update === "function" ? update(prev) : { ...prev, ...update };
       try {
-        localStorage.setItem(
-          "nexora_progress",
-          JSON.stringify({ ...next, date: today }),
-        );
+        const progData = { ...next, date: today };
+        localStorage.setItem("nexora_progress", JSON.stringify(progData));
+        if (user?.uid) {
+          localStorage.setItem(`nexora_progress_${user.uid}`, JSON.stringify(progData));
+        }
       } catch (e) {
         console.warn("Failed to cache progress:", e);
       }
@@ -3324,15 +3405,18 @@ export function useNexoraData(
                   placedHouseItems: dbData.placedHouseItems ?? dbSettings.placedHouseItems ?? DEFAULT_SETTINGS.placedHouseItems,
                   spaceHouseUnlocked: dbData.spaceHouseUnlocked ?? dbSettings.spaceHouseUnlocked ?? DEFAULT_SETTINGS.spaceHouseUnlocked,
                   activeSpaceRoom: dbData.activeSpaceRoom ?? dbSettings.activeSpaceRoom ?? DEFAULT_SETTINGS.activeSpaceRoom,
-                  isPro: isUserProUnlocked(user?.uid) || (dbData.isPro ?? dbSettings.isPro ?? DEFAULT_SETTINGS.isPro),
-                  proTestActive: dbData.proTestActive ?? dbSettings.proTestActive ?? false,
-                  proTestStartedAt: dbData.proTestStartedAt ?? dbSettings.proTestStartedAt ?? null,
-                  proTestExpiresAt: dbData.proTestExpiresAt ?? dbSettings.proTestExpiresAt ?? null,
-                  proTestRemainingMs: dbData.proTestRemainingMs ?? dbSettings.proTestRemainingMs ?? null,
-                  proTestLastUsedAt: dbData.proTestLastUsedAt ?? dbSettings.proTestLastUsedAt ?? null,
-                  proTestCooldownUntil: dbData.proTestCooldownUntil ?? dbSettings.proTestCooldownUntil ?? null,
-                  proTestLastCompletedAt: dbData.proTestLastCompletedAt ?? dbSettings.proTestLastCompletedAt ?? null,
-                  proTestDay2Notified: dbData.proTestDay2Notified ?? dbSettings.proTestDay2Notified ?? false,
+                  isPro: isUserProUnlocked(user?.uid) || Boolean(dbData.isPro ?? dbSettings.isPro ?? dbData.subscription?.active ?? prev.isPro),
+                  proPlan: dbData.proPlan ?? dbSettings.proPlan ?? dbData.subscription?.plan ?? (dbData.isPro || dbSettings.isPro ? 'Yearly Master' : prev.proPlan),
+                  proActivatedAt: parseTimestampIso(dbData.proActivatedAt ?? dbSettings.proActivatedAt ?? dbData.subscription?.activatedAt ?? prev.proActivatedAt),
+                  proExpiresAt: dbData.proExpiresAt ?? dbSettings.proExpiresAt ?? dbData.subscription?.expiresAt ?? prev.proExpiresAt,
+                  proTestActive: Boolean(dbData.proTestActive ?? dbSettings.proTestActive ?? prev.proTestActive),
+                  proTestStartedAt: parseTimestampIso(dbData.proTestStartedAt ?? dbSettings.proTestStartedAt ?? prev.proTestStartedAt),
+                  proTestExpiresAt: parseTimestampIso(dbData.proTestExpiresAt ?? dbSettings.proTestExpiresAt ?? prev.proTestExpiresAt),
+                  proTestRemainingMs: typeof (dbData.proTestRemainingMs ?? dbSettings.proTestRemainingMs ?? prev.proTestRemainingMs) === 'number' ? (dbData.proTestRemainingMs ?? dbSettings.proTestRemainingMs ?? prev.proTestRemainingMs) : null,
+                  proTestLastUsedAt: parseTimestampIso(dbData.proTestLastUsedAt ?? dbSettings.proTestLastUsedAt ?? prev.proTestLastUsedAt),
+                  proTestCooldownUntil: parseTimestampIso(dbData.proTestCooldownUntil ?? dbSettings.proTestCooldownUntil ?? prev.proTestCooldownUntil),
+                  proTestLastCompletedAt: parseTimestampIso(dbData.proTestLastCompletedAt ?? dbSettings.proTestLastCompletedAt ?? prev.proTestLastCompletedAt),
+                  proTestDay2Notified: Boolean(dbData.proTestDay2Notified ?? dbSettings.proTestDay2Notified ?? prev.proTestDay2Notified),
                   lastViewedRank: dbData.lastViewedRank ?? dbSettings.lastViewedRank ?? undefined,
                 };
               });
@@ -3355,7 +3439,7 @@ export function useNexoraData(
         const resolvedAccountName = settings.accountName || resolvedDisplayName;
         const resolvedLocation = settings.location || '';
 
-        const writePayload = {
+        const writePayload = cleanPayload({
           name: resolvedDisplayName,
           displayName: resolvedDisplayName,
           ["Name"]: resolvedDisplayName,
@@ -3372,6 +3456,17 @@ export function useNexoraData(
           ["Location"]: resolvedLocation,
           time: new Date().toISOString(),
           ...settings,
+          isPro: settings.isPro || false,
+          proPlan: settings.proPlan || (settings.isPro ? 'Yearly Master' : 'Free Tier'),
+          proActivatedAt: parseTimestampIso(settings.proActivatedAt) || null,
+          proExpiresAt: settings.proExpiresAt || null,
+          proTestActive: settings.proTestActive || false,
+          proTestExpiresAt: parseTimestampIso(settings.proTestExpiresAt) || null,
+          proTestStartedAt: parseTimestampIso(settings.proTestStartedAt) || null,
+          proTestRemainingMs: settings.proTestRemainingMs !== undefined ? settings.proTestRemainingMs : null,
+          proTestCooldownUntil: parseTimestampIso(settings.proTestCooldownUntil) || null,
+          proTestLastCompletedAt: parseTimestampIso(settings.proTestLastCompletedAt) || null,
+          proTestDay2Notified: settings.proTestDay2Notified || false,
           settings: {
             ...settings,
             displayName: resolvedDisplayName,
@@ -3380,6 +3475,17 @@ export function useNexoraData(
             photoFileName: resolvedProfilePic,
             photoURL: resolvedProfilePic,
             location: resolvedLocation,
+            isPro: settings.isPro || false,
+            proPlan: settings.proPlan || (settings.isPro ? 'Yearly Master' : 'Free Tier'),
+            proActivatedAt: parseTimestampIso(settings.proActivatedAt) || null,
+            proExpiresAt: settings.proExpiresAt || null,
+            proTestActive: settings.proTestActive || false,
+            proTestExpiresAt: parseTimestampIso(settings.proTestExpiresAt) || null,
+            proTestStartedAt: parseTimestampIso(settings.proTestStartedAt) || null,
+            proTestRemainingMs: settings.proTestRemainingMs !== undefined ? settings.proTestRemainingMs : null,
+            proTestCooldownUntil: parseTimestampIso(settings.proTestCooldownUntil) || null,
+            proTestLastCompletedAt: parseTimestampIso(settings.proTestLastCompletedAt) || null,
+            proTestDay2Notified: settings.proTestDay2Notified || false,
           },
           uid: user.uid,
           email: user.email || `${user.uid}@nexora.app`,
@@ -3397,7 +3503,7 @@ export function useNexoraData(
           isTodayCompleted: dailyProgress.completed,
           updatedAt: serverTimestamp(),
           onboardingCompleted: settings.onboardingCompleted || false,
-        };
+        });
 
         const rewardsPayload = {
           uid: user.uid,

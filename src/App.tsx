@@ -109,6 +109,7 @@ import {
 import { getMascotNotificationDetails } from "./lib/mascotSystem";
 import { createInitialGardenState } from "./types/garden";
 import { HOUSE_ITEMS } from "./constants/houseItems";
+import { parseTimestampMs, parseTimestampIso } from "./lib/firestoreUtils";
 import { NexoraStudio } from "./components/NexoraStudio";
 import { BottomNav } from "./components/BottomNav";
 import { PWAInstallerCard } from "./components/PWAInstallerCard";
@@ -790,12 +791,16 @@ export default function App() {
   // Pro Test Expiration & Restoration Manager (4-Day Test, 3-Week Cooldown)
   const restoreTrueProgressAfterProTest = useCallback(
     async () => {
+      // If user has a permanent Pro subscription or unlocked UID, preserve their Pro status
+      const isPaidPro = isUserProUnlocked(user?.uid) || (Boolean(settings.isPro) && settings.proPlan !== '4-Day Free Pro Test' && settings.proPlan !== 'Free Tier');
       const now = new Date();
       const threeWeeksCooldown = new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000).toISOString();
       const updateData = {
         proTestActive: false,
         proTestExpiresAt: null,
-        isPro: isUserProUnlocked(user?.uid) || false,
+        proTestRemainingMs: 0,
+        isPro: isPaidPro,
+        proPlan: isPaidPro ? (settings.proPlan || 'Yearly Master') : 'Free Tier',
         proTestLastCompletedAt: now.toISOString(),
         proTestCooldownUntil: threeWeeksCooldown,
       };
@@ -815,24 +820,26 @@ export default function App() {
         }
       }
 
-      showToast("4-DAY PRO TEST COMPLETED: Upgrade to Pro via WhatsApp or test again in 3 weeks.", "info");
-      setProTestMessage(
-        "Your 4-Day Pro test time is complete! You can upgrade to full Pro by contacting the creator on WhatsApp, or test again after the 3-week cooldown. 👑",
-      );
-      vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+      if (!isPaidPro) {
+        showToast("4-DAY PRO TEST COMPLETED: Upgrade to Pro via WhatsApp or test again in 3 weeks.", "info");
+        setProTestMessage(
+          "Your 4-Day Pro test time is complete! You can upgrade to full Pro by contacting the creator on WhatsApp, or test again after the 3-week cooldown. 👑",
+        );
+        vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+      }
     },
-    [user, onUpdateSettings, showToast],
+    [user, settings.isPro, settings.proPlan, onUpdateSettings, showToast],
   );
 
   useEffect(() => {
     if (!isDataReady) return;
 
-    const testExpiresAt = settings.proTestExpiresAt;
-    const now = new Date();
+    const testExpiresMs = parseTimestampMs(settings.proTestExpiresAt);
+    const now = Date.now();
     const isTestActive =
       Boolean(settings.proTestActive) &&
-      Boolean(testExpiresAt) &&
-      new Date(testExpiresAt!).getTime() > now.getTime() + 100;
+      Boolean(testExpiresMs) &&
+      testExpiresMs! > now + 100;
 
     if (isTestActive) {
       if (!isCurrentlyBoosting) {
@@ -841,8 +848,9 @@ export default function App() {
       }
 
       // Day 2 Notification Reminder
-      if (settings.proTestStartedAt && !settings.proTestDay2Notified) {
-        const elapsedMs = now.getTime() - new Date(settings.proTestStartedAt).getTime();
+      const testStartedMs = parseTimestampMs(settings.proTestStartedAt);
+      if (testStartedMs && !settings.proTestDay2Notified) {
+        const elapsedMs = now - testStartedMs;
         const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
         if (elapsedMs >= twoDaysMs) {
           showToast("🔔 Day 2 of your 4-Day Pro Test! 2 days remaining to enjoy all VIP features.", "info");
@@ -853,9 +861,9 @@ export default function App() {
         }
       }
     } else if (
-      (isCurrentlyBoosting || settings.proTestActive) &&
-      testExpiresAt &&
-      new Date(testExpiresAt).getTime() <= now.getTime()
+      settings.proTestActive &&
+      testExpiresMs !== null &&
+      testExpiresMs <= now
     ) {
       // Transition from active to expired (ran out of time)
       setIsCurrentlyBoosting(false);
@@ -876,13 +884,13 @@ export default function App() {
 
   // Expiry Check Interval
   useEffect(() => {
-    if (!settings.proTestExpiresAt || (settings.isPro && !settings.proTestActive)) return;
+    if (!settings.proTestExpiresAt || !settings.proTestActive || (settings.isPro && settings.proPlan !== '4-Day Free Pro Test')) return;
 
     const interval = setInterval(() => {
-      const now = new Date();
-      const expiry = new Date(settings.proTestExpiresAt!);
+      const now = Date.now();
+      const expiryMs = parseTimestampMs(settings.proTestExpiresAt);
 
-      if (now >= expiry) {
+      if (expiryMs !== null && now >= expiryMs) {
         // Trigger restore
         restoreTrueProgressAfterProTest();
         clearInterval(interval);
@@ -890,7 +898,7 @@ export default function App() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [settings.proTestExpiresAt, settings.isPro, settings.proTestActive, restoreTrueProgressAfterProTest]);
+  }, [settings.proTestExpiresAt, settings.isPro, settings.proPlan, settings.proTestActive, restoreTrueProgressAfterProTest]);
   const [sessionXP, setSessionXP] = useState(0);
   const [sessionCoins, setSessionCoins] = useState(0);
   const [sessionStreak, setSessionStreak] = useState(0);

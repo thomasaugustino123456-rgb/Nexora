@@ -86,6 +86,9 @@ export interface UserSettings {
   activeSkin?: string;
   zenModeEnabled?: boolean;
   isPro?: boolean;
+  proPlan?: string | null;
+  proActivatedAt?: string | null;
+  proExpiresAt?: string | null;
   performanceMode?: boolean;
   lowPowerMode?: boolean;
   onboardingCompleted?: boolean;
