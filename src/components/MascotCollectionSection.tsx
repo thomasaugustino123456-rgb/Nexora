@@ -6,6 +6,10 @@ import { Sparkles, Check, Lock, Flame, Droplets, Shield, Zap, Sprout } from 'luc
 interface MascotCollectionSectionProps {
   coins: number;
   activeMascotSkin?: string;
+  activeHat?: string;
+  activeEye?: string;
+  activeClothes?: string;
+  activeEffect?: string;
   purchasedItems: string[];
   onEquip: (mascotId: string) => void;
   onBuy: (item: { id: string; name: string; coinPrice: number }, currency: 'coins') => void;
@@ -14,6 +18,10 @@ interface MascotCollectionSectionProps {
 export const MascotCollectionSection: React.FC<MascotCollectionSectionProps> = React.memo(({
   coins,
   activeMascotSkin = 'blue-slim',
+  activeHat = 'none',
+  activeEye = 'none',
+  activeClothes = 'none',
+  activeEffect = 'none',
   purchasedItems,
   onEquip,
   onBuy
@@ -65,6 +73,11 @@ export const MascotCollectionSection: React.FC<MascotCollectionSectionProps> = R
             key={selectedMascot.id}
             mascotId={selectedMascot.id}
             className="w-full h-full"
+            hat={activeHat}
+            head={activeHat}
+            eye={activeEye}
+            clothes={activeClothes}
+            effect={activeEffect}
             interactive={true}
             showSpeech={true}
             soundPack={isDogSoundPackActive ? 'dog' : 'cat'}

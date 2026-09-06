@@ -410,3 +410,123 @@ export function getMascotNotificationDetails(mascotId: string = 'blue-slim', cha
   return { image, title, body, mascotId: normId };
 }
 
+export type WearableSubCategory = 'eye' | 'head' | 'clothes';
+
+export type MascotSlotCategory = 
+  | 'skin' 
+  | 'wearable'
+  | 'wearable-eye' 
+  | 'wearable-head' 
+  | 'wearable-clothes' 
+  | 'effect-power' 
+  | 'other';
+
+export function getWearableSubCategory(itemId: string): WearableSubCategory {
+  const cleanId = (itemId || '').toLowerCase();
+  
+  // 1. Eye Wearable (Sunglasses, Visors, Monocle, Eyewear)
+  if (
+    cleanId.includes('cool') ||
+    cleanId.includes('shade') ||
+    cleanId.includes('glass') ||
+    cleanId.includes('sunglass') ||
+    cleanId.includes('visor') ||
+    cleanId.includes('apex') ||
+    cleanId.includes('monocle')
+  ) {
+    return 'eye';
+  }
+
+  // 2. Body Clothes Wearable (Ninja Gi & Suit, Detective Trench Coat, Hero Cape, Exosuit Armor, Streetwear Hoodie)
+  if (
+    cleanId.includes('ninja') ||
+    cleanId.includes('detective') ||
+    cleanId.includes('cape') ||
+    cleanId.includes('armor') ||
+    cleanId.includes('suit') ||
+    cleanId.includes('hoodie') ||
+    cleanId.includes('clothes') ||
+    cleanId.includes('robe') ||
+    cleanId.includes('trench')
+  ) {
+    return 'clothes';
+  }
+
+  // 3. Head Wearable (Viking Helm, Royal Crown, Wizard Hat, Artist Beret, Space Helmet, Party Hat)
+  return 'head';
+}
+
+export function isWearableCategory(cat: MascotSlotCategory | string): boolean {
+  return cat === 'wearable' || cat === 'wearable-eye' || cat === 'wearable-head' || cat === 'wearable-clothes';
+}
+
+export function getMascotItemCategory(itemId: string, itemType?: string): MascotSlotCategory {
+  const cleanId = (itemId || '').toLowerCase();
+  const cleanType = (itemType || '').toLowerCase();
+
+  // 1. Effects Power
+  if (
+    cleanType === 'effect-power' || 
+    cleanId.startsWith('effect-') || 
+    ['sparkles', 'embers', 'orbs', 'neon_glow', 'neon', 'gold_dust', 'gold-dust', 'lightning'].includes(cleanId)
+  ) {
+    return 'effect-power';
+  }
+
+  // 2. Base Mascot Skins (Body)
+  if (
+    cleanType === 'skin' &&
+    (cleanId.includes('-slim') ||
+    ['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim', 'skin-emperor', 'skin-voidwalker', 'skin-godmode', 'gold', 'cosmic', 'standard', 'sunset', 'emerald', 'cyberpunk', 'bubblegum', 'midnight'].includes(cleanId))
+  ) {
+    return 'skin';
+  }
+
+  // 3. Wearables (Eye, Head, Body Clothes)
+  if (
+    cleanType === 'wearable' ||
+    cleanId.startsWith('wearable-') ||
+    cleanId === 'pro-skin-apex' ||
+    cleanId.startsWith('skin-cool') ||
+    cleanId.startsWith('skin-artist') ||
+    cleanId.startsWith('skin-viking') ||
+    cleanId.startsWith('skin-ninja') ||
+    cleanId.startsWith('skin-detective') ||
+    cleanId.startsWith('skin-crown') ||
+    cleanId.startsWith('skin-wizard') ||
+    cleanId.startsWith('skin-space') ||
+    cleanId.startsWith('skin-cape') ||
+    cleanId.startsWith('skin-armor') ||
+    ['cool', 'artist', 'viking', 'ninja', 'detective', 'crown', 'wizard', 'space', 'apex', 'cape', 'armor', 'party'].includes(cleanId)
+  ) {
+    const sub = getWearableSubCategory(cleanId);
+    if (sub === 'eye') return 'wearable-eye';
+    if (sub === 'clothes') return 'wearable-clothes';
+    return 'wearable-head';
+  }
+
+  // Living Mascot Body fallback
+  if (
+    cleanId.includes('-slim') ||
+    ['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(cleanId)
+  ) {
+    return 'skin';
+  }
+
+  return 'other';
+}
+
+export function normalizeWearableId(itemId: string): string {
+  return (itemId || '')
+    .toLowerCase()
+    .replace('pro-skin-', '')
+    .replace('skin-', '')
+    .replace('wearable-', '');
+}
+
+export function normalizeEffectId(itemId: string): string {
+  return (itemId || '')
+    .toLowerCase()
+    .replace('effect-', '')
+    .replace('-', '_');
+}

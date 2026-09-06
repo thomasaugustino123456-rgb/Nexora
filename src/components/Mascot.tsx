@@ -4,6 +4,7 @@ import { useSound } from '../hooks/useSound';
 
 
 import { MascotMood } from '../types';
+import { MascotBackgroundEffect, MascotForegroundEffect } from './MascotEffects';
 export type { MascotMood };
 
 export interface MascotProps {
@@ -268,6 +269,9 @@ export const Mascot = React.memo(({
 
         {/* Shadow */}
         <ellipse cx="200" cy="355" rx="120" ry="14" fill="#000000" opacity="0.15" />
+
+        {/* Slot 3: Effects Power (Background Aura Layer) */}
+        <MascotBackgroundEffect effect={effect} uid={uid} />
 
         <g className="slime-mascot-core">
           {/* Halo */}
@@ -784,6 +788,9 @@ export const Mascot = React.memo(({
               )}
             </g>
           )}
+
+          {/* Slot 3: Effects Power (Foreground Particles Layer) */}
+          <MascotForegroundEffect effect={effect} uid={uid} />
         </g>
       </svg>
     </motion.div>

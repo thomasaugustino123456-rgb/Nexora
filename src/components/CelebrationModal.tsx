@@ -65,7 +65,9 @@ export function CelebrationModal({ settings, onFinish }: CelebrationModalProps) 
             <div className="mb-8">
               <Mascot 
                 className="w-28 h-28" 
-                hat={settings.activeSkin} 
+                theme={settings.activeSkin === 'none' ? 'standard' : settings.activeSkin}
+                hat={settings.activeHat || 'none'} 
+                effect={settings.activeEffect || 'none'}
                 soundPack={settings.isDogSoundPackActive ? 'dog' : 'cat'}
               />
             </div>

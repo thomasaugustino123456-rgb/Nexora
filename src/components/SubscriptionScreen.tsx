@@ -121,33 +121,46 @@ const PLANS: PlanDetails[] = [
   }
 ];
 
-// Comparison Matrix Data
-const COMPARISON_FEATURES = [
+// 4 Primary Focused Differentiators (High Impact & Clean)
+const PRIMARY_COMPARISON_FEATURES = [
   {
-    category: 'Core AI & Analytics',
-    items: [
-      { name: 'AI Habit & Food Scans', free: '3 scans / day', pro: 'Unlimited ⚡' },
-      { name: 'AI Health Coach Consultations', free: 'Limited (3 msgs/day)', pro: 'Unlimited Realtime AI' },
-      { name: 'Clean Score Breakdown & Alerts', free: 'Basic overview', pro: 'Deep Molecular Analysis' },
-      { name: 'Pantry Database & Scan History', free: 'Last 7 days', pro: 'Lifetime Unlimited Vault' },
-    ]
+    icon: Sparkles,
+    name: 'AI Habit & Food Scans',
+    subtitle: 'Deep ingredient safety & macro analysis',
+    free: '3 scans / day',
+    pro: 'Unlimited Instant ⚡',
   },
   {
-    category: 'Performance & Focus',
-    items: [
-      { name: '40Hz Gamma & Binaural Audio', free: '1 preview track', pro: 'Full Soundscape Library' },
-      { name: 'Circadian Routine Planner', free: 'Standard presets', pro: 'Custom Adaptive Schedules' },
-      { name: 'Offline Mode Access', free: 'Partial', pro: 'Full Offline Engine' },
-    ]
+    icon: BrainCircuit,
+    name: '24/7 AI Health Coach',
+    subtitle: 'Realtime biofeedback & tailored guidance',
+    free: '3 msgs / day',
+    pro: 'Unlimited Realtime AI',
   },
   {
-    category: 'Gamification & VIP Perks',
-    items: [
-      { name: 'Mascot Evolved Auras & Costumes', free: 'Basic tiers', pro: 'All Mythic & Gold Auras' },
-      { name: 'Daily XP & Streak Multiplier', free: '1.0x baseline', pro: '2.5x VIP Boost 🚀' },
-      { name: 'Direct VIP Cloud Sync & Priority Support', free: 'Standard', pro: '24/7 Priority VIP' },
-    ]
+    icon: Music,
+    name: '40Hz Gamma & Soundscapes',
+    subtitle: 'Neuro-acoustic focus & sleep soundscapes',
+    free: '1 preview track',
+    pro: 'Full Soundscape Library',
+  },
+  {
+    icon: Flame,
+    name: 'Daily XP & Streak Multiplier',
+    subtitle: 'Supercharge rewards, mythic skins & auras',
+    free: '1.0x baseline',
+    pro: '2.5x VIP Boost 🚀',
   }
+];
+
+// Secondary detailed features in sleek expandable drawer
+const SECONDARY_COMPARISON_FEATURES = [
+  { name: 'Clean Score Breakdown & Alerts', free: 'Basic overview', pro: 'Deep Molecular Analysis' },
+  { name: 'Pantry Database & Scan History', free: 'Last 7 days', pro: 'Lifetime Unlimited Vault' },
+  { name: 'Circadian Routine Planner', free: 'Standard presets', pro: 'Custom Adaptive Schedules' },
+  { name: 'Offline Mode Access', free: 'Partial', pro: 'Full Offline Engine' },
+  { name: 'Mascot Evolved Auras & Costumes', free: 'Basic tiers', pro: 'All Mythic & Gold Auras' },
+  { name: 'Direct VIP Cloud Sync & Priority Support', free: 'Standard', pro: '24/7 Priority VIP' }
 ];
 
 // Success Metrics / Social Proof Stats
@@ -175,34 +188,64 @@ export function SubscriptionScreen({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isActivatingTrial, setIsActivatingTrial] = useState<boolean>(false);
 
-  // Duolingo-style superhero flying state
-  const [hasLaunched, setHasLaunched] = useState<boolean>(false);
-  const [flightPhase, setFlightPhase] = useState<'launch' | 'hover'>('launch');
+  // Duolingo-style cinematic superhero flight state machine
+  const [flightStage, setFlightStage] = useState<'intro_clouds' | 'jet_dive' | 'jet_pull_up' | 'breakthrough' | 'hovering'>('intro_clouds');
+  const [cameraShake, setCameraShake] = useState<number>(0);
+  const [scrollY, setScrollY] = useState<number>(0);
+  const [showFullComparison, setShowFullComparison] = useState<boolean>(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Scroll direction detection for appear / hide dynamic floating dock
   const [showFloatingDock, setShowFloatingDock] = useState<boolean>(false);
   const lastScrollY = useRef<number>(0);
 
-  // Launch superhero animation sequence
+  // Cinematic Duolingo-grade choreography with synchronized haptics
   useEffect(() => {
-    const launchTimer = setTimeout(() => {
-      setHasLaunched(true);
-    }, 150);
+    // 0ms: Initial heavy cloud blanket covers the screen
+    
+    // 350ms: Superhero mascot swoops in, angles downward & dives into the cloud bank
+    const diveTimer = setTimeout(() => {
+      setFlightStage('jet_dive');
+      try {
+        vibrate([15, 25]);
+      } catch (e) {}
+    }, 350);
 
+    // 1150ms: Powerful fighter-jet pull-up! Accelerates upward, foreground clouds whip across head
+    const pullUpTimer = setTimeout(() => {
+      setFlightStage('jet_pull_up');
+      setCameraShake(3.5);
+      setTimeout(() => setCameraShake(0), 400);
+      try {
+        vibrate([25, 45, 20]);
+      } catch (e) {}
+    }, 1150);
+
+    // 1950ms: Breakthrough into clear sky! Heavy clouds dissolve, radiant cartoon Sun blooms
+    const breakthroughTimer = setTimeout(() => {
+      setFlightStage('breakthrough');
+      try {
+        vibrate([20, 50, 35]);
+      } catch (e) {}
+    }, 1950);
+
+    // 2750ms: Settles into continuous superhero hovering loop
     const hoverTimer = setTimeout(() => {
-      setFlightPhase('hover');
-    }, 1400);
+      setFlightStage('hovering');
+    }, 2750);
 
     return () => {
-      clearTimeout(launchTimer);
+      clearTimeout(diveTimer);
+      clearTimeout(pullUpTimer);
+      clearTimeout(breakthroughTimer);
       clearTimeout(hoverTimer);
     };
   }, []);
 
-  // Handle scroll to show/hide floating dock cleanly
+  // Handle scroll: tracks scroll position for mascot sky departure, sun tracking & floating dock
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const currentScrollY = e.currentTarget.scrollTop;
+    setScrollY(currentScrollY);
     if (currentScrollY > 480) {
       if (currentScrollY < lastScrollY.current || currentScrollY > 700) {
         setShowFloatingDock(true);
@@ -621,57 +664,104 @@ export function SubscriptionScreen({
       className="min-h-screen bg-gradient-to-b from-[#2B86FE] via-[#5CB2FF] via-40% to-[#D8F696] text-slate-900 overflow-y-auto overflow-x-hidden font-sans relative selection:bg-[#94E421]/40"
     >
       {/* ======================================================== */}
-      {/* DUOLINGO-STYLE SKY WITH REAL SVG SUPERHERO MASCOT FLIGHT */}
+      {/* DUOLINGO-GRADE CINEMATIC SUPERHERO SKY & MASCOT REVEAL */}
       {/* ======================================================== */}
-      <div className="relative w-full pt-4 pb-8 overflow-hidden select-none">
+      <div className="relative w-full pt-4 pb-6 overflow-hidden select-none">
         
-        {/* Animated Drifting Background Clouds */}
+        {/* Sticky Top Cloud Trim on Scroll (Framing the sky softly without blocking content) */}
+        <div 
+          className={`fixed top-14 left-0 right-0 pointer-events-none z-20 transition-opacity duration-300 ${
+            scrollY > 50 ? 'opacity-95' : 'opacity-0'
+          }`}
+        >
+          <svg viewBox="0 0 1440 60" fill="none" className="w-full h-8 sm:h-10 drop-shadow-sm">
+            <path 
+              d="M0,35 C140,12 280,42 430,22 C590,5 740,38 900,18 C1060,42 1220,12 1440,28 L1440,0 L0,0 Z" 
+              fill="white" 
+              fillOpacity="0.9" 
+            />
+          </svg>
+        </div>
+
+        {/* Ambient Drifting Clouds in Clear Sky */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {/* Cloud 1 (slow drift) */}
+          {/* Subtle Background Cloud 1 */}
           <motion.div 
-            animate={{ x: [-100, 450] }}
-            transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
+            animate={{ x: [-80, 480] }}
+            transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
             className="absolute top-6 left-0 opacity-40 blur-[1px]"
           >
-            <div className="w-36 h-12 bg-white/70 rounded-full" />
-            <div className="w-20 h-20 bg-white/70 rounded-full -mt-14 ml-6" />
+            <div className="w-40 h-12 bg-white/70 rounded-full" />
+            <div className="w-24 h-24 bg-white/70 rounded-full -mt-16 ml-8" />
           </motion.div>
 
-          {/* Cloud 2 (higher drift) */}
+          {/* Subtle Background Cloud 2 */}
           <motion.div 
-            animate={{ x: [450, -120] }}
-            transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
-            className="absolute top-20 right-0 opacity-30 blur-[1px]"
+            animate={{ x: [480, -100] }}
+            transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
+            className="absolute top-24 right-0 opacity-35 blur-[1px]"
           >
-            <div className="w-48 h-14 bg-white/60 rounded-full" />
-            <div className="w-24 h-24 bg-white/60 rounded-full -mt-16 ml-10" />
+            <div className="w-44 h-12 bg-white/60 rounded-full" />
+            <div className="w-20 h-20 bg-white/60 rounded-full -mt-14 ml-10" />
           </motion.div>
 
           {/* Floating Sparkles & Golden Stars */}
           <motion.div 
-            animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1.3, 0.8] }}
+            animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.3, 0.8] }}
             transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
             className="absolute top-10 left-10 text-yellow-200"
           >
-            <Sparkles size={22} className="fill-yellow-200" />
+            <Sparkles size={20} className="fill-yellow-200" />
           </motion.div>
           <motion.div 
             animate={{ opacity: [0.3, 1, 0.3], scale: [1, 1.4, 1] }}
             transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: 0.7 }}
             className="absolute top-16 right-12 text-white"
           >
-            <Sparkles size={18} className="fill-white" />
+            <Sparkles size={16} className="fill-white" />
           </motion.div>
           <motion.div 
-            animate={{ opacity: [0.2, 0.9, 0.2], scale: [0.7, 1.2, 0.7] }}
+            animate={{ opacity: [0.3, 0.9, 0.3], scale: [0.7, 1.2, 0.7] }}
             transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 1.4 }}
-            className="absolute top-32 left-1/4 text-yellow-300"
+            className="absolute top-28 left-1/4 text-yellow-300"
           >
-            <Star size={16} className="fill-yellow-300 stroke-yellow-300" />
+            <Star size={15} className="fill-yellow-300 stroke-yellow-300" />
           </motion.div>
         </div>
 
-        {/* Top Header Floating Controls Bar (Responsive Width) */}
+        {/* Heavy Entrance Cloud Blanket (Covers everywhere at start, then parts away) */}
+        <AnimatePresence>
+          {(flightStage === 'intro_clouds' || flightStage === 'jet_dive') && (
+            <motion.div
+              initial={{ opacity: 0.95 }}
+              animate={{ opacity: 0.95 }}
+              exit={{ opacity: 0, scale: 1.1, y: 30 }}
+              transition={{ duration: 0.9, ease: "easeInOut" }}
+              className="absolute inset-0 pointer-events-none z-25 overflow-hidden flex flex-col justify-center"
+            >
+              {/* Left billow */}
+              <motion.div 
+                animate={flightStage === 'jet_dive' ? { x: -40, opacity: 0.8 } : { x: 0 }}
+                transition={{ duration: 0.8 }}
+                className="absolute -left-12 top-0 w-72 h-72 bg-white/90 rounded-full blur-xl" 
+              />
+              {/* Right billow */}
+              <motion.div 
+                animate={flightStage === 'jet_dive' ? { x: 40, opacity: 0.8 } : { x: 0 }}
+                transition={{ duration: 0.8 }}
+                className="absolute -right-12 top-10 w-80 h-80 bg-white/85 rounded-full blur-xl" 
+              />
+              {/* Center cloud bank */}
+              <motion.div 
+                animate={flightStage === 'jet_dive' ? { y: 30, opacity: 0.7 } : { y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-white via-white/80 to-transparent blur-md" 
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Top Header Floating Controls Bar (Clean 5 Stars, Compact Sync) */}
         <div className="w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 md:px-8 flex items-center justify-between relative z-30 mb-2">
           {/* Back Button */}
           <motion.button 
@@ -688,9 +778,9 @@ export function SubscriptionScreen({
             <ArrowLeft size={18} className="stroke-[2.5]" />
           </motion.button>
 
-          {/* Social Proof Trust Rating Badge */}
-          <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-md px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full border border-black/5 shadow-md">
-            <div className="flex text-amber-400">
+          {/* Social Proof Trust Rating Badge - 5 Full Amber Stars */}
+          <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-md px-3 sm:px-3.5 py-1.5 rounded-full border border-black/5 shadow-md">
+            <div className="flex text-amber-400 gap-0.5">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} size={12} className="fill-amber-400 stroke-amber-400" />
               ))}
@@ -699,62 +789,172 @@ export function SubscriptionScreen({
             <span className="text-[10px] sm:text-[11px] text-slate-600 font-bold">· 12.4k reviews</span>
           </div>
 
-          {/* Restore / Sync Button */}
+          {/* Restore / Sync Button - Sleek & Compact */}
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
             onClick={handleCheckProStatus}
             disabled={!isOnline || isVerifying}
             id="sub-restore-btn"
-            className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/90 hover:bg-white text-xs sm:text-sm font-extrabold text-slate-800 flex items-center gap-1.5 shadow-md border border-black/5 transition-all cursor-pointer"
+            title={isVerifying ? 'Syncing...' : 'Sync & Restore'}
+            className="h-9 sm:h-10 px-3 rounded-full bg-white/95 hover:bg-white text-xs font-extrabold text-slate-800 flex items-center gap-1.5 shadow-md border border-black/5 transition-all cursor-pointer"
           >
-            <RefreshCw size={12} className={isVerifying ? 'animate-spin text-[#64A312]' : 'text-slate-600'} />
-            <span>{isVerifying ? 'Syncing...' : 'Restore'}</span>
+            <RefreshCw size={12} className={isVerifying ? 'animate-spin text-[#64A312]' : 'text-slate-700'} />
+            <span className="hidden xs:inline text-[11px] font-bold">{isVerifying ? 'Syncing' : 'Restore'}</span>
           </motion.button>
         </div>
 
-        {/* HERO SUPERHERO FLIGHT CONTAINER */}
-        <div className="relative flex flex-col items-center justify-center mt-2 mb-2 z-20 min-h-[190px] sm:min-h-[220px]">
+        {/* CAMERA RIG CONTAINER (Follows mascot with smooth tilt & dynamic reaction) */}
+        <motion.div
+          animate={
+            flightStage === 'jet_dive'
+              ? { y: 12, x: -4, rotate: 1.5 }
+              : flightStage === 'jet_pull_up'
+                ? { y: -16, x: 5, rotate: -1.5 }
+                : flightStage === 'breakthrough'
+                  ? { y: [ -6, 0 ], x: [ 2, 0 ], rotate: [ -0.8, 0 ] }
+                  : { y: 0, x: 0, rotate: 0 }
+          }
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          style={{
+            transform: cameraShake > 0 ? `translate(${(Math.random() - 0.5) * cameraShake}px, ${(Math.random() - 0.5) * cameraShake}px)` : undefined
+          }}
+          className="relative flex flex-col items-center justify-center mt-2 mb-2 z-20 min-h-[210px] sm:min-h-[230px]"
+        >
           
-          {/* Dynamic Superhero Launch & Hover Mascot Animation */}
+          {/* ======================================================== */}
+          {/* THE CARTOON SUN (Behind the Mascot, blooms on breakthrough) */}
+          {/* ======================================================== */}
           <motion.div
-            initial={{ y: 220, scale: 0.35, rotate: -25, opacity: 0 }}
+            initial={{ scale: 0, opacity: 0 }}
             animate={
-              hasLaunched
-                ? flightPhase === 'launch'
-                  ? { y: [220, -15, 0], scale: [0.35, 1.15, 1], rotate: [-25, 8, 0], opacity: [0, 1, 1] }
-                  : { 
-                      y: [0, -14, 0], 
-                      scale: [1, 1.03, 1], 
-                      rotate: [0, 2.5, -2.5, 0], 
-                      opacity: 1 
-                    }
-                : { y: 220, opacity: 0 }
+              flightStage === 'breakthrough' || flightStage === 'hovering'
+                ? { 
+                    scale: [ 0.2, 1.12, 1 ], 
+                    opacity: Math.max(0, 1 - scrollY / 200),
+                    y: -Math.min(scrollY * 0.75, 190)
+                  }
+                : { scale: 0, opacity: 0 }
+            }
+            transition={{ 
+              scale: { duration: 0.85, ease: [0.34, 1.56, 0.64, 1] },
+              opacity: { duration: 0.4 }
+            }}
+            className="absolute top-1 sm:top-2 left-1/2 -translate-x-1/2 w-48 h-48 sm:w-56 sm:h-56 pointer-events-none -z-10 flex items-center justify-center"
+          >
+            {/* Ambient Solar Warmth Glow */}
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-300/50 via-yellow-200/60 to-orange-400/40 rounded-full blur-2xl animate-pulse" />
+            
+            {/* Rotating Golden Solar Rays */}
+            <motion.div 
+              animate={{ rotate: 360 }}
+              transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
+              className="w-full h-full relative flex items-center justify-center"
+            >
+              {[...Array(12)].map((_, i) => (
+                <div 
+                  key={i}
+                  className="absolute w-2 sm:w-2.5 h-12 sm:h-14 bg-gradient-to-t from-amber-300 to-yellow-100 rounded-full origin-bottom"
+                  style={{ transform: `rotate(${i * 30}deg) translateY(-32px)` }}
+                />
+              ))}
+            </motion.div>
+
+            {/* Radiant Sun Core Sphere */}
+            <div className="absolute w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-yellow-100 shadow-[0_0_36px_rgba(251,191,36,0.85)] border-2 border-yellow-100/90 flex items-center justify-center">
+              {/* Cute Mascot-Friendly Sun Smile */}
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-amber-700/60" />
+                <div className="w-3 h-1.5 rounded-full border-b-2 border-amber-800/70" />
+                <div className="w-2 h-2 rounded-full bg-amber-700/60" />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* ======================================================== */}
+          {/* SUPERHERO MASCOT WITH DYNAMIC FLIGHT CHOREOGRAPHY */}
+          {/* ======================================================== */}
+          <motion.div
+            animate={
+              // Scroll takes over once in hover mode
+              scrollY > 0 && flightStage === 'hovering'
+                ? {
+                    y: -Math.min(scrollY * 1.15, 260),
+                    opacity: Math.max(0, 1 - scrollY / 180),
+                    scale: Math.max(0.65, 1 - scrollY / 400),
+                    rotate: 0
+                  }
+                : flightStage === 'intro_clouds'
+                  ? { y: -140, x: -70, rotate: -30, scale: 0.6, opacity: 0 }
+                  : flightStage === 'jet_dive'
+                    ? { y: 65, x: 25, rotate: 26, scale: 1.05, opacity: 1 }
+                    : flightStage === 'jet_pull_up'
+                      ? { y: -18, x: 0, rotate: -10, scale: 1.15, opacity: 1 }
+                      : flightStage === 'breakthrough'
+                        ? { y: 0, x: 0, rotate: 0, scale: 1, opacity: 1 }
+                        : { 
+                            y: [0, -10, 0], 
+                            scale: [1, 1.02, 1], 
+                            rotate: [-2, 2, -2], 
+                            opacity: 1 
+                          }
             }
             transition={
-              flightPhase === 'launch'
-                ? { duration: 1.2, ease: [0.22, 1, 0.36, 1] }
-                : { 
-                    y: { duration: 3.2, repeat: Infinity, ease: "easeInOut" },
-                    rotate: { duration: 4.5, repeat: Infinity, ease: "easeInOut" },
-                    scale: { duration: 3.2, repeat: Infinity, ease: "easeInOut" }
-                  }
+              flightStage === 'jet_dive'
+                ? { duration: 0.8, ease: [0.25, 1, 0.5, 1] }
+                : flightStage === 'jet_pull_up'
+                  ? { duration: 0.75, ease: [0.16, 1, 0.3, 1] }
+                  : flightStage === 'breakthrough'
+                    ? { duration: 0.8, ease: "easeOut" }
+                    : flightStage === 'hovering' && scrollY === 0
+                      ? {
+                          y: { duration: 3.2, repeat: Infinity, ease: "easeInOut" },
+                          rotate: { duration: 4.2, repeat: Infinity, ease: "easeInOut" },
+                          scale: { duration: 3.2, repeat: Infinity, ease: "easeInOut" }
+                        }
+                      : { duration: 0.15 }
             }
-            className="relative flex flex-col items-center cursor-pointer"
+            className="relative flex flex-col items-center cursor-pointer select-none"
             onClick={() => {
               vibrate(VIBRATION_PATTERNS.SUCCESS);
             }}
           >
             {/* Speed / Rocket Jet Trail Particles */}
             <div className="relative flex flex-col items-center">
-              {/* Radial Superhero Energy Burst Glow */}
+              
+              {/* Radial Superhero Energy Aura Glow */}
               <motion.div 
                 animate={{ scale: [1, 1.25, 1], opacity: [0.45, 0.8, 0.45] }}
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute -inset-8 bg-gradient-to-r from-[#98E724]/60 via-cyan-300/60 to-yellow-300/60 rounded-full blur-2xl -z-10"
               />
 
-              {/* AUTHENTIC SVG VECTOR MASCOT WITH SUPERHERO GLOW THEME */}
+              {/* Superhero Fluttering Aerodynamic Cape */}
+              <motion.div
+                animate={
+                  flightStage === 'jet_pull_up'
+                    ? { scaleY: [ 1, 1.35, 1 ], rotate: [ -5, 8, -5 ] }
+                    : { scaleY: [ 1, 1.15, 1 ], rotate: [ -3, 3, -3 ] }
+                }
+                transition={{ duration: 0.35, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute -top-1 w-28 sm:w-32 h-20 -z-10 pointer-events-none"
+              >
+                <svg viewBox="0 0 120 90" fill="none" className="w-full h-full drop-shadow-md">
+                  <path 
+                    d="M20,15 C45,10 75,10 100,15 C95,55 85,85 60,88 C35,85 25,55 20,15 Z" 
+                    fill="url(#superheroCapeGrad)" 
+                  />
+                  <defs>
+                    <linearGradient id="superheroCapeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#EF4444" />
+                      <stop offset="60%" stopColor="#DC2626" />
+                      <stop offset="100%" stopColor="#991B1B" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </motion.div>
+
+              {/* SVG VECTOR MASCOT WITH LIGHTNING-SLIM SUPERHERO THEME */}
               <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 relative flex items-center justify-center filter drop-shadow-[0_16px_32px_rgba(0,0,0,0.3)]">
                 <Mascot 
                   mood="hyped"
@@ -765,20 +965,36 @@ export function SubscriptionScreen({
                 />
               </div>
 
-              {/* Superhero Twin Rocket Booster Exhaust Flares */}
+              {/* Jet Thrusters Exhaust Flares (Flaring brightly during dive & pull-up) */}
               <motion.div 
                 animate={{ 
-                  scaleY: [1, 1.5, 0.8, 1.4, 1],
-                  scaleX: [1, 0.9, 1.1, 0.95, 1],
-                  opacity: [0.75, 1, 0.7, 1, 0.75]
+                  scaleY: flightStage === 'jet_pull_up' ? [ 1.4, 2.2, 1.4 ] : [ 0.9, 1.3, 0.9 ],
+                  opacity: flightStage === 'jet_pull_up' ? [ 0.9, 1, 0.9 ] : [ 0.7, 0.95, 0.7 ]
                 }}
-                transition={{ duration: 0.4, repeat: Infinity, ease: "easeInOut" }}
-                className="flex items-center justify-center gap-3 -mt-2"
+                transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
+                className="flex items-center justify-center gap-3 -mt-2.5"
               >
-                <div className="w-3 h-7 bg-gradient-to-b from-[#FF2E93] via-amber-400 to-yellow-200 rounded-full blur-[1px] shadow-[0_0_12px_#FF2E93]" />
-                <div className="w-3 h-7 bg-gradient-to-b from-[#FF2E93] via-amber-400 to-yellow-200 rounded-full blur-[1px] shadow-[0_0_12px_#FF2E93]" />
+                <div className="w-3.5 h-8 sm:w-4 sm:h-9 bg-gradient-to-b from-cyan-400 via-amber-400 to-rose-500 rounded-full blur-[1px] shadow-[0_0_16px_#38BDF8]" />
+                <div className="w-3.5 h-8 sm:w-4 sm:h-9 bg-gradient-to-b from-cyan-400 via-amber-400 to-rose-500 rounded-full blur-[1px] shadow-[0_0_16px_#38BDF8]" />
               </motion.div>
             </div>
+
+            {/* Cloud Puffs Hitting Mascot's Head (Active during jet pull-up phase) */}
+            <AnimatePresence>
+              {flightStage === 'jet_pull_up' && (
+                <motion.div
+                  initial={{ y: -60, x: -10, opacity: 0, scale: 0.6 }}
+                  animate={{ y: [ -60, 20, 100 ], x: [ -10, 8, 25 ], opacity: [ 0, 0.95, 0 ], scale: [ 0.6, 1.2, 1.5 ] }}
+                  transition={{ duration: 0.65, ease: "easeInOut" }}
+                  className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none z-30"
+                >
+                  <div className="w-28 h-12 bg-white/95 rounded-full blur-[1px] shadow-lg flex items-center justify-center">
+                    <div className="w-14 h-14 bg-white rounded-full -mt-7 ml-3" />
+                    <div className="w-10 h-10 bg-white rounded-full -mt-5 -ml-4" />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
 
           {/* Super Nexora VIP Header Text */}
@@ -799,7 +1015,7 @@ export function SubscriptionScreen({
               Supercharge your health, focus & discipline with AI
             </p>
           </motion.div>
-        </div>
+        </motion.div>
 
         {/* Fluffy Sky Cloud Bottom Divider SVG */}
         <div className="relative w-full -mb-1 mt-3">
@@ -812,7 +1028,7 @@ export function SubscriptionScreen({
             <path 
               d="M0,180 C150,110 320,130 460,170 C600,210 750,140 900,160 C1050,180 1200,110 1350,150 C1400,165 1440,180 1440,180 L1440,220 L0,220 Z" 
               fill="#D8F696" 
-              fillOpacity="0.4"
+              fillOpacity="0.4" 
             />
             <path 
               d="M0,190 C120,140 280,160 420,190 C580,220 740,160 920,180 C1100,200 1260,150 1440,190 L1440,220 L0,220 Z" 
@@ -1440,60 +1656,103 @@ export function SubscriptionScreen({
         </div>
 
         {/* ======================================================== */}
-        {/* NEW: FREE VS. PRO COMPARISON MATRIX CARD */}
+        {/* REDESIGNED: STREAMLINED 4-CARD HIGH-CONVERSION COMPARISON */}
         {/* ======================================================== */}
         <div className="bg-white/95 backdrop-blur-md rounded-[32px] sm:rounded-[36px] p-5 sm:p-7 border border-black/5 shadow-xl mb-8 overflow-hidden">
+          
+          {/* Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-black/10 gap-2">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 text-[10px] sm:text-xs font-black uppercase tracking-wider mb-1">
-                <Crown size={12} className="text-amber-500" /> Plan Comparison
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#98E724]/25 text-slate-900 text-[10px] sm:text-xs font-black uppercase tracking-wider mb-1">
+                <Crown size={12} className="text-amber-500" /> Plan Breakdown
               </div>
               <h3 className="text-lg sm:text-xl font-black text-slate-950">
                 Free vs. Super Nexora Pro
               </h3>
             </div>
-            <div className="flex items-center gap-3 self-end sm:self-auto text-xs font-black">
+            
+            <div className="flex items-center gap-2 self-start sm:self-auto text-xs font-black">
               <span className="text-slate-500 px-3 py-1 bg-slate-100 rounded-full">Free</span>
               <span className="text-slate-950 px-3.5 py-1 bg-[#98E724] rounded-full shadow-xs">VIP Pro</span>
             </div>
           </div>
 
-          <div className="space-y-6 mt-5">
-            {COMPARISON_FEATURES.map((cat, cIdx) => (
-              <div key={cIdx} className="space-y-2.5">
-                <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-slate-400 block pl-1">
-                  {cat.category}
-                </span>
+          {/* 4 High-Impact Primary Comparison Cards */}
+          <div className="grid grid-cols-1 gap-2.5 sm:gap-3 mt-4">
+            {PRIMARY_COMPARISON_FEATURES.map((item, idx) => {
+              const IconC = item.icon;
+              return (
+                <div 
+                  key={idx}
+                  className="p-3.5 sm:p-4 rounded-2xl bg-slate-50/90 hover:bg-slate-100/90 transition-all border border-black/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#98E724]/25 text-slate-950 flex items-center justify-center shrink-0 shadow-xs">
+                      <IconC size={18} className="stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-black text-slate-950">{item.name}</h4>
+                      <p className="text-[11px] text-slate-500 font-medium">{item.subtitle}</p>
+                    </div>
+                  </div>
 
-                <div className="space-y-2">
-                  {cat.items.map((item, iIdx) => (
+                  <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-4 shrink-0 text-xs">
+                    {/* Free Column */}
+                    <div className="flex items-center justify-center sm:justify-start gap-1.5 text-slate-600 bg-white sm:bg-transparent py-1.5 px-2.5 sm:p-0 rounded-xl border sm:border-0 border-slate-200">
+                      <span className="sm:hidden text-[9px] uppercase font-bold text-slate-400">Free:</span>
+                      <span className="text-[11px] font-semibold">{item.free}</span>
+                    </div>
+
+                    {/* Pro Column */}
+                    <div className="flex items-center justify-center sm:justify-start gap-1.5 text-slate-950 bg-[#98E724]/25 py-1.5 px-3 rounded-xl border border-[#98E724]/40 font-black">
+                      <Check size={13} className="text-[#64A312] stroke-[3]" />
+                      <span className="text-[11px]">{item.pro}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Expandable "View All 10 Differences" Drawer */}
+          <div className="mt-4 pt-3 border-t border-black/5 text-center">
+            <button
+              onClick={() => {
+                vibrate(VIBRATION_PATTERNS.CLICK);
+                setShowFullComparison(!showFullComparison);
+              }}
+              className="text-xs font-bold text-slate-700 hover:text-slate-950 inline-flex items-center gap-1.5 py-1.5 px-3.5 rounded-full hover:bg-black/5 transition-all cursor-pointer"
+            >
+              <span>{showFullComparison ? 'Show Less' : 'View All 10 Feature Differences'}</span>
+              {showFullComparison ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+
+            <AnimatePresence>
+              {showFullComparison && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-3 space-y-2 overflow-hidden text-left"
+                >
+                  {SECONDARY_COMPARISON_FEATURES.map((item, sIdx) => (
                     <div 
-                      key={iIdx}
-                      className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100/80 transition-colors border border-black/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                      key={sIdx}
+                      className="p-3 rounded-xl bg-slate-50/70 border border-black/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
                     >
-                      <span className="text-xs sm:text-sm font-extrabold text-slate-900">
-                        {item.name}
-                      </span>
-
-                      <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-6 text-xs font-bold shrink-0">
-                        {/* Free column */}
-                        <div className="flex items-center gap-1.5 text-slate-500 bg-white sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none border sm:border-0 border-slate-200">
-                          <span className="sm:hidden text-[9px] uppercase font-bold text-slate-400 block">Free:</span>
-                          <span className="text-[11px] sm:text-xs">{item.free}</span>
-                        </div>
-
-                        {/* Pro column */}
-                        <div className="flex items-center gap-1.5 text-slate-950 bg-[#98E724]/20 sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none border sm:border-0 border-[#98E724]/40">
-                          <span className="sm:hidden text-[9px] uppercase font-bold text-[#64A312] block">Pro:</span>
-                          <Check size={14} className="text-[#64A312] stroke-[3]" />
-                          <span className="text-[11px] sm:text-xs font-black text-slate-950">{item.pro}</span>
-                        </div>
+                      <span className="text-xs font-bold text-slate-800">{item.name}</span>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="text-slate-500 text-[11px]">Free: {item.free}</span>
+                        <span className="text-slate-950 font-black text-[11px] flex items-center gap-1 bg-[#98E724]/20 px-2 py-0.5 rounded-lg">
+                          <Check size={12} className="text-[#64A312] stroke-[3]" />
+                          {item.pro}
+                        </span>
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-            ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 

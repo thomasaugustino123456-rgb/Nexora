@@ -83,7 +83,10 @@ export interface UserSettings {
   savedVideoIds?: string[];
   savedPostIds?: string[];
   activeHat?: string;
+  activeEye?: string;
+  activeClothes?: string;
   activeSkin?: string;
+  activeEffect?: string;
   zenModeEnabled?: boolean;
   isPro?: boolean;
   proPlan?: string | null;
@@ -185,7 +188,7 @@ export interface ShopItem {
   description: string;
   price: number;
   coinPrice?: number;
-  effect: 'streak-protection' | 'double-points' | 'skin' | 'gift' | 'sound-pack' | 'music' | 'power-up';
+  effect: 'streak-protection' | 'double-points' | 'skin' | 'wearable' | 'effect-power' | 'gift' | 'sound-pack' | 'music' | 'power-up';
   icon: string;
   rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   proOnly?: boolean;
@@ -197,7 +200,7 @@ export interface LibraryItem {
   name: string;
   icon: string;
   activated: boolean;
-  type: 'power-up' | 'skin' | 'gift' | 'sound-pack' | 'music';
+  type: 'power-up' | 'skin' | 'wearable' | 'effect-power' | 'gift' | 'sound-pack' | 'music';
   purchasedAt: string; // ISO date
 }
 

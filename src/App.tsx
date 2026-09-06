@@ -106,7 +106,7 @@ import {
   ShopItem,
   isUserProUnlocked,
 } from "./types";
-import { getMascotNotificationDetails } from "./lib/mascotSystem";
+import { getMascotNotificationDetails, getMascotItemCategory, normalizeWearableId, normalizeEffectId, isWearableCategory, getWearableSubCategory, MascotSlotCategory } from "./lib/mascotSystem";
 import { createInitialGardenState } from "./types/garden";
 import { HOUSE_ITEMS } from "./constants/houseItems";
 import { parseTimestampMs, parseTimestampIso } from "./lib/firestoreUtils";
@@ -321,6 +321,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   language: "en",
   activeHat: "none",
   activeSkin: "sunset",
+  activeEffect: "none",
   zenModeEnabled: false,
   challengeCountGoal: 3,
   league: "Bronze",
@@ -6530,13 +6531,88 @@ export default function App() {
                       purchasedItems={settings.purchasedItems || []}
                       isPro={isPro}
                       settings={settings}
+                      onEquipMascotSlot={(itemId, category: MascotSlotCategory) => {
+                        vibrate(VIBRATION_PATTERNS.CLICK);
+                        onUpdateSettings((prev) => {
+                          let activeSkin = prev.activeSkin || "blue-slim";
+                          let activeHat = prev.activeHat || "none";
+                          let activeEye = prev.activeEye || "none";
+                          let activeClothes = prev.activeClothes || "none";
+                          let activeEffect = prev.activeEffect || "none";
+
+                          if (category === "skin") {
+                            activeSkin = itemId;
+                          } else if (category === "wearable-eye") {
+                            activeEye = normalizeWearableId(itemId);
+                          } else if (category === "wearable-head") {
+                            activeHat = normalizeWearableId(itemId);
+                          } else if (category === "wearable-clothes") {
+                            activeClothes = normalizeWearableId(itemId);
+                          } else if (category === "wearable") {
+                            const sub = getWearableSubCategory(itemId);
+                            const norm = normalizeWearableId(itemId);
+                            if (sub === 'eye') activeEye = norm;
+                            else if (sub === 'clothes') activeClothes = norm;
+                            else activeHat = norm;
+                          } else if (category === "effect-power") {
+                            activeEffect = normalizeEffectId(itemId);
+                          }
+
+                          if (user) {
+                            const userRef = doc(db, "users", user.uid);
+                            const libraryRef = doc(db, "library", user.uid);
+                            const updateData = { activeSkin, activeHat, activeEye, activeClothes, activeEffect, updatedAt: serverTimestamp() };
+                            setDoc(userRef, updateData, { merge: true }).catch(() => {});
+                            setDoc(libraryRef, updateData, { merge: true }).catch(() => {});
+                          }
+                          return { ...prev, activeSkin, activeHat, activeEye, activeClothes, activeEffect };
+                        });
+                      }}
+                      onUnequipMascotSlot={(category: MascotSlotCategory) => {
+                        vibrate(VIBRATION_PATTERNS.CLICK);
+                        onUpdateSettings((prev) => {
+                          let activeSkin = prev.activeSkin || "blue-slim";
+                          let activeHat = prev.activeHat || "none";
+                          let activeEye = prev.activeEye || "none";
+                          let activeClothes = prev.activeClothes || "none";
+                          let activeEffect = prev.activeEffect || "none";
+
+                          if (category === "skin") {
+                            activeSkin = "blue-slim";
+                          } else if (category === "wearable-eye") {
+                            activeEye = "none";
+                          } else if (category === "wearable-head") {
+                            activeHat = "none";
+                          } else if (category === "wearable-clothes") {
+                            activeClothes = "none";
+                          } else if (category === "wearable") {
+                            activeHat = "none";
+                            activeEye = "none";
+                            activeClothes = "none";
+                          } else if (category === "effect-power") {
+                            activeEffect = "none";
+                          }
+
+                          if (user) {
+                            const userRef = doc(db, "users", user.uid);
+                            const libraryRef = doc(db, "library", user.uid);
+                            const updateData = { activeSkin, activeHat, activeEye, activeClothes, activeEffect, updatedAt: serverTimestamp() };
+                            setDoc(userRef, updateData, { merge: true }).catch(() => {});
+                            setDoc(libraryRef, updateData, { merge: true }).catch(() => {});
+                          }
+                          return { ...prev, activeSkin, activeHat, activeEye, activeClothes, activeEffect };
+                        });
+                      }}
                       onBuy={(item, currency) => {
                         vibrate(VIBRATION_PATTERNS.SUCCESS);
 
                         // Trigger the Shop unboxing chest animation
                         setUnboxingShopItem(item);
 
-                        const isSkin = item.effect === "skin";
+                        const mascotCategory = getMascotItemCategory(item.id, item.effect);
+                        const isMascotSkin = mascotCategory === "skin";
+                        const isMascotWearable = isWearableCategory(mascotCategory);
+                        const isMascotEffect = mascotCategory === "effect-power";
                         const isMusic = item.effect === "music";
                         const isSoundPack = item.effect === "sound-pack";
                         const isGift = item.effect === "gift";
@@ -6547,11 +6623,11 @@ export default function App() {
                           id: `${item.id}-${Date.now()}`,
                           itemId: item.id,
                           name: item.name,
-                          icon: typeof item.icon === "string" || typeof item.icon === "number" ? String(item.icon) : (isMusic ? "🎵" : isSkin ? "🎨" : isSoundPack ? "🔊" : isGift ? "🎁" : "⚡"),
+                          icon: typeof item.icon === "string" || typeof item.icon === "number" ? String(item.icon) : (isMusic ? "🎵" : isMascotSkin ? "🎨" : isMascotWearable ? "🥷" : isMascotEffect ? "⚡" : isSoundPack ? "🔊" : isGift ? "🎁" : "⚡"),
                           activated: true, // Activate immediately upon purchase!
                           type:
-                            item.effect === "skin"
-                              ? "skin"
+                            item.effect === "skin" || item.effect === "wearable" || item.effect === "effect-power"
+                              ? item.effect
                               : item.effect === "gift"
                                 ? "gift"
                                 : item.effect === "sound-pack"
@@ -6604,13 +6680,45 @@ export default function App() {
                           playMusic(item.id);
                         }
 
+                        let activeSkin = settings.activeSkin || "blue-slim";
+                        let activeHat = settings.activeHat || "none";
+                        let activeEye = settings.activeEye || "none";
+                        let activeClothes = settings.activeClothes || "none";
+                        let activeEffect = settings.activeEffect || "none";
+
+                        if (isMascotSkin) {
+                          activeSkin = item.id;
+                        } else if (mascotCategory === "wearable-eye") {
+                          activeEye = normalizeWearableId(item.id);
+                        } else if (mascotCategory === "wearable-head") {
+                          activeHat = normalizeWearableId(item.id);
+                        } else if (mascotCategory === "wearable-clothes") {
+                          activeClothes = normalizeWearableId(item.id);
+                        } else if (isMascotWearable) {
+                          const sub = getWearableSubCategory(item.id);
+                          const norm = normalizeWearableId(item.id);
+                          if (sub === 'eye') activeEye = norm;
+                          else if (sub === 'clothes') activeClothes = norm;
+                          else activeHat = norm;
+                        } else if (isMascotEffect) {
+                          activeEffect = normalizeEffectId(item.id);
+                        }
+
                         onUpdateSettings((prev) => {
                           let inventory = prev.inventory || [];
                           
                           // Deactivate matching categories if needed
-                          if (isSkin || isMusic || isSoundPack) {
+                          if (isMascotSkin || isMascotWearable || isMascotEffect || isMusic || isSoundPack) {
                             inventory = inventory.map((invItem) => {
-                              if (isSkin && invItem.type === "skin") {
+                              const invMascotCat = getMascotItemCategory(invItem.itemId || invItem.id, invItem.type);
+                              if (isMascotSkin && invMascotCat === "skin") {
+                                return { ...invItem, activated: false };
+                              }
+                              // Deactivate only within the EXACT matching wearable subcategory (e.g. eye with eye, head with head, clothes with clothes)
+                              if (isMascotWearable && invMascotCat === mascotCategory) {
+                                return { ...invItem, activated: false };
+                              }
+                              if (isMascotEffect && invMascotCat === "effect-power") {
                                 return { ...invItem, activated: false };
                               }
                               if (isMusic && invItem.type === "music") {
@@ -6621,16 +6729,6 @@ export default function App() {
                               }
                               return invItem;
                             });
-                          }
-
-                          let activeHat = prev.activeHat;
-                          let activeSkin = prev.activeSkin;
-                          if (isSkin) {
-                            if (['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(item.id)) {
-                              activeSkin = item.id;
-                            } else {
-                              activeHat = item.id.replace("skin-", "").replace("pro-skin-", "");
-                            }
                           }
 
                           let isDogSoundPackActive = prev.isDogSoundPackActive;
@@ -6668,6 +6766,9 @@ export default function App() {
                             ...prev,
                             activeSkin,
                             activeHat,
+                            activeEye,
+                            activeClothes,
+                            activeEffect,
                             isDogSoundPackActive,
                             hasUltimateBadge,
                             plantState: updatedPlantState,
@@ -6706,8 +6807,8 @@ export default function App() {
                             inventory: arrayUnion(newItem, ...bonusItems),
                             updatedAt: serverTimestamp()
                           };
-                          setDoc(userRef, { purchasedItems: arrayUnion(item.id), inventory: arrayUnion(newItem, ...bonusItems), hasUltimateBadge: isUltimateBadge ? true : settings.hasUltimateBadge }, { merge: true }).catch((err) => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`));
-                          setDoc(libraryRef, { purchasedItems: arrayUnion(item.id), inventory: arrayUnion(newItem, ...bonusItems) }, { merge: true }).catch((err) => handleFirestoreError(err, OperationType.WRITE, `library/${user.uid}`));
+                          setDoc(userRef, { purchasedItems: arrayUnion(item.id), inventory: arrayUnion(newItem, ...bonusItems), hasUltimateBadge: isUltimateBadge ? true : settings.hasUltimateBadge, activeSkin, activeHat, activeEye, activeClothes, activeEffect }, { merge: true }).catch((err) => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`));
+                          setDoc(libraryRef, { purchasedItems: arrayUnion(item.id), inventory: arrayUnion(newItem, ...bonusItems), activeSkin, activeHat, activeEye, activeClothes, activeEffect }, { merge: true }).catch((err) => handleFirestoreError(err, OperationType.WRITE, `library/${user.uid}`));
                           setDoc(purchaseRef, purchaseData, { merge: true }).catch((err) => handleFirestoreError(err, OperationType.WRITE, `shop_purchases/${user.uid}`));
                           setDoc(shopRef, purchaseData, { merge: true }).catch((err) => handleFirestoreError(err, OperationType.WRITE, `shop/${user.uid}`));
                           setDoc(userShopRef, purchaseData, { merge: true }).catch((err) => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/shop/main`));
@@ -6732,7 +6833,7 @@ export default function App() {
                           showToast("Ultimate Mythic Emblem activated! ⚜️🏅 Displayed on profile & leaderboard!", "success");
                         } else if (isGift) {
                           showToast(`GIFT UNBOXED! Received +${giftCoinsBonus} Coins ${giftXPBonus ? `& +${giftXPBonus} XP` : ''}! 🎁✨`, "success");
-                        } else if (isSkin) {
+                        } else if (isMascotSkin || isMascotWearable || isMascotEffect) {
                           showToast(`${item.name} equipped on your mascot! 🎨✨`, "success");
                         } else if (isSoundPack) {
                           showToast("Dog Sound Pack activated! Mascot will now bark! 🐶", "success");
@@ -7004,35 +7105,45 @@ export default function App() {
                       }
 
                       const targetId = itemToActivate.itemId || itemToActivate.id;
-                      const isLivingMascot = ['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(targetId);
+                      const mascotCategory = getMascotItemCategory(targetId, itemToActivate.type);
+                      const isSkinSlot = mascotCategory === "skin";
+                      const isWearableSlot = isWearableCategory(mascotCategory);
+                      const isEffectSlot = mascotCategory === "effect-power";
 
-                      let activeSkin = settings.activeSkin || 'blue-slim';
-                      let activeHat = settings.activeHat;
-                      if (itemToActivate.type === "skin") {
-                        if (isLivingMascot) {
-                          activeSkin = targetId;
-                        } else {
-                          activeHat = targetId.replace("skin-", "").replace("pro-skin-", "");
-                        }
+                      let activeSkin = settings.activeSkin || "blue-slim";
+                      let activeHat = settings.activeHat || "none";
+                      let activeEye = settings.activeEye || "none";
+                      let activeClothes = settings.activeClothes || "none";
+                      let activeEffect = settings.activeEffect || "none";
+
+                      if (isSkinSlot) {
+                        activeSkin = targetId;
+                      } else if (mascotCategory === "wearable-eye") {
+                        activeEye = normalizeWearableId(targetId);
+                      } else if (mascotCategory === "wearable-head") {
+                        activeHat = normalizeWearableId(targetId);
+                      } else if (mascotCategory === "wearable-clothes") {
+                        activeClothes = normalizeWearableId(targetId);
+                      } else if (isWearableSlot) {
+                        const sub = getWearableSubCategory(targetId);
+                        const norm = normalizeWearableId(targetId);
+                        if (sub === 'eye') activeEye = norm;
+                        else if (sub === 'clothes') activeClothes = norm;
+                        else activeHat = norm;
+                      } else if (isEffectSlot) {
+                        activeEffect = normalizeEffectId(targetId);
                       }
 
                       let inventory = (settings.inventory || []).map(
                         (item) => {
                           const itId = item.itemId || item.id;
-                          const itIsLiving = ['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(itId);
+                          const itCategory = getMascotItemCategory(itId, item.type);
                           if (item.id === id || item.itemId === id) {
                             return { ...item, activated: true };
                           }
-                          // If it's a skin, deactivate other skins in the same category (living mascot vs hats)
-                          if (
-                            item.type === "skin" &&
-                            itemToActivate.type === "skin"
-                          ) {
-                            if (isLivingMascot && itIsLiving) {
-                              return { ...item, activated: false };
-                            } else if (!isLivingMascot && !itIsLiving) {
-                              return { ...item, activated: false };
-                            }
+                          // Only deactivate items within the EXACT same slot category
+                          if (mascotCategory !== "other" && itCategory === mascotCategory) {
+                            return { ...item, activated: false };
                           }
                           // If it's music, deactivate other music
                           if (
@@ -7136,15 +7247,6 @@ export default function App() {
                         }));
                       }
 
-                      onUpdateSettings({
-                        inventory,
-                        activeSkin,
-                        activeHat,
-                        isDogSoundPackActive,
-                        hasUltimateBadge,
-                        plantState: updatedPlantState,
-                      });
-
                       if (user) {
                         const userRef = doc(db, "users", user.uid);
                         const purchaseRef = doc(db, "shop_purchases", user.uid);
@@ -7156,6 +7258,9 @@ export default function App() {
                           inventory,
                           activeSkin: activeSkin || "blue-slim",
                           activeHat: activeHat || "none",
+                          activeEye: activeEye || "none",
+                          activeClothes: activeClothes || "none",
+                          activeEffect: activeEffect || "none",
                           updatedAt: serverTimestamp(),
                         };
 
@@ -7163,8 +7268,21 @@ export default function App() {
                         setDoc(purchaseRef, { inventory }, { merge: true }).catch(() => {});
                         setDoc(shopRef, { inventory }, { merge: true }).catch(() => {});
                         setDoc(userShopRef, { inventory }, { merge: true }).catch(() => {});
-                        setDoc(libraryRef, { inventory, activeSkin: activeSkin || "blue-slim", activeHat: activeHat || "none" }, { merge: true }).catch(() => {});
+                        setDoc(libraryRef, { inventory, activeSkin: activeSkin || "blue-slim", activeHat: activeHat || "none", activeEye: activeEye || "none", activeClothes: activeClothes || "none", activeEffect: activeEffect || "none" }, { merge: true }).catch(() => {});
                       }
+
+                      onUpdateSettings((prev) => ({
+                        ...prev,
+                        inventory,
+                        activeSkin: activeSkin || "blue-slim",
+                        activeHat: activeHat || "none",
+                        activeEye: activeEye || "none",
+                        activeClothes: activeClothes || "none",
+                        activeEffect: activeEffect || "none",
+                        isDogSoundPackActive,
+                        hasUltimateBadge,
+                        plantState: updatedPlantState,
+                      }));
 
                       if (itemToActivate.itemId !== "plant-recovery") {
                         showToast(`${itemToActivate.name} activated!`, "success");
@@ -7181,7 +7299,7 @@ export default function App() {
                           stopAllMusic();
                         }
                         const targetId = itemToDeactivate?.itemId || itemToDeactivate?.id || id;
-                        const isLivingMascot = ['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(targetId);
+                        const mascotCategory = getMascotItemCategory(targetId, itemToDeactivate?.type);
 
                         const inventory = (prev.inventory || []).map((item) => {
                           if (item.id === id || item.itemId === id) {
@@ -7190,14 +7308,27 @@ export default function App() {
                           return item;
                         });
 
-                        let activeSkin = prev.activeSkin || 'blue-slim';
-                        let activeHat = prev.activeHat;
-                        if (itemToDeactivate?.type === "skin") {
-                          if (isLivingMascot) {
-                            activeSkin = "blue-slim";
-                          } else {
-                            activeHat = "none";
-                          }
+                        let activeSkin = prev.activeSkin || "blue-slim";
+                        let activeHat = prev.activeHat || "none";
+                        let activeEye = prev.activeEye || "none";
+                        let activeClothes = prev.activeClothes || "none";
+                        let activeEffect = prev.activeEffect || "none";
+
+                        if (mascotCategory === "skin") {
+                          activeSkin = "blue-slim";
+                        } else if (mascotCategory === "wearable-eye") {
+                          activeEye = "none";
+                        } else if (mascotCategory === "wearable-head") {
+                          activeHat = "none";
+                        } else if (mascotCategory === "wearable-clothes") {
+                          activeClothes = "none";
+                        } else if (isWearableCategory(mascotCategory)) {
+                          const sub = getWearableSubCategory(targetId);
+                          if (sub === 'eye') activeEye = "none";
+                          else if (sub === 'clothes') activeClothes = "none";
+                          else activeHat = "none";
+                        } else if (mascotCategory === "effect-power") {
+                          activeEffect = "none";
                         }
 
                         let isDogSoundPackActive = prev.isDogSoundPackActive;
@@ -7212,6 +7343,9 @@ export default function App() {
                             inventory,
                             activeSkin: activeSkin || "blue-slim",
                             activeHat: activeHat || "none",
+                            activeEye: activeEye || "none",
+                            activeClothes: activeClothes || "none",
+                            activeEffect: activeEffect || "none",
                             updatedAt: serverTimestamp(),
                           };
                           setDoc(userRef, updateData, { merge: true }).catch(() => {});
@@ -7223,6 +7357,9 @@ export default function App() {
                           inventory,
                           activeSkin: activeSkin || "blue-slim",
                           activeHat,
+                          activeEye,
+                          activeClothes,
+                          activeEffect,
                           isDogSoundPackActive,
                         };
                       });
@@ -7249,17 +7386,29 @@ export default function App() {
                           prev.purchasedItems || []
                         ).filter((pid) => pid !== deletedItemId && pid !== id && pid !== itemToDelete?.id);
 
-                        const isLivingMascot = ['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(deletedItemId);
+                        const deletedCat = getMascotItemCategory(deletedItemId, itemToDelete?.type);
                         let activeSkin = prev.activeSkin || 'blue-slim';
-                        let activeHat = prev.activeHat;
-                        if (
-                          itemToDelete?.type === "skin" &&
-                          itemToDelete.activated
-                        ) {
-                          if (isLivingMascot) {
+                        let activeHat = prev.activeHat || 'none';
+                        let activeEye = prev.activeEye || 'none';
+                        let activeClothes = prev.activeClothes || 'none';
+                        let activeEffect = prev.activeEffect || 'none';
+
+                        if (itemToDelete?.activated) {
+                          if (deletedCat === "skin") {
                             activeSkin = "blue-slim";
-                          } else {
+                          } else if (deletedCat === "wearable-eye") {
+                            activeEye = "none";
+                          } else if (deletedCat === "wearable-head") {
                             activeHat = "none";
+                          } else if (deletedCat === "wearable-clothes") {
+                            activeClothes = "none";
+                          } else if (isWearableCategory(deletedCat)) {
+                            const sub = getWearableSubCategory(deletedItemId);
+                            if (sub === 'eye') activeEye = "none";
+                            else if (sub === 'clothes') activeClothes = "none";
+                            else activeHat = "none";
+                          } else if (deletedCat === "effect-power") {
+                            activeEffect = "none";
                           }
                         }
 
@@ -7275,6 +7424,9 @@ export default function App() {
                             inventory,
                             activeSkin: activeSkin || "blue-slim",
                             activeHat: activeHat || "none",
+                            activeEye: activeEye || "none",
+                            activeClothes: activeClothes || "none",
+                            activeEffect: activeEffect || "none",
                             updatedAt: serverTimestamp(),
                           };
 
@@ -7282,7 +7434,7 @@ export default function App() {
                           setDoc(purchaseRef, { purchasedItems, inventory }, { merge: true }).catch((e) => handleFirestoreError(e, OperationType.WRITE, `shop_purchases/${user.uid}`));
                           setDoc(shopRef, { purchasedItems, inventory }, { merge: true }).catch((e) => handleFirestoreError(e, OperationType.WRITE, `shop/${user.uid}`));
                           setDoc(userShopRef, { purchasedItems, inventory }, { merge: true }).catch((e) => handleFirestoreError(e, OperationType.WRITE, `users/${user.uid}/shop/main`));
-                          setDoc(libraryRef, { purchasedItems, inventory, activeSkin: activeSkin || "blue-slim", activeHat: activeHat || "none" }, { merge: true }).catch((e) => handleFirestoreError(e, OperationType.WRITE, `library/${user.uid}`));
+                          setDoc(libraryRef, { purchasedItems, inventory, activeSkin: activeSkin || "blue-slim", activeHat: activeHat || "none", activeEye: activeEye || "none", activeClothes: activeClothes || "none", activeEffect: activeEffect || "none" }, { merge: true }).catch((e) => handleFirestoreError(e, OperationType.WRITE, `library/${user.uid}`));
                         }
 
                         return {
@@ -7291,6 +7443,9 @@ export default function App() {
                           purchasedItems,
                           activeSkin: activeSkin || "blue-slim",
                           activeHat,
+                          activeEye,
+                          activeClothes,
+                          activeEffect,
                         };
                       });
                       showToast("Item deleted from library", "info");

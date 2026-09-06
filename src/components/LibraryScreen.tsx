@@ -14,6 +14,8 @@ import { AnimatedDetectiveKit } from './AnimatedDetectiveKit';
 import { AnimatedWizardHat } from './AnimatedWizardHat';
 import { AnimatedRoyalCrown } from './AnimatedRoyalCrown';
 import { LivingMascot } from './LivingMascot';
+import { AnimatedEffectPreview } from './AnimatedEffectPreview';
+import { getMascotItemCategory, normalizeWearableId, normalizeEffectId } from '../lib/mascotSystem';
 
 interface LibraryScreenProps {
   items: LibraryItem[];
@@ -149,15 +151,23 @@ export function LibraryScreen({
                   <div className="flex flex-col">
                     {Array.from(new Map(items.map((it, idx) => [it.id || `item-${idx}`, it])).values()).map((item, idx) => {
                       const isMusic = item.type === 'music';
-                      const isSkin = item.type === 'skin';
                       const isSoundPack = item.type === 'sound-pack';
                       const targetSkinId = item.itemId || item.id;
-                      const isLivingMascot = ['blue-slim', 'fire-slim', 'water-slim', 'shield-slim', 'lightning-slim', 'earth-slim'].includes(targetSkinId);
-                      const active = isLivingMascot
-                        ? ((settings.activeSkin || 'blue-slim') === targetSkinId)
-                        : (isSkin 
-                            ? (settings.activeHat === targetSkinId.replace('skin-', '').replace('pro-skin-', '') || item.activated)
-                            : item.activated);
+                      const mascotCategory = getMascotItemCategory(targetSkinId, item.type);
+                      const isLivingMascot = mascotCategory === 'skin';
+                      const isWearable = mascotCategory === 'wearable';
+                      const isEffectPower = mascotCategory === 'effect-power';
+
+                      let active = false;
+                      if (isLivingMascot) {
+                        active = (settings.activeSkin || 'blue-slim') === targetSkinId;
+                      } else if (isWearable) {
+                        active = (settings.activeHat || 'none') === normalizeWearableId(targetSkinId);
+                      } else if (isEffectPower) {
+                        active = (settings.activeEffect || 'none') === normalizeEffectId(targetSkinId);
+                      } else {
+                        active = !!item.activated;
+                      }
 
                       return (
                         <div 
@@ -191,6 +201,10 @@ export function LibraryScreen({
                                       className="w-full h-full" 
                                     />
                                   </div>
+                                ) : isEffectPower ? (
+                                  <div className="w-8 h-8 relative flex items-center justify-center pointer-events-none">
+                                    <AnimatedEffectPreview effectId={targetSkinId} className="w-full h-full" />
+                                  </div>
                                 ) : item.itemId === 'skin-cool' ? (
                                   <AnimatedSunglasses className="w-8 h-5" animate={false} />
                                 ) : item.itemId === 'skin-ninja' ? (
@@ -217,7 +231,7 @@ export function LibraryScreen({
                               <h4 className="font-extrabold text-[#4F3F34] text-xs sm:text-sm uppercase tracking-wide truncate">{item.name}</h4>
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                 <span className="text-[7.5px] font-black text-[#4F3F34]/50 bg-[#FAF7F2] border border-[#E9E4D4]/45 px-1.5 py-0.5 rounded uppercase">
-                                  {isLivingMascot ? 'Mascot' : item.type}
+                                  {isLivingMascot ? 'Slot 1: Skin' : isWearable ? 'Slot 2: Wearable' : isEffectPower ? 'Slot 3: Effect' : item.type}
                                 </span>
                                 {isMusic && (
                                   <span className={`text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded flex items-center gap-1 ${
@@ -229,9 +243,19 @@ export function LibraryScreen({
                                     {active ? 'Playing' : 'In Library'}
                                   </span>
                                 )}
-                                {isSkin && active && (
-                                  <span className="text-[7.5px] font-black text-amber-600 bg-amber-50 px-1 py-0.5 rounded uppercase">
-                                    {isLivingMascot ? 'Mascot Active 👑' : 'Equipped 👑'}
+                                {isLivingMascot && active && (
+                                  <span className="text-[7.5px] font-black text-blue-700 bg-blue-50 px-1 py-0.5 rounded uppercase">
+                                    Mascot Body Active 🎨
+                                  </span>
+                                )}
+                                {isWearable && active && (
+                                  <span className="text-[7.5px] font-black text-purple-700 bg-purple-50 px-1 py-0.5 rounded uppercase">
+                                    Wearable Active 🥷
+                                  </span>
+                                )}
+                                {isEffectPower && active && (
+                                  <span className="text-[7.5px] font-black text-amber-700 bg-amber-50 px-1 py-0.5 rounded uppercase">
+                                    Effect Aura Active ⚡
                                   </span>
                                 )}
                                 {isSoundPack && active && (

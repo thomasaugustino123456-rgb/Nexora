@@ -6,12 +6,17 @@ import { triggerHaptic } from '../lib/mascotHaptics';
 import { useSound } from '../hooks/useSound';
 import { Sparkles, Zap, Flame, Droplets, Shield, Sprout, Volume2, VolumeX } from 'lucide-react';
 import { MascotMood } from '../types';
+import { MascotBackgroundEffect, MascotForegroundEffect } from './MascotEffects';
 
 export interface LivingMascotProps {
   mascotId?: MascotId | string;
   className?: string;
   mood?: MascotMood;
   hat?: string;
+  head?: string;
+  eye?: string;
+  clothes?: string;
+  effect?: string;
   soundEnabled?: boolean;
   soundPack?: 'cat' | 'dog';
   vibrationEnabled?: boolean;
@@ -29,6 +34,10 @@ export const LivingMascot = React.memo(({
   className = 'w-36 h-36',
   mood = 'happy',
   hat = 'none',
+  head,
+  eye,
+  clothes,
+  effect = 'none',
   soundEnabled = true,
   soundPack = 'cat',
   vibrationEnabled = true,
@@ -41,6 +50,19 @@ export const LivingMascot = React.memo(({
   isWaving = false
 }: LivingMascotProps) => {
   const { play } = useSound();
+
+  // Normalize 3-wearable slot system: Eye, Head, Body Clothes
+  const effectiveEye = (eye && eye !== 'none')
+    ? eye
+    : (['cool', 'shades', 'sunglass', 'sunglasses', 'visor', 'apex', 'monocle'].some(s => hat?.toLowerCase().includes(s)) ? hat : 'none');
+
+  const effectiveClothes = (clothes && clothes !== 'none')
+    ? clothes
+    : (['ninja', 'detective', 'cape', 'armor', 'suit', 'hoodie'].some(s => hat?.toLowerCase().includes(s)) ? hat : 'none');
+
+  const effectiveHead = (head && head !== 'none')
+    ? head
+    : (hat && hat !== 'none' && hat !== effectiveEye && hat !== effectiveClothes ? hat : 'none');
 
   // Normalize mascotId
   const validMascotId: MascotId = (MASCOTS_DATA[mascotId as MascotId] ? mascotId : 'blue-slim') as MascotId;
@@ -563,6 +585,28 @@ export const LivingMascot = React.memo(({
             <filter id="mascotVikingHornShadow" x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow dx="0" dy="5" stdDeviation="3" floodColor="#000000" floodOpacity="0.3"/>
             </filter>
+
+            {/* Hero Cape & Armor Gradients */}
+            <linearGradient id="mascotCapeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#ef4444"/>
+              <stop offset="60%" stopColor="#dc2626"/>
+              <stop offset="100%" stopColor="#991b1b"/>
+            </linearGradient>
+            <linearGradient id="mascotCapeGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#fef08a"/>
+              <stop offset="50%" stopColor="#f59e0b"/>
+              <stop offset="100%" stopColor="#b45309"/>
+            </linearGradient>
+            <linearGradient id="mascotArmorGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#38bdf8"/>
+              <stop offset="30%" stopColor="#0284c7"/>
+              <stop offset="100%" stopColor="#0f172a"/>
+            </linearGradient>
+            <linearGradient id="mascotArmorMetal" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#64748b"/>
+              <stop offset="50%" stopColor="#94a3b8"/>
+              <stop offset="100%" stopColor="#334155"/>
+            </linearGradient>
           </defs>
 
           {/* Dynamic Ground Shadow (Expands on landing impact) */}
@@ -598,6 +642,9 @@ export const LivingMascot = React.memo(({
             animate={{ rotate: [0, 3, 0], opacity: [0.85, 1, 0.85] }}
             transition={{ repeat: Infinity, duration: 5.0, ease: 'easeInOut' }}
           />
+
+          {/* Slot 3: Effects Power (Background Aura Layer) */}
+          <MascotBackgroundEffect effect={effect} uid={uid} />
 
           {/* Elemental Ear / Horn Features */}
           {validMascotId === 'fire-slim' && (
@@ -957,10 +1004,86 @@ export const LivingMascot = React.memo(({
             )}
           </g>
 
-          {/* Wearables / Hats / Masks Overlay System */}
-          {hat && hat !== 'none' && (
-            <g id="living-mascot-wearable-overlay">
-              {(hat === 'crown' || hat.includes('crown')) && (
+          {/* Wearables Multi-Slot System: Body Clothes, Eyewear, and Headwear Overlay */}
+          
+          {/* Layer 1: Body Clothes Wearable */}
+          {effectiveClothes && effectiveClothes !== 'none' && (
+            <g id="living-mascot-clothes-overlay">
+              {effectiveClothes.includes('ninja') && (
+                <g id="living-mascot-ninja-clothes">
+                  <g filter="url(#mascotNinjaShadow)">
+                    <path d="M 45 220 C 45 190, 355 190, 355 220 C 370 310, 335 348, 200 350 C 65 348, 30 310, 45 220 Z" fill="url(#mascotNinjaFabricGrad)"/>
+                    <path d="M 120 220 L 200 280 L 280 220 L 255 210 L 200 250 L 145 210 Z" fill="#111315" stroke="#374151" strokeWidth="2"/>
+                    <path d="M 45 210 C 70 195, 120 205, 125 230 C 95 240, 55 235, 45 210 Z" fill="#1f2328" stroke="#374151" strokeWidth="1.5"/>
+                    <path d="M 355 210 C 330 195, 280 205, 275 230 C 305 240, 345 235, 355 210 Z" fill="#1f2328" stroke="#374151" strokeWidth="1.5"/>
+                    <rect x="70" y="280" width="260" height="22" rx="4" fill="url(#mascotNinjaSashGrad)"/>
+                    <path d="M 230 295 Q 240 335 250 350 Q 230 335 220 295 Z" fill="url(#mascotNinjaSashGrad)"/>
+                    <path d="M 245 295 Q 260 330 275 342 Q 255 330 240 295 Z" fill="#991b1b"/>
+                    <g transform="translate(140, 291) scale(0.85)">
+                      <path d="M 12 0 L 15 8 L 24 12 L 15 16 L 12 24 L 9 16 L 0 12 L 9 8 Z" fill="url(#mascotNinjaMetalGrad)"/>
+                      <circle cx="12" cy="12" r="3" fill="#111827"/>
+                    </g>
+                    <rect x="52" y="215" width="30" height="18" rx="6" fill="#111315" stroke="#4b5563" strokeWidth="1.5" transform="rotate(-15 67 224)"/>
+                    <rect x="318" y="215" width="30" height="18" rx="6" fill="#111315" stroke="#4b5563" strokeWidth="1.5" transform="rotate(15 333 224)"/>
+                  </g>
+                </g>
+              )}
+
+              {effectiveClothes.includes('detective') && (
+                <g id="living-mascot-detective-clothes">
+                  <g filter="url(#mascotClothingShadowDet)">
+                    <path d="M 50 220 C 50 195, 350 195, 350 220 C 365 310, 330 345, 200 348 C 70 345, 35 310, 50 220 Z" fill="url(#mascotCoatGradDet)"/>
+                    <path d="M 45 220 C 110 195, 290 195, 355 220 C 330 250, 270 255, 200 258 C 130 255, 70 250, 45 220 Z" fill="url(#mascotCoatShadowGradDet)"/>
+                    <path d="M 140 205 L 200 240 L 260 205 L 235 200 L 200 220 L 165 200 Z" fill="#4a3728"/>
+                    <path d="M 125 200 L 175 255 L 200 240 L 160 195 Z" fill="url(#mascotCoatGradDet)" stroke="#8c7a52" strokeWidth="1.5"/>
+                    <path d="M 275 200 L 225 255 L 200 240 L 240 195 Z" fill="url(#mascotCoatGradDet)" stroke="#8c7a52" strokeWidth="1.5"/>
+                    <circle cx="170" cy="275" r="5" fill="#3e2723"/>
+                    <circle cx="230" cy="275" r="5" fill="#3e2723"/>
+                    <circle cx="170" cy="305" r="5" fill="#3e2723"/>
+                    <circle cx="230" cy="305" r="5" fill="#3e2723"/>
+                    <rect x="75" y="290" width="250" height="18" rx="4" fill="#6d5438"/>
+                    <rect x="182" y="286" width="36" height="26" rx="4" fill="#fbbf24" stroke="#d97706" strokeWidth="2"/>
+                    <rect x="190" y="291" width="20" height="16" rx="2" fill="#4a3728"/>
+                    <rect x="58" y="215" width="28" height="16" rx="5" fill="#7a6b43" transform="rotate(-15 72 223)"/>
+                    <rect x="314" y="215" width="28" height="16" rx="5" fill="#7a6b43" transform="rotate(15 328 223)"/>
+                  </g>
+                  {/* Hand Magnifying Glass */}
+                  <g filter="url(#mascotClothingShadowDet)">
+                    <rect x="270" y="200" width="16" height="55" rx="8" fill="#4a2c11" stroke="#261405" strokeWidth="2" transform="rotate(-40 278 227)"/>
+                    <circle cx="235" cy="175" r="34" fill="none" stroke="url(#mascotMetalRimDet)" strokeWidth="7"/>
+                    <circle cx="235" cy="175" r="30" fill="url(#mascotGlassGradDet)"/>
+                    <path d="M 215 155 Q 235 145 255 160" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" fill="none"/>
+                    <path d="M 210 165 Q 220 155 230 162" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" opacity="0.8" fill="none"/>
+                  </g>
+                </g>
+              )}
+
+              {effectiveClothes.includes('cape') && (
+                <g id="living-mascot-cape-clothes">
+                  <path d="M 80 200 Q 30 260 40 345 Q 120 355 200 350 Q 280 355 360 345 Q 370 260 320 200 Q 200 220 80 200 Z" fill="url(#mascotCapeGrad)" filter="url(#mascotClothingShadowDet)"/>
+                  <path d="M 120 205 L 200 235 L 280 205 L 260 195 L 200 215 L 140 195 Z" fill="#7f1d1d"/>
+                  <circle cx="200" cy="225" r="14" fill="url(#mascotCapeGoldGrad)" stroke="#78350f" strokeWidth="2"/>
+                  <path d="M 200 216 L 203 222 L 209 222 L 204 226 L 206 232 L 200 228 L 194 232 L 196 226 L 191 222 L 197 222 Z" fill="#ffffff"/>
+                </g>
+              )}
+
+              {effectiveClothes.includes('armor') && (
+                <g id="living-mascot-armor-clothes">
+                  <path d="M 70 215 Q 200 230 330 215 C 345 290 310 340 200 345 C 90 340 55 290 70 215 Z" fill="url(#mascotArmorMetal)" stroke="#1e293b" strokeWidth="2"/>
+                  <path d="M 130 225 L 200 265 L 270 225 L 250 215 L 200 245 L 150 215 Z" fill="url(#mascotArmorGrad)"/>
+                  <circle cx="200" cy="275" r="16" fill="#0284c7" stroke="#38bdf8" strokeWidth="2.5"/>
+                  <circle cx="200" cy="275" r="10" fill="#38bdf8" className="animate-pulse"/>
+                  <rect x="55" y="210" width="34" height="20" rx="6" fill="url(#mascotArmorGrad)" stroke="#38bdf8" strokeWidth="1.5" transform="rotate(-15 72 220)"/>
+                  <rect x="311" y="210" width="34" height="20" rx="6" fill="url(#mascotArmorGrad)" stroke="#38bdf8" strokeWidth="1.5" transform="rotate(15 328 220)"/>
+                </g>
+              )}
+            </g>
+          )}
+
+          {/* Layer 2: Headwear Wearable */}
+          {effectiveHead && effectiveHead !== 'none' && (
+            <g id="living-mascot-head-overlay">
+              {(effectiveHead === 'crown' || effectiveHead.includes('crown')) && (
                 <g transform="translate(47, -108) scale(1.02)">
                   {/* Back Inner Velvet Cushion */}
                   <path d="M 50 200 C 50 70, 250 70, 250 200 Z" fill="url(#mascotVelvetGradCrown)"/>
@@ -1004,7 +1127,7 @@ export const LivingMascot = React.memo(({
                 </g>
               )}
 
-              {(hat === 'wizard' || hat.includes('wizard')) && (
+              {(effectiveHead === 'wizard' || effectiveHead.includes('wizard')) && (
                 <g transform="translate(45, -135) scale(1.03)">
                   <g>
                     <path d="M 40 220 Q 150 250 260 220 C 290 200 10 200 40 220 Z" fill="url(#mascotVelvetGrad)" stroke="#000000" strokeWidth="1.5"/>
@@ -1021,7 +1144,7 @@ export const LivingMascot = React.memo(({
                 </g>
               )}
 
-              {(hat === 'party' || hat.includes('party')) && (
+              {(effectiveHead === 'party' || effectiveHead.includes('party')) && (
                 <g transform="translate(0, 15)">
                   <path d="M150,95 L200,40 L250,95 Z" fill="#ff4081" stroke="#c2185b" strokeWidth="2.5" />
                   <path d="M175,67 L225,67 L200,40 Z" fill="#00e676" />
@@ -1029,72 +1152,25 @@ export const LivingMascot = React.memo(({
                 </g>
               )}
 
-              {(hat === 'detective' || hat.includes('detective')) && (
-                <g id="living-mascot-detective-wearable">
-                  {/* Trench Coat */}
-                  <g filter="url(#mascotClothingShadowDet)">
-                    <path d="M 50 220 C 50 195, 350 195, 350 220 C 365 310, 330 345, 200 348 C 70 345, 35 310, 50 220 Z" fill="url(#mascotCoatGradDet)"/>
-                    <path d="M 45 220 C 110 195, 290 195, 355 220 C 330 250, 270 255, 200 258 C 130 255, 70 250, 45 220 Z" fill="url(#mascotCoatShadowGradDet)"/>
-                    <path d="M 140 205 L 200 240 L 260 205 L 235 200 L 200 220 L 165 200 Z" fill="#4a3728"/>
-                    <path d="M 125 200 L 175 255 L 200 240 L 160 195 Z" fill="url(#mascotCoatGradDet)" stroke="#8c7a52" strokeWidth="1.5"/>
-                    <path d="M 275 200 L 225 255 L 200 240 L 240 195 Z" fill="url(#mascotCoatGradDet)" stroke="#8c7a52" strokeWidth="1.5"/>
-                    <circle cx="170" cy="275" r="5" fill="#3e2723"/>
-                    <circle cx="230" cy="275" r="5" fill="#3e2723"/>
-                    <circle cx="170" cy="305" r="5" fill="#3e2723"/>
-                    <circle cx="230" cy="305" r="5" fill="#3e2723"/>
-                    <rect x="75" y="290" width="250" height="18" rx="4" fill="#6d5438"/>
-                    <rect x="182" y="286" width="36" height="26" rx="4" fill="#fbbf24" stroke="#d97706" strokeWidth="2"/>
-                    <rect x="190" y="291" width="20" height="16" rx="2" fill="#4a3728"/>
-                    <rect x="58" y="215" width="28" height="16" rx="5" fill="#7a6b43" transform="rotate(-15 72 223)"/>
-                    <rect x="314" y="215" width="28" height="16" rx="5" fill="#7a6b43" transform="rotate(15 328 223)"/>
-                  </g>
-
-                  {/* Deerstalker Hat */}
-                  <g filter="url(#mascotClothingShadowDet)">
-                    <path d="M 85 110 C 80 145, 120 160, 145 135 Z" fill="#6d4c33" stroke="#3e2723" strokeWidth="2"/>
-                    <path d="M 315 110 C 320 145, 280 160, 255 135 Z" fill="#6d4c33" stroke="#3e2723" strokeWidth="2"/>
-                    <path d="M 100 135 C 100 60, 150 45, 200 45 C 250 45, 300 60, 300 135 Z" fill="url(#mascotHatGradDet)"/>
-                    <path d="M 200 45 C 200 90, 200 120, 200 135" stroke="#3e2723" strokeWidth="2" strokeDasharray="4 2"/>
-                    <path d="M 150 55 C 160 90, 170 115, 175 135" stroke="#3e2723" strokeWidth="1.5"/>
-                    <path d="M 250 55 C 240 90, 230 115, 225 135" stroke="#3e2723" strokeWidth="1.5"/>
-                    <path d="M 85 130 C 130 155, 270 155, 315 130 C 325 142, 280 162, 200 162 C 120 162, 75 142, 85 130 Z" fill="#54371d"/>
-                    <path d="M 100 125 C 70 120, 75 140, 95 135 Z" fill="#3e2723"/>
-                    <path d="M 300 125 C 330 120, 325 140, 305 135 Z" fill="#3e2723"/>
-                    <path d="M 100 135 C 140 145, 260 145, 300 135 L 300 125 C 260 135, 140 135, 100 125 Z" fill="#1f1a17"/>
-                    <rect x="188" y="126" width="24" height="14" rx="2" fill="#fbbf24" stroke="#b45309" strokeWidth="1.5"/>
-                    <ellipse cx="200" cy="45" rx="10" ry="6" fill="#3e2723"/>
-                  </g>
-
-                  {/* Hand Magnifying Glass */}
-                  <g filter="url(#mascotClothingShadowDet)">
-                    <rect x="270" y="200" width="16" height="55" rx="8" fill="#4a2c11" stroke="#261405" strokeWidth="2" transform="rotate(-40 278 227)"/>
-                    <circle cx="235" cy="175" r="34" fill="none" stroke="url(#mascotMetalRimDet)" strokeWidth="7"/>
-                    <circle cx="235" cy="175" r="30" fill="url(#mascotGlassGradDet)"/>
-                    <path d="M 215 155 Q 235 145 255 160" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" fill="none"/>
-                    <path d="M 210 165 Q 220 155 230 162" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" opacity="0.8" fill="none"/>
-                  </g>
+              {effectiveHead.includes('detective') && (
+                <g id="living-mascot-detective-hat" filter="url(#mascotClothingShadowDet)">
+                  <path d="M 85 110 C 80 145, 120 160, 145 135 Z" fill="#6d4c33" stroke="#3e2723" strokeWidth="2"/>
+                  <path d="M 315 110 C 320 145, 280 160, 255 135 Z" fill="#6d4c33" stroke="#3e2723" strokeWidth="2"/>
+                  <path d="M 100 135 C 100 60, 150 45, 200 45 C 250 45, 300 60, 300 135 Z" fill="url(#mascotHatGradDet)"/>
+                  <path d="M 200 45 C 200 90, 200 120, 200 135" stroke="#3e2723" strokeWidth="2" strokeDasharray="4 2"/>
+                  <path d="M 150 55 C 160 90, 170 115, 175 135" stroke="#3e2723" strokeWidth="1.5"/>
+                  <path d="M 250 55 C 240 90, 230 115, 225 135" stroke="#3e2723" strokeWidth="1.5"/>
+                  <path d="M 85 130 C 130 155, 270 155, 315 130 C 325 142, 280 162, 200 162 C 120 162, 75 142, 85 130 Z" fill="#54371d"/>
+                  <path d="M 100 125 C 70 120, 75 140, 95 135 Z" fill="#3e2723"/>
+                  <path d="M 300 125 C 330 120, 325 140, 305 135 Z" fill="#3e2723"/>
+                  <path d="M 100 135 C 140 145, 260 145, 300 135 L 300 125 C 260 135, 140 135, 100 125 Z" fill="#1f1a17"/>
+                  <rect x="188" y="126" width="24" height="14" rx="2" fill="#fbbf24" stroke="#b45309" strokeWidth="1.5"/>
+                  <ellipse cx="200" cy="45" rx="10" ry="6" fill="#3e2723"/>
                 </g>
               )}
 
-              {(hat === 'ninja' || hat.includes('ninja')) && (
-                <g id="living-mascot-ninja-wearable">
-                  {/* Shinobi Gi Suit */}
-                  <g filter="url(#mascotNinjaShadow)">
-                    <path d="M 45 220 C 45 190, 355 190, 355 220 C 370 310, 335 348, 200 350 C 65 348, 30 310, 45 220 Z" fill="url(#mascotNinjaFabricGrad)"/>
-                    <path d="M 120 220 L 200 280 L 280 220 L 255 210 L 200 250 L 145 210 Z" fill="#111315" stroke="#374151" strokeWidth="2"/>
-                    <path d="M 45 210 C 70 195, 120 205, 125 230 C 95 240, 55 235, 45 210 Z" fill="#1f2328" stroke="#374151" strokeWidth="1.5"/>
-                    <path d="M 355 210 C 330 195, 280 205, 275 230 C 305 240, 345 235, 355 210 Z" fill="#1f2328" stroke="#374151" strokeWidth="1.5"/>
-                    <rect x="70" y="280" width="260" height="22" rx="4" fill="url(#mascotNinjaSashGrad)"/>
-                    <path d="M 230 295 Q 240 335 250 350 Q 230 335 220 295 Z" fill="url(#mascotNinjaSashGrad)"/>
-                    <path d="M 245 295 Q 260 330 275 342 Q 255 330 240 295 Z" fill="#991b1b"/>
-                    <g transform="translate(140, 291) scale(0.85)">
-                      <path d="M 12 0 L 15 8 L 24 12 L 15 16 L 12 24 L 9 16 L 0 12 L 9 8 Z" fill="url(#mascotNinjaMetalGrad)"/>
-                      <circle cx="12" cy="12" r="3" fill="#111827"/>
-                    </g>
-                    <rect x="52" y="215" width="30" height="18" rx="6" fill="#111315" stroke="#4b5563" strokeWidth="1.5" transform="rotate(-15 67 224)"/>
-                    <rect x="318" y="215" width="30" height="18" rx="6" fill="#111315" stroke="#4b5563" strokeWidth="1.5" transform="rotate(15 333 224)"/>
-                  </g>
-
+              {effectiveHead.includes('ninja') && (
+                <g id="living-mascot-ninja-hood">
                   {/* Ninja Hood Cowl */}
                   <g filter="url(#mascotNinjaShadow)">
                     <g>
@@ -1108,7 +1184,6 @@ export const LivingMascot = React.memo(({
                     <path d="M 200 104 L 204 111 L 211 114 L 204 117 L 200 124 L 196 117 L 189 114 L 196 111 Z" fill="#1f2937"/>
                     <path d="M 80 145 Q 200 158 320 145 L 320 158 Q 200 170 80 158 Z" fill="#111315"/>
                   </g>
-
                   {/* Ninja Lower Face Mask */}
                   <g filter="url(#mascotNinjaShadow)">
                     <path d="M 70 190 C 110 182, 290 182, 330 190 C 345 235, 290 250, 200 252 C 110 250, 55 235, 70 190 Z" fill="url(#mascotNinjaFabricGrad)"/>
@@ -1120,7 +1195,79 @@ export const LivingMascot = React.memo(({
                 </g>
               )}
 
-              {(hat === 'cool' || hat.includes('cool') || hat.includes('shades')) && (
+              {(effectiveHead === 'artist' || effectiveHead.includes('artist') || effectiveHead.includes('beret')) && (
+                <g transform="translate(0, 10)">
+                  <path d="M130,95 Q200,45 260,90 Q200,85 130,95 Z" fill="#dc2626" stroke="#991b1b" strokeWidth="2" />
+                  <circle cx="200" cy="52" r="4" fill="#991b1b" />
+                </g>
+              )}
+
+              {(effectiveHead === 'viking' || effectiveHead.includes('viking')) && (
+                <g transform="translate(32, -90) scale(1.12)">
+                  <g filter="url(#mascotVikingHornShadow)">
+                    <path d="M 85,150 Q 5,140 15,30 Q 55,70 85,110 Z" fill="url(#mascotVikingHorn)" stroke="#5d4037" strokeWidth="2"/>
+                    <ellipse cx="80" cy="130" rx="12" ry="24" fill="url(#mascotVikingSilver)" stroke="#37474f" strokeWidth="2" transform="rotate(-15 80 130)"/>
+                  </g>
+                  <g filter="url(#mascotVikingHornShadow)">
+                    <path d="M 215,150 Q 295,140 285,30 Q 245,70 215,110 Z" fill="url(#mascotVikingHorn)" stroke="#5d4037" strokeWidth="2"/>
+                    <ellipse cx="220" cy="130" rx="12" ry="24" fill="url(#mascotVikingSilver)" stroke="#37474f" strokeWidth="2" transform="rotate(15 220 130)"/>
+                  </g>
+                  <path d="M 70,165 A 80,80 0 0,1 230,165 Z" fill="url(#mascotVikingIron)" stroke="#263238" strokeWidth="3"/>
+                  <path d="M 140,165 L 145,86 L 155,86 L 160,165 Z" fill="url(#mascotVikingSilver)" stroke="#263238" strokeWidth="2"/>
+                  <path d="M 145,86 L 150,60 L 155,86 Z" fill="url(#mascotVikingSilver)" stroke="#263238" strokeWidth="2"/>
+                  <rect x="60" y="165" width="180" height="20" rx="6" fill="url(#mascotVikingSilver)" stroke="#263238" strokeWidth="3"/>
+                  <circle cx="75" cy="175" r="4" fill="#ffffff" stroke="#263238" strokeWidth="1"/>
+                  <circle cx="105" cy="175" r="4" fill="#ffffff" stroke="#263238" strokeWidth="1"/>
+                  <circle cx="135" cy="175" r="4" fill="#ffffff" stroke="#263238" strokeWidth="1"/>
+                  <circle cx="165" cy="175" r="4" fill="#ffffff" stroke="#263238" strokeWidth="1"/>
+                  <circle cx="195" cy="175" r="4" fill="#ffffff" stroke="#263238" strokeWidth="1"/>
+                  <circle cx="225" cy="175" r="4" fill="#ffffff" stroke="#263238" strokeWidth="1"/>
+                </g>
+              )}
+
+              {(effectiveHead === 'space' || effectiveHead.includes('space')) && (
+                <g transform="translate(0, 10)">
+                  <circle cx="200" cy="180" r="115" fill="none" stroke="#22d3ee" strokeWidth="6" opacity="0.8" filter="drop-shadow(0 0 10px rgba(34,211,238,0.6))" />
+                  <ellipse cx="200" cy="170" rx="90" ry="60" fill="#0284c7" opacity="0.35" />
+                  <path d="M130,140 Q200,120 270,140 Q240,180 130,140 Z" fill="#ffffff" opacity="0.2" />
+                </g>
+              )}
+
+              {(effectiveHead === 'emperor' || effectiveHead.includes('emperor')) && (
+                <g transform="translate(0, 10)">
+                  <path d="M150,95 L165,50 L185,75 L200,40 L215,75 L235,50 L250,95 Z" fill="#f59e0b" stroke="#b45309" strokeWidth="3" />
+                  <circle cx="165" cy="48" r="4" fill="#ef4444" />
+                  <circle cx="200" cy="38" r="5" fill="#3b82f6" />
+                  <circle cx="235" cy="48" r="4" fill="#ef4444" />
+                  <ellipse cx="200" cy="215" rx="168" ry="138" fill="none" stroke="#fbbf24" strokeWidth="4" strokeDasharray="8,6" opacity="0.7" />
+                </g>
+              )}
+
+              {(effectiveHead === 'voidwalker' || effectiveHead.includes('void')) && (
+                <g transform="translate(0, 10)">
+                  <path d="M135,115 C135,50 265,50 265,115 C265,130 135,130 135,115 Z" fill="#0f172a" stroke="#a855f7" strokeWidth="3" />
+                  <ellipse cx="200" cy="115" rx="55" ry="12" fill="#3b0764" />
+                  <circle cx="175" cy="115" r="5" fill="#c084fc" filter="drop-shadow(0 0 6px #c084fc)" />
+                  <circle cx="225" cy="115" r="5" fill="#c084fc" filter="drop-shadow(0 0 6px #c084fc)" />
+                </g>
+              )}
+
+              {(effectiveHead === 'godmode' || effectiveHead.includes('godmode') || effectiveHead.includes('overlord')) && (
+                <g transform="translate(0, 5)">
+                  <path d="M70,120 L70,220 M55,120 L55,150 Q70,165 85,150 L85,120" stroke="#f59e0b" strokeWidth="4" fill="none" strokeLinecap="round" />
+                  <polygon points="70,105 63,120 77,120" fill="#f59e0b" />
+                  <polygon points="55,110 50,122 60,122" fill="#f59e0b" />
+                  <polygon points="85,110 80,122 90,122" fill="#f59e0b" />
+                  <ellipse cx="200" cy="215" rx="175" ry="50" fill="none" stroke="#6366f1" strokeWidth="3" transform="rotate(-15 200 215)" opacity="0.8" />
+                </g>
+              )}
+            </g>
+          )}
+
+          {/* Layer 3: Eyewear Wearable */}
+          {effectiveEye && effectiveEye !== 'none' && (
+            <g id="living-mascot-eye-overlay">
+              {(effectiveEye === 'cool' || effectiveEye.includes('cool') || effectiveEye.includes('shades') || effectiveEye.includes('sunglass')) && (
                 <g transform="translate(40, 95) scale(0.8)">
                   <g stroke="#000" strokeWidth="2">
                     <path d="M40,45 L10,25 C5,20 5,15 15,20 L46,50 Z" fill="#111" />
@@ -1144,78 +1291,19 @@ export const LivingMascot = React.memo(({
                 </g>
               )}
 
-              {(hat === 'artist' || hat.includes('artist') || hat.includes('beret')) && (
-                <g transform="translate(0, 10)">
-                  <path d="M130,95 Q200,45 260,90 Q200,85 130,95 Z" fill="#dc2626" stroke="#991b1b" strokeWidth="2" />
-                  <circle cx="200" cy="52" r="4" fill="#991b1b" />
-                </g>
-              )}
-
-              {(hat === 'viking' || hat.includes('viking')) && (
-                <g transform="translate(32, -90) scale(1.12)">
-                  <g filter="url(#mascotVikingHornShadow)">
-                    <path d="M 85,150 Q 5,140 15,30 Q 55,70 85,110 Z" fill="url(#mascotVikingHorn)" stroke="#5d4037" strokeWidth="2"/>
-                    <ellipse cx="80" cy="130" rx="12" ry="24" fill="url(#mascotVikingSilver)" stroke="#37474f" strokeWidth="2" transform="rotate(-15 80 130)"/>
-                  </g>
-                  <g filter="url(#mascotVikingHornShadow)">
-                    <path d="M 215,150 Q 295,140 285,30 Q 245,70 215,110 Z" fill="url(#mascotVikingHorn)" stroke="#5d4037" strokeWidth="2"/>
-                    <ellipse cx="220" cy="130" rx="12" ry="24" fill="url(#mascotVikingSilver)" stroke="#37474f" strokeWidth="2" transform="rotate(15 220 130)"/>
-                  </g>
-                  <path d="M 70,165 A 80,80 0 0,1 230,165 Z" fill="url(#mascotVikingIron)" stroke="#263238" strokeWidth="3"/>
-                  <path d="M 140,165 L 145,86 L 155,86 L 160,165 Z" fill="url(#mascotVikingSilver)" stroke="#263238" strokeWidth="2"/>
-                  <path d="M 145,86 L 150,60 L 155,86 Z" fill="url(#mascotVikingSilver)" stroke="#263238" strokeWidth="2"/>
-                  <rect x="60" y="165" width="180" height="20" rx="6" fill="url(#mascotVikingSilver)" stroke="#263238" strokeWidth="3"/>
-                  <circle cx="75" cy="175" r="4" fill="#ffffff" stroke="#263238" strokeWidth="1"/>
-                  <circle cx="105" cy="175" r="4" fill="#ffffff" stroke="#263238" strokeWidth="1"/>
-                  <circle cx="135" cy="175" r="4" fill="#ffffff" stroke="#263238" strokeWidth="1"/>
-                  <circle cx="165" cy="175" r="4" fill="#ffffff" stroke="#263238" strokeWidth="1"/>
-                  <circle cx="195" cy="175" r="4" fill="#ffffff" stroke="#263238" strokeWidth="1"/>
-                  <circle cx="225" cy="175" r="4" fill="#ffffff" stroke="#263238" strokeWidth="1"/>
-                </g>
-              )}
-
-              {(hat === 'space' || hat.includes('space')) && (
-                <g transform="translate(0, 10)">
-                  <circle cx="200" cy="180" r="115" fill="none" stroke="#22d3ee" strokeWidth="6" opacity="0.8" filter="drop-shadow(0 0 10px rgba(34,211,238,0.6))" />
-                  <ellipse cx="200" cy="170" rx="90" ry="60" fill="#0284c7" opacity="0.35" />
-                  <path d="M130,140 Q200,120 270,140 Q240,180 130,140 Z" fill="#ffffff" opacity="0.2" />
-                </g>
-              )}
-
-              {(hat === 'emperor' || hat.includes('emperor')) && (
-                <g transform="translate(0, 10)">
-                  <path d="M150,95 L165,50 L185,75 L200,40 L215,75 L235,50 L250,95 Z" fill="#f59e0b" stroke="#b45309" strokeWidth="3" />
-                  <circle cx="165" cy="48" r="4" fill="#ef4444" />
-                  <circle cx="200" cy="38" r="5" fill="#3b82f6" />
-                  <circle cx="235" cy="48" r="4" fill="#ef4444" />
-                  <ellipse cx="200" cy="215" rx="168" ry="138" fill="none" stroke="#fbbf24" strokeWidth="4" strokeDasharray="8,6" opacity="0.7" />
-                </g>
-              )}
-
-              {(hat === 'voidwalker' || hat.includes('void')) && (
-                <g transform="translate(0, 10)">
-                  <path d="M135,115 C135,50 265,50 265,115 C265,130 135,130 135,115 Z" fill="#0f172a" stroke="#a855f7" strokeWidth="3" />
-                  <ellipse cx="200" cy="115" rx="55" ry="12" fill="#3b0764" />
-                  <circle cx="175" cy="115" r="5" fill="#c084fc" filter="drop-shadow(0 0 6px #c084fc)" />
-                  <circle cx="225" cy="115" r="5" fill="#c084fc" filter="drop-shadow(0 0 6px #c084fc)" />
-                </g>
-              )}
-
-              {(hat === 'godmode' || hat.includes('godmode') || hat.includes('overlord')) && (
-                <g transform="translate(0, 5)">
-                  <path d="M70,120 L70,220 M55,120 L55,150 Q70,165 85,150 L85,120" stroke="#f59e0b" strokeWidth="4" fill="none" strokeLinecap="round" />
-                  <polygon points="70,105 63,120 77,120" fill="#f59e0b" />
-                  <polygon points="55,110 50,122 60,122" fill="#f59e0b" />
-                  <polygon points="85,110 80,122 90,122" fill="#f59e0b" />
-                  <ellipse cx="200" cy="215" rx="175" ry="50" fill="none" stroke="#6366f1" strokeWidth="3" transform="rotate(-15 200 215)" opacity="0.8" />
-                </g>
-              )}
-
-              {(hat === 'apex' || hat.includes('apex') || hat.includes('pro')) && (
+              {(effectiveEye === 'apex' || effectiveEye.includes('apex') || effectiveEye.includes('visor') || effectiveEye.includes('hud')) && (
                 <g transform="translate(0, 15)">
                   <rect x="120" y="160" width="160" height="30" rx="8" fill="#0284c7" fillOpacity="0.85" stroke="#38bdf8" strokeWidth="3" filter="drop-shadow(0 0 12px #38bdf8)" />
                   <line x1="130" y1="175" x2="270" y2="175" stroke="#e0f2fe" strokeWidth="2" strokeDasharray="4,4" />
                   <text x="200" y="181" fontSize="10" fontFamily="monospace" fontWeight="bold" fill="#38bdf8" textAnchor="middle">QUANTUM HUD v2.0</text>
+                </g>
+              )}
+
+              {effectiveEye.includes('monocle') && (
+                <g transform="translate(45, 95) scale(0.85)">
+                  <circle cx="215" cy="115" r="30" fill="url(#mascotGlassGradDet)" stroke="url(#mascotCapeGoldGrad)" strokeWidth="4.5"/>
+                  <path d="M 202 102 Q 220 95 228 108" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" fill="none"/>
+                  <path d="M 245 115 Q 275 145 285 220" stroke="url(#mascotCapeGoldGrad)" strokeWidth="2" strokeDasharray="3 2" fill="none"/>
                 </g>
               )}
             </g>
@@ -1234,6 +1322,9 @@ export const LivingMascot = React.memo(({
           >
             N
           </text>
+
+          {/* Slot 3: Effects Power (Foreground Particles Layer) */}
+          <MascotForegroundEffect effect={effect} uid={uid} />
         </svg>
       </motion.div>
     </div>
