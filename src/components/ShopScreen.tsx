@@ -1,8 +1,9 @@
 import React, { useState, useRef } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, Star, Sparkles, Shield, Zap, Music, Gift, Check, RotateCcw } from "lucide-react";
+import { ArrowLeft, Star, Sparkles, Shield, Zap, Music, Gift, Check } from "lucide-react";
 import { ShopItem, UserSettings } from "../types";
 import { translate } from "../lib/translations";
+import { formatCompactNumber } from "./HomeScreen";
 import { AnimatedSunglasses } from "./AnimatedSunglasses";
 import { AnimatedNinjaMask } from "./AnimatedNinjaMask";
 import { AnimatedVikingHat } from "./AnimatedVikingHat";
@@ -500,50 +501,6 @@ export function ShopScreen({
   const activeHat = settings?.activeHat || 'none';
   const activeEffect = settings?.activeEffect || 'none';
 
-  const getSkinLabel = (id: string) => {
-    const map: Record<string, string> = {
-      'blue-slim': 'Blue Slim (Classic)',
-      'fire-slim': 'Fire Slim 🔥',
-      'water-slim': 'Water Slim 💧',
-      'shield-slim': 'Shield Slim 🛡️',
-      'lightning-slim': 'Lightning Slim ⚡',
-      'earth-slim': 'Earth Slim 🌿',
-      'skin-emperor': 'Golden Emperor 👑',
-      'skin-voidwalker': 'Void Walker 🌌',
-      'skin-godmode': 'Cosmic Overlord 🪐',
-    };
-    return map[id] || id;
-  };
-
-  const getHatLabel = (id: string) => {
-    const map: Record<string, string> = {
-      'none': 'None Equipped',
-      'cool': 'Cool Shades 🕶️',
-      'artist': 'Artist Beret 🎨',
-      'viking': 'Viking Helm 🪖',
-      'ninja': 'Ninja Mask 🥷',
-      'detective': 'Detective Hat 🕵️',
-      'crown': 'Royal Crown 👑',
-      'wizard': 'Wizard Hat 🧙',
-      'space': 'Space Helmet 👨‍🚀',
-      'apex': 'Apex Quantum Visor 🥽',
-    };
-    return map[id] || id;
-  };
-
-  const getEffectLabel = (id: string) => {
-    const map: Record<string, string> = {
-      'none': 'None Equipped',
-      'sparkles': 'Starlight Sparkles ✨',
-      'embers': 'Blazing Embers 🔥',
-      'orbs': 'Cosmic Planetary Orbs 🪐',
-      'neon': 'Cyber Neon Pulse ⚡',
-      'gold-dust': 'Imperial Gold Dust 👑',
-      'lightning': 'Storm Lightning Arcs 🌩️',
-    };
-    return map[id] || id;
-  };
-
   const featuredItem = SHOP_ITEMS[0];
   const powerUps = SHOP_ITEMS.filter(
     (item) =>
@@ -566,198 +523,42 @@ export function ShopScreen({
       exit={{ opacity: 0, x: -20 }}
       className="p-4 sm:p-6 pb-28 max-w-3xl mx-auto"
     >
-      {/* Top Header */}
-      <div className="flex items-center justify-between gap-2.5 mb-6">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+      {/* Top Navigation & Balance Header */}
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
           <button
             onClick={onBack}
-            className="p-2 -ml-1.5 rounded-full hover:bg-blue-100 active:scale-95 transition-all cursor-pointer text-blue-900 shrink-0"
+            className="p-2 -ml-1 rounded-full hover:bg-blue-100 active:scale-95 transition-all cursor-pointer text-blue-900 shrink-0"
             title="Back"
           >
             <ArrowLeft size={22} className="stroke-[2.5]" />
           </button>
-          <h1 className="text-xl sm:text-2xl font-black text-blue-950 tracking-tight truncate">
+          <h1 className="text-xl sm:text-2xl font-black text-blue-950 tracking-tight whitespace-nowrap">
             Nexora {translate("Shop", lang)}
           </h1>
         </div>
-        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          <div className="flex items-center gap-1.5 bg-amber-50/90 border border-amber-200/90 px-3 sm:px-3.5 py-1.5 rounded-full text-amber-800 font-black shadow-xs text-sm sm:text-base">
-            <Star size={18} className="fill-amber-400 text-amber-500 shrink-0" />
-            <span className="tabular-nums">{streak}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <div 
+            className="flex items-center gap-1.5 bg-amber-50/90 border border-amber-200/90 px-2.5 sm:px-3.5 py-1.5 rounded-full text-amber-800 font-black shadow-xs text-xs sm:text-sm"
+            title={`${streak} Streak Points`}
+          >
+            <Star size={16} className="fill-amber-400 text-amber-500 shrink-0" />
+            <span className="tabular-nums font-black">{formatCompactNumber(streak)}</span>
           </div>
-          <div className="flex items-center gap-1.5 bg-yellow-50/90 border border-yellow-200/90 px-3 sm:px-3.5 py-1.5 rounded-full text-yellow-900 font-black shadow-xs text-sm sm:text-base">
-            <div className="w-5 h-5 bg-gradient-to-b from-yellow-300 via-yellow-400 to-amber-500 rounded-full flex items-center justify-center text-[11px] font-black text-yellow-950 border border-yellow-600/50 shadow-xs shrink-0">
+          <div 
+            className="flex items-center gap-1.5 bg-yellow-50/90 border border-yellow-200/90 px-2.5 sm:px-3.5 py-1.5 rounded-full text-yellow-900 font-black shadow-xs text-xs sm:text-sm"
+            title={`${coins} Coins`}
+          >
+            <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-b from-yellow-300 via-yellow-400 to-amber-500 rounded-full flex items-center justify-center text-[10px] sm:text-[11px] font-black text-yellow-950 border border-yellow-600/50 shadow-xs shrink-0">
               $
             </div>
-            <span className="tabular-nums">{coins}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ======================================================== */}
-      {/* 3-SLOT LIVE WARDROBE STAGE */}
-      {/* ======================================================== */}
-      <div className="bg-gradient-to-br from-blue-50/90 via-white to-amber-50/70 rounded-3xl p-5 sm:p-6 border-2 border-blue-200/90 shadow-md mb-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 transform translate-x-4 -translate-y-4 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
-        
-        <div className="flex flex-col sm:flex-row items-center gap-6 relative z-10">
-          {/* Realtime Mascot Avatar Rendering all 3 slots simultaneously */}
-          <div className="flex flex-col items-center justify-center p-4 bg-white/95 rounded-2xl border border-blue-100 shadow-sm shrink-0">
-            <div className="w-28 h-28 sm:w-32 sm:h-32 relative flex items-center justify-center">
-              <LivingMascot
-                mascotId={activeSkin as any}
-                hat={activeHat as any}
-                effect={activeEffect as any}
-                interactive={true}
-                showSpeech={false}
-                className="w-full h-full"
-              />
-            </div>
-            <div className="text-[10px] font-black text-blue-900/60 uppercase tracking-widest mt-2 flex items-center gap-1">
-              <Sparkles size={11} className="text-amber-500" />
-              Live 3-Slot Wardrobe
-            </div>
-          </div>
-
-          {/* 3 Slot Equipment Status Cards */}
-          <div className="flex-1 w-full space-y-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 bg-blue-600 text-white font-black text-[9px] uppercase tracking-wider rounded-full">
-                  Triple-Slot System
-                </span>
-                <span className="text-[11px] text-blue-900/70 font-semibold">
-                  Wear 1 from each category at the same time
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              {/* Slot 1: Mascot Skin */}
-              <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-sm flex flex-col justify-between">
-                <div>
-                  <span className="text-[9px] font-black text-blue-600 uppercase tracking-wider block mb-0.5">
-                    🎨 Slot 1: Body Skin
-                  </span>
-                  <p className="text-xs font-black text-slate-800 truncate" title={getSkinLabel(activeSkin)}>
-                    {getSkinLabel(activeSkin)}
-                  </p>
-                </div>
-                {activeSkin !== 'blue-slim' && (
-                  <button
-                    onClick={() => onEquipMascotSlot?.('blue-slim', 'skin')}
-                    className="mt-2.5 text-[10px] font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    <RotateCcw size={11} /> Reset Base
-                  </button>
-                )}
-              </div>
-
-              {/* Slot 2: Wearable & Mask */}
-              <div className="bg-white p-3 rounded-xl border border-purple-100 shadow-sm flex flex-col justify-between">
-                <div>
-                  <span className="text-[9px] font-black text-purple-600 uppercase tracking-wider block mb-0.5">
-                    🥷 Slot 2: Wearable & Mask
-                  </span>
-                  <p className="text-xs font-black text-slate-800 truncate" title={getHatLabel(activeHat)}>
-                    {getHatLabel(activeHat)}
-                  </p>
-                </div>
-                {activeHat !== 'none' && (
-                  <button
-                    onClick={() => onUnequipMascotSlot?.('wearable')}
-                    className="mt-2.5 text-[10px] font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    Unequip Slot
-                  </button>
-                )}
-              </div>
-
-              {/* Slot 3: Effects Power */}
-              <div className="bg-white p-3 rounded-xl border border-amber-100 shadow-sm flex flex-col justify-between">
-                <div>
-                  <span className="text-[9px] font-black text-amber-600 uppercase tracking-wider block mb-0.5">
-                    ⚡ Slot 3: Effects Power
-                  </span>
-                  <p className="text-xs font-black text-slate-800 truncate" title={getEffectLabel(activeEffect)}>
-                    {getEffectLabel(activeEffect)}
-                  </p>
-                </div>
-                {activeEffect !== 'none' && (
-                  <button
-                    onClick={() => onUnequipMascotSlot?.('effect-power')}
-                    className="mt-2.5 text-[10px] font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    Unequip Slot
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Featured Item Deal */}
-      <div className="mb-8">
-        <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest mb-3">
-          Featured Deal
-        </h2>
-        <div className="relative overflow-hidden glass-card p-5 sm:p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-2 border-blue-200">
-          <div className="absolute top-0 right-0 p-2 bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest rounded-bl-xl">
-            Hot!
-          </div>
-          <div className="flex items-center gap-5">
-            <div className="text-5xl drop-shadow-lg flex items-center justify-center min-w-[64px]">
-              {featuredItem.icon}
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-black text-blue-900">
-                {featuredItem.name}
-              </h3>
-              <p className="text-xs text-blue-900/60 mb-3">
-                {featuredItem.description}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onBuy(featuredItem, "streak")}
-                  disabled={
-                    (!(isPro && featuredItem.effect === "music") &&
-                      streak < featuredItem.price) ||
-                    purchasedItems.includes(featuredItem.id)
-                  }
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-black transition-all active:scale-95 shadow-md shadow-blue-200 disabled:opacity-50 text-xs cursor-pointer"
-                >
-                  {purchasedItems.includes(featuredItem.id)
-                    ? "Purchased"
-                    : isPro && featuredItem.effect === "music"
-                      ? "Free"
-                      : `${featuredItem.price} Streak`}
-                </button>
-                {featuredItem.coinPrice && (
-                  <button
-                    onClick={() => onBuy(featuredItem, "coins")}
-                    disabled={
-                      (!(isPro && featuredItem.effect === "music") &&
-                        coins < featuredItem.coinPrice) ||
-                      purchasedItems.includes(featuredItem.id)
-                    }
-                    className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 rounded-xl font-black transition-all active:scale-95 shadow-md shadow-yellow-200 disabled:opacity-50 text-xs cursor-pointer"
-                  >
-                    {purchasedItems.includes(featuredItem.id)
-                      ? "Purchased"
-                      : isPro && featuredItem.effect === "music"
-                        ? "Free"
-                        : `${featuredItem.coinPrice} Coins`}
-                  </button>
-                )}
-              </div>
-            </div>
+            <span className="tabular-nums font-black">{formatCompactNumber(coins)}</span>
           </div>
         </div>
       </div>
 
       {/* Category Navigation Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 scrollbar-none">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2.5 mb-6 scrollbar-none">
         {[
           { id: 'all', label: 'All Items', icon: Star },
           { id: 'skins', label: '🎨 Base Skins', icon: Sparkles },
@@ -783,6 +584,79 @@ export function ShopScreen({
           );
         })}
       </div>
+
+      {/* Featured Item Deal */}
+      {(selectedCategory === 'all' || selectedCategory === 'powerups') && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2.5">
+            <h2 className="text-xs font-black text-blue-900/40 uppercase tracking-widest">
+              Featured Deal
+            </h2>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+              Limited Time
+            </span>
+          </div>
+          <div className="relative overflow-hidden glass-card p-5 sm:p-6 bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-purple-500/10 border-2 border-blue-200 rounded-3xl shadow-sm">
+            <div className="absolute top-0 right-0 p-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-bl-xl shadow-xs">
+              Hot Deal! 🔥
+            </div>
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-2xl shadow-sm border border-blue-100 flex items-center justify-center text-4xl sm:text-5xl shrink-0">
+                {featuredItem.icon}
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+                  <h3 className="text-lg font-black text-blue-950">
+                    {featuredItem.name}
+                  </h3>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                    {featuredItem.rarity || 'Special'}
+                  </span>
+                </div>
+                <p className="text-xs text-blue-900/70 mb-3 max-w-md">
+                  {featuredItem.description}
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                  <button
+                    onClick={() => onBuy(featuredItem, "streak")}
+                    disabled={
+                      (!(isPro && featuredItem.effect === "music") &&
+                        streak < featuredItem.price) ||
+                      purchasedItems.includes(featuredItem.id)
+                    }
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-black transition-all active:scale-95 shadow-sm shadow-blue-200 disabled:opacity-50 text-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Star size={13} className="fill-white" />
+                    {purchasedItems.includes(featuredItem.id)
+                      ? "Purchased"
+                      : isPro && featuredItem.effect === "music"
+                        ? "Free"
+                        : `${featuredItem.price} Streak`}
+                  </button>
+                  {featuredItem.coinPrice && (
+                    <button
+                      onClick={() => onBuy(featuredItem, "coins")}
+                      disabled={
+                        (!(isPro && featuredItem.effect === "music") &&
+                          coins < featuredItem.coinPrice) ||
+                        purchasedItems.includes(featuredItem.id)
+                      }
+                      className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl font-black transition-all active:scale-95 shadow-sm shadow-amber-200 disabled:opacity-50 text-xs cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span className="font-black">$</span>
+                      {purchasedItems.includes(featuredItem.id)
+                        ? "Purchased"
+                        : isPro && featuredItem.effect === "music"
+                          ? "Free"
+                          : `${featuredItem.coinPrice} Coins`}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Categories Content */}
       <div className="space-y-10">

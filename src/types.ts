@@ -263,6 +263,7 @@ export interface UserStats {
   lastClaimedRank?: number; // Last rank (1-6) the user claimed a reward for
   lowestRankSinceClaim?: number; // Lowest rank user dropped to after claiming, to track reclaiming
   lastActiveDate?: string; // YYYY-MM-DD
+  streakStatus?: 'active' | 'frozen' | 'broken';
   trophies: Trophy[];
   pointsByCategory: {
     physical: number;

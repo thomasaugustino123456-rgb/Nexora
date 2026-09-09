@@ -16,6 +16,8 @@ import { LivingMascot } from './LivingMascot';
 import { GoldenTrophy, IceTrophy, BrokenTrophy } from './Trophies';
 import { MascotAIWrapper } from './SuspenseWrappers';
 import { formatDistanceToNow } from 'date-fns';
+import { getStreakInfo } from '../lib/streakSystem';
+import { StreakFlameOverlay } from './StreakFlameOverlay';
 
 export function formatCompactNumber(num: number | undefined | null): string {
   if (num === undefined || num === null || isNaN(num)) return "0";
@@ -110,10 +112,11 @@ export interface HomeScreenProps {
   onSelectTask: (taskId: string) => void,
   onOpenGarden: () => void,
   gardenState?: GardenState,
-  isSyncing?: boolean
+  isSyncing?: boolean,
+  onUpdateStats?: (updater: (prev: UserStats) => UserStats) => void
 }
 
-export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenArchives, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask, onOpenGarden, gardenState, isSyncing = false }: HomeScreenProps) => {
+export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenArchives, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask, onOpenGarden, gardenState, isSyncing = false, onUpdateStats }: HomeScreenProps) => {
 
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
@@ -131,6 +134,25 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
     "Success doesn’t just find you. You have to go out and get it."
   ];
   const quote = quotes[new Date().getDay() % quotes.length];
+
+  // Streak Freeze & Broken Status Check
+  const streakInfo = getStreakInfo(stats);
+  const [showStreakOverlay, setShowStreakOverlay] = useState(false);
+  const [streakOverlayStatus, setStreakOverlayStatus] = useState<'active' | 'frozen' | 'broken'>('active');
+
+  // Trigger streak freeze or broken overlay automatically on initial open if applicable
+  useEffect(() => {
+    if (streakInfo.status === 'frozen' || streakInfo.status === 'broken') {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const alertKey = `nexora_streak_modal_shown_${todayStr}_${streakInfo.status}`;
+      if (!sessionStorage.getItem(alertKey) && !localStorage.getItem(alertKey)) {
+        setStreakOverlayStatus(streakInfo.status);
+        setShowStreakOverlay(true);
+        sessionStorage.setItem(alertKey, 'true');
+        localStorage.setItem(alertKey, 'true');
+      }
+    }
+  }, [streakInfo.status]);
 
   // Mascot Interaction & Onboarding Sequence State
   const [tapCount, setTapCount] = useState(0);
@@ -257,6 +279,22 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
     // Celebration Message after finishing first task
     mascotMood = 'celebrating';
     companionSpeech = `WOOHOO! 🎉 You crushed your first task! You're officially on a roll, ${userDisplayName}! Keep building momentum! 🔥`;
+    isWaving = false;
+  } else if (streakInfo.status === 'broken' && tapCount === 0) {
+    mascotMood = 'grieving';
+    companionSpeech = `Oh no! 💔 Our streak flame shattered! Tap our streak flame to restore it and get back on track!`;
+    isWaving = false;
+  } else if (streakInfo.status === 'frozen' && tapCount === 0) {
+    mascotMood = 'concerned';
+    companionSpeech = `Brrr! 🥶 Our ${stats.streak}-day streak turned to ice! Complete today's challenge to thaw the flame and save our streak!`;
+    isWaving = false;
+  } else if (trophies.some(t => t.type === 'broken') && tapCount === 0) {
+    mascotMood = 'sad';
+    companionSpeech = `Our trophy broke from inactivity! 🥀 Stay consistent and crush today's goals to claim a golden trophy!`;
+    isWaving = false;
+  } else if (trophies.some(t => t.type === 'ice') && tapCount === 0) {
+    mascotMood = 'concerned';
+    companionSpeech = `Watch out, friend! 🧊 One of our trophies is frozen in ice! Complete today's protocol to melt it!`;
     isWaving = false;
   } else if (showSessionGreeting) {
     // Session opening greeting for returning/existing user opening or logging back into the app
@@ -450,12 +488,46 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border border-[#E9E4D4] shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 hover:border-orange-500/30 transition-colors relative overflow-hidden"
+                  onClick={() => {
+                    setStreakOverlayStatus(streakInfo.status);
+                    setShowStreakOverlay(true);
+                  }}
+                  className={`flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 transition-colors relative overflow-hidden ${
+                    streakInfo.status === 'frozen' 
+                      ? 'border-cyan-400/60 bg-cyan-50/40 hover:border-cyan-500' 
+                      : streakInfo.status === 'broken'
+                      ? 'border-blue-300/60 bg-blue-50/40 hover:border-blue-500'
+                      : 'border-[#E9E4D4] hover:border-orange-500/30'
+                  }`}
                 >
-                  <span className="text-[9px] font-black text-orange-600/70 uppercase tracking-widest text-center block mb-1.5">{translate("Streak", lang)}</span>
+                  <span className={`text-[9px] font-black uppercase tracking-widest text-center block mb-1.5 ${
+                    streakInfo.status === 'frozen' ? 'text-cyan-600/90' : streakInfo.status === 'broken' ? 'text-blue-600/90' : 'text-orange-600/70'
+                  }`}>
+                    {streakInfo.status === 'frozen' ? 'Ice Streak' : streakInfo.status === 'broken' ? 'Broken' : translate("Streak", lang)}
+                  </span>
                   <div className="flex flex-col items-center gap-2 w-full">
-                    <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/15 flex-shrink-0">
-                      {isSyncing ? <Loader2 size={14} className="animate-spin" /> : <Flame size={14} strokeWidth={2.2} />}
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-md flex-shrink-0 transition-colors ${
+                      streakInfo.status === 'frozen'
+                        ? 'bg-gradient-to-tr from-blue-600 to-cyan-400 shadow-cyan-500/25 ring-2 ring-cyan-300/50'
+                        : streakInfo.status === 'broken'
+                        ? 'bg-gradient-to-tr from-slate-600 to-blue-400 shadow-blue-500/20'
+                        : 'bg-orange-500 shadow-orange-500/15'
+                    }`}>
+                      {isSyncing ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Flame
+                          size={14}
+                          strokeWidth={2.2}
+                          className={
+                            streakInfo.status === 'frozen'
+                              ? 'text-cyan-100 animate-pulse'
+                              : streakInfo.status === 'broken'
+                              ? 'text-blue-100'
+                              : ''
+                          }
+                        />
+                      )}
                     </div>
                     <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible" title={`${stats.streak} days`}>
                       {formatCompactNumber(stats.streak)}
@@ -857,6 +929,15 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
             <p className="text-sm font-serif italic text-blue-900/40 leading-relaxed">"{quote}"</p>
           </div>
         </div>
+      )}
+
+      {/* Duolingo-Style Streak Freeze / Broken Fullscreen Blurred Overlay */}
+      {showStreakOverlay && (
+        <StreakFlameOverlay
+          status={streakOverlayStatus}
+          streakCount={stats.streak || 0}
+          onDismiss={() => setShowStreakOverlay(false)}
+        />
       )}
     </motion.div>
   );

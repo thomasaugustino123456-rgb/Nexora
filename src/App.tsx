@@ -106,6 +106,7 @@ import {
   ShopItem,
   isUserProUnlocked,
 } from "./types";
+import { getStreakInfo } from "./lib/streakSystem";
 import { getMascotNotificationDetails, getMascotItemCategory, normalizeWearableId, normalizeEffectId, isWearableCategory, getWearableSubCategory, MascotSlotCategory } from "./lib/mascotSystem";
 import { createInitialGardenState } from "./types/garden";
 import { HOUSE_ITEMS } from "./constants/houseItems";
@@ -4765,12 +4766,49 @@ export default function App() {
     });
   }, [onUpdateStats, settings.badgeSettings?.trophyAlerts]);
 
-  // Run trophy inactivity check once after hydration
+  // Streak Inactivity & Notification Check (Day 1: Ice, Day 2+: Broken)
+  const checkStreak = useCallback(() => {
+    onUpdateStats((prevStats) => {
+      if (!prevStats || (prevStats.streak || 0) <= 0) return prevStats;
+
+      const todayStr = new Date().toISOString().split("T")[0];
+      const streakInfo = getStreakInfo(prevStats);
+
+      if (streakInfo.status === "frozen") {
+        const lastAlert = localStorage.getItem("nexora_last_streak_ice_alert");
+        if (lastAlert !== todayStr && settings.badgeSettings?.trophyAlerts !== false) {
+          localStorage.setItem("nexora_last_streak_ice_alert", todayStr);
+          sendNotification("Streak Freeze Alert! ❄️", {
+            body: "Your streak turned to ice! Complete a task today to thaw your flame and protect your streak!",
+            icon: nexoraAppIcon,
+          });
+          showToast("STREAK ALERT: ICE FLAME DETECTED! ❄️", "info");
+        }
+      } else if (streakInfo.status === "broken") {
+        const lastAlert = localStorage.getItem("nexora_last_streak_broken_alert");
+        if (lastAlert !== todayStr && settings.badgeSettings?.trophyAlerts !== false) {
+          localStorage.setItem("nexora_last_streak_broken_alert", todayStr);
+          sendNotification("Streak Shattered! 💔", {
+            body: "Your streak broke from inactivity! Open Nexora to restore your flame and rebuild your habit streak!",
+            icon: nexoraAppIcon,
+          });
+          showToast("STREAK ALERT: FLAME SHATTERED! 💔", "error");
+        }
+      }
+
+      return prevStats;
+    });
+  }, [onUpdateStats, settings.badgeSettings?.trophyAlerts]);
+
+  // Run trophy & streak inactivity check once after hydration
   useEffect(() => {
     if (!isDataReady || !isStateHydrated) return;
-    const timer = setTimeout(checkTrophies, 2000);
+    const timer = setTimeout(() => {
+      checkTrophies();
+      checkStreak();
+    }, 2000);
     return () => clearTimeout(timer);
-  }, [checkTrophies, isDataReady, isStateHydrated]);
+  }, [checkTrophies, checkStreak, isDataReady, isStateHydrated]);
 
   const handlePlayLibraryChallenge = (cid: string) => {
     vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
@@ -6319,6 +6357,7 @@ export default function App() {
                       onArchiveChallenge={handleArchiveChallenge}
                       gardenState={gardenState}
                       isSyncing={isSyncingData}
+                      onUpdateStats={onUpdateStats}
                     />
                   </motion.div>
                 )
