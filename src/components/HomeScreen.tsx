@@ -282,7 +282,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
     isWaving = false;
   } else if (streakInfo.status === 'broken' && tapCount === 0) {
     mascotMood = 'grieving';
-    companionSpeech = `Oh no! 💔 Our streak flame shattered! Tap our streak flame to restore it and get back on track!`;
+    companionSpeech = `Oh no! 💔 Our streak flame shattered! Complete today's challenge to reignite our flame and keep your streak alive!`;
     isWaving = false;
   } else if (streakInfo.status === 'frozen' && tapCount === 0) {
     mascotMood = 'concerned';
@@ -529,8 +529,8 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                         />
                       )}
                     </div>
-                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible" title={`${stats.streak} days`}>
-                      {formatCompactNumber(stats.streak)}
+                    <span className="text-xs sm:text-sm md:text-base font-black text-[#4F3F34] tracking-tight block text-center whitespace-nowrap overflow-visible" title={`${streakInfo.streakCount} days`}>
+                      {formatCompactNumber(streakInfo.streakCount)}
                     </span>
                   </div>
                 </motion.div>
@@ -935,7 +935,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
       {showStreakOverlay && (
         <StreakFlameOverlay
           status={streakOverlayStatus}
-          streakCount={stats.streak || 0}
+          streakCount={streakInfo.streakCount}
           onDismiss={() => setShowStreakOverlay(false)}
         />
       )}

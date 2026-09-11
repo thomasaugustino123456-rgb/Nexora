@@ -10,11 +10,19 @@ export interface StreakInfo {
 }
 
 /**
- * Calculates current user streak state based on calendar day difference
+ * Calculates current user streak state based on calendar day difference:
  * - diffDays <= 0 (today completed): active (healthy red/gold flame)
- * - diffDays === 1 (completed yesterday, today active): active (healthy red/gold flame)
- * - diffDays === 2 (1 day expired without completion): frozen (turned to ice)
- * - diffDays >= 3 (2+ days expired without completion): broken (flame shattered)
+ * - diffDays === 1 (completed yesterday, not yet completed today): frozen (ice flame). Count does NOT reduce.
+ * - diffDays === 2 (completed 2 days ago, missed 1 day): broken (flame shattered). Count does NOT reduce yet.
+ * - diffDays >= 3: Systematic 2-day cycle:
+ *   - Day 3: Streak count reduces by 1, turns to Ice (frozen).
+ *   - Day 4: Second day of that number, turns to Broken (broken).
+ *   - Day 5: Streak count reduces by another 1, turns to Ice (frozen).
+ *   - Day 6: Turns to Broken (broken).
+ *   - Continues until user completes a task or reaches 0.
+ *
+ * CRITICAL: Uses stats.streakAtLastCompletion as baseStreak so that reading or clicking
+ * can NEVER cascade-reduce the streak number repeatedly.
  */
 export function getStreakInfo(stats?: Partial<UserStats> | null): StreakInfo {
   const currentStreak = stats?.streak || 0;
@@ -36,39 +44,76 @@ export function getStreakInfo(stats?: Partial<UserStats> | null): StreakInfo {
   const todayTime = new Date(todayStr + "T00:00:00").getTime();
   const lastTime = new Date(lastDateStr + "T00:00:00").getTime();
 
+  // The base streak count achieved when the user was last active/completed.
+  // Crucial: baseStreak never mutates during dormancy, preventing cascading decay feedback loops.
+  const baseStreak =
+    stats.streakAtLastCompletion !== undefined && stats.streakAtLastCompletion !== null
+      ? stats.streakAtLastCompletion
+      : currentStreak;
+
   if (isNaN(todayTime) || isNaN(lastTime)) {
     return {
       status: "active",
       daysInactive: 0,
-      streakCount: currentStreak,
+      streakCount: baseStreak,
       lastDateStr,
     };
   }
 
-  const diffDays = Math.floor((todayTime - lastTime) / msPerDay);
+  // Use Math.round to avoid daylight saving time offset rounding errors
+  const diffDays = Math.round((todayTime - lastTime) / msPerDay);
 
-  if (diffDays <= 1) {
-    // Completed today (0) or completed yesterday (1) with current day still active: healthy flame!
+  if (diffDays <= 0) {
+    // Day 0: Completed today: Healthy red/gold flame!
     return {
       status: "active",
-      daysInactive: Math.max(0, diffDays),
-      streakCount: currentStreak,
+      daysInactive: 0,
+      streakCount: baseStreak,
       lastDateStr,
     };
-  } else if (diffDays === 2) {
-    // 1 expired day missed without completing task: turned to ice!
+  } else if (diffDays === 1) {
+    // Day 1: Completed yesterday, not yet completed today: Streak turns to ice (frozen)! Count does NOT reduce.
     return {
       status: "frozen",
       daysInactive: 1,
-      streakCount: currentStreak,
+      streakCount: baseStreak,
+      lastDateStr,
+    };
+  } else if (diffDays === 2) {
+    // Day 2: 1 missed day: Streak breaks / shatters! Count does NOT reduce yet.
+    return {
+      status: "broken",
+      daysInactive: 1,
+      streakCount: baseStreak,
       lastDateStr,
     };
   } else {
-    // 2 or more expired days missed: broken/shattered!
+    // Day 3+: Systematic 2-day inactivity decay cycle:
+    // - Day 3 (cycleStep 0): streak reduces by 1, turns to Ice (frozen)
+    // - Day 4 (cycleStep 1): stays reduced by 1, turns to Broken (broken)
+    // - Day 5 (cycleStep 2): streak reduces by 2, turns to Ice (frozen)
+    // - Day 6 (cycleStep 3): stays reduced by 2, turns to Broken (broken)
+    // - Day 7 (cycleStep 4): streak reduces by 3, turns to Ice (frozen)
+    // - Day 8 (cycleStep 5): stays reduced by 3, turns to Broken (broken)
+    const cycleStep = diffDays - 3;
+    const reduction = Math.floor(cycleStep / 2) + 1;
+    const decayedStreak = Math.max(0, baseStreak - reduction);
+
+    if (decayedStreak === 0) {
+      return {
+        status: "broken",
+        daysInactive: diffDays - 1,
+        streakCount: 0,
+        lastDateStr,
+      };
+    }
+
+    const status: StreakState = cycleStep % 2 === 0 ? "frozen" : "broken";
+
     return {
-      status: "broken",
+      status,
       daysInactive: diffDays - 1,
-      streakCount: currentStreak,
+      streakCount: decayedStreak,
       lastDateStr,
     };
   }
@@ -85,10 +130,13 @@ export function restoreStreakState(stats: UserStats): UserStats {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split("T")[0];
   const todayStr = today.toISOString().split("T")[0];
+  const current = Math.max(1, stats.streak || 1);
 
   return {
     ...stats,
-    streak: Math.max(1, stats.streak || 1),
+    streak: current,
+    streakAtLastCompletion: current,
+    streakStatus: "frozen",
     lastCompletedDate: yesterdayStr,
     lastActiveDate: todayStr,
   };

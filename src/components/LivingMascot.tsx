@@ -592,6 +592,15 @@ export const LivingMascot = React.memo(({
               <stop offset="60%" stopColor="#dc2626"/>
               <stop offset="100%" stopColor="#991b1b"/>
             </linearGradient>
+            <linearGradient id="mascotCapeBackGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#ef4444"/>
+              <stop offset="35%" stopColor="#dc2626"/>
+              <stop offset="75%" stopColor="#991b1b"/>
+              <stop offset="100%" stopColor="#450a0a"/>
+            </linearGradient>
+            <filter id="mascotCapeShadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="8" stdDeviation="7" floodColor="#000000" floodOpacity="0.45"/>
+            </filter>
             <linearGradient id="mascotCapeGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#fef08a"/>
               <stop offset="50%" stopColor="#f59e0b"/>
@@ -607,6 +616,27 @@ export const LivingMascot = React.memo(({
               <stop offset="50%" stopColor="#94a3b8"/>
               <stop offset="100%" stopColor="#334155"/>
             </linearGradient>
+            <radialGradient id="mascotPlasmaCore" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#ffffff"/>
+              <stop offset="35%" stopColor="#38bdf8"/>
+              <stop offset="75%" stopColor="#0284c7"/>
+              <stop offset="100%" stopColor="#0f172a"/>
+            </radialGradient>
+
+            {/* Quantum Cyber Visor (🥽 Cyber Goggles) Gradients & Glow */}
+            <linearGradient id="mascotCyberGoggleLensGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.75"/>
+              <stop offset="60%" stopColor="#0891b2" stopOpacity="0.8"/>
+              <stop offset="100%" stopColor="#0e7490" stopOpacity="0.88"/>
+            </linearGradient>
+            <linearGradient id="mascotCyberGoggleFrame" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#334155"/>
+              <stop offset="50%" stopColor="#1e293b"/>
+              <stop offset="100%" stopColor="#0f172a"/>
+            </linearGradient>
+            <filter id="mascotCyberGoggleGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#06b6d4" floodOpacity="0.75"/>
+            </filter>
           </defs>
 
           {/* Dynamic Ground Shadow (Expands on landing impact) */}
@@ -689,6 +719,37 @@ export const LivingMascot = React.memo(({
               {/* Cat ears */}
               <path d="M125,120 Q105,75 140,88 Z" fill={`url(#bodyGrad-${uid})`} stroke={colors.stroke} strokeWidth={2} />
               <path d="M275,120 Q295,75 260,88 Z" fill={`url(#bodyGrad-${uid})`} stroke={colors.stroke} strokeWidth={2} />
+            </g>
+          )}
+
+          {/* Slot 2: Hero Crimson Cape - Flowing Back Layer (Behind Mascot Body) */}
+          {effectiveClothes.includes('cape') && (
+            <g id="living-mascot-cape-back" filter="url(#mascotCapeShadow)">
+              {/* Outer Cape Sweep & Billowing Curves */}
+              <path
+                d="M 105 175 C 45 220, 16 280, 22 335 C 28 368, 65 374, 110 374 C 160 374, 200 370, 200 370 C 200 370, 240 374, 290 374 C 335 374, 372 368, 378 335 C 384 280, 355 220, 295 175 C 260 178, 140 178, 105 175 Z"
+                fill="url(#mascotCapeBackGrad)"
+              />
+              {/* Deep Velvet Shadow Folds */}
+              <path d="M 105 175 Q 68 270 60 366 Q 105 374 135 372 Q 112 270 118 177 Z" fill="#7f1d1d" opacity="0.6" />
+              <path d="M 295 175 Q 332 270 340 366 Q 295 374 265 372 Q 288 270 282 177 Z" fill="#7f1d1d" opacity="0.6" />
+              <path d="M 160 178 Q 155 280 160 372 Q 200 370 200 370 Q 200 370, 240 372 Q 245 280, 240 178 Z" fill="#991b1b" opacity="0.5" />
+              {/* Golden Scalloped Hemline Trim */}
+              <path
+                d="M 26 345 Q 60 374 110 374 Q 160 374 200 370 Q 240 374 290 374 Q 340 374 374 345"
+                fill="none"
+                stroke="url(#mascotCapeGoldGrad)"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 40 354 Q 120 376 200 372 Q 280 376 360 354"
+                fill="none"
+                stroke="#fef08a"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                opacity="0.8"
+              />
             </g>
           )}
 
@@ -1010,71 +1071,140 @@ export const LivingMascot = React.memo(({
           {effectiveClothes && effectiveClothes !== 'none' && (
             <g id="living-mascot-clothes-overlay">
               {effectiveClothes.includes('ninja') && (
-                <g id="living-mascot-ninja-clothes">
-                  <g filter="url(#mascotNinjaShadow)">
-                    <path d="M 45 220 C 45 190, 355 190, 355 220 C 370 310, 335 348, 200 350 C 65 348, 30 310, 45 220 Z" fill="url(#mascotNinjaFabricGrad)"/>
-                    <path d="M 120 220 L 200 280 L 280 220 L 255 210 L 200 250 L 145 210 Z" fill="#111315" stroke="#374151" strokeWidth="2"/>
-                    <path d="M 45 210 C 70 195, 120 205, 125 230 C 95 240, 55 235, 45 210 Z" fill="#1f2328" stroke="#374151" strokeWidth="1.5"/>
-                    <path d="M 355 210 C 330 195, 280 205, 275 230 C 305 240, 345 235, 355 210 Z" fill="#1f2328" stroke="#374151" strokeWidth="1.5"/>
-                    <rect x="70" y="280" width="260" height="22" rx="4" fill="url(#mascotNinjaSashGrad)"/>
-                    <path d="M 230 295 Q 240 335 250 350 Q 230 335 220 295 Z" fill="url(#mascotNinjaSashGrad)"/>
-                    <path d="M 245 295 Q 260 330 275 342 Q 255 330 240 295 Z" fill="#991b1b"/>
-                    <g transform="translate(140, 291) scale(0.85)">
-                      <path d="M 12 0 L 15 8 L 24 12 L 15 16 L 12 24 L 9 16 L 0 12 L 9 8 Z" fill="url(#mascotNinjaMetalGrad)"/>
-                      <circle cx="12" cy="12" r="3" fill="#111827"/>
-                    </g>
-                    <rect x="52" y="215" width="30" height="18" rx="6" fill="#111315" stroke="#4b5563" strokeWidth="1.5" transform="rotate(-15 67 224)"/>
-                    <rect x="318" y="215" width="30" height="18" rx="6" fill="#111315" stroke="#4b5563" strokeWidth="1.5" transform="rotate(15 333 224)"/>
+                <g id="living-mascot-ninja-clothes" filter="url(#mascotNinjaShadow)">
+                  {/* Contoured Shinobi Tunic conforming to round mascot body */}
+                  <path
+                    d="M 115 228 Q 200 244 285 228 C 310 256, 305 315, 276 338 C 238 348, 162 348, 124 338 C 95 315, 90 256, 115 228 Z"
+                    fill="url(#mascotNinjaFabricGrad)"
+                    stroke="#1f2937"
+                    strokeWidth="2"
+                  />
+                  {/* Crossed V-neck Gi Lapels */}
+                  <path d="M 125 228 L 200 280 L 160 280 L 115 238 Z" fill="#1f2328" stroke="#dc2626" strokeWidth="1.5" />
+                  <path d="M 275 228 L 140 280 L 180 280 L 285 238 Z" fill="#111315" stroke="#dc2626" strokeWidth="1.5" />
+                  {/* Red Obi Sash wrapped around lower body */}
+                  <path d="M 108 288 Q 200 300 292 288 L 286 312 Q 200 324 114 312 Z" fill="url(#mascotNinjaSashGrad)" />
+                  {/* Obi Sash Ribbon Tails */}
+                  <path d="M 230 306 Q 242 334 250 348 Q 232 336 222 306 Z" fill="url(#mascotNinjaSashGrad)" />
+                  <path d="M 244 306 Q 256 330 268 342 Q 252 330 238 306 Z" fill="#991b1b" />
+                  {/* Shuriken Belt Medallion */}
+                  <g transform="translate(186, 292) scale(0.75)">
+                    <path d="M 16 0 L 20 11 L 32 16 L 20 21 L 16 32 L 12 21 L 0 16 L 12 11 Z" fill="url(#mascotNinjaMetalGrad)" />
+                    <circle cx="16" cy="16" r="4" fill="#111827" />
                   </g>
+                  {/* Tailored Shinobi Armhole Sleeve Cuffs */}
+                  <rect x="74" y="218" width="22" height="15" rx="5" fill="#111315" stroke="#dc2626" strokeWidth="1.5" transform="rotate(-15 85 225)" />
+                  <rect x="304" y="218" width="22" height="15" rx="5" fill="#111315" stroke="#dc2626" strokeWidth="1.5" transform="rotate(15 315 225)" />
                 </g>
               )}
 
               {effectiveClothes.includes('detective') && (
-                <g id="living-mascot-detective-clothes">
-                  <g filter="url(#mascotClothingShadowDet)">
-                    <path d="M 50 220 C 50 195, 350 195, 350 220 C 365 310, 330 345, 200 348 C 70 345, 35 310, 50 220 Z" fill="url(#mascotCoatGradDet)"/>
-                    <path d="M 45 220 C 110 195, 290 195, 355 220 C 330 250, 270 255, 200 258 C 130 255, 70 250, 45 220 Z" fill="url(#mascotCoatShadowGradDet)"/>
-                    <path d="M 140 205 L 200 240 L 260 205 L 235 200 L 200 220 L 165 200 Z" fill="#4a3728"/>
-                    <path d="M 125 200 L 175 255 L 200 240 L 160 195 Z" fill="url(#mascotCoatGradDet)" stroke="#8c7a52" strokeWidth="1.5"/>
-                    <path d="M 275 200 L 225 255 L 200 240 L 240 195 Z" fill="url(#mascotCoatGradDet)" stroke="#8c7a52" strokeWidth="1.5"/>
-                    <circle cx="170" cy="275" r="5" fill="#3e2723"/>
-                    <circle cx="230" cy="275" r="5" fill="#3e2723"/>
-                    <circle cx="170" cy="305" r="5" fill="#3e2723"/>
-                    <circle cx="230" cy="305" r="5" fill="#3e2723"/>
-                    <rect x="75" y="290" width="250" height="18" rx="4" fill="#6d5438"/>
-                    <rect x="182" y="286" width="36" height="26" rx="4" fill="#fbbf24" stroke="#d97706" strokeWidth="2"/>
-                    <rect x="190" y="291" width="20" height="16" rx="2" fill="#4a3728"/>
-                    <rect x="58" y="215" width="28" height="16" rx="5" fill="#7a6b43" transform="rotate(-15 72 223)"/>
-                    <rect x="314" y="215" width="28" height="16" rx="5" fill="#7a6b43" transform="rotate(15 328 223)"/>
-                  </g>
+                <g id="living-mascot-detective-clothes" filter="url(#mascotClothingShadowDet)">
+                  {/* Contoured Detective Coat conforming to round mascot body */}
+                  <path
+                    d="M 115 228 Q 200 244 285 228 C 310 256, 305 315, 276 338 C 238 348, 162 348, 124 338 C 95 315, 90 256, 115 228 Z"
+                    fill="url(#mascotCoatGradDet)"
+                    stroke="#8c7a52"
+                    strokeWidth="2"
+                  />
+                  {/* Folded Tweed Lapels */}
+                  <path d="M 125 228 L 180 274 L 200 250 L 155 228 Z" fill="url(#mascotCoatShadowGradDet)" stroke="#6b5735" strokeWidth="1.5" />
+                  <path d="M 275 228 L 220 274 L 200 250 L 245 228 Z" fill="url(#mascotCoatShadowGradDet)" stroke="#6b5735" strokeWidth="1.5" />
+                  {/* Double Breasted Buttons */}
+                  <circle cx="168" cy="270" r="4" fill="#3e2723" />
+                  <circle cx="232" cy="270" r="4" fill="#3e2723" />
+                  <circle cx="168" cy="308" r="4" fill="#3e2723" />
+                  <circle cx="232" cy="308" r="4" fill="#3e2723" />
+                  {/* Leather Belt with Brass Buckle */}
+                  <path d="M 108 288 Q 200 298 292 288 L 287 306 Q 200 316 113 306 Z" fill="#6d5438" />
+                  <rect x="184" y="287" width="32" height="22" rx="4" fill="#fbbf24" stroke="#d97706" strokeWidth="2" />
+                  <rect x="192" y="292" width="16" height="12" rx="2" fill="#4a3728" />
+                  {/* Tailored Coat Sleeve Cuffs */}
+                  <rect x="74" y="218" width="22" height="15" rx="5" fill="#7a6b43" stroke="#544328" strokeWidth="1.5" transform="rotate(-15 85 225)" />
+                  <rect x="304" y="218" width="22" height="15" rx="5" fill="#7a6b43" stroke="#544328" strokeWidth="1.5" transform="rotate(15 315 225)" />
                   {/* Hand Magnifying Glass */}
-                  <g filter="url(#mascotClothingShadowDet)">
-                    <rect x="270" y="200" width="16" height="55" rx="8" fill="#4a2c11" stroke="#261405" strokeWidth="2" transform="rotate(-40 278 227)"/>
-                    <circle cx="235" cy="175" r="34" fill="none" stroke="url(#mascotMetalRimDet)" strokeWidth="7"/>
-                    <circle cx="235" cy="175" r="30" fill="url(#mascotGlassGradDet)"/>
-                    <path d="M 215 155 Q 235 145 255 160" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" fill="none"/>
-                    <path d="M 210 165 Q 220 155 230 162" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" opacity="0.8" fill="none"/>
+                  <g>
+                    <rect x="274" y="202" width="14" height="48" rx="7" fill="#4a2c11" stroke="#261405" strokeWidth="1.5" transform="rotate(-40 281 226)" />
+                    <circle cx="242" cy="182" r="28" fill="none" stroke="url(#mascotMetalRimDet)" strokeWidth="6" />
+                    <circle cx="242" cy="182" r="24" fill="url(#mascotGlassGradDet)" />
+                    <path d="M 226 166 Q 242 158 258 170" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" fill="none" />
                   </g>
                 </g>
               )}
 
               {effectiveClothes.includes('cape') && (
-                <g id="living-mascot-cape-clothes">
-                  <path d="M 80 200 Q 30 260 40 345 Q 120 355 200 350 Q 280 355 360 345 Q 370 260 320 200 Q 200 220 80 200 Z" fill="url(#mascotCapeGrad)" filter="url(#mascotClothingShadowDet)"/>
-                  <path d="M 120 205 L 200 235 L 280 205 L 260 195 L 200 215 L 140 195 Z" fill="#7f1d1d"/>
-                  <circle cx="200" cy="225" r="14" fill="url(#mascotCapeGoldGrad)" stroke="#78350f" strokeWidth="2"/>
-                  <path d="M 200 216 L 203 222 L 209 222 L 204 226 L 206 232 L 200 228 L 194 232 L 196 226 L 191 222 L 197 222 Z" fill="#ffffff"/>
+                <g id="living-mascot-cape-front">
+                  {/* Golden Shoulder Collar Fasteners (Cape hangs behind body) */}
+                  <path
+                    d="M 112 210 Q 200 236 288 210 L 280 222 Q 200 246 120 222 Z"
+                    fill="url(#mascotCapeGoldGrad)"
+                    stroke="#b45309"
+                    strokeWidth="1.5"
+                    filter="url(#mascotClothingShadowDet)"
+                  />
+                  {/* Golden Celestial Star Medallion Clasp */}
+                  <circle cx="200" cy="228" r="15" fill="url(#mascotCapeGoldGrad)" stroke="#fef08a" strokeWidth="2" filter="url(#mascotClothingShadowDet)" />
+                  <circle cx="200" cy="228" r="7" fill="#dc2626" />
+                  {/* 8-Point Hero Star */}
+                  <path
+                    d="M 200 218 L 203 225 L 210 228 L 203 231 L 200 238 L 197 231 L 190 228 L 197 225 Z"
+                    fill="#ffffff"
+                  />
                 </g>
               )}
 
               {effectiveClothes.includes('armor') && (
                 <g id="living-mascot-armor-clothes">
-                  <path d="M 70 215 Q 200 230 330 215 C 345 290 310 340 200 345 C 90 340 55 290 70 215 Z" fill="url(#mascotArmorMetal)" stroke="#1e293b" strokeWidth="2"/>
-                  <path d="M 130 225 L 200 265 L 270 225 L 250 215 L 200 245 L 150 215 Z" fill="url(#mascotArmorGrad)"/>
-                  <circle cx="200" cy="275" r="16" fill="#0284c7" stroke="#38bdf8" strokeWidth="2.5"/>
-                  <circle cx="200" cy="275" r="10" fill="#38bdf8" className="animate-pulse"/>
-                  <rect x="55" y="210" width="34" height="20" rx="6" fill="url(#mascotArmorGrad)" stroke="#38bdf8" strokeWidth="1.5" transform="rotate(-15 72 220)"/>
-                  <rect x="311" y="210" width="34" height="20" rx="6" fill="url(#mascotArmorGrad)" stroke="#38bdf8" strokeWidth="1.5" transform="rotate(15 328 220)"/>
+                  {/* Contoured High-Tech Exosuit Chestplate */}
+                  <path
+                    d="M 115 228 Q 200 244 285 228 C 310 256, 305 315, 276 338 C 238 348, 162 348, 124 338 C 95 315, 90 256, 115 228 Z"
+                    fill="url(#mascotArmorMetal)"
+                    stroke="#0284c7"
+                    strokeWidth="2.5"
+                    filter="url(#mascotClothingShadowDet)"
+                  />
+                  {/* Armor Beveled Inset Plates */}
+                  <path d="M 125 240 L 175 250 L 165 275 L 120 265 Z" fill="url(#mascotArmorGrad)" stroke="#38bdf8" strokeWidth="1" />
+                  <path d="M 275 240 L 225 250 L 235 275 L 280 265 Z" fill="url(#mascotArmorGrad)" stroke="#38bdf8" strokeWidth="1" />
+                  <path d="M 130 295 L 170 295 L 165 325 L 135 320 Z" fill="url(#mascotArmorGrad)" stroke="#0284c7" strokeWidth="1" />
+                  <path d="M 270 295 L 230 295 L 235 325 L 265 320 Z" fill="url(#mascotArmorGrad)" stroke="#0284c7" strokeWidth="1" />
+                  {/* Neon Blue Power Lines */}
+                  <path d="M 200 235 L 200 260" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d="M 148 275 L 172 282 M 252 275 L 228 282" stroke="#00f0ff" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M 200 308 L 200 340" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" />
+                  {/* Central Plasma Power Core / Arc-Reactor */}
+                  <circle cx="200" cy="284" r="22" fill="#0f172a" stroke="#0284c7" strokeWidth="2.5" />
+                  <circle cx="200" cy="284" r="17" fill="url(#mascotPlasmaCore)" />
+                  <circle cx="200" cy="284" r="12" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="5 3" className="animate-spin" style={{ animationDuration: '8s' }} />
+                  <text x="200" y="290" fontSize="13" fontFamily="system-ui, sans-serif" fontWeight="900" fill="#ffffff" textAnchor="middle">N</text>
+                  {/* Tailored Cyber Pauldron Sleeve Cuffs */}
+                  <rect x="74" y="218" width="22" height="15" rx="5" fill="url(#mascotArmorGrad)" stroke="#38bdf8" strokeWidth="1.5" transform="rotate(-15 85 225)" />
+                  <rect x="304" y="218" width="22" height="15" rx="5" fill="url(#mascotArmorGrad)" stroke="#38bdf8" strokeWidth="1.5" transform="rotate(15 315 225)" />
+                </g>
+              )}
+
+              {/* Hands are kept beautifully visible emerging from sleeves */}
+              {!effectiveClothes.includes('cape') && (
+                <g id="living-mascot-visible-hands">
+                  {/* Left Hand / Arm Flipper protruding from sleeve */}
+                  <ellipse
+                    cx="74"
+                    cy="225"
+                    rx="16"
+                    ry="22"
+                    fill={`url(#armGrad-${uid})`}
+                    style={{ transformOrigin: '74px 225px' }}
+                    className={mood === 'celebrating' ? 'animate-bounce' : ''}
+                  />
+                  {/* Right Hand / Arm Flipper protruding from sleeve */}
+                  <ellipse
+                    cx="326"
+                    cy="225"
+                    rx="16"
+                    ry="22"
+                    fill={`url(#armGrad-${uid})`}
+                    style={{ transformOrigin: '326px 225px' }}
+                  />
                 </g>
               )}
             </g>
@@ -1292,10 +1422,120 @@ export const LivingMascot = React.memo(({
               )}
 
               {(effectiveEye === 'apex' || effectiveEye.includes('apex') || effectiveEye.includes('visor') || effectiveEye.includes('hud')) && (
-                <g transform="translate(0, 15)">
-                  <rect x="120" y="160" width="160" height="30" rx="8" fill="#0284c7" fillOpacity="0.85" stroke="#38bdf8" strokeWidth="3" filter="drop-shadow(0 0 12px #38bdf8)" />
-                  <line x1="130" y1="175" x2="270" y2="175" stroke="#e0f2fe" strokeWidth="2" strokeDasharray="4,4" />
-                  <text x="200" y="181" fontSize="10" fontFamily="monospace" fontWeight="bold" fill="#38bdf8" textAnchor="middle">QUANTUM HUD v2.0</text>
+                <g id="living-mascot-cyber-goggles" transform="translate(0, 5)">
+                  {/* High-Tech Goggle Elastic Headband Strap (🥽) */}
+                  <g>
+                    {/* Left Strap wrapping around head */}
+                    <path d="M 112 178 C 80 176, 55 174, 42 172" stroke="#1e293b" strokeWidth="9" strokeLinecap="round" fill="none" />
+                    <path d="M 112 178 C 80 176, 55 174, 42 172" stroke="#06b6d4" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                    {/* Right Strap wrapping around head */}
+                    <path d="M 288 178 C 320 176, 345 174, 358 172" stroke="#1e293b" strokeWidth="9" strokeLinecap="round" fill="none" />
+                    <path d="M 288 178 C 320 176, 345 174, 358 172" stroke="#06b6d4" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                    {/* Metal Side Adjustment Buckles */}
+                    <rect x="94" y="167" width="10" height="22" rx="3" fill="#64748b" stroke="#0f172a" strokeWidth="1.5" />
+                    <rect x="296" y="167" width="10" height="22" rx="3" fill="#64748b" stroke="#0f172a" strokeWidth="1.5" />
+                  </g>
+
+                  {/* Dual Ocular Goggle Outer Bezel & Bridge (🥽 Shape) */}
+                  <g filter="url(#mascotCyberGoggleGlow)">
+                    {/* Left Eyepiece Frame */}
+                    <path
+                      d="M 110 160 C 108 146, 186 146, 186 160 L 184 198 C 184 212, 112 212, 110 198 Z"
+                      fill="url(#mascotCyberGoggleFrame)"
+                      stroke="#06b6d4"
+                      strokeWidth="3.5"
+                    />
+                    {/* Right Eyepiece Frame */}
+                    <path
+                      d="M 214 160 C 214 146, 290 146, 290 160 L 288 198 C 288 212, 216 212, 214 198 Z"
+                      fill="url(#mascotCyberGoggleFrame)"
+                      stroke="#06b6d4"
+                      strokeWidth="3.5"
+                    />
+                    {/* Center Bridge connecting the two ocular lenses */}
+                    <path
+                      d="M 184 172 Q 200 165 216 172 L 216 184 Q 200 177 184 184 Z"
+                      fill="url(#mascotCyberGoggleFrame)"
+                      stroke="#0891b2"
+                      strokeWidth="2"
+                    />
+                    {/* Center Status LED Sensor */}
+                    <circle cx="200" cy="178" r="3" fill="#38bdf8" />
+                  </g>
+
+                  {/* High-Tech Cyan Visor Goggle Lenses */}
+                  <g>
+                    {/* Left Goggle Lens */}
+                    <rect
+                      x="115"
+                      y="154"
+                      width="68"
+                      height="48"
+                      rx="14"
+                      fill="url(#mascotCyberGoggleLensGrad)"
+                      stroke="#38bdf8"
+                      strokeWidth="1.5"
+                    />
+                    {/* Right Goggle Lens */}
+                    <rect
+                      x="217"
+                      y="154"
+                      width="68"
+                      height="48"
+                      rx="14"
+                      fill="url(#mascotCyberGoggleLensGrad)"
+                      stroke="#38bdf8"
+                      strokeWidth="1.5"
+                    />
+                  </g>
+
+                  {/* Quantum Cyber HUD & Reticles Overlays */}
+                  <g opacity="0.9">
+                    {/* Left Lens HUD: Targeting Bracket & Reticle */}
+                    <path d="M 124 168 L 120 168 L 120 188 L 124 188" fill="none" stroke="#e0f2fe" strokeWidth="1.5" />
+                    <path d="M 174 168 L 178 168 L 178 188 L 174 188" fill="none" stroke="#e0f2fe" strokeWidth="1.5" />
+                    <circle cx="149" cy="178" r="7" fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 2" />
+                    <line x1="141" y1="178" x2="157" y2="178" stroke="#38bdf8" strokeWidth="1" />
+                    <line x1="149" y1="170" x2="149" y2="186" stroke="#38bdf8" strokeWidth="1" />
+                    <text x="149" y="196" fontSize="7" fontFamily="monospace" fontWeight="bold" fill="#bae6fd" textAnchor="middle">SYS:OK</text>
+
+                    {/* Right Lens HUD: Quantum Radar & Audio Spectrogram */}
+                    <circle cx="251" cy="178" r="10" fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="5 3" />
+                    <circle cx="251" cy="178" r="4" fill="#00f0ff" />
+                    <line x1="230" y1="194" x2="230" y2="191" stroke="#38bdf8" strokeWidth="1.5" />
+                    <line x1="233" y1="194" x2="233" y2="188" stroke="#38bdf8" strokeWidth="1.5" />
+                    <line x1="236" y1="194" x2="236" y2="190" stroke="#38bdf8" strokeWidth="1.5" />
+                    <line x1="239" y1="194" x2="239" y2="186" stroke="#38bdf8" strokeWidth="1.5" />
+                    <text x="258" y="196" fontSize="7" fontFamily="monospace" fontWeight="bold" fill="#bae6fd" textAnchor="middle">HUD:2.0</text>
+                  </g>
+
+                  {/* Signature 🥽 Curved Glass Specular Highlight Arc */}
+                  <g>
+                    {/* Left Curved Glare Reflection */}
+                    <path
+                      d="M 124 162 Q 149 154 174 162"
+                      fill="none"
+                      stroke="#ffffff"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      opacity="0.8"
+                    />
+                    <circle cx="127" cy="168" r="1.5" fill="#ffffff" opacity="0.9" />
+                    {/* Right Curved Glare Reflection */}
+                    <path
+                      d="M 226 162 Q 251 154 276 162"
+                      fill="none"
+                      stroke="#ffffff"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      opacity="0.8"
+                    />
+                    <circle cx="229" cy="168" r="1.5" fill="#ffffff" opacity="0.9" />
+                  </g>
+
+                  {/* Outer Temple LEDs */}
+                  <circle cx="106" cy="164" r="2.5" fill="#00f0ff" className="animate-pulse" />
+                  <circle cx="294" cy="164" r="2.5" fill="#00f0ff" className="animate-pulse" />
                 </g>
               )}
 

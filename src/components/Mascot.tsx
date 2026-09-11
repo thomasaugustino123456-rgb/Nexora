@@ -265,6 +265,21 @@ export const Mascot = React.memo(({
             <stop offset="0%" stopColor="#ffffff" stopOpacity={0.9}/>
             <stop offset="100%" stopColor={colors.armEnd} stopOpacity={0.4}/>
           </linearGradient>
+
+          {/* Quantum Cyber Visor (🥽 Cyber Goggles) Gradients & Glow */}
+          <linearGradient id={`mascotCyberGoggleLensGrad-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.75"/>
+            <stop offset="60%" stopColor="#0891b2" stopOpacity="0.8"/>
+            <stop offset="100%" stopColor="#0e7490" stopOpacity="0.88"/>
+          </linearGradient>
+          <linearGradient id={`mascotCyberGoggleFrame-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#334155"/>
+            <stop offset="50%" stopColor="#1e293b"/>
+            <stop offset="100%" stopColor="#0f172a"/>
+          </linearGradient>
+          <filter id={`mascotCyberGoggleGlow-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#06b6d4" floodOpacity="0.75"/>
+          </filter>
         </defs>
 
         {/* Shadow */}
@@ -780,10 +795,107 @@ export const Mascot = React.memo(({
                 </g>
               )}
               {(hat === 'apex' || hat === 'pro-apex' || hat === 'skin-pro-apex' || hat === 'pro-skin-apex') && (
-                <g transform="translate(0, 15)">
-                  <rect x="120" y="160" width="160" height="30" rx="8" fill="#0284c7" fillOpacity="0.85" stroke="#38bdf8" strokeWidth="3" filter="drop-shadow(0 0 12px #38bdf8)" />
-                  <line x1="130" y1="175" x2="270" y2="175" stroke="#e0f2fe" strokeWidth="2" strokeDasharray="4,4" />
-                  <text x="200" y="181" fontSize="10" fontFamily="monospace" fontWeight="bold" fill="#38bdf8" textAnchor="middle">QUANTUM HUD v2.0</text>
+                <g id="mascot-cyber-goggles" transform="translate(0, 5)">
+                  {/* High-Tech Goggle Elastic Headband Strap (🥽) */}
+                  <g>
+                    <path d="M 112 178 C 80 176, 55 174, 42 172" stroke="#1e293b" strokeWidth="9" strokeLinecap="round" fill="none" />
+                    <path d="M 112 178 C 80 176, 55 174, 42 172" stroke="#06b6d4" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                    <path d="M 288 178 C 320 176, 345 174, 358 172" stroke="#1e293b" strokeWidth="9" strokeLinecap="round" fill="none" />
+                    <path d="M 288 178 C 320 176, 345 174, 358 172" stroke="#06b6d4" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                    <rect x="94" y="167" width="10" height="22" rx="3" fill="#64748b" stroke="#0f172a" strokeWidth="1.5" />
+                    <rect x="296" y="167" width="10" height="22" rx="3" fill="#64748b" stroke="#0f172a" strokeWidth="1.5" />
+                  </g>
+
+                  {/* Dual Ocular Goggle Outer Bezel & Bridge (🥽 Shape) */}
+                  <g filter={`url(#mascotCyberGoggleGlow-${uid})`}>
+                    <path
+                      d="M 110 160 C 108 146, 186 146, 186 160 L 184 198 C 184 212, 112 212, 110 198 Z"
+                      fill={`url(#mascotCyberGoggleFrame-${uid})`}
+                      stroke="#06b6d4"
+                      strokeWidth="3.5"
+                    />
+                    <path
+                      d="M 214 160 C 214 146, 290 146, 290 160 L 288 198 C 288 212, 216 212, 214 198 Z"
+                      fill={`url(#mascotCyberGoggleFrame-${uid})`}
+                      stroke="#06b6d4"
+                      strokeWidth="3.5"
+                    />
+                    <path
+                      d="M 184 172 Q 200 165 216 172 L 216 184 Q 200 177 184 184 Z"
+                      fill={`url(#mascotCyberGoggleFrame-${uid})`}
+                      stroke="#0891b2"
+                      strokeWidth="2"
+                    />
+                    <circle cx="200" cy="178" r="3" fill="#38bdf8" />
+                  </g>
+
+                  {/* High-Tech Cyan Visor Goggle Lenses */}
+                  <g>
+                    <rect
+                      x="115"
+                      y="154"
+                      width="68"
+                      height="48"
+                      rx="14"
+                      fill={`url(#mascotCyberGoggleLensGrad-${uid})`}
+                      stroke="#38bdf8"
+                      strokeWidth="1.5"
+                    />
+                    <rect
+                      x="217"
+                      y="154"
+                      width="68"
+                      height="48"
+                      rx="14"
+                      fill={`url(#mascotCyberGoggleLensGrad-${uid})`}
+                      stroke="#38bdf8"
+                      strokeWidth="1.5"
+                    />
+                  </g>
+
+                  {/* Quantum Cyber HUD & Reticles Overlays */}
+                  <g opacity="0.9">
+                    <path d="M 124 168 L 120 168 L 120 188 L 124 188" fill="none" stroke="#e0f2fe" strokeWidth="1.5" />
+                    <path d="M 174 168 L 178 168 L 178 188 L 174 188" fill="none" stroke="#e0f2fe" strokeWidth="1.5" />
+                    <circle cx="149" cy="178" r="7" fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 2" />
+                    <line x1="141" y1="178" x2="157" y2="178" stroke="#38bdf8" strokeWidth="1" />
+                    <line x1="149" y1="170" x2="149" y2="186" stroke="#38bdf8" strokeWidth="1" />
+                    <text x="149" y="196" fontSize="7" fontFamily="monospace" fontWeight="bold" fill="#bae6fd" textAnchor="middle">SYS:OK</text>
+
+                    <circle cx="251" cy="178" r="10" fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="5 3" />
+                    <circle cx="251" cy="178" r="4" fill="#00f0ff" />
+                    <line x1="230" y1="194" x2="230" y2="191" stroke="#38bdf8" strokeWidth="1.5" />
+                    <line x1="233" y1="194" x2="233" y2="188" stroke="#38bdf8" strokeWidth="1.5" />
+                    <line x1="236" y1="194" x2="236" y2="190" stroke="#38bdf8" strokeWidth="1.5" />
+                    <line x1="239" y1="194" x2="239" y2="186" stroke="#38bdf8" strokeWidth="1.5" />
+                    <text x="258" y="196" fontSize="7" fontFamily="monospace" fontWeight="bold" fill="#bae6fd" textAnchor="middle">HUD:2.0</text>
+                  </g>
+
+                  {/* Signature 🥽 Curved Glass Specular Highlight Arc */}
+                  <g>
+                    <path
+                      d="M 124 162 Q 149 154 174 162"
+                      fill="none"
+                      stroke="#ffffff"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      opacity="0.8"
+                    />
+                    <circle cx="127" cy="168" r="1.5" fill="#ffffff" opacity="0.9" />
+                    <path
+                      d="M 226 162 Q 251 154 276 162"
+                      fill="none"
+                      stroke="#ffffff"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      opacity="0.8"
+                    />
+                    <circle cx="229" cy="168" r="1.5" fill="#ffffff" opacity="0.9" />
+                  </g>
+
+                  {/* Outer Temple LEDs */}
+                  <circle cx="106" cy="164" r="2.5" fill="#00f0ff" className="animate-pulse" />
+                  <circle cx="294" cy="164" r="2.5" fill="#00f0ff" className="animate-pulse" />
                 </g>
               )}
             </g>

@@ -374,6 +374,8 @@ const DEFAULT_SETTINGS: UserSettings = {
 
 const DEFAULT_STATS: UserStats = {
   streak: 0,
+  streakAtLastCompletion: 0,
+  streakStatus: "active" as const,
   bestStreak: 0,
   totalPoints: 0,
   level: 1,
@@ -4683,15 +4685,14 @@ export default function App() {
       if (!prevStats.trophies || prevStats.trophies.length === 0) return prevStats;
 
       const todayStr = new Date().toISOString().split('T')[0];
-      // If user active date is missing, set to today and do not decay
-      if (!prevStats.lastActiveDate) {
-        return { ...prevStats, lastActiveDate: todayStr };
-      }
+      const lastDateStr = prevStats.lastCompletedDate
+        ? prevStats.lastCompletedDate.split('T')[0].split(' ')[0].trim()
+        : (prevStats.lastActiveDate || todayStr);
 
-      const lastActiveTime = new Date(prevStats.lastActiveDate).getTime();
-      const todayTime = new Date(todayStr).getTime();
+      const lastActiveTime = new Date(lastDateStr + "T00:00:00").getTime();
+      const todayTime = new Date(todayStr + "T00:00:00").getTime();
       if (isNaN(lastActiveTime) || isNaN(todayTime)) {
-        return { ...prevStats, lastActiveDate: todayStr };
+        return prevStats;
       }
 
       const daysInactive = Math.floor((todayTime - lastActiveTime) / (1000 * 60 * 60 * 24));
@@ -4720,14 +4721,29 @@ export default function App() {
             sendNotification("Trophy Alert! 🧊", {
               body: "One of your trophies turned to ICE! Complete a challenge today to restore it!",
               icon: nexoraAppIcon,
+              isAutomated: false,
             });
             showToast("TROPHY ALERT: ICE DETECTED! 🧊", "info");
+          }
+
+          if (user?.uid) {
+            try {
+              const userRef = doc(db, "users", user.uid);
+              const rewardsRef = doc(db, "users", user.uid, "rewards", "main");
+              const statsMainRef = doc(db, "users", user.uid, "stats", "main");
+              updateDoc(userRef, {
+                trophies,
+                "stats.trophies": trophies,
+                updatedAt: serverTimestamp(),
+              }).catch(() => {});
+              setDoc(rewardsRef, { trophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+              setDoc(statsMainRef, { trophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+            } catch (e) {}
           }
 
           return {
             ...prevStats,
             trophies,
-            lastActiveDate: todayStr,
           };
         }
       } else if (daysInactive >= 3) {
@@ -4740,10 +4756,25 @@ export default function App() {
             type: "broken",
             lastUpdated: new Date().toISOString(),
           };
+
+          if (user?.uid) {
+            try {
+              const userRef = doc(db, "users", user.uid);
+              const rewardsRef = doc(db, "users", user.uid, "rewards", "main");
+              const statsMainRef = doc(db, "users", user.uid, "stats", "main");
+              updateDoc(userRef, {
+                trophies,
+                "stats.trophies": trophies,
+                updatedAt: serverTimestamp(),
+              }).catch(() => {});
+              setDoc(rewardsRef, { trophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+              setDoc(statsMainRef, { trophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+            } catch (e) {}
+          }
+
           return {
             ...prevStats,
             trophies,
-            lastActiveDate: todayStr,
           };
         } else {
           const goldIndex = trophies.findIndex((t) => t.type === "golden");
@@ -4753,10 +4784,25 @@ export default function App() {
               type: "ice",
               lastUpdated: new Date().toISOString(),
             };
+
+            if (user?.uid) {
+              try {
+                const userRef = doc(db, "users", user.uid);
+                const rewardsRef = doc(db, "users", user.uid, "rewards", "main");
+                const statsMainRef = doc(db, "users", user.uid, "stats", "main");
+                updateDoc(userRef, {
+                  trophies,
+                  "stats.trophies": trophies,
+                  updatedAt: serverTimestamp(),
+                }).catch(() => {});
+                setDoc(rewardsRef, { trophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+                setDoc(statsMainRef, { trophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+              } catch (e) {}
+            }
+
             return {
               ...prevStats,
               trophies,
-              lastActiveDate: todayStr,
             };
           }
         }
@@ -4764,9 +4810,9 @@ export default function App() {
 
       return prevStats;
     });
-  }, [onUpdateStats, settings.badgeSettings?.trophyAlerts]);
+  }, [onUpdateStats, settings.badgeSettings?.trophyAlerts, user]);
 
-  // Streak Inactivity & Notification Check (Day 1: Ice, Day 2+: Broken)
+  // Streak Inactivity & Notification Check (Day 1: Ice, Day 2+: Broken with count reduction)
   const checkStreak = useCallback(() => {
     onUpdateStats((prevStats) => {
       if (!prevStats || (prevStats.streak || 0) <= 0) return prevStats;
@@ -4779,34 +4825,99 @@ export default function App() {
         if (lastAlert !== todayStr && settings.badgeSettings?.trophyAlerts !== false) {
           localStorage.setItem("nexora_last_streak_ice_alert", todayStr);
           sendNotification("Streak Freeze Alert! ❄️", {
-            body: "Your streak turned to ice! Complete a task today to thaw your flame and protect your streak!",
+            body: "Your streak turned to ice! Complete today's challenge to thaw your flame and keep your streak alive!",
             icon: nexoraAppIcon,
+            isAutomated: false,
           });
           showToast("STREAK ALERT: ICE FLAME DETECTED! ❄️", "info");
+          try {
+            play("water");
+            vibrate(VIBRATION_PATTERNS.NOTIFY);
+          } catch (e) {}
         }
       } else if (streakInfo.status === "broken") {
         const lastAlert = localStorage.getItem("nexora_last_streak_broken_alert");
         if (lastAlert !== todayStr && settings.badgeSettings?.trophyAlerts !== false) {
           localStorage.setItem("nexora_last_streak_broken_alert", todayStr);
           sendNotification("Streak Shattered! 💔", {
-            body: "Your streak broke from inactivity! Open Nexora to restore your flame and rebuild your habit streak!",
+            body: "Your streak broke from inactivity! Complete today's challenge to reignite your flame!",
             icon: nexoraAppIcon,
+            isAutomated: false,
           });
           showToast("STREAK ALERT: FLAME SHATTERED! 💔", "error");
+          try {
+            play("chest_land");
+            vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+          } catch (e) {}
         }
+      }
+
+      // Preserve streakAtLastCompletion so baseStreak remains rock-solid during inactivity
+      const baseStreak =
+        prevStats.streakAtLastCompletion !== undefined && prevStats.streakAtLastCompletion !== null
+          ? prevStats.streakAtLastCompletion
+          : prevStats.streak;
+
+      // If status or streak count changed, update local stats and sync to Firestore
+      if (
+        prevStats.streakStatus !== streakInfo.status ||
+        prevStats.streak !== streakInfo.streakCount ||
+        prevStats.streakAtLastCompletion !== baseStreak
+      ) {
+        if (user?.uid) {
+          try {
+            const userRef = doc(db, "users", user.uid);
+            const rewardsRef = doc(db, "users", user.uid, "rewards", "main");
+            const statsMainRef = doc(db, "users", user.uid, "stats", "main");
+            const streakPayload = {
+              streak: streakInfo.streakCount,
+              streakStatus: streakInfo.status,
+              streakAtLastCompletion: baseStreak,
+              "stats.streak": streakInfo.streakCount,
+              "stats.streakStatus": streakInfo.status,
+              "stats.streakAtLastCompletion": baseStreak,
+              updatedAt: serverTimestamp(),
+            };
+            updateDoc(userRef, streakPayload).catch(() => {});
+            setDoc(rewardsRef, {
+              streak: streakInfo.streakCount,
+              streakStatus: streakInfo.status,
+              streakAtLastCompletion: baseStreak,
+              updatedAt: serverTimestamp()
+            }, { merge: true }).catch(() => {});
+            setDoc(statsMainRef, {
+              streak: streakInfo.streakCount,
+              streakStatus: streakInfo.status,
+              streakAtLastCompletion: baseStreak,
+              updatedAt: serverTimestamp()
+            }, { merge: true }).catch(() => {});
+          } catch (e) {}
+        }
+
+        return {
+          ...prevStats,
+          streak: streakInfo.streakCount,
+          streakStatus: streakInfo.status,
+          streakAtLastCompletion: baseStreak,
+        };
       }
 
       return prevStats;
     });
-  }, [onUpdateStats, settings.badgeSettings?.trophyAlerts]);
+  }, [onUpdateStats, settings.badgeSettings?.trophyAlerts, user, play]);
 
-  // Run trophy & streak inactivity check once after hydration
+  // Run trophy & streak inactivity check once after hydration and when date changes
+  const lastInactivityCheckRef = useRef<string>("");
   useEffect(() => {
     if (!isDataReady || !isStateHydrated) return;
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (lastInactivityCheckRef.current === todayStr) return;
+    lastInactivityCheckRef.current = todayStr;
+
     const timer = setTimeout(() => {
       checkTrophies();
       checkStreak();
-    }, 2000);
+    }, 1500);
     return () => clearTimeout(timer);
   }, [checkTrophies, checkStreak, isDataReady, isStateHydrated]);
 
@@ -5086,7 +5197,7 @@ export default function App() {
     coinsToAdd += plantBonusCoins;
     xpToAdd += plantBonusXP;
 
-    // STRICT DAILY STREAK CALCULATION - ALWAYS INCREMENT STREAK BY 1 ON COMPLETING ANY CHALLENGE (OFFICIAL OR CUSTOM PLAN)
+    // STRICT DAILY STREAK CALCULATION - Increment streak by 1 on completing challenge on a new day
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split("T")[0];
@@ -5095,13 +5206,15 @@ export default function App() {
     const rawLastCompleted = stats.lastCompletedDate || "";
     const normalizedLastCompleted = rawLastCompleted ? rawLastCompleted.split("T")[0].split(" ")[0].trim() : "";
 
+    const isAlreadyCompletedToday = normalizedLastCompleted === today;
     let currentActualStreak = stats.streak || 0;
-    let streakToSave = currentActualStreak + 1;
+    // Only increment daily streak once per calendar day! Completing multiple tasks on the same day maintains the achieved streak.
+    let streakToSave = isAlreadyCompletedToday ? currentActualStreak : currentActualStreak + 1;
     let usedStreakProtection = false;
 
     const finalStreakShow = streakToSave;
     setSessionStreak(finalStreakShow);
-    setIsNewStreak(true); // Always treat as a new streak bump for the animation
+    setIsNewStreak(!isAlreadyCompletedToday); // Only play bump animation on the day's first completion
 
     if (usedXPBoost) {
       showToast("XP Overdrive consumed! Triple XP added! 🚀⚡", "success");
@@ -5210,6 +5323,8 @@ export default function App() {
       level: newLevel,
       coins: (stats.coins || 0) + coinsToAdd + levelUpBonusCoins,
       streak: streakToSave,
+      streakAtLastCompletion: streakToSave,
+      streakStatus: 'active' as const,
       bestStreak: newBestStreak,
       totalCompletedDays: newTotalCompletedDays,
       lastCompletedDate: newLastCompletedDate,
@@ -5237,6 +5352,8 @@ export default function App() {
 
       const coreStatsPayload = {
         streak: updatedStats.streak,
+        streakAtLastCompletion: updatedStats.streakAtLastCompletion,
+        streakStatus: 'active',
         bestStreak: updatedStats.bestStreak,
         totalPoints: updatedStats.totalPoints,
         weeklyPoints: updatedStats.weeklyPoints,
@@ -5246,10 +5363,11 @@ export default function App() {
         coins: updatedStats.coins,
         totalCompletedDays: updatedStats.totalCompletedDays,
         lastCompletedDate: updatedStats.lastCompletedDate,
+        trophies: updatedStats.trophies,
         updatedAt: serverTimestamp(),
       };
 
-      setDoc(userRef, { coins: updatedStats.coins, xp: updatedStats.xp, totalPoints: updatedStats.totalPoints, stats: updatedStats, streak: updatedStats.streak, lastCompletedDate: updatedStats.lastCompletedDate, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+      setDoc(userRef, { coins: updatedStats.coins, xp: updatedStats.xp, totalPoints: updatedStats.totalPoints, stats: updatedStats, streak: updatedStats.streak, streakAtLastCompletion: updatedStats.streakAtLastCompletion, streakStatus: 'active', trophies: updatedStats.trophies, lastCompletedDate: updatedStats.lastCompletedDate, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
       setDoc(userStatsMainRef, coreStatsPayload, { merge: true }).catch(() => {});
       setDoc(userTopStatsRef, coreStatsPayload, { merge: true }).catch(() => {});
 

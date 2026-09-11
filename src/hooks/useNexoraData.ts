@@ -513,7 +513,10 @@ function mergeStats(dbStats: UserStats, localStats: UserStats, defaultStats: Use
     ...localStats,
     ...dbStats, // dbStats is spread last so that unhandled positive remote fields are preserved
 
-    streak: Math.max(dbStats.streak || 0, localStats.streak || 0),
+    // Streak from dbStats is the remote authoritative source; only fall back to local if dbStats is missing
+    streak: dbStats.streak !== undefined ? dbStats.streak : (localStats.streak ?? defaultStats.streak),
+    streakAtLastCompletion: dbStats.streakAtLastCompletion ?? localStats.streakAtLastCompletion ?? (dbStats.streak !== undefined ? dbStats.streak : (localStats.streak ?? defaultStats.streak)),
+    streakStatus: dbStats.streakStatus || localStats.streakStatus || 'active',
     bestStreak: Math.max(dbStats.bestStreak || 0, localStats.bestStreak || 0),
     totalPoints: Math.max(dbStats.totalPoints || 0, localStats.totalPoints || 0),
     xp: Math.max(dbStats.xp || 0, localStats.xp || 0),
@@ -524,10 +527,10 @@ function mergeStats(dbStats: UserStats, localStats: UserStats, defaultStats: Use
     weeklyPoints: Math.max(dbStats.weeklyPoints || 0, localStats.weeklyPoints || 0),
     weeklyXP: Math.max(dbStats.weeklyXP || 0, localStats.weeklyXP || 0),
     
-    lastCompletedDate: (dbStats.lastCompletedDate || "") > (localStats.lastCompletedDate || "")
+    lastCompletedDate: (dbStats.lastCompletedDate !== undefined && dbStats.lastCompletedDate !== null)
       ? dbStats.lastCompletedDate
       : (localStats.lastCompletedDate ?? null),
-    lastActiveDate: (dbStats.lastActiveDate || "") > (localStats.lastActiveDate || "")
+    lastActiveDate: (dbStats.lastActiveDate !== undefined && dbStats.lastActiveDate !== null)
       ? dbStats.lastActiveDate
       : (localStats.lastActiveDate ?? null),
     lastGiftDate: (dbStats.lastGiftDate || "") > (localStats.lastGiftDate || "")
@@ -1987,8 +1990,15 @@ export function useNexoraData(
                 DEFAULT_STATS.totalPoints
               );
 
-              finalStreak = Math.max(docData.streak || 0, docData.stats?.streak || 0, rewardsData?.streak || 0, rewardsTopData?.streak || 0, rankTopData?.streak || 0, leaderboardTopData?.streak || 0, statsMainData?.streak || 0, statsTopData?.streak || 0, DEFAULT_STATS.streak);
-              finalBestStreak = Math.max(docData.bestStreak || 0, docData.stats?.bestStreak || 0, rewardsData?.bestStreak || 0, rewardsTopData?.bestStreak || 0, rankTopData?.bestStreak || 0, leaderboardTopData?.bestStreak || 0, statsMainData?.bestStreak || 0, statsTopData?.bestStreak || 0, DEFAULT_STATS.bestStreak);
+              // Prioritize the authoritative streak directly on docData if present, preventing stale collections from restoring decayed numbers
+              if (docData.streak !== undefined && docData.streak !== null) {
+                finalStreak = Number(docData.streak);
+              } else if (docData.stats?.streak !== undefined && docData.stats?.streak !== null) {
+                finalStreak = Number(docData.stats.streak);
+              } else {
+                finalStreak = Math.max(rewardsData?.streak || 0, statsMainData?.streak || 0, statsTopData?.streak || 0, DEFAULT_STATS.streak);
+              }
+              finalBestStreak = Math.max(docData.bestStreak || 0, docData.stats?.bestStreak || 0, rewardsData?.bestStreak || 0, rewardsTopData?.bestStreak || 0, rankTopData?.bestStreak || 0, leaderboardTopData?.bestStreak || 0, statsMainData?.bestStreak || 0, statsTopData?.bestStreak || 0, finalStreak, DEFAULT_STATS.bestStreak);
               finalTotalPoints = maxOverallPoints;
               finalXP = Math.max(docData.xp || 0, docData.stats?.xp || 0, rewardsData?.xp || 0, rewardsTopData?.xp || 0, rankTopData?.xp || 0, leaderboardTopData?.xp || 0, statsMainData?.xp || 0, statsTopData?.xp || 0, maxOverallPoints, DEFAULT_STATS.xp);
               finalLevel = Math.max(docData.level || 1, docData.stats?.level || 1, rewardsData?.level || 1, rewardsTopData?.level || 1, rankTopData?.level || 1, leaderboardTopData?.level || 1, statsMainData?.level || 1, statsTopData?.level || 1, DEFAULT_STATS.level || 1);
@@ -2010,10 +2020,13 @@ export function useNexoraData(
               finalWeeklyXP = Math.max(docData.weeklyXP || 0, docData.stats?.weeklyXP || 0, rewardsData?.weeklyXP || 0, rewardsTopData?.weeklyXP || 0, rankTopData?.weeklyXP || 0, leaderboardTopData?.weeklyXP || 0, statsMainData?.weeklyXP || 0, statsTopData?.weeklyXP || 0, finalXP, maxOverallPoints, DEFAULT_STATS.weeklyXP);
             }
             
-            // For complex structures, use the one that is non-empty
-            const finalTrophies = (rewardsData?.trophies?.length > 0) ? rewardsData.trophies : ((rewardsTopData?.trophies?.length > 0) ? rewardsTopData.trophies : ((statsMainData?.trophies?.length > 0) ? statsMainData.trophies : ((docData.stats?.trophies?.length > 0) ? docData.stats.trophies : (docData.trophies || []))));
+            // Prioritize primary docData trophies (where ice/broken statuses are recorded in real-time)
+            const finalTrophies = (docData.trophies?.length > 0) ? docData.trophies : ((docData.stats?.trophies?.length > 0) ? docData.stats.trophies : ((statsMainData?.trophies?.length > 0) ? statsMainData.trophies : ((rewardsData?.trophies?.length > 0) ? rewardsData.trophies : (rewardsTopData?.trophies || []))));
             const finalUnlockedHats = (rewardsData?.unlockedHats?.length > 0) ? rewardsData.unlockedHats : ((statsMainData?.unlockedHats?.length > 0) ? statsMainData.unlockedHats : ((docData.stats?.unlockedHats?.length > 0) ? docData.stats.unlockedHats : (docData.unlockedHats || [])));
             
+            const finalStreakAtLastCompletion = docData.streakAtLastCompletion ?? docData.stats?.streakAtLastCompletion ?? rewardsData?.streakAtLastCompletion ?? statsMainData?.streakAtLastCompletion ?? finalStreak;
+            const finalStreakStatus = docData.streakStatus ?? docData.stats?.streakStatus ?? rewardsData?.streakStatus ?? statsMainData?.streakStatus ?? 'active';
+
             // Merge Notebook Notes cleanly so notes are 100% preserved
             const rawNotes = [
               ...(Array.isArray(notebookNotesList) ? notebookNotesList : []),
@@ -2053,6 +2066,8 @@ export function useNexoraData(
               ...(docData.stats || {}),
               
               streak: finalStreak,
+              streakAtLastCompletion: finalStreakAtLastCompletion,
+              streakStatus: finalStreakStatus,
               bestStreak: finalBestStreak,
               totalPoints: finalTotalPoints,
               xp: finalXP,
@@ -2406,6 +2421,78 @@ export function useNexoraData(
     };
   }, []);
 
+  // REAL-TIME MULTI-DEVICE SYNCHRONIZATION LISTENER
+  // Subscribes to the user document so streak, streakStatus, trophies, and completion state
+  // update in real-time across multiple logged-in devices without requiring a refresh.
+  useEffect(() => {
+    if (!user || !user.uid || !isDataReady || !dataLoadedFromFirestore.current) return;
+
+    const userDocRef = doc(db, "users", user.uid);
+    console.log(`[MULTI-DEVICE SYNC] Attaching real-time onSnapshot listener for user UID: ${user.uid}`);
+
+    const unsubscribeSnapshot = onSnapshot(
+      userDocRef,
+      (snapshot) => {
+        // Skip local writes made by this device to avoid echoing or infinite loops
+        if (snapshot.metadata.hasPendingWrites) return;
+        if (!snapshot.exists()) return;
+
+        const data = snapshot.data();
+        if (!data) return;
+
+        const remoteStats = data.stats || {};
+        const remoteStreak = data.streak !== undefined ? data.streak : remoteStats.streak;
+        const remoteStreakAtLastCompletion = data.streakAtLastCompletion !== undefined ? data.streakAtLastCompletion : remoteStats.streakAtLastCompletion;
+        const remoteStreakStatus = data.streakStatus || remoteStats.streakStatus;
+        const remoteTrophies = data.trophies || remoteStats.trophies;
+        const remoteLastCompleted = data.lastCompletedDate || remoteStats.lastCompletedDate;
+
+        rawSetStats((prev) => {
+          let hasChanges = false;
+          const updated = { ...prev };
+
+          if (remoteStreak !== undefined && remoteStreak !== prev.streak) {
+            updated.streak = remoteStreak;
+            hasChanges = true;
+          }
+          if (remoteStreakAtLastCompletion !== undefined && remoteStreakAtLastCompletion !== prev.streakAtLastCompletion) {
+            updated.streakAtLastCompletion = remoteStreakAtLastCompletion;
+            hasChanges = true;
+          }
+          if (remoteStreakStatus && remoteStreakStatus !== prev.streakStatus) {
+            updated.streakStatus = remoteStreakStatus;
+            hasChanges = true;
+          }
+          if (remoteLastCompleted && remoteLastCompleted !== prev.lastCompletedDate) {
+            updated.lastCompletedDate = remoteLastCompleted;
+            hasChanges = true;
+          }
+          if (remoteTrophies && Array.isArray(remoteTrophies) && !deepEqual(remoteTrophies, prev.trophies)) {
+            updated.trophies = remoteTrophies;
+            hasChanges = true;
+          }
+
+          if (hasChanges) {
+            console.log(`[MULTI-DEVICE SYNC] Remote Firestore snapshot detected external device change! streak=${updated.streak}, streakStatus=${updated.streakStatus}`);
+            try {
+              localStorage.setItem("nexora_stats", JSON.stringify(updated));
+            } catch (e) {}
+            return updated;
+          }
+          return prev;
+        });
+      },
+      (error) => {
+        console.warn(`[MULTI-DEVICE SYNC] Real-time onSnapshot listener encountered an error:`, error);
+      }
+    );
+
+    return () => {
+      console.log(`[MULTI-DEVICE SYNC] Detaching real-time listener for user UID: ${user.uid}`);
+      unsubscribeSnapshot();
+    };
+  }, [user, isDataReady]);
+
   // Background Sync Effect with Aggressive Throttling (Optimized)
   useEffect(() => {
     if (!user || !isDataReady || !dataLoadedFromFirestore.current) return;
@@ -2530,6 +2617,8 @@ export function useNexoraData(
                     ...DEFAULT_STATS,
                     ...dbData.stats,
                     streak: dbData.streak ?? dbData.stats?.streak ?? DEFAULT_STATS.streak,
+                    streakAtLastCompletion: dbData.streakAtLastCompletion ?? dbData.stats?.streakAtLastCompletion ?? (dbData.streak ?? dbData.stats?.streak ?? DEFAULT_STATS.streak),
+                    streakStatus: dbData.streakStatus ?? dbData.stats?.streakStatus ?? 'active',
                     bestStreak: dbData.bestStreak ?? dbData.stats?.bestStreak ?? DEFAULT_STATS.bestStreak,
                     totalPoints: dbData.totalPoints ?? dbData.stats?.totalPoints ?? DEFAULT_STATS.totalPoints,
                     xp: dbData.xp ?? dbData.stats?.xp ?? DEFAULT_STATS.xp,
@@ -2699,6 +2788,8 @@ export function useNexoraData(
               coins: stats.coins || 0,
               xp: stats.xp || 0,
               streak: stats.streak || 0,
+              streakAtLastCompletion: stats.streakAtLastCompletion ?? stats.streak ?? 0,
+              streakStatus: stats.streakStatus || 'active',
               bestStreak: stats.bestStreak || 0,
               totalPoints: stats.totalPoints || 0,
               level: stats.level || 1,
@@ -2714,6 +2805,8 @@ export function useNexoraData(
               uid: user.uid,
               userName: settings.displayName || user.displayName || 'Champion',
               streak: stats.streak || 0,
+              streakAtLastCompletion: stats.streakAtLastCompletion ?? stats.streak ?? 0,
+              streakStatus: stats.streakStatus || 'active',
               bestStreak: stats.bestStreak || 0,
               xp: stats.xp || 0,
               coins: stats.coins || 0,
@@ -2789,6 +2882,8 @@ export function useNexoraData(
             const statsMainDocRef = doc(db, "users", user.uid, "stats", "main");
             const statsMainPayload = cleanPayload({
               streak: stats.streak || 0,
+              streakAtLastCompletion: stats.streakAtLastCompletion ?? stats.streak ?? 0,
+              streakStatus: stats.streakStatus || 'active',
               bestStreak: stats.bestStreak || 0,
               totalPoints: stats.totalPoints || 0,
               weeklyPoints: stats.weeklyPoints || 0,
@@ -3334,6 +3429,8 @@ export function useNexoraData(
                 ...DEFAULT_STATS,
                 ...dbData.stats,
                 streak: dbData.streak ?? dbData.stats?.streak ?? DEFAULT_STATS.streak,
+                streakAtLastCompletion: dbData.streakAtLastCompletion ?? dbData.stats?.streakAtLastCompletion ?? (dbData.streak ?? dbData.stats?.streak ?? DEFAULT_STATS.streak),
+                streakStatus: dbData.streakStatus ?? dbData.stats?.streakStatus ?? 'active',
                 bestStreak: dbData.bestStreak ?? dbData.stats?.bestStreak ?? DEFAULT_STATS.bestStreak,
                 totalPoints: dbData.totalPoints ?? dbData.stats?.totalPoints ?? DEFAULT_STATS.totalPoints,
                 xp: dbData.xp ?? dbData.stats?.xp ?? DEFAULT_STATS.xp,
@@ -3494,6 +3591,8 @@ export function useNexoraData(
           coins: stats.coins || 0,
           xp: stats.xp || 0,
           streak: stats.streak || 0,
+          streakAtLastCompletion: stats.streakAtLastCompletion ?? stats.streak ?? 0,
+          streakStatus: stats.streakStatus || 'active',
           bestStreak: stats.bestStreak || 0,
           totalPoints: stats.totalPoints || 0,
           level: stats.level || 1,
@@ -3509,6 +3608,8 @@ export function useNexoraData(
           uid: user.uid,
           userName: settings.displayName || user.displayName || 'Champion',
           streak: stats.streak || 0,
+          streakAtLastCompletion: stats.streakAtLastCompletion ?? stats.streak ?? 0,
+          streakStatus: stats.streakStatus || 'active',
           bestStreak: stats.bestStreak || 0,
           xp: stats.xp || 0,
           coins: stats.coins || 0,

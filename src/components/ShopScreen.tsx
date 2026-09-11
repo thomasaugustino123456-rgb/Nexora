@@ -10,6 +10,9 @@ import { AnimatedVikingHat } from "./AnimatedVikingHat";
 import { AnimatedDetectiveKit } from "./AnimatedDetectiveKit";
 import { AnimatedWizardHat } from "./AnimatedWizardHat";
 import { AnimatedRoyalCrown } from "./AnimatedRoyalCrown";
+import { AnimatedCyberGoggles } from "./AnimatedCyberGoggles";
+import { AnimatedHeroCape } from "./AnimatedHeroCape";
+import { AnimatedCyberExosuit } from "./AnimatedCyberExosuit";
 import { AnimatedEffectPreview } from "./AnimatedEffectPreview";
 import { LivingMascot } from "./LivingMascot";
 import { MascotCollectionSection } from "./MascotCollectionSection";
@@ -1098,6 +1101,12 @@ function MascotSkinsHorizontalShowcase({
                     <AnimatedWizardHat className="w-18 h-18" />
                   ) : item.id === "skin-crown" ? (
                     <AnimatedRoyalCrown className="w-18 h-18" />
+                  ) : item.id === "skin-apex" ? (
+                    <AnimatedCyberGoggles className="w-20 h-14" />
+                  ) : item.id === "skin-cape" ? (
+                    <AnimatedHeroCape className="w-20 h-16" />
+                  ) : item.id === "skin-armor" ? (
+                    <AnimatedCyberExosuit className="w-20 h-16" />
                   ) : (
                     item.icon
                   )}

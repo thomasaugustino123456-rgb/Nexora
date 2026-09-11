@@ -245,6 +245,7 @@ export interface GratitudeEntry {
 
 export interface UserStats {
   streak: number;
+  streakAtLastCompletion?: number;
   bestStreak: number;
   totalPoints: number;
   xp: number;
