@@ -1663,7 +1663,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
               {/* TAB 8: OFFICIAL SUPPORT GMAIL INBOX */}
               {activeTab === "tab_gmail" && (
-                <AdminGmailSupport showToast={showToast} />
+                <AdminGmailSupport
+                  showToast={showToast}
+                  onNavigateToSignals={() => setActiveTab("tab_signals")}
+                />
               )}
             </motion.div>
           )}

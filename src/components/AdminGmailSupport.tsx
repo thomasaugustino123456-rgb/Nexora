@@ -14,7 +14,11 @@ import {
   ChevronRight,
   Filter,
   Sparkles,
-  ArrowLeft
+  ArrowLeft,
+  Copy,
+  Check,
+  MessageSquare,
+  ChevronDown
 } from "lucide-react";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "../firebase";
@@ -33,9 +37,10 @@ interface EmailMessage {
 
 interface AdminGmailSupportProps {
   showToast: (msg: string, type: "success" | "error" | "info") => void;
+  onNavigateToSignals?: () => void;
 }
 
-export const AdminGmailSupport: React.FC<AdminGmailSupportProps> = ({ showToast }) => {
+export const AdminGmailSupport: React.FC<AdminGmailSupportProps> = ({ showToast, onNavigateToSignals }) => {
   const [accessToken, setAccessToken] = useState<string | null>(() => {
     return sessionStorage.getItem("nexora_support_gmail_token");
   });
@@ -48,12 +53,27 @@ export const AdminGmailSupport: React.FC<AdminGmailSupportProps> = ({ showToast 
   const [selectedMessage, setSelectedMessage] = useState<EmailMessage | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filterType, setFilterType] = useState<"all" | "unread">("all");
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [showAdvancedOAuth, setShowAdvancedOAuth] = useState<boolean>(false);
+  const [copiedEmail, setCopiedEmail] = useState<boolean>(false);
+
+  const handleCopyEmail = () => {
+    try {
+      navigator.clipboard.writeText("nexoraterm1234@gmail.com");
+      setCopiedEmail(true);
+      showToast("Copied nexoraterm1234@gmail.com to clipboard", "success");
+      setTimeout(() => setCopiedEmail(false), 2000);
+    } catch {
+      showToast("nexoraterm1234@gmail.com", "info");
+    }
+  };
 
   const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 
   // Connect via Google OAuth popup
   const handleConnectGmail = async () => {
     setIsConnecting(true);
+    setFetchError(null);
     try {
       const provider = new GoogleAuthProvider();
       provider.addScope(GMAIL_SCOPE);
@@ -95,9 +115,10 @@ export const AdminGmailSupport: React.FC<AdminGmailSupportProps> = ({ showToast 
     setConnectedEmail(null);
     setMessages([]);
     setSelectedMessage(null);
+    setFetchError(null);
     sessionStorage.removeItem("nexora_support_gmail_token");
     sessionStorage.removeItem("nexora_support_gmail_email");
-    showToast("Disconnected support Gmail account", "info");
+    showToast("Cleared Gmail link. You can read emails via the Gmail app.", "info");
   };
 
   // Decode standard base64url message payload parts
@@ -226,13 +247,16 @@ export const AdminGmailSupport: React.FC<AdminGmailSupportProps> = ({ showToast 
       const resolved = await Promise.all(detailsPromises);
       const filteredMsgs = resolved.filter((m): m is EmailMessage => m !== null);
       setMessages(filteredMsgs);
+      setFetchError(null);
 
       if (filteredMsgs.length > 0 && !selectedMessage) {
         setSelectedMessage(filteredMsgs[0]);
       }
     } catch (err: any) {
       console.error("Error fetching support emails:", err);
-      showToast("Unable to load Gmail messages. Check permissions.", "error");
+      setFetchError(
+        "Google requires the Gmail API to be enabled in Google Cloud Console. Since you manage support via the official Gmail app, you can open your inbox directly, or clear this link."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -260,24 +284,33 @@ export const AdminGmailSupport: React.FC<AdminGmailSupportProps> = ({ showToast 
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-lg font-black text-slate-900 uppercase">
-                Support Gmail Inbox
+                Support & Helpdesk Hub
               </h3>
               <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                 Official Helpdesk
               </span>
             </div>
             <p className="text-xs text-slate-500 font-semibold mt-0.5">
-              Live communication link for <span className="font-bold text-slate-800">nexoraterm1234@gmail.com</span>
+              Support channel for <span className="font-bold text-slate-800">nexoraterm1234@gmail.com</span>
             </p>
           </div>
         </div>
 
         {connectedEmail ? (
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="text-right hidden sm:block mr-1">
               <span className="text-[9px] font-black uppercase text-emerald-700 block">Connected Account</span>
               <span className="text-xs font-bold text-slate-800 font-mono">{connectedEmail}</span>
             </div>
+            <a
+              href="https://mail.google.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2.5 px-3.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-xs"
+            >
+              <ExternalLink size={13} />
+              <span>Open Gmail</span>
+            </a>
             <button
               onClick={() => fetchEmails()}
               disabled={isLoading}
@@ -295,77 +328,244 @@ export const AdminGmailSupport: React.FC<AdminGmailSupportProps> = ({ showToast 
             </button>
           </div>
         ) : (
-          <button
-            onClick={handleConnectGmail}
-            disabled={isConnecting}
-            className="p-3.5 px-6 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-md shadow-red-600/20 hover:scale-105 active:scale-95 flex items-center gap-2"
-          >
-            {isConnecting ? (
-              <>
-                <RefreshCw size={15} className="animate-spin" />
-                <span>Connecting Account...</span>
-              </>
-            ) : (
-              <>
-                <Mail size={15} />
-                <span>Connect nexoraterm1234@gmail.com</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href="https://mail.google.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-3 px-5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-red-600/20 hover:scale-105 active:scale-95 flex items-center gap-2"
+            >
+              <ExternalLink size={14} />
+              <span>Open Gmail App / Web</span>
+            </a>
+          </div>
         )}
       </div>
 
+      {fetchError && (
+        <div className="bg-amber-50/90 border border-amber-200 rounded-3xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 bg-amber-100 text-amber-800 rounded-2xl shrink-0 mt-0.5 md:mt-0">
+              <AlertCircle size={20} />
+            </div>
+            <div>
+              <h5 className="text-sm font-black text-slate-900 uppercase">
+                Direct Gmail App Notice
+              </h5>
+              <p className="text-xs text-slate-600 font-medium mt-1 max-w-xl leading-relaxed">
+                Google requires the Gmail API to be enabled in Google Cloud Console for in-app syncing. Since you manage support via the official Gmail app, you can read and answer incoming emails directly in Gmail with zero setup.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 w-full md:w-auto flex-wrap">
+            <a
+              href="https://mail.google.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-xs"
+            >
+              <ExternalLink size={13} />
+              <span>Open Gmail</span>
+            </a>
+            {onNavigateToSignals && (
+              <button
+                onClick={onNavigateToSignals}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-xs"
+              >
+                <MessageSquare size={13} />
+                <span>Signals Desk</span>
+              </button>
+            )}
+            <button
+              onClick={handleDisconnect}
+              className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+            >
+              Clear Link
+            </button>
+          </div>
+        </div>
+      )}
+
       {!accessToken ? (
-        /* Not Connected Welcome State */
-        <div className="bg-white border border-emerald-100/90 rounded-3xl p-10 flex flex-col items-center justify-center text-center shadow-xs">
-          <div className="w-16 h-16 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center border border-red-200 mb-4 shadow-sm">
-            <Mail size={32} />
-          </div>
-          <h4 className="text-xl font-black text-slate-900 uppercase">
-            Authorize Support Inbox Connection
-          </h4>
-          <p className="text-sm text-slate-600 max-w-lg mt-2 font-medium">
-            Connect your <span className="font-bold text-slate-900">nexoraterm1234@gmail.com</span> support account to view live incoming user tickets, emails, and bug reports without leaving the Nexora command center.
-          </p>
+        /* Support Hub Overview (Option B default) */
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Card 1: Official External Gmail */}
+            <div className="bg-white border border-red-100 rounded-3xl p-6 shadow-xs flex flex-col justify-between gap-6 hover:border-red-200 transition-all">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center border border-red-100">
+                    <Mail size={24} />
+                  </div>
+                  <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200">
+                    Direct Email
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-base font-black text-slate-900 uppercase">
+                    Official Support Gmail
+                  </h4>
+                  <p className="text-xs text-slate-500 font-semibold mt-1">
+                    Receive, read, and reply to official inquiries using the Gmail mobile app or browser with real-time push notifications.
+                  </p>
+                </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl w-full mt-8 text-left">
-            <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex flex-col gap-1.5">
-              <div className="flex items-center gap-2 text-emerald-800 font-black text-xs uppercase">
-                <CheckCircle2 size={14} />
-                <span>Real-Time Sync</span>
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-2 mt-2">
+                  <span className="text-xs font-mono font-bold text-slate-800 truncate">
+                    nexoraterm1234@gmail.com
+                  </span>
+                  <button
+                    onClick={handleCopyEmail}
+                    className="p-1.5 px-2.5 bg-white hover:bg-slate-100 text-slate-700 rounded-xl text-[11px] font-bold transition-all border border-slate-200 flex items-center gap-1 shrink-0"
+                  >
+                    {copiedEmail ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                    <span>{copiedEmail ? "Copied" : "Copy"}</span>
+                  </button>
+                </div>
               </div>
-              <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
-                Directly retrieve incoming support messages sent by Nexora operatives.
-              </p>
+
+              <div className="flex items-center gap-2 pt-2">
+                <a
+                  href="https://mail.google.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-red-600/20 flex items-center justify-center gap-2"
+                >
+                  <ExternalLink size={14} />
+                  <span>Launch Support Gmail</span>
+                </a>
+              </div>
             </div>
-            <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex flex-col gap-1.5">
-              <div className="flex items-center gap-2 text-emerald-800 font-black text-xs uppercase">
-                <Shield size={14} />
-                <span>Secure OAuth</span>
+
+            {/* Card 2: In-App User Signals */}
+            <div className="bg-white border border-emerald-100 rounded-3xl p-6 shadow-xs flex flex-col justify-between gap-6 hover:border-emerald-200 transition-all">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-2xl flex items-center justify-center border border-emerald-100">
+                    <MessageSquare size={24} />
+                  </div>
+                  <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    In-App Live
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-base font-black text-slate-900 uppercase">
+                    In-App Signals & Feedback
+                  </h4>
+                  <p className="text-xs text-slate-500 font-semibold mt-1">
+                    Instant user tickets, bug dispatches, and operator feedback stored safely in Firestore. No third-party email required.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex items-center gap-2 mt-2">
+                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                  <span className="text-xs font-semibold text-emerald-950">
+                    Direct real-time synchronization with Firestore
+                  </span>
+                </div>
               </div>
-              <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
-                Read-only protected access. Tokens are kept in memory and never exposed.
-              </p>
-            </div>
-            <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex flex-col gap-1.5">
-              <div className="flex items-center gap-2 text-emerald-800 font-black text-xs uppercase">
-                <Sparkles size={14} />
-                <span>Fast Reply</span>
+
+              <div className="flex items-center gap-2 pt-2">
+                {onNavigateToSignals ? (
+                  <button
+                    onClick={onNavigateToSignals}
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
+                  >
+                    <span>View In-App Signals Desk</span>
+                    <ChevronRight size={14} />
+                  </button>
+                ) : (
+                  <div className="w-full py-3 bg-emerald-50 text-emerald-800 rounded-2xl font-black text-xs uppercase tracking-wider text-center border border-emerald-200">
+                    Active & Receiving Feedback
+                  </div>
+                )}
               </div>
-              <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
-                Launch one-click replies with prefilled subject lines & recipient email.
-              </p>
             </div>
           </div>
 
-          <button
-            onClick={handleConnectGmail}
-            disabled={isConnecting}
-            className="mt-8 py-3.5 px-8 bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-md shadow-red-600/20 hover:scale-105 active:scale-95 flex items-center gap-2.5"
-          >
-            <Mail size={16} />
-            <span>Connect & Authorize Support Gmail</span>
-          </button>
+          {/* Collapsible Future Setup: Google Cloud OAuth */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
+            <button
+              onClick={() => setShowAdvancedOAuth(!showAdvancedOAuth)}
+              className="w-full flex items-center justify-between text-left group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-slate-100 text-slate-600 rounded-xl group-hover:bg-slate-200 transition-all">
+                  <Shield size={18} />
+                </div>
+                <div>
+                  <h5 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                    Direct In-App Gmail Sync (Future / Advanced Option)
+                  </h5>
+                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                    Optional: Connect Google Cloud OAuth to read emails directly inside this tab.
+                  </p>
+                </div>
+              </div>
+              <ChevronDown
+                size={18}
+                className={`text-slate-400 transition-transform ${showAdvancedOAuth ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {showAdvancedOAuth && (
+              <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col gap-6">
+                <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                  To sync Gmail directly into this tab in the future, enable the <strong className="text-slate-800">Gmail API</strong> in your Google Cloud Console project. When ready, click below to connect with Google OAuth:
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col gap-1">
+                    <span className="text-[10px] font-black uppercase text-slate-700 flex items-center gap-1.5">
+                      <CheckCircle2 size={12} className="text-emerald-600" />
+                      1. Enable API
+                    </span>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Enable Gmail API in Google Cloud Console.
+                    </p>
+                  </div>
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col gap-1">
+                    <span className="text-[10px] font-black uppercase text-slate-700 flex items-center gap-1.5">
+                      <CheckCircle2 size={12} className="text-emerald-600" />
+                      2. Add Test User
+                    </span>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Add support email to OAuth consent screen test users.
+                    </p>
+                  </div>
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col gap-1">
+                    <span className="text-[10px] font-black uppercase text-slate-700 flex items-center gap-1.5">
+                      <CheckCircle2 size={12} className="text-emerald-600" />
+                      3. Authorize
+                    </span>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Tick &quot;View email messages&quot; on Google popup.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-start">
+                  <button
+                    onClick={handleConnectGmail}
+                    disabled={isConnecting}
+                    className="py-3 px-6 bg-slate-900 hover:bg-black text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-sm flex items-center gap-2"
+                  >
+                    {isConnecting ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" />
+                        <span>Authenticating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail size={14} />
+                        <span>Connect & Authorize Support Gmail</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         /* Connected Inbox View */
