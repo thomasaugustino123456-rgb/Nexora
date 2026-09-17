@@ -125,19 +125,15 @@ export function getStreakInfo(stats?: Partial<UserStats> | null): StreakInfo {
  * allowing the user to complete a task today to advance it normally.
  */
 export function restoreStreakState(stats: UserStats): UserStats {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split("T")[0];
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = new Date().toISOString().split("T")[0];
   const current = Math.max(1, stats.streak || 1);
 
   return {
     ...stats,
     streak: current,
     streakAtLastCompletion: current,
-    streakStatus: "frozen",
-    lastCompletedDate: yesterdayStr,
+    streakStatus: "active",
+    lastCompletedDate: todayStr,
     lastActiveDate: todayStr,
   };
 }

@@ -6,10 +6,11 @@ import {
   Infinity, Zap, Crown, Coins, Brain, Sparkles, BookOpen, Flower2, Compass, Map, Loader2
 } from 'lucide-react';
 import { 
-  UserStats, UserSettings, DailyProgress, MascotMood, ChallengeStep, CustomPlan 
+  UserStats, UserSettings, DailyProgress, MascotMood, ChallengeStep, CustomPlan, LeaderboardEntry 
 } from '../types';
 import { GardenState } from '../types/garden';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
+import { useSound } from '../hooks/useSound';
 import { translate } from '../lib/translations';
 import { Mascot } from './Mascot';
 import { LivingMascot } from './LivingMascot';
@@ -113,10 +114,15 @@ export interface HomeScreenProps {
   onOpenGarden: () => void,
   gardenState?: GardenState,
   isSyncing?: boolean,
-  onUpdateStats?: (updater: (prev: UserStats) => UserStats) => void
+  onUpdateStats?: (updater: (prev: UserStats) => UserStats) => void,
+  onSaveCustomPlan?: (plan: CustomPlan) => Promise<void> | void,
+  onUpdateSettings?: (updater: Partial<UserSettings> | ((prev: UserSettings) => UserSettings)) => void,
+  onOpenSubscription?: () => void,
+  userRank?: number,
+  leaderboard?: LeaderboardEntry[]
 }
 
-export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenArchives, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask, onOpenGarden, gardenState, isSyncing = false, onUpdateStats }: HomeScreenProps) => {
+export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToday, dailyProgress, settings, history, onOpenGallery, dailyQuest, isPro, emergencyActive, customPlans = [], onStartCustomPlan, onDeleteCustomPlan, onOpenPlanBuilder, onOpenPlant, onOpenArchives, fcmToken, setupFCM, fcmError, showToast, onArchiveChallenge, onSelectTask, onOpenGarden, gardenState, isSyncing = false, onUpdateStats, onSaveCustomPlan, onUpdateSettings, onOpenSubscription, userRank, leaderboard }: HomeScreenProps) => {
 
   const trophies = stats.trophies || [];
   const latestTrophy = trophies[0];
@@ -155,9 +161,17 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
   }, [streakInfo.status]);
 
   // Mascot Interaction & Onboarding Sequence State
+  const { play } = useSound();
   const [tapCount, setTapCount] = useState(0);
   const mascotControls = useAnimationControls();
   const isHomeScreenMountedRef = useRef(false);
+
+  // Stat inspection state (clicks on Coins, XP, Streak)
+  const [statInspection, setStatInspection] = useState<'coins' | 'xp' | 'streak' | null>(null);
+  const statInspectionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Idle challenge reminder state
+  const [isIdleChallengeReminder, setIsIdleChallengeReminder] = useState(false);
 
   useEffect(() => {
     isHomeScreenMountedRef.current = true;
@@ -192,6 +206,18 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
     }
   }, [isExistingUser, welcomeStep]);
 
+  // Idle Challenge Reminder: if user is on Home screen for 18 seconds without finishing today's tasks
+  useEffect(() => {
+    if (isCompletedToday || welcomeStep < 3) return;
+
+    const timer = setTimeout(() => {
+      setIsIdleChallengeReminder(true);
+      setIsSpeechVisible(true);
+    }, 18000);
+
+    return () => clearTimeout(timer);
+  }, [isCompletedToday, welcomeStep]);
+
   // Session greeting for opening/revisiting the app - only once per browser session
   const [showSessionGreeting, setShowSessionGreeting] = useState<boolean>(() => {
     try {
@@ -219,7 +245,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
     }
   }, [isCompletedToday, stats.totalCompletedDays, welcomeStep]);
 
-  // Auto-advance or hide greeting speech bubble after 6 seconds of reading time
+  // Auto-advance or hide greeting speech bubble after 6.5 seconds of reading time
   useEffect(() => {
     if (!isSpeechVisible) return;
 
@@ -236,20 +262,47 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
             sessionStorage.setItem('nexora_session_greeted_v1', 'true');
           } catch {}
         }
-      }, 6000);
+      }, 6500);
       return () => clearTimeout(timer);
     }
   }, [showSessionGreeting, welcomeStep, isSpeechVisible]);
 
-  // Reset tap count back to 0 after 6 seconds of inactivity so speech bubble reverts to clean quote/streak state
+  // Reset tap count back to 0 after 6.5 seconds of inactivity so speech bubble reverts to clean quote/streak state
   useEffect(() => {
     if (tapCount > 0) {
       const timer = setTimeout(() => {
         setTapCount(0);
-      }, 6000);
+      }, 6500);
       return () => clearTimeout(timer);
     }
   }, [tapCount]);
+
+  // Inspect stat when user taps on Coins, XP, or Streak
+  const handleInspectStat = (type: 'coins' | 'xp' | 'streak') => {
+    if (statInspectionTimerRef.current) {
+      clearTimeout(statInspectionTimerRef.current);
+    }
+    setTapCount(0);
+    setIsIdleChallengeReminder(false);
+    setStatInspection(type);
+    setIsSpeechVisible(true);
+    triggerJump();
+
+    if (type === 'coins') {
+      play('coin');
+      vibrate(VIBRATION_PATTERNS.CLICK);
+    } else if (type === 'xp') {
+      play('mascotPop');
+      vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT);
+    } else if (type === 'streak') {
+      play('fire_streak');
+      vibrate(VIBRATION_PATTERNS.CLICK);
+    }
+
+    statInspectionTimerRef.current = setTimeout(() => {
+      setStatInspection(null);
+    }, 6500);
+  };
 
   // Calming down state
   const [lastY, setLastY] = useState<number | null>(null);
@@ -265,7 +318,37 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
 
   const userDisplayName = settings.displayName || settings.accountName || 'Champion';
 
-  if (welcomeStep === 0) {
+  if (statInspection === 'coins') {
+    const coinAmt = stats.coins || 0;
+    if (coinAmt === 0) {
+      mascotMood = 'concerned';
+      companionSpeech = `We have 0 Nexora Coins right now, ${userDisplayName}! 🪙 Complete today's challenges to start stacking your treasure vault!`;
+    } else if (coinAmt === 1) {
+      mascotMood = 'happy';
+      companionSpeech = `You have 1 shiny Nexora Coin! 🪙 Keep conquering challenges to fill our coin pouch!`;
+    } else {
+      mascotMood = 'celebrating';
+      companionSpeech = `Whoa, look at that! You've got ${formatCompactNumber(coinAmt)} Nexora Coins! 🪙 Ready to unlock awesome skins or power-ups in the shop?`;
+    }
+    isWaving = true;
+  } else if (statInspection === 'xp') {
+    const xpAmt = stats.xp || 0;
+    mascotMood = 'hyped';
+    companionSpeech = `You've powered up with ${formatCompactNumber(xpAmt)} Total XP! ⚡ Every challenge you complete surges our energy higher. Keep leveling up!`;
+    isWaving = false;
+  } else if (statInspection === 'streak') {
+    if (streakInfo.status === 'frozen') {
+      mascotMood = 'concerned';
+      companionSpeech = `Brrr! 🥶 Our ${streakInfo.streakCount}-day streak flame is frozen in ice! Complete today's challenge to thaw it!`;
+    } else if (streakInfo.status === 'broken') {
+      mascotMood = 'grieving';
+      companionSpeech = `Our streak flame shattered! 🥀 Finish today's challenge to reignite our flame!`;
+    } else {
+      mascotMood = 'celebrating';
+      companionSpeech = `Our streak is burning hot at ${streakInfo.streakCount} days! 🔥 Keep the fire lit by finishing today's tasks!`;
+    }
+    isWaving = false;
+  } else if (welcomeStep === 0) {
     // 1st Message: Welcome message ONLY for genuine brand-new user
     mascotMood = 'welcoming';
     companionSpeech = `Welcome to Nexora, ${userDisplayName}! 🎉 I'm your Nexus productivity companion, so excited to build epic habits & conquer goals with you!`;
@@ -289,42 +372,104 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
     companionSpeech = `Brrr! 🥶 Our ${stats.streak}-day streak turned to ice! Complete today's challenge to thaw the flame and save our streak!`;
     isWaving = false;
   } else if (trophies.some(t => t.type === 'broken') && tapCount === 0) {
-    mascotMood = 'sad';
-    companionSpeech = `Our trophy broke from inactivity! 🥀 Stay consistent and crush today's goals to claim a golden trophy!`;
+    mascotMood = 'concerned';
+    companionSpeech = `Watch out, friend! 🥀 One of our trophies broke from inactivity! Let's crush today's challenge to earn a Golden Trophy and replace it!`;
     isWaving = false;
   } else if (trophies.some(t => t.type === 'ice') && tapCount === 0) {
     mascotMood = 'concerned';
-    companionSpeech = `Watch out, friend! 🧊 One of our trophies is frozen in ice! Complete today's protocol to melt it!`;
+    companionSpeech = `Watch out, friend! 🧊 One of our trophies turned to ice! Complete today's protocol to thaw and protect our trophies!`;
     isWaving = false;
   } else if (showSessionGreeting) {
     // Session opening greeting for returning/existing user opening or logging back into the app
     mascotMood = 'welcoming';
     companionSpeech = `Hey ${userDisplayName}! Welcome back from your journey, friend! 🌟 Great to see you back on your quest!`;
     isWaving = true;
-  } else if (tapCount >= 6) {
-    mascotMood = 'boiling';
-    companionSpeech = "🔥 MAXIMUM OVERDRIVE! NO EXCUSES TODAY!";
-    isWaving = false;
-  } else if (tapCount === 5) {
-    mascotMood = 'angry';
-    companionSpeech = "⚡ Hey! Easy on the taps! Focus on your habits!";
-    isWaving = false;
-  } else if (tapCount === 4) {
-    mascotMood = 'hyped';
-    companionSpeech = "🔥 I'm supercharged! Ready to crush today's protocol?";
-    isWaving = false;
-  } else if (tapCount === 3) {
-    mascotMood = 'happy';
-    companionSpeech = "✨ Bounce bounce! Every bit of discipline builds massive momentum!";
-    isWaving = false;
-  } else if (tapCount === 2) {
-    mascotMood = 'happy';
-    companionSpeech = "Hehe! That tickles! Let's conquer today's goals together!";
-    isWaving = false;
   } else if (tapCount === 1) {
     mascotMood = 'happy';
-    companionSpeech = `Hey ${userDisplayName}! Ready to level up today? 🌟`;
+    companionSpeech = `Hey ${userDisplayName}! Ready to level up today? 🌟 (Tap me again to see my funny faces!)`;
+    isWaving = true;
+  } else if (tapCount === 2) {
+    mascotMood = 'dumb';
+    companionSpeech = `Bleeeh! 🤪 Look at my silly goofy face! Don't let your challenges be as goofy as me!`;
     isWaving = false;
+  } else if (tapCount === 3) {
+    mascotMood = 'anime';
+    companionSpeech = `Kyaaa~! ✨ You can do it, Senpai ${userDisplayName}! Fight for your dreams! (◕‿◕✿)`;
+    isWaving = true;
+  } else if (tapCount === 4) {
+    mascotMood = 'celebrating';
+    companionSpeech = `WOOHOO! 🎉 You're the absolute best! Keep crushing those habits!`;
+    isWaving = false;
+  } else if (tapCount === 5) {
+    mascotMood = 'motivational';
+    companionSpeech = `⚡ The fire of discipline is inside you! Let's conquer the day!`;
+    isWaving = false;
+  } else if (tapCount === 6) {
+    mascotMood = 'hyped';
+    companionSpeech = `🔥 I'm supercharged! Ready to crush today's protocol?`;
+    isWaving = false;
+  } else if (tapCount === 7) {
+    mascotMood = 'angry';
+    companionSpeech = `⚡ Hey! Easy on the taps! Focus on your habits!`;
+    isWaving = false;
+  } else if (tapCount === 8) {
+    mascotMood = 'boiling';
+    companionSpeech = `🔥 MAXIMUM OVERDRIVE! NO EXCUSES TODAY!`;
+    isWaving = false;
+  } else if (tapCount === 9) {
+    if (!isPro) {
+      mascotMood = 'happy';
+      companionSpeech = `👑 Unlock Zen, Wink, Shocked, Fiery & Pouting mascot expressions with Nexora Pro or your 4-Day Free Pro Test ($0.00)! Tap to try!`;
+      isWaving = true;
+    } else {
+      mascotMood = 'zen';
+      companionSpeech = `Ooooom... 🧘 Focus on your inner calm, ${userDisplayName}. Deep breaths, clear mind.`;
+      isWaving = false;
+    }
+  } else if (tapCount === 10) {
+    if (!isPro) {
+      mascotMood = 'motivational';
+      companionSpeech = `✨ VIP mascot expressions and Nex AI custom challenges are waiting in Pro! Try 4-Day Free Pro Test anytime!`;
+      isWaving = true;
+    } else {
+      mascotMood = 'wink';
+      companionSpeech = `Hey there, superstar! 😉 You and me are climbing all the way to the top!`;
+      isWaving = true;
+    }
+  } else if (tapCount === 11) {
+    if (!isPro) {
+      mascotMood = 'hyped';
+      companionSpeech = `⚡ Keep crushing your habits, ${userDisplayName}! You're building pure unstoppable momentum!`;
+      isWaving = false;
+    } else {
+      mascotMood = 'shocked';
+      companionSpeech = `WHAAAT?! 😱 Did you really crush those habits that quickly?! Absolutely unreal!`;
+      isWaving = false;
+    }
+  } else if (tapCount === 12) {
+    if (!isPro) {
+      mascotMood = 'celebrating';
+      companionSpeech = `🔥 Champions don't make excuses! Let's conquer today's protocol!`;
+      isWaving = false;
+    } else {
+      mascotMood = 'fiery';
+      companionSpeech = `CAN'T BE STOPPED! 🔥 Pure fiery passion and discipline! Let's conquer the day!`;
+      isWaving = false;
+    }
+  } else if (tapCount >= 13) {
+    if (!isPro) {
+      mascotMood = 'happy';
+      companionSpeech = `🎉 You're incredible, ${userDisplayName}! Keep tapping into your true potential!`;
+      isWaving = true;
+    } else {
+      mascotMood = 'pouting';
+      companionSpeech = `Hmph! 😤 Why are you tapping me when your daily protocol is waiting?! Go conquer it!`;
+      isWaving = false;
+    }
+  } else if (isIdleChallengeReminder) {
+    mascotMood = 'motivational';
+    companionSpeech = `Hey ${userDisplayName}! Don't forget to start your challenges for today! 🔥 Ready to build some momentum?`;
+    isWaving = true;
   } else if (isPlantDead) {
     mascotMood = 'sad';
     companionSpeech = "Oh no... Our plant wilted while you were away 🥀! Let's visit the Garden to revive or plant a new seed!";
@@ -387,6 +532,13 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
     triggerMascotSimpleTapReaction();
     vibrate(VIBRATION_PATTERNS.CLICK);
 
+    if (statInspectionTimerRef.current) {
+      clearTimeout(statInspectionTimerRef.current);
+      statInspectionTimerRef.current = null;
+    }
+    setStatInspection(null);
+    setIsIdleChallengeReminder(false);
+
     if (welcomeStep === 0) {
       setWelcomeStep(1);
       setIsSpeechVisible(true);
@@ -431,14 +583,14 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
         mascotTapTimeoutRef.current = null;
       }
       triggerMascotDoubleTapReaction();
-      setTapCount(prev => (prev >= 6 ? 1 : prev + 1));
+      setTapCount(prev => (prev >= 13 ? 1 : prev + 1));
       setIsSpeechVisible(true);
     } else {
       lastMascotTapRef.current = now;
       mascotTapTimeoutRef.current = setTimeout(() => {
-        setTapCount(prev => (prev >= 6 ? 1 : prev + 1));
+        setTapCount(prev => (prev >= 13 ? 1 : prev + 1));
         setIsSpeechVisible(true);
-        if (tapCount < 5) {
+        if (tapCount < 7) {
           triggerJump();
         }
         mascotTapTimeoutRef.current = null;
@@ -489,6 +641,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   onClick={() => {
+                    handleInspectStat('streak');
                     setStreakOverlayStatus(streakInfo.status);
                     setShowStreakOverlay(true);
                   }}
@@ -541,6 +694,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  onClick={() => handleInspectStat('xp')}
                   className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border border-[#E9E4D4] shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 hover:border-emerald-500/30 transition-colors relative overflow-hidden"
                 >
                   <span className="text-[9px] font-black text-emerald-600/70 uppercase tracking-widest text-center block mb-1.5">{translate("XP", lang)}</span>
@@ -560,6 +714,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  onClick={() => handleInspectStat('coins')}
                   className="flex flex-col items-center justify-center py-3.5 px-2 sm:px-4 rounded-2xl bg-white/95 border border-[#E9E4D4] shadow-sm select-none cursor-pointer min-w-[75px] sm:min-w-[90px] flex-1 mx-0.5 hover:border-amber-500/30 transition-colors relative overflow-hidden"
                 >
                   <span className="text-[9px] font-black text-amber-600/70 uppercase tracking-widest text-center block mb-1.5">{translate("Coins", lang)}</span>
@@ -832,6 +987,7 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   showSpeech={false}
                   speechText={companionSpeech}
                   isWaving={isWaving}
+                  forcedLookDirection={statInspection ? 'up' : null}
                 />
               </motion.div>
             </div>
@@ -847,7 +1003,13 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
                   className="flex-1 min-w-[150px] max-w-2xl relative z-10 bg-white/95 border-2 border-[#E9E4D4] px-4 py-3 sm:px-5 sm:py-4 rounded-2xl sm:rounded-3xl shadow-md shadow-amber-900/5 cursor-pointer hover:border-[#69C496]/50 transition-colors my-auto"
-                  onClick={() => handleMascotTap()}
+                  onClick={() => {
+                    if (!isPro && tapCount >= 9 && onOpenSubscription) {
+                      onOpenSubscription();
+                    } else {
+                      handleMascotTap();
+                    }
+                  }}
                 >
                   {/* Speech Arrow pointing left towards mascot */}
                   <motion.div 
@@ -856,6 +1018,84 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
                     transition={{ duration: 0.2, delay: 0.05 }}
                     className="absolute top-1/2 -left-[8px] -translate-y-1/2 w-3.5 h-3.5 bg-white border-b-2 border-l-2 border-[#E9E4D4] rotate-45 z-0" 
                   />
+
+                  {/* Contextual Tag indicating what the Mascot is looking at */}
+                  {statInspection === 'coins' && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-black uppercase tracking-wider text-amber-800 bg-amber-100/90 px-2.5 py-0.5 rounded-full w-fit">
+                      <Coins size={13} className="text-amber-600 animate-bounce" />
+                      <span>Nexora Coins • {formatCompactNumber(stats.coins || 0)}</span>
+                    </div>
+                  )}
+
+                  {statInspection === 'xp' && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full w-fit">
+                      <Star size={13} className="text-emerald-600 animate-spin" />
+                      <span>Total XP Gauge • {formatCompactNumber(stats.xp || 0)} XP</span>
+                    </div>
+                  )}
+
+                  {statInspection === 'streak' && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-black uppercase tracking-wider text-orange-800 bg-orange-100/90 px-2.5 py-0.5 rounded-full w-fit">
+                      <Flame size={13} className="text-orange-600 animate-pulse" />
+                      <span>Streak Flame • {streakInfo.streakCount} Days</span>
+                    </div>
+                  )}
+
+                  {tapCount === 2 && !statInspection && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-full w-fit">
+                      <span>🤪 Goofy Derp Face</span>
+                    </div>
+                  )}
+
+                  {tapCount === 3 && !statInspection && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-black uppercase tracking-wider text-pink-700 bg-pink-50 border border-pink-200/80 px-2.5 py-0.5 rounded-full w-fit">
+                      <span>✨ Anime Chibi Mode</span>
+                    </div>
+                  )}
+
+                  {tapCount >= 9 && !isPro && !statInspection && (
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-full w-fit">
+                        <span>👑 Nexora Pro Moods</span>
+                      </div>
+                      {onOpenSubscription && (
+                        <span className="text-[10px] font-black text-amber-600 bg-amber-100/90 hover:bg-amber-200 px-2 py-0.5 rounded-lg transition-all">
+                          Try Free ($0.00) →
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {isPro && tapCount === 9 && !statInspection && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-black uppercase tracking-wider text-teal-800 bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 rounded-full w-fit">
+                      <span>🧘 Zen Meditation Mood</span>
+                    </div>
+                  )}
+
+                  {isPro && tapCount === 10 && !statInspection && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-black uppercase tracking-wider text-indigo-800 bg-indigo-50 border border-indigo-200/80 px-2.5 py-0.5 rounded-full w-fit">
+                      <span>😉 Playful Wink Mood</span>
+                    </div>
+                  )}
+
+                  {isPro && tapCount === 11 && !statInspection && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-black uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-full w-fit">
+                      <span>😱 Shocked Gasp Mood</span>
+                    </div>
+                  )}
+
+                  {isPro && tapCount === 12 && !statInspection && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-black uppercase tracking-wider text-rose-800 bg-rose-50 border border-rose-200/80 px-2.5 py-0.5 rounded-full w-fit">
+                      <span>🔥 Fiery Blaze Mood</span>
+                    </div>
+                  )}
+
+                  {isPro && tapCount === 13 && !statInspection && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-black uppercase tracking-wider text-purple-800 bg-purple-50 border border-purple-200/80 px-2.5 py-0.5 rounded-full w-fit">
+                      <span>😤 Pouting Cheeks Mood</span>
+                    </div>
+                  )}
+
                   <p className="text-[#4F3F34] text-xs sm:text-sm md:text-base font-semibold tracking-normal leading-relaxed relative z-10 break-words whitespace-normal text-left">
                     {companionSpeech}
                   </p>
@@ -907,7 +1147,20 @@ export const HomeScreen = React.memo(({ stats, onStartChallenge, isCompletedToda
 
       {/* DashboardWidgets removed for cleaner home screen */}
 
-      <MascotAIWrapper stats={stats} settings={settings} showToast={showToast} />
+      <MascotAIWrapper 
+        stats={stats} 
+        settings={settings} 
+        showToast={showToast} 
+        onSaveCustomPlan={onSaveCustomPlan}
+        onUpdateSettings={onUpdateSettings}
+        isPro={isPro}
+        onOpenSubscription={onOpenSubscription}
+        customPlans={customPlans}
+        gardenState={gardenState}
+        userRank={userRank}
+        leaderboard={leaderboard}
+        onOpenPlant={onOpenPlant}
+      />
       
       <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         {sectionOrder.map(id => {

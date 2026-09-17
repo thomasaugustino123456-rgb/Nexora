@@ -14,13 +14,15 @@ import {
   Zap,
   CheckCircle2,
   AlertCircle,
-  WifiOff
+  WifiOff,
+  Loader2
 } from 'lucide-react';
 import { FirebaseUser } from '../firebase';
 import { LeaderboardEntry, UserSettings, UserStats } from '../types';
 import { Mascot } from './Mascot';
 import { useSound } from '../hooks/useSound';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
+import { getStartOfWeekKey } from '../lib/firestoreUtils';
 
 const LEAGUES = [
   'Bronze', 
@@ -200,6 +202,7 @@ export function LeaderboardScreen({
   user, 
   settings, 
   stats, 
+  isLeaderboardLoading = false,
   onBack,
   onClaimRankReward
 }: { 
@@ -207,27 +210,26 @@ export function LeaderboardScreen({
   user: FirebaseUser | null; 
   settings: UserSettings; 
   stats: UserStats; 
+  isLeaderboardLoading?: boolean;
   onBack: () => void;
   onClaimRankReward: (rank: number, coins: number) => void;
 }) {
-  const currentRank = useMemo(() => {
-    const userPts = Math.max(
-      Number(stats.weeklyPoints || 0),
-      Number(stats.weeklyXP || 0),
-      Number(stats.totalPoints || 0),
-      Number(stats.xp || 0)
-    );
-    if (userPts <= 0) return 0;
-    const idx = leaderboard.findIndex(l => l.uid === user?.uid);
-    return idx !== -1 ? idx + 1 : 0;
-  }, [leaderboard, user, stats]);
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
-  const userRank = currentRank;
-  const { play } = useSound();
+  const hasRealUsers = useMemo(() => {
+    return (leaderboard || []).some(
+      (item) => item.uid && !item.uid.startsWith("bot-") && item.uid !== user?.uid
+    );
+  }, [leaderboard, user?.uid]);
+
+  const isSyncingRankings = isOnline && (isLeaderboardLoading || !hasRealUsers);
 
   const [displayList, setDisplayList] = useState<LeaderboardEntry[]>(() => {
+    const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
     return (leaderboard || []).filter((item) => {
       if (!item || !item.uid) return false;
+      // In offline mode: only bots and current user are shown per user specifications
+      if (!online && !item.uid.startsWith("bot-") && item.uid !== user?.uid) return false;
       if (item.uid.startsWith("bot-")) return true;
       if ((item as any).deleted || (item as any).isDeleted || (item as any).is_deleted || (item as any).status === "deleted") return false;
       const pts = Math.max(
@@ -238,9 +240,28 @@ export function LeaderboardScreen({
         Number((item as any).xp || 0)
       );
       return pts > 0;
-    });
+    }).map((item) => ({
+      ...item,
+      displayName: item.displayName || (item.uid.startsWith("bot-") ? "AI_Rival" : (item.uid === user?.uid ? (settings.displayName || user?.displayName || "You") : `Champion_${item.uid.slice(0, 4)}`))
+    }));
   });
-  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  const currentRank = useMemo(() => {
+    const userPts = Math.max(
+      Number(stats.weeklyPoints || 0),
+      Number(stats.weeklyXP || 0),
+      Number(stats.totalPoints || 0),
+      Number(stats.xp || 0)
+    );
+    if (userPts <= 0) return 0;
+    // When live standings are syncing, avoid computing a transient/fake rank against only bots
+    if (isSyncingRankings) return -1;
+    const idx = displayList.findIndex(l => l.uid === user?.uid);
+    return idx !== -1 ? idx + 1 : 0;
+  }, [displayList, user, stats, isSyncingRankings]);
+
+  const userRank = currentRank;
+  const { play } = useSound();
   const [isAnimatingRank, setIsAnimatingRank] = useState<boolean>(false);
   const [showCelebrationSpot, setShowCelebrationSpot] = useState<boolean>(false);
   const [animationPreviousRank, setAnimationPreviousRank] = useState<number | null>(null);
@@ -331,6 +352,10 @@ export function LeaderboardScreen({
   useEffect(() => {
     const sanitizedLeaderboard = (leaderboard || []).filter((item) => {
       if (!item || !item.uid) return false;
+      // In offline mode: only bots and current user are shown per user specifications
+      if (!isOnline && !item.uid.startsWith("bot-") && item.uid !== user?.uid) {
+        return false;
+      }
       if (item.uid.startsWith("bot-")) return true;
       if ((item as any).deleted || (item as any).isDeleted || (item as any).is_deleted || (item as any).status === "deleted") return false;
       const pts = Math.max(
@@ -357,7 +382,22 @@ export function LeaderboardScreen({
     // Always update displayList immediately so real users are visible instantly
     setDisplayList(sanitizedLeaderboard);
 
-    if (prevRankStr && wasGlowActive) {
+    // Track all timers for this effect run to guarantee complete cleanup on unmount or re-render
+    const activeTimers: ReturnType<typeof setTimeout>[] = [];
+    const addTimer = (fn: () => void, ms: number) => {
+      const id = setTimeout(fn, ms);
+      activeTimers.push(id);
+      return id;
+    };
+
+    // Safety watchdog: after 8.5 seconds, force settle back to idle so UI never hangs
+    addTimer(() => {
+      setClimbPhase('idle');
+      setIsAnimatingRank(false);
+      setShowCelebrationSpot(false);
+    }, 8500);
+
+    if (prevRankStr) {
       const prevRank = parseInt(prevRankStr);
       if (prevRank > currentRank && prevRank <= sanitizedLeaderboard.length) {
         setAnimationPreviousRank(prevRank);
@@ -374,13 +414,13 @@ export function LeaderboardScreen({
           // Scroll immediately to the starting (lower) position
           scrollToUser(true);
 
-          // Step 1: Wait 1500ms (1.5 seconds) so they see their starting position before the climb starts
-          const anticipationTimer = setTimeout(() => {
+          // Step 1: Wait 1400ms so they see their starting position before the climb starts
+          addTimer(() => {
             setClimbPhase('anticipation');
             vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT || [30, 50, 10]);
             
-            // Step 2: Wait 600ms of squash preparation, then shoot up!
-            const shootTimer = setTimeout(() => {
+            // Step 2: Wait 550ms of squash preparation, then shoot up!
+            addTimer(() => {
               setClimbPhase('shooting');
               setDisplayList(sanitizedLeaderboard); // Update list order to trigger layout transition!
               vibrate([20, 30, 20, 30, 20]); // Speed-dash rapid haptic vibrations
@@ -390,12 +430,12 @@ export function LeaderboardScreen({
               }
               
               // Smooth scroll to follow the climb to the new final position
-              setTimeout(() => {
+              addTimer(() => {
                 scrollToUser(false);
-              }, 150);
+              }, 120);
               
-              // Step 3: Wait 900ms during the climb, then impact!
-              const impactTimer = setTimeout(() => {
+              // Step 3: Wait 850ms during the climb, then impact!
+              addTimer(() => {
                 setClimbPhase('impact');
                 setShowCelebrationSpot(true);
                 vibrate(VIBRATION_PATTERNS.HEAVY || 40); // Thump/impact vibration!
@@ -404,8 +444,8 @@ export function LeaderboardScreen({
                   play('chest_land'); // Slam/impact sound!
                 }
                 
-                // Step 4: Wait 450ms squash rebound, then celebrate!
-                const celebrateTimer = setTimeout(() => {
+                // Step 4: Wait 400ms squash rebound, then celebrate!
+                addTimer(() => {
                   setClimbPhase('celebrate');
                   setIsAnimatingRank(false);
                   localStorage.removeItem("nexora_previous_rank");
@@ -416,28 +456,19 @@ export function LeaderboardScreen({
                     play('trophy1'); // Beautiful reward chime!
                   }
                   
-                  // Step 5: Wait 2000ms, then settle back to idle
-                  const settleTimer = setTimeout(() => {
+                  // Step 5: Settle back to normal idle
+                  addTimer(() => {
                     setClimbPhase('idle');
                     setShowCelebrationSpot(false);
-                  }, 2000);
-                  
-                  return () => clearTimeout(settleTimer);
-                }, 450);
-                
-                return () => clearTimeout(celebrateTimer);
-              }, 900);
-              
-              return () => clearTimeout(impactTimer);
-            }, 600);
-            
-            return () => clearTimeout(shootTimer);
-          }, 1500);
-
-          return () => {
-            clearTimeout(anticipationTimer);
-          };
+                  }, 1800);
+                }, 400);
+              }, 850);
+            }, 550);
+          }, 1400);
         }
+      } else {
+        localStorage.removeItem("nexora_previous_rank");
+        setDisplayList(sanitizedLeaderboard);
       }
     } else if (wasGlowActive) {
       // User clicked the glowing tab. Smoothly scroll to user position, wait, then trigger a gorgeous highlight bounce!
@@ -447,21 +478,21 @@ export function LeaderboardScreen({
       // First, scroll to user smoothly
       scrollToUser(false);
       
-      // Step 1: Wait 1800ms (1.8 seconds) for smooth scroll to finish and user to fully focus on their row
-      const bounceStartTimer = setTimeout(() => {
+      // Step 1: Wait 1400ms for smooth scroll to finish and user to fully focus on their row
+      addTimer(() => {
         setClimbPhase('anticipation');
         vibrate(VIBRATION_PATTERNS.HEAVY_LIGHT || [30, 50, 10]);
         
-        // Step 2: Wait 600ms, then jump up (bounce stretch)!
-        const bounceShootTimer = setTimeout(() => {
+        // Step 2: Wait 550ms, then jump up (bounce stretch)!
+        addTimer(() => {
           setClimbPhase('shooting');
           vibrate([25, 45, 25]); // Playful bounce vibrations
           if (settings?.soundEnabled !== false) {
             play('header_switch'); // Whoosh sound
           }
           
-          // Step 3: Wait 700ms in the air, then slam back down!
-          const bounceImpactTimer = setTimeout(() => {
+          // Step 3: Wait 650ms in the air, then slam back down!
+          addTimer(() => {
             setClimbPhase('impact');
             setShowCelebrationSpot(true);
             vibrate(VIBRATION_PATTERNS.HEAVY || 40); // Impact vibration
@@ -469,78 +500,42 @@ export function LeaderboardScreen({
               play('chest_land'); // Slam sound
             }
             
-            // Step 4: Wait 450ms, then celebrate!
-            const bounceCelebrateTimer = setTimeout(() => {
+            // Step 4: Wait 400ms, then celebrate!
+            addTimer(() => {
               setClimbPhase('celebrate');
               vibrate(VIBRATION_PATTERNS.SUCCESS || [20, 50, 20]); // Happy victory vibration
               if (settings?.soundEnabled !== false) {
                 play('continue'); // Light success chime
               }
               
-              // Step 5: Wait 2000ms, then settle back to normal idle
-              const bounceSettleTimer = setTimeout(() => {
+              // Step 5: Wait 1800ms, then settle back to normal idle
+              addTimer(() => {
                 setClimbPhase('idle');
                 setShowCelebrationSpot(false);
-              }, 2000);
-              
-              return () => clearTimeout(bounceSettleTimer);
-            }, 450);
-            
-            return () => clearTimeout(bounceCelebrateTimer);
-          }, 700);
-          
-          return () => clearTimeout(bounceImpactTimer);
-        }, 600);
-        
-        return () => clearTimeout(bounceShootTimer);
-      }, 1800);
-      
-      return () => {
-        clearTimeout(bounceStartTimer);
-      };
+              }, 1800);
+            }, 400);
+          }, 650);
+        }, 550);
+      }, 1400);
     }
 
-    setDisplayList(sanitizedLeaderboard);
+    return () => {
+      activeTimers.forEach(id => clearTimeout(id));
+    };
   }, [leaderboard, user, currentRank, settings.soundEnabled, play]);
 
   const currentLeague = settings.league || 'Bronze';
   const leagueIndex = LEAGUES.indexOf(currentLeague);
 
   const startOfWeek = useMemo(() => {
-    const today = new Date();
-    return new Date(today.setDate(today.getDate() - today.getDay()))
-      .toISOString()
-      .split("T")[0];
+    return getStartOfWeekKey();
   }, []);
 
   const hasClaimedThisWeek = useMemo(() => {
     if (!userRank || userRank > 6 || userRank < 1) return true;
     const rankKey = `week_${startOfWeek}_rank_${userRank}`;
-    const alreadyClaimedKey = stats.claimedRankRewards?.[rankKey];
-
-    // If this specific rank was already claimed:
-    if (alreadyClaimedKey) {
-      // Can only reclaim if pushed down by another user and user retook their place:
-      const wasPushedDown = (stats.lowestRankSinceClaim || 0) > (stats.lastClaimedRank || 0);
-      const isRetakingPlace = wasPushedDown && userRank <= (stats.lastClaimedRank || 0);
-      if (isRetakingPlace) {
-        return false; // Eligible to claim again!
-      }
-      return true; // Already claimed
-    }
-
-    // Fallback check
-    if (stats.lastRankRewardClaimWeek === startOfWeek && stats.lastClaimedRank && stats.lastClaimedRank === userRank) {
-      const wasPushedDown = (stats.lowestRankSinceClaim || 0) > stats.lastClaimedRank;
-      const isRetakingPlace = wasPushedDown && userRank <= stats.lastClaimedRank;
-      if (isRetakingPlace) {
-        return false;
-      }
-      return true;
-    }
-
-    return false;
-  }, [userRank, startOfWeek, stats.claimedRankRewards, stats.lastRankRewardClaimWeek, stats.lastClaimedRank, stats.lowestRankSinceClaim]);
+    return Boolean(stats.claimedRankRewards?.[rankKey]);
+  }, [userRank, startOfWeek, stats.claimedRankRewards]);
 
   // Filter or format the countdown statement
   const daysString = useMemo(() => {
@@ -659,27 +654,49 @@ export function LeaderboardScreen({
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-4xl shadow-sm animate-pulse">
-                {userRank === 1 ? "🏆" : userRank === 2 ? "🥇" : userRank === 3 ? "🥈" : userRank >= 4 && userRank <= 6 ? "🥉" : "🎗️"}
+              <div className="w-16 h-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-4xl shadow-sm">
+                {isSyncingRankings ? (
+                  <Loader2 size={32} className="animate-spin text-blue-500" />
+                ) : !isOnline ? (
+                  "🤖"
+                ) : userRank === 1 ? (
+                  "🏆"
+                ) : userRank === 2 ? (
+                  "🥇"
+                ) : userRank === 3 ? (
+                  "🥈"
+                ) : userRank >= 4 && userRank <= 6 ? (
+                  "🥉"
+                ) : (
+                  "🎗️"
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <h4 className="text-sm font-black uppercase tracking-tight truncate text-slate-800">
-                  {userRank > 0 && userRank <= 6 
-                    ? `Congratulations, bro!` 
-                    : userRank > 6 
-                      ? `Progress Recognition` 
-                      : `Unranked`}
+                  {isSyncingRankings
+                    ? "Syncing Live Arena..."
+                    : !isOnline
+                    ? "Offline Arena - AI Rivals"
+                    : userRank > 0 && userRank <= 6
+                    ? `Congratulations, Champion!`
+                    : userRank > 6
+                    ? `Progress Recognition`
+                    : `Unranked`}
                 </h4>
                 <p className="text-[11px] text-slate-500 font-medium leading-tight">
-                  {userRank === 1 
-                    ? `You are Rank #1! You've earned the ultimate weekly championship: 400 Coins, Golden Trophy, and +150 XP Bonus, bro! 🔥`
+                  {isSyncingRankings
+                    ? "Connecting to live server combatants and verifying your official ranking..."
+                    : !isOnline
+                    ? "You are currently offline. Showing AI sparring rivals. Reconnect to the internet to enter the global standings and claim weekly rewards."
+                    : userRank === 1
+                    ? `You are Rank #1! You've earned the ultimate weekly championship: 400 Coins, Golden Trophy, and +150 XP Bonus! 🔥`
                     : userRank > 1 && userRank <= 6
-                      ? `You are Rank #${userRank} this week and earned +${getRankRewardCoins(userRank)} Coins reward, bro!` 
-                      : userRank > 6
-                        ? `You are Rank #${userRank}. Excellent effort! Keep pushing to reach the Top 6 for coin rewards.`
-                        : `Complete your active habits to climb the ranks and unlock weekly chest rewards!`}
+                    ? `You are Rank #${userRank} this week and earned +${getRankRewardCoins(userRank)} Coins reward!`
+                    : userRank > 6
+                    ? `You are Rank #${userRank}. Excellent effort! Keep pushing to reach the Top 6 for coin rewards.`
+                    : `Complete your active habits to climb the ranks and unlock weekly chest rewards!`}
                 </p>
-                {!isOnline && userRank > 0 && userRank <= 6 && !hasClaimedThisWeek && (
+                {!isOnline && !hasClaimedThisWeek && (
                   <p className="text-[10px] text-rose-500 font-extrabold flex items-center gap-1 mt-1.5 bg-rose-50 border border-rose-200/80 px-2.5 py-1 rounded-lg">
                     <WifiOff size={12} /> Internet connection required to claim Rank section rewards.
                   </p>
@@ -688,7 +705,38 @@ export function LeaderboardScreen({
             </div>
 
             {/* Reward Claim Parameters */}
-            {userRank > 0 && userRank <= 6 ? (
+            {isSyncingRankings ? (
+              <div className="pt-2 border-t border-slate-150 flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Calculated Reward</p>
+                  <p className="text-sm font-black text-slate-500 flex items-center gap-1.5">
+                    <Loader2 size={13} className="animate-spin text-blue-500" />
+                    <span>Verifying Live Position...</span>
+                  </p>
+                </div>
+                <button
+                  disabled
+                  className="bg-slate-200 text-slate-400 font-black text-xs uppercase tracking-widest px-4 py-2.5 rounded-xl border border-slate-300 flex items-center gap-1.5 cursor-not-allowed opacity-80"
+                >
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Syncing Arena...</span>
+                </button>
+              </div>
+            ) : !isOnline ? (
+              <div className="pt-2 border-t border-slate-150 flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Offline Status</p>
+                  <p className="text-xs font-black text-slate-600 uppercase tracking-wider">AI Rival Standings</p>
+                </div>
+                <button
+                  disabled
+                  className="bg-slate-200 text-slate-400 font-black text-xs uppercase tracking-widest px-4 py-2.5 rounded-xl border border-slate-300 flex items-center gap-1.5 cursor-not-allowed opacity-80"
+                >
+                  <WifiOff size={14} />
+                  <span>Online Required</span>
+                </button>
+              </div>
+            ) : userRank > 0 && userRank <= 6 ? (
               <div className="pt-2 border-t border-slate-150 flex items-center justify-between">
                 <div>
                   <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Calculated Reward</p>
@@ -702,21 +750,13 @@ export function LeaderboardScreen({
                     <CheckCircle2 size={14} className="text-emerald-500" />
                     <span>Claimed</span>
                   </div>
-                ) : !isOnline ? (
-                  <button
-                    disabled
-                    className="bg-slate-200 text-slate-400 font-black text-xs uppercase tracking-widest px-4 py-2.5 rounded-xl border border-slate-300 flex items-center gap-1.5 cursor-not-allowed opacity-80"
-                  >
-                    <WifiOff size={14} />
-                    <span>Online Required</span>
-                  </button>
                 ) : (
                   <button
                     onClick={() => {
                       const coins = getRankRewardCoins(userRank);
                       onClaimRankReward(userRank, coins);
                     }}
-                    className="bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-yellow-950 font-black text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl shadow-lg ring-2 ring-yellow-400/30 border border-yellow-200/50 transition-all active:scale-95 duration-200"
+                    className="bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-yellow-950 font-black text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl shadow-lg ring-2 ring-yellow-400/30 border border-yellow-200/50 transition-all active:scale-95 duration-200 cursor-pointer"
                   >
                     Claim Rewards
                   </button>
@@ -733,22 +773,13 @@ export function LeaderboardScreen({
                 </div>
               </div>
             ) : (
-              <div className="pt-2 border-t border-slate-150 grid grid-cols-4 gap-1.5 text-center">
-                <div className="bg-white border border-slate-200 rounded-xl p-2">
-                  <p className="text-[8px] font-black text-yellow-600 uppercase">Rank 1</p>
-                  <p className="text-[10px] font-black text-slate-800">400 🪙</p>
+              <div className="pt-2 border-t border-slate-150 flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Status</p>
+                  <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Unranked</p>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-xl p-2">
-                  <p className="text-[8px] font-black text-blue-600 uppercase">Rank 2</p>
-                  <p className="text-[10px] font-black text-slate-800">200 🪙</p>
-                </div>
-                <div className="bg-white border border-slate-200 rounded-xl p-2">
-                  <p className="text-[8px] font-black text-amber-600 uppercase">Rank 3</p>
-                  <p className="text-[10px] font-black text-slate-800">150 🪙</p>
-                </div>
-                <div className="bg-white border border-slate-200 rounded-xl p-2">
-                  <p className="text-[8px] font-black text-slate-500 uppercase">Ranks 4-6</p>
-                  <p className="text-[10px] font-black text-slate-800">50 🪙</p>
+                <div className="text-[10px] bg-blue-50 px-3 py-1.5 rounded-xl text-blue-700 font-bold uppercase tracking-wider border border-blue-100">
+                  Earn XP to Enter
                 </div>
               </div>
             )}
@@ -758,6 +789,24 @@ export function LeaderboardScreen({
 
       {/* 4. The Leaderboard List Stream - Clean continuous layout with separators */}
       <div className="flex-1 px-6 py-3">
+        {isSyncingRankings && (
+          <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-2xl flex items-center gap-3">
+            <Loader2 size={16} className="animate-spin text-blue-600 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black text-blue-950 uppercase tracking-tight">Syncing Arena Rankings</p>
+              <p className="text-[10px] text-blue-600 font-medium">Connecting to live combatants from the server...</p>
+            </div>
+          </div>
+        )}
+        {!isOnline && (
+          <div className="mb-3 p-3 bg-slate-100 border border-slate-200 rounded-2xl flex items-center gap-3">
+            <WifiOff size={16} className="text-slate-500 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black text-slate-800 uppercase tracking-tight">Offline Mode: AI Rivals Only</p>
+              <p className="text-[10px] text-slate-500 font-medium">Connect to the internet to view real competitors and live ranks.</p>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between py-2 mb-3">
           <div className="flex items-center gap-1.5">
             <Award size={14} className="text-emerald-500" />

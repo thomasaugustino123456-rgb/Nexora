@@ -27,6 +27,7 @@ export interface LivingMascotProps {
   onPowerTriggered?: () => void;
   sizeMultiplier?: number;
   isWaving?: boolean;
+  forcedLookDirection?: 'up' | 'down' | 'left' | 'right' | 'center' | null;
 }
 
 export const LivingMascot = React.memo(({
@@ -47,7 +48,8 @@ export const LivingMascot = React.memo(({
   speechText,
   onPowerTriggered,
   sizeMultiplier = 1,
-  isWaving = false
+  isWaving = false,
+  forcedLookDirection = null
 }: LivingMascotProps) => {
   const { play } = useSound();
 
@@ -60,9 +62,16 @@ export const LivingMascot = React.memo(({
     ? clothes
     : (['ninja', 'detective', 'cape', 'armor', 'suit', 'hoodie'].some(s => hat?.toLowerCase().includes(s)) ? hat : 'none');
 
-  const effectiveHead = (head && head !== 'none')
+  let resolvedHead = (head && head !== 'none')
     ? head
     : (hat && hat !== 'none' && hat !== effectiveEye && hat !== effectiveClothes ? hat : 'none');
+
+  // If head is not explicitly equipped with a separate hat, but ninja or detective clothes are equipped, show matching hood/hat
+  if (resolvedHead === 'none') {
+    if (effectiveClothes.includes('ninja')) resolvedHead = 'ninja';
+    else if (effectiveClothes.includes('detective')) resolvedHead = 'detective';
+  }
+  const effectiveHead = resolvedHead;
 
   // Normalize mascotId
   const validMascotId: MascotId = (MASCOTS_DATA[mascotId as MascotId] ? mascotId : 'blue-slim') as MascotId;
@@ -70,7 +79,14 @@ export const LivingMascot = React.memo(({
 
   // Animation States
   const [isBlinking, setIsBlinking] = useState(false);
-  const [eyeGlanceOffset, setEyeGlanceOffset] = useState(0);
+  const [eyeGlanceX, setEyeGlanceX] = useState(0);
+  const [eyeGlanceY, setEyeGlanceY] = useState(0);
+  const [glanceTilt, setGlanceTilt] = useState(0);
+  const [glanceBodyY, setGlanceBodyY] = useState(0);
+  const [isBreathingIn, setIsBreathingIn] = useState(false);
+  const [isDeepBreathing, setIsDeepBreathing] = useState(false);
+  const [idleBodyShift, setIdleBodyShift] = useState<'none' | 'squish' | 'wobble' | 'stretch'>('none');
+  const [idleFaceMood, setIdleFaceMood] = useState<'none' | 'curious' | 'content_smile' | 'whistle'>('none');
   const [isSmiling, setIsSmiling] = useState(false);
   const [isTalking, setIsTalking] = useState(false);
   const [jumpPhase, setJumpPhase] = useState<'idle' | 'compress' | 'jump' | 'air' | 'landing' | 'bounce'>('idle');
@@ -91,6 +107,36 @@ export const LivingMascot = React.memo(({
     setVibeState(vibrationEnabled);
   }, [soundEnabled, vibrationEnabled]);
 
+  // Sync forcedLookDirection (e.g. looking straight UP when user clicks Coins or XP at the top)
+  useEffect(() => {
+    if (forcedLookDirection === 'up') {
+      setEyeGlanceX(0);
+      setEyeGlanceY(-6.5);
+      setGlanceTilt(0);
+      setGlanceBodyY(-4);
+    } else if (forcedLookDirection === 'down') {
+      setEyeGlanceX(0);
+      setEyeGlanceY(6);
+      setGlanceTilt(0);
+      setGlanceBodyY(3);
+    } else if (forcedLookDirection === 'left') {
+      setEyeGlanceX(-6.5);
+      setEyeGlanceY(0);
+      setGlanceTilt(-3);
+      setGlanceBodyY(0);
+    } else if (forcedLookDirection === 'right') {
+      setEyeGlanceX(6.5);
+      setEyeGlanceY(0);
+      setGlanceTilt(3);
+      setGlanceBodyY(0);
+    } else if (forcedLookDirection === 'center') {
+      setEyeGlanceX(0);
+      setEyeGlanceY(0);
+      setGlanceTilt(0);
+      setGlanceBodyY(0);
+    }
+  }, [forcedLookDirection]);
+
   // Sync speech state when speechText prop updates
   useEffect(() => {
     if (speechText) {
@@ -100,50 +146,186 @@ export const LivingMascot = React.memo(({
     }
   }, [speechText]);
 
-  // Periodic blinking effect (every 4-7 seconds, duration 180ms)
+  // Periodic natural blinking effect (every 3.2-5.5s, 180ms)
   useEffect(() => {
     if (!interactive) return;
 
+    let timer: NodeJS.Timeout;
     const scheduleBlink = () => {
-      const delay = 4000 + Math.random() * 3000;
+      const delay = 3000 + Math.random() * 2800;
       return setTimeout(() => {
-        setIsBlinking(true);
-        setTimeout(() => setIsBlinking(false), 180);
+        if (!isDeepBreathing) {
+          setIsBlinking(true);
+          setTimeout(() => setIsBlinking(false), 190);
+        }
         timer = scheduleBlink();
       }, delay);
     };
 
-    let timer = scheduleBlink();
+    timer = scheduleBlink();
     return () => clearTimeout(timer);
-  }, [interactive]);
+  }, [interactive, isDeepBreathing]);
 
-  // Periodic subtle eye movement (every 8-12 seconds, glance left/right then center)
+  // Periodic active 4-way glance movement (look left, right, up, down, and corners every 3.2-6s)
   useEffect(() => {
     if (!interactive) return;
 
+    let timer: NodeJS.Timeout;
     const scheduleGlance = () => {
-      const delay = 8000 + Math.random() * 4000;
+      const delay = 3200 + Math.random() * 3000;
       return setTimeout(() => {
-        const offset = Math.random() > 0.5 ? 3.5 : -3.5;
-        setEyeGlanceOffset(offset);
-        setTimeout(() => setEyeGlanceOffset(0), 1200);
+        // Don't override if a forced look direction is active
+        if (forcedLookDirection) {
+          timer = scheduleGlance();
+          return;
+        }
+
+        // Distinct 4-way & diagonal gaze directions with natural body tilt and displacement
+        const directions = [
+          { x: 6.5, y: 0, tilt: 3.2, bodyY: 0 },       // right
+          { x: -6.5, y: 0, tilt: -3.2, bodyY: 0 },     // left
+          { x: 0, y: -6.0, tilt: 0, bodyY: -3.5 },     // looking up
+          { x: 0, y: 5.5, tilt: 0, bodyY: 2.5 },       // looking down
+          { x: 5.0, y: -4.0, tilt: 2.2, bodyY: -2.5 }, // top-right
+          { x: -5.0, y: -4.0, tilt: -2.2, bodyY: -2.5 },// top-left
+          { x: 5.0, y: 4.0, tilt: 1.8, bodyY: 2.0 },   // bottom-right
+          { x: -5.0, y: 4.0, tilt: -1.8, bodyY: 2.0 }  // bottom-left
+        ];
+        const chosen = directions[Math.floor(Math.random() * directions.length)];
+        setEyeGlanceX(chosen.x);
+        setEyeGlanceY(chosen.y);
+        setGlanceTilt(chosen.tilt);
+        setGlanceBodyY(chosen.bodyY);
+
+        // Keep glance for 1.3s - 2.2s then smoothly center back
+        const holdTime = 1300 + Math.random() * 900;
+        setTimeout(() => {
+          if (!forcedLookDirection) {
+            setEyeGlanceX(0);
+            setEyeGlanceY(0);
+            setGlanceTilt(0);
+            setGlanceBodyY(0);
+          }
+        }, holdTime);
+
         timer = scheduleGlance();
       }, delay);
     };
 
-    let timer = scheduleGlance();
+    timer = scheduleGlance();
     return () => clearTimeout(timer);
+  }, [interactive, forcedLookDirection]);
+
+  // Gentle Living Breathing cycle (in and out every 2.6s)
+  useEffect(() => {
+    if (!interactive) return;
+
+    const breathInterval = setInterval(() => {
+      setIsBreathingIn(prev => !prev);
+    }, 2600);
+
+    return () => clearInterval(breathInterval);
   }, [interactive]);
 
-  // Periodic subtle smile animation (every 15-20 seconds, duration 600ms)
+  // Peaceful Deep Breathing (air in and out with closed eyes every 10-16 seconds when idle)
+  useEffect(() => {
+    if (!interactive) return;
+
+    let timer: NodeJS.Timeout;
+    const scheduleDeepBreath = () => {
+      const delay = 10000 + Math.random() * 6000;
+      return setTimeout(() => {
+        // Only trigger deep breathing if mascot is idle and not jumping or speaking
+        if (jumpPhase === 'idle' && !isTalking && !forcedLookDirection) {
+          setIsDeepBreathing(true);
+          setIsBlinking(true); // Eyes close serenely
+
+          // Breathe in and hold, then gently exhale
+          setTimeout(() => {
+            setIsDeepBreathing(false);
+            setIsBlinking(false); // Eyes open
+            timer = scheduleDeepBreath();
+          }, 1700);
+        } else {
+          timer = scheduleDeepBreath();
+        }
+      }, delay);
+    };
+
+    timer = scheduleDeepBreath();
+    return () => clearTimeout(timer);
+  }, [interactive, jumpPhase, isTalking, forcedLookDirection]);
+
+  // Idle Living Body Shifts (squish, wobble, or gentle stretch every 7-11 seconds when idle)
+  useEffect(() => {
+    if (!interactive) return;
+
+    let timer: NodeJS.Timeout;
+    const scheduleBodyShift = () => {
+      const delay = 7500 + Math.random() * 4500;
+      return setTimeout(() => {
+        if (jumpPhase === 'idle' && !isDeepBreathing && !forcedLookDirection) {
+          const shifts: Array<'squish' | 'wobble' | 'stretch'> = ['squish', 'wobble', 'stretch'];
+          const chosen = shifts[Math.floor(Math.random() * shifts.length)];
+          setIdleBodyShift(chosen);
+
+          setTimeout(() => {
+            setIdleBodyShift('none');
+            timer = scheduleBodyShift();
+          }, 1100);
+        } else {
+          timer = scheduleBodyShift();
+        }
+      }, delay);
+    };
+
+    timer = scheduleBodyShift();
+    return () => clearTimeout(timer);
+  }, [interactive, jumpPhase, isDeepBreathing, forcedLookDirection]);
+
+  // Idle Face & Mouth Expression Changes (content smile, curious brow, whistle when centered)
+  useEffect(() => {
+    if (!interactive) return;
+
+    let timer: NodeJS.Timeout;
+    const scheduleIdleFace = () => {
+      const delay = 8500 + Math.random() * 5500;
+      return setTimeout(() => {
+        if (
+          jumpPhase === 'idle' && 
+          eyeGlanceX === 0 && 
+          eyeGlanceY === 0 && 
+          !isTalking && 
+          !isDeepBreathing && 
+          !forcedLookDirection
+        ) {
+          const idleFaces: Array<'curious' | 'content_smile' | 'whistle'> = ['curious', 'content_smile', 'whistle'];
+          const chosen = idleFaces[Math.floor(Math.random() * idleFaces.length)];
+          setIdleFaceMood(chosen);
+
+          setTimeout(() => {
+            setIdleFaceMood('none');
+            timer = scheduleIdleFace();
+          }, 2100);
+        } else {
+          timer = scheduleIdleFace();
+        }
+      }, delay);
+    };
+
+    timer = scheduleIdleFace();
+    return () => clearTimeout(timer);
+  }, [interactive, jumpPhase, eyeGlanceX, eyeGlanceY, isTalking, isDeepBreathing, forcedLookDirection]);
+
+  // Periodic subtle smile animation (every 12-18 seconds, duration 800ms)
   useEffect(() => {
     if (!interactive) return;
 
     const scheduleSmile = () => {
-      const delay = 15000 + Math.random() * 5000;
+      const delay = 12000 + Math.random() * 6000;
       return setTimeout(() => {
         setIsSmiling(true);
-        setTimeout(() => setIsSmiling(false), 600);
+        setTimeout(() => setIsSmiling(false), 800);
         timer = scheduleSmile();
       }, delay);
     };
@@ -391,6 +573,126 @@ export const LivingMascot = React.memo(({
       {/* Power Overlay animation */}
       {renderPowerOverlay()}
 
+      {/* Emotion Particles (Anime Sparkles & Hearts, Dumb sweat/question mark, Happy stars, Deep breath aura) */}
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-visible">
+        {mood === 'anime' && (
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: [0, 1, 0.8, 0], y: [-5, -28], scale: [0.6, 1.1, 0.9] }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: "easeOut" }}
+              className="absolute top-2 left-6 text-pink-400 text-lg select-none"
+            >
+              💖
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: [0, 1, 0.8, 0], y: [-5, -24], scale: [0.6, 1.2, 0.9] }}
+              transition={{ repeat: Infinity, duration: 2.1, delay: 0.5, ease: "easeOut" }}
+              className="absolute top-0 right-6 text-yellow-300 text-lg select-none"
+            >
+              ✨
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: [0, 1, 0.8, 0], y: [-5, -22], scale: [0.7, 1.0, 0.8] }}
+              transition={{ repeat: Infinity, duration: 2.3, delay: 1.0, ease: "easeOut" }}
+              className="absolute top-8 right-3 text-rose-400 text-base select-none"
+            >
+              🌸
+            </motion.div>
+          </>
+        )}
+
+        {mood === 'dumb' && (
+          <motion.div
+            initial={{ opacity: 0, rotate: -15, scale: 0.5 }}
+            animate={{ opacity: [0, 1, 1, 0], rotate: [-15, 10, -10, 0], y: [-4, -20] }}
+            transition={{ repeat: Infinity, duration: 1.9 }}
+            className="absolute top-1 right-8 text-xl font-black text-amber-500 select-none"
+          >
+            ❓
+          </motion.div>
+        )}
+
+        {(mood === 'happy' || mood === 'celebrating') && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: [0, 1, 0], scale: [0.5, 1.2, 0.5], y: [-4, -22] }}
+            transition={{ repeat: Infinity, duration: 1.7 }}
+            className="absolute top-1 right-8 text-amber-400 text-base select-none"
+          >
+            ⭐
+          </motion.div>
+        )}
+
+        {mood === 'fiery' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: [0, 1, 0.8, 0], scale: [0.7, 1.3, 1], y: [-2, -26] }}
+            transition={{ repeat: Infinity, duration: 1.4, ease: "easeOut" }}
+            className="absolute -top-1 right-7 text-orange-500 text-lg select-none"
+          >
+            🔥
+          </motion.div>
+        )}
+
+        {mood === 'zen' && (
+          <motion.div
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: [0, 0.9, 0], y: [-4, -24], rotate: [-5, 10, -5] }}
+            transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+            className="absolute top-0 right-6 text-emerald-400 text-base select-none"
+          >
+            🍃
+          </motion.div>
+        )}
+
+        {mood === 'wink' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: [0, 1, 0], scale: [0.5, 1.3, 0.7], rotate: [0, 45, 90] }}
+            transition={{ repeat: Infinity, duration: 1.8 }}
+            className="absolute top-1 right-6 text-yellow-300 text-base select-none"
+          >
+            ✨
+          </motion.div>
+        )}
+
+        {mood === 'shocked' && (
+          <motion.div
+            initial={{ opacity: 0, y: 2, scale: 0.5 }}
+            animate={{ opacity: [0, 1, 1, 0], y: [-2, -18], scale: [0.6, 1.2, 1] }}
+            transition={{ repeat: Infinity, duration: 1.5 }}
+            className="absolute top-0 right-7 text-amber-500 font-black text-xl select-none"
+          >
+            ⚡
+          </motion.div>
+        )}
+
+        {(mood === 'pouting' || mood === 'pouty') && (
+          <motion.div
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: [0, 0.9, 0], y: [0, 16] }}
+            transition={{ repeat: Infinity, duration: 2.0, ease: "easeIn" }}
+            className="absolute top-8 left-8 text-sky-400 text-xs select-none"
+          >
+            💧
+          </motion.div>
+        )}
+
+        {isDeepBreathing && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: [0, 0.85, 0], scale: [0.8, 1.2, 1.35], y: [-2, -18] }}
+            transition={{ duration: 1.6, ease: "easeInOut" }}
+            className="absolute top-2 left-1/2 -translate-x-1/2 text-cyan-500/90 text-[10px] font-black tracking-widest uppercase select-none"
+          >
+            ~ breathe ~
+          </motion.div>
+        )}
+      </div>
+
       {/* Mascot Animated Vector Body Container */}
       <motion.div
         className="w-full h-full relative"
@@ -408,11 +710,19 @@ export const LivingMascot = React.memo(({
             ? { scaleX: 1.20, scaleY: 0.80, y: 0, rotate: 0 }
             : jumpPhase === 'bounce'
             ? { scaleX: 0.95, scaleY: 1.05, y: -3, rotate: 0 }
+            : isDeepBreathing
+            ? { scaleX: 1.025, scaleY: 1.06, y: -6.5, rotate: 0 }
+            : idleBodyShift === 'squish'
+            ? { scaleX: 1.06, scaleY: 0.94, y: 2, rotate: 0 }
+            : idleBodyShift === 'wobble'
+            ? { scaleX: 1.01, scaleY: 0.99, y: -1.5, rotate: [0, -3.5, 3.5, 0] }
+            : idleBodyShift === 'stretch'
+            ? { scaleX: 0.96, scaleY: 1.05, y: -4, rotate: 0 }
             : {
-                y: [0, -4, 0],
-                scaleX: [1, 1.015, 1],
-                scaleY: [1, 0.985, 1],
-                rotate: isRareTrigger ? [0, -8, 8, -4, 0] : 0
+                y: (isBreathingIn ? -4 : 0) + glanceBodyY,
+                scaleX: isBreathingIn ? 1.03 : 0.98,
+                scaleY: isBreathingIn ? 1.035 : 0.975,
+                rotate: isRareTrigger ? [0, -8, 8, -4, 0] : glanceTilt
               }
         }
         transition={
@@ -428,11 +738,15 @@ export const LivingMascot = React.memo(({
             ? { duration: 0.12, ease: 'easeIn' }
             : jumpPhase === 'bounce'
             ? { duration: 0.10, ease: 'easeOut' }
+            : isDeepBreathing
+            ? { duration: 1.2, ease: 'easeInOut' }
+            : idleBodyShift !== 'none'
+            ? { duration: 0.8, ease: 'easeInOut' }
             : {
-                y: { repeat: Infinity, duration: 4.2, ease: 'easeInOut' },
-                scaleX: { repeat: Infinity, duration: 3.8, ease: 'easeInOut' },
-                scaleY: { repeat: Infinity, duration: 3.8, ease: 'easeInOut' },
-                rotate: { duration: 0.9, ease: 'easeInOut' }
+                y: { duration: 2.6, ease: 'easeInOut' },
+                scaleX: { duration: 2.6, ease: 'easeInOut' },
+                scaleY: { duration: 2.6, ease: 'easeInOut' },
+                rotate: { duration: 0.5, ease: 'easeInOut' }
               }
         }
       >
@@ -859,7 +1173,8 @@ export const LivingMascot = React.memo(({
 
           {/* Eyes & Facial Expression System */}
           {(() => {
-            const currentEyeOffset = isBlinking ? 0 : (isTalking ? 2 : eyeGlanceOffset);
+            const currentEyeOffsetX = isBlinking ? 0 : (isTalking ? 2 : eyeGlanceX);
+            const currentEyeOffsetY = isBlinking ? 0 : eyeGlanceY;
 
             if (isBlinking) {
               return (
@@ -871,14 +1186,69 @@ export const LivingMascot = React.memo(({
               );
             }
 
+            if (mood === 'dumb') {
+              return (
+                /* Goofy / Derp Cross-Eyes with silly pupils & cocked brows */
+                <g>
+                  <ellipse cx={150 + currentEyeOffsetX * 0.4} cy={180 + currentEyeOffsetY * 0.4} rx={16} ry={17} fill="#ffffff" stroke={colors.eyeColor} strokeWidth={3.5} />
+                  <ellipse cx={250 + currentEyeOffsetX * 0.4} cy={180 + currentEyeOffsetY * 0.4} rx={16} ry={17} fill="#ffffff" stroke={colors.eyeColor} strokeWidth={3.5} />
+                  {/* Cross-eyed pupils inward */}
+                  <circle cx={158 + currentEyeOffsetX} cy={184 + currentEyeOffsetY} r={6.5} fill={colors.eyeColor} />
+                  <circle cx={160 + currentEyeOffsetX} cy={182 + currentEyeOffsetY} r={2} fill="#fff" />
+                  <circle cx={242 + currentEyeOffsetX} cy={184 + currentEyeOffsetY} r={6.5} fill={colors.eyeColor} />
+                  <circle cx={240 + currentEyeOffsetX} cy={182 + currentEyeOffsetY} r={2} fill="#fff" />
+                  {/* Silly uneven eyebrows */}
+                  <path d="M130,165 Q148,153 166,167" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinecap="round" fill="none" />
+                  <path d="M234,160 Q250,166 270,157" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinecap="round" fill="none" />
+                </g>
+              );
+            }
+
+            if (mood === 'anime') {
+              return (
+                /* Sparkly Anime Chibi Eyes with starry reflections */
+                <g>
+                  {/* Left Anime Eye */}
+                  <ellipse cx={150 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} rx={19} ry={21} fill="#0f172a" />
+                  <ellipse cx={150 + currentEyeOffsetX} cy={185 + currentEyeOffsetY} rx={17} ry={14} fill="#38bdf8" opacity={0.88} />
+                  {/* Big primary shine */}
+                  <circle cx={143 + currentEyeOffsetX} cy={172 + currentEyeOffsetY} r={7.5} fill="#ffffff" />
+                  {/* Secondary bottom shine & star */}
+                  <circle cx={157 + currentEyeOffsetX} cy={187 + currentEyeOffsetY} r={4} fill="#ffffff" />
+                  <polygon points={`${152 + currentEyeOffsetX},${176 + currentEyeOffsetY} ${154 + currentEyeOffsetX},${181 + currentEyeOffsetY} ${159 + currentEyeOffsetX},${182 + currentEyeOffsetY} ${155 + currentEyeOffsetX},${185 + currentEyeOffsetY} ${156 + currentEyeOffsetX},${190 + currentEyeOffsetY} ${152 + currentEyeOffsetX},${187 + currentEyeOffsetY} ${148 + currentEyeOffsetX},${190 + currentEyeOffsetY} ${149 + currentEyeOffsetX},${185 + currentEyeOffsetY} ${145 + currentEyeOffsetX},${182 + currentEyeOffsetY} ${150 + currentEyeOffsetX},${181 + currentEyeOffsetY}`} fill="#fef08a" />
+                  {/* Eyelashes */}
+                  <path d={`M${128 + currentEyeOffsetX},${167 + currentEyeOffsetY} Q${150 + currentEyeOffsetX},${156 + currentEyeOffsetY} ${172 + currentEyeOffsetX},${167 + currentEyeOffsetY}`} stroke="#0f172a" strokeWidth={5} strokeLinecap="round" fill="none" />
+                  <path d={`M${167 + currentEyeOffsetX},${163 + currentEyeOffsetY} L${175 + currentEyeOffsetX},${157 + currentEyeOffsetY}`} stroke="#0f172a" strokeWidth={3.5} strokeLinecap="round" />
+
+                  {/* Right Anime Eye */}
+                  <ellipse cx={250 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} rx={19} ry={21} fill="#0f172a" />
+                  <ellipse cx={250 + currentEyeOffsetX} cy={185 + currentEyeOffsetY} rx={17} ry={14} fill="#38bdf8" opacity={0.88} />
+                  {/* Big primary shine */}
+                  <circle cx={243 + currentEyeOffsetX} cy={172 + currentEyeOffsetY} r={7.5} fill="#ffffff" />
+                  {/* Secondary bottom shine & star */}
+                  <circle cx={257 + currentEyeOffsetX} cy={187 + currentEyeOffsetY} r={4} fill="#ffffff" />
+                  <polygon points={`${252 + currentEyeOffsetX},${176 + currentEyeOffsetY} ${254 + currentEyeOffsetX},${181 + currentEyeOffsetY} ${259 + currentEyeOffsetX},${182 + currentEyeOffsetY} ${255 + currentEyeOffsetX},${185 + currentEyeOffsetY} ${256 + currentEyeOffsetX},${190 + currentEyeOffsetY} ${252 + currentEyeOffsetX},${187 + currentEyeOffsetY} ${248 + currentEyeOffsetX},${190 + currentEyeOffsetY} ${249 + currentEyeOffsetX},${185 + currentEyeOffsetY} ${245 + currentEyeOffsetX},${182 + currentEyeOffsetY} ${250 + currentEyeOffsetX},${181 + currentEyeOffsetY}`} fill="#fef08a" />
+                  {/* Eyelashes */}
+                  <path d={`M${228 + currentEyeOffsetX},${167 + currentEyeOffsetY} Q${250 + currentEyeOffsetX},${156 + currentEyeOffsetY} ${272 + currentEyeOffsetX},${167 + currentEyeOffsetY}`} stroke="#0f172a" strokeWidth={5} strokeLinecap="round" fill="none" />
+                  <path d={`M${267 + currentEyeOffsetX},${163 + currentEyeOffsetY} L${275 + currentEyeOffsetX},${157 + currentEyeOffsetY}`} stroke="#0f172a" strokeWidth={3.5} strokeLinecap="round" />
+
+                  {/* Cute Anime Manga Cheek Blush Strips */}
+                  <line x1="110" y1="197" x2="122" y2="207" stroke="#f43f5e" strokeWidth={3.5} strokeLinecap="round" />
+                  <line x1="118" y1="195" x2="130" y2="205" stroke="#f43f5e" strokeWidth={3.5} strokeLinecap="round" />
+                  <line x1="270" y1="197" x2="282" y2="207" stroke="#f43f5e" strokeWidth={3.5} strokeLinecap="round" />
+                  <line x1="278" y1="195" x2="290" y2="205" stroke="#f43f5e" strokeWidth={3.5} strokeLinecap="round" />
+                </g>
+              );
+            }
+
             if (mood === 'welcoming' || mood === 'celebrating' || mood === 'hyped') {
               return (
                 <g>
                   {/* Star Sparkling Eyes */}
-                  <g transform={`translate(${135 + currentEyeOffset}, 166) scale(0.85)`}>
+                  <g transform={`translate(${135 + currentEyeOffsetX}, ${166 + currentEyeOffsetY}) scale(0.85)`}>
                     <polygon points="18,0 23,12 36,18 23,24 18,36 13,24 0,18 13,12" fill="#facc15" />
                   </g>
-                  <g transform={`translate(${235 + currentEyeOffset}, 166) scale(0.85)`}>
+                  <g transform={`translate(${235 + currentEyeOffsetX}, ${166 + currentEyeOffsetY}) scale(0.85)`}>
                     <polygon points="18,0 23,12 36,18 23,24 18,36 13,24 0,18 13,12" fill="#facc15" />
                   </g>
                 </g>
@@ -889,12 +1259,12 @@ export const LivingMascot = React.memo(({
               return (
                 <g>
                   {/* Motivated Cheerful Eyes */}
-                  <circle cx={150 + currentEyeOffset} cy="180" r="15" fill={colors.eyeColor} />
-                  <circle cx={146 + currentEyeOffset} cy="174" r="6" fill="#fff" />
-                  <circle cx={152 + currentEyeOffset} cy="182" r="2.5" fill="#fff" />
-                  <circle cx={250 + currentEyeOffset} cy="180" r="15" fill={colors.eyeColor} />
-                  <circle cx={246 + currentEyeOffset} cy="174" r="6" fill="#fff" />
-                  <circle cx={252 + currentEyeOffset} cy="182" r="2.5" fill="#fff" />
+                  <circle cx={150 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={15} fill={colors.eyeColor} />
+                  <circle cx={146 + currentEyeOffsetX} cy={174 + currentEyeOffsetY} r={6} fill="#fff" />
+                  <circle cx={152 + currentEyeOffsetX} cy={182 + currentEyeOffsetY} r={2.5} fill="#fff" />
+                  <circle cx={250 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={15} fill={colors.eyeColor} />
+                  <circle cx={246 + currentEyeOffsetX} cy={174 + currentEyeOffsetY} r={6} fill="#fff" />
+                  <circle cx={252 + currentEyeOffsetX} cy={182 + currentEyeOffsetY} r={2.5} fill="#fff" />
                   <path d="M135,160 Q150,154 165,162" stroke={colors.eyeColor} strokeWidth="4.5" strokeLinecap="round" fill="none" />
                   <path d="M265,160 Q250,154 235,162" stroke={colors.eyeColor} strokeWidth="4.5" strokeLinecap="round" fill="none" />
                 </g>
@@ -905,8 +1275,8 @@ export const LivingMascot = React.memo(({
               return (
                 <g>
                   {/* Downturned Sad Eyes */}
-                  <path d={`M${130 + currentEyeOffset},184 Q${150 + currentEyeOffset},170 ${170 + currentEyeOffset},184`} stroke={colors.eyeColor} strokeWidth={6} strokeLinecap="round" fill="none" />
-                  <path d={`M${230 + currentEyeOffset},184 Q${250 + currentEyeOffset},170 ${270 + currentEyeOffset},184`} stroke={colors.eyeColor} strokeWidth={6} strokeLinecap="round" fill="none" />
+                  <path d={`M${130 + currentEyeOffsetX},${184 + currentEyeOffsetY} Q${150 + currentEyeOffsetX},${170 + currentEyeOffsetY} ${170 + currentEyeOffsetX},${184 + currentEyeOffsetY}`} stroke={colors.eyeColor} strokeWidth={6} strokeLinecap="round" fill="none" />
+                  <path d={`M${230 + currentEyeOffsetX},${184 + currentEyeOffsetY} Q${250 + currentEyeOffsetX},${170 + currentEyeOffsetY} ${270 + currentEyeOffsetX},${184 + currentEyeOffsetY}`} stroke={colors.eyeColor} strokeWidth={6} strokeLinecap="round" fill="none" />
                   
                   {/* Sad Eyebrows angled inward */}
                   <path d="M135,158 L165,166" stroke={colors.eyeColor} strokeWidth="4.5" strokeLinecap="round" />
@@ -925,10 +1295,10 @@ export const LivingMascot = React.memo(({
               return (
                 <g>
                   {/* Wide Concerned Eyes */}
-                  <circle cx={150 + currentEyeOffset} cy="180" r="15" fill={colors.eyeColor} />
-                  <circle cx={146 + currentEyeOffset} cy="175" r="5" fill="#fff" />
-                  <circle cx={250 + currentEyeOffset} cy="180" r="15" fill={colors.eyeColor} />
-                  <circle cx={246 + currentEyeOffset} cy="175" r="5" fill="#fff" />
+                  <circle cx={150 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={15} fill={colors.eyeColor} />
+                  <circle cx={146 + currentEyeOffsetX} cy={175 + currentEyeOffsetY} r={5} fill="#fff" />
+                  <circle cx={250 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={15} fill={colors.eyeColor} />
+                  <circle cx={246 + currentEyeOffsetX} cy={175 + currentEyeOffsetY} r={5} fill="#fff" />
                   
                   {/* Worried Eyebrows */}
                   <path d="M135,162 Q150,158 165,165" stroke={colors.eyeColor} strokeWidth="4.5" strokeLinecap="round" fill="none" />
@@ -940,16 +1310,79 @@ export const LivingMascot = React.memo(({
               );
             }
 
-            if (mood === 'pouty') {
+            if (mood === 'pouting' || mood === 'pouty') {
               return (
                 <g>
-                  {/* Pouty eyes looking down-left */}
-                  <circle cx={148} cy="183" r="13" fill={colors.eyeColor} />
-                  <circle cx={144} cy="180" r="4" fill="#fff" />
-                  <circle cx={248} cy="183" r="13" fill={colors.eyeColor} />
-                  <circle cx={244} cy="180" r="4" fill="#fff" />
-                  <path d="M135,162 L165,164" stroke={colors.eyeColor} strokeWidth="4" strokeLinecap="round" />
-                  <path d="M265,162 L235,164" stroke={colors.eyeColor} strokeWidth="4" strokeLinecap="round" />
+                  {/* Big watery sad puppy eyes */}
+                  <ellipse cx={148 + currentEyeOffsetX} cy={182 + currentEyeOffsetY} rx={15} ry={16} fill={colors.eyeColor} />
+                  <circle cx={144 + currentEyeOffsetX} cy={176 + currentEyeOffsetY} r={6} fill="#fff" />
+                  <circle cx={152 + currentEyeOffsetX} cy={185 + currentEyeOffsetY} r={3} fill="#fff" />
+                  <ellipse cx={248 + currentEyeOffsetX} cy={182 + currentEyeOffsetY} rx={15} ry={16} fill={colors.eyeColor} />
+                  <circle cx={244 + currentEyeOffsetX} cy={176 + currentEyeOffsetY} r={6} fill="#fff" />
+                  <circle cx={252 + currentEyeOffsetX} cy={185 + currentEyeOffsetY} r={3} fill="#fff" />
+                  {/* Trembling sad eyebrows */}
+                  <path d="M132,165 Q150,158 165,166" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinecap="round" fill="none" />
+                  <path d="M268,165 Q250,158 235,166" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinecap="round" fill="none" />
+                  {/* Shimmering tear drop */}
+                  <ellipse cx={135} cy={195} rx={3.5} ry={5} fill="#38bdf8" opacity={0.85} className="animate-pulse" />
+                </g>
+              );
+            }
+
+            if (mood === 'zen') {
+              return (
+                <g>
+                  {/* Serene closed smiling arc eyes with zen meditation brows */}
+                  <path d={`M${130 + currentEyeOffsetX},${182 + currentEyeOffsetY} Q${150 + currentEyeOffsetX},${172 + currentEyeOffsetY} ${170 + currentEyeOffsetX},${182 + currentEyeOffsetY}`} stroke={colors.eyeColor} strokeWidth={5.5} strokeLinecap="round" fill="none" />
+                  <path d={`M${230 + currentEyeOffsetX},${182 + currentEyeOffsetY} Q${250 + currentEyeOffsetX},${172 + currentEyeOffsetY} ${270 + currentEyeOffsetX},${182 + currentEyeOffsetY}`} stroke={colors.eyeColor} strokeWidth={5.5} strokeLinecap="round" fill="none" />
+                  <path d="M136,160 Q150,155 164,161" stroke={colors.eyeColor} strokeWidth={3.5} strokeLinecap="round" fill="none" />
+                  <path d="M264,160 Q250,155 236,161" stroke={colors.eyeColor} strokeWidth={3.5} strokeLinecap="round" fill="none" />
+                </g>
+              );
+            }
+
+            if (mood === 'wink') {
+              return (
+                <g>
+                  {/* Left eye: Sparkling open with star glint */}
+                  <circle cx={150 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={16} fill={colors.eyeColor} />
+                  <circle cx={145 + currentEyeOffsetX} cy={173 + currentEyeOffsetY} r={6} fill="#fff" />
+                  <polygon points={`${155 + currentEyeOffsetX},${175 + currentEyeOffsetY} ${157 + currentEyeOffsetX},${179 + currentEyeOffsetY} ${161 + currentEyeOffsetX},${180 + currentEyeOffsetY} ${158 + currentEyeOffsetX},${183 + currentEyeOffsetY} ${159 + currentEyeOffsetX},${187 + currentEyeOffsetY} ${155 + currentEyeOffsetX},${185 + currentEyeOffsetY} ${151 + currentEyeOffsetX},${187 + currentEyeOffsetY} ${152 + currentEyeOffsetX},${183 + currentEyeOffsetY} ${149 + currentEyeOffsetX},${180 + currentEyeOffsetY} ${153 + currentEyeOffsetX},${179 + currentEyeOffsetY}`} fill="#fde047" />
+                  {/* Right eye: Winking closed happy curve */}
+                  <path d={`M${234 + currentEyeOffsetX},${182 + currentEyeOffsetY} Q${252 + currentEyeOffsetX},${170 + currentEyeOffsetY} ${268 + currentEyeOffsetY},${182 + currentEyeOffsetY}`} stroke={colors.eyeColor} strokeWidth={6} strokeLinecap="round" fill="none" />
+                  <path d={`M${266 + currentEyeOffsetX},${180 + currentEyeOffsetY} L${274 + currentEyeOffsetX},${176 + currentEyeOffsetY}`} stroke={colors.eyeColor} strokeWidth={4} strokeLinecap="round" />
+                </g>
+              );
+            }
+
+            if (mood === 'shocked') {
+              return (
+                <g>
+                  {/* Huge shocked circular eyes with tiny pinpoint pupils */}
+                  <circle cx={148 + currentEyeOffsetX} cy={178 + currentEyeOffsetY} r={19} fill="#ffffff" stroke={colors.eyeColor} strokeWidth={4.5} />
+                  <circle cx={148 + currentEyeOffsetX} cy={178 + currentEyeOffsetY} r={6} fill={colors.eyeColor} />
+                  <circle cx={252 + currentEyeOffsetX} cy={178 + currentEyeOffsetY} r={19} fill="#ffffff" stroke={colors.eyeColor} strokeWidth={4.5} />
+                  <circle cx={252 + currentEyeOffsetX} cy={178 + currentEyeOffsetY} r={6} fill={colors.eyeColor} />
+                  {/* High surprised eyebrows */}
+                  <path d="M130,148 Q148,140 166,150" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinecap="round" fill="none" />
+                  <path d="M234,150 Q252,140 270,148" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinecap="round" fill="none" />
+                </g>
+              );
+            }
+
+            if (mood === 'fiery') {
+              return (
+                <g>
+                  {/* Sharp focused determined brows */}
+                  <path d="M126,155 L168,171" stroke="#ea580c" strokeWidth={6} strokeLinecap="round" />
+                  <path d="M274,155 L232,171" stroke="#ea580c" strokeWidth={6} strokeLinecap="round" />
+                  {/* Fiery glowing eyes */}
+                  <ellipse cx={148 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} rx={16} ry={13} fill="#dc2626" />
+                  <ellipse cx={148 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} rx={12} ry={9} fill="#f59e0b" />
+                  <circle cx={148 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={4.5} fill="#fef08a" />
+                  <ellipse cx={252 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} rx={16} ry={13} fill="#dc2626" />
+                  <ellipse cx={252 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} rx={12} ry={9} fill="#f59e0b" />
+                  <circle cx={252 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={4.5} fill="#fef08a" />
                 </g>
               );
             }
@@ -969,10 +1402,10 @@ export const LivingMascot = React.memo(({
             if (mood === 'surprised') {
               return (
                 <g>
-                  <circle cx={150 + currentEyeOffset} cy="180" r="18" fill={colors.eyeColor} />
-                  <circle cx={145 + currentEyeOffset} cy="173" r="7" fill="#fff" />
-                  <circle cx={250 + currentEyeOffset} cy="180" r="18" fill={colors.eyeColor} />
-                  <circle cx={245 + currentEyeOffset} cy="173" r="7" fill="#fff" />
+                  <circle cx={150 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={18} fill={colors.eyeColor} />
+                  <circle cx={145 + currentEyeOffsetX} cy={173 + currentEyeOffsetY} r={7} fill="#fff" />
+                  <circle cx={250 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={18} fill={colors.eyeColor} />
+                  <circle cx={245 + currentEyeOffsetX} cy={173 + currentEyeOffsetY} r={7} fill="#fff" />
                 </g>
               );
             }
@@ -980,8 +1413,8 @@ export const LivingMascot = React.memo(({
             if (mood === 'happy' && !isTalking) {
               return (
                 <g stroke={colors.eyeColor} strokeWidth={7} strokeLinecap="round" fill="none">
-                  <path d={`M${125 + currentEyeOffset},185 Q${145 + currentEyeOffset},165 ${165 + currentEyeOffset},185`} />
-                  <path d={`M${235 + currentEyeOffset},185 Q${255 + currentEyeOffset},165 ${275 + currentEyeOffset},185`} />
+                  <path d={`M${125 + currentEyeOffsetX},${185 + currentEyeOffsetY} Q${145 + currentEyeOffsetX},${165 + currentEyeOffsetY} ${165 + currentEyeOffsetX},${185 + currentEyeOffsetY}`} />
+                  <path d={`M${235 + currentEyeOffsetX},${185 + currentEyeOffsetY} Q${255 + currentEyeOffsetX},${165 + currentEyeOffsetY} ${275 + currentEyeOffsetX},${185 + currentEyeOffsetY}`} />
                 </g>
               );
             }
@@ -989,29 +1422,87 @@ export const LivingMascot = React.memo(({
             if (mood === 'angry' || mood === 'boiling') {
               return (
                 <g>
-                  <circle cx={150 + currentEyeOffset} cy="180" r="14" fill={colors.eyeColor} />
-                  <circle cx={145 + currentEyeOffset} cy="175" r="5" fill="#fff" />
-                  <circle cx={250 + currentEyeOffset} cy="180" r="14" fill={colors.eyeColor} />
-                  <circle cx={245 + currentEyeOffset} cy="175" r="5" fill="#fff" />
-                  <path d="M130,158 L165,170" stroke={colors.eyeColor} strokeWidth="5.5" strokeLinecap="round" />
-                  <path d="M270,158 L235,170" stroke={colors.eyeColor} strokeWidth="5.5" strokeLinecap="round" />
+                  <circle cx={150 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={14} fill={colors.eyeColor} />
+                  <circle cx={145 + currentEyeOffsetX} cy={175 + currentEyeOffsetY} r={5} fill="#fff" />
+                  <circle cx={250 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={14} fill={colors.eyeColor} />
+                  <circle cx={245 + currentEyeOffsetX} cy={175 + currentEyeOffsetY} r={5} fill="#fff" />
+                  <path d="M130,158 L165,170" stroke={colors.eyeColor} strokeWidth={5.5} strokeLinecap="round" />
+                  <path d="M270,158 L235,170" stroke={colors.eyeColor} strokeWidth={5.5} strokeLinecap="round" />
+                </g>
+              );
+            }
+
+            if (mood === 'neutral' && idleFaceMood === 'curious') {
+              return (
+                <g>
+                  <circle cx={150 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={14} fill={colors.eyeColor} />
+                  <circle cx={145 + currentEyeOffsetX} cy={175 + currentEyeOffsetY} r={5} fill="#fff" />
+                  <circle cx={250 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={14} fill={colors.eyeColor} />
+                  <circle cx={245 + currentEyeOffsetX} cy={175 + currentEyeOffsetY} r={5} fill="#fff" />
+                  {/* Curious raised left eyebrow & inquisitive right brow */}
+                  <path d="M130,154 Q148,144 166,156" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinecap="round" fill="none" />
+                  <path d="M234,163 Q250,161 268,164" stroke={colors.eyeColor} strokeWidth={3.8} strokeLinecap="round" fill="none" />
                 </g>
               );
             }
 
             return (
               <g>
-                <circle cx={150 + currentEyeOffset} cy="180" r="14" fill={colors.eyeColor} />
-                <circle cx={145 + currentEyeOffset} cy="175" r="5" fill="#fff" />
-                <circle cx={250 + currentEyeOffset} cy="180" r="14" fill={colors.eyeColor} />
-                <circle cx={245 + currentEyeOffset} cy="175" r="5" fill="#fff" />
+                <circle cx={150 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={14} fill={colors.eyeColor} />
+                <circle cx={145 + currentEyeOffsetX} cy={175 + currentEyeOffsetY} r={5} fill="#fff" />
+                <circle cx={250 + currentEyeOffsetX} cy={180 + currentEyeOffsetY} r={14} fill={colors.eyeColor} />
+                <circle cx={245 + currentEyeOffsetX} cy={175 + currentEyeOffsetY} r={5} fill="#fff" />
               </g>
             );
           })()}
 
           {/* Mouth Expressions - Clean, Glitch-Free Vector Rendering */}
           <g>
-            {isTalking || isSmiling || mood === 'happy' || mood === 'hyped' || mood === 'welcoming' || mood === 'celebrating' || mood === 'motivational' ? (
+            {isDeepBreathing ? (
+              /* Peaceful breathing line */
+              <path d="M188,201 Q200,206 212,201" fill="none" stroke={colors.eyeColor} strokeWidth={4} strokeLinecap="round" />
+            ) : mood === 'dumb' ? (
+              /* Silly tongue blep mouth */
+              <g>
+                <path d="M184,198 Q200,205 216,198" fill="none" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinecap="round" />
+                <path d="M194,202 Q200,218 206,202 Z" fill="#ff6b8b" stroke={colors.eyeColor} strokeWidth={3} />
+                <line x1="200" y1="202" x2="200" y2="210" stroke="#b3243d" strokeWidth={1.5} />
+              </g>
+            ) : mood === 'anime' ? (
+              /* Cute anime cat :3 mouth */
+              <g>
+                <path d="M184,198 Q192,207 200,199 Q208,207 216,198" fill="none" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinecap="round" strokeLinejoin="round" />
+              </g>
+            ) : idleFaceMood === 'curious' ? (
+              /* Curious small :o mouth */
+              <ellipse cx="200" cy="201" rx="5" ry="6.5" fill={colors.eyeColor} />
+            ) : idleFaceMood === 'whistle' ? (
+              /* Whistling round mouth */
+              <circle cx="204" cy="200" r="4.5" fill={colors.eyeColor} />
+            ) : idleFaceMood === 'content_smile' ? (
+              /* Gentle idle content smile */
+              <path d="M184,197 Q200,208 216,197" fill="none" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinecap="round" />
+            ) : mood === 'zen' ? (
+              /* Serene zen smile */
+              <path d="M186,200 Q200,208 214,200" fill="none" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinecap="round" />
+            ) : mood === 'wink' ? (
+              /* Cheerful cheeky mouth with subtle tongue */
+              <g>
+                <path d="M184,196 Q200,214 216,196" fill="none" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinecap="round" />
+                <path d="M192,204 Q200,218 208,204 Z" fill="#ff6b8b" stroke={colors.eyeColor} strokeWidth={2.5} />
+              </g>
+            ) : mood === 'shocked' ? (
+              /* Shocked cartoon 'O' mouth */
+              <ellipse cx="200" cy="205" rx="9" ry="13" fill="#7f1d1d" stroke={colors.eyeColor} strokeWidth={4} />
+            ) : mood === 'fiery' ? (
+              /* Fierce determined battle grin */
+              <g>
+                <path d="M182,197 Q200,214 218,197 Z" fill="#ffffff" stroke={colors.eyeColor} strokeWidth={4.5} strokeLinejoin="round" />
+                <line x1="192" y1="198" x2="192" y2="206" stroke="#94a3b8" strokeWidth={2} />
+                <line x1="200" y1="198" x2="200" y2="208" stroke="#94a3b8" strokeWidth={2} />
+                <line x1="208" y1="198" x2="208" y2="206" stroke="#94a3b8" strokeWidth={2} />
+              </g>
+            ) : isTalking || isSmiling || mood === 'happy' || mood === 'hyped' || mood === 'welcoming' || mood === 'celebrating' || mood === 'motivational' ? (
               <g>
                 <path
                   d="M182,194 Q200,216 218,194 Q200,228 182,194 Z"
@@ -1038,14 +1529,17 @@ export const LivingMascot = React.memo(({
                 strokeWidth={4.5}
                 strokeLinecap="round"
               />
-            ) : mood === 'pouty' ? (
-              <path
-                d="M188,208 Q200,200 212,208"
-                fill="none"
-                stroke={colors.eyeColor}
-                strokeWidth={5}
-                strokeLinecap="round"
-              />
+            ) : mood === 'pouty' || mood === 'pouting' ? (
+              <g>
+                <path
+                  d="M188,208 Q200,200 212,208"
+                  fill="none"
+                  stroke={colors.eyeColor}
+                  strokeWidth={5}
+                  strokeLinecap="round"
+                />
+                <path d="M193,209 Q200,214 207,209" fill="none" stroke="#f43f5e" strokeWidth={3} strokeLinecap="round" />
+              </g>
             ) : mood === 'angry' || mood === 'boiling' ? (
               <path
                 d="M184,204 Q200,192 216,204"

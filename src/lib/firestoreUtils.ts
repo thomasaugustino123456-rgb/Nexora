@@ -75,6 +75,18 @@ export async function safeAddDoc<T = any>(
 }
 
 /**
+ * Returns a stable, timezone-safe start-of-week string (YYYY-MM-DD representing Sunday)
+ */
+export function getStartOfWeekKey(d: Date = new Date()): string {
+  const sunday = new Date(d);
+  sunday.setDate(d.getDate() - d.getDay());
+  const year = sunday.getFullYear();
+  const month = String(sunday.getMonth() + 1).padStart(2, "0");
+  const day = String(sunday.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Universal Timestamp normalizer handling ISO strings, numeric timestamps, and Firestore Timestamp objects ({ seconds, nanoseconds } or toMillis / toDate).
  */
 export function parseTimestampMs(val: any): number | null {

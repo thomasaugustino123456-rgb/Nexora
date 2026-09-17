@@ -83,6 +83,7 @@ export function ProfileScreen({
   const [editEmail, setEditEmail] = useState(
     settings.email || user?.email || "",
   );
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -109,66 +110,129 @@ export function ProfileScreen({
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    if (!file) return;
 
-    // Clear input so user can pick the exact same photo again if they want
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (file.size > 25 * 1024 * 1024) {
+      alert("Image is too large! Please choose a picture under 25MB.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
     }
 
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert(
-          "Image is too large! Please choose a smaller one, bro (Max 5MB).",
-        );
-        return;
+    setIsProcessingPhoto(true);
+
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+
+    const cleanup = () => {
+      try {
+        URL.revokeObjectURL(objectUrl);
+      } catch (e) {}
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
+      setIsProcessingPhoto(false);
+    };
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const img = new Image();
-        img.onload = () => {
-          // Compress using canvas to ensure it fits in localStorage/Firestore
-          const canvas = document.createElement("canvas");
-          const MAX_WIDTH = 400;
-          const MAX_HEIGHT = 400;
-          let width = img.width;
-          let height = img.height;
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const MAX_DIM = 400;
+        let width = img.width;
+        let height = img.height;
 
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
           }
+        } else {
+          if (height > MAX_DIM) {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
 
-          width = Math.round(width);
-          height = Math.round(height);
+        canvas.width = Math.max(1, width);
+        canvas.height = Math.max(1, height);
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+          setEditPhoto(dataUrl);
 
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-            setEditPhoto(dataUrl);
+          const nameToSave = editName || settings.displayName || user?.displayName || "Champion";
+          const locationToSave = editLocation || settings.location || "";
+          const accountNameToSave = editAccountName || settings.accountName || nameToSave;
+          const emailToSave = editEmail || settings.email || user?.email || "";
 
-            // Auto-save the profile picture immediately so the user doesn't have to find the Save button
-            onUpdateProfile(
-              editName || settings.displayName || "Pioneer",
-              dataUrl,
-              editLocation,
-            );
+          // Auto-save the profile picture immediately so it saves to Firestore and local cache
+          onUpdateProfile(nameToSave, dataUrl, locationToSave, {
+            accountName: accountNameToSave,
+            email: emailToSave,
+          });
+        }
+      } catch (err) {
+        console.error("Error processing profile image:", err);
+      } finally {
+        cleanup();
+      }
+    };
+
+    img.onerror = () => {
+      console.warn("Direct image load failed, falling back to FileReader...");
+      const reader = new FileReader();
+      reader.onload = () => {
+        const fallbackImg = new Image();
+        fallbackImg.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            const MAX_DIM = 400;
+            let width = fallbackImg.width;
+            let height = fallbackImg.height;
+            if (width > height) {
+              if (width > MAX_DIM) {
+                height = Math.round((height * MAX_DIM) / width);
+                width = MAX_DIM;
+              }
+            } else {
+              if (height > MAX_DIM) {
+                width = Math.round((width * MAX_DIM) / height);
+                height = MAX_DIM;
+              }
+            }
+            canvas.width = Math.max(1, width);
+            canvas.height = Math.max(1, height);
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              ctx.drawImage(fallbackImg, 0, 0, width, height);
+              const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+              setEditPhoto(dataUrl);
+              onUpdateProfile(
+                editName || settings.displayName || user?.displayName || "Champion",
+                dataUrl,
+                editLocation || settings.location || "",
+                {
+                  accountName: editAccountName || settings.accountName,
+                  email: editEmail || settings.email,
+                }
+              );
+            }
+          } catch (e) {
+            console.error("Canvas draw fallback error:", e);
+          } finally {
+            cleanup();
           }
         };
-        img.src = reader.result as string;
+        fallbackImg.onerror = () => cleanup();
+        fallbackImg.src = reader.result as string;
       };
+      reader.onerror = () => cleanup();
       reader.readAsDataURL(file);
-    }
+    };
+
+    img.src = objectUrl;
   };
 
   const saveProfile = () => {
@@ -203,11 +267,11 @@ export function ProfileScreen({
           <div className="w-32 h-32 rounded-[2.5rem] bg-white border-4 border-white shadow-2xl relative z-10 overflow-hidden">
             <img
               src={editPhoto || "/icon-512.png"}
-              className={`w-full h-full object-cover shadow-inner transition-opacity duration-300 ${isSyncing ? "opacity-50" : "opacity-100"}`}
+              className={`w-full h-full object-cover shadow-inner transition-opacity duration-300 ${isProcessingPhoto || isSyncing ? "opacity-40" : "opacity-100"}`}
               referrerPolicy="no-referrer"
             />
-            {isSyncing && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/30 backdrop-blur-sm z-20">
+            {(isProcessingPhoto || isSyncing) && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-xs z-20">
                 <Loader2 size={32} className="text-blue-600 animate-spin" />
               </div>
             )}

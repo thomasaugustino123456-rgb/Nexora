@@ -107,10 +107,11 @@ import {
   isUserProUnlocked,
 } from "./types";
 import { getStreakInfo } from "./lib/streakSystem";
+import { computeTrophyInactivityDays, getExpectedTrophyStates, replaceDegradedTrophyWithNew } from "./lib/trophySystem";
 import { getMascotNotificationDetails, getMascotItemCategory, normalizeWearableId, normalizeEffectId, isWearableCategory, getWearableSubCategory, MascotSlotCategory } from "./lib/mascotSystem";
 import { createInitialGardenState } from "./types/garden";
 import { HOUSE_ITEMS } from "./constants/houseItems";
-import { parseTimestampMs, parseTimestampIso } from "./lib/firestoreUtils";
+import { parseTimestampMs, parseTimestampIso, getStartOfWeekKey } from "./lib/firestoreUtils";
 import { NexoraStudio } from "./components/NexoraStudio";
 import { BottomNav } from "./components/BottomNav";
 import { PWAInstallerCard } from "./components/PWAInstallerCard";
@@ -434,13 +435,13 @@ const NAV_ITEMS_MAP: Record<
 };
 
 export default function App() {
-  const showToast = (
+  const showToast = useCallback((
     message: string,
     type: "success" | "error" | "info" = "info",
   ) => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
-  };
+  }, []);
 
   const {
     user,
@@ -1652,6 +1653,25 @@ export default function App() {
         time: finalTime
       });
 
+      // Synchronously cache profile picture to device storage
+      if (typeof window !== 'undefined' && photoURL) {
+        try {
+          localStorage.setItem(`user_profilepic_${user.uid}`, photoURL);
+          localStorage.setItem(`nexora_user_profilepic_${user.uid}`, photoURL);
+          const currentSettings = JSON.parse(localStorage.getItem('nexora_settings') || '{}');
+          localStorage.setItem('nexora_settings', JSON.stringify({
+            ...currentSettings,
+            displayName: name,
+            profilePic: photoURL,
+            location,
+            accountName: finalAccountName,
+            email: finalEmail,
+          }));
+        } catch (storageErr) {
+          console.warn("Device storage notice for profile picture:", storageErr);
+        }
+      }
+
       // 1. Sync directly to Firebase Auth currentUser profile if available
       if (auth.currentUser) {
         try {
@@ -2569,7 +2589,7 @@ export default function App() {
     }
 
     // 3. Server-Side FCM Notification (For background/closed app push support)
-    if (fcmToken) {
+    if (fcmToken && (typeof navigator === "undefined" || navigator.onLine !== false)) {
       try {
         await fetch("/api/send-notification", {
           method: "POST",
@@ -2584,9 +2604,11 @@ export default function App() {
             badge: mergedOptions.badge,
             url: '/?screen=challenge'
           }),
+        }).catch((err) => {
+          console.warn("Server-side push notification fetch notice:", err?.message || err);
         });
-      } catch (error) {
-        console.error("Error sending server-side notification:", error);
+      } catch (error: any) {
+        console.warn("Server-side push notification delivery skipped (offline or network unavailable):", error?.message || error);
       }
     }
   };
@@ -2961,11 +2983,11 @@ export default function App() {
       if (data.success) {
         showToast("AI Motivation transmitted! 🔥", "success");
       } else {
-        console.error("Motivation send failure:", data.error);
+        console.warn("Motivation send failure:", data.error);
         showToast("Sync Failed: " + data.error, "error");
       }
     } catch (error: any) {
-      console.error("Error sending motivation:", error);
+      console.warn("Error sending motivation:", error);
       showToast("Sync Error: " + error.message, "error");
     }
   };
@@ -3006,7 +3028,7 @@ export default function App() {
         showToast("Failed to send email: " + data.error, "error");
       }
     } catch (error: any) {
-      console.error("Error sending test email:", error);
+      console.warn("Error sending test email:", error);
       showToast("Error: " + error.message, "error");
     }
   };
@@ -3294,6 +3316,10 @@ export default function App() {
       { uid: "bot-4", displayName: "FlowState", weeklyXP: 500, weeklyPoints: 500, level: 6, streak: 8, league: "Bronze" },
       { uid: "bot-5", displayName: "Iron_Will", weeklyXP: 320, weeklyPoints: 320, level: 4, streak: 5, league: "Bronze" },
     ];
+  });
+
+  const [isLeaderboardLoading, setIsLeaderboardLoading] = useState<boolean>(() => {
+    return typeof navigator !== "undefined" ? navigator.onLine : false;
   });
 
   // Offline Pending Custom Plans Helpers
@@ -3767,9 +3793,6 @@ export default function App() {
           }
         }
       });
-
-      // Automatic Trophy Check (Periodic)
-      checkTrophies();
     };
 
     // Check every 30 seconds to be more precise and avoid missing the minute mark
@@ -3791,17 +3814,15 @@ export default function App() {
   ]);
 
   const handleSaveCustomPlan = async (plan: CustomPlan) => {
-    if (!user) return;
-    const planWithUser = { ...plan, userId: user.uid };
+    const userId = user?.uid || "local-user";
+    const planWithUser = { ...plan, userId };
 
     // 1. Instantly update React state & cache so the new challenge plan appears immediately
     setCustomPlans((prev) => {
       const updated = [planWithUser, ...prev.filter((p) => p.id !== planWithUser.id)];
       try {
         localStorage.setItem("nexora_custom_plans_cache", JSON.stringify(updated));
-        if (user?.uid) {
-          localStorage.setItem(`nexora_custom_plans_cache_${user.uid}`, JSON.stringify(updated));
-        }
+        localStorage.setItem(`nexora_custom_plans_cache_${userId}`, JSON.stringify(updated));
       } catch (e) {
         console.warn("Failed to write custom plans cache:", e);
       }
@@ -3811,23 +3832,25 @@ export default function App() {
     // 2. Persist to pending offline sync queue so it persists if app reloads offline
     addPendingCustomPlan(planWithUser);
 
-    showToast("Plan created successfully! 🎯", "success");
+    showToast(`Plan "${plan.name}" added to Challenges! 🎯`, "success");
     setActiveScreen("home");
     vibrate(VIBRATION_PATTERNS.SUCCESS);
 
-    // 3. Attempt Firestore write
-    try {
-      const planRef = doc(db, "customPlans", plan.id);
-      await setDoc(planRef, planWithUser);
-      // Success: remove from pending sync queue
-      removePendingCustomPlan(plan.id);
-      console.log(`[CustomPlan] Saved "${plan.name}" to Firestore successfully.`);
-    } catch (error) {
-      console.warn("[CustomPlan] Offline mode: saved locally and queued for auto-sync.", error);
+    // 3. Attempt Firestore write if authenticated
+    if (user?.uid) {
       try {
-        handleFirestoreError(error, OperationType.WRITE, "customPlans");
-      } catch (e) {
-        console.error("Firestore error handled:", e);
+        const planRef = doc(db, "customPlans", plan.id);
+        await setDoc(planRef, planWithUser);
+        // Success: remove from pending sync queue
+        removePendingCustomPlan(plan.id);
+        console.log(`[CustomPlan] Saved "${plan.name}" to Firestore successfully.`);
+      } catch (error) {
+        console.warn("[CustomPlan] Offline mode: saved locally and queued for auto-sync.", error);
+        try {
+          handleFirestoreError(error, OperationType.WRITE, "customPlans");
+        } catch (e) {
+          console.error("Firestore error handled:", e);
+        }
       }
     }
   };
@@ -3872,11 +3895,7 @@ export default function App() {
       vibrate(VIBRATION_PATTERNS.ERROR);
       return;
     }
-    const startOfWeekStr = new Date(
-      new Date().setDate(new Date().getDate() - new Date().getDay())
-    )
-      .toISOString()
-      .split("T")[0];
+    const startOfWeekStr = getStartOfWeekKey();
 
     const rankKey = `week_${startOfWeekStr}_rank_${rank}`;
 
@@ -4041,6 +4060,7 @@ export default function App() {
   const usersDocsRef = useRef<any[]>([]);
   const rankDocsRef = useRef<any[]>([]);
   const deletedDocsRef = useRef<any[]>([]);
+  const hasLoadedFirestoreLeaderboardRef = useRef<boolean>(false);
 
   const userRef = useRef(user);
   const statsRef = useRef(stats);
@@ -4068,6 +4088,21 @@ export default function App() {
       if (data?.uid) deletedUserIds.add(data.uid);
       if (data?.userId) deletedUserIds.add(data.userId);
     });
+
+    // 0. Seed allDataMap from locally cached real users if Firestore docs haven't loaded yet
+    try {
+      const saved = localStorage.getItem("nexora_leaderboard_cache");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((item) => {
+            if (item && item.uid && !item.uid.startsWith("bot-") && !deletedUserIds.has(item.uid)) {
+              allDataMap.set(item.uid, item);
+            }
+          });
+        }
+      }
+    } catch (e) {}
 
     const parseAndAdd = (d: any, defaultDocId: string) => {
       if (!d) return;
@@ -4362,8 +4397,20 @@ export default function App() {
     }
 
     setLeaderboard(sorted);
+
+    const hasRealUsers = sorted.some((item) => item.uid && !item.uid.startsWith("bot-") && item.uid !== currentUser?.uid);
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+
+    // Only complete loading state if real users are hydrated, firestore responded, or offline
+    if (hasRealUsers || hasLoadedFirestoreLeaderboardRef.current || isOffline) {
+      setIsLeaderboardLoading(false);
+    }
+
     try {
-      localStorage.setItem("nexora_leaderboard_cache", JSON.stringify(sorted));
+      // Only write to persistent cache if real users are present or no cache exists yet, preventing bot-only overwrites
+      if (hasRealUsers || !localStorage.getItem("nexora_leaderboard_cache")) {
+        localStorage.setItem("nexora_leaderboard_cache", JSON.stringify(sorted));
+      }
     } catch (e) {
       console.warn("Failed to write leaderboard cache:", e);
     }
@@ -4403,6 +4450,7 @@ export default function App() {
 
     getDocsFromCache(qLb).then((snap) => {
       if (snap.docs.length > 0) {
+        hasLoadedFirestoreLeaderboardRef.current = true;
         leaderboardDocsRef.current = snap.docs;
         processAndSetLeaderboard();
       }
@@ -4410,6 +4458,7 @@ export default function App() {
 
     getDocsFromCache(qUsers).then((snap) => {
       if (snap.docs.length > 0) {
+        hasLoadedFirestoreLeaderboardRef.current = true;
         usersDocsRef.current = snap.docs;
         processAndSetLeaderboard();
       }
@@ -4417,6 +4466,7 @@ export default function App() {
 
     getDocsFromCache(qRank).then((snap) => {
       if (snap.docs.length > 0) {
+        hasLoadedFirestoreLeaderboardRef.current = true;
         rankDocsRef.current = snap.docs;
         processAndSetLeaderboard();
       }
@@ -4432,6 +4482,7 @@ export default function App() {
 
     getDocs(qLb).then((snap) => {
       if (snap.docs.length > 0) {
+        hasLoadedFirestoreLeaderboardRef.current = true;
         leaderboardDocsRef.current = snap.docs;
         processAndSetLeaderboard();
       }
@@ -4439,6 +4490,7 @@ export default function App() {
 
     getDocs(qUsers).then((snap) => {
       if (snap.docs.length > 0) {
+        hasLoadedFirestoreLeaderboardRef.current = true;
         usersDocsRef.current = snap.docs;
         processAndSetLeaderboard();
       }
@@ -4446,6 +4498,7 @@ export default function App() {
 
     getDocs(qRank).then((snap) => {
       if (snap.docs.length > 0) {
+        hasLoadedFirestoreLeaderboardRef.current = true;
         rankDocsRef.current = snap.docs;
         processAndSetLeaderboard();
       }
@@ -4463,6 +4516,7 @@ export default function App() {
     const unsubLb = onSnapshot(
       qLb,
       (snapshot) => {
+        hasLoadedFirestoreLeaderboardRef.current = true;
         leaderboardDocsRef.current = snapshot.docs;
         processAndSetLeaderboard();
       },
@@ -4478,6 +4532,7 @@ export default function App() {
     const unsubUsers = onSnapshot(
       qUsers,
       (snapshot) => {
+        hasLoadedFirestoreLeaderboardRef.current = true;
         usersDocsRef.current = snapshot.docs;
         processAndSetLeaderboard();
       },
@@ -4493,6 +4548,7 @@ export default function App() {
     const unsubRank = onSnapshot(
       qRank,
       (snapshot) => {
+        hasLoadedFirestoreLeaderboardRef.current = true;
         rankDocsRef.current = snapshot.docs;
         processAndSetLeaderboard();
       },
@@ -4505,7 +4561,14 @@ export default function App() {
       }
     );
 
+    // Failsafe timeout to prevent infinite sync if network is unstable
+    const failsafeTimer = setTimeout(() => {
+      hasLoadedFirestoreLeaderboardRef.current = true;
+      setIsLeaderboardLoading(false);
+    }, 5000);
+
     return () => {
+      clearTimeout(failsafeTimer);
       unsubDeleted();
       unsubLb();
       unsubUsers();
@@ -4526,8 +4589,9 @@ export default function App() {
   const initialRankHandledRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (user?.uid !== rankUserRef.current) {
-      rankUserRef.current = user?.uid || null;
+    const currentUid = user?.uid || null;
+    if (currentUid !== rankUserRef.current) {
+      rankUserRef.current = currentUid;
       initialRankHandledRef.current = false;
     }
   }, [user?.uid]);
@@ -4684,131 +4748,68 @@ export default function App() {
     onUpdateStats((prevStats) => {
       if (!prevStats.trophies || prevStats.trophies.length === 0) return prevStats;
 
+      const daysInactive = computeTrophyInactivityDays(prevStats);
+      const expectedTrophies = getExpectedTrophyStates(prevStats.trophies, daysInactive);
+
+      // Check if anything actually changed to prevent redundant writes or cycles
+      const hasChanged = expectedTrophies.some((t, i) => t.type !== prevStats.trophies[i]?.type);
+      if (!hasChanged) {
+        return prevStats;
+      }
+
       const todayStr = new Date().toISOString().split('T')[0];
-      const lastDateStr = prevStats.lastCompletedDate
-        ? prevStats.lastCompletedDate.split('T')[0].split(' ')[0].trim()
-        : (prevStats.lastActiveDate || todayStr);
 
-      const lastActiveTime = new Date(lastDateStr + "T00:00:00").getTime();
-      const todayTime = new Date(todayStr + "T00:00:00").getTime();
-      if (isNaN(lastActiveTime) || isNaN(todayTime)) {
-        return prevStats;
-      }
-
-      const daysInactive = Math.floor((todayTime - lastActiveTime) / (1000 * 60 * 60 * 24));
-
-      // Day 0 or Day 1 of inactivity (< 2 days): No trophy decay, no alerts
-      if (daysInactive < 2) {
-        return prevStats;
-      }
-
-      const trophies = [...prevStats.trophies];
-
-      if (daysInactive === 2) {
-        // DAY 2 INACTIVE: Exactly 1 oldest golden trophy turns to ICE
-        // Notification sent ONLY on second day, and only once per calendar day
-        const goldIndex = trophies.findIndex((t) => t.type === "golden");
-        if (goldIndex !== -1) {
-          trophies[goldIndex] = {
-            ...trophies[goldIndex],
-            type: "ice",
-            lastUpdated: new Date().toISOString(),
-          };
-
-          const lastAlert = localStorage.getItem("nexora_last_trophy_ice_alert");
-          if (lastAlert !== todayStr && settings.badgeSettings?.trophyAlerts) {
-            localStorage.setItem("nexora_last_trophy_ice_alert", todayStr);
-            sendNotification("Trophy Alert! 🧊", {
-              body: "One of your trophies turned to ICE! Complete a challenge today to restore it!",
-              icon: nexoraAppIcon,
-              isAutomated: false,
-            });
-            showToast("TROPHY ALERT: ICE DETECTED! 🧊", "info");
-          }
-
-          if (user?.uid) {
-            try {
-              const userRef = doc(db, "users", user.uid);
-              const rewardsRef = doc(db, "users", user.uid, "rewards", "main");
-              const statsMainRef = doc(db, "users", user.uid, "stats", "main");
-              updateDoc(userRef, {
-                trophies,
-                "stats.trophies": trophies,
-                updatedAt: serverTimestamp(),
-              }).catch(() => {});
-              setDoc(rewardsRef, { trophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
-              setDoc(statsMainRef, { trophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
-            } catch (e) {}
-          }
-
-          return {
-            ...prevStats,
-            trophies,
-          };
-        }
-      } else if (daysInactive >= 3) {
-        // DAY 3+ INACTIVE: Exactly 1 oldest ice trophy breaks (turns to broken)
-        // (or 1 golden turns to ice if no ice trophies). NO notification sent!
-        const iceIndex = trophies.findIndex((t) => t.type === "ice");
-        if (iceIndex !== -1) {
-          trophies[iceIndex] = {
-            ...trophies[iceIndex],
-            type: "broken",
-            lastUpdated: new Date().toISOString(),
-          };
-
-          if (user?.uid) {
-            try {
-              const userRef = doc(db, "users", user.uid);
-              const rewardsRef = doc(db, "users", user.uid, "rewards", "main");
-              const statsMainRef = doc(db, "users", user.uid, "stats", "main");
-              updateDoc(userRef, {
-                trophies,
-                "stats.trophies": trophies,
-                updatedAt: serverTimestamp(),
-              }).catch(() => {});
-              setDoc(rewardsRef, { trophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
-              setDoc(statsMainRef, { trophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
-            } catch (e) {}
-          }
-
-          return {
-            ...prevStats,
-            trophies,
-          };
-        } else {
-          const goldIndex = trophies.findIndex((t) => t.type === "golden");
-          if (goldIndex !== -1) {
-            trophies[goldIndex] = {
-              ...trophies[goldIndex],
-              type: "ice",
-              lastUpdated: new Date().toISOString(),
-            };
-
-            if (user?.uid) {
-              try {
-                const userRef = doc(db, "users", user.uid);
-                const rewardsRef = doc(db, "users", user.uid, "rewards", "main");
-                const statsMainRef = doc(db, "users", user.uid, "stats", "main");
-                updateDoc(userRef, {
-                  trophies,
-                  "stats.trophies": trophies,
-                  updatedAt: serverTimestamp(),
-                }).catch(() => {});
-                setDoc(rewardsRef, { trophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
-                setDoc(statsMainRef, { trophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
-              } catch (e) {}
-            }
-
-            return {
-              ...prevStats,
-              trophies,
-            };
-          }
+      // If a trophy newly turned to ice today, send ice notification once per calendar day
+      const hasIce = expectedTrophies.some((t) => t.type === 'ice');
+      const prevHadIce = prevStats.trophies.some((t) => t.type === 'ice');
+      if (hasIce && !prevHadIce) {
+        const lastAlert = localStorage.getItem('nexora_last_trophy_ice_alert');
+        if (lastAlert !== todayStr && settings.badgeSettings?.trophyAlerts !== false) {
+          localStorage.setItem('nexora_last_trophy_ice_alert', todayStr);
+          sendNotification('Trophy Alert! 🧊', {
+            body: 'One of your trophies turned to ICE! Complete a challenge today to restore it!',
+            icon: nexoraAppIcon,
+            isAutomated: false,
+          });
+          showToast('TROPHY ALERT: ICE DETECTED! 🧊', 'info');
         }
       }
 
-      return prevStats;
+      // If a trophy broke today, send broken alert notification once per calendar day
+      const brokenCount = expectedTrophies.filter((t) => t.type === 'broken').length;
+      const prevBrokenCount = prevStats.trophies.filter((t) => t.type === 'broken').length;
+      if (brokenCount > prevBrokenCount) {
+        const lastBrokenAlert = localStorage.getItem('nexora_last_trophy_broken_alert');
+        if (lastBrokenAlert !== todayStr && settings.badgeSettings?.trophyAlerts !== false) {
+          localStorage.setItem('nexora_last_trophy_broken_alert', todayStr);
+          sendNotification('Trophy Shattered! 🥀', {
+            body: 'One of your trophies broke from inactivity! Complete a challenge to reclaim a Golden Trophy!',
+            icon: nexoraAppIcon,
+            isAutomated: false,
+          });
+          showToast('TROPHY ALERT: TROPHY BROKEN! 🥀', 'error');
+        }
+      }
+
+      if (user?.uid) {
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          const rewardsRef = doc(db, 'users', user.uid, 'rewards', 'main');
+          const statsMainRef = doc(db, 'users', user.uid, 'stats', 'main');
+          updateDoc(userRef, {
+            trophies: expectedTrophies,
+            'stats.trophies': expectedTrophies,
+            updatedAt: serverTimestamp(),
+          }).catch(() => {});
+          setDoc(rewardsRef, { trophies: expectedTrophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+          setDoc(statsMainRef, { trophies: expectedTrophies, updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+        } catch (e) {}
+      }
+
+      return {
+        ...prevStats,
+        trophies: expectedTrophies,
+      };
     });
   }, [onUpdateStats, settings.badgeSettings?.trophyAlerts, user]);
 
@@ -5282,36 +5283,14 @@ export default function App() {
 
     let newTrophies = [...(stats.trophies || [])];
     if (canAwardTrophy) {
-      // Find index of oldest 'ice' trophy to replace (furthest to the right)
-      let removeIndex = -1;
-      for (let i = newTrophies.length - 1; i >= 0; i--) {
-        if (newTrophies[i].type === "ice") {
-          removeIndex = i;
-          break;
-        }
-      }
-      
-      // If no 'ice' trophy, find the oldest 'broken' trophy to replace
-      if (removeIndex === -1) {
-        for (let i = newTrophies.length - 1; i >= 0; i--) {
-          if (newTrophies[i].type === "broken") {
-            removeIndex = i;
-            break;
-          }
-        }
-      }
-
-      if (removeIndex !== -1) {
-        newTrophies.splice(removeIndex, 1);
-      }
-
-      newTrophies.unshift({
-        id: `trophy-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        type: "golden",
-        earnedDate: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
-      });
+      newTrophies = replaceDegradedTrophyWithNew(newTrophies);
     }
+    // Since task is completed today, all remaining trophies are well and healthy
+    newTrophies = newTrophies.map((t) => ({
+      ...t,
+      type: t.type === 'broken' && !canAwardTrophy ? 'broken' : 'golden',
+      lastUpdated: new Date().toISOString(),
+    }));
 
     const updatedStats = {
       ...stats,
@@ -6476,6 +6455,11 @@ export default function App() {
                       gardenState={gardenState}
                       isSyncing={isSyncingData}
                       onUpdateStats={onUpdateStats}
+                      onSaveCustomPlan={handleSaveCustomPlan}
+                      onUpdateSettings={onUpdateSettings}
+                      onOpenSubscription={() => setActiveScreen("subscription")}
+                      userRank={userRank}
+                      leaderboard={leaderboard}
                     />
                   </motion.div>
                 )
@@ -7750,6 +7734,7 @@ export default function App() {
                       user={user}
                       settings={settings}
                       stats={stats}
+                      isLeaderboardLoading={isLeaderboardLoading}
                       onBack={() => {
                         vibrate(VIBRATION_PATTERNS.CLICK);
                         setActiveScreen("home");

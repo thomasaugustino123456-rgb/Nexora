@@ -1,12 +1,12 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, setLogLevel } from 'firebase/firestore';
-import { getAuth, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider, GoogleAuthProvider, setPersistence, browserLocalPersistence, User, updateProfile } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider, GoogleAuthProvider, setPersistence, browserLocalPersistence, User, updateProfile, updatePassword, sendPasswordResetEmail, linkWithCredential } from 'firebase/auth';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import { getAnalytics, logEvent, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 import { initializeAppCheck, ReCaptchaV3Provider, CustomProvider } from 'firebase/app-check';
 import firebaseConfigData from './firebase-applet-config.json';
 
-// Intercept and demote internal Firestore SDK assertion errors (e.g., ID: ca9, b815, ve: -1) to warnings to prevent console error noise
+// Intercept and demote internal Firestore SDK assertion errors, auth network glitches, and push notification errors to warnings to prevent console error noise
 if (typeof window !== 'undefined') {
   const isAssertionMsg = (msg: string) => {
     if (!msg) return false;
@@ -21,7 +21,10 @@ if (typeof window !== 'undefined') {
       (lower.includes('firestore') && lower.includes('internal')) ||
       lower.includes('token-subscribe-failed') ||
       lower.includes('messaging/token-subscribe-failed') ||
-      lower.includes('missing required authentication credential')
+      lower.includes('missing required authentication credential') ||
+      lower.includes('auth/network-request-failed') ||
+      lower.includes('network-request-failed') ||
+      lower.includes('error sending server-side notification')
     );
   };
 
@@ -77,7 +80,7 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export { onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider, GoogleAuthProvider, setPersistence, browserLocalPersistence, updateProfile };
+export { onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider, GoogleAuthProvider, setPersistence, browserLocalPersistence, updateProfile, updatePassword, sendPasswordResetEmail, linkWithCredential };
 export type FirebaseUser = User;
 
 // Initialize Analytics lazily

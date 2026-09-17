@@ -18,6 +18,8 @@ import { SHOP_ITEMS } from "../components/ShopScreen";
 import { MASCOTS_DATA, MascotId } from "../lib/mascotSystem";
 import { HOUSE_ITEMS } from "../constants/houseItems";
 import { parseTimestampMs, parseTimestampIso } from "../lib/firestoreUtils";
+import { getStreakInfo } from "../lib/streakSystem";
+import { computeTrophyInactivityDays, getExpectedTrophyStates } from "../lib/trophySystem";
 
 export function extractRealDisplayName(docDataOrList: any | any[], currentUser?: any): string {
   const docList = Array.isArray(docDataOrList) ? docDataOrList : [docDataOrList];
@@ -89,6 +91,12 @@ export function extractRealProfilePic(docDataOrList: any | any[], currentUser?: 
       if (typeof c === 'string' && c.trim() !== "") {
         return c.trim();
       }
+    }
+  }
+  if (currentUser?.uid && typeof window !== 'undefined') {
+    const cachedDevicePic = localStorage.getItem(`user_profilepic_${currentUser.uid}`) || localStorage.getItem(`nexora_user_profilepic_${currentUser.uid}`);
+    if (cachedDevicePic && typeof cachedDevicePic === 'string' && cachedDevicePic.trim() !== "") {
+      return cachedDevicePic.trim();
     }
   }
   if (currentUser?.photoURL && typeof currentUser.photoURL === 'string' && currentUser.photoURL.trim() !== "") {
@@ -549,7 +557,14 @@ function mergeStats(dbStats: UserStats, localStats: UserStats, defaultStats: Use
       trophyMap.set(t.id, t);
     }
   });
-  merged.trophies = Array.from(trophyMap.values());
+  const rawTrophies = Array.from(trophyMap.values());
+  const trophyDaysInactive = computeTrophyInactivityDays(merged);
+  merged.trophies = getExpectedTrophyStates(rawTrophies, trophyDaysInactive);
+
+  // Derive dynamic streak status deterministically from merged data
+  const streakCalc = getStreakInfo(merged);
+  merged.streakStatus = streakCalc.status;
+  merged.streak = streakCalc.streakCount;
 
   // Merge pointsByCategory (take the maximum of each category)
   const dbPointsCat = dbStats.pointsByCategory || { physical: 0, mental: 0, creative: 0 };
@@ -2092,6 +2107,13 @@ export function useNexoraData(
               lifetimeWaterCompletions: docData.lifetimeWaterCompletions ?? docData.stats?.lifetimeWaterCompletions ?? rewardsData?.lifetimeWaterCompletions ?? DEFAULT_STATS.lifetimeWaterCompletions,
               hasClaimedXpChest: docData.hasClaimedXpChest ?? docData.stats?.hasClaimedXpChest ?? rewardsData?.hasClaimedXpChest ?? DEFAULT_STATS.hasClaimedXpChest,
             };
+
+            const calculatedStreakInfo = getStreakInfo(mappedStats);
+            mappedStats.streakStatus = calculatedStreakInfo.status;
+            mappedStats.streak = calculatedStreakInfo.streakCount;
+
+            const trophyDaysInactive = computeTrophyInactivityDays(mappedStats);
+            mappedStats.trophies = getExpectedTrophyStates(finalTrophies, trophyDaysInactive);
             
             const gardenCandidates = [
               plantsTopData?.gardenState,
@@ -2414,6 +2436,12 @@ export function useNexoraData(
         setIsDataReady(true);
         setLoading(false);
       }
+    }, (authErr: any) => {
+      console.warn("[Firebase Auth] onAuthStateChanged network/transient error handled:", authErr?.message || authErr);
+      isInitialAuthResolutionDone.current = true;
+      setAuthLoading(false);
+      setIsDataReady(true);
+      setLoading(false);
     });
     return () => {
       unsubscribeAuth();
@@ -3250,87 +3278,99 @@ export function useNexoraData(
     needsOnboarding,
   ]);
 
-  const onUpdateSettings = (
-    update: Partial<UserSettings> | ((prev: UserSettings) => UserSettings),
-  ) => {
-    setSettings((prev) => {
-      const next =
-        typeof update === "function" ? update(prev) : { ...prev, ...update };
-      try {
-        localStorage.setItem("nexora_settings", JSON.stringify(next));
-        if (user?.uid) {
-          localStorage.setItem(`nexora_settings_${user.uid}`, JSON.stringify(next));
-        }
-        if (next.onboardingCompleted) {
-          localStorage.setItem("nexora_onboarding_completed", "true");
+  const onUpdateSettings = useCallback(
+    (
+      update: Partial<UserSettings> | ((prev: UserSettings) => UserSettings),
+    ) => {
+      setSettings((prev) => {
+        const next =
+          typeof update === "function" ? update(prev) : { ...prev, ...update };
+        try {
+          localStorage.setItem("nexora_settings", JSON.stringify(next));
           if (user?.uid) {
-            localStorage.setItem(`nexora_onboarding_completed_${user.uid}`, "true");
+            localStorage.setItem(`nexora_settings_${user.uid}`, JSON.stringify(next));
           }
+          if (next.onboardingCompleted) {
+            localStorage.setItem("nexora_onboarding_completed", "true");
+            if (user?.uid) {
+              localStorage.setItem(`nexora_onboarding_completed_${user.uid}`, "true");
+            }
+          }
+          if (next.plantOnboardingCompleted) {
+            localStorage.setItem("nexora_plant_onboarding_completed", "true");
+            if (user?.uid) {
+              localStorage.setItem(`nexora_plant_onboarding_completed_${user.uid}`, "true");
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to cache settings:", e);
         }
-        if (next.plantOnboardingCompleted) {
-          localStorage.setItem("nexora_plant_onboarding_completed", "true");
+        return next;
+      });
+    },
+    [user?.uid]
+  );
+
+  const onUpdateStats = useCallback(
+    (
+      update: Partial<UserStats> | ((prev: UserStats) => UserStats),
+    ) => {
+      setStats((prev) => {
+        const next =
+          typeof update === "function" ? update(prev) : { ...prev, ...update };
+        try {
+          localStorage.setItem("nexora_stats", JSON.stringify(next));
           if (user?.uid) {
-            localStorage.setItem(`nexora_plant_onboarding_completed_${user.uid}`, "true");
+            localStorage.setItem(`nexora_stats_${user.uid}`, JSON.stringify(next));
           }
+        } catch (e) {
+          console.warn("Failed to cache stats:", e);
         }
-      } catch (e) {
-        console.warn("Failed to cache settings:", e);
-      }
-      return next;
-    });
-  };
+        return next;
+      });
+    },
+    [user?.uid]
+  );
 
-  const onUpdateStats = (
-    update: Partial<UserStats> | ((prev: UserStats) => UserStats),
-  ) => {
-    setStats((prev) => {
-      const next =
-        typeof update === "function" ? update(prev) : { ...prev, ...update };
-      try {
-        localStorage.setItem("nexora_stats", JSON.stringify(next));
-        if (user?.uid) {
-          localStorage.setItem(`nexora_stats_${user.uid}`, JSON.stringify(next));
+  const onUpdateDailyProgress = useCallback(
+    (
+      update: Partial<DailyProgress> | ((prev: DailyProgress) => DailyProgress),
+    ) => {
+      setDailyProgress((prev) => {
+        const next =
+          typeof update === "function" ? update(prev) : { ...prev, ...update };
+        try {
+          const progData = { ...next, date: today };
+          localStorage.setItem("nexora_progress", JSON.stringify(progData));
+          if (user?.uid) {
+            localStorage.setItem(`nexora_progress_${user.uid}`, JSON.stringify(progData));
+          }
+        } catch (e) {
+          console.warn("Failed to cache progress:", e);
         }
-      } catch (e) {
-        console.warn("Failed to cache stats:", e);
-      }
-      return next;
-    });
-  };
+        return next;
+      });
+    },
+    [user?.uid, today]
+  );
 
-  const onUpdateDailyProgress = (
-    update: Partial<DailyProgress> | ((prev: DailyProgress) => DailyProgress),
-  ) => {
-    setDailyProgress((prev) => {
-      const next =
-        typeof update === "function" ? update(prev) : { ...prev, ...update };
-      try {
-        const progData = { ...next, date: today };
-        localStorage.setItem("nexora_progress", JSON.stringify(progData));
-        if (user?.uid) {
-          localStorage.setItem(`nexora_progress_${user.uid}`, JSON.stringify(progData));
+  const onUpdateGardenState = useCallback(
+    (
+      update: Partial<GardenState> | ((prev: GardenState) => GardenState),
+    ) => {
+      setGardenState((prev) => {
+        const next =
+          typeof update === "function" ? update(prev) : { ...prev, ...update };
+        try {
+          localStorage.setItem("nexora_garden", JSON.stringify(next));
+        } catch (e) {
+          console.warn("Failed to cache garden:", e);
         }
-      } catch (e) {
-        console.warn("Failed to cache progress:", e);
-      }
-      return next;
-    });
-  };
-
-  const onUpdateGardenState = (
-    update: Partial<GardenState> | ((prev: GardenState) => GardenState),
-  ) => {
-    setGardenState((prev) => {
-      const next =
-        typeof update === "function" ? update(prev) : { ...prev, ...update };
-      try {
-        localStorage.setItem("nexora_garden", JSON.stringify(next));
-      } catch (e) {
-        console.warn("Failed to cache garden:", e);
-      }
-      return next;
-    });
-  };
+        return next;
+      });
+    },
+    []
+  );
 
   const forceSyncData = useCallback(async () => {
     if (blockAllWritesRef.current) {

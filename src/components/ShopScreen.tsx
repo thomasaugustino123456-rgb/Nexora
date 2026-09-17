@@ -502,6 +502,8 @@ export function ShopScreen({
 
   const activeSkin = settings?.activeSkin || 'blue-slim';
   const activeHat = settings?.activeHat || 'none';
+  const activeEye = settings?.activeEye || 'none';
+  const activeClothes = settings?.activeClothes || 'none';
   const activeEffect = settings?.activeEffect || 'none';
 
   const featuredItem = SHOP_ITEMS[0];
@@ -661,6 +663,162 @@ export function ShopScreen({
         </div>
       )}
 
+      {/* Interactive Living Mascot Fitting Room & Wardrobe Station */}
+      {(selectedCategory === 'all' || selectedCategory === 'skins' || selectedCategory === 'wearables' || selectedCategory === 'effects') && (
+        <div className="mb-8 p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-blue-50/90 via-indigo-50/50 to-white/90 border-2 border-blue-200/80 shadow-md relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-blue-300/10 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 relative z-10">
+            {/* Live Interactive Mascot Preview Stage */}
+            <div className="flex flex-col items-center shrink-0">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 relative flex items-center justify-center p-1 bg-white/80 rounded-2xl border border-blue-100 shadow-inner">
+                <LivingMascot
+                  mascotId={activeSkin as any}
+                  hat={activeHat}
+                  head={activeHat}
+                  eye={activeEye}
+                  clothes={activeClothes}
+                  effect={activeEffect}
+                  className="w-full h-full"
+                  interactive={true}
+                  showSpeech={true}
+                  soundEnabled={true}
+                  vibrationEnabled={true}
+                />
+              </div>
+              <span className="text-[10px] font-bold text-blue-900/60 mt-1.5 flex items-center gap-1">
+                <Sparkles size={11} className="text-amber-500 fill-amber-400" /> Tap to play & talk
+              </span>
+            </div>
+
+            {/* Wardrobe Slots Breakdown */}
+            <div className="flex-1 w-full space-y-2.5 text-center sm:text-left">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <h3 className="text-sm font-black text-blue-950 flex items-center gap-1.5 justify-center sm:justify-start">
+                    <span>Mascot Wardrobe & Fitting Room</span>
+                    <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-extrabold uppercase">Live 3-Slot</span>
+                  </h3>
+                  <p className="text-[11px] text-blue-900/70 font-medium">
+                    Equip or remove headwear, eyewear, and outfits independently.
+                  </p>
+                </div>
+
+                {(activeHat !== 'none' || activeEye !== 'none' || activeClothes !== 'none' || activeEffect !== 'none') && (
+                  <button
+                    onClick={() => {
+                      onUnequipMascotSlot?.('wearable');
+                      onUnequipMascotSlot?.('effect-power');
+                    }}
+                    className="text-[10px] font-extrabold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg border border-rose-200 transition-all cursor-pointer active:scale-95"
+                  >
+                    Clear All Wearables
+                  </button>
+                )}
+              </div>
+
+              {/* Slot Tags Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                {/* Skin Slot */}
+                <div className="p-2 rounded-xl bg-white/90 border border-blue-100/80 flex items-center justify-between text-xs shadow-xs">
+                  <div className="min-w-0 pr-1 text-left">
+                    <span className="text-[9px] font-black text-blue-900/50 uppercase block">Skin (Body)</span>
+                    <span className="font-extrabold text-blue-950 capitalize truncate block text-[11px]">
+                      {activeSkin.replace('-slim', '')}
+                    </span>
+                  </div>
+                  <span className="text-base">🎨</span>
+                </div>
+
+                {/* Headwear Slot */}
+                <div className="p-2 rounded-xl bg-white/90 border border-blue-100/80 flex items-center justify-between text-xs shadow-xs">
+                  <div className="min-w-0 pr-1 text-left">
+                    <span className="text-[9px] font-black text-blue-900/50 uppercase block">Headwear</span>
+                    <span className={`font-extrabold capitalize truncate block text-[11px] ${activeHat !== 'none' ? 'text-blue-950' : 'text-slate-400'}`}>
+                      {activeHat !== 'none' ? activeHat : 'None'}
+                    </span>
+                  </div>
+                  {activeHat !== 'none' ? (
+                    <button
+                      onClick={() => onUnequipMascotSlot?.('wearable-head')}
+                      className="text-slate-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 transition-colors text-xs font-black cursor-pointer"
+                      title="Unequip Headwear"
+                    >
+                      ✕
+                    </button>
+                  ) : (
+                    <span className="text-base opacity-40">🎩</span>
+                  )}
+                </div>
+
+                {/* Eyewear Slot */}
+                <div className="p-2 rounded-xl bg-white/90 border border-blue-100/80 flex items-center justify-between text-xs shadow-xs">
+                  <div className="min-w-0 pr-1 text-left">
+                    <span className="text-[9px] font-black text-blue-900/50 uppercase block">Eyewear</span>
+                    <span className={`font-extrabold capitalize truncate block text-[11px] ${activeEye !== 'none' ? 'text-blue-950' : 'text-slate-400'}`}>
+                      {activeEye !== 'none' ? activeEye : 'None'}
+                    </span>
+                  </div>
+                  {activeEye !== 'none' ? (
+                    <button
+                      onClick={() => onUnequipMascotSlot?.('wearable-eye')}
+                      className="text-slate-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 transition-colors text-xs font-black cursor-pointer"
+                      title="Unequip Eyewear"
+                    >
+                      ✕
+                    </button>
+                  ) : (
+                    <span className="text-base opacity-40">🕶️</span>
+                  )}
+                </div>
+
+                {/* Outfit / Clothes Slot */}
+                <div className="p-2 rounded-xl bg-white/90 border border-blue-100/80 flex items-center justify-between text-xs shadow-xs">
+                  <div className="min-w-0 pr-1 text-left">
+                    <span className="text-[9px] font-black text-blue-900/50 uppercase block">Outfit</span>
+                    <span className={`font-extrabold capitalize truncate block text-[11px] ${activeClothes !== 'none' ? 'text-blue-950' : 'text-slate-400'}`}>
+                      {activeClothes !== 'none' ? activeClothes : 'None'}
+                    </span>
+                  </div>
+                  {activeClothes !== 'none' ? (
+                    <button
+                      onClick={() => onUnequipMascotSlot?.('wearable-clothes')}
+                      className="text-slate-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 transition-colors text-xs font-black cursor-pointer"
+                      title="Unequip Outfit"
+                    >
+                      ✕
+                    </button>
+                  ) : (
+                    <span className="text-base opacity-40">🥋</span>
+                  )}
+                </div>
+
+                {/* Aura / Effects Slot */}
+                <div className="p-2 rounded-xl bg-white/90 border border-blue-100/80 flex items-center justify-between text-xs shadow-xs col-span-2 sm:col-span-2">
+                  <div className="min-w-0 pr-1 text-left">
+                    <span className="text-[9px] font-black text-blue-900/50 uppercase block">Elemental Aura</span>
+                    <span className={`font-extrabold capitalize truncate block text-[11px] ${activeEffect !== 'none' ? 'text-blue-950' : 'text-slate-400'}`}>
+                      {activeEffect !== 'none' ? activeEffect.replace('_', ' ') : 'None'}
+                    </span>
+                  </div>
+                  {activeEffect !== 'none' ? (
+                    <button
+                      onClick={() => onUnequipMascotSlot?.('effect-power')}
+                      className="text-slate-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 transition-colors text-xs font-black cursor-pointer"
+                      title="Unequip Aura"
+                    >
+                      ✕
+                    </button>
+                  ) : (
+                    <span className="text-base opacity-40">✨</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Categories Content */}
       <div className="space-y-10">
         {/* 1. Base Mascot Skins (Collection) */}
@@ -671,6 +829,8 @@ export function ShopScreen({
               activeMascotSkin={activeSkin}
               purchasedItems={purchasedItems}
               activeHat={activeHat}
+              activeEye={activeEye}
+              activeClothes={activeClothes}
               activeEffect={activeEffect}
               onEquip={(mascotId) => {
                 onEquipMascotSlot ? onEquipMascotSlot(mascotId, 'skin') : onBuy({ id: mascotId, name: mascotId, price: 0, coinPrice: 0, effect: 'skin', icon: '✨', description: '' }, 'coins');
@@ -690,6 +850,8 @@ export function ShopScreen({
               isPro={isPro}
               purchasedItems={purchasedItems}
               activeHat={activeHat}
+              activeEye={activeEye}
+              activeClothes={activeClothes}
               onBuy={onBuy}
               onEquipMascotSlot={onEquipMascotSlot}
               onUnequipMascotSlot={onUnequipMascotSlot}
@@ -882,6 +1044,12 @@ function ShopItemCard({
             <AnimatedWizardHat className="w-10 h-10" />
           ) : item.id === "skin-crown" ? (
             <AnimatedRoyalCrown className="w-10 h-10" />
+          ) : item.id === "skin-apex" || item.id === "pro-skin-apex" ? (
+            <AnimatedCyberGoggles className="w-12 h-8" />
+          ) : item.id === "skin-cape" ? (
+            <AnimatedHeroCape className="w-12 h-10" />
+          ) : item.id === "skin-armor" ? (
+            <AnimatedCyberExosuit className="w-12 h-10" />
           ) : (
             item.icon
           )}
@@ -980,6 +1148,8 @@ function MascotSkinsHorizontalShowcase({
   isPro,
   purchasedItems,
   activeHat,
+  activeEye,
+  activeClothes,
   onBuy,
   onEquipMascotSlot,
   onUnequipMascotSlot,
@@ -990,6 +1160,8 @@ function MascotSkinsHorizontalShowcase({
   isPro: boolean;
   purchasedItems: string[];
   activeHat?: string;
+  activeEye?: string;
+  activeClothes?: string;
   onBuy: (item: ShopItem, currency: "streak" | "coins") => void;
   onEquipMascotSlot?: (itemId: string, category: MascotSlotCategory) => void;
   onUnequipMascotSlot?: (category: MascotSlotCategory) => void;
@@ -1028,10 +1200,10 @@ function MascotSkinsHorizontalShowcase({
       <div className="mb-3">
         <h2 className="text-xs font-black text-blue-900/50 uppercase tracking-widest flex items-center gap-1.5">
           <Sparkles size={14} className="text-amber-500 fill-amber-400" />
-          Mascot Wearables & Masks (Slot 2)
+          Mascot Wearables & Outfits (Headwear, Eyewear & Clothes)
         </h2>
         <p className="text-[11px] text-blue-900/60 font-medium">
-          Equips on your mascot head or face alongside your body skin and effects power!
+          Equips on your mascot head, face, or body alongside your skin and effects power!
         </p>
       </div>
 
@@ -1045,7 +1217,26 @@ function MascotSkinsHorizontalShowcase({
           const isFreeForPro = isPro && (item.effect === "music" || item.price === 0);
           const isProLocked = item.proOnly && !isPro;
           const isPurchased = purchasedItems.includes(item.id);
-          const isEquipped = (activeHat || 'none') === normalizeWearableId(item.id);
+          
+          const sub = getWearableSubCategory(item.id);
+          const norm = normalizeWearableId(item.id);
+          let isEquipped = false;
+          let slotCategory: MascotSlotCategory = 'wearable-head';
+          let slotLabel = 'Headwear';
+
+          if (sub === 'eye') {
+            isEquipped = (activeEye || 'none') === norm;
+            slotCategory = 'wearable-eye';
+            slotLabel = 'Eyewear';
+          } else if (sub === 'clothes') {
+            isEquipped = (activeClothes || 'none') === norm;
+            slotCategory = 'wearable-clothes';
+            slotLabel = 'Outfit';
+          } else {
+            isEquipped = (activeHat || 'none') === norm;
+            slotCategory = 'wearable-head';
+            slotLabel = 'Headwear';
+          }
 
           const rarityConfig = {
             common: { bg: "bg-slate-100 text-slate-600 border-slate-200", label: "Common" },
@@ -1069,6 +1260,9 @@ function MascotSkinsHorizontalShowcase({
                 <div className="flex items-center gap-1.5">
                   <span className={`px-2.5 py-0.5 text-[9px] font-black uppercase rounded-full border ${rarityBg}`}>
                     {rarityLabel}
+                  </span>
+                  <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 text-[9px] font-extrabold uppercase rounded-full">
+                    {slotLabel}
                   </span>
                   {item.proOnly && (
                     <span className="px-2 py-0.5 bg-amber-100 border border-amber-300 text-amber-800 text-[9px] font-black uppercase rounded-full">
@@ -1101,7 +1295,7 @@ function MascotSkinsHorizontalShowcase({
                     <AnimatedWizardHat className="w-18 h-18" />
                   ) : item.id === "skin-crown" ? (
                     <AnimatedRoyalCrown className="w-18 h-18" />
-                  ) : item.id === "skin-apex" ? (
+                  ) : item.id === "skin-apex" || item.id === "pro-skin-apex" ? (
                     <AnimatedCyberGoggles className="w-20 h-14" />
                   ) : item.id === "skin-cape" ? (
                     <AnimatedHeroCape className="w-20 h-16" />
@@ -1132,10 +1326,10 @@ function MascotSkinsHorizontalShowcase({
                   isEquipped ? (
                     <div className="flex items-center gap-2 w-full">
                       <div className="flex-1 bg-emerald-100 border border-emerald-300 text-emerald-800 py-2.5 rounded-xl text-xs font-black text-center flex items-center justify-center gap-1.5">
-                        <Check size={14} /> EQUIPPED IN SLOT 2
+                        <Check size={14} /> EQUIPPED ({slotLabel.toUpperCase()})
                       </div>
                       <button
-                        onClick={() => onUnequipMascotSlot?.('wearable')}
+                        onClick={() => onUnequipMascotSlot?.(slotCategory)}
                         className="px-3 py-2.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer"
                       >
                         Unequip
@@ -1143,10 +1337,10 @@ function MascotSkinsHorizontalShowcase({
                     </div>
                   ) : (
                     <button
-                      onClick={() => onEquipMascotSlot?.(item.id, 'wearable')}
+                      onClick={() => onEquipMascotSlot?.(item.id, slotCategory)}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-black transition-all active:scale-95 shadow-md shadow-blue-200 flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <Zap size={14} /> EQUIP WEARABLE
+                      <Zap size={14} /> EQUIP {slotLabel.toUpperCase()}
                     </button>
                   )
                 ) : (

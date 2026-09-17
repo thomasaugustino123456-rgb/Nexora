@@ -311,6 +311,53 @@ export const Mascot = React.memo(({
               <path d="M125,185 Q145,165 165,185" />
               <path d="M235,185 Q255,165 275,185" />
             </g>
+          ) : activeMood === 'dumb' ? (
+            /* Goofy / Derp Cross-Eyes with swirl */
+            <g>
+              <ellipse cx="150" cy="180" rx="15" ry="16" fill="#ffffff" stroke="#031b33" strokeWidth={3} />
+              <ellipse cx="250" cy="180" rx="15" ry="16" fill="#ffffff" stroke="#031b33" strokeWidth={3} />
+              {/* Goofy cross-eyed pupils pointing inwards & downwards */}
+              <circle cx="158" cy="184" r="6.5" fill="#031b33" />
+              <circle cx="160" cy="182" r="2" fill="#ffffff" />
+              <circle cx="242" cy="184" r="6.5" fill="#031b33" />
+              <circle cx="240" cy="182" r="2" fill="#ffffff" />
+              {/* Uneven silly eyebrows */}
+              <path d="M130,166 Q148,154 165,168" stroke="#031b33" strokeWidth={4} strokeLinecap="round" fill="none" />
+              <path d="M235,160 Q250,166 270,158" stroke="#031b33" strokeWidth={4} strokeLinecap="round" fill="none" />
+            </g>
+          ) : activeMood === 'anime' ? (
+            /* Sparkly Anime Chibi Eyes with sparkles and starry reflections */
+            <g>
+              {/* Left Anime Eye */}
+              <ellipse cx="150" cy="180" rx="18" ry="20" fill="#0f172a" />
+              <ellipse cx="150" cy="185" rx="16" ry="13" fill="#38bdf8" opacity="0.85" />
+              {/* Big primary shine */}
+              <circle cx="143" cy="172" r="7.5" fill="#ffffff" />
+              {/* Secondary bottom shine & star */}
+              <circle cx="157" cy="187" r="4" fill="#ffffff" />
+              <polygon points="152,176 154,181 159,182 155,185 156,190 152,187 148,190 149,185 145,182 150,181" fill="#fef08a" />
+              {/* Lashes */}
+              <path d="M130,168 Q150,158 170,168" stroke="#0f172a" strokeWidth={5} strokeLinecap="round" fill="none" />
+              <path d="M165,164 L173,158" stroke="#0f172a" strokeWidth={3.5} strokeLinecap="round" />
+
+              {/* Right Anime Eye */}
+              <ellipse cx="250" cy="180" rx="18" ry="20" fill="#0f172a" />
+              <ellipse cx="250" cy="185" rx="16" ry="13" fill="#38bdf8" opacity="0.85" />
+              {/* Big primary shine */}
+              <circle cx="243" cy="172" r="7.5" fill="#ffffff" />
+              {/* Secondary bottom shine & star */}
+              <circle cx="257" cy="187" r="4" fill="#ffffff" />
+              <polygon points="252,176 254,181 259,182 255,185 256,190 252,187 248,190 249,185 245,182 250,181" fill="#fef08a" />
+              {/* Lashes */}
+              <path d="M230,168 Q250,158 270,168" stroke="#0f172a" strokeWidth={5} strokeLinecap="round" fill="none" />
+              <path d="M265,164 L273,158" stroke="#0f172a" strokeWidth={3.5} strokeLinecap="round" />
+
+              {/* Cute Anime Blush Stickers */}
+              <line x1="112" y1="198" x2="124" y2="208" stroke="#f43f5e" strokeWidth={3} strokeLinecap="round" />
+              <line x1="120" y1="196" x2="132" y2="206" stroke="#f43f5e" strokeWidth={3} strokeLinecap="round" />
+              <line x1="268" y1="198" x2="280" y2="208" stroke="#f43f5e" strokeWidth={3} strokeLinecap="round" />
+              <line x1="276" y1="196" x2="288" y2="206" stroke="#f43f5e" strokeWidth={3} strokeLinecap="round" />
+            </g>
           ) : activeMood === 'angry' || activeMood === 'boiling' ? (
             <g>
               <circle cx="150" cy="180" r="14" fill="#031b33"/>
@@ -344,6 +391,19 @@ export const Mascot = React.memo(({
             <g>
               <path d="M182,196 Q200,202 218,196 Q200,236 182,196 Z" fill="#b3243d" stroke="#031b33" strokeWidth={4.5} strokeLinejoin="round"/>
               <path d="M186,208 Q200,204 214,208 Q200,232 186,208 Z" fill="#ff6b8b"/>
+            </g>
+          ) : activeMood === 'dumb' ? (
+            /* Silly tongue blep mouth */
+            <g>
+              <path d="M184,198 Q200,205 216,198" fill="none" stroke="#031b33" strokeWidth={4.5} strokeLinecap="round" />
+              {/* Tongue sticking out */}
+              <path d="M194,202 Q200,218 206,202 Z" fill="#ff6b8b" stroke="#031b33" strokeWidth={3} />
+              <line x1="200" y1="202" x2="200" y2="210" stroke="#b3243d" strokeWidth={1.5} />
+            </g>
+          ) : activeMood === 'anime' ? (
+            /* Cute anime cat :3 mouth */
+            <g>
+              <path d="M184,198 Q192,207 200,199 Q208,207 216,198" fill="none" stroke="#031b33" strokeWidth={4.5} strokeLinecap="round" strokeLinejoin="round" />
             </g>
           ) : activeMood === 'angry' || activeMood === 'boiling' ? (
             <path d="M188,206 Q200,196 212,206" fill="none" stroke="#031b33" strokeWidth={4} strokeLinecap="round"/>

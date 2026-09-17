@@ -7,9 +7,7 @@ import {
   ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle, Video,
   Layout, BoxSelect, Lock, Key, EyeOff, MessageSquareOff, Loader2, X
 } from 'lucide-react';
-// import { auth, FirebaseUser, EmailAuthProvider, linkWithCredential, updatePassword, sendPasswordResetEmail, GoogleAuthProvider, reauthenticateWithPopup } from '../firebase';
-// FirebaseUser is now defined locally or imported elsewhere, check imports
-type FirebaseUser = any; // Temporary fix
+import { auth, FirebaseUser, updatePassword, sendPasswordResetEmail, linkWithCredential, EmailAuthProvider } from '../firebase';
 
 import { UserSettings } from '../types';
 import { vibrate, VIBRATION_PATTERNS } from '../lib/vibrate';
@@ -122,13 +120,74 @@ export function SettingsScreen({
   );
 
   const handleSavePassword = async () => {
-    // vibrate(15);
-    // showToast('Firebase Auth is disabled. Transitioning to Supabase.', 'info');
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    if (!passwordInput || passwordInput.trim().length < 6) {
+      showToast('Password must be at least 6 characters long.', 'error');
+      vibrate(VIBRATION_PATTERNS.ERROR);
+      return;
+    }
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      showToast('No active session found. Please sign in first.', 'error');
+      vibrate(VIBRATION_PATTERNS.ERROR);
+      return;
+    }
+
+    setIsPasswordActionLoading(true);
+    try {
+      if (hasPasswordProvider) {
+        await updatePassword(currentUser, passwordInput.trim());
+        showToast('Account password updated successfully! 🔒', 'success');
+      } else {
+        const userEmail = currentUser.email || settings.email;
+        if (userEmail) {
+          const credential = EmailAuthProvider.credential(userEmail, passwordInput.trim());
+          await linkWithCredential(currentUser, credential);
+          showToast('Direct password login linked successfully! 🔒', 'success');
+        } else {
+          await updatePassword(currentUser, passwordInput.trim());
+          showToast('Account password set successfully! 🔒', 'success');
+        }
+      }
+      setPasswordInput('');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (err: any) {
+      console.error('Password update error:', err);
+      const code = err?.code || '';
+      if (code.includes('requires-recent-login')) {
+        showToast('Security notice: Please log out and log back in to update your password.', 'error');
+      } else if (code.includes('weak-password')) {
+        showToast('Password is too weak. Please use at least 6 characters.', 'error');
+      } else {
+        showToast(err?.message || 'Failed to update password. Please try again.', 'error');
+      }
+      vibrate(VIBRATION_PATTERNS.ERROR);
+    } finally {
+      setIsPasswordActionLoading(false);
+    }
   };
 
   const handleSendResetEmail = async () => {
-    // vibrate(15);
-    // showToast('Firebase Auth is disabled. Transitioning to Supabase.', 'info');
+    vibrate(VIBRATION_PATTERNS.CLICK);
+    const targetEmail = auth.currentUser?.email || settings.email;
+    if (!targetEmail) {
+      showToast('No email address associated with this account.', 'error');
+      vibrate(VIBRATION_PATTERNS.ERROR);
+      return;
+    }
+
+    setIsPasswordActionLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, targetEmail);
+      showToast(`Password reset link sent to ${targetEmail}! ✉️`, 'success');
+      vibrate(VIBRATION_PATTERNS.SUCCESS);
+    } catch (err: any) {
+      console.error('Password reset email error:', err);
+      showToast(err?.message || 'Could not send reset email. Please verify your address.', 'error');
+      vibrate(VIBRATION_PATTERNS.ERROR);
+    } finally {
+      setIsPasswordActionLoading(false);
+    }
   };
 
   const handleInlineFeedbackSubmit = () => {

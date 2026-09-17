@@ -7,7 +7,6 @@ import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 import { Resend } from "resend";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GoogleGenAI } from "@google/genai";
 
 const __dirname = typeof __filename !== 'undefined' 
@@ -120,26 +119,74 @@ const MOTIVATIONAL_QUOTES = [
   { title: "Focus Bro! 🎯", body: "Distractions are the enemy of progress. Stay focused on your goals." },
 ];
 
+const callGeminiSafe = async (
+  params: {
+    contents: any;
+    config?: any;
+  },
+  modelsToTry: string[] = ["gemini-3.1-flash-lite", "gemini-3.8-flash"]
+): Promise<{ text: string } | null> => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
+
+    for (const model of modelsToTry) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: params.contents,
+          config: {
+            ...params.config,
+            maxOutputTokens: params.config?.maxOutputTokens || 500,
+          }
+        });
+        if (response && response.text) {
+          return { text: response.text };
+        }
+      } catch (err: any) {
+        // Quietly log without dumping full error JSON
+        const statusMsg = err?.status || err?.code || (err?.error && err.error.code) || "temporarily unavailable";
+        console.log(`[Gemini Safe] Model ${model} is ${statusMsg}`);
+      }
+    }
+  } catch (initErr: any) {
+    console.log("[Gemini Safe] Client initialization notice:", initErr?.message || "unavailable");
+  }
+  return null;
+};
+
 const generateMotivationalQuote = async (): Promise<{ title: string; body: string }> => {
   let title = "Nexora Motivation 🔥";
   let body = "Don't let your streak die! You're a beast, bro!";
   
   if (process.env.GEMINI_API_KEY) {
     try {
-      const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = "You are Nexora, a friendly water-bottle mascot for a productivity app. Generate a super short, punchy, and aggressive-but-friendly motivational push notification message for a user who needs to finish their habits today. Max 20 words. Include one emoji. Format: Title | Body";
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
-      if (text.includes("|")) {
-        const parts = text.split("|");
-        title = parts[0].trim();
-        body = parts[1].trim();
+      const result = await callGeminiSafe({ contents: prompt });
+      if (result && result.text) {
+        const text = result.text.trim();
+        if (text.includes("|")) {
+          const parts = text.split("|");
+          title = parts[0].trim();
+          body = parts[1].trim();
+        } else {
+          body = text;
+        }
       } else {
-        body = text;
+        const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+        title = randomQuote.title;
+        body = randomQuote.body;
       }
-    } catch (aiErr) {
-      console.error("AI Quote Generation failed, using static fallback:", aiErr);
+    } catch {
       const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
       title = randomQuote.title;
       body = randomQuote.body;
@@ -1057,56 +1104,20 @@ async function startServer() {
       }
     `;
 
-    // 1. First Attempt: Use gemini-3.5-flash
-    try {
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
-        }
-      });
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-        config: { responseMimeType: "application/json" }
-      });
+    const result = await callGeminiSafe({
+      contents: prompt,
+      config: { responseMimeType: "application/json" }
+    });
 
-      if (response && response.text) {
-        const cleanText = response.text.trim();
+    if (result && result.text) {
+      try {
+        const cleanText = result.text.trim();
         return res.json(JSON.parse(cleanText));
+      } catch (parseErr) {
+        console.log("[Mood Analysis] JSON parse fallback");
       }
-    } catch (error: any) {
-      console.warn("[MODEL FALLBACK] Primary model (gemini-3.5-flash) failed, attempting gemini-3.1-flash-lite. Error:", error.message || error);
     }
 
-    // 2. Second Attempt: Fallback to gemini-3.1-flash-lite
-    try {
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
-        }
-      });
-      const response = await ai.models.generateContent({
-        model: "gemini-3.1-flash-lite",
-        contents: prompt,
-        config: { responseMimeType: "application/json" }
-      });
-
-      if (response && response.text) {
-        const cleanText = response.text.trim();
-        return res.json(JSON.parse(cleanText));
-      }
-    } catch (fallbackError: any) {
-      console.error("[MODEL FALLBACK FAILED] Secondary model (gemini-3.1-flash-lite) also failed. Error:", fallbackError.message || fallbackError);
-    }
-
-    // 3. Elegant Local Graceful Fallback: Never fail, guarantee a valid JSON response
-    console.warn("[EMERGENCY FALLBACK] Using dynamic keyword-based mood analysis.");
     return res.json(getKeywordBasedMoodAnalysis(title || "", content));
   });
 
@@ -1194,52 +1205,11 @@ OVERRIDE PROTOCOL: ${overrideProtocol}`;
       Keep it short (max 100 words), use uppercase for emphasis, and sound like a high-end AI assistant.
     `;
 
-    // 1. First Attempt: Use gemini-3.5-flash
-    try {
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
-        }
-      });
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-      });
-
-      if (response && response.text) {
-        return res.json({ analysis: response.text });
-      }
-    } catch (error: any) {
-      console.warn("[MODEL FALLBACK] Habits Primary model (gemini-3.5-flash) failed, attempting gemini-3.1-flash-lite. Error:", error.message || error);
+    const result = await callGeminiSafe({ contents: prompt });
+    if (result && result.text) {
+      return res.json({ analysis: result.text });
     }
 
-    // 2. Second Attempt: Fallback to gemini-3.1-flash-lite
-    try {
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
-        }
-      });
-      const response = await ai.models.generateContent({
-        model: "gemini-3.1-flash-lite",
-        contents: prompt,
-      });
-
-      if (response && response.text) {
-        return res.json({ analysis: response.text });
-      }
-    } catch (fallbackError: any) {
-      console.error("[MODEL FALLBACK FAILED] Habits Secondary model (gemini-3.1-flash-lite) also failed. Error:", fallbackError.message || fallbackError);
-    }
-
-    // 3. Elegant Local Graceful Fallback: Never fail, guarantee a valid JSON response
-    console.warn("[EMERGENCY FALLBACK] Using dynamic stats-based habits analysis.");
     return res.json({
       analysis: getKeywordBasedHabitsAnalysis(stats, history)
     });
@@ -1264,20 +1234,10 @@ OVERRIDE PROTOCOL: ${overrideProtocol}`;
     const getRandomFallback = () => fallbacks[Math.floor(Math.random() * fallbacks.length)];
 
     if (!apiKey) {
-      console.warn("AI Service: GEMINI_API_KEY missing. Using simulated response.");
       return res.json({ text: getRandomFallback() });
     }
 
     try {
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
-        }
-      });
-
       const systemInstruction = `You are Nexora (or Nexo), a friendly, energetic water-bottle mascot for Nexora - a gamified productivity app that tracks water intake, push-ups, breathing sessions, and creative drawing with an active custom ecosystem. You use friendly, motivating language, often using terms like 'bro', 'beast', 'legend', 'champ', and 'let's go!'. Help the user understand what Nexora can do, give advice about hydration, physical consistency, and building habits. IMPORTANT: Keep your replies short (under 70 words), conversational, and extremely motivating. Answer the user directly with absolute positivity!`;
 
       // Map client messages to Gemini API format, filtering empty or system cards
@@ -1298,37 +1258,517 @@ OVERRIDE PROTOCOL: ${overrideProtocol}`;
         return res.json({ text: "What's on your mind today, champ? Let's crush some habits! 💧" });
       }
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+      const chatRes = await callGeminiSafe({
         contents: formattedContents,
         config: {
-          systemInstruction: systemInstruction,
-          temperature: 0.8,
+          systemInstruction,
+          temperature: 0.8
         }
       });
 
-      if (!response || !response.text) {
-        throw new Error("Empty response from Gemini API");
+      if (chatRes && chatRes.text) {
+        return res.json({ text: chatRes.text });
       }
 
-      res.json({ text: response.text });
-    } catch (error: any) {
-      console.error("Server Landing Chat failed:", error);
-      try {
-        fs.writeFileSync(
-          path.join(process.cwd(), "public", "landing-chat-error.json"),
-          JSON.stringify({ message: error.message, stack: error.stack, error }, null, 2),
-          "utf8"
-        );
-      } catch (logErr) {
-        console.error("Failed to write error log file:", logErr);
-      }
-      
-      // Graceful fallback to guarantee the client's chatbot NEVER glitches out
-      console.warn("Using highly motivating fallback response due to API error.");
-      res.json({ 
-        text: getRandomFallback() 
+      return res.json({ text: getRandomFallback() });
+    } catch {
+      return res.json({ text: getRandomFallback() });
+    }
+  });
+
+  // NEX AI Pro Companion Chat API with guardrails & function triggers
+  app.post("/api/nex-ai/chat", async (req, res) => {
+    const { messages, sessionTurnCount = 1 } = req.body;
+    const userContext = req.body.userContext || req.body.userData || {};
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "Messages array is required" });
+    }
+
+    // Flexible context extraction supporting flat keys, nested stats, and rich sub-objects
+    const displayName = userContext.displayName || userContext.name || "Champion";
+    const streak = userContext.streak ?? userContext.stats?.streak ?? 0;
+    const bestStreak = userContext.bestStreak ?? userContext.stats?.bestStreak ?? streak;
+    const xp = userContext.xp ?? userContext.stats?.xp ?? 0;
+    const weeklyXP = userContext.weeklyXP ?? userContext.stats?.weeklyXP ?? xp;
+    const coins = userContext.coins ?? userContext.stats?.coins ?? 0;
+    const gems = userContext.gems ?? userContext.stats?.gems ?? 0;
+    const level = userContext.level ?? userContext.stats?.level ?? Math.floor(xp / 100) + 1;
+    const league = userContext.league || userContext.stats?.league || "Bronze";
+    
+    // Rank & Leaderboard Context
+    let rankPosition: number | null = userContext.rankPosition ?? null;
+    if (rankPosition === null && userContext.stats?.rank) {
+      const match = String(userContext.stats.rank).match(/\d+/);
+      if (match) rankPosition = parseInt(match[0], 10);
+    }
+    const totalPlayersInLeague = userContext.totalPlayersInLeague ?? 15;
+    const pointsNeededToClimb = userContext.pointsNeededToClimb ?? (rankPosition && rankPosition > 1 ? 150 : null);
+    const playerAheadName = userContext.playerAheadName ?? (rankPosition && rankPosition > 1 ? "Apex_Habit" : null);
+    const leaderboardTop = Array.isArray(userContext.leaderboardTop) ? userContext.leaderboardTop : [];
+
+    // Plants & Garden Context
+    const plantInfo = userContext.plantInfo || {};
+    const currentPlant = plantInfo.currentPlant || {
+      type: "sprout",
+      stage: 0,
+      stageName: "Seed",
+      growthPoints: 0,
+      health: 100,
+      isThirsty: false,
+      isDead: false
+    };
+    const unlockedPlants = Array.isArray(plantInfo.unlockedPlants) && plantInfo.unlockedPlants.length > 0
+      ? plantInfo.unlockedPlants
+      : [{ type: currentPlant.type || "sprout", stage: currentPlant.stage || 0, stageName: currentPlant.stageName || "Seed", health: currentPlant.health || 100 }];
+    const stage5Count = plantInfo.stage5Count ?? (currentPlant.stage >= 5 ? 1 : 0);
+    const spaceHouseUnlocked = plantInfo.spaceHouseUnlocked ?? (stage5Count >= 3);
+    const gardenSeedsCount = plantInfo.gardenSeedsCount ?? 0;
+
+    // Inventory & Shop Context
+    const inventoryInfo = userContext.inventoryInfo || {};
+    const purchasedItemIds = Array.isArray(inventoryInfo.purchasedItemIds) ? inventoryInfo.purchasedItemIds : [];
+    const equipped = inventoryInfo.equipped || {};
+
+    // Rewards & Custom Plans Context
+    const rewardsInfo = userContext.rewardsInfo || {};
+    const trophiesCount = rewardsInfo.trophiesCount ?? (Array.isArray(userContext.stats?.trophies) ? userContext.stats.trophies.length : 0);
+    const customPlans = Array.isArray(userContext.customPlans) ? userContext.customPlans : [];
+    const activeHabitsCount = customPlans.length || (userContext.activeHabitsCount ?? 0);
+
+    // Pro & Subscription Context
+    const proInfo = userContext.proInfo || {};
+    const isPro = Boolean(userContext.isPro ?? proInfo.isPro);
+    const isProTest = Boolean(userContext.isProTest ?? proInfo.isProTest);
+    const proPlan = userContext.proPlan || proInfo.proPlan || (isProTest ? "4-Day Free Pro Test" : isPro ? "Pro Member" : "Free Tier");
+    const proTestDaysLeft = userContext.proTestDaysLeft ?? proInfo.proTestDaysLeft ?? null;
+
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    // Hard Guardrail checks on last message
+    const lastUserMessage = [...messages].reverse().find((m: any) => m.role === "user")?.content || "";
+    const lowerUserMsg = lastUserMessage.toLowerCase();
+
+    // 1. Medical advice guardrail
+    const isMedicalQuery = /\b(diagnos|disease|prescript|medicat|wound|infection|pain in chest|fracture|symptom|illness|heart attack|stroke|blood pressure pill|drug dosage)\b/i.test(lowerUserMsg);
+    if (isMedicalQuery) {
+      return res.json({
+        reply: `Bro, as your Nex AI companion, I care deeply about your wellness, but I'm here for physical fitness habits, mental discipline, and daily routines—I can't provide medical diagnoses, treatment plans, or prescription advice. If you're experiencing symptoms or pain, please consult a qualified healthcare professional right away! \n\nLet's steer your focus toward healthy hydration or gentle breathing instead. How are you feeling overall today?`,
+        action: null,
+        sessionLimitReached: false
       });
+    }
+
+    // 2. Relationship / romantic advice guardrail
+    const isRelationshipQuery = /\b(break up|girlfriend|boyfriend|ex-wife|ex-husband|dating advice|cheated|divorce|tinder|romance|crush on)\b/i.test(lowerUserMsg);
+    if (isRelationshipQuery) {
+      return res.json({
+        reply: `I hear you, ${displayName}! However, my expertise is dialed into your physical strength, discipline, plant garden, and habit streaks. I can't give relationship or dating counseling. Let's channel that raw energy into crushing a workout, logging your water, or leveling up your rank! Ready for a quick pushup set?`,
+        action: null,
+        sessionLimitReached: false
+      });
+    }
+
+    // 3. Conversation length limit (wrap up and urge action)
+    if (sessionTurnCount >= 15) {
+      return res.json({
+        reply: `We've laid down some solid strategies today, ${displayName}! But remember: true victory is won through daily action, not just conversation. Let's pause chatting for now so you can go tackle your challenges, water your plants, and keep your ${streak}-day streak burning! Go get it, legend! 🔥`,
+        action: null,
+        sessionLimitReached: true
+      });
+    }
+
+    // High-IQ Local Fallback Generator in case Gemini is offline or rate-limited
+    const generateLocalFallback = () => {
+      // A. Choice / Option Decision Request (e.g. "choose between Atlas or Orion", "either A or B, you choose")
+      const isChoiceRequest = /\b(?:choose|pick|between|either)\b/i.test(lowerUserMsg);
+      const optionsMatch = lowerUserMsg.match(/(?:between|either)\s+["']?([A-Za-z0-9_ -]+?)["']?\s+(?:or|and)\s+["']?([A-Za-z0-9_ -]+?)["']?(?:\s*[,.!?]|\s+you\s+(?:choose|pick)|$)/i);
+      
+      if (isChoiceRequest && optionsMatch && optionsMatch[1] && optionsMatch[2]) {
+        let opt1 = optionsMatch[1].trim().replace(/^(?:my\s+name\s+to\s+|a\s+|the\s+)/i, '');
+        let opt2 = optionsMatch[2].trim().replace(/\s+you\s+(?:choose|pick).*$/i, '');
+        
+        // Pick option 1 as the definitive, decisive choice
+        const chosen = opt1.charAt(0).toUpperCase() + opt1.slice(1);
+        const alt = opt2.charAt(0).toUpperCase() + opt2.slice(1);
+
+        if (lowerUserMsg.includes('name') || lowerUserMsg.includes('profile')) {
+          return {
+            reply: `Between **${chosen}** and **${alt}**, I choose **${chosen}**! ⚡\n\nIt sounds bold, grounded, and commands unbreakable discipline—perfect for your Level ${level} journey and ${streak}-day streak. I've prepared your name update below, tap to apply it immediately!`,
+            action: {
+              type: "update_name",
+              newName: chosen,
+              payload: { name: chosen }
+            },
+            sessionLimitReached: false
+          };
+        } else {
+          return {
+            reply: `Between **${chosen}** and **${alt}**, I choose **${chosen}**! It aligns best with building consistent momentum. Tap below to add this challenge to your custom plan!`,
+            action: {
+              type: "create_challenge",
+              challenge: {
+                name: chosen,
+                icon: "⚡",
+                color: "#3b82f6",
+                challenges: ["pushups", "water", "breathing"],
+                steps: ["pushups", "water", "breathing"],
+                days: [0, 1, 2, 3, 4, 5, 6],
+                reminderTime: "08:30",
+                targetDesc: `Daily focus: ${chosen}`
+              }
+            },
+            sessionLimitReached: false
+          };
+        }
+      }
+
+      // B. Suggestions Request (e.g. "suggest some names", "recommend a name/challenge")
+      const isSuggestionRequest = /\b(?:suggest|recommend|give me|ideas for)\b.*\b(?:name|names|profile|challenge|challenges|routine)\b/i.test(lowerUserMsg);
+      if (isSuggestionRequest) {
+        if (lowerUserMsg.includes('name') || lowerUserMsg.includes('profile')) {
+          return {
+            reply: `Here are 3 awesome name ideas tailored for your discipline, ${displayName}:\n\n1. **Atlas** — Grounded, unbreakable strength that carries heavy loads with ease.\n2. **Orion** — The celestial hunter; sharp focus and laser precision towards your goals.\n3. **Vanguard** — The leader at the front line of consistency.\n\n**My Recommendation:** I pick **Atlas** for you! It has that classic stoic presence. Tap below to set your name to Atlas, or let me know if you want another!`,
+            action: {
+              type: "update_name",
+              newName: "Atlas",
+              payload: { name: "Atlas" }
+            },
+            sessionLimitReached: false
+          };
+        } else {
+          return {
+            reply: `Here are 3 custom challenge ideas for you, ${displayName}:\n\n1. **Morning Spartan Routine** — 20 pushups & 500ml cold water right after waking up.\n2. **Midday Reset Protocol** — 3 minutes box breathing & gratitude reflection.\n3. **Evening Unwind & Hydrate** — Gentle stretches & 1L clean water.\n\n**My Recommendation:** I pick **Morning Spartan Routine** because starting your day with physical momentum makes everything else feel easy! Tap below to add it:`,
+            action: {
+              type: "create_challenge",
+              challenge: {
+                name: "Morning Spartan Routine",
+                icon: "💪",
+                color: "#3b82f6",
+                challenges: ["pushups", "water"],
+                steps: ["pushups", "water"],
+                days: [0, 1, 2, 3, 4, 5, 6],
+                reminderTime: "08:00",
+                targetDesc: "20 Pushups & 500ml Water"
+              }
+            },
+            sessionLimitReached: false
+          };
+        }
+      }
+
+      // C. Multi-part / Comprehensive Status Query (Stats, Rank, Climbing, Plants, Care, Unlocking)
+      const asksAboutRank = /\b(rank|leaderboard|position|climb|standing|league)\b/i.test(lowerUserMsg);
+      const asksAboutStats = /\b(xp|coins|coin|streak|level|stats|points|gems)\b/i.test(lowerUserMsg);
+      const asksAboutPlants = /\b(plant|plants|garden|seed|seeds|sprout|flower|improve|unlock|care|water)\b/i.test(lowerUserMsg);
+
+      if ((asksAboutRank && asksAboutPlants) || (asksAboutStats && asksAboutPlants) || (asksAboutRank && asksAboutStats)) {
+        const rankText = rankPosition 
+          ? `You are currently holding **Rank #${rankPosition}** in the **${league} League**! ${playerAheadName ? `Rank #${rankPosition - 1} is held by **${playerAheadName}** (${pointsNeededToClimb} XP ahead).` : "You are right at the very top of your division!"}`
+          : `You are in the **${league} League**! Complete your first challenge today to secure an official placement on this week's board.`;
+
+        const plantStatusText = `Your active botanical plant is **${currentPlant.type.toUpperCase()}** (Stage **${currentPlant.stage}/5**: *${currentPlant.stageName}*). Health is at **${currentPlant.health}%**, and it is currently **${currentPlant.isThirsty ? "thirsty—water it now!" : "well-hydrated"}**. You have **${unlockedPlants.length}** species unlocked (${unlockedPlants.map((p: any) => `${p.type} Lv.${p.stage}`).join(', ')}).`;
+
+        return {
+          reply: `Here is your complete live status breakdown, ${displayName}! 📊🌱\n\n### ⚡ Your Current Stats\n• **Streak:** 🔥 **${streak} Days** (Best: ${bestStreak} days)\n• **Total XP:** ⭐ **${xp} XP** (Level **${level}**)\n• **Weekly XP:** 📈 **${weeklyXP} XP**\n• **Nexora Coins:** 🪙 **${coins} Coins** | **Gems:** 💎 **${gems}**\n\n### 🏆 Rank & Leaderboard Position\n• ${rankText}\n• **How to climb higher:**\n  1. **Daily Flows:** Complete your primary challenge flow for +50–100 XP.\n  2. **Daily Quests:** Check your quests daily for high-yield XP bounties.\n  3. **Streak Multipliers:** Maintain your streak daily—streak chests grant massive XP multipliers.\n  4. **Shop Boosters:** Pop a **Double XP** or **XP Overdrive** from the shop if you have coins to leapfrog ahead!\n\n### 🌿 Your Plants & Botanical Garden\n• ${plantStatusText}\n• **How to care for & improve your plant:**\n  1. **Water Daily:** Logging water or completing the hydration challenge grants **+15 growth points** directly to your plant.\n  2. **Restore Health:** If health dips or your plant wilts, water it immediately or use **Nano Fertilizer** from the Plant Shop.\n  3. **Equip Gear:** Use the **UV Growth Lamp** (2x growth points) or **Eco Drone** in the Plant Shop for passive growth!\n• **How to get new plants:**\n  1. **Ecosystem Milestone:** Grow ANY plant to **Stage 5 (Fully Bloomed)** to automatically unlock the next species in the ecosystem (*Sprout ➔ Zen ➔ Desert ➔ Tropical ➔ Forest ➔ Meadow ➔ Crystal ➔ Volcano...*)!\n  2. **Space House:** Grow 3 plants to Stage 5 to unlock the secret Space House (${stage5Count}/3 completed)!\n  3. **Loot Seeds:** Maintain your streak to earn mystery Loot Seeds for rare botanical flora.`,
+          action: null,
+          sessionLimitReached: false
+        };
+      }
+
+      // D. Direct Name change request
+      const nameChangeMatch = lowerUserMsg.match(/(?:change|set|rename|call me|update\s+(?:my\s+)?name(?:\s+to)?)\s+([A-Za-z0-9_ -]{2,20})/i);
+      if (nameChangeMatch && !lowerUserMsg.includes("challenge") && !lowerUserMsg.includes("between") && !lowerUserMsg.includes("or")) {
+        const proposedName = nameChangeMatch[1].trim().replace(/\s+(?:please|bro|thanks).*$/i, '');
+        return {
+          reply: `Got it! I've prepped your profile update for **${proposedName}**. Tap the button below to apply it immediately:`,
+          action: {
+            type: "update_name",
+            newName: proposedName,
+            payload: { name: proposedName }
+          },
+          sessionLimitReached: false
+        };
+      }
+
+      // E. Direct Custom challenge request
+      if (lowerUserMsg.includes("challenge") || lowerUserMsg.includes("routine") || lowerUserMsg.includes("plan") || lowerUserMsg.includes("workout") || lowerUserMsg.includes("pushup")) {
+        let challengeName = "Morning Power Surge";
+        let targetDesc = "15 Pushups & 500ml Water";
+        let subChallenges = ["pushups", "water", "breathing"];
+        let icon = "⚡";
+
+        if (lowerUserMsg.includes("water") || lowerUserMsg.includes("hydrate")) {
+          challengeName = "Hydration Fortress";
+          targetDesc = "Drink 2L Clean Water";
+          subChallenges = ["water", "breathing"];
+          icon = "💧";
+        } else if (lowerUserMsg.includes("mind") || lowerUserMsg.includes("breath") || lowerUserMsg.includes("relax")) {
+          challengeName = "Zen Mind Sanctuary";
+          targetDesc = "10 Mins Box Breathing & Reflection";
+          subChallenges = ["breathing", "gratitude", "meditation"];
+          icon = "🧘";
+        } else if (lowerUserMsg.includes("pushup") || lowerUserMsg.includes("chest") || lowerUserMsg.includes("workout") || lowerUserMsg.includes("fitness")) {
+          challengeName = "Iron Core Protocol";
+          targetDesc = "25 Pushups Daily";
+          subChallenges = ["pushups", "water"];
+          icon = "💪";
+        }
+
+        return {
+          reply: `I've created a custom challenge tailored for you: **${challengeName}**! Tap the button below to add it directly to your home plans:`,
+          action: {
+            type: "create_challenge",
+            challenge: {
+              name: challengeName,
+              icon: icon,
+              color: "#3b82f6",
+              challenges: subChallenges,
+              steps: subChallenges,
+              days: [0, 1, 2, 3, 4, 5, 6],
+              reminderTime: "08:30",
+              targetDesc: targetDesc
+            },
+            payload: {
+              name: challengeName,
+              icon: icon,
+              color: "#3b82f6",
+              challenges: subChallenges,
+              steps: subChallenges,
+              days: [0, 1, 2, 3, 4, 5, 6],
+              reminderTime: "08:30",
+              targetDesc: targetDesc
+            }
+          },
+          sessionLimitReached: false
+        };
+      }
+
+      // F. Plant-only inquiries
+      if (asksAboutPlants) {
+        return {
+          reply: `Here's your botanical garden report, ${displayName}! 🌱\n\n• **Active Plant:** **${currentPlant.type.toUpperCase()}** (Stage **${currentPlant.stage}/5**: *${currentPlant.stageName}*)\n• **Health:** **${currentPlant.health}%** | **Thirst:** ${currentPlant.isThirsty ? "💧 Needs water immediately!" : "✨ Thriving & Hydrated"}\n• **Growth Points:** ${currentPlant.growthPoints}/100 points towards the next stage.\n• **Unlocked Species (${unlockedPlants.length}):** ${unlockedPlants.map((p: any) => `${p.type} (Stage ${p.stage}/5)`).join(', ')}.\n\n**Plant Care Tips:**\n1. Water it daily by logging your water intake or completing the water challenge (+15 growth points).\n2. If health drops below 50%, use **Nano Fertilizer** from the Plant Shop to bring it back to full vitality.\n3. Grow any plant to Stage 5 to unlock the next exotic species in your ecosystem!`,
+          action: null,
+          sessionLimitReached: false
+        };
+      }
+
+      // G. Rank-only inquiries
+      if (asksAboutRank) {
+        return {
+          reply: `Here is where you stand in the arena, ${displayName}: 🏆\n\n• **League:** **${league} League**\n• **Position:** ${rankPosition ? `**Rank #${rankPosition}** of ${totalPlayersInLeague} competitors` : "**Unranked** (complete a challenge today to enter!)"}\n• **Weekly XP:** **${weeklyXP} XP**\n\n**How to Climb the Ranks:**\n1. Finish your Daily Flow to bank 50–100 XP instantly.\n2. Complete your Daily Quest for high-tier bonus XP.\n3. Keep your streak alive—higher streaks trigger weekly bonus chests that skyrocket your rank standing!\n4. Pick up **Double XP** from the shop to double every point you earn today!`,
+          action: null,
+          sessionLimitReached: false
+        };
+      }
+
+      // H. Direct Pro Status check ("am I pro?", "check my pro", etc.)
+      const isDirectProStatusCheck = /\b(am i pro|is my pro|do i have pro|check my pro|my pro status|what tier am i|my tier)\b/i.test(lowerUserMsg);
+      if (isDirectProStatusCheck) {
+        if (isProTest) {
+          return {
+            reply: `Yes! You're currently on the **4-Day Free Pro Test** ($0.00 trial, ${proTestDaysLeft !== null ? `${proTestDaysLeft} days remaining` : 'active'}) with all Pro features unlocked 👑`,
+            action: null,
+            sessionLimitReached: false
+          };
+        } else if (isPro) {
+          return {
+            reply: `Yes! You are an active **Nexora Pro Member** with full lifetime/subscription privileges unlocked 👑`,
+            action: null,
+            sessionLimitReached: false
+          };
+        } else {
+          return {
+            reply: `You're currently on the **Free Tier**. You can start a **4-Day Free Pro Test ($0.00)** anytime in the Pro tab to test all Pro features risk-free!`,
+            action: null,
+            sessionLimitReached: false
+          };
+        }
+      }
+
+      // I. Pro Plans, Pricing, Money, Offers & Tiers inquiry
+      const asksAboutPro = /\b(pro|subscription|pricing|price|cost|tier|tiers|trial|test|pay|offers|money|plans)\b/i.test(lowerUserMsg);
+      if (asksAboutPro) {
+        let proStatusText = "";
+        if (isProTest) {
+          proStatusText = `You're currently enjoying the **4-Day Free Pro Test** ($0.00 trial) with full Pro access active! 👑`;
+        } else if (isPro) {
+          proStatusText = `You are currently an active **Nexora Pro Member**! You have full access to everything unlocked. 👑`;
+        } else {
+          proStatusText = `You are currently on the **Free Tier**. You can start a **4-Day Free Pro Test ($0.00)** anytime to try all Pro features risk-free!`;
+        }
+
+        return {
+          reply: `${proStatusText}\n\n**Nexora Pro Plans & Tiers:**\n• **4-Day Free Pro Test:** $0.00 (Try full Pro features risk-free)\n• **Monthly Pro:** $4.99 / month\n• **Yearly Pro:** $29.99 / year *(Best value - save over 50%!)*\n• **Lifetime Pass:** $49.99 one-time unlock forever\n\n**What Pro Unlocks:**\n- 24/7 Nex AI companion chat & custom challenges creator\n- Unlimited Custom Habit Routines & Flows\n- All Pro Themes, Emblems & Cosmetic Shop Perks\n- Plant Growth Boosters & 2x XP multipliers`,
+          action: null,
+          sessionLimitReached: false
+        };
+      }
+
+      // J. General greetings & friendly conversation (ChatGPT-style: short & conversational)
+      const isGreeting = /^(hey|hi|hello|yo|sup|greetings|good morning|good evening|good afternoon|howdy)(\s+.*)?$/i.test(lowerUserMsg.trim());
+      if (isGreeting && lowerUserMsg.trim().split(/\s+/).length <= 4) {
+        return {
+          reply: `Hey ${displayName}! 🔥 Ready to lock in and crush some habits, or what's on your mind?`,
+          action: null,
+          sessionLimitReached: false
+        };
+      }
+
+      // K. Short acknowledgments (ChatGPT-style: brief, conversational)
+      const isAcknowledgement = /^(ok|okay|cool|nice|got it|alright|bet|sure|done|sounds good|thx|thanks|thank you)(\s+.*)?$/i.test(lowerUserMsg.trim());
+      if (isAcknowledgement && lowerUserMsg.trim().split(/\s+/).length <= 4) {
+        if (/thanks|thank you|thx/i.test(lowerUserMsg)) {
+          return {
+            reply: `Anytime, ${displayName}! Always here in your corner. Let's keep that streak alive! 💪`,
+            action: null,
+            sessionLimitReached: false
+          };
+        }
+        return {
+          reply: `Let's get it! Go crush those goals today, ${displayName}! 🔥`,
+          action: null,
+          sessionLimitReached: false
+        };
+      }
+
+      // L. General companion fallback
+      return {
+        reply: `Hey ${displayName}! I'm right here with you. What would you like to focus on—checking your rank, reviewing plants, custom workout challenges, or Pro features?`,
+        action: null,
+        sessionLimitReached: false
+      };
+    };
+
+    if (!apiKey) {
+      return res.json(generateLocalFallback());
+    }
+
+    try {
+      const systemInstruction = `You are Nex AI, the high-energy, friendly, supportive, and knowledgeable AI companion inside Nexora.
+You have real-time live access to ${displayName}'s profile, stats, leaderboard ranking, botanical garden, and habit plans.
+
+=== CURRENT LIVE USER STATUS (GROUND TRUTH) ===
+• User Name: "${displayName}"
+• Daily Streak: ${streak} days (Best Streak: ${bestStreak} days)
+• Total XP: ${xp} XP | Weekly XP: ${weeklyXP} XP | Level: Level ${level}
+• Coins: ${coins} 🪙 | Gems: ${gems} 💎
+• Pro Status: ${isProTest ? `ACTIVE 4-DAY FREE PRO TEST ($0.00 trial, ${proTestDaysLeft !== null ? `${proTestDaysLeft} days left` : 'active'})` : isPro ? `ACTIVE PRO MEMBER (${proPlan})` : 'FREE TIER USER'}
+• Rank / Leaderboard:
+  - League: "${league} League"
+  - Position: ${rankPosition ? `Rank #${rankPosition} of ${totalPlayersInLeague}` : `Unranked`}
+  - Competitor Ahead: ${playerAheadName ? `Rank #${(rankPosition || 2) - 1} is held by "${playerAheadName}" (${pointsNeededToClimb} XP to overtake)` : (rankPosition === 1 ? 'Rank #1 in league!' : 'Complete daily flows to get on leaderboard')}
+• Plants & Botanical Garden:
+  - Active Plant: ${currentPlant.type.toUpperCase()} (Stage ${currentPlant.stage}/5: "${currentPlant.stageName}", Health: ${currentPlant.health}%, ${currentPlant.isThirsty ? "THIRSTY" : "HYDRATED"})
+  - Growth: ${currentPlant.growthPoints}/100 XP
+  - Unlocked Species (${unlockedPlants.length}): ${unlockedPlants.map((p: any) => `${p.type} (Stage ${p.stage}/5)`).join(', ') || 'sprout'}
+  - Stage 5 Bloomed Plants: ${stage5Count} (${spaceHouseUnlocked ? 'Space House UNLOCKED' : `${3 - stage5Count} more needed`})
+• Active Custom Plans (${customPlans.length}): ${customPlans.map((p: any) => p.name).join(', ') || 'None'}
+
+=== PRO PLANS & OFFERS (GROUND TRUTH) ===
+• 4-Day Free Pro Test: $0.00 (4-day trial of all Pro features with zero upfront charge).
+• Monthly Pro: $4.99 / month.
+• Yearly Pro: $29.99 / year (save over 50%).
+• Lifetime Pass: $49.99 one-time unlock forever.
+• In-App Shop Boosters (bought with Coins & Gems): Double XP, Nano Fertilizer (restores plant vitality), UV Growth Lamp, Eco Drone, Cosmetics.
+
+=== CHATGPT-STYLE RESPONSE DISCIPLINE (CRITICAL) ===
+1. SHORT INPUT = SHORT OUTPUT:
+   If the user sends a greeting, acknowledgement, or short casual text (e.g. "hey", "hi", "what's up", "how are you", "yo", "sup", "thanks", "ok", "got it"):
+   Respond naturally in 1-2 SHORT sentences! E.g. "Hey ${displayName}! Ready to lock in, or what's on your mind? 🔥"
+   NEVER dump unsolicited lists of their streak, rank, coins, plants, or stats unless the user specifically asks for them!
+2. DIRECT SHORT QUESTION = DIRECT CONCISE ANSWER:
+   If the user asks a quick single question (e.g. "what is my streak?", "how many coins do I have?", "am I pro?"):
+   Answer directly in 1-2 punchy sentences. If they ask "am I pro", tell them clearly whether they are on the 4-Day Free Pro Test, Paid Pro, or Free Tier.
+3. DETAILED / IDENTIFY / EXPLAIN / MULTI-PART QUESTION = IN-DEPTH STRUCTURED ANSWER:
+   If the user asks to "Identify", "explain", analyze their status, asks about rank climbing, plant care, or asks multi-part questions, ONLY THEN provide a comprehensive, beautifully structured markdown reply with headers and bullet points.
+4. PRO PLANS, MONEY, OFFERS & TIERS INQUIRIES:
+   When the user asks about Pro plans, money, offers, tiers, or their Pro test:
+   Accurately tell them their current status (${isProTest ? 'currently on the 4-Day Free Pro Test' : isPro ? 'active Pro member' : 'currently on Free Tier'}) and explain the tiers clearly ($0.00 4-Day Test, $4.99/mo, $29.99/yr, $49.99 Lifetime).
+5. TOKEN EFFICIENCY:
+   Keep answers concise, impactful, and conversational without unnecessary verbose filler.
+
+=== DECISION MAKING & SUGGESTIONS ===
+• WHEN ASKED TO CHOOSE BETWEEN OPTIONS (e.g. "choose between Atlas or Orion"):
+  Pick EXACTLY ONE single option! Never bundle or merge them. Explain why with conviction.
+• WHEN ASKED FOR SUGGESTIONS:
+  Provide 2-3 distinct options, then give your personal #1 top pick.
+
+=== TOPIC BOUNDARIES ===
+• If asked for medical advice or romantic counseling, politely decline and redirect to fitness, hydration, or daily habits.
+
+=== JSON OUTPUT STRUCTURE ===
+Return strictly a JSON object:
+{
+  "reply": "Your markdown response text",
+  "action": null | {
+    "type": "create_challenge",
+    "challenge": {
+      "name": "Single Challenge Name",
+      "icon": "⚡" | "💧" | "💪" | "🧘",
+      "color": "#3b82f6",
+      "challenges": ["pushups", "water"],
+      "days": [0, 1, 2, 3, 4, 5, 6],
+      "reminderTime": "08:30",
+      "targetDesc": "Short description"
+    }
+  } | {
+    "type": "update_name",
+    "newName": "SingleChosenName"
+  }
+}`;
+
+      let formattedContents = messages
+        .filter((m: any) => m && (m.content || m.text))
+        .map((m: any) => ({
+          role: m.role === "model" ? "model" : "user",
+          parts: [{ text: m.content || m.text }]
+        }));
+
+      const firstUserIdx = formattedContents.findIndex(c => c.role === "user");
+      if (firstUserIdx !== -1) {
+        formattedContents = formattedContents.slice(firstUserIdx);
+      }
+
+      // Limit history to last 6 messages to minimize token usage
+      if (formattedContents.length > 6) {
+        formattedContents = formattedContents.slice(-6);
+      }
+
+      if (formattedContents.length === 0) {
+        return res.json(generateLocalFallback());
+      }
+
+      let parsedResult: any = null;
+
+      const aiResponse = await callGeminiSafe({
+        contents: formattedContents,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+          maxOutputTokens: 500,
+          responseMimeType: "application/json"
+        }
+      });
+
+      if (aiResponse && aiResponse.text) {
+        try {
+          parsedResult = JSON.parse(aiResponse.text.trim());
+        } catch {
+          parsedResult = null;
+        }
+      }
+
+      if (parsedResult && parsedResult.reply) {
+        return res.json({
+          reply: parsedResult.reply,
+          action: parsedResult.action || null,
+          sessionLimitReached: false
+        });
+      }
+
+      return res.json(generateLocalFallback());
+    } catch {
+      return res.json(generateLocalFallback());
     }
   });
 

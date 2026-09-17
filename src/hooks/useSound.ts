@@ -56,6 +56,12 @@ export const SOUNDS = {
   trophy_triplets:
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775223058/mixkit-funky-triplets-1141_yeizgw.mp3",
 
+  // Lightning & Thunder Celebration (dedicated to the Lightning celebration page)
+  lightning:
+    "https://res.cloudinary.com/ddtfq9acc/video/upload/v1777215960/mixkit-explainer-video-game-alert-sweep-236_xmqkot.wav",
+  lightning_thunder:
+    "https://res.cloudinary.com/ddtfq9acc/video/upload/v1783088375/mixkit-martial-arts-punch-2052_l0noe5.wav",
+
   // Game alerts & Mascots
   losing:
     "https://res.cloudinary.com/dfoty883a/video/upload/v1775215702/mixkit-player-losing-or-failing-2042_mdtjny.wav",
@@ -324,6 +330,176 @@ export function playSound(soundKey: SoundKey, volume = 0.52) {
   }
 }
 
+/**
+ * Synthesizes a dedicated, authentic cartoon lightning strike and thunder sound effect
+ * created specifically for the Lightning Celebration Page.
+ * 
+ * Generates:
+ * 1. Pre-discharge high-voltage electric ionization charge (0 - 50ms)
+ * 2. Supersonic electric whip crack & dual detuned arc buzz (50 - 180ms)
+ * 3. Thunderous deep sub-bass shockwave impact with analog saturation (65 - 650ms)
+ * 4. Secondary electrical arc sparks matching the flashing screen bolts (220ms & 380ms)
+ * 5. Rolling low-frequency thunder rumble (100ms - 1300ms) that smoothly fades
+ *    as the lightning overlay clears and transitions to the mascot.
+ */
+export function playLightningThunder(volume = 0.9) {
+  try {
+    const ctx = getOrCreateAudioContext();
+    if (ctx) {
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+
+      const now = ctx.currentTime;
+
+      // 1. Initial High-Voltage Electric Arc Crackle (The "ZAP / SNAP")
+      const crackleSize = Math.floor(ctx.sampleRate * 0.22);
+      const crackleBuffer = ctx.createBuffer(1, crackleSize, ctx.sampleRate);
+      const crackleData = crackleBuffer.getChannelData(0);
+      for (let i = 0; i < crackleSize; i++) {
+        // High density random spark impulses
+        const rand = Math.random() * 2 - 1;
+        crackleData[i] = rand * (Math.random() > 0.08 ? 0.9 : 2.2);
+      }
+
+      const crackleSource = ctx.createBufferSource();
+      crackleSource.buffer = crackleBuffer;
+
+      const crackleFilter = ctx.createBiquadFilter();
+      crackleFilter.type = "bandpass";
+      crackleFilter.frequency.setValueAtTime(4200, now);
+      crackleFilter.frequency.exponentialRampToValueAtTime(750, now + 0.18);
+      crackleFilter.Q.setValueAtTime(6.5, now);
+
+      const crackleGain = ctx.createGain();
+      crackleGain.gain.setValueAtTime(volume * 0.95, now);
+      crackleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+      crackleSource.connect(crackleFilter);
+      crackleFilter.connect(crackleGain);
+      crackleGain.connect(ctx.destination);
+
+      crackleSource.start(now);
+      crackleSource.stop(now + 0.23);
+
+      // 2. Dual High-Voltage Buzzing Sawtooth Electric Arc (1800Hz -> 180Hz)
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc1.type = "sawtooth";
+      osc2.type = "sawtooth";
+
+      osc1.frequency.setValueAtTime(1750, now);
+      osc1.frequency.exponentialRampToValueAtTime(190, now + 0.18);
+
+      osc2.frequency.setValueAtTime(1790, now); // Detuned for electrical phase buzz
+      osc2.frequency.exponentialRampToValueAtTime(180, now + 0.18);
+
+      const arcFilter = ctx.createBiquadFilter();
+      arcFilter.type = "lowpass";
+      arcFilter.frequency.setValueAtTime(3800, now);
+      arcFilter.frequency.exponentialRampToValueAtTime(600, now + 0.18);
+
+      const arcGain = ctx.createGain();
+      arcGain.gain.setValueAtTime(volume * 0.55, now);
+      arcGain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+
+      osc1.connect(arcFilter);
+      osc2.connect(arcFilter);
+      arcFilter.connect(arcGain);
+      arcGain.connect(ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.2);
+      osc2.stop(now + 0.2);
+
+      // 3. Thunderous Deep Sub-Bass Shockwave Impact ("KABOOM!")
+      const boomOsc = ctx.createOscillator();
+      boomOsc.type = "triangle";
+      boomOsc.frequency.setValueAtTime(140, now + 0.02);
+      boomOsc.frequency.exponentialRampToValueAtTime(26, now + 0.55);
+
+      // Soft distortion waveshaper for thunderous acoustic weight
+      const waveShaper = ctx.createWaveShaper();
+      const nSamples = 1024;
+      const curve = new Float32Array(nSamples);
+      for (let i = 0; i < nSamples; ++i) {
+        const x = (i * 2) / nSamples - 1;
+        curve[i] = ((3 + 12) * x * 20 * (Math.PI / 180)) / (Math.PI + 12 * Math.abs(x));
+      }
+      waveShaper.curve = curve;
+      waveShaper.oversample = "2x";
+
+      const boomGain = ctx.createGain();
+      boomGain.gain.setValueAtTime(0.001, now);
+      boomGain.gain.setValueAtTime(volume * 1.0, now + 0.03);
+      boomGain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+
+      boomOsc.connect(waveShaper);
+      waveShaper.connect(boomGain);
+      boomGain.connect(ctx.destination);
+
+      boomOsc.start(now + 0.02);
+      boomOsc.stop(now + 0.7);
+
+      // 4. Secondary Electrical Sparks at +200ms & +360ms (matching lightning fork pulses)
+      [0.2, 0.36].forEach((delayTime, idx) => {
+        const sparkTime = now + delayTime;
+        const sparkOsc = ctx.createOscillator();
+        sparkOsc.type = "sawtooth";
+        sparkOsc.frequency.setValueAtTime(1400 - idx * 250, sparkTime);
+        sparkOsc.frequency.exponentialRampToValueAtTime(240, sparkTime + 0.09);
+
+        const sparkGain = ctx.createGain();
+        sparkGain.gain.setValueAtTime(volume * 0.35, sparkTime);
+        sparkGain.gain.exponentialRampToValueAtTime(0.001, sparkTime + 0.09);
+
+        sparkOsc.connect(sparkGain);
+        sparkGain.connect(ctx.destination);
+        sparkOsc.start(sparkTime);
+        sparkOsc.stop(sparkTime + 0.1);
+      });
+
+      // 5. Rolling Low-Frequency Thunder Rumble (Atmospheric decay over 1.25s)
+      const rumbleSize = Math.floor(ctx.sampleRate * 1.3);
+      const rumbleBuffer = ctx.createBuffer(1, rumbleSize, ctx.sampleRate);
+      const rumbleData = rumbleBuffer.getChannelData(0);
+      let lastVal = 0;
+      for (let i = 0; i < rumbleSize; i++) {
+        const white = Math.random() * 2 - 1;
+        lastVal = (lastVal + 0.025 * white) / 1.025;
+        rumbleData[i] = lastVal * 3.8;
+      }
+      const rumbleSource = ctx.createBufferSource();
+      rumbleSource.buffer = rumbleBuffer;
+
+      const rumbleFilter = ctx.createBiquadFilter();
+      rumbleFilter.type = "lowpass";
+      rumbleFilter.frequency.setValueAtTime(240, now + 0.04);
+      rumbleFilter.frequency.exponentialRampToValueAtTime(45, now + 1.25);
+
+      const rumbleGain = ctx.createGain();
+      rumbleGain.gain.setValueAtTime(0.001, now);
+      rumbleGain.gain.setValueAtTime(volume * 0.8, now + 0.05);
+      rumbleGain.gain.exponentialRampToValueAtTime(0.001, now + 1.25);
+
+      rumbleSource.connect(rumbleFilter);
+      rumbleFilter.connect(rumbleGain);
+      rumbleGain.connect(ctx.destination);
+
+      rumbleSource.start(now + 0.04);
+      rumbleSource.stop(now + 1.3);
+    }
+  } catch (e) {
+    // Web audio execution safety fallback
+  }
+
+  // Pure lightning impact audio layer (no other pages' sounds)
+  try {
+    playSound("lightning_thunder", volume * 0.95);
+  } catch (e) {}
+}
+
 export function useSound() {
   const [currentMusic, setCurrentMusic] = useState<string | null>(
     activeMusicKey
@@ -331,6 +507,10 @@ export function useSound() {
 
   const play = useCallback((soundKey: SoundKey, volume = 0.65) => {
     playSound(soundKey, volume);
+  }, []);
+
+  const playLightning = useCallback((vol = 0.85) => {
+    playLightningThunder(vol);
   }, []);
 
   const playButtonClick = useCallback(() => play("nav_switch"), [play]);
@@ -419,6 +599,7 @@ export function useSound() {
     playChestReveal,
     playFlameComplete,
     playMascotCelebration,
+    playLightning,
     stop,
     playMusic,
     stopAllMusic,

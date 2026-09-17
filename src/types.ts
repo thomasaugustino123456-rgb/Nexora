@@ -370,7 +370,7 @@ export interface NexusVideo {
   repostCount?: number;
 }
 export type ChallengeStep = 'pushups' | 'water' | 'breathing' | 'drawing' | 'football' | 'bubbles' | 'memory' | 'gratitude' | 'reaction' | 'meditation' | 'writing' | 'completion' | 'home';
-export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling' | 'surprised' | 'sad' | 'grieving' | 'concerned' | 'pouty' | 'sleeping' | 'hyped' | 'welcoming' | 'celebrating' | 'motivational';
+export type MascotMood = 'neutral' | 'happy' | 'angry' | 'boiling' | 'surprised' | 'sad' | 'grieving' | 'concerned' | 'pouty' | 'pouting' | 'sleeping' | 'hyped' | 'welcoming' | 'celebrating' | 'motivational' | 'dumb' | 'anime' | 'zen' | 'wink' | 'shocked' | 'fiery';
 
 export interface SocialCircle {
   id: string;

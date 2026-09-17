@@ -13,9 +13,12 @@ import { AnimatedVikingHat } from './AnimatedVikingHat';
 import { AnimatedDetectiveKit } from './AnimatedDetectiveKit';
 import { AnimatedWizardHat } from './AnimatedWizardHat';
 import { AnimatedRoyalCrown } from './AnimatedRoyalCrown';
+import { AnimatedCyberGoggles } from './AnimatedCyberGoggles';
+import { AnimatedHeroCape } from './AnimatedHeroCape';
+import { AnimatedCyberExosuit } from './AnimatedCyberExosuit';
 import { LivingMascot } from './LivingMascot';
 import { AnimatedEffectPreview } from './AnimatedEffectPreview';
-import { getMascotItemCategory, normalizeWearableId, normalizeEffectId } from '../lib/mascotSystem';
+import { getMascotItemCategory, getWearableSubCategory, normalizeWearableId, normalizeEffectId } from '../lib/mascotSystem';
 
 interface LibraryScreenProps {
   items: LibraryItem[];
@@ -162,7 +165,15 @@ export function LibraryScreen({
                       if (isLivingMascot) {
                         active = (settings.activeSkin || 'blue-slim') === targetSkinId;
                       } else if (isWearable) {
-                        active = (settings.activeHat || 'none') === normalizeWearableId(targetSkinId);
+                        const sub = getWearableSubCategory(targetSkinId);
+                        const norm = normalizeWearableId(targetSkinId);
+                        if (sub === 'eye') {
+                          active = (settings.activeEye || 'none') === norm;
+                        } else if (sub === 'clothes') {
+                          active = (settings.activeClothes || 'none') === norm;
+                        } else {
+                          active = (settings.activeHat || 'none') === norm;
+                        }
                       } else if (isEffectPower) {
                         active = (settings.activeEffect || 'none') === normalizeEffectId(targetSkinId);
                       } else {
@@ -217,6 +228,12 @@ export function LibraryScreen({
                                   <AnimatedWizardHat className="w-7 h-7" animate={false} />
                                 ) : item.itemId === 'skin-crown' ? (
                                   <AnimatedRoyalCrown className="w-7 h-7" animate={false} />
+                                ) : item.itemId === 'skin-apex' || item.itemId === 'pro-skin-apex' ? (
+                                  <AnimatedCyberGoggles className="w-8 h-5" animate={false} />
+                                ) : item.itemId === 'skin-cape' ? (
+                                  <AnimatedHeroCape className="w-8 h-6" animate={false} />
+                                ) : item.itemId === 'skin-armor' ? (
+                                  <AnimatedCyberExosuit className="w-8 h-6" animate={false} />
                                 ) : typeof item.icon === 'string' || typeof item.icon === 'number' ? item.icon : '🎁'}
                               </div>
                               {active && (
@@ -231,7 +248,13 @@ export function LibraryScreen({
                               <h4 className="font-extrabold text-[#4F3F34] text-xs sm:text-sm uppercase tracking-wide truncate">{item.name}</h4>
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                 <span className="text-[7.5px] font-black text-[#4F3F34]/50 bg-[#FAF7F2] border border-[#E9E4D4]/45 px-1.5 py-0.5 rounded uppercase">
-                                  {isLivingMascot ? 'Slot 1: Skin' : isWearable ? 'Slot 2: Wearable' : isEffectPower ? 'Slot 3: Effect' : item.type}
+                                  {isLivingMascot
+                                    ? 'Slot 1: Skin'
+                                    : isWearable
+                                      ? `Wearable (${getWearableSubCategory(targetSkinId).toUpperCase()})`
+                                      : isEffectPower
+                                        ? 'Slot 3: Aura'
+                                        : item.type}
                                 </span>
                                 {isMusic && (
                                   <span className={`text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded flex items-center gap-1 ${
