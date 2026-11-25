@@ -1,6 +1,28 @@
 {
-  "currentVersion": "1.5.2",
+  "currentVersion": "1.5.3",
   "history": [
+    {
+      "version": "1.5.3",
+      "date": "2026-11-25",
+      "title": "Invite Friends & Coin Rewards",
+      "updates": [
+        {
+          "category": "Social & Rewards",
+          "title": "Invite Friends (+5 Coins)",
+          "description": "Share your personal QR code or invite link with friends and earn +5 Coins automatically for every friend who creates a new account."
+        },
+        {
+          "category": "Onboarding",
+          "title": "Friend Welcome Screen",
+          "description": "Invited friends now land on a dedicated animated mascot welcome page to start their new Nexora journey."
+        },
+        {
+          "category": "Stability",
+          "title": "Leaderboard Sync Guard",
+          "description": "Sanitized leaderboard payloads and hardened sync error handling for smoother background saves."
+        }
+      ]
+    },
     {
       "version": "1.5.2",
       "date": "2026-04-26",

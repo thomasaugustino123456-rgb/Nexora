@@ -1,10 +1,9 @@
 {
-  "version": "1.5.2",
+  "version": "1.5.3",
   "releaseNotes": [
-    "Nexora v1.5.2: Stable restoration active! ⚡",
-    "Firestore Hybrid Sync: Improved connection reliability.",
-    "Gemini 1.5 Integration: Mascot AI is now fully operational.",
-    "Stability Enhancements: Reverted back to the standard stable previous release."
+    "Nexora v1.5.3: Invite Friends & Earn +5 Coins! 🪙",
+    "Share your personal QR code or invite link and track friends joining live.",
+    "New Welcome Screen for invited friends and smoother leaderboard sync."
   ],
   "imageUrl": "/mascot.png",
   "forceUpdate": false

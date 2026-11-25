@@ -997,7 +997,7 @@ export default function App() {
     }
   }, [user?.uid, settings?.isPro, onUpdateSettings]);
 
-  const currentAppVersion = "1.5.2"; // Stable v1.5.2 Standard Version
+  const currentAppVersion = "1.5.3"; // Stable v1.5.3 Invite & Sync Release
   const [activeScreen, setActiveScreen] = useLocalStorage<Screen>(
     "nexora_active_screen",
     "home",

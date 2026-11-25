@@ -1,7 +1,7 @@
 // NEXORA OFFLINE MODE V2 — SERVICE WORKER
 // Architecture: Versioned Application Shell Cache + Safe Static Assets + FCM Messaging
 
-const CACHE_VERSION = 'nexora-offline-v2.0.0';
+const CACHE_VERSION = 'nexora-offline-v2.0.1';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const ASSET_CACHE = `${CACHE_VERSION}-assets`;
 const VALID_CACHES = [SHELL_CACHE, ASSET_CACHE];
