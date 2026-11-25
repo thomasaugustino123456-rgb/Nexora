@@ -5,7 +5,7 @@ import {
   Trash2, ChevronLeft, RefreshCw, Smartphone, Zap, Flame, 
   Droplets, Target, Clock, Volume2, Palette, Sparkles, 
   ShieldCheck, BrainCircuit, Info, CreditCard, Check, BookOpen, AlertCircle, Video,
-  Layout, BoxSelect, Lock, Key, EyeOff, MessageSquareOff, Loader2, X
+  Layout, BoxSelect, Lock, Key, EyeOff, MessageSquareOff, Loader2, X, UserPlus
 } from 'lucide-react';
 import { auth, FirebaseUser, updatePassword, sendPasswordResetEmail, linkWithCredential, EmailAuthProvider } from '../firebase';
 
@@ -36,6 +36,8 @@ interface SettingsScreenProps {
   sendNotification: (title: string, body: string) => void;
   onOpenArchitectLab: () => void;
   onOpenDeviceShowcase?: () => void;
+  onOpenReferralHub?: () => void;
+  referralCount?: number;
   rollbackBackupData: any;
   onRollbackRestore: () => void;
   onSimulateUpdate: () => void;
@@ -49,6 +51,8 @@ export function SettingsScreen({
   onSubmitFeedback, onShowManifesto, showToast, sendNotification,
   onOpenArchitectLab,
   onOpenDeviceShowcase,
+  onOpenReferralHub,
+  referralCount = 0,
   rollbackBackupData,
   onRollbackRestore,
   onSimulateUpdate,
@@ -212,6 +216,7 @@ export function SettingsScreen({
   // Map of categories on the Settings dashboard
   const CATEGORIES = [
     { id: 'account', label: 'Account', desc: 'Bio-ID, photo, and passwords', icon: User, color: 'text-amber-500 bg-amber-500/[0.06] border-amber-500/10' },
+    { id: 'referrals', label: 'Invite Friends', desc: 'Share QR or link · +5 Coins per friend', icon: UserPlus, color: 'text-emerald-600 bg-emerald-500/[0.08] border-emerald-500/15' },
     { id: 'notifications', label: 'Notifications', desc: 'Push schedules, sound packs', icon: Bell, color: 'text-orange-500 bg-orange-500/[0.06] border-orange-500/10' },
     { id: 'goals', label: 'Goals', desc: 'Pushups, water, challenges', icon: Target, color: 'text-emerald-500 bg-emerald-500/[0.06] border-emerald-500/10' },
     { id: 'appearance', label: 'Appearance', desc: 'Theme colors, interface, performance', icon: Palette, color: 'text-purple-500 bg-purple-500/[0.06] border-purple-500/10' },
@@ -473,41 +478,48 @@ export function SettingsScreen({
                 return (
                   <motion.div
                     key={cat.id}
-                    onClick={() => {
-                      vibrate(VIBRATION_PATTERNS.CLICK);
-                      if (cat.id === 'device-showcase') {
-                        onOpenDeviceShowcase?.();
-                      } else {
-                        setActiveCategory(cat.id);
-                      }
-                    }}
-                    whileHover={{ scale: 1.015 }}
-                    whileTap={{ scale: 0.985 }}
-                    className="p-5 bg-white border border-[#E9E4D4] rounded-3xl shadow-sm hover:shadow-md hover:border-[#69C496]/50 transition-all cursor-pointer flex gap-4 text-left items-start select-none"
-                    id={`setting-card-${cat.id}`}
-                  >
-                    <div className={`p-3 rounded-2xl ${cat.color} shrink-0 border`}>
-                      <IconComponent size={20} className="stroke-[2.2]" />
-                    </div>
-                    <div className="min-w-0 space-y-1">
-                      <h4 className="font-black text-[#4F3F34] text-[15px] tracking-tight flex items-center gap-1.5">
-                        {translate(cat.label, selectedLanguage)}
-                        {cat.id === 'premium' && !isPro && (
-                          <span className="text-[8px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase animate-pulse">
-                            Get
-                          </span>
-                        )}
-                        {cat.id === 'premium' && isPro && (
-                          <span className="text-[8px] bg-[#69C496] text-white px-1.5 py-0.5 rounded-full font-black uppercase">
-                            Active
-                          </span>
-                        )}
-                      </h4>
-                      <p className="text-xs font-bold text-[#4F3F34]/50 leading-snug">
-                        {translate(cat.desc, selectedLanguage)}
-                      </p>
-                    </div>
-                  </motion.div>
+                      onClick={() => {
+                        vibrate(VIBRATION_PATTERNS.CLICK);
+                        if (cat.id === 'device-showcase') {
+                          onOpenDeviceShowcase?.();
+                        } else if (cat.id === 'referrals') {
+                          onOpenReferralHub?.();
+                        } else {
+                          setActiveCategory(cat.id);
+                        }
+                      }}
+                      whileHover={{ scale: 1.015 }}
+                      whileTap={{ scale: 0.985 }}
+                      className="p-5 bg-white border border-[#E9E4D4] rounded-3xl shadow-sm hover:shadow-md hover:border-[#69C496]/50 transition-all cursor-pointer flex gap-4 text-left items-start select-none"
+                      id={`setting-card-${cat.id}`}
+                    >
+                      <div className={`p-3 rounded-2xl ${cat.color} shrink-0 border`}>
+                        <IconComponent size={20} className="stroke-[2.2]" />
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <h4 className="font-black text-[#4F3F34] text-[15px] tracking-tight flex items-center gap-1.5">
+                          {translate(cat.label, selectedLanguage)}
+                          {cat.id === 'referrals' && referralCount > 0 && (
+                            <span className="text-[10px] text-emerald-700 font-black tabular-nums">
+                              · {referralCount} joined
+                            </span>
+                          )}
+                          {cat.id === 'premium' && !isPro && (
+                            <span className="text-[8px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase animate-pulse">
+                              Get
+                            </span>
+                          )}
+                          {cat.id === 'premium' && isPro && (
+                            <span className="text-[8px] bg-[#69C496] text-white px-1.5 py-0.5 rounded-full font-black uppercase">
+                              Active
+                            </span>
+                          )}
+                        </h4>
+                        <p className="text-xs font-bold text-[#4F3F34]/50 leading-snug">
+                          {translate(cat.desc, selectedLanguage)}
+                        </p>
+                      </div>
+                    </motion.div>
                 );
               })}
             </div>

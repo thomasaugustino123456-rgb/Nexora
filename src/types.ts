@@ -180,6 +180,11 @@ export interface UserSettings {
   communityBanned?: boolean;
   communityBannedUntil?: string;
   communityBannedPermanent?: boolean;
+  referralPromptStatus?: 'unseen' | 'later' | 'accepted';
+  referredBy?: string;
+  referralCount?: number;
+  referralCoinsEarned?: number;
+  seenReferralCount?: number;
 }
 
 export interface ShopItem {
@@ -279,6 +284,18 @@ export interface UserStats {
   lifetimeWaterCompletions?: number;
   hasClaimedXpChest?: boolean;
   lastXpChestClaimDate?: string;
+  referralCount?: number;
+  referralCoinsEarned?: number;
+}
+
+export interface ReferralRecord {
+  id: string;
+  friendUid: string;
+  friendName: string;
+  referrerUid: string;
+  coinsAwarded: number;
+  status: 'completed';
+  createdAt: string;
 }
 
 export interface LeaderboardEntry {

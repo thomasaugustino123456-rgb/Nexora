@@ -17,6 +17,7 @@ import { Mascot, MascotMood } from "./Mascot";
 import { ArrowLeft } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
 import { MascotImage } from "./MascotImage";
+import { claimReferralRewardOnNewSignup, clearPendingReferralUid } from "../services/referralService";
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -41,12 +42,14 @@ const GoogleIcon = () => (
 
 interface AuthScreenProps {
   onBack?: () => void;
+  initialIsSignUp?: boolean;
+  referredByName?: string | null;
 }
 
-export function AuthScreen({ onBack }: AuthScreenProps) {
+export function AuthScreen({ onBack, initialIsSignUp = false, referredByName = null }: AuthScreenProps) {
   const [authView, setAuthView] = useState<"options" | "form">("options");
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(initialIsSignUp);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -390,8 +393,14 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
         };
         await setDoc(doc(db, "leaderboard", userCredential.user.uid), initialLbData, { merge: true });
         await setDoc(doc(db, "rank", userCredential.user.uid), initialLbData, { merge: true });
+        await claimReferralRewardOnNewSignup({
+          uid: userCredential.user.uid,
+          displayName: userCredential.user.displayName || "Champion",
+          email: trimmedEmail,
+        }).catch(() => {});
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
+        clearPendingReferralUid();
         const uid = userCredential.user.uid;
         try {
           sessionStorage.setItem("nexora_login_flow", "true");
@@ -573,8 +582,14 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
         };
         await setDoc(doc(db, "leaderboard", result.user.uid), initialGoogleLbData, { merge: true });
         await setDoc(doc(db, "rank", result.user.uid), initialGoogleLbData, { merge: true });
+        await claimReferralRewardOnNewSignup({
+          uid: result.user.uid,
+          displayName: result.user.displayName || "Champion",
+          email: result.user.email,
+        }).catch(() => {});
       } else {
         // Existing Google user - only update updatedAt timestamp, never reset onboardingCompleted
+        clearPendingReferralUid();
         localStorage.setItem("nexora_cached_user", uid);
         try {
           sessionStorage.setItem("nexora_login_flow", "true");
@@ -728,19 +743,25 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
                 </div>
               )}
 
+              {referredByName && (
+                <div className="w-full bg-emerald-50/95 border border-emerald-200 text-emerald-950 px-3.5 py-2.5 rounded-2xl text-xs font-bold text-center shadow-xs">
+                  Invited by <span className="font-black">{referredByName}</span> · Create your new account to begin
+                </div>
+              )}
+
               {/* Button 1: Continue with email */}
               <button
                 type="button"
                 onClick={() => {
                   vibrate(15);
-                  setIsSignUp(false);
+                  setIsSignUp(initialIsSignUp);
                   setAuthView("form");
                   clearErrorState();
                 }}
                 className="w-full h-11 sm:h-12 md:h-13 bg-[#258bfb] hover:bg-[#1c7ee9] active:scale-[0.98] text-white font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-blue-500/30 border border-blue-400/40 flex items-center justify-center gap-2.5 transition-all cursor-pointer"
               >
                 <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-white stroke-[2.4]" />
-                <span>Continue with email</span>
+                <span>{initialIsSignUp ? "Sign up with email" : "Continue with email"}</span>
               </button>
 
               {/* Button 2: Continue with Google */}

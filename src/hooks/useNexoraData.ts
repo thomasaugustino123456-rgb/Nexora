@@ -17,7 +17,7 @@ import { GardenState, createInitialGardenState } from "../types/garden";
 import { SHOP_ITEMS } from "../components/ShopScreen";
 import { MASCOTS_DATA, MascotId } from "../lib/mascotSystem";
 import { HOUSE_ITEMS } from "../constants/houseItems";
-import { parseTimestampMs, parseTimestampIso } from "../lib/firestoreUtils";
+import { parseTimestampMs, parseTimestampIso, buildSafeLeaderboardPayload } from "../lib/firestoreUtils";
 import { getStreakInfo } from "../lib/streakSystem";
 import { computeTrophyInactivityDays, getExpectedTrophyStates } from "../lib/trophySystem";
 
@@ -1950,7 +1950,12 @@ export function useNexoraData(
               
               accountName: extractRealAccountName(allProfileDocs, currentUser),
               email: docData.email || (docData.settings?.email) || currentUser.email || "",
-              time: docData.time || docData["Time"] || (docData.settings?.time) || new Date().toISOString()
+              time: docData.time || docData["Time"] || (docData.settings?.time) || new Date().toISOString(),
+              referralPromptStatus: docData.referralPromptStatus ?? docData.settings?.referralPromptStatus ?? 'unseen',
+              referredBy: docData.referredBy ?? docData.settings?.referredBy,
+              referralCount: Math.max(Number(docData.referralCount) || 0, Number(docData.stats?.referralCount) || 0, Number(docData.settings?.referralCount) || 0),
+              referralCoinsEarned: Math.max(Number(docData.referralCoinsEarned) || 0, Number(docData.stats?.referralCoinsEarned) || 0, Number(docData.settings?.referralCoinsEarned) || 0),
+              seenReferralCount: Number(docData.seenReferralCount ?? docData.settings?.seenReferralCount ?? 0)
             };
             
             const savedOrigStats = docData.originalStatsBeforeProTest || docData.settings?.originalStatsBeforeProTest;
@@ -2106,6 +2111,8 @@ export function useNexoraData(
               waterDrank: docData.waterDrank ?? docData.stats?.waterDrank ?? rewardsData?.waterDrank ?? DEFAULT_STATS.waterDrank,
               lifetimeWaterCompletions: docData.lifetimeWaterCompletions ?? docData.stats?.lifetimeWaterCompletions ?? rewardsData?.lifetimeWaterCompletions ?? DEFAULT_STATS.lifetimeWaterCompletions,
               hasClaimedXpChest: docData.hasClaimedXpChest ?? docData.stats?.hasClaimedXpChest ?? rewardsData?.hasClaimedXpChest ?? DEFAULT_STATS.hasClaimedXpChest,
+              referralCount: Math.max(Number(docData.referralCount) || 0, Number(docData.stats?.referralCount) || 0, Number(statsMainData?.referralCount) || 0),
+              referralCoinsEarned: Math.max(Number(docData.referralCoinsEarned) || 0, Number(docData.stats?.referralCoinsEarned) || 0, Number(statsMainData?.referralCoinsEarned) || 0),
             };
 
             const calculatedStreakInfo = getStreakInfo(mappedStats);
@@ -2474,6 +2481,9 @@ export function useNexoraData(
         const remoteStreakStatus = data.streakStatus || remoteStats.streakStatus;
         const remoteTrophies = data.trophies || remoteStats.trophies;
         const remoteLastCompleted = data.lastCompletedDate || remoteStats.lastCompletedDate;
+        const remoteReferralCount = Math.max(Number(data.referralCount) || 0, Number(remoteStats.referralCount) || 0);
+        const remoteReferralCoinsEarned = Math.max(Number(data.referralCoinsEarned) || 0, Number(remoteStats.referralCoinsEarned) || 0);
+        const remoteCoins = Math.max(Number(data.coins) || 0, Number(remoteStats.coins) || 0);
 
         rawSetStats((prev) => {
           let hasChanges = false;
@@ -2499,6 +2509,12 @@ export function useNexoraData(
             updated.trophies = remoteTrophies;
             hasChanges = true;
           }
+          if (remoteReferralCount > (prev.referralCount || 0)) {
+            updated.referralCount = remoteReferralCount;
+            updated.referralCoinsEarned = remoteReferralCoinsEarned;
+            updated.coins = Math.max(prev.coins || 0, remoteCoins);
+            hasChanges = true;
+          }
 
           if (hasChanges) {
             console.log(`[MULTI-DEVICE SYNC] Remote Firestore snapshot detected external device change! streak=${updated.streak}, streakStatus=${updated.streakStatus}`);
@@ -2509,6 +2525,19 @@ export function useNexoraData(
           }
           return prev;
         });
+
+        if (remoteReferralCount > 0) {
+          rawSetSettings((prev) => {
+            if (remoteReferralCount > (prev.referralCount || 0)) {
+              return {
+                ...prev,
+                referralCount: remoteReferralCount,
+                referralCoinsEarned: remoteReferralCoinsEarned,
+              };
+            }
+            return prev;
+          });
+        }
       },
       (error) => {
         console.warn(`[MULTI-DEVICE SYNC] Real-time onSnapshot listener encountered an error:`, error);
@@ -2969,13 +2998,11 @@ export function useNexoraData(
               stats.totalPoints || 0,
               stats.xp || 0
             );
-            const rankPayload = cleanPayload({
+            const rankPayload = buildSafeLeaderboardPayload({
               uid: user.uid,
-              userId: user.uid,
-              name: settings.displayName || user.displayName || 'Champion',
               displayName: settings.displayName || user.displayName || 'Champion',
-              photoFileName: settings.profilePic || user.photoURL || '',
-              profilePic: settings.profilePic || user.photoURL || '',
+              photoURL: settings.profilePic || '',
+              fallbackPhotoURL: user.photoURL || '',
               league: settings.league || 'Bronze',
               points: currentMaxPoints,
               weeklyPoints: currentMaxPoints,
@@ -2985,8 +3012,9 @@ export function useNexoraData(
               streak: stats.streak || 0,
               level: stats.level || 1,
               updatedAt: serverTimestamp(),
+              includeAliases: true,
             });
-            if (!settings.proTestActive) {
+            if (!settings.proTestActive && auth.currentUser?.uid === user.uid) {
               try {
                 await setDoc(rankDocRef, rankPayload, { merge: true });
               } catch (rkErr) {
@@ -2999,7 +3027,8 @@ export function useNexoraData(
                 await setDoc(leaderboardTopRef, rankPayload, { merge: true });
                 console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote leaderboard document to: ${leaderboardTopRef.path}`);
               } catch (lbErr: any) {
-                console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Failed to write leaderboard document to: leaderboard/${user.uid}. Error:`, lbErr);
+                handleFirestoreError(lbErr, OperationType.WRITE, `leaderboard/${user.uid}`);
+                console.warn(`[PERSISTENCE AUDIT] Non-critical error writing leaderboard doc leaderboard/${user.uid}:`, lbErr);
               }
             }
 
@@ -3212,14 +3241,11 @@ export function useNexoraData(
               stats.xp || 0
             );
 
-            const writePayload = {
+            const writePayload = buildSafeLeaderboardPayload({
               uid: user.uid,
-              userId: user.uid,
               displayName: settings.displayName || user.displayName || "Champion",
-              name: settings.displayName || user.displayName || "Champion",
-              photoURL: settings.profilePic || user.photoURL || "",
-              photoFileName: settings.profilePic || user.photoURL || "",
-              profilePic: settings.profilePic || user.photoURL || "",
+              photoURL: settings.profilePic || "",
+              fallbackPhotoURL: user.photoURL || "",
               streak: Math.max(preData.streak || 0, stats.streak || 0),
               totalPoints: maxPts,
               points: maxPts,
@@ -3228,17 +3254,27 @@ export function useNexoraData(
               xp: maxPts,
               level: Math.max(preData.level || 1, stats.level || 1),
               league: settings.league || preData.league || "Bronze",
-            };
+              includeAliases: true,
+            });
             console.log(`[PERSISTENCE AUDIT] Write payload for leaderboard document:`, JSON.stringify(writePayload));
             
-            if (maxPts > 0) {
-              await setDoc(leaderboardRef, writePayload, { merge: true });
-              await setDoc(rankDocRef, writePayload, { merge: true });
-              console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote leaderboard document to: ${leaderboardRef.path}`);
+            if (maxPts > 0 && auth.currentUser?.uid === user.uid) {
+              try {
+                await setDoc(leaderboardRef, writePayload, { merge: true });
+                console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Successfully wrote leaderboard document to: ${leaderboardRef.path}`);
+              } catch (lbErr: any) {
+                handleFirestoreError(lbErr, OperationType.WRITE, leaderboardRef.path);
+                console.warn(`[PERSISTENCE AUDIT] Non-critical error writing leaderboard document to ${leaderboardRef.path}:`, lbErr);
+              }
+              try {
+                await setDoc(rankDocRef, writePayload, { merge: true });
+              } catch (rkErr: any) {
+                console.warn(`[PERSISTENCE AUDIT] Non-critical error writing rank document to ${rankDocRef.path}:`, rkErr);
+              }
             }
           } catch (err: any) {
             handleFirestoreError(err, OperationType.WRITE, leaderboardRef.path);
-            console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Failed to write leaderboard document to: ${leaderboardRef.path}. Error:`, err);
+            console.warn(`[PERSISTENCE AUDIT] Non-critical leaderboard sync warning for ${leaderboardRef.path}:`, err);
           }
         }
 
@@ -3870,33 +3906,38 @@ export function useNexoraData(
       }
 
       // 3. Leaderboard Doc Force Write
-      try {
-        console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${leaderboardRef.path}`);
-        const preLbSnap = await getDocSafely(leaderboardRef);
-        console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${leaderboardRef.path}:`, preLbSnap.exists() ? JSON.stringify(preLbSnap.data()) : "Document does not exist");
+      if (auth.currentUser?.uid === user.uid) {
+        try {
+          console.log(`[PERSISTENCE AUDIT] Fetching pre-write document snapshot for: ${leaderboardRef.path}`);
+          const preLbSnap = await getDocSafely(leaderboardRef);
+          console.log(`[PERSISTENCE AUDIT] Document BEFORE write at ${leaderboardRef.path}:`, preLbSnap.exists() ? JSON.stringify(preLbSnap.data()) : "Document does not exist");
 
-        const writePayload = {
-          uid: user.uid,
-          displayName: settings.displayName || "Anonymous",
-          photoURL: settings.profilePic || user.photoURL || "",
-          streak: stats.streak || 0,
-          totalPoints: stats.totalPoints || 0,
-          weeklyXP: stats.weeklyXP || 0,
-          weeklyPoints: stats.weeklyPoints || 0,
-          level: stats.level || 1,
-          league: settings.league || "Bronze",
-        };
-        console.log(`[PERSISTENCE AUDIT] Force sync payload for leaderboard document:`, JSON.stringify(writePayload));
+          const writePayload = buildSafeLeaderboardPayload({
+            uid: user.uid,
+            displayName: settings.displayName || user.displayName || "Champion",
+            photoURL: settings.profilePic || "",
+            fallbackPhotoURL: user.photoURL || "",
+            streak: stats.streak || 0,
+            totalPoints: stats.totalPoints || 0,
+            weeklyXP: stats.weeklyXP || 0,
+            weeklyPoints: stats.weeklyPoints || 0,
+            xp: stats.xp || stats.totalPoints || 0,
+            level: stats.level || 1,
+            league: settings.league || "Bronze",
+            includeAliases: false,
+          });
+          console.log(`[PERSISTENCE AUDIT] Force sync payload for leaderboard document:`, JSON.stringify(writePayload));
 
-        await setDoc(leaderboardRef, writePayload, { merge: true });
-        console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote leaderboard document to: ${leaderboardRef.path}`);
+          await setDoc(leaderboardRef, writePayload, { merge: true });
+          console.log(`[PERSISTENCE AUDIT] [WRITE SUCCESS] Force sync successfully wrote leaderboard document to: ${leaderboardRef.path}`);
 
-        console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${leaderboardRef.path}`);
-        const postLbSnap = await getDocSafely(leaderboardRef);
-        console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${leaderboardRef.path}:`, postLbSnap.exists() ? JSON.stringify(postLbSnap.data()) : "Document does not exist");
-      } catch (err: any) {
-        handleFirestoreError(err, OperationType.WRITE, leaderboardRef.path);
-        console.error(`[PERSISTENCE AUDIT] [WRITE FAILURE] Force sync failed to write leaderboard document to: ${leaderboardRef.path}. Error:`, err);
+          console.log(`[PERSISTENCE AUDIT] Fetching post-write document snapshot for: ${leaderboardRef.path}`);
+          const postLbSnap = await getDocSafely(leaderboardRef);
+          console.log(`[PERSISTENCE AUDIT] Document AFTER write at ${leaderboardRef.path}:`, postLbSnap.exists() ? JSON.stringify(postLbSnap.data()) : "Document does not exist");
+        } catch (err: any) {
+          handleFirestoreError(err, OperationType.WRITE, leaderboardRef.path);
+          console.warn(`[PERSISTENCE AUDIT] Non-critical force sync warning for leaderboard document ${leaderboardRef.path}:`, err);
+        }
       }
 
       console.log("Hooks: Manual/Force Sync complete ✅");

@@ -316,6 +316,20 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid"]
+    },
+    "Referral": {
+      "title": "Referral",
+      "description": "Verified referral record created when a friend signs up with a new account",
+      "type": "object",
+      "properties": {
+        "friendUid": { "type": "string" },
+        "friendName": { "type": "string", "maxLength": 60 },
+        "referrerUid": { "type": "string" },
+        "coinsAwarded": { "type": "number" },
+        "status": { "type": "string", "enum": ["completed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["friendUid", "friendName", "referrerUid", "coinsAwarded", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -538,6 +552,10 @@
         }
       },
       "description": "User written notebooks and brain dumps synced under user UID"
+    },
+    "/referrals/{friendUid}": {
+      "schema": { "$ref": "Referral" },
+      "description": "Verified friend referrals keyed by the new friend's UID"
     }
   }
 }

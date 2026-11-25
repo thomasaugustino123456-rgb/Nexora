@@ -539,5 +539,29 @@ service cloud.firestore {
     match /notebooks/{userId} {
       allow read, write: if true;
     }
+
+    // ===============================================================
+    // Referrals Path (One-time verified friend signups)
+    // ===============================================================
+    match /referrals/{friendUid} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == friendUid ||
+        resource.data.referrerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() &&
+        request.auth.uid == friendUid &&
+        request.resource.data.keys().hasAll(['friendUid', 'friendName', 'referrerUid', 'coinsAwarded', 'status', 'createdAt']) &&
+        request.resource.data.friendUid == request.auth.uid &&
+        request.resource.data.referrerUid is string &&
+        request.resource.data.referrerUid.size() >= 6 &&
+        request.resource.data.referrerUid.size() <= 128 &&
+        request.resource.data.referrerUid != request.auth.uid &&
+        request.resource.data.friendName is string &&
+        request.resource.data.friendName.size() <= 60 &&
+        request.resource.data.coinsAwarded == 5 &&
+        request.resource.data.status == 'completed';
+      allow update, delete: if false;
+    }
   }
 }

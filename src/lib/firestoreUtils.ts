@@ -122,3 +122,106 @@ export function parseTimestampIso(val: any): string | null {
   const ms = parseTimestampMs(val);
   return ms !== null ? new Date(ms).toISOString() : null;
 }
+
+const VALID_LEADERBOARD_LEAGUES = [
+  'Bronze',
+  'Silver',
+  'Gold',
+  'Platinum',
+  'Diamond',
+  'Master',
+  'Champion',
+  'Divine',
+  'Nexus',
+] as const;
+
+export interface SafeLeaderboardInput {
+  uid: string;
+  displayName?: unknown;
+  photoURL?: unknown;
+  fallbackPhotoURL?: unknown;
+  streak?: unknown;
+  totalPoints?: unknown;
+  points?: unknown;
+  weeklyPoints?: unknown;
+  weeklyXP?: unknown;
+  xp?: unknown;
+  level?: unknown;
+  league?: unknown;
+  updatedAt?: unknown;
+  includeAliases?: boolean;
+}
+
+const toSafeInt = (val: unknown, min: number, max?: number): number => {
+  const num = Number(val);
+  if (!Number.isFinite(num)) return min;
+  const floored = Math.floor(num);
+  if (floored < min) return min;
+  if (max !== undefined && floored > max) return max;
+  return floored;
+};
+
+export function normalizeLeaderboardLeague(val: unknown): string {
+  if (typeof val === 'string') {
+    const trimmed = val.trim().toLowerCase();
+    const matched = VALID_LEADERBOARD_LEAGUES.find((l) => l.toLowerCase() === trimmed);
+    if (matched) return matched;
+  }
+  return 'Bronze';
+}
+
+export function buildSafeLeaderboardPayload(input: SafeLeaderboardInput) {
+  const rawName = typeof input.displayName === 'string' ? input.displayName.trim() : '';
+  const safeDisplayName = (rawName || 'Champion').slice(0, 95);
+
+  let safePhotoURL = '';
+  if (typeof input.photoURL === 'string' && input.photoURL.trim().length > 0 && input.photoURL.length <= 800000) {
+    safePhotoURL = input.photoURL.trim();
+  } else if (
+    typeof input.fallbackPhotoURL === 'string' &&
+    input.fallbackPhotoURL.trim().length > 0 &&
+    input.fallbackPhotoURL.length <= 800000
+  ) {
+    safePhotoURL = input.fallbackPhotoURL.trim();
+  }
+
+  const safeTotalPoints = toSafeInt(input.totalPoints, 0, 999999);
+  const safeWeeklyPoints = toSafeInt(input.weeklyPoints ?? input.totalPoints, 0, 999999);
+  const safeWeeklyXP = toSafeInt(input.weeklyXP ?? input.weeklyPoints ?? input.totalPoints, 0, 999999);
+  const safeXP = toSafeInt(input.xp ?? input.totalPoints, 0);
+  const safePoints = toSafeInt(input.points ?? input.totalPoints, 0, 999999);
+  const safeStreak = toSafeInt(input.streak, 0);
+  const safeLevel = toSafeInt(input.level, 1);
+  const safeLeague = normalizeLeaderboardLeague(input.league);
+
+  const payload: Record<string, any> = {
+    uid: input.uid,
+    displayName: safeDisplayName,
+    photoURL: safePhotoURL,
+    streak: safeStreak,
+    totalPoints: safeTotalPoints,
+    weeklyPoints: safeWeeklyPoints,
+    weeklyXP: safeWeeklyXP,
+    xp: safeXP,
+    level: safeLevel,
+    league: safeLeague,
+  };
+
+  if (input.includeAliases !== false) {
+    const compactAliasPhoto = safePhotoURL.length <= 250000 ? safePhotoURL : '';
+    payload.userId = input.uid;
+    payload.name = safeDisplayName;
+    payload.points = safePoints;
+    if (compactAliasPhoto) {
+      payload.photoFileName = compactAliasPhoto;
+      payload.profilePic = compactAliasPhoto;
+    }
+  }
+
+  if (input.updatedAt !== undefined) {
+    payload.updatedAt = input.updatedAt;
+  }
+
+  return cleanPayload(payload);
+}
+

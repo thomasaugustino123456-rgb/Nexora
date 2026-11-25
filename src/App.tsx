@@ -111,7 +111,7 @@ import { computeTrophyInactivityDays, getExpectedTrophyStates, replaceDegradedTr
 import { getMascotNotificationDetails, getMascotItemCategory, normalizeWearableId, normalizeEffectId, isWearableCategory, getWearableSubCategory, MascotSlotCategory } from "./lib/mascotSystem";
 import { createInitialGardenState } from "./types/garden";
 import { HOUSE_ITEMS } from "./constants/houseItems";
-import { parseTimestampMs, parseTimestampIso, getStartOfWeekKey } from "./lib/firestoreUtils";
+import { parseTimestampMs, parseTimestampIso, getStartOfWeekKey, buildSafeLeaderboardPayload } from "./lib/firestoreUtils";
 import { NexoraStudio } from "./components/NexoraStudio";
 import { BottomNav } from "./components/BottomNav";
 import { PWAInstallerCard } from "./components/PWAInstallerCard";
@@ -265,6 +265,18 @@ import { TrophyRewardsScreen } from "./components/TrophyRewardsScreen";
 import { ShopChestUnboxingModal } from "./components/ShopChestUnboxingModal";
 import { AdminPanel } from "./components/AdminPanel";
 import { HydrationDetailPage } from "./components/HydrationDetailPage";
+import {
+  ReferralPromptModal,
+  ReferralShareFlowModal,
+  ReferralFriendWelcomeScreen,
+  ReferralFlowStep,
+} from "./components/ReferralHub";
+import {
+  captureReferralFromUrl,
+  fetchReferrerPublicProfile,
+  ReferrerPublicProfile,
+  REFERRAL_REWARD_COINS,
+} from "./services/referralService";
 
 const SOCIAL_LOCKED = false;
 
@@ -912,6 +924,14 @@ export default function App() {
   const [globalSavedVideos, setGlobalSavedVideos] = useState<NexusVideo[]>([]);
   const [focusedVideoId, setFocusedVideoId] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
+  const [authStartInSignUp, setAuthStartInSignUp] = useState(false);
+  const [pendingReferrerUid, setPendingReferrerUid] = useState<string | null>(() =>
+    captureReferralFromUrl()
+  );
+  const [referrerProfile, setReferrerProfile] = useState<ReferrerPublicProfile | null>(null);
+  const [showReferralPrompt, setShowReferralPrompt] = useState(false);
+  const [showReferralHubModal, setShowReferralHubModal] = useState(false);
+  const [referralHubInitialStep, setReferralHubInitialStep] = useState<ReferralFlowStep>("congrats");
   const [dailyQuest, setDailyQuest] = useState<ChallengeStep>("water");
   const [emergencyActive, setEmergencyActive] = useState(false);
   const [isLibraryReplay, setIsLibraryReplay] = useState(false);
@@ -1535,7 +1555,42 @@ export default function App() {
     if (sharedUserId) {
       setPublicUserViewId(sharedUserId);
     }
+    const capturedRef = captureReferralFromUrl();
+    if (capturedRef) {
+      setPendingReferrerUid(capturedRef);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!pendingReferrerUid || user) return;
+    let cancelled = false;
+    fetchReferrerPublicProfile(pendingReferrerUid).then((profile) => {
+      if (!cancelled && profile) {
+        setReferrerProfile(profile);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingReferrerUid, user]);
+
+  useEffect(() => {
+    if (!user || !isDataReady) return;
+    const currentCount = Math.max(
+      Number(settings.referralCount) || 0,
+      Number(stats.referralCount) || 0
+    );
+    const seenCount = Number(settings.seenReferralCount || 0);
+    if (currentCount > seenCount) {
+      const diff = currentCount - seenCount;
+      const coinsGained = diff * REFERRAL_REWARD_COINS;
+      showToast(
+        `${diff} friend${diff > 1 ? "s" : ""} joined Nexora from your invite! +${coinsGained} Coins awarded!`,
+        "success"
+      );
+      onUpdateSettings({ seenReferralCount: currentCount });
+    }
+  }, [user, isDataReady, settings.referralCount, stats.referralCount, settings.seenReferralCount]);
 
   const onUpdateDailyProgress = (
     update: Partial<DailyProgress> | ((prev: DailyProgress) => DailyProgress),
@@ -1728,27 +1783,32 @@ export default function App() {
       // Mirror to secondary documents and leaderboard safely
       const leaderboardRef = doc(db, "leaderboard", user.uid);
       const rankRef = doc(db, "rank", user.uid);
-      const lbData = {
+      const lbData = buildSafeLeaderboardPayload({
         uid: user.uid,
-        userId: user.uid,
         displayName: name,
-        name: name,
-        photoURL: photoURL || settings.profilePic || user.photoURL || "",
-        profilePic: photoURL || settings.profilePic || user.photoURL || "",
+        photoURL: photoURL || settings.profilePic || "",
+        fallbackPhotoURL: user.photoURL || "",
         streak: stats.streak || 0,
         totalPoints: stats.totalPoints || 0,
         weeklyXP: stats.weeklyXP || 0,
         weeklyPoints: stats.weeklyPoints || 0,
+        xp: stats.xp || stats.totalPoints || 0,
         level: stats.level || 1,
         league: settings.league || "Bronze",
-      };
+        includeAliases: true,
+      });
 
-      await Promise.allSettled([
+      const mirrorWrites: Promise<any>[] = [
         setDoc(userSingularDocRef, updatePayload, { merge: true }),
         setDoc(userSettingsDocRef, updatePayload, { merge: true }),
-        setDoc(leaderboardRef, lbData, { merge: true }),
-        setDoc(rankRef, lbData, { merge: true })
-      ]);
+      ];
+      if (auth.currentUser?.uid === user.uid) {
+        mirrorWrites.push(
+          setDoc(leaderboardRef, lbData, { merge: true }),
+          setDoc(rankRef, lbData, { merge: true })
+        );
+      }
+      await Promise.allSettled(mirrorWrites);
 
       showToast("Profile sync successful! 🛡️", "success");
       vibrate(VIBRATION_PATTERNS.SUCCESS);
@@ -4324,10 +4384,11 @@ export default function App() {
         currentStats.level || 1
       );
 
-      const currentUserEntry = {
+      const currentUserEntry = buildSafeLeaderboardPayload({
         uid: currentUser.uid,
         displayName: currentSettings.displayName || existingUser?.displayName || currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : "Champion"),
-        photoURL: currentSettings.profilePic || existingUser?.photoURL || currentUser.photoURL || "",
+        photoURL: currentSettings.profilePic || existingUser?.photoURL || "",
+        fallbackPhotoURL: currentUser.photoURL || "",
         weeklyXP: authoritativeMaxPts,
         weeklyPoints: authoritativeMaxPts,
         totalPoints: authoritativeMaxPts,
@@ -4336,12 +4397,13 @@ export default function App() {
         streak: authoritativeStreak,
         level: authoritativeLevel,
         league: currentSettings.league || existingUser?.league || "Bronze",
-      };
+        includeAliases: false,
+      });
 
-      allDataMap.set(currentUser.uid, currentUserEntry);
+      allDataMap.set(currentUser.uid, currentUserEntry as LeaderboardEntry);
 
-      // Instantly write user to /leaderboard and /rank only if they have points (>0)
-      if (authoritativeMaxPts > 0) {
+      // Instantly write user to /leaderboard and /rank only if they have points (>0) and active matching auth
+      if (authoritativeMaxPts > 0 && auth.currentUser?.uid === currentUser.uid) {
         setDoc(doc(db, "leaderboard", currentUser.uid), currentUserEntry, { merge: true }).catch(() => {});
         setDoc(doc(db, "rank", currentUser.uid), currentUserEntry, { merge: true }).catch(() => {});
       }
@@ -5354,29 +5416,29 @@ export default function App() {
         forceSyncData().catch(() => {});
       }, 300);
 
-      const leaderboardRef = doc(db, "leaderboard", user.uid);
-      setDoc(
-        leaderboardRef,
-        {
-          uid: user.uid,
-          displayName: settings.displayName || "Anonymous",
-          photoURL: settings.profilePic || user.photoURL || "",
-          streak: updatedStats.streak,
-          totalPoints: updatedStats.totalPoints,
-          weeklyXP: updatedStats.weeklyXP || 0,
-          weeklyPoints: updatedStats.weeklyPoints || 0,
-          xp: updatedStats.xp,
-          level: newLevel,
-          league: settings.league || "Bronze",
-        },
-        { merge: true },
-      ).catch((err) => {
-        try {
+      if (auth.currentUser?.uid === user.uid) {
+        const leaderboardRef = doc(db, "leaderboard", user.uid);
+        setDoc(
+          leaderboardRef,
+          buildSafeLeaderboardPayload({
+            uid: user.uid,
+            displayName: settings.displayName || user.displayName || "Champion",
+            photoURL: settings.profilePic || "",
+            fallbackPhotoURL: user.photoURL || "",
+            streak: updatedStats.streak,
+            totalPoints: updatedStats.totalPoints,
+            weeklyXP: updatedStats.weeklyXP || 0,
+            weeklyPoints: updatedStats.weeklyPoints || 0,
+            xp: updatedStats.xp,
+            level: newLevel,
+            league: settings.league || "Bronze",
+            includeAliases: false,
+          }),
+          { merge: true },
+        ).catch((err) => {
           handleFirestoreError(err, OperationType.WRITE, `leaderboard/${user.uid}`);
-        } catch (e) {
-          console.error("LB sync error", e);
-        }
-      });
+        });
+      }
 
       // 1. Log Finished Challenge to the new global "challenges" collection under user UID
       const challengeDocRef = doc(db, "challenges", user.uid);
@@ -5899,8 +5961,24 @@ export default function App() {
                 </div>
               }
             >
-              <AuthScreen onBack={() => setShowAuth(false)} />
+              <AuthScreen
+                onBack={() => setShowAuth(false)}
+                initialIsSignUp={authStartInSignUp}
+                referredByName={referrerProfile?.displayName || null}
+              />
             </Suspense>
+          ) : pendingReferrerUid ? (
+            <ReferralFriendWelcomeScreen
+              referrerProfile={referrerProfile}
+              onStartNewAccount={() => {
+                setAuthStartInSignUp(true);
+                setShowAuth(true);
+              }}
+              onAlreadyHaveAccount={() => {
+                setAuthStartInSignUp(false);
+                setShowAuth(true);
+              }}
+            />
           ) : (
             <Suspense
               fallback={
@@ -5911,7 +5989,12 @@ export default function App() {
             >
               <div className="w-full flex flex-col items-center">
                 <PWAInstallerCard currentScreen="landing" className="sticky top-0 z-50 w-full" />
-                <LandingPage onGetStarted={() => setShowAuth(true)} />
+                <LandingPage
+                  onGetStarted={() => {
+                    setAuthStartInSignUp(false);
+                    setShowAuth(true);
+                  }}
+                />
               </div>
             </Suspense>
           )}
@@ -6626,6 +6709,14 @@ export default function App() {
                       onOpenDeviceShowcase={() => {
                         vibrate(VIBRATION_PATTERNS.CLICK);
                         setActiveScreen("device-showcase");
+                      }}
+                      referralCount={Math.max(Number(settings.referralCount) || 0, Number(stats.referralCount) || 0)}
+                      onOpenReferralHub={() => {
+                        vibrate(VIBRATION_PATTERNS.CLICK);
+                        setReferralHubInitialStep(
+                          settings.referralPromptStatus === "accepted" ? "tracker" : "share"
+                        );
+                        setShowReferralHubModal(true);
                       }}
                     />
                   </Suspense>
@@ -8182,6 +8273,14 @@ export default function App() {
               onFinish={() => {
                 setActiveCustomPlan(null);
                 setActiveScreen("home");
+                if (
+                  settings.referralPromptStatus !== "later" &&
+                  settings.referralPromptStatus !== "accepted"
+                ) {
+                  setTimeout(() => {
+                    setShowReferralPrompt(true);
+                  }, 450);
+                }
               }}
             />
           )}
@@ -8243,6 +8342,33 @@ export default function App() {
               </motion.div>
             </div>
           )}
+
+          <ReferralPromptModal
+            isOpen={showReferralPrompt}
+            settings={settings}
+            onLater={() => {
+              setShowReferralPrompt(false);
+              onUpdateSettings({ referralPromptStatus: "later" });
+              showToast("Invite Friends is saved in Settings anytime!", "info");
+            }}
+            onAccept={() => {
+              setShowReferralPrompt(false);
+              onUpdateSettings({ referralPromptStatus: "accepted" });
+              setReferralHubInitialStep("congrats");
+              setShowReferralHubModal(true);
+            }}
+          />
+
+          <ReferralShareFlowModal
+            isOpen={showReferralHubModal}
+            initialStep={referralHubInitialStep}
+            userUid={user?.uid || ""}
+            settings={settings}
+            referralCount={Math.max(Number(settings.referralCount) || 0, Number(stats.referralCount) || 0)}
+            referralCoinsEarned={Math.max(Number(settings.referralCoinsEarned) || 0, Number(stats.referralCoinsEarned) || 0)}
+            showToast={showToast}
+            onClose={() => setShowReferralHubModal(false)}
+          />
 
           <AnimatePresence>
             {showUpdatePopup && updateInfo && (
