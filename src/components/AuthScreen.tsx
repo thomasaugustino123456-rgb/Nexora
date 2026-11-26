@@ -18,6 +18,7 @@ import { ArrowLeft } from "lucide-react";
 import { vibrate } from "../lib/vibrate";
 import { MascotImage } from "./MascotImage";
 import { claimReferralRewardOnNewSignup, clearPendingReferralUid } from "../services/referralService";
+import { buildSafeLeaderboardPayload } from "../lib/firestoreUtils";
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -50,6 +51,9 @@ export function AuthScreen({ onBack, initialIsSignUp = false, referredByName = n
   const [authView, setAuthView] = useState<"options" | "form">("options");
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSignUp, setIsSignUp] = useState(initialIsSignUp);
+  useEffect(() => {
+    setIsSignUp(initialIsSignUp);
+  }, [initialIsSignUp]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -372,32 +376,30 @@ export function AuthScreen({ onBack, initialIsSignUp = false, referredByName = n
           await deleteDoc(doc(db, "onboardingID", userCredential.user.uid));
         } catch {}
         await setDoc(doc(db, "users", userCredential.user.uid), signUpData);
-        await setDoc(doc(db, "user", userCredential.user.uid), signUpData);
-        const initialLbData = {
+        const initialLbData = buildSafeLeaderboardPayload({
           uid: userCredential.user.uid,
-          userId: userCredential.user.uid,
-          displayName: 'Champion',
-          name: 'Champion',
-          photoURL: '',
-          profilePic: '',
+          displayName: userCredential.user.displayName || "Champion",
+          photoURL: "",
           streak: 0,
           totalPoints: 0,
-          points: 0,
           weeklyPoints: 0,
           weeklyXP: 0,
           xp: 0,
           level: 1,
-          league: 'Bronze',
-          createdAt: serverTimestamp(),
+          league: "Bronze",
           updatedAt: serverTimestamp(),
-        };
-        await setDoc(doc(db, "leaderboard", userCredential.user.uid), initialLbData, { merge: true });
-        await setDoc(doc(db, "rank", userCredential.user.uid), initialLbData, { merge: true });
-        await claimReferralRewardOnNewSignup({
-          uid: userCredential.user.uid,
-          displayName: userCredential.user.displayName || "Champion",
-          email: trimmedEmail,
-        }).catch(() => {});
+          includeAliases: true,
+        });
+        await Promise.allSettled([
+          setDoc(doc(db, "user", userCredential.user.uid), signUpData),
+          setDoc(doc(db, "leaderboard", userCredential.user.uid), initialLbData, { merge: true }),
+          setDoc(doc(db, "rank", userCredential.user.uid), initialLbData, { merge: true }),
+          claimReferralRewardOnNewSignup({
+            uid: userCredential.user.uid,
+            displayName: userCredential.user.displayName || "Champion",
+            email: trimmedEmail,
+          }),
+        ]);
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
         clearPendingReferralUid();
@@ -561,32 +563,30 @@ export function AuthScreen({ onBack, initialIsSignUp = false, referredByName = n
           await deleteDoc(doc(db, "onboardingID", result.user.uid));
         } catch {}
         await setDoc(doc(db, "users", result.user.uid), googleUserData);
-        await setDoc(doc(db, "user", result.user.uid), googleUserData);
-        const initialGoogleLbData = {
+        const initialGoogleLbData = buildSafeLeaderboardPayload({
           uid: result.user.uid,
-          userId: result.user.uid,
-          displayName: result.user.displayName || 'Champion',
-          name: result.user.displayName || 'Champion',
-          photoURL: result.user.photoURL || '',
-          profilePic: result.user.photoURL || '',
+          displayName: result.user.displayName || "Champion",
+          photoURL: result.user.photoURL || "",
           streak: 0,
           totalPoints: 0,
-          points: 0,
           weeklyPoints: 0,
           weeklyXP: 0,
           xp: 0,
           level: 1,
-          league: 'Bronze',
-          createdAt: serverTimestamp(),
+          league: "Bronze",
           updatedAt: serverTimestamp(),
-        };
-        await setDoc(doc(db, "leaderboard", result.user.uid), initialGoogleLbData, { merge: true });
-        await setDoc(doc(db, "rank", result.user.uid), initialGoogleLbData, { merge: true });
-        await claimReferralRewardOnNewSignup({
-          uid: result.user.uid,
-          displayName: result.user.displayName || "Champion",
-          email: result.user.email,
-        }).catch(() => {});
+          includeAliases: true,
+        });
+        await Promise.allSettled([
+          setDoc(doc(db, "user", result.user.uid), googleUserData),
+          setDoc(doc(db, "leaderboard", result.user.uid), initialGoogleLbData, { merge: true }),
+          setDoc(doc(db, "rank", result.user.uid), initialGoogleLbData, { merge: true }),
+          claimReferralRewardOnNewSignup({
+            uid: result.user.uid,
+            displayName: result.user.displayName || "Champion",
+            email: result.user.email,
+          }),
+        ]);
       } else {
         // Existing Google user - only update updatedAt timestamp, never reset onboardingCompleted
         clearPendingReferralUid();

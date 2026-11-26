@@ -273,9 +273,13 @@ import {
 } from "./components/ReferralHub";
 import {
   captureReferralFromUrl,
+  claimReferralRewardOnNewSignup,
+  clearPendingReferralUid,
   fetchReferrerPublicProfile,
+  getPendingReferralUid,
   ReferrerPublicProfile,
   REFERRAL_REWARD_COINS,
+  subscribeToReferrals,
 } from "./services/referralService";
 
 const SOCIAL_LOCKED = false;
@@ -1573,6 +1577,88 @@ export default function App() {
       cancelled = true;
     };
   }, [pendingReferrerUid, user]);
+
+  useEffect(() => {
+    if (!user || !isDataReady) return;
+    const pendingRef = getPendingReferralUid();
+    if (!pendingRef) return;
+    if (pendingRef === user.uid || settings.referredBy) {
+      clearPendingReferralUid();
+      return;
+    }
+
+    const createdMs = user.metadata?.creationTime
+      ? new Date(user.metadata.creationTime).getTime()
+      : NaN;
+    const isRecentSignup =
+      (typeof window !== "undefined" &&
+        sessionStorage.getItem("nexora_signup_flow") === "true") ||
+      !settings.onboardingCompleted ||
+      (!Number.isNaN(createdMs) && Date.now() - createdMs < 20 * 60 * 1000);
+
+    if (!isRecentSignup) {
+      clearPendingReferralUid();
+      return;
+    }
+
+    let cancelled = false;
+    claimReferralRewardOnNewSignup({
+      uid: user.uid,
+      displayName: settings.displayName || user.displayName || "Champion",
+      email: user.email,
+    }).then((res) => {
+      if (!cancelled && res.claimed && res.referrerUid) {
+        onUpdateSettings({ referredBy: res.referrerUid });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, isDataReady, settings.referredBy, settings.onboardingCompleted, settings.displayName]);
+
+  useEffect(() => {
+    if (!user?.uid || !isDataReady) return;
+    const unsubscribe = subscribeToReferrals(user.uid, (records) => {
+      const verifiedCount = records.length;
+      if (verifiedCount <= 0) return;
+      const verifiedCoins = records.reduce(
+        (sum, r) => sum + (Number(r.coinsAwarded) || REFERRAL_REWARD_COINS),
+        0
+      );
+
+      onUpdateStats((prev) => {
+        const prevCount = Number(prev.referralCount) || 0;
+        if (verifiedCount <= prevCount) return prev;
+        const delta = verifiedCount - prevCount;
+        return {
+          ...prev,
+          coins: (prev.coins || 0) + delta * REFERRAL_REWARD_COINS,
+          referralCount: verifiedCount,
+          referralCoinsEarned: Math.max(
+            Number(prev.referralCoinsEarned) || 0,
+            verifiedCoins,
+            verifiedCount * REFERRAL_REWARD_COINS
+          ),
+        };
+      });
+
+      onUpdateSettings((prev) => {
+        const prevCount = Number(prev.referralCount) || 0;
+        if (verifiedCount <= prevCount) return prev;
+        return {
+          ...prev,
+          referralCount: verifiedCount,
+          referralCoinsEarned: Math.max(
+            Number(prev.referralCoinsEarned) || 0,
+            verifiedCoins,
+            verifiedCount * REFERRAL_REWARD_COINS
+          ),
+        };
+      });
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid, isDataReady]);
 
   useEffect(() => {
     if (!user || !isDataReady) return;

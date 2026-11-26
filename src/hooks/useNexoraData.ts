@@ -2510,9 +2510,10 @@ export function useNexoraData(
             hasChanges = true;
           }
           if (remoteReferralCount > (prev.referralCount || 0)) {
+            const newReferralsDelta = remoteReferralCount - (prev.referralCount || 0);
             updated.referralCount = remoteReferralCount;
-            updated.referralCoinsEarned = remoteReferralCoinsEarned;
-            updated.coins = Math.max(prev.coins || 0, remoteCoins);
+            updated.referralCoinsEarned = Math.max(remoteReferralCoinsEarned, remoteReferralCount * 5);
+            updated.coins = Math.max((prev.coins || 0) + newReferralsDelta * 5, remoteCoins);
             hasChanges = true;
           }
 
@@ -2520,6 +2521,7 @@ export function useNexoraData(
             console.log(`[MULTI-DEVICE SYNC] Remote Firestore snapshot detected external device change! streak=${updated.streak}, streakStatus=${updated.streakStatus}`);
             try {
               localStorage.setItem("nexora_stats", JSON.stringify(updated));
+              localStorage.setItem(`nexora_stats_${user.uid}`, JSON.stringify(updated));
             } catch (e) {}
             return updated;
           }
@@ -2529,11 +2531,16 @@ export function useNexoraData(
         if (remoteReferralCount > 0) {
           rawSetSettings((prev) => {
             if (remoteReferralCount > (prev.referralCount || 0)) {
-              return {
+              const nextSettings = {
                 ...prev,
                 referralCount: remoteReferralCount,
-                referralCoinsEarned: remoteReferralCoinsEarned,
+                referralCoinsEarned: Math.max(remoteReferralCoinsEarned, remoteReferralCount * 5),
               };
+              try {
+                localStorage.setItem("nexora_settings", JSON.stringify(nextSettings));
+                localStorage.setItem(`nexora_settings_${user.uid}`, JSON.stringify(nextSettings));
+              } catch (e) {}
+              return nextSettings;
             }
             return prev;
           });
@@ -2843,6 +2850,8 @@ export function useNexoraData(
               role: 'user',
               stats: stats,
               coins: stats.coins || 0,
+              referralCount: Math.max(Number(stats.referralCount) || 0, Number(settings.referralCount) || 0),
+              referralCoinsEarned: Math.max(Number(stats.referralCoinsEarned) || 0, Number(settings.referralCoinsEarned) || 0),
               xp: stats.xp || 0,
               streak: stats.streak || 0,
               streakAtLastCompletion: stats.streakAtLastCompletion ?? stats.streak ?? 0,

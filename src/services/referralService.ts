@@ -181,6 +181,47 @@ export async function claimReferralRewardOnNewSignup(newUser: {
   const friendUserRef = doc(db, "users", newUser.uid);
   const referrerUserRef = doc(db, "users", pendingReferrerUid);
 
+  const recordReferralMirrors = async () => {
+    await Promise.allSettled([
+      setDoc(
+        doc(db, "users", pendingReferrerUid, "stats", "main"),
+        {
+          coins: increment(REFERRAL_REWARD_COINS),
+          referralCount: increment(1),
+          referralCoinsEarned: increment(REFERRAL_REWARD_COINS),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      ),
+      setDoc(
+        doc(db, "rewards", pendingReferrerUid),
+        {
+          userId: pendingReferrerUid,
+          coins: increment(REFERRAL_REWARD_COINS),
+          lastRewardReceivedAt: serverTimestamp(),
+          lastRewardSource: "friend_referral",
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      ),
+      setDoc(
+        doc(db, "users", newUser.uid, "settings", "referral"),
+        {
+          referredBy: pendingReferrerUid,
+          claimedAt: serverTimestamp(),
+        },
+        { merge: true }
+      ),
+      addDoc(collection(db, "users", pendingReferrerUid, "notifications"), {
+        title: "Friend Joined Nexora! 🎉",
+        message: `${safeFriendName} created a new account using your invite! You earned +${REFERRAL_REWARD_COINS} Coins!`,
+        type: "reward",
+        read: false,
+        createdAt: new Date().toISOString(),
+      }),
+    ]);
+  };
+
   try {
     const result = await runTransaction(db, async (tx) => {
       const [referralSnap, referrerSnap, friendSnap] = await Promise.all([
@@ -257,52 +298,66 @@ export async function claimReferralRewardOnNewSignup(newUser: {
     });
 
     if (result.claimed) {
-      // Keep secondary stats/rewards mirrors synchronized so logged-out hydration picks up the +5 Coins reliably
-      await Promise.allSettled([
-        setDoc(
-          doc(db, "users", pendingReferrerUid, "stats", "main"),
-          {
-            coins: increment(REFERRAL_REWARD_COINS),
-            referralCount: increment(1),
-            referralCoinsEarned: increment(REFERRAL_REWARD_COINS),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        ),
-        setDoc(
-          doc(db, "rewards", pendingReferrerUid),
-          {
-            userId: pendingReferrerUid,
-            coins: increment(REFERRAL_REWARD_COINS),
-            lastRewardReceivedAt: serverTimestamp(),
-            lastRewardSource: "friend_referral",
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        ),
-        setDoc(
-          doc(db, "users", newUser.uid, "settings", "referral"),
-          {
-            referredBy: pendingReferrerUid,
-            claimedAt: serverTimestamp(),
-          },
-          { merge: true }
-        ),
-        addDoc(collection(db, "users", pendingReferrerUid, "notifications"), {
-          title: "Friend Joined Nexora! 🎉",
-          message: `${safeFriendName} created a new account using your invite! You earned +${REFERRAL_REWARD_COINS} Coins!`,
-          type: "reward",
-          read: false,
-          createdAt: new Date().toISOString(),
-        }),
-      ]);
+      await recordReferralMirrors();
     }
 
     clearPendingReferralUid();
     return result;
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `referrals/${newUser.uid}`);
-    return { claimed: false, reason: "transaction_error" };
+    // Fallback if cross-user transaction update on referrerUserRef was blocked:
+    // Record the friend-owned referral proof & mark referredBy so the referrer's live listener reconciles +5 Coins safely.
+    try {
+      const existingRefSnap = await getDoc(referralDocRef).catch(() => null);
+      if (existingRefSnap?.exists()) {
+        clearPendingReferralUid();
+        return { claimed: false, reason: "already_claimed" };
+      }
+
+      await setDoc(referralDocRef, {
+        friendUid: newUser.uid,
+        friendName: safeFriendName,
+        referrerUid: pendingReferrerUid,
+        coinsAwarded: REFERRAL_REWARD_COINS,
+        status: "completed",
+        createdAt: serverTimestamp(),
+      });
+
+      await Promise.allSettled([
+        setDoc(
+          friendUserRef,
+          {
+            referredBy: pendingReferrerUid,
+            referralClaimedAt: serverTimestamp(),
+          },
+          { merge: true }
+        ),
+        setDoc(
+          referrerUserRef,
+          {
+            coins: increment(REFERRAL_REWARD_COINS),
+            stats: {
+              coins: increment(REFERRAL_REWARD_COINS),
+              referralCount: increment(1),
+              referralCoinsEarned: increment(REFERRAL_REWARD_COINS),
+            },
+            referralCount: increment(1),
+            referralCoinsEarned: increment(REFERRAL_REWARD_COINS),
+            lastReferralFriendName: safeFriendName,
+            lastReferralAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        ),
+        recordReferralMirrors(),
+      ]);
+
+      clearPendingReferralUid();
+      return { claimed: true, referrerUid: pendingReferrerUid };
+    } catch (fallbackErr) {
+      handleFirestoreError(err, OperationType.WRITE, `referrals/${newUser.uid}`);
+      handleFirestoreError(fallbackErr, OperationType.WRITE, `referrals/${newUser.uid}`);
+      return { claimed: false, reason: "transaction_error" };
+    }
   }
 }
 
